@@ -1,0 +1,95 @@
+📘 Fusklapp – SQLite CLI
+
+
+När du är inne i sqlite3 fantasy_mx.db och ser sqlite>:
+
+Grunder
+
+- .tables → lista alla tabeller
+
+- .schema tabellnamn → visa strukturen för en tabell
+
+- .exit eller .quit → avsluta SQLite och gå tillbaka till CMD
+
+- .help → lista alla kommandon
+
+SQL du brukar behöva
+
+- SELECT * FROM users; → se alla användare
+
+- SELECT * FROM competitions; → se tävlingar
+
+- SELECT * FROM sim_date; → kolla vilken simulerad dag som är inställd
+
+- DELETE FROM sim_date; → töm tabellen
+
+- INSERT INTO sim_date (value) VALUES ('2026-01-10'); → sätt simulerat datum till 10 jan 2026
+
+- UPDATE season_teams SET total_points=0; → nollställ poäng för alla team (om du behöver testa om från början)
+
+
+---
+
+📘 Fusklapp – CMD / Terminal (Windows)
+
+
+När du är i din projektmapp C:\projects\MittFantasySpel>:
+
+Flask-servern
+
+- python app.py → starta servern
+
+- CTRL + C → stoppa servern (när den kör i terminalen)
+
+- Efter att du ändrat i app.py → stoppa med CTRL+C och starta igen för att läsa in ändringar
+
+SQLite
+
+- sqlite3 fantasy_mx.db → öppna din databas i SQLite CLI
+
+- sqlite3 fantasy_mx.db ".tables" → kör bara en gång och visa tabeller, hoppar över CLI
+
+- sqlite3 fantasy_mx.db "SELECT * FROM sim_date;" → kör SQL direkt från CMD
+
+Hantera miljön
+
+- dir → lista filer i mappen (som app.py, fantasy_mx.db, templates\)
+
+- cls → rensa skärmen i CMD
+
+
+---
+
+📌 Exempel Arbetsflöde
+
+1. Stoppa servern: CTRL+C
+
+2. Öppna SQLite:
+
+	sqlite3 fantasy_mx.db
+
+
+
+3. Sätt nytt sim‑datum:
+
+	DELETE FROM sim_date;
+	INSERT INTO sim_date (value) VALUES ('2026-01-17');
+	.quit
+
+
+
+4. Starta servern igen:
+
+	python app.py
+
+
+
+5. Öppna browser → http://127.0.0.1:5000/
+
+👉 Nu ska "nästa tävling" vara den 17 jan 2026 (San Diego).
+
+
+---
+✅ Med detta har du ett litet “survival kit” för både server och DB-hantering.
+
+👉 Vill du att jag även gör en kort batch-fil (reset_sim_date.bat) du kan dubbelklicka på för att t.ex. återställa sim_date till dagens datum utan att öppna SQLite manuellt?
