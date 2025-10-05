@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ team.team_name }} - Mitt Säsongsteam</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Anpassa Tailwind för mörkt läge om du har anpassade färger */
+    body {
+      background-color: #1a202c; /* Mörk bakgrund */
+      color: #e2e8f0; /* Ljus text */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-6">
+
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-blue-500">Mitt Säsongsteam</h1>
+      <a href="{{ url_for('index') }}" class="bg-gray-500 px-4 py-2 rounded text-white font-bold">⬅ Tillbaka</a>
+    </div>
+
+    <div class="bg-gray-800 p-6 rounded-lg shadow-md mb-6">
+      <h2 class="text-2xl font-semibold mb-2">{{ team.team_name }}</h2>
+      <p class="text-lg mb-4">Totala poäng: <span class="font-bold text-green-400">{{ team.total_points }}</span></p>
+
+      <h3 class="text-xl font-semibold mb-3 border-b border-gray-700 pb-2">Ditt team:</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {% for rider in riders %}
+          <div class="bg-gray-700 p-4 rounded-lg flex items-center shadow">
+            {% if rider.bike_brand %}
+              <img src="{{ url_for('static', filename='brand_logos/' + rider.bike_brand.lower() + '.png') }}" 
+                   alt="{{ rider.bike_brand }} Logo" 
+                   class="w-10 h-10 object-contain mr-3">
+            {% else %}
+              <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center mr-3 text-sm">?</div>
+            {% endif %}
+            <div>
+              <p class="font-bold text-lg">#{{ rider.rider_number }} {{ rider.name }}</p>
+              <p class="text-sm text-gray-400">{{ rider.class }} ({{ rider.bike_brand }})</p>
+              <p class="text-sm text-yellow-400">Värde: {{ "{:,.0f}".format(rider.price) }} kr</p>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <div class="mt-6">
+        <button onclick="window.location.href='{{ url_for('my_scores') }}'"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition duration-200">
+          Visa poänghistorik
+        </button>

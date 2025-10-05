@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Track Maps – {{ competition.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .thumb { opacity: .6; cursor: pointer; border: 2px solid transparent; }
+    .thumb.active { opacity: 1; border-color: #60a5fa; }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-blue-400">Track Maps</h1>
+        <p class="text-sm text-gray-400">
+          {{ competition.name }} • {{ competition.event_date }}
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <a href="{{ url_for('trackmaps_page') }}"
+           class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded flex items-center gap-2">
+          <span>⬅</span> <span>Alla banor</span>
+        </a>
+
+        {# Om league_id skickas in (via ?league_id=123), visa “Schedule” som går tillbaka till rätt liga #}
+        {% if request.args.get('league_id') %}
+          <a href="{{ url_for('league_detail_page', league_id=request.args.get('league_id')) }}"
+             class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded">
+            Schedule
+          </a>
+        {% else %}
+          <a href="{{ url_for('leagues_page') }}"
+             class="bg-slate-600 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded">
+            Schedule
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="bg-slate-800 rounded-lg shadow p-4">
+      {% if images and images|length > 0 %}
+        <img id="main"
+             src="{{ url_for('static', filename=images[0].image_url) }}"
+             alt="Track Map {{ competition.name }}"
+             class="w-full max-h-[70vh] object-contain rounded mb-4 bg-slate-700">
+
+        <div class="flex flex-wrap gap-2 justify-center">
+          {% for im in images[:5] %}
+            <img src="{{ url_for('static', filename=im.image_url) }}"
+                 class="thumb w-24 h-20 object-cover rounded {% if loop.first %}active{% endif %}"
+                 onclick="setMain(this.src, this)">
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center text-gray-400 py-10">
+          <p>Inga track maps uppladdade för denna bana ännu.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    function setMain(src, thumbEl){
+      const main = document.getElementById('main');
+      if(main) main.src = src;
+      const container = thumbEl.parentElement;
+      container.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+      thumbEl.classList.add('active');
+    }
+  </script>
+</body>
+</html>

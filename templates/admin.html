@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Resultathantering</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="relative font-sans min-h-screen text-gray-200">
+  <!-- Bakgrund -->
+  <div class="absolute inset-0 bg-cover bg-center"
+       style="background-image: url('{{ url_for("static", filename="images/admin.jpg") }}');"></div>
+  <div class="absolute inset-0 bg-black bg-opacity-70"></div>
+
+  <!-- Innehåll -->
+  <div class="relative z-10 p-2 sm:p-4 md:p-8">
+    <div class="container mx-auto bg-white bg-opacity-95 dark:bg-gray-800 dark:bg-opacity-95 p-3 sm:p-4 md:p-6 rounded-lg shadow-lg">
+
+      <!-- Header - Responsiv layout -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 md:mb-8 gap-4">
+        <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 text-center sm:text-left">Resultathantering</h1>
+        <a href="{{ url_for('index') }}"
+           class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base">
+          Tillbaka till Huvudsidan
+        </a>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Simulerat datum -->
+      <div class="mb-4 sm:mb-6">
+        <h2 class="text-lg sm:text-xl font-semibold mb-2">Simulerat datum</h2>
+        <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3">
+          Sätt ett simulerat datum (YYYY-MM-DD) för att styra vilket race som anses vara "nästa/aktuellt".
+        </p>
+
+        <form action="{{ url_for('admin_set_sim_date') }}" method="POST"
+              class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <label for="sim_date" class="text-sm font-medium">Datum:</label>
+          <input type="text" id="sim_date" name="sim_date" placeholder="2026-01-17"
+                 class="flex-1 p-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 text-sm" />
+          <div class="flex gap-2">
+            <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded text-sm">
+              Sätt datum
+            </button>
+            <button type="submit" formaction="{{ url_for('admin_set_sim_date') }}" name="sim_date" value=""
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-3 py-2 rounded text-sm">
+              Rensa
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Aktuellt simulerat datum -->
+      <div class="mb-4 p-3 bg-blue-100 dark:bg-blue-900 border-l-4 border-blue-500 rounded-r-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <span class="text-base sm:text-lg font-semibold text-blue-800 dark:text-blue-200">Aktuellt simulerat datum:</span>
+          <span id="current-sim-date" class="text-lg sm:text-xl font-bold text-blue-900 dark:text-blue-100">{{ today.strftime('%Y-%m-%d') if today else 'Idag' }}</span>
+        </div>
+        <div class="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
+          Simuleringar och "nästa race" baseras på detta datum
+        </div>
+      </div>
+
+      <!-- Välj tävling + kontroller -->
+      <div class="mb-4 sm:mb-6">
+        <div class="flex flex-col lg:flex-row lg:items-end gap-3">
+          <div class="flex-1 min-w-0">
+            <label for="competition-select" class="block text-lg sm:text-xl font-semibold mb-2">1. Välj Tävling</label>
+            <select id="competition-select" name="competition_id" onchange="loadSavedResults()"
+                    class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base">
+              <option value="">-- Välj tävling --</option>
+              {% for comp in competitions %}
+                <option value="{{ comp.id }}">
+                  {{ comp.name }} ({{ comp.event_date }})
+                  {% if comp.coast_250 == 'both' %} [Showdown]{% elif comp.coast_250 %} [250SX {{ comp.coast_250|capitalize }}]{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 lg:ml-4">
+            <button type="button"
+                    onclick="simulateForSelected()"
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              ⚙️ Simulera
+            </button>
+            <button type="button"
+                    onclick="loadSavedResults()"
+                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              ↻ Ladda
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aktuell tävling för resultathantering -->
+      <div id="selected-competition-info" class="mb-4 p-3 bg-green-100 dark:bg-green-900 border-l-4 border-green-500 rounded-r-lg" style="display: none;">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <span class="text-base sm:text-lg font-semibold text-green-800 dark:text-green-200">Aktuell tävling för resultathantering:</span>
+          <span id="selected-competition-name" class="text-lg sm:text-xl font-bold text-green-900 dark:text-green-100"></span>
+        </div>
+        <div class="text-xs sm:text-sm text-green-700 dark:text-green-300 mt-1">
+          Resultat, holeshot och poängberäkning gäller för denna tävling
+        </div>
+      </div>
+
+      <!-- Schedule / översikt -->
+      <div class="mb-4 sm:mb-6 rounded bg-gray-50 dark:bg-gray-700 p-2 sm:p-3">
+        <h3 class="text-base sm:text-lg font-semibold mb-2">SX Schema</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs sm:text-sm border-collapse min-w-[600px]">
+            <thead class="bg-gray-200 dark:bg-gray-600">
+              <tr>
+                <th class="p-1 sm:p-2 text-left">Datum</th>
+                <th class="p-1 sm:p-2 text-left">Tävling</th>
+                <th class="p-1 sm:p-2 text-left">250SX</th>
+                <th class="p-1 sm:p-2">Serie</th>
+                <th class="p-1 sm:p-2">Mult</th>
+                <th class="p-1 sm:p-2">TC</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in competitions if c.series == 'SX' %}
+                <tr class="border-t border-gray-200 dark:border-gray-600">
+                  <td class="p-1 sm:p-2 text-xs sm:text-sm">{{ c.event_date }}</td>
+                  <td class="p-1 sm:p-2 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{{ c.name }}</td>
+                  <td class="p-1 sm:p-2">
+                    {% if c.coast_250 == 'both' %}
+                      <span class="text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded bg-purple-600 text-white">SD</span>
+                    {% elif c.coast_250 %}
+                      <span class="text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded bg-blue-600 text-white">
+                        {{ 'W' if c.coast_250 == 'west' else 'E' }}
+                      </span>
+                    {% else %}
+                      <span class="text-xs text-gray-400">-</span>
+                    {% endif %}
+                  </td>
+                  <td class="p-1 sm:p-2 text-center text-xs sm:text-sm">{{ c.series }}</td>
+                  <td class="p-1 sm:p-2 text-center text-xs sm:text-sm">{{ c.point_multiplier or 1.0 }}</td>
+                  <td class="p-1 sm:p-2 text-center">
+                    {% if c.is_triple_crown %}
+                      <span class="text-xs px-1 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-600 text-white">⭐</span>
+                    {% else %}
+                      <span class="text-xs text-gray-400">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resultatformulär -->
+      <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="return validateResults()">
+        <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+
+        <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
+          <h2 class="text-lg sm:text-xl font-semibold mb-3 text-yellow-800 dark:text-yellow-300">Holeshot Vinnare</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <label for="holeshot_450" class="block mb-1 text-sm sm:text-base">450cc:</label>
+              <select name="holeshot_450" id="holeshot_450" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base">
+                <option value="">-- Välj förare --</option>
+                {% for rider in riders_450 %}
+                  <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="holeshot_250" class="block mb-1 text-sm sm:text-base">250cc:</label>
+              <select name="holeshot_250" id="holeshot_250" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base">
+                <option value="">-- Välj förare --</option>
+                {% for rider in riders_250 %}
+                  <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+          <div>
+            <h2 class="text-lg sm:text-xl font-semibold mb-2">Toppresultat 450cc</h2>
+            <div id="results-container-450" class="space-y-1 sm:space-y-2"></div>
+            <button type="button" onclick="addResultRow('450')" class="mt-3 sm:mt-4 bg-blue-500 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              + Lägg till 450-rad
+            </button>
+          </div>
+          <div>
+            <h2 class="text-lg sm:text-xl font-semibold mb-2">Toppresultat 250cc</h2>
+            <div id="results-container-250" class="space-y-1 sm:space-y-2"></div>
+            <button type="button" onclick="addResultRow('250')" class="mt-3 sm:mt-4 bg-blue-500 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              + Lägg till 250-rad
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-6 sm:mt-8 border-t pt-4">
+          <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-base sm:text-lg">
+            ✅ Spara Resultat & Räkna Poäng
+          </button>
+        </div>
+      </form>
+
+        <!-- OUT-status hantering -->
+<div class="mb-4 sm:mb-6 rounded bg-gray-50 dark:bg-gray-700 p-2 sm:p-3">
+  <h3 class="text-base sm:text-lg font-semibold mb-2">OUT-status (skador/sjukdom)</h3>
+  <div class="flex flex-col sm:flex-row gap-2 mb-3">
+    <button type="button"
+      onclick="loadOutList()"
+      class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+      Ladda lista
+    </button>
+    <span class="text-xs sm:text-sm text-gray-300">Markera föraren OUT för vald tävling</span>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div>
+      <h4 class="font-semibold mb-1 text-sm sm:text-base">450cc</h4>
+      <div id="out-list-450" class="space-y-1 text-xs sm:text-sm"></div>
+    </div>
+    <div>
+      <h4 class="font-semibold mb-1 text-sm sm:text-base">250cc</h4>
+      <div id="out-list-250" class="space-y-1 text-xs sm:text-sm"></div>
+    </div>
+  </div>
+</div>
+
+      <!-- Race Scores (senaste race) -->
+      <div class="mt-6 sm:mt-8 lg:mt-10">
+        <h2 class="text-xl sm:text-2xl font-bold text-purple-500 mb-3 sm:mb-4">Race Scores (senaste race)</h2>
+        {% if race_scores %}
+          <ul class="space-y-1 sm:space-y-2">
+            {% for score in race_scores %}
+              <li class="flex justify-between bg-gray-100 dark:bg-gray-700 p-2 sm:p-3 rounded">
+                <span class="text-sm sm:text-base truncate">{{ score.username }}</span>
+                <span class="font-bold text-green-600 text-sm sm:text-base">{{ score.total_points }} p</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-gray-500 text-sm sm:text-base">Inga resultat/poäng ännu.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates för resultatrader -->
+  <template id="result-row-template-450">
+    <div class="result-row flex items-center gap-2 sm:gap-4 p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+      <span class="position-label font-bold w-6 sm:w-8 text-center text-sm sm:text-base">1.</span>
+      <input type="hidden" name="positions_450[]" value="1">
+      <select name="riders_450[]" class="w-full p-1 sm:p-2 border rounded bg-white dark:bg-gray-600 text-xs sm:text-sm">
+        <option value="">-- Välj förare --</option>
+        {% for rider in riders_450 %}
+          <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+        {% endfor %}
+      </select>
+      <button type="button" onclick="removeRow(this,'450')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
+    </div>
+  </template>
+
+  <template id="result-row-template-250">
+    <div class="result-row flex items-center gap-2 sm:gap-4 p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
+      <span class="position-label font-bold w-6 sm:w-8 text-center text-sm sm:text-base">1.</span>
+      <input type="hidden" name="positions_250[]" value="1">
+      <select name="riders_250[]" class="w-full p-1 sm:p-2 border rounded bg-white dark:bg-gray-600 text-xs sm:text-sm">
+        <option value="">-- Välj förare --</option>
+        {% for rider in riders_250 %}
+          <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+        {% endfor %}
+      </select>
+      <button type="button" onclick="removeRow(this,'250')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
+    </div>
+  </template>
+
+  <!-- Script -->
+  <script>
+    function syncHiddenCompetitionId() {
+      const comp = document.getElementById("competition-select")?.value || "";
+      const h = document.getElementById("competition_id_hidden");
+      if (h) h.value = comp;
+    }
+
+    function updateSelectedCompetitionInfo() {
+      const select = document.getElementById("competition-select");
+      const infoDiv = document.getElementById("selected-competition-info");
+      const nameSpan = document.getElementById("selected-competition-name");
+      
+      if (select.value) {
+        const selectedOption = select.options[select.selectedIndex];
+        nameSpan.textContent = selectedOption.textContent;
+        infoDiv.style.display = "block";
+      } else {
+        infoDiv.style.display = "none";
+      }
+    }
+
+    async function loadSavedResults() {
+      syncHiddenCompetitionId();
+      const comp = document.getElementById("competition-select").value;
+      const c450 = document.getElementById("results-container-450");
+      const c250 = document.getElementById("results-container-250");
+      const hs450 = document.getElementById("holeshot_450");
+      const hs250 = document.getElementById("holeshot_250");
+
+      c450.innerHTML = "";
+      c250.innerHTML = "";
+      if (hs450) hs450.value = "";
+      if (hs250) hs250.value = "";
+      
+      // Update competition info display
+      updateSelectedCompetitionInfo();
+      
+      if (!comp) return;
+
+      try {
+        const res = await fetch(`/admin/get_results/${comp}`);
+        if (!res.ok) throw new Error("fetch failed");
+        const data = await res.json();
+
+        (data.top_results || []).forEach((r) =>
+          addResultRow(
+            r.class && r.class.startsWith("450") ? "450" : "250",
+            r.rider_id,
+            r.position
+          )
+        );
+        
+        // Add event listeners to existing rows
+        document.querySelectorAll('select[name="riders_450[]"]').forEach(select => {
+          select.addEventListener('change', function() {
+            validateAndUpdateDropdowns('450');
+          });
+        });
+        document.querySelectorAll('select[name="riders_250[]"]').forEach(select => {
+          select.addEventListener('change', function() {
+            validateAndUpdateDropdowns('250');
+          });
+        });
+
+        if (!data.top_results || data.top_results.length === 0) {
+          for (let i = 0; i < 6; i++) {
+            addResultRow("450");
+            addResultRow("250");
+          }
+        }
+
+        (data.holeshot_results || []).forEach((r) => {
+          if (r.class && r.class.startsWith("450") && hs450) hs450.value = r.rider_id;
+          if (r.class && r.class.startsWith("250") && hs250) hs250.value = r.rider_id;
+        });
+      } catch (e) {
+        for (let i = 0; i < 6; i++) {
+          addResultRow("450");
+          addResultRow("250");
+        }
+      }
+    }
+
+    function addResultRow(cls, selectedId = null, pos = null) {
+      const container = document.getElementById(`results-container-${cls}`);
+      const template = document.getElementById(`result-row-template-${cls}`);
+      const row = template.content.cloneNode(true);
+      const idx = pos || container.children.length + 1;
+      row.querySelector(".position-label").textContent = `${idx}.`;
+      row.querySelector("input").value = idx;
+      const select = row.querySelector("select");
+      if (selectedId) select.value = selectedId;
+      
+      // Add change event listener to prevent duplicates
+      select.addEventListener('change', function() {
+        validateAndUpdateDropdowns(cls);
+      });
+      
+      container.appendChild(row);
+      validateAndUpdateDropdowns(cls);
+    }
+
+    function removeRow(btn, cls) {
+      btn.parentElement.remove();
+      renumberRows(cls);
+    }
+
+    function renumberRows(cls) {
+      const container = document.getElementById(`results-container-${cls}`);
+      container.querySelectorAll(".result-row").forEach((row, i) => {
+        row.querySelector(".position-label").textContent = `${i + 1}.`;
+        row.querySelector("input").value = i + 1;
+      });
+    }
+
+    async function simulateForSelected() {
+      const comp = document.getElementById("competition-select").value;
+      if (!comp) {
+        alert("Välj en tävling först.");
+        return;
+      }
+      try {
+        const res = await fetch(`/admin/simulate/${comp}`, { method: "POST" });
+        if (res.redirected) {
+          window.location.href = res.url;
+          return;
+        }
+        await loadSavedResults();
+        showToast("Simulering klar!", true);
+      } catch (e) {
+        console.error(e);
+        showToast("Kunde inte köra simuleringen.", false);
+      }
+    }
+
+    async function loadOutList() {
+      const comp = document.getElementById("competition-select").value;
+      if (!comp) { alert("Välj en tävling först."); return; }
+      try {
+        const res = await fetch(`/admin/get_out_status/${comp}`);
+        if (!res.ok) throw new Error("fetch failed");
+        const riders = await res.json();
+
+        const c450 = document.getElementById("out-list-450");
+        const c250 = document.getElementById("out-list-250");
+        c450.innerHTML = "";
+        c250.innerHTML = "";
+
+        const render = (container, list) => {
+          list.forEach(r => {
+            const id = `out-${r.id}`;
+            const row = document.createElement("label");
+            row.className = "flex items-center gap-2 bg-white/70 dark:bg-gray-800 p-2 rounded";
+            row.innerHTML = `
+              <input type="checkbox" id="${id}" ${r.is_out ? "checked" : ""}>
+              <span class="flex-1">#${r.rider_number || "-"} ${r.name} <span class="text-gray-400 text-xs">(${r.bike_brand || "—"})</span></span>
+              <button class="text-xs bg-blue-600 text-white rounded px-2 py-1">Spara</button>
+            `;
+            const btn = row.querySelector("button");
+            btn.onclick = async () => {
+              const checked = row.querySelector("input").checked;
+              await setOut(r.id, checked);
+            };
+            container.appendChild(row);
+          });
+        };
+
+        render(c450, riders.filter(r => r.class === "450cc"));
+        render(c250, riders.filter(r => r.class === "250cc"));
+      } catch (e) {
+        console.error(e);
+        alert("Kunde inte ladda OUT-lista.");
+      }
+    }
+
+    async function setOut(riderId, isOut) {
+      const comp = document.getElementById("competition-select").value;
+      if (!comp) { alert("Välj en tävling först."); return; }
+      try {
+        const res = await fetch("/admin/set_out_status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            competition_id: parseInt(comp, 10),
+            rider_id: parseInt(riderId, 10),
+            status: isOut ? "OUT" : "CLEAR",
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "save failed");
+
+        showToast(isOut ? "Föraren markerad OUT" : "OUT borttagen", true);
+        localStorage.setItem("out-updated", String(Date.now()));
+        await loadOutList();
+        // Optionally refresh pick-forms if visible
+        // loadSavedResults();
+      } catch (e) {
+        console.error(e);
+        showToast("Kunde inte spara OUT-status", false);
+      }
+    }
+
+    function validateAndUpdateDropdowns(cls) {
+      const selects = document.querySelectorAll(`select[name="riders_${cls}[]"]`);
+      const selectedValues = Array.from(selects)
+        .map(sel => sel.value)
+        .filter(val => val);
+      
+      // Find duplicates
+      const duplicates = selectedValues.filter((value, index) => 
+        selectedValues.indexOf(value) !== index
+      );
+      
+      // Disable options that are already selected elsewhere
+      selects.forEach(select => {
+        const currentValue = select.value;
+        Array.from(select.options).forEach(option => {
+          if (option.value && option.value !== currentValue) {
+            // Check if this option is selected in another dropdown
+            const isSelectedElsewhere = Array.from(selects)
+              .some(otherSelect => otherSelect !== select && otherSelect.value === option.value);
+            
+            option.disabled = isSelectedElsewhere;
+            option.style.color = isSelectedElsewhere ? '#999' : '';
+          }
+        });
+      });
+    }
+
+    function validateResults() {
+      // Check for duplicates in 450cc results
+      const riders450 = Array.from(document.querySelectorAll('select[name="riders_450[]"]'))
+        .map(sel => sel.value)
+        .filter(val => val);
+      
+      if (riders450.length !== new Set(riders450).size) {
+        alert("Du kan inte sätta samma 450cc-förare flera gånger.");
+        return false;
+      }
+      
+      // Check for duplicates in 250cc results
+      const riders250 = Array.from(document.querySelectorAll('select[name="riders_250[]"]'))
+        .map(sel => sel.value)
+        .filter(val => val);
+      
+      if (riders250.length !== new Set(riders250).size) {
+        alert("Du kan inte sätta samma 250cc-förare flera gånger.");
+        return false;
+      }
+      
+      return true;
+    }
+
+    function showToast(msg, ok = true) {
+      let t = document.getElementById("toast");
+      if (!t) {
+        t = document.createElement("div");
+        t.id = "toast";
+        t.style.position = "fixed";
+        t.style.bottom = "20px";
+        t.style.right = "20px";
+        t.style.padding = "12px 16px";
+        t.style.borderRadius = "8px";
+        t.style.color = "#fff";
+        t.style.fontWeight = "bold";
+        t.style.zIndex = "9999";
+        t.style.transition = "opacity .25s ease";
+        document.body.appendChild(t);
+      }
+      t.style.background = ok ? "#16a34a" : "#dc2626";
+      t.textContent = msg;
+      t.style.opacity = "1";
+      setTimeout(() => (t.style.opacity = "0"), 1800);
+    }
+
+    function updateSimDateDisplay() {
+      // This will be called after form submission to update the display
+      fetch('/admin')
+        .then(response => response.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const newDate = doc.querySelector('#current-sim-date');
+          if (newDate) {
+            document.getElementById('current-sim-date').textContent = newDate.textContent;
+          }
+        })
+        .catch(err => console.error('Could not update date display:', err));
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const sel = document.getElementById("competition-select");
+      if (sel && sel.options.length > 1 && !sel.value) {
+        sel.selectedIndex = 1;
+      }
+      loadSavedResults();
+      
+      // Update competition info on page load
+      updateSelectedCompetitionInfo();
+      
+      // Update date display after form submissions
+      document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+          setTimeout(updateSimDateDisplay, 1000); // Update after redirect
+        });
+      });
+    });
+  </script>
+</body>
+</html>

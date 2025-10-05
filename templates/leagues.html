@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Mina Ligor - MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
+  <div class="container mx-auto p-3 sm:p-4 md:p-8">
+    <!-- Header - Responsiv layout -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
+      <header>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-500">Mina Ligor</h1>
+        <p class="text-base sm:text-lg mt-2 text-gray-600 dark:text-gray-400">
+          Inloggad som: <strong>{{ username }}</strong>
+        </p>
+      </header>
+      <a href="{{ url_for('index') }}"
+         class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base self-start sm:self-center">
+         Tillbaka till Huvudsidan
+      </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="p-3 sm:p-4 rounded-md mb-4 sm:mb-6 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white text-sm sm:text-base">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+      <div class="space-y-4 sm:space-y-6 lg:space-y-8">
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+          <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Skapa en ny liga</h2>
+          <form action="{{ url_for('create_league') }}" method="POST" enctype="multipart/form-data" class="space-y-3 sm:space-y-4">
+            <div>
+              <label for="league_name" class="block mb-1 text-sm sm:text-base">Namn på ligan:</label>
+              <input type="text" name="league_name" id="league_name" required
+                     class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base">
+            </div>
+            <div>
+              <label for="league_image" class="block mb-1 text-sm sm:text-base">Ladda upp ligabild (valfritt):</label>
+              <input type="file" name="league_image" id="league_image" accept="image/*"
+                     class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base">
+            </div>
+            <button type="submit"
+                    class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              Skapa Liga
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+          <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Anslut till en liga</h2>
+          <form action="{{ url_for('join_league') }}" method="POST" class="space-y-3 sm:space-y-4">
+            <div>
+              <label for="invite_code" class="block mb-1 text-sm sm:text-base">Inbjudningskod:</label>
+              <input type="text" name="invite_code" id="invite_code" required
+                     class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 uppercase text-sm sm:text-base"
+                     placeholder="T.EX. A7B3F">
+            </div>
+            <button type="submit"
+                    class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              Anslut
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Dina ligor</h2>
+        <div class="space-y-2 sm:space-y-3">
+          {% if my_leagues %}
+            {% for league in my_leagues %}
+              <div class="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block">
+                  {% if league.image_url %}
+                    <img src="{{ league.image_url }}" alt="Ligabild"
+                        class="h-20 sm:h-28 w-full object-contain bg-white dark:bg-gray-700 rounded mb-2 p-2">
+                  {% endif %}
+                  <p class="font-bold text-base sm:text-lg">{{ league.name }}</p>
+                  <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    Inbjudningskod:
+                    <span class="font-mono bg-gray-200 dark:bg-gray-600 px-1 sm:px-2 py-0.5 sm:py-1 rounded text-xs sm:text-sm">
+                      {{ league.invite_code }}
+                    </span>
+                  </p>
+                </a>
+                <div class="flex flex-wrap gap-2 mt-2 sm:mt-3">
+                  {% if league.creator_id != session["user_id"] %}
+                  <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
+                        onsubmit="return confirm('Vill du lämna denna liga?');">
+                    <button type="submit"
+                            class="flex items-center gap-1 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold px-2 sm:px-3 py-1 rounded text-xs sm:text-sm transition">
+                      🚪 Lämna
+                    </button>
+                  </form>
+                  {% endif %}
+                  {% if league.creator_id == session["user_id"] %}
+                  <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
+                        onsubmit="return confirm('Är du säker på att du vill radera denna liga permanent?');">
+                    <button type="submit"
+                            class="flex items-center gap-1 bg-red-700 hover:bg-red-800 text-white font-bold px-2 sm:px-3 py-1 rounded text-xs sm:text-sm shadow transition">
+                      ❌ Ta bort
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-gray-500 text-sm sm:text-base">Du är inte med i några ligor än.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

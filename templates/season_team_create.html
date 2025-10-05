@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skapa ditt Säsongsteam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .rider-card:hover { transform: translateY(-5px); }
+        .btn-add:disabled { background-color: #4b5563; cursor: not-allowed; opacity: 0.5; }
+        .rule-valid { color: #22c55e; }
+        .rule-invalid { color: #ef4444; }
+        #toast { position: fixed; bottom: 20px; left: 50%;
+                 transform: translateX(-50%) translateY(100px);
+                 padding: 16px 24px; border-radius: 8px;
+                 color: white; font-weight: bold;
+                 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                 transition: transform 0.3s ease-in-out; z-index: 1000; }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.success { background-color: #22c55e; }
+        #toast.error { background-color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
+    <div id="toast"></div>
+    <div class="container mx-auto p-4 md:p-8">
+        <div class="flex justify-between items-center mb-8">
+            <header>
+                <h1 class="text-4xl md:text-5xl font-bold text-blue-500">Skapa ditt Säsongsteam</h1>
+                <p class="text-lg mt-2 text-gray-600 dark:text-gray-400">
+                    Inloggad som: <strong>{{ username }}</strong>
+                </p>
+            </header>
+            <a href="{{ url_for('index') }}" 
+               class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+               Tillbaka
+            </a>
+        </div>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Riderlista -->
+            <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Välj Förare</h2>
+                <div id="rider-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {% for rider in riders %}
+                    <div class="rider-card bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-md flex flex-col justify-between transition-transform">
+                        <div>
+                            <h3 class="font-bold text-lg">{{ rider.name }}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ rider.class }}</p>
+                            <p class="font-semibold text-green-500 mt-2">${{ "{:,.0f}".format(rider.price) }}</p>
+                        </div>
+                        <button onclick='selectRider({{ rider.id }}, {{ rider.price }})'
+                                data-rider-id="{{ rider.id }}"
+                                data-rider-class="{{ rider.class }}"
+                                data-rider-name="{{ rider.name }}"
+                                data-rider-price="{{ rider.price }}"
+                                class="btn-add mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                            Välj
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Ditt team -->
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg h-fit sticky top-8">
+                <h2 class="text-2xl font-semibold mb-4 border-b pb-2">Ditt Team</h2>
+                <div class="mb-4">
+                    <label for="team-name-input" class="block dark:text-gray-300 mb-2">Teamnamn:</label>
+                    <input type="text" id="team-name-input"
+                           class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600"
+                           placeholder="T.ex. Team Awesome">
+                </div>
+
+                <div class="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
+                    <h4 class="font-semibold mb-2">Regler:</h4>
+                    <ul class="space-y-1 text-sm">
+                        <li id="rule-total" class="flex justify-between"><span>Totalt:</span><span>0 / 4</span></li>
+                        <li id="rule-450" class="flex justify-between"><span>450cc:</span><span>0 / 2</span></li>
+                        <li id="rule-250" class="flex justify-between"><span>250cc:</span><span>0 / 2</span></li>
+                        <li id="rule-budget" class="flex justify-between"><span>Budget:</span><span id="budget-remaining">$1,500,000</span></li>
+                    </ul>
+                </div>
+
+                <div id="your-team-list" class="space-y-3"></div>
+
+                <button onclick="saveSeasonTeam()"
+                        id="save-team-btn"
+                        class="mt-6 w-full bg-green-600 font-bold py-2 px-4 rounded text-white"
+                        disabled>
+                    Spara Team
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const totalBudget = 1500000;
+        let budget = totalBudget;
+        let myTeam = [];
+        const allRiders = {{ riders | tojson | safe }};
+
+        function showToast(msg, ok=true){
+            const t=document.getElementById("toast");
+            t.textContent=msg;
+            t.className= ok?"success":"error";
+            t.classList.add("show");
+            setTimeout(()=>t.classList.remove("show"),3000);
+        }
+
+        function updateUI(){
+            document.getElementById("budget-remaining").textContent =
+              new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0})
+              .format(budget);
+
+            const list=document.getElementById("your-team-list");
+            list.innerHTML = myTeam.length? "" : "<p class='text-gray-500'>Välj förare från listan.</p>";
+
+            myTeam.forEach(r=>{
+                const div=document.createElement("div");
+                div.className="flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-3 rounded-md";
+                div.innerHTML=`<div><p class="font-semibold">${r.name}</p>
+                                <p class="text-xs text-gray-500">$${r.price}</p></div>
+                               <button onclick="removeRider(${r.id})" class="text-red-500 font-bold">✕</button>`;
+                list.appendChild(div);
+            });
+
+            const c450=myTeam.filter(r=>r.class==="450cc").length;
+            const c250=myTeam.filter(r=>r.class==="250cc").length;
+            const total=myTeam.length;
+
+            const rule=(id,ok,txt)=>{
+                const li=document.getElementById(id);
+                li.querySelector("span:last-child").textContent=txt;
+                li.className=(ok?"rule-valid":"rule-invalid")+" flex justify-between";
+            };
+            rule("rule-total",total===4,`${total} / 4`);
+            rule("rule-450",c450===2,`${c450} / 2`);
+            rule("rule-250",c250===2,`${c250} / 2`);
+            rule("rule-budget",budget>=0,`$${budget.toLocaleString()}`);
+
+            document.querySelectorAll(".btn-add").forEach(btn=>{
+                const rid=parseInt(btn.dataset.riderId);
+                const rider=allRiders.find(r=>r.id===rid);
+                const isSelected=myTeam.some(r=>r.id===rid);
+
+                if(isSelected){
+                    btn.disabled=true;
+                    btn.textContent="Vald";  // 🔥 Endast denna markeras som vald
+                }else{
+                    btn.textContent="Välj";
+                    let ok=true;
+                    if(total>=4) ok=false;
+                    if(rider.class==="450cc" && c450>=2) ok=false;
+                    if(rider.class==="250cc" && c250>=2) ok=false;
+                    if(rider.price>budget) ok=false;
+                    btn.disabled=!ok;
+                }
+            });
+
+            const save=document.getElementById("save-team-btn");
+            const valid= total===4 && c450===2 && c250===2 && budget>=0;
+            save.disabled=!valid;
+            save.textContent=valid?"Spara Team":"Team Ogiltigt";
+        }
+
+        function selectRider(id, price){
+            const rider=allRiders.find(r=>r.id===id);
+            if(!rider) return;
+            if(budget-price<0){ showToast("Inte nog budget!",false); return;}
+            myTeam.push(rider);
+            budget-=price;
+            updateUI();
+        }
+
+        function removeRider(id){
+            const i=myTeam.findIndex(r=>r.id===id);
+            if(i>-1){
+                budget+=myTeam[i].price;
+                myTeam.splice(i,1);
+                updateUI();
+            }
+        }
+
+        async function saveSeasonTeam(){
+            const name=document.getElementById("team-name-input").value.trim();
+            if(!name){ showToast("Du måste ange teamnamn",false);return;}
+            try{
+                const body={ team: myTeam.map(r=>({id:r.id})), team_name:name };
+                const res=await fetch("/save_season_team",{
+                    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+                });
+                const result=await res.json();
+                if(res.ok){
+                    showToast(result.message||"Team sparat!",true);
+                    setTimeout(()=>window.location.href="/season_team",1200);
+                }else{
+                    showToast(result.message||"Fel vid sparning",false);
+                }
+            }catch(e){
+                console.error(e); showToast("Serverfel",false);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", updateUI);
+    </script>
+</body>
+</html>

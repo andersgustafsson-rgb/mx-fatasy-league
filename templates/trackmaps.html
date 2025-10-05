@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Track Maps 2026 – Supercross</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .thumb { opacity: .6; cursor: pointer; border: 2px solid transparent; }
+    .thumb.active { opacity: 1; border-color: #60a5fa; }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-blue-500">Track Maps – AMA Supercross 2026</h1>
+      <a href="{{ url_for('index') }}"
+         class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-4 py-2 rounded">⬅ Tillbaka</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {% for c in competitions %}
+        <div id="track-{{ c.id }}" class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 transition ring-0">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ c.name }}</h2>
+            <span class="text-xs bg-indigo-600 text-white px-2 py-1 rounded">
+              {{ c.event_date }}
+            </span>
+          </div>
+
+          {% set imgs = c.images.order_by('sort_order').all() %}
+          <div class="rounded bg-gray-50 dark:bg-gray-700 p-2 flex flex-col items-center">
+            {% if imgs and imgs|length > 0 %}
+              <img id="main-{{ c.id }}"
+                   src="{{ url_for('static', filename=imgs[0].image_url) }}"
+                   alt="Track Map {{ c.name }}"
+                   class="w-full max-h-72 object-contain rounded mb-2">
+              <div class="flex flex-wrap gap-2 justify-center">
+                {% for im in imgs[:5] %}
+                  <img src="{{ url_for('static', filename=im.image_url) }}"
+                       class="thumb w-20 h-16 object-cover rounded {% if loop.first %}active{% endif %}"
+                       onclick="setMain('{{ c.id }}', this.src, this)">
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-center text-gray-500 py-6">
+                <p>Inga track maps uppladdade ännu</p>
+                <p class="text-xs">Kom tillbaka senare</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    function setMain(cid, src, thumbEl){
+      const main = document.getElementById('main-'+cid);
+      if(main) main.src = src;
+      const container = thumbEl.parentElement;
+      container.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+      thumbEl.classList.add('active');
+    }
+
+    // Scrolla mjukt och highlighta när man kommer med #track-<id>
+    function highlightFromHash(){
+      if (!location.hash) return;
+      const el = document.querySelector(location.hash);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("ring-2","ring-blue-400");
+      setTimeout(()=> el.classList.remove("ring-2","ring-blue-400"), 1600);
+    }
+
+    document.addEventListener("DOMContentLoaded", highlightFromHash);
+    window.addEventListener("hashchange", highlightFromHash);
+  </script>
+</body>
+</html>

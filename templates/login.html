@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logga in - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen">
+    <div class="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg">
+        <div class="flex justify-center items-center gap-4 mb-6">
+            <!-- STORLEKEN DUBBLAD HÄR -->
+            <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League Logotyp" class="h-32 w-32">
+            <h1 class="text-3xl font-bold text-center text-blue-500">MX Fantasy League</h1>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2">Användarnamn</label>
+                <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2">Lösenord</label>
+                <input type="password" id="password" name="password" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600" required>
+            </div>
+            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                Logga in
+            </button>
+        </form>
+        <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
+            Har du inget konto? <a href="{{ url_for('register') }}" class="text-blue-500 hover:underline">Registrera dig här</a>
+        </p>
+    </div>
+</body>
+</html>
+

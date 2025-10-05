@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skapa ditt Säsongsteam</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .rider-card:hover { transform: translateY(-4px); }
+    .btn-add:disabled { background-color: #4b5563; cursor: not-allowed; opacity: 0.6; }
+    .rule-valid { color: #22c55e; }
+    .rule-invalid { color: #ef4444; }
+    #toast { position: fixed; bottom: 20px; left: 50%;
+             transform: translateX(-50%) translateY(100px);
+             padding: 16px 24px; border-radius: 8px;
+             color: white; font-weight: bold;
+             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+             transition: transform 0.3s ease-in-out; z-index: 1000; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { background-color: #22c55e; }
+    #toast.error { background-color: #ef4444; }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
+  <div id="toast"></div>
+
+  <div class="container mx-auto p-3 sm:p-4 md:p-8">
+    <!-- Header - Responsiv layout -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
+      <header>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-500">Skapa ditt Säsongsteam</h1>
+        <p class="text-base sm:text-lg mt-2 text-gray-600 dark:text-gray-400">
+          Inloggad som: <strong>{{ username }}</strong>
+        </p>
+      </header>
+      <a href="{{ url_for('index') }}"
+         class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base self-start sm:self-center">
+        Tillbaka
+      </a>
+    </div>
+
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+      <!-- Riderlista -->
+      <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Välj Förare</h2>
+
+        <div class="mb-3 sm:mb-4 flex flex-wrap gap-2">
+          <button id="tab-all" class="px-2 sm:px-3 py-1 rounded bg-blue-600 text-white text-xs sm:text-sm" onclick="setFilter('all')">
+            Alla
+          </button>
+          <button id="tab-450" class="px-2 sm:px-3 py-1 rounded bg-gray-700 text-white text-xs sm:text-sm" onclick="setFilter('450cc')">
+            450cc
+          </button>
+          <button id="tab-250" class="px-2 sm:px-3 py-1 rounded bg-gray-700 text-white text-xs sm:text-sm" onclick="setFilter('250cc')">
+            250cc
+          </button>
+          <span class="text-xs text-gray-400 ml-2">(Klicka på + för att lägga till)</span>
+        </div>
+
+        <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+      </div>
+
+      <!-- Ditt team -->
+      <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg h-fit sticky top-4 sm:top-8">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Ditt Team</h2>
+
+        <div class="mb-3 sm:mb-4">
+          <label for="team-name-input" class="block dark:text-gray-300 mb-1 sm:mb-2 text-sm sm:text-base">Teamnamn:</label>
+          <input type="text" id="team-name-input"
+                 class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base"
+                 placeholder="T.ex. Team Awesome" oninput="validateAndRender()" />
+        </div>
+
+        <div class="mb-3 sm:mb-4 p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
+          <h4 class="font-semibold mb-2 text-sm sm:text-base">Regler:</h4>
+          <ul class="space-y-1 text-xs sm:text-sm">
+            <li id="rule-total" class="flex justify-between"><span>Totalt:</span><span>0 / 4</span></li>
+            <li id="rule-450" class="flex justify-between"><span>450cc:</span><span>0 / 2</span></li>
+            <li id="rule-250" class="flex justify-between"><span>250cc:</span><span>0 / 2</span></li>
+            <li id="rule-budget" class="flex justify-between"><span>Budget:</span>
+              <span id="budget-remaining">1 500 000</span>
+            </li>
+          </ul>
+        </div>
+
+        <div id="your-team-list" class="space-y-2 sm:space-y-3"></div>
+
+        <button onclick="saveSeasonTeam()"
+                id="save-team-btn"
+                class="mt-4 sm:mt-6 w-full bg-green-600 hover:bg-green-700 font-bold py-2 px-3 sm:px-4 rounded text-white disabled:opacity-60 text-sm sm:text-base"
+                disabled>
+          Spara Team
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Data från servern (se till att du skickar 'riders' i samma format som tidigare)
+    const allRiders = {{ riders | tojson | safe }};
+
+    // Konfiguration
+    const totalBudget = 1500000;
+
+    // App-state
+    let budget = totalBudget;
+    let myTeam = [];
+    let classFilter = "all";
+
+    function showToast(msg, ok = true) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.className = ok ? "success" : "error";
+      t.classList.add("show");
+      setTimeout(() => t.classList.remove("show"), 2500);
+    }
+
+    function setFilter(cls) {
+      classFilter = cls;
+      document.getElementById("tab-all").className =
+        "px-3 py-1 rounded " + (cls === "all" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
+      document.getElementById("tab-450").className =
+        "px-3 py-1 rounded " + (cls === "450cc" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
+      document.getElementById("tab-250").className =
+        "px-3 py-1 rounded " + (cls === "250cc" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
+
+      renderRiderList();
+    }
+
+    function formatCurrency(v) {
+      return new Intl.NumberFormat("sv-SE").format(v);
+    }
+
+    function riderCardHTML(r) {
+      // Bygg HTML för rider-kortet: visa image_url om finns, annars logga/placeholder
+      const imgHtml = r.image_url
+        ? `<img src="${window.location.origin}${window.location.pathname.includes('/static') ? '' : ''}${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
+                alt="${r.name} headshot"
+                class="w-10 h-10 object-cover rounded-full" width="40" height="40" />`
+        : (r.bike_brand
+              ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
+                   alt="${r.bike_brand} logo"
+                   class="w-10 h-10 object-contain" width="40" height="40" />`
+            : `<div class="w-10 h-10 bg-gray-600 rounded-full"></div>`);
+
+      return `
+        <div class="rider-card bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow flex items-center gap-3 transition-transform">
+          <div class="flex-shrink-0">${imgHtml}</div>
+          <div class="flex-1">
+            <div class="font-bold">${r.name}</div>
+            <div class="text-xs text-gray-600 dark:text-gray-300">
+              ${r.class} • #${r.rider_number || "-"}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">${r.bike_brand || "—"}</div>
+            <div class="font-semibold text-green-600 mt-1">${formatCurrency(r.price)} kr</div>
+          </div>
+          <button class="btn-add px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                  ${!canAddRider(r) ? "disabled" : ""}>
+            ${myTeam.some(x => x.id === r.id) ? "Vald" : "Lägg till +"}
+          </button>
+        </div>
+      `;
+    }
+
+    function renderRiderList() {
+      const container = document.getElementById("rider-list");
+      container.innerHTML = "";
+      const filtered = allRiders.filter(
+        (r) => classFilter === "all" || r.class === classFilter
+      );
+
+      filtered.forEach((r) => {
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = riderCardHTML(r);
+        const btn = wrapper.querySelector(".btn-add");
+        btn.onclick = () => addRider(r);
+        container.appendChild(wrapper.firstElementChild);
+      });
+    }
+
+    function canAddRider(r) {
+      if (myTeam.length >= 4) return false;
+      if (r.price > budget) return false;
+      const c450 = myTeam.filter((x) => x.class === "450cc").length;
+      const c250 = myTeam.filter((x) => x.class === "250cc").length;
+      if (r.class === "450cc" && c450 >= 2) return false;
+      if (r.class === "250cc" && c250 >= 2) return false;
+      return true;
+    }
+
+    function addRider(r) {
+      if (!canAddRider(r)) return;
+      if (myTeam.some((x) => x.id === r.id)) return;
+      myTeam.push(r);
+      budget -= r.price;
+      validateAndRender();
+    }
+
+    function removeRider(id) {
+      const idx = myTeam.findIndex((x) => x.id === id);
+      if (idx > -1) {
+        budget += myTeam[idx].price;
+        myTeam.splice(idx, 1);
+        validateAndRender();
+      }
+    }
+
+    function validateAndRender() {
+      // Render teamlistan
+      const list = document.getElementById("your-team-list");
+      list.innerHTML = myTeam.length ? "" : "<p class='text-gray-500'>Välj förare från listan.</p>";
+
+      myTeam.forEach((r) => {
+        const row = document.createElement("div");
+        row.className = "flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-3 rounded-md";
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            ${r.image_url
+              ? `<img src="${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
+                       alt="${r.name} headshot"
+                       class="w-8 h-8 object-cover rounded-full" width="32" height="32" />`
+              : (r.bike_brand
+                  ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
+                         alt="${r.bike_brand} logo"
+                         class="w-8 h-8 object-contain" width="32" height="32" />`
+                  : `<div class="w-8 h-8 bg-gray-600 rounded-full"></div>`)}
+            <div>
+              <div class="font-semibold">${r.name}</div>
+              <div class="text-xs text-gray-500">${r.class} • #${r.rider_number || "-"}</div>
+            </div>
+          </div>
+          <button class="text-red-500 font-bold" onclick="removeRider(${r.id})">✕</button>
+        `;
+        list.appendChild(row);
+      });
+
+      // Regler
+      const c450 = myTeam.filter((x) => x.class === "450cc").length;
+      const c250 = myTeam.filter((x) => x.class === "250cc").length;
+      const total = myTeam.length;
+
+      const rule = (id, ok, txt) => {
+        const li = document.getElementById(id);
+        li.querySelector("span:last-child").textContent = txt;
+        li.className = (ok ? "rule-valid" : "rule-invalid") + " flex justify-between";
+      };
+
+      document.getElementById("budget-remaining").textContent = formatCurrency(budget);
+      rule("rule-total", total === 4, `${total} / 4`);
+      rule("rule-450", c450 === 2, `${c450} / 2`);
+      rule("rule-250", c250 === 2, `${c250} / 2`);
+      rule("rule-budget", budget >= 0, `${formatCurrency(budget)}`);
+
+      // Uppdatera riderlista (disable knappar)
+      renderRiderList();
+
+      // Aktivera Spara om valid
+      const save = document.getElementById("save-team-btn");
+      const valid =
+        total === 4 &&
+        c450 === 2 &&
+        c250 === 2 &&
+        budget >= 0 &&
+        document.getElementById("team-name-input").value.trim();
+      save.disabled = !valid;
+    }
+
+    async function saveSeasonTeam() {
+      const name = document.getElementById("team-name-input").value.trim();
+      if (!name) { showToast("Du måste ange teamnamn", false); return; }
+      if (myTeam.length !== 4) { showToast("Du måste välja exakt 4 förare", false); return; }
+      const c450 = myTeam.filter((x) => x.class === "450cc").length;
+      const c250 = myTeam.filter((x) => x.class === "250cc").length;
+      if (c450 !== 2 || c250 !== 2) { showToast("Regel: 2×450cc och 2×250cc", false); return; }
+
+      const payload = {
+        team_name: name,
+        team: myTeam.map((r) => ({ id: r.id })),
+      };
+
+      try {
+        const resp = await fetch("/save_season_team", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+          showToast(data.message || "Kunde inte spara teamet.", false);
+          return;
+        }
+        showToast(data.message || "Team sparat!", true);
+        setTimeout(() => (window.location.href = "/season_team"), 600);
+      } catch (e) {
+        console.error(e);
+        showToast("Nätverksfel vid sparning", false);
+      }
+    }
+
+    // Init
+    document.addEventListener("DOMContentLoaded", () => {
+      setFilter("all");
+      validateAndRender();
+    });
+  </script>
+</body>
+</html>

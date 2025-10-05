@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ competition.name }} - Race Picks</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+  .result-correct { border-left: 4px solid #22c55e; }
+  .dark .result-correct { background-color: rgba(34, 197, 94, 0.1); }
+  .result-close { border-left: 4px solid #eab308; }
+  .dark .result-close { background-color: rgba(234, 179, 8, 0.1); }
+  .picks-locked { pointer-events: none; opacity: 0.6; }
+
+  /* Smalare rader + mindre preview */
+  .pick-row { grid-template-columns: 32px 1fr; gap: 10px; align-items: center; }
+  .preview-img {
+    width: 28px; height: 28px; border-radius: 9999px;
+    object-fit: cover; background: #4b5563; opacity: .85;
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .preview-img.has-src { opacity: 1; }
+  .pick-select-sm {
+    padding-top: .4rem; padding-bottom: .4rem;  /* ~py-1.5 */
+    font-size: .875rem; /* text-sm */
+    line-height: 1.25rem;
+  }
+  .section-narrow { max-width: 960px; }
+</style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-3 sm:p-4 md:p-6">
+
+    <!-- Header - Responsiv layout -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-4">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 break-words">{{ competition.name }}</h1>
+
+        {# Visa datum om du har det #}
+        {% if competition.event_date %}
+          <p class="text-xs sm:text-sm text-gray-400 mt-1">
+            {{ competition.event_date.strftime('%Y-%m-%d') }}
+          </p>
+        {% endif %}
+
+        {# 250SX East/West label #}
+        {% if competition.coast_250 %}
+          <div class="mt-2 inline-flex items-center gap-2">
+            <span class="text-xs text-gray-400">
+              250SX {{ competition.coast_250|capitalize }}
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white">
+              {{ 'W' if competition.coast_250 == 'west' else 'E' }}
+            </span>
+          </div>
+        {% endif %}
+      </div>
+
+      <a href="{{ url_for('index') }}" class="bg-gray-500 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base self-start sm:self-center">
+        ⬅ Tillbaka
+      </a>
+    </div>
+
+
+    {% if not actual_results %}
+    {% set outset = out_ids | default([]) %}
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Gissa topp 6, Holeshot & Wildcard</h2>
+
+<!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
+<div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+
+  <!-- Kolumn: 450cc -->
+  <div>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">450cc</h3>
+    {% for i in range(1, 7) %}
+      <div class="pick-row mb-1.5">
+        <img id="prev-450-{{ i }}" class="preview-img" alt="" />
+        <div class="flex items-center gap-2">
+          <span class="w-8">{{ i }}.</span>
+          <select
+            class="pick-select pick-select-sm w-full border rounded bg-gray-800 text-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            data-class="450cc"
+            data-position="{{ i }}"
+            onchange="onPickChange('450cc', {{ i }})"
+          >
+            <option value="">-- välj förare --</option>
+            {% for rider in riders_450 %}
+              <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
+                #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Kolumn: 250cc -->
+  <div>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">250cc</h3>
+    {% for i in range(1, 7) %}
+      <div class="pick-row mb-1.5">
+        <img id="prev-250-{{ i }}" class="preview-img" alt="" />
+        <div class="flex items-center gap-2">
+          <span class="w-8">{{ i }}.</span>
+          <select
+            class="pick-select pick-select-sm w-full border rounded bg-gray-800 text-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            data-class="250cc"
+            data-position="{{ i }}"
+            onchange="onPickChange('250cc', {{ i }})"
+          >
+            <option value="">-- välj förare --</option>
+            {% for rider in riders_250 %}
+              <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
+                #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+<!-- SLUT: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
+
+
+
+
+    <div class="mt-4 sm:mt-6">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Gissa Holeshot</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div>
+          <label class="block text-sm sm:text-base mb-1">450cc:</label>
+          <select id="holeshot-450" class="w-full pick-select-sm border rounded bg-gray-800 text-white text-sm sm:text-base">
+  <option value="">-- välj förare --</option>
+  {% for rider in riders_450 %}
+    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
+      {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+    </option>
+  {% endfor %}
+
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm sm:text-base mb-1">250cc:</label>
+          <select id="holeshot-250" class="w-full pick-select-sm border rounded bg-gray-800 text-white text-sm sm:text-base">
+  <option value="">-- välj förare --</option>
+  {% for rider in riders_250 %}
+    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
+      {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+    </option>
+  {% endfor %}
+
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-100 dark:bg-purple-800 rounded">
+      <h3 class="font-bold text-base sm:text-lg text-purple-900 dark:text-purple-200">🎲 Wildcard – slumpa en plats (10–20) & välj en 450cc‑förare</h3>
+      <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:items-center">
+        <button type="button" id="wildcard-roll-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm sm:text-base" onclick="rollWildcard()">Slumpa plats</button>
+        <span id="wildcard-position-label" class="font-bold text-purple-900 dark:text-purple-100 text-sm sm:text-base"></span>
+        <input type="hidden" id="wildcard-position" />
+        <select id="wildcard-pick" class="flex-1 pick-select-sm border rounded bg-white dark:bg-gray-700 text-sm sm:text-base">
+  <option value="">-- välj 450cc förare --</option>
+  {% for rider in riders_450 %}
+    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
+      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+    </option>
+  {% endfor %}
+
+        </select>
+      </div>
+    </div>
+
+    <button onclick="savePicks()" class="mt-4 sm:mt-6 w-full bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
+
+    {% else %}
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Resultat vs Dina Val</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+      <div>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">450cc</h3>
+        <div id="results-450" class="space-y-1 sm:space-y-2"></div>
+      </div>
+      <div>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">250cc</h3>
+        <div id="results-250" class="space-y-1 sm:space-y-2"></div>
+      </div>
+    </div>
+
+    <div class="mt-4 sm:mt-6">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Holeshot Resultat</h3>
+      <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
+    </div>
+
+    <div class="mt-4 sm:mt-6">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Wildcard Resultat</h3>
+      <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-100 dark:bg-purple-700 rounded"></div>
+    </div>
+    {% endif %}
+  </div>
+
+
+<script>
+  // Serverdata
+  const competitionId = {{ competition.id|tojson }};
+  const actualResults = {{ actual_results|tojson }};
+  const holeshotResults = {{ holeshot_results|tojson }};
+  const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
+  // NYTT: OUT-lista från servern för att kunna validera i UI
+  const OUT_IDS = {{ out_ids | tojson }};
+
+  function updateDropdowns(riderClass) {
+    const selects = document.querySelectorAll(
+      `.pick-select[data-class="${riderClass}"]`
+    );
+
+    // 1) Nollställ om någon råkar ha en OUT vald i denna klass
+    selects.forEach((sel) => {
+      const val = sel.value;
+      if (val && OUT_IDS.includes(Number(val))) {
+        sel.value = "";
+      }
+    });
+
+    // 2) Håll övriga regler (unika val per klass) + OUT alltid disabled
+    const chosenRiderIds = Array.from(selects)
+      .map((s) => s.value)
+      .filter(Boolean);
+
+    selects.forEach((sel) => {
+      for (const opt of sel.options) {
+        if (!opt.value) continue;
+        const isChosenElsewhere =
+          chosenRiderIds.includes(opt.value) && sel.value !== opt.value;
+        const isOut = OUT_IDS.includes(Number(opt.value));
+        opt.disabled = isChosenElsewhere || isOut;
+      }
+    });
+  }
+
+  const findRiderName = (id) => {
+    const r = allRiders.find((x) => String(x.id) === String(id));
+    return r ? r.name : "Okänd";
+  };
+
+  // Bygg bild-URL från rider-data: headshot först, annars brand-logga
+function imgSrcFor(riderId) {
+  const r = allRiders.find((x) => Number(x.id) === Number(riderId));
+  if (!r) return null;
+  if (r.image_url) return `/static/${r.image_url}`;
+  if (r.bike_brand) return `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+  return null;
+}
+function onPickChange(cls, pos) {
+  const sel = document.querySelector(
+    `.pick-select[data-class="${cls}"][data-position="${pos}"]`
+  );
+  const imgId = cls.startsWith("450") ? `prev-450-${pos}` : `prev-250-${pos}`;
+  const img = document.getElementById(imgId);
+
+  const val = sel?.value;
+  const src = val ? imgSrcFor(val) : null;
+  if (img) {
+    if (src) {
+      img.src = src;
+      img.classList.add("has-src"); // gör preview tydligare
+      img.style.background = "transparent";
+    } else {
+      img.removeAttribute("src");
+      img.classList.remove("has-src");
+      img.style.background = "#4b5563";
+    }
+  }
+
+  updateDropdowns(cls);
+}
+
+  async function displayResults(myPicks) {
+    if (!actualResults || actualResults.length === 0) return;
+
+    ["450", "250"].forEach((cls) => {
+      const container = document.getElementById(`results-${cls}`);
+      let html = "";
+      for (let i = 1; i <= 6; i++) {
+        const result = actualResults.find(
+          (r) => r.class && r.class.startsWith(cls) && r.position === i
+        );
+        const pick = myPicks.top6_picks.find(
+          (p) =>
+            p.class && p.class.startsWith(cls) && p.predicted_position === i
+        );
+
+        if (!result && !pick) continue;
+
+        const resultName = result ? `${findRiderName(result.id)}` : "Inget resultat";
+        const pickName = pick ? `${findRiderName(pick.rider_id)}` : "Inget val";
+
+        let cardClass = "bg-gray-50 dark:bg-gray-700";
+        if (pick && result && String(pick.rider_id) === String(result.id)) {
+          cardClass += " result-correct";
+        } else if (
+          pick &&
+          actualResults.some(
+            (r) =>
+              String(r.id) === String(pick.rider_id) &&
+              r.class &&
+              r.class.startsWith(cls) &&
+              r.position <= 6
+          )
+        ) {
+          cardClass += " result-close";
+        }
+
+        html += `
+          <div class="p-3 rounded ${cardClass}">
+            <p class="font-bold">${i}. ${resultName}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 pl-4">Ditt val: ${pickName}</p>
+          </div>`;
+      }
+      if (container) container.innerHTML = html;
+    });
+
+    const hsContainer = document.getElementById("holeshot-results");
+    if (hsContainer) {
+      hsContainer.innerHTML = ["450cc", "250cc"]
+        .map((cls) => {
+          const result = holeshotResults.find((r) => r.class === cls);
+          const pickId = myPicks.holeshot_picks[cls];
+          const pickName = pickId ? findRiderName(pickId) : "Inget val";
+          const resultName = result ? findRiderName(result.rider_id) : "Inget resultat";
+
+          let cardClass = "bg-gray-50 dark:bg-gray-700";
+          if (result && pickId && String(result.rider_id) === String(pickId)) {
+            cardClass += " result-correct";
+          }
+          return `
+            <div class="p-3 rounded ${cardClass}">
+              <p class="font-bold">${cls}: ${resultName}</p>
+              <p class="text-sm text-gray-500 dark:text-gray-400 pl-4">Ditt val: ${pickName}</p>
+            </div>`;
+        })
+        .join("");
+    }
+  }
+
+  async function fetchAndDisplayMyPicks() {
+    try {
+      const res = await fetch(`/get_my_picks/${competitionId}`);
+      if (!res.ok) throw new Error("Kunde inte hämta dina val");
+      const myPicks = await res.json();
+
+      if (!actualResults || actualResults.length === 0) {
+        // Återställ tidigare val i UI
+        (myPicks.top6_picks || []).forEach((p) => {
+          const sel = document.querySelector(
+            `.pick-select[data-class="${p.class}"][data-position="${p.predicted_position}"]`
+          );
+          if (sel) sel.value = p.rider_id;
+          // Sätt förhandsbild för tidigare val
+const imgId = p.class.startsWith("450")
+  ? `prev-450-${p.predicted_position}`
+  : `prev-250-${p.predicted_position}`;
+const img = document.getElementById(imgId);
+const src = imgSrcFor(p.rider_id);
+if (img && src) {
+  img.src = src;
+  img.style.background = "transparent";
+}
+        });
+        if (myPicks.holeshot_picks?.["450cc"])
+          document.getElementById("holeshot-450").value =
+            myPicks.holeshot_picks["450cc"];
+        if (myPicks.holeshot_picks?.["250cc"])
+          document.getElementById("holeshot-250").value =
+            myPicks.holeshot_picks["250cc"];
+        if (myPicks.wildcard_pick)
+          document.getElementById("wildcard-pick").value =
+            myPicks.wildcard_pick;
+
+        // Wildcard-knapp: lås endast om position faktiskt finns
+        const btn = document.getElementById("wildcard-roll-btn");
+        const posVal = myPicks.wildcard_pos;
+        if (posVal !== null && posVal !== undefined && String(posVal).trim() !== "") {
+          document.getElementById("wildcard-position").value = posVal;
+          document.getElementById("wildcard-position-label").textContent =
+            `Din plats: ${posVal}`;
+          btn.disabled = true;
+          btn.classList.add("opacity-50", "cursor-not-allowed");
+        } else {
+          btn.disabled = false;
+          btn.classList.remove("opacity-50", "cursor-not-allowed");
+          document.getElementById("wildcard-position").value = "";
+          document.getElementById("wildcard-position-label").textContent = "";
+        }
+
+        // Holeshot: rensa om OUT
+const hs450Sel = document.getElementById("holeshot-450");
+if (hs450Sel && hs450Sel.value && OUT_IDS.includes(Number(hs450Sel.value))) {
+  hs450Sel.value = "";
+}
+const hs250Sel = document.getElementById("holeshot-250");
+if (hs250Sel && hs250Sel.value && OUT_IDS.includes(Number(hs250Sel.value))) {
+  hs250Sel.value = "";
+}
+
+// Wildcard: rensa om OUT
+const wcSel = document.getElementById("wildcard-pick");
+if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
+  wcSel.value = "";
+}
+
+        // NYTT: Rensa bort OUT som råkat ligga kvar som "vald"
+        document.querySelectorAll(".pick-select").forEach((sel) => {
+          const chosen = sel.value;
+          if (chosen && OUT_IDS.includes(Number(chosen))) {
+            sel.value = "";
+          }
+        });
+
+        
+
+        // Applicera disable-regler och OUT disable
+        updateDropdowns("450cc");
+        updateDropdowns("250cc");
+      }
+
+      if (actualResults && actualResults.length > 0) {
+        displayResults(myPicks);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  
+
+
+  async function rollWildcard() {
+    const btn = document.getElementById("wildcard-roll-btn");
+    if (btn.disabled) return;
+    const pos = Math.floor(Math.random() * 11) + 10; // 10-20
+    try {
+      const resp = await fetch("/lock_wildcard_pos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ competition_id: competitionId, position: pos }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        alert(data.error || "Kunde inte låsa wildcard");
+        return;
+      }
+      if (data.status === "locked") {
+        document.getElementById("wildcard-position").value = pos;
+        document.getElementById("wildcard-position-label").textContent =
+          `Din plats: ${pos}`;
+        btn.disabled = true;
+        btn.classList.add("opacity-50", "cursor-not-allowed");
+      } else {
+        alert(data.error || "Kunde inte låsa wildcard");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Nätverksfel vid låsning av wildcard");
+    }
+  }
+
+  async function savePicks() {
+    const picks = Array.from(document.querySelectorAll(".pick-select"))
+      .map((sel) => ({
+        position: sel.dataset.position,
+        rider_id: sel.value,
+        class: sel.dataset.class,
+      }))
+      .filter((p) => p.rider_id);
+
+    // Kontrollera dubletter
+    const riderIds = picks.map(p => p.rider_id);
+    const uniqueRiderIds = [...new Set(riderIds)];
+    if (riderIds.length !== uniqueRiderIds.length) {
+      alert("Du kan inte välja samma förare flera gånger. Välj olika förare för varje position.");
+      return;
+    }
+
+    // Extra säkerhet: client-side filter bort OUT
+    for (const p of picks) {
+      if (OUT_IDS.includes(Number(p.rider_id))) {
+        alert("En vald förare är OUT. Välj en annan.");
+        return;
+      }
+    }
+
+    const payload = {
+      competition_id: competitionId,
+      picks: picks,
+      holeshot_450: document.getElementById("holeshot-450")?.value,
+      holeshot_250: document.getElementById("holeshot-250")?.value,
+      wildcard_pick: document.getElementById("wildcard-pick")?.value,
+      wildcard_pos: document.getElementById("wildcard-position")?.value,
+    };
+
+    try {
+      const resp = await fetch("/save_picks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      alert(data.message || data.error || "Ok");
+    } catch (e) {
+      alert("Ett fel uppstod vid sparning.");
+    }
+  }
+
+  ["holeshot-450", "holeshot-250", "wildcard-pick"].forEach((id) => {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.addEventListener("change", () => {
+    const val = sel.value;
+    if (val && OUT_IDS.includes(Number(val))) {
+      sel.value = "";
+      alert("Föraren är OUT för detta race.");
+    }
+  });
+});
+
+
+  
+
+
+    document.addEventListener("DOMContentLoaded", fetchAndDisplayMyPicks);
+
+window.addEventListener("focus", () => {
+  if (localStorage.getItem("out-updated")) {
+    location.reload();
+  }
+});
+
+</script>
+
+</body>
+</html>

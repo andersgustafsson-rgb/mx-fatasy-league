@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ league.name }} - MX Fantasy League</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-4 md:p-8">
+
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+      <header>
+        <h1 class="text-4xl md:text-5xl font-bold text-blue-500">{{ league.name }}</h1>
+        <p class="text-lg mt-2 text-gray-400">
+          Inbjudningskod:
+          <span class="font-mono bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
+            {{ league.invite_code }}
+          </span>
+        </p>
+      </header>
+      <div class="flex gap-3">
+        <a href="{{ url_for('leagues_page') }}"
+           class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded">
+           Tillbaka till Ligor
+        </a>
+        <a href="{{ url_for('index') }}"
+           class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+           Huvudsidan
+        </a>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Actions -->
+    <div class="flex gap-3 mb-8">
+      {% if league.creator_id != session["user_id"] %}
+      <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
+            onsubmit="return confirm('Är du säker på att du vill lämna ligan?');">
+        <button type="submit"
+                class="flex items-center gap-2 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold px-4 py-2 rounded transition">
+          <span>🚪</span> Lämna liga
+        </button>
+      </form>
+      {% endif %}
+
+      {% if league.creator_id == session["user_id"] %}
+      <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
+            onsubmit="return confirm('Vill du ta bort denna liga permanent?');">
+        <button type="submit"
+                class="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded shadow transition">
+          <span>❌</span> Ta bort liga
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Liga-bild -->
+    {% if league.image_url %}
+    <div class="mb-8 flex justify-center">
+      <img src="{{ league.image_url }}" alt="Ligabild"
+           class="max-h-80 w-full object-contain bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+      <!-- Medlemmar -->
+      <div class="md:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg h-fit">
+        <h2 class="text-2xl font-semibold mb-4">Medlemmar ({{ members|length }})</h2>
+        <ul class="space-y-2">
+          {% for member in members %}
+            <li class="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">{{ member.username }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Leaderboard + Schedule -->
+      <div class="md:col-span-2 space-y-8">
+
+        <!-- Season leaderboard -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-semibold mb-4">Säsongens Leaderboard</h2>
+          <div class="space-y-2">
+            {% if season_leaderboard %}
+              {% for team in season_leaderboard %}
+                <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                  <div>
+                    <span class="font-bold mr-2">{{ loop.index }}.</span>
+                    <span>{{ team.team_name or '—' }}</span>
+                    <span class="text-sm text-gray-500">/ {{ team.username }}</span>
+                  </div>
+                  <span class="font-bold text-green-500">{{ team.total_points }} p</span>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="text-gray-400">Inga säsongsteam skapade än.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+  <h2 class="text-2xl font-semibold mb-4">Schedule</h2>
+  <table class="w-full text-sm border-collapse">
+    <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+      <tr>
+        <th class="p-2 text-left">Datum</th>
+        <th class="p-2 text-left">Tävling</th>
+        <th class="p-2 text-left">250SX</th>
+        <th class="p-2 text-center">Serie</th>
+        <th class="p-2 text-center">Multiplikator</th>
+        <th class="p-2 text-center">Triple Crown</th>
+      </tr>
+    </thead>
+
+    <tbody class="text-gray-800 dark:text-gray-200">
+      {% for race in competitions %}
+      <tr
+        class="border-t border-gray-200/70 dark:border-gray-600/50 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer"
+        onclick="window.location.href='{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}'">
+
+        <!-- Datum -->
+        <td class="p-2">{{ race.event_date }}</td>
+
+        <!-- Tävling -->
+        <td class="p-2">{{ race.name }}</td>
+
+        <!-- 250SX-badge -->
+        <td class="p-2">
+          {% if race.coast_250 == 'both' %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
+                         bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200">
+              Showdown
+            </span>
+          {% elif race.coast_250 in ['east', 'west'] %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
+                         bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200">
+              250SX {{ race.coast_250|capitalize }}
+            </span>
+          {% else %}
+            <span class="text-xs text-gray-400">-</span>
+          {% endif %}
+        </td>
+
+        <!-- Serie -->
+        <td class="p-2 text-center">{{ race.series }}</td>
+
+        <!-- Multiplikator -->
+        <td class="p-2 text-center">{{ race.point_multiplier or 1.0 }}</td>
+
+        <!-- Triple Crown -->
+        <td class="p-2 text-center">
+          {% if race.is_triple_crown %} 👑 Ja {% else %} - {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+      </div>
+    </div>
+  </div>
+</body>
+</html>
