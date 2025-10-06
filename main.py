@@ -421,8 +421,54 @@ def season_team_builder():
     if not user_id:
         return redirect(url_for("login"))
 
-    all_riders = Rider.query.all()
-    return render_template("season_team_builder.html", riders=all_riders)
+    try:
+        all_riders = Rider.query.all()
+        print(f"Found {len(all_riders)} riders for season team builder")
+        return render_template("season_team_builder.html", riders=all_riders)
+    except Exception as e:
+        print(f"Error in season_team_builder: {e}")
+        return f"Error loading riders: {str(e)}", 500
+
+@app.route("/create_season_team", methods=["POST"])
+def create_season_team():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    try:
+        data = request.get_json()
+        team_name = data.get('team_name', 'Mitt Team')
+        rider_ids = data.get('rider_ids', [])
+        
+        # Check if user already has a season team
+        existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        if existing_team:
+            return jsonify({"success": False, "message": "Du har redan ett säsongsteam"})
+        
+        # Create new season team
+        new_team = SeasonTeam(
+            user_id=user_id,
+            team_name=team_name,
+            total_points=0
+        )
+        db.session.add(new_team)
+        db.session.flush()  # Get the team ID
+        
+        # Add riders to team
+        for rider_id in rider_ids:
+            team_rider = SeasonTeamRider(
+                season_team_id=new_team.id,
+                rider_id=rider_id
+            )
+            db.session.add(team_rider)
+        
+        db.session.commit()
+        return jsonify({"success": True, "message": "Säsongsteam skapat!"})
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating season team: {e}")
+        return jsonify({"success": False, "message": f"Fel: {str(e)}"}), 500
 
 @app.route("/my_scores")
 def my_scores():

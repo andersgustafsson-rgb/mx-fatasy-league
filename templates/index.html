@@ -38,7 +38,7 @@
             </a>
             {% endif %}
             <a
-              href="{{ url_for('season_team_page') }}"
+              href="{{ url_for('leagues_page') }}"
               class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
               >Mina Ligor</a
             >
@@ -46,6 +46,11 @@
               href="{{ url_for('my_scores') }}"
               class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
               >Mina Poäng</a
+            >
+            <a
+              href="{{ url_for('season_team_page') }}"
+              class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
+              >Säsongsteam</a
             >
             <a
               href="{{ url_for('logout') }}"
