@@ -1794,29 +1794,29 @@ def fix_database_route():
         # Create riders
         Rider.query.delete()
         riders_450 = [
-            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
-            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
-            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
-            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'}
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 1},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 23},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 21},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki', 'rider_number': 94},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 51},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 7},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 27},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 14},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 9}
         ]
         
         riders_250 = [
-            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
-            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
-            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'}
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 18},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 96},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 24},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 34},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 48},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 77},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 33},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 30},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 47}
         ]
         
         all_riders = riders_450 + riders_250
@@ -1887,29 +1887,29 @@ def create_test_user_route():
     # Create riders if they don't exist
     if Rider.query.count() == 0:
         riders_450 = [
-            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
-            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
-            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
-            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'}
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 1},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 23},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 21},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki', 'rider_number': 94},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 51},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 7},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 27},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 14},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 9}
         ]
         
         riders_250 = [
-            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
-            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
-            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'}
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 18},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 96},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 24},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 34},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 48},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 77},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 33},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 30},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 47}
         ]
         
         all_riders = riders_450 + riders_250
@@ -2095,16 +2095,16 @@ def create_test_data():
     # Create all Supercross 2025 riders
     if Rider.query.count() == 0:
         riders_450 = [
-            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
-            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
-            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
-            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
-            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 1},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 23},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 21},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki', 'rider_number': 94},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas', 'rider_number': 51},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 7},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna', 'rider_number': 27},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 14},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'rider_number': 9},
             {'name': 'Christian Craig', 'class_name': '450cc', 'bike_brand': 'Honda'},
             {'name': 'Dean Wilson', 'class_name': '450cc', 'bike_brand': 'Honda'},
             {'name': 'Shane McElrath', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
@@ -2156,16 +2156,16 @@ def create_test_data():
         ]
         
         riders_250 = [
-            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
-            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
-            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
-            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
-            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
-            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
-            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 18},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 96},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 24},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 34},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 48},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 77},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'rider_number': 33},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 30},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 47},
             {'name': 'Jo Shimoda', 'class_name': '250cc', 'bike_brand': 'Honda'},
             {'name': 'Nate Thrasher', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
             {'name': 'Tom Vialle', 'class_name': '250cc', 'bike_brand': 'KTM'},
