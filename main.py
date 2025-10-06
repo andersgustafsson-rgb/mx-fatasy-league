@@ -1424,8 +1424,7 @@ def create_user_now_route():
         
         test_user = User(
             username='test',
-            password_hash=generate_password_hash('password'),
-            email='test@example.com'
+            password_hash=generate_password_hash('password')
         )
         
         db.session.add(test_user)
@@ -1451,8 +1450,7 @@ def create_test2_user_route():
         
         test2_user = User(
             username='test2',
-            password_hash=generate_password_hash('password'),
-            email='test2@example.com'
+            password_hash=generate_password_hash('password')
         )
         
         db.session.add(test2_user)
@@ -1530,7 +1528,7 @@ def debug_users_route():
         all_users = User.query.all()
         user_list = []
         for user in all_users:
-            user_list.append(f"ID: {user.id}, Username: '{user.username}', Email: {user.email}")
+            user_list.append(f"ID: {user.id}, Username: '{user.username}'")
         
         # Create test user if missing
         test_user = User.query.filter_by(username='test').first()
@@ -1582,16 +1580,14 @@ def force_create_users_route():
         # Create test user (admin)
         test_user = User(
             username='test',
-            password_hash=generate_password_hash('password'),
-            email='test@example.com'
+            password_hash=generate_password_hash('password')
         )
         db.session.add(test_user)
         
         # Create test2 user (normal)
         test2_user = User(
             username='test2',
-            password_hash=generate_password_hash('password'),
-            email='test2@example.com'
+            password_hash=generate_password_hash('password')
         )
         db.session.add(test2_user)
         
@@ -1732,8 +1728,7 @@ def create_test_user_route():
     if not existing_user:
         test_user = User(
             username='test',
-            password_hash=generate_password_hash('password'),
-            email='test@example.com'
+            password_hash=generate_password_hash('password')
         )
         db.session.add(test_user)
         db.session.commit()
@@ -1926,8 +1921,7 @@ def create_test_data():
     if not existing_user:
         test_user = User(
             username='test',
-            password_hash=generate_password_hash('password'),
-            email='test@example.com'
+            password_hash=generate_password_hash('password')
         )
         db.session.add(test_user)
         print("Created test user: test/password")
