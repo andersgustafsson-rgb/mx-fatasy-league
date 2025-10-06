@@ -10,4 +10,4 @@ services:
       - key: FLASK_ENV
         value: production
       - key: DATABASE_URL
-        value: sqlite:///fantasy_mx.db
+        value: sqlite:///app/fantasy_mx.db
