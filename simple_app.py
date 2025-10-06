@@ -338,12 +338,13 @@ def season_team_builder():
         team_riders = db.session.query(Rider).join(SeasonTeamRider).filter(SeasonTeamRider.team_id == my_team.id).all()
     
     all_riders = Rider.query.order_by(Rider.class_name, Rider.name).all()
-    
+
     return render_template('season_team_builder.html',
                          username=user.username,
                          my_team=my_team,
                          team_riders=team_riders,
-                         all_riders=all_riders)
+                         all_riders=all_riders,
+                         riders=all_riders)
 
 @app.route('/race_picks')
 def race_picks():
@@ -386,6 +387,43 @@ def my_scores():
                          total=total,
                          best=best,
                          history=history)
+
+@app.route('/admin/set_sim_date', methods=['POST'])
+def admin_set_sim_date():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if not user or user.username != 'test':
+        flash('Du har inte behörighet att uppdatera simulerat datum', 'error')
+        return redirect(url_for('index'))
+
+    value = request.form.get('sim_date', '').strip()
+
+    # Ensure table exists
+    db.create_all()
+
+    current = SimDate.query.first()
+    if not current:
+        current = SimDate(value=date.today().strftime('%Y-%m-%d'))
+        db.session.add(current)
+
+    if value:
+        # Basic validation YYYY-MM-DD
+        try:
+            datetime.strptime(value, '%Y-%m-%d')
+            current.value = value
+            db.session.commit()
+            flash(f'Simulerat datum satt till {value}', 'success')
+        except ValueError:
+            flash('Ogiltigt datumformat. Använd YYYY-MM-DD.', 'error')
+    else:
+        # Reset to today
+        current.value = date.today().strftime('%Y-%m-%d')
+        db.session.commit()
+        flash('Simulerat datum återställt till idag', 'success')
+
+    return redirect(url_for('admin'))
 
 # API Routes
 @app.route('/get_season_leaderboard')
