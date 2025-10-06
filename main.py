@@ -1608,6 +1608,16 @@ def force_create_users_route():
     except Exception as e:
         return f"<h1>Error:</h1><p>{str(e)}</p>"
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Render"""
+    try:
+        # Test database connection
+        db.session.execute(db.text("SELECT 1"))
+        return jsonify({"status": "healthy", "database": "connected"})
+    except Exception as e:
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+
 @app.get("/fix_database")
 def fix_database_route():
     """Fix database by creating all tables and data"""
@@ -2104,10 +2114,19 @@ def create_test_data():
     
     db.session.commit()
 
+# Initialize database function
+def init_database():
+    """Initialize database with tables and test data"""
+    try:
+        with app.app_context():
+            db.create_all()
+            create_test_data()
+            print("Database initialized successfully")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+
 # Initialize database for Render
-with app.app_context():
-    db.create_all()
-    create_test_data()
+init_database()
 
 if __name__ == "__main__":
     # Production vs Development configuration
