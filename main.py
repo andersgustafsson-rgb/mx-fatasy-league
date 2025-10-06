@@ -2413,9 +2413,11 @@ def load_smx_2026_riders():
             for row in reader:
                 total_rows += 1
                 
-                # Skip empty rows
-                if not row.get('Förare') or not row.get('Klass (best-effort)'):
+                # Skip empty rows or rows with missing essential data
+                if not row.get('Förare') or not row.get('Klass (best-effort)') or row.get('Förare').strip() == '' or row.get('Klass (best-effort)').strip() == '':
                     skipped_rows += 1
+                    if total_rows <= 10:  # Only print first 10 skipped rows for debugging
+                        print(f"DEBUG: Skipped row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}'")
                     continue
                     
                 # Convert class format (450 -> 450cc, 250 -> 250cc)
