@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="relative font-sans min-h-screen text-gray-200">
+  <!-- Bakgrund -->
+  <div
+    class="absolute inset-0 bg-cover bg-center"
+    style="background-image: url('{{ url_for("static", filename="images/huvudsida.jpg") }}');"
+  ></div>
+  <div class="absolute inset-0 bg-black bg-opacity-70"></div>
+
+  <!-- Innehåll -->
+  <div class="relative z-10">
+    <div class="container mx-auto p-4 md:p-8">
+      <!-- Header -->
+      <div class="mb-6 md:mb-8">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <header class="text-center sm:text-left">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-yellow-400">MX Fantasy League</h1>
+            <p class="text-base md:text-lg mt-2 text-gray-200">
+              Välkommen, <strong>{{ username }}</strong>!
+            </p>
+          </header>
+          
+          <!-- Navigation -->
+          <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
+            {% if username == 'test' %}
+            <a
+              href="/admin"
+              class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"
+            >
+              Admin
+            </a>
+            {% endif %}
+            <a
+              href="/logout"
+              class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"
+              >Logga ut</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
+        <!-- Välkommen -->
+        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+          <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Välkommen!</h2>
+          <p class="text-base sm:text-lg text-gray-800 dark:text-gray-200">
+            Du är nu inloggad som <strong>{{ username }}</strong>.
+          </p>
+          {% if username == 'test' %}
+          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mt-2">
+            Du har admin-behörighet och kan komma åt admin-sidan.
+          </p>
+          {% else %}
+          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mt-2">
+            Du är en vanlig användare.
+          </p>
+          {% endif %}
+        </div>
+
+        <!-- Status -->
+        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+          <h2 class="text-xl sm:text-2xl font-bold text-green-500 mb-2">Status</h2>
+          <p class="text-base sm:text-lg text-gray-800 dark:text-gray-200">
+            Appen körs på Render! 🚀
+          </p>
+          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mt-2">
+            Denna version är förenklad för att fungera på molnet.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
