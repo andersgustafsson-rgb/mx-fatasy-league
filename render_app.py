@@ -11,11 +11,8 @@ app = Flask(__name__)
 # Configuration for Render
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'my-super-secret-key-for-mx-fantasy-league-2025')
 
-# Create instance directory if it doesn't exist
-instance_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
-os.makedirs(instance_path, exist_ok=True)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(instance_path, "fantasy_mx.db")}')
+# Use in-memory SQLite for Render (simpler)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
@@ -111,11 +108,30 @@ def create_users():
     except Exception as e:
         return f"<h1>Error:</h1><p>{str(e)}</p>"
 
-# Initialize database
+# Initialize database and create users
 def init_db():
     with app.app_context():
         db.create_all()
-        print("Database initialized")
+        
+        # Create test users if they don't exist
+        if not User.query.filter_by(username='test').first():
+            test_user = User(
+                username='test',
+                password_hash=generate_password_hash('password'),
+                email='test@example.com'
+            )
+            db.session.add(test_user)
+        
+        if not User.query.filter_by(username='test2').first():
+            test2_user = User(
+                username='test2',
+                password_hash=generate_password_hash('password'),
+                email='test2@example.com'
+            )
+            db.session.add(test2_user)
+        
+        db.session.commit()
+        print("Database initialized with test users")
 
 if __name__ == '__main__':
     init_db()
