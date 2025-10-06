@@ -1804,8 +1804,11 @@ def fix_database_route():
             rider = Rider(
                 name=rider_data['name'],
                 class_name=rider_data['class_name'],
+                rider_number=rider_data.get('rider_number'),
                 bike_brand=rider_data['bike_brand'],
-                price=rider_data.get('price', 50)  # Default price if not specified
+                price=rider_data.get('price', 50),  # Default price if not specified
+                image_url=rider_data.get('image_url', f"riders/{rider_data['name'].lower().replace(' ', '_')}.jpg"),
+                coast_250=rider_data.get('coast_250')
             )
             db.session.add(rider)
         
@@ -1894,8 +1897,11 @@ def create_test_user_route():
             rider = Rider(
                 name=rider_data['name'],
                 class_name=rider_data['class_name'],
+                rider_number=rider_data.get('rider_number'),
                 bike_brand=rider_data['bike_brand'],
-                price=rider_data.get('price', 50)  # Default price if not specified
+                price=rider_data.get('price', 50),  # Default price if not specified
+                image_url=rider_data.get('image_url', f"riders/{rider_data['name'].lower().replace(' ', '_')}.jpg"),
+                coast_250=rider_data.get('coast_250')
             )
             db.session.add(rider)
         db.session.commit()
@@ -2219,8 +2225,11 @@ def create_test_data():
             rider = Rider(
                 name=rider_data['name'],
                 class_name=rider_data['class_name'],
+                rider_number=rider_data.get('rider_number'),
                 bike_brand=rider_data['bike_brand'],
-                price=rider_data.get('price', 50)  # Default price if not specified
+                price=rider_data.get('price', 50),  # Default price if not specified
+                image_url=rider_data.get('image_url', f"riders/{rider_data['name'].lower().replace(' ', '_')}.jpg"),
+                coast_250=rider_data.get('coast_250')
             )
             db.session.add(rider)
         print(f"Created {len(all_riders)} Supercross 2026 riders ({len(riders_450)}x 450cc, {len(riders_250)}x 250cc)")
