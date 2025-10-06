@@ -2407,7 +2407,16 @@ def load_smx_2026_riders():
         
         print("DEBUG: Starting to load SMX 2026 riders...")
         
-        with open('data/smx_2026_riders_numbers_best_effort.csv', 'r', encoding='utf-8') as file:
+        # Check if file exists
+        import os
+        file_path = 'data/smx_2026_riders_numbers_best_effort.csv'
+        if not os.path.exists(file_path):
+            print(f"DEBUG: File not found at {file_path}")
+            return []
+        
+        print(f"DEBUG: File exists at {file_path}")
+        
+        with open(file_path, 'r', encoding='utf-8') as file:
             # Read all lines first to debug
             lines = file.readlines()
             print(f"DEBUG: File has {len(lines)} lines")
