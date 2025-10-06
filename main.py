@@ -2405,13 +2405,26 @@ def load_smx_2026_riders():
         import csv
         riders = []
         
+        print("DEBUG: Starting to load SMX 2026 riders...")
+        
         with open('data/smx_2026_riders_numbers_best_effort.csv', 'r', encoding='utf-8') as file:
+            # Read all lines first to debug
+            lines = file.readlines()
+            print(f"DEBUG: File has {len(lines)} lines")
+            
+            # Reset file pointer
+            file.seek(0)
+            
             reader = csv.DictReader(file, delimiter='|')
             total_rows = 0
             skipped_rows = 0
             
             for row in reader:
                 total_rows += 1
+                
+                # Debug first few rows
+                if total_rows <= 5:
+                    print(f"DEBUG: Row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}'")
                 
                 # Skip empty rows or rows with missing essential data
                 if not row.get('Förare') or not row.get('Klass (best-effort)') or row.get('Förare').strip() == '' or row.get('Klass (best-effort)').strip() == '':
@@ -2477,9 +2490,17 @@ def load_smx_2026_riders():
                 riders.append(rider_data)
         
         print(f"DEBUG: Loaded {len(riders)} riders from CSV (total rows: {total_rows}, skipped: {skipped_rows})")
+        
+        # Count by class
+        riders_450 = [r for r in riders if r['class_name'] == '450cc']
+        riders_250 = [r for r in riders if r['class_name'] == '250cc']
+        print(f"DEBUG: 450cc riders: {len(riders_450)}, 250cc riders: {len(riders_250)}")
+        
         return riders
     except Exception as e:
         print(f"Error loading SMX 2026 riders: {e}")
+        import traceback
+        traceback.print_exc()
         return []
 
 def create_test_data():
