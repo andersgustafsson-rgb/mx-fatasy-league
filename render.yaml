@@ -9,3 +9,5 @@ services:
         value: my-super-secret-key-for-mx-fantasy-league-2025
       - key: FLASK_ENV
         value: production
+      - key: DATABASE_URL
+        value: sqlite:///fantasy_mx.db

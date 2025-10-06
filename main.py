@@ -30,8 +30,8 @@ app = Flask(__name__)
 # Configuration from environment variables
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
-# Force in-memory database for Render deployment - ignore all environment variables
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+# Use persistent database for Render deployment
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///fantasy_mx.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
