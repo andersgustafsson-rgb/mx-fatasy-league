@@ -3,7 +3,7 @@ services:
     name: mx-fatasy-league
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 main:app
     envVars:
       - key: SECRET_KEY
         value: my-super-secret-key-for-mx-fantasy-league-2025
