@@ -1716,11 +1716,11 @@ def fix_database_route():
         # Create competitions
         Competition.query.delete()
         competitions = [
-            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+            {'name': 'Anaheim 1', 'event_date': '2026-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2026-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2026-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2026-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2026-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
         ]
         
         for comp_data in competitions:
@@ -1805,11 +1805,11 @@ def create_test_user_route():
     # Create competitions if they don't exist
     if Competition.query.count() == 0:
         competitions = [
-            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+            {'name': 'Anaheim 1', 'event_date': '2026-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2026-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2026-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2026-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2026-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
         ]
         
         for comp_data in competitions:
@@ -1918,11 +1918,11 @@ def force_create_data_route():
     
     # Create competitions
     competitions = [
-        {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+        {'name': 'Anaheim 1', 'event_date': '2026-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'San Diego', 'event_date': '2026-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Anaheim 2', 'event_date': '2026-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Houston', 'event_date': '2026-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Tampa', 'event_date': '2026-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
     ]
     
     for comp_data in competitions:
@@ -1998,23 +1998,23 @@ def create_test_data():
     # Create all Supercross 2025 competitions
     if Competition.query.count() == 0:
         competitions = [
-            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Orlando', 'event_date': '2025-02-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Detroit', 'event_date': '2025-02-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Glendale', 'event_date': '2025-02-22', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Seattle', 'event_date': '2025-03-01', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'St. Louis', 'event_date': '2025-03-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Daytona', 'event_date': '2025-03-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Birmingham', 'event_date': '2025-03-22', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Indianapolis', 'event_date': '2025-03-29', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Foxborough', 'event_date': '2025-04-05', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Nashville', 'event_date': '2025-04-12', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Philadelphia', 'event_date': '2025-04-19', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Las Vegas', 'event_date': '2025-05-03', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5}
+            {'name': 'Anaheim 1', 'event_date': '2026-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2026-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2026-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2026-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2026-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Orlando', 'event_date': '2026-02-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Detroit', 'event_date': '2026-02-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Glendale', 'event_date': '2026-02-22', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Seattle', 'event_date': '2026-03-01', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'St. Louis', 'event_date': '2026-03-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Daytona', 'event_date': '2026-03-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Birmingham', 'event_date': '2026-03-22', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Indianapolis', 'event_date': '2026-03-29', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Foxborough', 'event_date': '2026-04-05', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Nashville', 'event_date': '2026-04-12', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Philadelphia', 'event_date': '2026-04-19', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Las Vegas', 'event_date': '2026-05-03', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5}
         ]
         
         for comp_data in competitions:
@@ -2026,7 +2026,7 @@ def create_test_data():
                 point_multiplier=comp_data['point_multiplier']
             )
             db.session.add(comp)
-        print("Created 17 Supercross 2025 competitions")
+        print("Created 17 Supercross 2026 competitions")
     
     # Create all Supercross 2025 riders
     if Rider.query.count() == 0:
@@ -2185,7 +2185,7 @@ def create_test_data():
                 price=rider_data.get('price', 50)  # Default price if not specified
             )
             db.session.add(rider)
-        print(f"Created {len(all_riders)} Supercross 2025 riders ({len(riders_450)}x 450cc, {len(riders_250)}x 250cc)")
+        print(f"Created {len(all_riders)} Supercross 2026 riders ({len(riders_450)}x 450cc, {len(riders_250)}x 250cc)")
     
     db.session.commit()
 
