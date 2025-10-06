@@ -12,12 +12,13 @@
   .dark .result-close { background-color: rgba(234, 179, 8, 0.1); }
   .picks-locked { pointer-events: none; opacity: 0.6; }
 
-  /* Smalare rader + mindre preview */
-  .pick-row { grid-template-columns: 32px 1fr; gap: 10px; align-items: center; }
+  /* Smalare rader + större preview */
+  .pick-row { grid-template-columns: 48px 1fr; gap: 12px; align-items: center; }
   .preview-img {
-    width: 28px; height: 28px; border-radius: 9999px;
+    width: 44px; height: 44px; border-radius: 9999px;
     object-fit: cover; background: #4b5563; opacity: .85;
     transition: opacity .15s ease, transform .15s ease;
+    border: 2px solid #6b7280;
   }
   .preview-img.has-src { opacity: 1; }
   .pick-select-sm {
