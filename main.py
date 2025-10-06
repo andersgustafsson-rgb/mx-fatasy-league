@@ -30,8 +30,8 @@ app = Flask(__name__)
 # Configuration from environment variables
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
-# Use persistent database for Render deployment
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app/fantasy_mx.db'
+# Use in-memory database for Render deployment (filesystem is read-only)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
@@ -313,22 +313,9 @@ def index():
     uid = session["user_id"]
     today = get_today()
 
-    try:
-        competitions = Competition.query.order_by(Competition.event_date).all()
-        upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
-        my_team = SeasonTeam.query.filter_by(user_id=uid).first()
-    except Exception as e:
-        print(f"Database error in index: {e}")
-        # Try to reinitialize database
-        try:
-            db.create_all()
-            create_test_data()
-            competitions = Competition.query.order_by(Competition.event_date).all()
-            upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
-            my_team = SeasonTeam.query.filter_by(user_id=uid).first()
-        except Exception as e2:
-            print(f"Failed to reinitialize database: {e2}")
-            return f"Database error: {str(e2)}", 500
+    competitions = Competition.query.order_by(Competition.event_date).all()
+    upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+    my_team = SeasonTeam.query.filter_by(user_id=uid).first()
 
     team_riders = []
     if my_team:
