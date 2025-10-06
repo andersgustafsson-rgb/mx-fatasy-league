@@ -22,7 +22,7 @@ COPY . .
 RUN mkdir -p static/uploads static/images static/sfx static/brand_logos
 
 # Set environment variables
-ENV FLASK_APP=app.py
+ENV FLASK_APP=main.py
 ENV FLASK_ENV=production
 ENV PYTHONUNBUFFERED=1
 
