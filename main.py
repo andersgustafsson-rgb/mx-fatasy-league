@@ -588,7 +588,7 @@ def race_picks_page(competition_id):
     riders_450 = (
         Rider.query
         .filter_by(class_name="450cc")
-        .order_by(Rider.name)
+        .order_by(Rider.rider_number)
         .all()
     )
 
@@ -607,7 +607,7 @@ def race_picks_page(competition_id):
             (Rider.coast_250 == comp.coast_250) | (Rider.coast_250 == "both")
         )
     # Annars (None): visa alla 250
-    riders_250 = riders_250_query.order_by(Rider.name).all()
+    riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
@@ -844,8 +844,8 @@ def admin_page():
     if session.get("username") != "test":
         return redirect(url_for("index"))
     competitions = Competition.query.order_by(Competition.event_date).all()
-    riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.name).all()
-    riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.name).all()
+    riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
+    riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
 
     race_scores = []
     last_scored = (
@@ -1149,7 +1149,7 @@ def admin_get_out_status(competition_id):
         return jsonify({"error": "unauthorized"}), 403
 
     # all riders
-    riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.name.asc()).all()
+    riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.rider_number.asc()).all()
 
     # out set for this competition
     out_rows = (
@@ -1238,7 +1238,7 @@ def season_team_build():
     # Hämta alla riders till buildern
     riders = (
         Rider.query
-        .order_by(Rider.class_name.desc(), Rider.price.desc(), Rider.name.asc())
+        .order_by(Rider.class_name.desc(), Rider.price.desc(), Rider.rider_number.asc())
         .all()
     )
     riders_payload = [
