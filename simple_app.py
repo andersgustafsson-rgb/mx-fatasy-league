@@ -14,7 +14,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 db = SQLAlchemy(app)
 
-# Initialize database immediately
+# Initialize database function (will be called after models are defined)
 def init_database():
     print("Creating database tables...")
     db.create_all()
@@ -97,10 +97,6 @@ def init_database():
     
     db.session.commit()
     print("Database initialization complete!")
-
-# Initialize database when app starts
-with app.app_context():
-    init_database()
 
 # Models
 class User(db.Model):
@@ -400,10 +396,9 @@ def get_season_leaderboard():
     
     return jsonify(leaderboard)
 
-# Initialize database when app starts
+# Initialize database after all models are defined
 with app.app_context():
-    db.create_all()
-    create_test_data()
+    init_database()
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
