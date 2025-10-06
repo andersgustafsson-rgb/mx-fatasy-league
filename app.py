@@ -202,7 +202,12 @@ class CompetitionImage(db.Model):
     competition = db.relationship(
         "Competition",
         backref=db.backref("images", cascade="all, delete-orphan", lazy="dynamic")
-    )    
+    )
+
+class SimDate(db.Model):
+    __tablename__ = "sim_date"
+    id = db.Column(db.Integer, primary_key=True)
+    value = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format    
 
 # -------------------------------------------------
 # Helpers
@@ -236,11 +241,25 @@ def login():
     if "user_id" in session:
         return redirect(url_for("index"))
     if request.method == "POST":
-        user = User.query.filter_by(username=request.form["username"]).first()
-        if user and check_password_hash(user.password_hash, request.form["password"]):
-            session["user_id"] = user.id
-            session["username"] = user.username
-            return redirect(url_for("index"))
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+        print(f"Login attempt: username='{username}', password='{password}'")
+        
+        user = User.query.filter_by(username=username).first()
+        print(f"User found: {user is not None}")
+        
+        if user:
+            print(f"User ID: {user.id}, Username: {user.username}")
+            password_check = check_password_hash(user.password_hash, password)
+            print(f"Password check: {password_check}")
+            
+            if password_check:
+                session["user_id"] = user.id
+                session["username"] = user.username
+                print("Login successful, redirecting...")
+                return redirect(url_for("index"))
+        
+        print("Login failed")
         flash("Felaktigt användarnamn eller lösenord", "error")
     return render_template("login.html")
 
@@ -1381,12 +1400,713 @@ def list_routes():
         output.append(f"{rule.endpoint:30s} {methods:20s} {rule.rule}")
     return "<pre>" + "\n".join(sorted(output)) + "</pre>"
 
+@app.get("/create_user_now")
+def create_user_now_route():
+    """Create user immediately"""
+    try:
+        # Create test user
+        existing_user = User.query.filter_by(username='test').first()
+        if existing_user:
+            return f"User 'test' already exists with ID {existing_user.id}"
+        
+        test_user = User(
+            username='test',
+            password_hash=generate_password_hash('password'),
+            email='test@example.com'
+        )
+        
+        db.session.add(test_user)
+        db.session.commit()
+        
+        return f"""
+        <h1>User Created!</h1>
+        <p>Username: test</p>
+        <p>Password: password</p>
+        <p><a href="/login">Go to Login</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/create_test2_user")
+def create_test2_user_route():
+    """Create test2 user"""
+    try:
+        # Create test2 user
+        existing_user = User.query.filter_by(username='test2').first()
+        if existing_user:
+            return f"User 'test2' already exists with ID {existing_user.id}"
+        
+        test2_user = User(
+            username='test2',
+            password_hash=generate_password_hash('password'),
+            email='test2@example.com'
+        )
+        
+        db.session.add(test2_user)
+        db.session.commit()
+        
+        return f"""
+        <h1>User Created!</h1>
+        <p>Username: test2</p>
+        <p>Password: password</p>
+        <p><a href="/login">Go to Login</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/fix_user_roles")
+def fix_user_roles_route():
+    """Fix user roles - test=admin, test2=normal user"""
+    try:
+        # Update test user (admin)
+        test_user = User.query.filter_by(username='test').first()
+        if test_user:
+            test_user.password_hash = generate_password_hash('password')
+            db.session.commit()
+            test_msg = "Updated test user (admin) with password 'password'"
+        else:
+            test_user = User(
+                username='test',
+                password_hash=generate_password_hash('password'),
+                email='test@example.com'
+            )
+            db.session.add(test_user)
+            db.session.commit()
+            test_msg = "Created test user (admin) with password 'password'"
+        
+        # Update test2 user (normal)
+        test2_user = User.query.filter_by(username='test2').first()
+        if test2_user:
+            test2_user.password_hash = generate_password_hash('password')
+            db.session.commit()
+            test2_msg = "Updated test2 user (normal) with password 'password'"
+        else:
+            test2_user = User(
+                username='test2',
+                password_hash=generate_password_hash('password'),
+                email='test2@example.com'
+            )
+            db.session.add(test2_user)
+            db.session.commit()
+            test2_msg = "Created test2 user (normal) with password 'password'"
+        
+        return f"""
+        <h1>User Roles Fixed!</h1>
+        <p><strong>Admin User:</strong></p>
+        <p>Username: test</p>
+        <p>Password: password</p>
+        <p>Role: Admin (can access admin page)</p>
+        <p>{test_msg}</p>
+        <br>
+        <p><strong>Normal User:</strong></p>
+        <p>Username: test2</p>
+        <p>Password: password</p>
+        <p>Role: Normal user</p>
+        <p>{test2_msg}</p>
+        <br>
+        <p><a href="/login">Go to Login</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/debug_users")
+def debug_users_route():
+    """Debug users - show all users and create missing ones"""
+    try:
+        # Show all existing users
+        all_users = User.query.all()
+        user_list = []
+        for user in all_users:
+            user_list.append(f"ID: {user.id}, Username: '{user.username}', Email: {user.email}")
+        
+        # Create test user if missing
+        test_user = User.query.filter_by(username='test').first()
+        if not test_user:
+            test_user = User(
+                username='test',
+                password_hash=generate_password_hash('password'),
+                email='test@example.com'
+            )
+            db.session.add(test_user)
+            db.session.commit()
+            user_list.append("CREATED: test user")
+        else:
+            user_list.append("EXISTS: test user")
+        
+        # Create test2 user if missing
+        test2_user = User.query.filter_by(username='test2').first()
+        if not test2_user:
+            test2_user = User(
+                username='test2',
+                password_hash=generate_password_hash('password'),
+                email='test2@example.com'
+            )
+            db.session.add(test2_user)
+            db.session.commit()
+            user_list.append("CREATED: test2 user")
+        else:
+            user_list.append("EXISTS: test2 user")
+        
+        return f"""
+        <h1>Debug Users</h1>
+        <h2>All Users in Database:</h2>
+        <ul>
+        {''.join([f'<li>{user}</li>' for user in user_list])}
+        </ul>
+        <p><a href="/login">Go to Login</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/force_create_users")
+def force_create_users_route():
+    """Force create users - delete and recreate"""
+    try:
+        # Delete existing users
+        User.query.filter(User.username.in_(['test', 'test2'])).delete()
+        db.session.commit()
+        
+        # Create test user (admin)
+        test_user = User(
+            username='test',
+            password_hash=generate_password_hash('password'),
+            email='test@example.com'
+        )
+        db.session.add(test_user)
+        
+        # Create test2 user (normal)
+        test2_user = User(
+            username='test2',
+            password_hash=generate_password_hash('password'),
+            email='test2@example.com'
+        )
+        db.session.add(test2_user)
+        
+        db.session.commit()
+        
+        # Verify creation
+        created_test = User.query.filter_by(username='test').first()
+        created_test2 = User.query.filter_by(username='test2').first()
+        
+        return f"""
+        <h1>Users Force Created!</h1>
+        <p><strong>Admin User:</strong></p>
+        <p>Username: test</p>
+        <p>Password: password</p>
+        <p>ID: {created_test.id if created_test else 'ERROR'}</p>
+        <br>
+        <p><strong>Normal User:</strong></p>
+        <p>Username: test2</p>
+        <p>Password: password</p>
+        <p>ID: {created_test2.id if created_test2 else 'ERROR'}</p>
+        <br>
+        <p><strong>Total users in database:</strong> {User.query.count()}</p>
+        <br>
+        <p><a href="/login">Go to Login</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/fix_database")
+def fix_database_route():
+    """Fix database by creating all tables and data"""
+    try:
+        # Create all tables
+        db.create_all()
+        
+        # Create test user
+        existing_user = User.query.filter_by(username='test').first()
+        if not existing_user:
+            test_user = User(
+                username='test',
+                password_hash=generate_password_hash('password'),
+                email='test@example.com'
+            )
+            db.session.add(test_user)
+            db.session.commit()
+        
+        # Create competitions
+        Competition.query.delete()
+        competitions = [
+            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+        ]
+        
+        for comp_data in competitions:
+            comp = Competition(
+                name=comp_data['name'],
+                event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
+                coast_250=comp_data['coast_250'],
+                series=comp_data['series'],
+                point_multiplier=comp_data['point_multiplier']
+            )
+            db.session.add(comp)
+        
+        # Create riders
+        Rider.query.delete()
+        riders_450 = [
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'}
+        ]
+        
+        riders_250 = [
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'}
+        ]
+        
+        all_riders = riders_450 + riders_250
+        for rider_data in all_riders:
+            rider = Rider(
+                name=rider_data['name'],
+                class_name=rider_data['class_name'],
+                bike_brand=rider_data['bike_brand'],
+                price=rider_data.get('price', 50)  # Default price if not specified
+            )
+            db.session.add(rider)
+        
+        # Create default sim_date
+        SimDate.query.delete()
+        default_sim_date = SimDate(value='2025-10-06')
+        db.session.add(default_sim_date)
+        
+        db.session.commit()
+        
+        return f"""
+        <h1>Database Fixed!</h1>
+        <p>Created all tables and data successfully!</p>
+        <p><strong>Competitions:</strong> {len(competitions)}</p>
+        <p><strong>Riders:</strong> {len(all_riders)}</p>
+        <p><strong>Sim Date:</strong> 2025-10-06</p>
+        <p><a href="/admin">Go to Admin</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
+@app.get("/create_test_user")
+def create_test_user_route():
+    """Create test user and all data via web route"""
+    # Create test user
+    existing_user = User.query.filter_by(username='test').first()
+    if not existing_user:
+        test_user = User(
+            username='test',
+            password_hash=generate_password_hash('password'),
+            email='test@example.com'
+        )
+        db.session.add(test_user)
+        db.session.commit()
+    
+    # Create competitions if they don't exist
+    if Competition.query.count() == 0:
+        competitions = [
+            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+        ]
+        
+        for comp_data in competitions:
+            comp = Competition(
+                name=comp_data['name'],
+                event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
+                coast_250=comp_data['coast_250'],
+                series=comp_data['series'],
+                point_multiplier=comp_data['point_multiplier']
+            )
+            db.session.add(comp)
+        db.session.commit()
+    
+    # Create riders if they don't exist
+    if Rider.query.count() == 0:
+        riders_450 = [
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'}
+        ]
+        
+        riders_250 = [
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'}
+        ]
+        
+        all_riders = riders_450 + riders_250
+        for rider_data in all_riders:
+            rider = Rider(
+                name=rider_data['name'],
+                class_name=rider_data['class_name'],
+                bike_brand=rider_data['bike_brand'],
+                price=rider_data.get('price', 50)  # Default price if not specified
+            )
+            db.session.add(rider)
+        db.session.commit()
+    
+    # Count what we have
+    comp_count = Competition.query.count()
+    rider_count = Rider.query.count()
+    user_count = User.query.count()
+    
+    return f"""
+    <h1>Data Created!</h1>
+    <p><strong>Users:</strong> {user_count}</p>
+    <p><strong>Competitions:</strong> {comp_count}</p>
+    <p><strong>Riders:</strong> {rider_count}</p>
+    <p><a href="/admin">Go to Admin</a></p>
+    """
+
+@app.get("/check_data")
+def check_data_route():
+    """Check what data exists in database"""
+    users = User.query.all()
+    competitions = Competition.query.all()
+    riders = Rider.query.all()
+    
+    result = f"""
+    <h1>Database Status</h1>
+    <p><strong>Users:</strong> {len(users)}</p>
+    <p><strong>Competitions:</strong> {len(competitions)}</p>
+    <p><strong>Riders:</strong> {len(riders)}</p>
+    
+    <h2>Competitions:</h2>
+    <ul>
+    """
+    
+    for comp in competitions:
+        result += f"<li>{comp.name} ({comp.event_date})</li>"
+    
+    result += "</ul>"
+    
+    riders_450 = [r for r in riders if r.class_name == '450cc']
+    riders_250 = [r for r in riders if r.class_name == '250cc']
+    
+    result += f"""
+    <h2>Riders:</h2>
+    <p><strong>450cc:</strong> {len(riders_450)}</p>
+    <p><strong>250cc:</strong> {len(riders_250)}</p>
+    """
+    
+    return result
+
+@app.get("/force_create_data")
+def force_create_data_route():
+    """Force create all data"""
+    # Clear existing data
+    Competition.query.delete()
+    Rider.query.delete()
+    db.session.commit()
+    
+    # Create competitions
+    competitions = [
+        {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+    ]
+    
+    for comp_data in competitions:
+        comp = Competition(
+            name=comp_data['name'],
+            event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
+            coast_250=comp_data['coast_250'],
+            series=comp_data['series'],
+            point_multiplier=comp_data['point_multiplier']
+        )
+        db.session.add(comp)
+    
+    # Create riders
+    riders_450 = [
+        {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+        {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
+        {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
+        {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+        {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+        {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+        {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
+        {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+        {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+        {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'}
+    ]
+    
+    riders_250 = [
+        {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+        {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+        {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+        {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
+        {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+        {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+        {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+        {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+        {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+        {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'}
+    ]
+    
+    all_riders = riders_450 + riders_250
+    for rider_data in all_riders:
+        rider = Rider(
+            name=rider_data['name'],
+            class_name=rider_data['class_name'],
+            bike_brand=rider_data['bike_brand']
+        )
+        db.session.add(rider)
+    
+    db.session.commit()
+    
+    return f"""
+    <h1>Data Created!</h1>
+    <p>Created {len(competitions)} competitions and {len(all_riders)} riders</p>
+    <p><a href="/admin">Go to Admin</a></p>
+    <p><a href="/check_data">Check Data</a></p>
+    """
+
 # -------------------------------------------------
 # Main
 # -------------------------------------------------
+def create_test_data():
+    """Create test data if it doesn't exist"""
+    # Create test user
+    existing_user = User.query.filter_by(username='test').first()
+    if not existing_user:
+        test_user = User(
+            username='test',
+            password_hash=generate_password_hash('password'),
+            email='test@example.com'
+        )
+        db.session.add(test_user)
+        print("Created test user: test/password")
+    
+    # Create all Supercross 2025 competitions
+    if Competition.query.count() == 0:
+        competitions = [
+            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Orlando', 'event_date': '2025-02-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Detroit', 'event_date': '2025-02-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Glendale', 'event_date': '2025-02-22', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Seattle', 'event_date': '2025-03-01', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'St. Louis', 'event_date': '2025-03-08', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Daytona', 'event_date': '2025-03-15', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Birmingham', 'event_date': '2025-03-22', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Indianapolis', 'event_date': '2025-03-29', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Foxborough', 'event_date': '2025-04-05', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Nashville', 'event_date': '2025-04-12', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Philadelphia', 'event_date': '2025-04-19', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Las Vegas', 'event_date': '2025-05-03', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5}
+        ]
+        
+        for comp_data in competitions:
+            comp = Competition(
+                name=comp_data['name'],
+                event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
+                coast_250=comp_data['coast_250'],
+                series=comp_data['series'],
+                point_multiplier=comp_data['point_multiplier']
+            )
+            db.session.add(comp)
+        print("Created 17 Supercross 2025 competitions")
+    
+    # Create all Supercross 2025 riders
+    if Rider.query.count() == 0:
+        riders_450 = [
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Justin Barcia', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+            {'name': 'Aaron Plessinger', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Malcolm Stewart', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Dylan Ferrandis', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Adam Cianciarulo', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Christian Craig', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Dean Wilson', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Shane McElrath', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Colt Nichols', 'class_name': '450cc', 'bike_brand': 'Beta'},
+            {'name': 'Freddie Noren', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Kyle Chisholm', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Cade Clason', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Josh Hill', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Benny Bloss', 'class_name': '450cc', 'bike_brand': 'Beta'},
+            {'name': 'Justin Starling', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+            {'name': 'Jeremy Hand', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Logan Karnow', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Kevin Moranz', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Coty Schock', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Derek Drake', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'John Short', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Tyler Stepek', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Brandon Scharer', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Cody Groves', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Joshua Cartwright', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Lorenzo Locurcio', 'class_name': '450cc', 'bike_brand': 'GasGas'},
+            {'name': 'Ryan Breece', 'class_name': '450cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Chase Marquier', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Alex Ray', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Justin Rodbell', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Dylan Woodcock', 'class_name': '450cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Kyle Bitterman', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Jace Owen', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Carson Brown', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Dakota Alix', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Kyle Chisholm', 'class_name': '450cc', 'bike_brand': 'Suzuki'},
+            {'name': 'Tristan Lane', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Bryce Shelly', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Cody Williams', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Dylan Merriam', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Jake Alessi', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Kyle Peters', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Lance Kobusch', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Mason Wharton', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Nick Schmidt', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Preston Taylor', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Ryan Surratt', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Scotty Wennerstrom', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Tanner Ward', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Tyler Stepek', 'class_name': '450cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Vince Friese', 'class_name': '450cc', 'bike_brand': 'Honda'},
+            {'name': 'Weston Peick', 'class_name': '450cc', 'bike_brand': 'KTM'},
+            {'name': 'Zach Osborne', 'class_name': '450cc', 'bike_brand': 'Husqvarna'}
+        ]
+        
+        riders_250 = [
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Pierce Brown', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Jalek Swoll', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Jo Shimoda', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Nate Thrasher', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Tom Vialle', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Daxton Bennick', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Casey Cochran', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Julien Beaumer', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Talon Hawkins', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Gavin Towers', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Derek Kelley', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Caden Braswell', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Preston Boespflug', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Gage Linville', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Tristan Lane', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Bryce Shelly', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Cody Williams', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Dylan Merriam', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Jake Alessi', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Kyle Peters', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Lance Kobusch', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Mason Wharton', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Nick Schmidt', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Preston Taylor', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Ryan Surratt', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Scotty Wennerstrom', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Tanner Ward', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Tyler Stepek', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Vince Friese', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Weston Peick', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Zach Osborne', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Austin Forkner', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Brandon Hartranft', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Carson Mumford', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Chase Yentzer', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Cole Thompson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Darian Sanayei', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Devin Simonson', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Dylan Walsh', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Enzo Lopes', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Garrett Marchbanks', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Grant Harlan', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Hunter Yoder', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Jace Kessler', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Jake Pinhancos', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Jared Lesher', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Jeremy Martin', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Jett Reynolds', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Joey Savatgy', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Josh Varize', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Kyle Cunningham', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Lance Kobusch', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Luke Neese', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Mason Wharton', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Matt Moss', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Max Miller', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Michael Mosiman', 'class_name': '250cc', 'bike_brand': 'GasGas'},
+            {'name': 'Mitchell Oldenburg', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Nate Thrasher', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Nick Romano', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Preston Boespflug', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Preston Taylor', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Ramyller Alves', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Ryan Surratt', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Scotty Wennerstrom', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Stilez Robertson', 'class_name': '250cc', 'bike_brand': 'Yamaha'},
+            {'name': 'Talon Hawkins', 'class_name': '250cc', 'bike_brand': 'Husqvarna'},
+            {'name': 'Tanner Ward', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Tristan Lane', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Tyler Stepek', 'class_name': '250cc', 'bike_brand': 'Kawasaki'},
+            {'name': 'Vince Friese', 'class_name': '250cc', 'bike_brand': 'Honda'},
+            {'name': 'Weston Peick', 'class_name': '250cc', 'bike_brand': 'KTM'},
+            {'name': 'Zach Osborne', 'class_name': '250cc', 'bike_brand': 'Husqvarna'}
+        ]
+        
+        all_riders = riders_450 + riders_250
+        for rider_data in all_riders:
+            rider = Rider(
+                name=rider_data['name'],
+                class_name=rider_data['class_name'],
+                bike_brand=rider_data['bike_brand'],
+                price=rider_data.get('price', 50)  # Default price if not specified
+            )
+            db.session.add(rider)
+        print(f"Created {len(all_riders)} Supercross 2025 riders ({len(riders_450)}x 450cc, {len(riders_250)}x 250cc)")
+    
+    db.session.commit()
+
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        create_test_data()
     
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'

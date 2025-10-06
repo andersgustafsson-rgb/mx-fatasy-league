@@ -61,8 +61,8 @@
         <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
           {% if upcoming_race %}
           <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Aktuellt Race</h2>
-          <p class="text-base sm:text-lg font-semibold break-words">{{ upcoming_race.name }}</p>
-          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-400 mb-4">
+          <p class="text-base sm:text-lg font-semibold break-words text-gray-800 dark:text-gray-200">{{ upcoming_race.name }}</p>
+          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
           <a
@@ -72,7 +72,7 @@
           >
           {% else %}
           <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Race Picks</h2>
-          <p class="text-gray-400">Säsongen är över!</p>
+          <p class="text-gray-600 dark:text-gray-300">Säsongen är över!</p>
           {% endif %}
         </div>
 
@@ -83,7 +83,7 @@
           <p class="mb-1 text-sm sm:text-base text-gray-800 dark:text-gray-200 break-words">
             Teamnamn: <strong>{{ my_team.team_name }}</strong>
           </p>
-          <p class="font-bold text-base sm:text-lg text-green-600 mb-3 sm:mb-4">
+          <p class="font-bold text-base sm:text-lg text-green-600 dark:text-green-400 mb-3 sm:mb-4">
             Totala poäng: {{ my_team.total_points or 0 }}
           </p>
 
@@ -123,7 +123,7 @@
           >
           {% else %}
           <h2 class="text-xl sm:text-2xl font-bold text-green-500 mb-2">Inget team än</h2>
-          <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3 sm:mb-4">
+          <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-3 sm:mb-4">
             Bygg ditt drömteam för hela säsongen.
           </p>
           <!-- VIKTIGT: pekar till buildersidan -->
@@ -139,7 +139,7 @@
       <!-- Säsongens Leaderboard -->
       <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
         <div class="flex justify-between items-center mb-3 sm:mb-4">
-          <h2 class="text-xl sm:text-2xl font-semibold">Säsongens Leaderboard</h2>
+          <h2 class="text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-200">Säsongens Leaderboard</h2>
         </div>
         <div id="season-leaderboard-list" class="space-y-1 sm:space-y-2"></div>
       </div>
@@ -218,16 +218,16 @@
 
     async function fetchSeasonLeaderboard() {
       const c = document.getElementById("season-leaderboard-list");
-      c.innerHTML = '<p class="text-gray-400">Laddar...</p>';
-      try {
-        console.log("Fetching leaderboard...");
-        const res = await fetch(`/get_season_leaderboard`);
-        console.log("Response status:", res.status);
-        const leaderboard = await res.json();
-        console.log("Leaderboard data:", leaderboard);
-        c.innerHTML = "";
-        if (leaderboard.length === 0) {
-          c.innerHTML = '<p class="text-gray-400">Inga säsongsteam ännu.</p>';
+        c.innerHTML = '<p class="text-gray-600 dark:text-gray-300">Laddar...</p>';
+        try {
+          console.log("Fetching leaderboard...");
+          const res = await fetch(`/get_season_leaderboard`);
+          console.log("Response status:", res.status);
+          const leaderboard = await res.json();
+          console.log("Leaderboard data:", leaderboard);
+          c.innerHTML = "";
+          if (leaderboard.length === 0) {
+            c.innerHTML = '<p class="text-gray-600 dark:text-gray-300">Inga säsongsteam ännu.</p>';
         } else {
           leaderboard.forEach((row, i) => {
             const el = document.createElement("div");
@@ -235,12 +235,12 @@
               "flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-100 dark:bg-gray-700 p-2 sm:p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 gap-1 sm:gap-0";
             el.innerHTML = `
               <a class="flex-1 flex items-center gap-2" href="/user/${encodeURIComponent(row.username)}">
-                <span class="font-bold w-6 text-right text-sm sm:text-base">${i + 1}.</span>
-                <span class="text-sm sm:text-base truncate">${row.team_name || "—"} <span class="text-xs sm:text-sm text-gray-500">/ ${row.username}</span></span>
+                <span class="font-bold w-6 text-right text-sm sm:text-base text-gray-800 dark:text-gray-200">${i + 1}.</span>
+                <span class="text-sm sm:text-base truncate text-gray-800 dark:text-gray-200">${row.team_name || "—"} <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">/ ${row.username}</span></span>
               </a>
               <span class="flex items-center gap-2 text-sm sm:text-base">
                 ${deltaIcon(row.delta)}
-                <span class="font-bold text-green-600">${row.total_points} poäng</span>
+                <span class="font-bold text-green-600 dark:text-green-400">${row.total_points} poäng</span>
               </span>`;
             c.appendChild(el);
           });
