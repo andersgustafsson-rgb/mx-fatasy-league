@@ -14,6 +14,94 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 db = SQLAlchemy(app)
 
+# Initialize database immediately
+def init_database():
+    print("Creating database tables...")
+    db.create_all()
+    print("Database tables created!")
+    
+    # Create test users
+    if not User.query.filter_by(username='test').first():
+        test_user = User(
+            username='test',
+            password_hash=generate_password_hash('password'),
+            email='test@example.com'
+        )
+        db.session.add(test_user)
+        print("Created test user")
+    
+    if not User.query.filter_by(username='test2').first():
+        test2_user = User(
+            username='test2',
+            password_hash=generate_password_hash('password'),
+            email='test2@example.com'
+        )
+        db.session.add(test2_user)
+        print("Created test2 user")
+    
+    # Create competitions
+    if Competition.query.count() == 0:
+        competitions = [
+            {'name': 'Anaheim 1', 'event_date': '2025-01-04', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'San Diego', 'event_date': '2025-01-11', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 2', 'event_date': '2025-01-18', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Houston', 'event_date': '2025-01-25', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Tampa', 'event_date': '2025-02-01', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0}
+        ]
+        
+        for comp_data in competitions:
+            comp = Competition(
+                name=comp_data['name'],
+                event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
+                coast_250=comp_data['coast_250'],
+                series=comp_data['series'],
+                point_multiplier=comp_data['point_multiplier']
+            )
+            db.session.add(comp)
+        print("Created competitions")
+    
+    # Create riders
+    if Rider.query.count() == 0:
+        riders_450 = [
+            {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'price': 100},
+            {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'price': 95},
+            {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'price': 90},
+            {'name': 'Jason Anderson', 'class_name': '450cc', 'bike_brand': 'Kawasaki', 'price': 85},
+            {'name': 'Ken Roczen', 'class_name': '450cc', 'bike_brand': 'Suzuki', 'price': 80}
+        ]
+        
+        riders_250 = [
+            {'name': 'Jett Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'price': 100},
+            {'name': 'Hunter Lawrence', 'class_name': '250cc', 'bike_brand': 'Honda', 'price': 95},
+            {'name': 'RJ Hampshire', 'class_name': '250cc', 'bike_brand': 'Husqvarna', 'price': 90},
+            {'name': 'Max Vohland', 'class_name': '250cc', 'bike_brand': 'KTM', 'price': 85},
+            {'name': 'Cameron McAdoo', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'price': 80}
+        ]
+        
+        all_riders = riders_450 + riders_250
+        for rider_data in all_riders:
+            rider = Rider(
+                name=rider_data['name'],
+                class_name=rider_data['class_name'],
+                bike_brand=rider_data['bike_brand'],
+                price=rider_data['price']
+            )
+            db.session.add(rider)
+        print("Created riders")
+    
+    # Create default sim_date
+    if SimDate.query.count() == 0:
+        default_sim_date = SimDate(value='2025-10-06')
+        db.session.add(default_sim_date)
+        print("Created sim_date")
+    
+    db.session.commit()
+    print("Database initialization complete!")
+
+# Initialize database when app starts
+with app.app_context():
+    init_database()
+
 # Models
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
