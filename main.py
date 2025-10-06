@@ -313,30 +313,56 @@ def index():
     uid = session["user_id"]
     today = get_today()
 
-    competitions = Competition.query.order_by(Competition.event_date).all()
+    # Ensure database is initialized
+    try:
+        # Check if tables exist, if not initialize
+        if not db.engine.dialect.has_table(db.engine, 'competitions'):
+            print("Tables missing, reinitializing database...")
+            init_database()
+    except Exception as e:
+        print(f"Database check error: {e}")
+        init_database()
+
+    # Get competitions with error handling
+    try:
+        competitions = Competition.query.order_by(Competition.event_date).all()
+    except Exception as e:
+        print(f"Error getting competitions: {e}")
+        competitions = []
+    
     upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
-    my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+    
+    # Get season team with error handling
+    try:
+        my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+    except Exception as e:
+        print(f"Error getting season team: {e}")
+        my_team = None
 
     team_riders = []
     if my_team:
-        rs = (
-            db.session.query(Rider)
-            .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
-            .filter(SeasonTeamRider.season_team_id == my_team.id)
-            .order_by(Rider.class_name.desc(), Rider.price.desc())
-            .all()
-        )
-        team_riders = [
-            {
-                "id": r.id,
-                "name": r.name,
-                "number": r.rider_number,
-                "brand": (r.bike_brand or "").lower(),
-                "class": r.class_name,
-                "image_url": r.image_url or None,   # <-- added
-            }
-            for r in rs
-        ]
+        try:
+            rs = (
+                db.session.query(Rider)
+                .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+                .filter(SeasonTeamRider.season_team_id == my_team.id)
+                .order_by(Rider.class_name.desc(), Rider.price.desc())
+                .all()
+            )
+            team_riders = [
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "number": r.rider_number,
+                    "brand": (r.bike_brand or "").lower(),
+                    "class": r.class_name,
+                    "image_url": r.image_url or None,   # <-- added
+                }
+                for r in rs
+            ]
+        except Exception as e:
+            print(f"Error getting team riders: {e}")
+            team_riders = []
 
     return render_template(
         "index.html",
@@ -357,7 +383,24 @@ def leagues_page():
     if "user_id" not in session:
         return redirect(url_for("login"))
     uid = session["user_id"]
-    my_leagues = League.query.join(LeagueMembership).filter(LeagueMembership.user_id == uid).all()
+    
+    # Ensure database is initialized
+    try:
+        # Check if tables exist, if not initialize
+        if not db.engine.dialect.has_table(db.engine, 'leagues'):
+            print("Tables missing, reinitializing database...")
+            init_database()
+    except Exception as e:
+        print(f"Database check error: {e}")
+        init_database()
+    
+    # Get leagues with error handling
+    try:
+        my_leagues = League.query.join(LeagueMembership).filter(LeagueMembership.user_id == uid).all()
+    except Exception as e:
+        print(f"Error getting leagues: {e}")
+        my_leagues = []
+    
     return render_template("leagues.html", my_leagues=my_leagues, username=session["username"])
 
 
@@ -2158,6 +2201,36 @@ def check_data_route():
     
     return result
 
+@app.get("/reset_database")
+def reset_database_route():
+    """Reset database - drop all tables and recreate"""
+    try:
+        with app.app_context():
+            print("Dropping all tables...")
+            db.drop_all()
+            print("All tables dropped")
+            
+            print("Recreating database...")
+            db.create_all()
+            print("Database tables recreated")
+            
+            print("Creating test data...")
+            create_test_data()
+            print("Test data created")
+            
+            return f"""
+            <h1>Database Reset Complete!</h1>
+            <p>All tables have been dropped and recreated with fresh data.</p>
+            <p><a href="/">Go to Home</a></p>
+            <p><a href="/admin">Go to Admin</a></p>
+            """
+    except Exception as e:
+        return f"""
+        <h1>Database Reset Failed!</h1>
+        <p>Error: {e}</p>
+        <p><a href="/">Go to Home</a></p>
+        """
+
 @app.get("/force_create_data")
 def force_create_data_route():
     """Force create all data"""
@@ -2517,14 +2590,29 @@ def init_database():
     """Initialize database with tables and test data"""
     try:
         with app.app_context():
+            print("Creating database tables...")
             db.create_all()
+            print("Database tables created successfully")
+            
+            print("Creating test data...")
             create_test_data()
+            print("Test data created successfully")
+            
             print("Database initialized successfully")
+            return True
     except Exception as e:
         print(f"Database initialization error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # Initialize database for Render
-init_database()
+print("Starting database initialization...")
+init_success = init_database()
+if init_success:
+    print("✅ Database initialization completed successfully")
+else:
+    print("❌ Database initialization failed")
 
 if __name__ == "__main__":
     # Production vs Development configuration
