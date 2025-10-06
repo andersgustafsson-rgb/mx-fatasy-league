@@ -613,29 +613,67 @@ def race_picks_page(competition_id):
 def create_league():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    name = (request.form.get("league_name") or "").strip()
-    if not name:
-        flash("Du måste ange ett liganamn.", "error")
+    
+    try:
+        name = (request.form.get("league_name") or "").strip()
+        if not name:
+            flash("Du måste ange ett liganamn.", "error")
+            return redirect(url_for("leagues_page"))
+
+        code = generate_invite_code()
+        image_url = None
+
+        file = request.files.get("league_image")
+        if file and file.filename and allowed_file(file.filename):
+            try:
+                fname = secure_filename(f"{code}_{file.filename}")
+                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                file.save(path)
+                image_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                print(f"League image saved: {path}")
+            except Exception as e:
+                print(f"Error saving league image: {e}")
+                # Continue without image if upload fails
+
+        league = League(name=name, creator_id=session["user_id"], invite_code=code, image_url=image_url)
+        db.session.add(league)
+        db.session.flush()
+        db.session.add(LeagueMembership(league_id=league.id, user_id=session["user_id"]))
+        db.session.commit()
+        
+        print(f"League created successfully: {name} with code {code}")
+        flash("Ligan skapades!", "success")
+        return redirect(url_for("leagues_page"))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error creating league: {e}")
+        flash(f"Fel vid skapande av liga: {str(e)}", "error")
         return redirect(url_for("leagues_page"))
 
-    code = generate_invite_code()
-    image_url = None
-
-    file = request.files.get("league_image")
-    if file and file.filename and allowed_file(file.filename):
-        fname = secure_filename(f"{code}_{file.filename}")
-        path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-        file.save(path)
-        image_url = url_for("static", filename=f"uploads/leagues/{fname}")
-
-    league = League(name=name, creator_id=session["user_id"], invite_code=code, image_url=image_url)
-    db.session.add(league)
-    db.session.flush()
-    db.session.add(LeagueMembership(league_id=league.id, user_id=session["user_id"]))
-    db.session.commit()
-    flash("Ligan skapades!", "success")
-    return redirect(url_for("leagues_page"))
-
+@app.get("/debug_league")
+def debug_league():
+    """Debug league creation"""
+    try:
+        # Test database connection
+        league_count = League.query.count()
+        user_count = User.query.count()
+        
+        # Test file upload folder
+        upload_folder = app.config["UPLOAD_FOLDER"]
+        folder_exists = os.path.exists(upload_folder)
+        
+        return f"""
+        <h1>League Debug Info</h1>
+        <p>Leagues in database: {league_count}</p>
+        <p>Users in database: {user_count}</p>
+        <p>Upload folder: {upload_folder}</p>
+        <p>Upload folder exists: {folder_exists}</p>
+        <p>Current user: {session.get('username', 'Not logged in')}</p>
+        <p>User ID: {session.get('user_id', 'None')}</p>
+        """
+    except Exception as e:
+        return f"<h1>Debug Error</h1><p>{str(e)}</p>"
 
 @app.post("/join_league")
 def join_league():
