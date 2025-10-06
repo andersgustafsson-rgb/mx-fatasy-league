@@ -375,9 +375,17 @@ def my_scores():
     user = User.query.get(session['user_id'])
     my_team = SeasonTeam.query.filter_by(user_id=session['user_id']).first()
     
+    # Create placeholder data for the template
+    total = my_team.total_points if my_team else 0
+    best = {'name': '—', 'points': 0}  # Placeholder
+    history = []  # Placeholder - no race history yet
+    
     return render_template('user_stats.html',
                          username=user.username,
-                         my_team=my_team)
+                         my_team=my_team,
+                         total=total,
+                         best=best,
+                         history=history)
 
 # API Routes
 @app.route('/get_season_leaderboard')
