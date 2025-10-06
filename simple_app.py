@@ -141,6 +141,13 @@ def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Ensure database exists
+    try:
+        User.query.first()
+    except Exception:
+        db.create_all()
+        create_test_data()
+    
     user = User.query.get(session['user_id'])
     today = get_today()
     
@@ -163,6 +170,13 @@ def index():
 def login():
     if 'user_id' in session:
         return redirect(url_for('index'))
+    
+    # Ensure database exists
+    try:
+        User.query.first()
+    except Exception:
+        db.create_all()
+        create_test_data()
     
     if request.method == 'POST':
         username = request.form.get('username', '')
@@ -298,10 +312,11 @@ def get_season_leaderboard():
     
     return jsonify(leaderboard)
 
+# Initialize database when app starts
+with app.app_context():
+    db.create_all()
+    create_test_data()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        create_test_data()
-    
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
