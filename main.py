@@ -415,6 +415,14 @@ def season_team_page():
         )
     return render_template("season_team.html", team=team, riders=riders)
 
+@app.route("/season_team_builder")
+def season_team_builder():
+    user_id = session.get("user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    all_riders = Rider.query.all()
+    return render_template("season_team_builder.html", riders=all_riders)
 
 @app.route("/my_scores")
 def my_scores():

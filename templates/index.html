@@ -31,14 +31,14 @@
           <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
             {% if username == 'test' %}
             <a
-              href="{{ url_for('admin') }}"
+              href="{{ url_for('admin_page') }}"
               class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
             >
               Admin
             </a>
             {% endif %}
             <a
-              href="{{ url_for('season_team') }}"
+              href="{{ url_for('season_team_page') }}"
               class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
               >Mina Ligor</a
             >
@@ -66,7 +66,7 @@
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
           <a
-            href="{{ url_for('race_picks') }}"
+            href="{{ url_for('race_picks_page', competition_id=1) }}"
             class="block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-center nav-sound text-sm sm:text-base"
             >Dina picks</a
           >
@@ -117,7 +117,7 @@
           {% endif %}
 
           <a
-            href="{{ url_for('season_team') }}"
+            href="{{ url_for('season_team_page') }}"
             class="mt-3 sm:mt-4 block bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base"
             >Visa mer detaljer</a
           >
