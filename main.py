@@ -31,7 +31,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
 # Use persistent database for Render deployment
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///app/fantasy_mx.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app/fantasy_mx.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
