@@ -10,7 +10,12 @@ app = Flask(__name__)
 
 # Configuration for Render
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'my-super-secret-key-for-mx-fantasy-league-2025')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///instance/fantasy_mx.db')
+
+# Create instance directory if it doesn't exist
+instance_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
+os.makedirs(instance_path, exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(instance_path, "fantasy_mx.db")}')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
