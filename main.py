@@ -2428,12 +2428,17 @@ def load_smx_2026_riders():
             total_rows = 0
             skipped_rows = 0
             
+            # Debug: Print column names
+            print(f"DEBUG: Column names: {reader.fieldnames}")
+            
             for row in reader:
                 total_rows += 1
                 
                 # Debug first few rows
                 if total_rows <= 5:
                     print(f"DEBUG: Row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}'")
+                    print(f"DEBUG: Full row keys: {list(row.keys())}")
+                    print(f"DEBUG: Full row values: {list(row.values())}")
                 
                 # Skip empty rows or rows with missing essential data
                 if not row.get('Förare') or not row.get('Klass (best-effort)') or row.get('Förare').strip() == '' or row.get('Klass (best-effort)').strip() == '':
