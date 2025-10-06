@@ -620,6 +620,7 @@ def race_picks_page(competition_id):
             "price": r.price,
             "is_out": (r.id in out_ids),
             "image_url": r.image_url,  # Viktigt för att kunna visa headshots i UI
+            "coast_250": r.coast_250,  # För coast-filtrering
         }
 
     riders_450_json = [serialize_rider(r) for r in riders_450]

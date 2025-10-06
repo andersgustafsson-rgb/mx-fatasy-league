@@ -137,7 +137,7 @@
   <option value="">-- välj förare --</option>
   {% for rider in riders_450 %}
     <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-      {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
     </option>
   {% endfor %}
 
@@ -149,7 +149,7 @@
   <option value="">-- välj förare --</option>
   {% for rider in riders_250 %}
     <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-      {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
+      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
     </option>
   {% endfor %}
 
@@ -212,6 +212,8 @@
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
   // NYTT: OUT-lista från servern för att kunna validera i UI
   const OUT_IDS = {{ out_ids | tojson }};
+  // Coast-filtrering för 250cc
+  const competitionCoast = {{ competition.coast_250|tojson }};
 
   function updateDropdowns(riderClass) {
     const selects = document.querySelectorAll(
@@ -237,9 +239,35 @@
         const isChosenElsewhere =
           chosenRiderIds.includes(opt.value) && sel.value !== opt.value;
         const isOut = OUT_IDS.includes(Number(opt.value));
-        opt.disabled = isChosenElsewhere || isOut;
+        
+        // Coast-filtrering för 250cc
+        let isWrongCoast = false;
+        if (riderClass === "250cc" && competitionCoast && competitionCoast !== "both") {
+          const rider = allRiders.find(r => String(r.id) === String(opt.value));
+          if (rider && rider.class === "250cc") {
+            // Tillåt endast samma coast eller 'both'
+            isWrongCoast = rider.coast_250 && rider.coast_250 !== competitionCoast && rider.coast_250 !== "both";
+          }
+        }
+        
+        opt.disabled = isChosenElsewhere || isOut || isWrongCoast;
       }
     });
+  }
+
+  // Uppdatera holeshot-dropdowns med coast-filtrering
+  function updateHoleshotDropdowns() {
+    const holeshot250 = document.getElementById('holeshot-250');
+    if (holeshot250 && competitionCoast && competitionCoast !== "both") {
+      for (const opt of holeshot250.options) {
+        if (!opt.value) continue;
+        const rider = allRiders.find(r => String(r.id) === String(opt.value));
+        if (rider && rider.class === "250cc") {
+          const isWrongCoast = rider.coast_250 && rider.coast_250 !== competitionCoast && rider.coast_250 !== "both";
+          opt.disabled = isWrongCoast || OUT_IDS.includes(Number(opt.value));
+        }
+      }
+    }
   }
 
   const findRiderName = (id) => {
@@ -424,8 +452,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         
 
         // Applicera disable-regler och OUT disable
-        updateDropdowns("450cc");
-        updateDropdowns("250cc");
+  updateDropdowns("450cc");
+  updateDropdowns("250cc");
+  updateHoleshotDropdowns();
       }
 
       if (actualResults && actualResults.length > 0) {
