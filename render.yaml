@@ -7,7 +7,5 @@ services:
     envVars:
       - key: SECRET_KEY
         value: my-super-secret-key-for-mx-fantasy-league-2025
-      - key: DATABASE_URL
-        value: sqlite:///:memory:
       - key: FLASK_ENV
         value: production
