@@ -40,6 +40,14 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/register')
+def register():
+    return f"""
+    <h1>Registrering</h1>
+    <p>För att registrera dig, kontakta administratören.</p>
+    <p><a href="/login">Tillbaka till inloggning</a></p>
+    """
+
 @app.route('/admin')
 def admin():
     if 'username' not in session or session['username'] != 'test':
