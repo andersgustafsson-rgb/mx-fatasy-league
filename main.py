@@ -2407,9 +2407,15 @@ def load_smx_2026_riders():
         
         with open('data/smx_2026_riders_numbers_best_effort.csv', 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file, delimiter='|')
+            total_rows = 0
+            skipped_rows = 0
+            
             for row in reader:
+                total_rows += 1
+                
                 # Skip empty rows
                 if not row.get('Förare') or not row.get('Klass (best-effort)'):
+                    skipped_rows += 1
                     continue
                     
                 # Convert class format (450 -> 450cc, 250 -> 250cc)
@@ -2468,6 +2474,7 @@ def load_smx_2026_riders():
                 
                 riders.append(rider_data)
         
+        print(f"DEBUG: Loaded {len(riders)} riders from CSV (total rows: {total_rows}, skipped: {skipped_rows})")
         return riders
     except Exception as e:
         print(f"Error loading SMX 2026 riders: {e}")
