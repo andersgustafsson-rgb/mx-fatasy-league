@@ -424,7 +424,22 @@ def season_team_builder():
     try:
         all_riders = Rider.query.all()
         print(f"Found {len(all_riders)} riders for season team builder")
-        return render_template("season_team_builder.html", riders=all_riders)
+        
+        # Convert riders to JSON-serializable format
+        riders_data = []
+        for rider in all_riders:
+            riders_data.append({
+                'id': rider.id,
+                'name': rider.name,
+                'class': rider.class_name,
+                'rider_number': rider.rider_number,
+                'bike_brand': rider.bike_brand,
+                'image_url': rider.image_url,
+                'price': rider.price,
+                'coast_250': rider.coast_250
+            })
+        
+        return render_template("season_team_builder.html", riders=riders_data)
     except Exception as e:
         print(f"Error in season_team_builder: {e}")
         return f"Error loading riders: {str(e)}", 500
