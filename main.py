@@ -311,9 +311,22 @@ def index():
     uid = session["user_id"]
     today = get_today()
 
-    competitions = Competition.query.order_by(Competition.event_date).all()
-    upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
-    my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+    try:
+        competitions = Competition.query.order_by(Competition.event_date).all()
+        upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+        my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+    except Exception as e:
+        print(f"Database error in index: {e}")
+        # Try to reinitialize database
+        try:
+            db.create_all()
+            create_test_data()
+            competitions = Competition.query.order_by(Competition.event_date).all()
+            upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+            my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+        except Exception as e2:
+            print(f"Failed to reinitialize database: {e2}")
+            return f"Database error: {str(e2)}", 500
 
     team_riders = []
     if my_team:
@@ -674,6 +687,24 @@ def debug_league():
         """
     except Exception as e:
         return f"<h1>Debug Error</h1><p>{str(e)}</p>"
+
+@app.get("/reset_database")
+def reset_database():
+    """Reset database - useful when database gets corrupted"""
+    try:
+        # Drop all tables
+        db.drop_all()
+        # Recreate all tables
+        db.create_all()
+        # Create test data
+        create_test_data()
+        return """
+        <h1>Database Reset Successfully!</h1>
+        <p>All tables have been recreated and test data has been added.</p>
+        <p><a href="/">Go to Home</a></p>
+        """
+    except Exception as e:
+        return f"<h1>Database Reset Error</h1><p>{str(e)}</p>"
 
 @app.post("/join_league")
 def join_league():
