@@ -307,6 +307,23 @@ function onPickChange(cls, pos) {
   updateDropdowns(cls);
 }
 
+  function initializePreviewImages() {
+    // Initialize all preview images for both 450cc and 250cc
+    for (let i = 1; i <= 6; i++) {
+      // 450cc
+      const sel450 = document.querySelector(`.pick-select[data-class="450cc"][data-position="${i}"]`);
+      if (sel450 && sel450.value) {
+        onPickChange('450cc', i);
+      }
+      
+      // 250cc
+      const sel250 = document.querySelector(`.pick-select[data-class="250cc"][data-position="${i}"]`);
+      if (sel250 && sel250.value) {
+        onPickChange('250cc', i);
+      }
+    }
+  }
+
   async function displayResults(myPicks) {
     if (!actualResults || actualResults.length === 0) return;
 
@@ -566,6 +583,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       updateDropdowns("450cc");
       updateDropdowns("250cc");
       updateHoleshotDropdowns();
+      
+      // Initialize all preview images
+      initializePreviewImages();
       
       // Then load user picks
       fetchAndDisplayMyPicks();
