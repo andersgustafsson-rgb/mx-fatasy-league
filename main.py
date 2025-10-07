@@ -2664,6 +2664,28 @@ def init_database():
             db.create_all()
             print("Database tables created successfully")
             
+            # Handle timezone column migration for existing competitions
+            try:
+                # Check if timezone column exists, if not add it
+                result = db.session.execute(db.text("PRAGMA table_info(competitions)"))
+                columns = [row[1] for row in result.fetchall()]
+                
+                if 'timezone' not in columns:
+                    print("Adding timezone column to competitions table...")
+                    db.session.execute(db.text("ALTER TABLE competitions ADD COLUMN timezone VARCHAR(50)"))
+                    db.session.commit()
+                    print("Timezone column added successfully")
+                    
+                    # Update existing competitions with timezone data
+                    competitions = Competition.query.all()
+                    for comp in competitions:
+                        comp.timezone = get_track_timezone(comp.name)
+                    db.session.commit()
+                    print(f"Updated {len(competitions)} competitions with timezone data")
+            except Exception as e:
+                print(f"Warning: Could not migrate timezone column: {e}")
+                # Continue anyway, the column will be added when creating new competitions
+            
             print("Creating test data...")
             create_test_data()
             print("Test data created successfully")
