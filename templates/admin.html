@@ -287,7 +287,7 @@
   <!-- Script -->
   <script>
     // Make riders data available to JavaScript
-    window.riders_250_data = {{ riders_250|tojson|safe }};
+    window.riders_250_data = {{ riders_250_json|tojson|safe }};
     console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
     
     function syncHiddenCompetitionId() {

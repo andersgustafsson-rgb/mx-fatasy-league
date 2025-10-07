@@ -904,6 +904,19 @@ def admin_page():
     riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
     riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
 
+    # Serialize riders data for JavaScript
+    def serialize_rider(r: Rider):
+        return {
+            "id": r.id,
+            "name": r.name,
+            "class_name": r.class_name,
+            "rider_number": r.rider_number,
+            "bike_brand": r.bike_brand,
+            "coast_250": r.coast_250,
+        }
+
+    riders_250_json = [serialize_rider(r) for r in riders_250]
+
     race_scores = []
     last_scored = (
         db.session.query(CompetitionScore.competition_id)
@@ -926,6 +939,7 @@ def admin_page():
         competitions=competitions,
         riders_450=riders_450,
         riders_250=riders_250,
+        riders_250_json=riders_250_json,
         race_scores=race_scores,
         today=get_today(),
     )
