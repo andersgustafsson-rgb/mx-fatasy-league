@@ -172,7 +172,7 @@
               <select name="holeshot_450" id="holeshot_450" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base text-gray-900 dark:text-gray-100">
                 <option value="">-- Välj förare --</option>
                 {% for rider in riders_450 %}
-                  <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+                  <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -181,7 +181,7 @@
               <select name="holeshot_250" id="holeshot_250" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base text-gray-900 dark:text-gray-100">
                 <option value="">-- Välj förare --</option>
                 {% for rider in riders_250 %}
-                  <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+                  <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -262,7 +262,7 @@
       <select name="riders_450[]" class="w-full p-1 sm:p-2 border rounded bg-white dark:bg-gray-600 text-xs sm:text-sm">
         <option value="">-- Välj förare --</option>
         {% for rider in riders_450 %}
-          <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
         {% endfor %}
       </select>
       <button type="button" onclick="removeRow(this,'450')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
@@ -276,7 +276,7 @@
       <select name="riders_250[]" class="w-full p-1 sm:p-2 border rounded bg-white dark:bg-gray-600 text-xs sm:text-sm">
         <option value="">-- Välj förare --</option>
         {% for rider in riders_250 %}
-          <option value="{{ rider.id }}">{{ rider.name }} ({{ rider.bike_brand }})</option>
+          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
         {% endfor %}
       </select>
       <button type="button" onclick="removeRow(this,'250')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
