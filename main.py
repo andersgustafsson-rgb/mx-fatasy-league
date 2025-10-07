@@ -2436,7 +2436,7 @@ def load_smx_2026_riders():
                 
                 # Debug first few rows
                 if total_rows <= 5:
-                    print(f"DEBUG: Row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}'")
+                    print(f"DEBUG: Row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}', Nummer='{row.get('Nummer (career)')}'")
                     print(f"DEBUG: Full row keys: {list(row.keys())}")
                     print(f"DEBUG: Full row values: {list(row.values())}")
                 
@@ -2455,7 +2455,11 @@ def load_smx_2026_riders():
                 if row.get('Nummer (career)'):
                     try:
                         rider_number = int(row['Nummer (career)'])
-                    except ValueError:
+                        if total_rows <= 5:  # Debug first few
+                            print(f"DEBUG: Parsed rider number: {rider_number} from '{row['Nummer (career)']}'")
+                    except ValueError as e:
+                        if total_rows <= 5:  # Debug first few
+                            print(f"DEBUG: Failed to parse rider number '{row['Nummer (career)']}': {e}")
                         pass
                 
                 # Get coast for 250cc riders
