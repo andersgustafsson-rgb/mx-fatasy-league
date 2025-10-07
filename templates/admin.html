@@ -485,17 +485,27 @@
     }
 
     async function saveAllOutStatus() {
+      console.log("saveAllOutStatus called");
       const comp = document.getElementById("competition-select").value;
-      if (!comp) { alert("Välj en tävling först."); return; }
+      if (!comp) { 
+        alert("Välj en tävling först."); 
+        return; 
+      }
+      
+      console.log("Competition selected:", comp);
       
       // Get all checkboxes
       const checkboxes = document.querySelectorAll('#out-list-450 input[type="checkbox"], #out-list-250 input[type="checkbox"]');
+      console.log("Found checkboxes:", checkboxes.length);
+      
       let saved = 0;
       let errors = 0;
       
       for (const checkbox of checkboxes) {
         const riderId = checkbox.id.replace('out-', '');
         const isOut = checkbox.checked;
+        
+        console.log(`Processing rider ${riderId}, isOut: ${isOut}`);
         
         try {
           const res = await fetch("/admin/set_out_status", {
@@ -510,17 +520,20 @@
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "save failed");
           saved++;
+          console.log(`Saved rider ${riderId}`);
         } catch (e) {
-          console.error(e);
+          console.error(`Error saving rider ${riderId}:`, e);
           errors++;
         }
       }
       
+      console.log(`Final result: ${saved} saved, ${errors} errors`);
+      
       if (errors === 0) {
-        showToast(`Alla ${saved} ändringar sparade!`, true);
+        alert(`Alla ${saved} ändringar sparade!`);
         localStorage.setItem("out-updated", String(Date.now()));
       } else {
-        showToast(`${saved} sparade, ${errors} fel`, false);
+        alert(`${saved} sparade, ${errors} fel`);
       }
     }
 
