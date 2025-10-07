@@ -679,15 +679,21 @@
     }
 
     function updateSimDateDisplay() {
+      console.log('DEBUG: updateSimDateDisplay called');
       // This will be called after form submission to update the display
       fetch('/admin')
         .then(response => response.text())
         .then(html => {
+          console.log('DEBUG: Fetched admin page HTML');
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, 'text/html');
           const newDate = doc.querySelector('#current-sim-date');
           if (newDate) {
+            console.log('DEBUG: Found new date element:', newDate.textContent);
             document.getElementById('current-sim-date').textContent = newDate.textContent;
+            console.log('DEBUG: Updated date display to:', newDate.textContent);
+          } else {
+            console.log('DEBUG: Could not find #current-sim-date element');
           }
         })
         .catch(err => console.error('Could not update date display:', err));
@@ -719,7 +725,8 @@
       
       // Update date display after form submissions
       document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function() {
+        form.addEventListener('submit', function(e) {
+          console.log('DEBUG: Form submitted:', e.target.action || 'unknown action');
           setTimeout(updateSimDateDisplay, 1000); // Update after redirect
         });
       });
