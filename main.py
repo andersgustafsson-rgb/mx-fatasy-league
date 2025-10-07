@@ -2506,6 +2506,10 @@ def load_smx_2026_riders():
                 }
                 
                 riders.append(rider_data)
+                
+                # Debug first few riders being added
+                if len(riders) <= 5:
+                    print(f"DEBUG: Adding rider: {rider_data['name']} #{rider_data['rider_number']} ({rider_data['class_name']})")
         
         print(f"DEBUG: Loaded {len(riders)} riders from CSV (total rows: {total_rows}, skipped: {skipped_rows})")
         
@@ -2589,7 +2593,7 @@ def create_test_data():
                 {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 62, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/62_max_anstie.jpg'}
             ]
         
-        for rider_data in all_riders:
+        for i, rider_data in enumerate(all_riders):
             rider = Rider(
                 name=rider_data['name'],
                 class_name=rider_data['class_name'],
@@ -2600,6 +2604,10 @@ def create_test_data():
                 coast_250=rider_data.get('coast_250')
             )
             db.session.add(rider)
+            
+            # Debug first few riders being saved to database
+            if i < 5:
+                print(f"DEBUG: Saving to DB: {rider.name} #{rider.rider_number} ({rider.class_name})")
         
         # Count riders by class
         riders_450_count = len([r for r in all_riders if r['class_name'] == '450cc'])
