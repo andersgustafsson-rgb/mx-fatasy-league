@@ -71,7 +71,7 @@
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
           <a
-            href="{{ url_for('race_picks_page', competition_id=1) }}"
+            href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}"
             class="block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-center nav-sound text-sm sm:text-base"
             >Dina picks</a
           >
