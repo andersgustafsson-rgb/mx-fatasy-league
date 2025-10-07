@@ -164,7 +164,7 @@
       </div>
 
       <!-- Resultatformulär -->
-      <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="return validateResults()">
+      <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="console.log('Form submitted'); return validateResults()">
         <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
 
         <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
@@ -298,6 +298,7 @@
       const comp = document.getElementById("competition-select")?.value || "";
       const h = document.getElementById("competition_id_hidden");
       if (h) h.value = comp;
+      console.log(`DEBUG: syncHiddenCompetitionId - competition: ${comp}, hidden field: ${h ? h.value : 'not found'}`);
     }
 
     function updateSelectedCompetitionInfo() {
