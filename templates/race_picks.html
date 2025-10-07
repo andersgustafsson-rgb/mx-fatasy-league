@@ -207,6 +207,7 @@
 <script>
   // Serverdata
   const competitionId = {{ competition.id|tojson }};
+  const competitionName = {{ competition.name|tojson }};
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
@@ -214,6 +215,10 @@
   const OUT_IDS = {{ out_ids | tojson }};
   // Coast-filtrering för 250cc
   const competitionCoast = {{ competition.coast_250|tojson }};
+  
+  console.log(`DEBUG: Race picks page loaded for competition: ${competitionName} (ID: ${competitionId})`);
+  console.log(`DEBUG: Competition coast: ${competitionCoast}`);
+  console.log(`DEBUG: Total riders: ${allRiders.length}`);
 
   function updateDropdowns(riderClass) {
     const selects = document.querySelectorAll(
@@ -278,29 +283,54 @@
   // Bygg bild-URL från rider-data: headshot först, annars brand-logga
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
-  if (!r) return null;
-  if (r.image_url) return `/static/${r.image_url}`;
-  if (r.bike_brand) return `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+  if (!r) {
+    console.log(`DEBUG: Rider not found for ID ${riderId}`);
+    return null;
+  }
+  
+  console.log(`DEBUG: imgSrcFor(${riderId}): ${r.name}, image_url: ${r.image_url}, bike_brand: ${r.bike_brand}`);
+  
+  if (r.image_url) {
+    const url = `/static/${r.image_url}`;
+    console.log(`DEBUG: Using rider image: ${url}`);
+    return url;
+  }
+  if (r.bike_brand) {
+    const url = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+    console.log(`DEBUG: Using bike brand logo: ${url}`);
+    return url;
+  }
+  
+  console.log(`DEBUG: No image or bike brand for ${r.name}`);
   return null;
 }
 function onPickChange(cls, pos) {
+  console.log(`DEBUG: onPickChange called for ${cls} position ${pos}`);
+  
   const sel = document.querySelector(
     `.pick-select[data-class="${cls}"][data-position="${pos}"]`
   );
   const imgId = cls.startsWith("450") ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
+  console.log(`DEBUG: Found select: ${sel ? 'yes' : 'no'}, img: ${img ? 'yes' : 'no'}, imgId: ${imgId}`);
+
   const val = sel?.value;
   const src = val ? imgSrcFor(val) : null;
+  
+  console.log(`DEBUG: Selected value: ${val}, src: ${src}`);
+  
   if (img) {
     if (src) {
       img.src = src;
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
+      console.log(`DEBUG: Set image src to: ${src}`);
     } else {
       img.removeAttribute("src");
       img.classList.remove("has-src");
       img.style.background = "#4b5563";
+      console.log(`DEBUG: Removed image src`);
     }
   }
 
@@ -308,17 +338,22 @@ function onPickChange(cls, pos) {
 }
 
   function initializePreviewImages() {
+    console.log(`DEBUG: initializePreviewImages called`);
+    console.log(`DEBUG: allRiders length: ${allRiders.length}`);
+    
     // Initialize all preview images for both 450cc and 250cc
     for (let i = 1; i <= 6; i++) {
       // 450cc
       const sel450 = document.querySelector(`.pick-select[data-class="450cc"][data-position="${i}"]`);
       if (sel450 && sel450.value) {
+        console.log(`DEBUG: Found 450cc selection for position ${i}: ${sel450.value}`);
         onPickChange('450cc', i);
       }
       
       // 250cc
       const sel250 = document.querySelector(`.pick-select[data-class="250cc"][data-position="${i}"]`);
       if (sel250 && sel250.value) {
+        console.log(`DEBUG: Found 250cc selection for position ${i}: ${sel250.value}`);
         onPickChange('250cc', i);
       }
     }
