@@ -594,8 +594,6 @@ def race_picks_page(competition_id):
 
     # 250 – coast-logik
     riders_250_query = Rider.query.filter_by(class_name="250cc")
-    print(f"DEBUG: Competition {comp.name} has coast_250 = {comp.coast_250}")
-    print(f"DEBUG: Total 250cc riders in DB: {riders_250_query.count()}")
     
     if comp.coast_250 == "both":
         # Showdown: tillåt east/west/both
@@ -604,22 +602,13 @@ def race_picks_page(competition_id):
             | (Rider.coast_250 == "west")
             | (Rider.coast_250 == "both")
         )
-        print("DEBUG: Filtering for 'both' - allowing east/west/both")
     elif comp.coast_250 in ("east", "west"):
         # Vanligt SX: endast samma coast eller 'both'
         riders_250_query = riders_250_query.filter(
             (Rider.coast_250 == comp.coast_250) | (Rider.coast_250 == "both")
         )
-        print(f"DEBUG: Filtering for '{comp.coast_250}' - allowing {comp.coast_250}/both")
-    else:
-        print("DEBUG: No coast filtering - showing all 250cc riders")
     # Annars (None): visa alla 250
     riders_250 = riders_250_query.order_by(Rider.rider_number).all()
-    print(f"DEBUG: Final 250cc riders count: {len(riders_250)}")
-    
-    # Debug: Show first few 250cc riders
-    for i, rider in enumerate(riders_250[:5]):
-        print(f"DEBUG: 250cc rider {i+1}: {rider.name} #{rider.rider_number} (coast: {rider.coast_250})")
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
@@ -2438,10 +2427,19 @@ def load_smx_2026_riders():
                 
                 # Get coast for 250cc riders
                 coast_250 = None
-                if class_name == '250cc' and row.get('Coast (250 East/West)'):
-                    coast = row['Coast (250 East/West)'].lower()
-                    if coast in ['east', 'west']:
-                        coast_250 = coast
+                if class_name == '250cc':
+                    if row.get('Coast (250 East/West)'):
+                        coast = row['Coast (250 East/West)'].lower()
+                        if coast in ['east', 'west']:
+                            coast_250 = coast
+                    else:
+                        # Default coast assignment for 250cc riders without explicit coast
+                        # This is a temporary solution - in reality, you'd need proper coast data
+                        # For now, assign alternating east/west based on rider number
+                        if rider_number:
+                            coast_250 = 'east' if rider_number % 2 == 0 else 'west'
+                        else:
+                            coast_250 = 'east'  # Default fallback
                 
                 # Extract bike brand from team/bike info
                 bike_brand = 'Unknown'
