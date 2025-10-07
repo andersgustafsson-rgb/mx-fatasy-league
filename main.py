@@ -232,10 +232,16 @@ def get_today():
     try:
         row = db.session.execute(db.text("SELECT value FROM sim_date LIMIT 1")).first()
         if row and row[0]:
-            return datetime.strptime(row[0], "%Y-%m-%d").date()
-    except Exception:
+            sim_date = datetime.strptime(row[0], "%Y-%m-%d").date()
+            print(f"DEBUG: get_today() returning simulated date: {sim_date}")
+            return sim_date
+    except Exception as e:
+        print(f"DEBUG: get_today() error reading sim_date: {e}")
         pass
-    return date.today()
+    
+    today = date.today()
+    print(f"DEBUG: get_today() returning real date: {today}")
+    return today
 
 
 def allowed_file(filename: str) -> bool:
@@ -1045,6 +1051,7 @@ def admin_set_sim_date():
     if session.get("username") != "test":
         return redirect(url_for("index"))
     sim = (request.form.get("sim_date") or "").strip()
+    print(f"DEBUG: admin_set_sim_date called with date: {sim}")
     if not sim:
         flash("Du måste ange ett datum (YYYY-MM-DD).", "error")
         return redirect(url_for("admin_page"))
@@ -1053,9 +1060,11 @@ def admin_set_sim_date():
         db.session.execute(db.text("DELETE FROM sim_date"))
         db.session.execute(db.text("INSERT INTO sim_date (value) VALUES (:v)"), {"v": sim})
         db.session.commit()
+        print(f"DEBUG: Successfully saved sim_date: {sim}")
         flash(f"Simulerat datum satt till {sim}.", "success")
     except Exception as e:
         db.session.rollback()
+        print(f"DEBUG: Error saving sim_date: {e}")
         flash(f"Kunde inte sätta sim datum: {e}", "error")
     return redirect(url_for("admin_page"))
 
