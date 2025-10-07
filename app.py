@@ -202,7 +202,7 @@ class CompetitionImage(db.Model):
     competition = db.relationship(
         "Competition",
         backref=db.backref("images", cascade="all, delete-orphan", lazy="dynamic")
-    )
+    )    
 
 class SimDate(db.Model):
     __tablename__ = "sim_date"
@@ -254,10 +254,10 @@ def login():
             print(f"Password check: {password_check}")
             
             if password_check:
-                session["user_id"] = user.id
-                session["username"] = user.username
+            session["user_id"] = user.id
+            session["username"] = user.username
                 print("Login successful, redirecting...")
-                return redirect(url_for("index"))
+            return redirect(url_for("index"))
         
         print("Login failed")
         flash("Felaktigt användarnamn eller lösenord", "error")
@@ -2104,8 +2104,8 @@ def create_test_data():
     db.session.commit()
 
 # Initialize database for Render
-with app.app_context():
-    db.create_all()
+    with app.app_context():
+        db.create_all()
     create_test_data()
 
 if __name__ == "__main__":

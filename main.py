@@ -734,7 +734,7 @@ def create_league():
         print(f"League created successfully: {name} with code {code}")
         flash("Ligan skapades!", "success")
         return redirect(url_for("leagues_page"))
-        
+
     except Exception as e:
         db.session.rollback()
         print(f"Error creating league: {e}")
@@ -926,7 +926,7 @@ def admin_get_results(competition_id):
 
     try:
         print(f"DEBUG: admin_get_results called for competition {competition_id}")
-        
+
         results = (
             db.session.query(
                 CompetitionResult.rider_id,
@@ -1208,7 +1208,7 @@ def admin_get_out_status(competition_id):
 
     try:
         print(f"DEBUG: admin_get_out_status called for competition {competition_id}")
-        
+
         # all riders
         riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.rider_number.asc()).all()
         print(f"DEBUG: Found {len(riders)} riders")
@@ -1517,16 +1517,8 @@ def save_picks():
         except Exception:
             pass
 
-    try:
-        db.session.commit()
-        print(f"DEBUG: Successfully saved picks for user {uid}, competition {comp_id}")
-        return jsonify({"message":"Picks sparade"}), 200
-    except Exception as e:
-        db.session.rollback()
-        print(f"DEBUG: Error saving picks: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    db.session.commit()
+    return jsonify({"message":"Picks sparade"}), 200
 
 
 
@@ -2556,6 +2548,18 @@ def load_smx_2026_riders():
                 # Set default price based on class
                 price = 450000 if class_name == '450cc' else 50000
                 
+                # Build image URL: riders/{number}_{name}.png (or .jpg fallback)
+                image_url = None
+                if rider_number:
+                    name_slug = row['Förare'].lower().replace(" ", "_")
+                    # Try PNG first, then JPG
+                    potential_urls = [
+                        f'riders/{rider_number}_{name_slug}.png',
+                        f'riders/{rider_number}_{name_slug}.jpg'
+                    ]
+                    # We'll use the first format (PNG) as default, backend will serve what exists
+                    image_url = potential_urls[0]
+                
                 # Create rider data
                 rider_data = {
                     'name': row['Förare'],
@@ -2564,7 +2568,7 @@ def load_smx_2026_riders():
                     'bike_brand': bike_brand,
                     'price': price,
                     'coast_250': coast_250,
-                    'image_url': f'riders/{row["Förare"].lower().replace(" ", "_")}.jpg'
+                    'image_url': image_url
                 }
                 
                 riders.append(rider_data)
