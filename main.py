@@ -80,6 +80,7 @@ class Competition(db.Model):
     point_multiplier = db.Column(db.Float, default=1.0)
     is_triple_crown = db.Column(db.Integer, default=0)
     coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
+    timezone = db.Column(db.String(50), nullable=True)  # <-- tidszon för banan
 
 class Rider(db.Model):
     __tablename__ = "riders"
@@ -242,6 +243,35 @@ def get_today():
     today = date.today()
     print(f"DEBUG: get_today() returning real date: {today}")
     return today
+
+
+def get_track_timezone(track_name):
+    """Get timezone for a track based on its name"""
+    timezone_map = {
+        # Pacific Time (UTC-8/-7)
+        'Anaheim 1': 'America/Los_Angeles',
+        'Anaheim 2': 'America/Los_Angeles', 
+        'San Diego': 'America/Los_Angeles',
+        'Glendale': 'America/Phoenix',  # Arizona (no DST)
+        'Seattle': 'America/Los_Angeles',
+        'Denver': 'America/Denver',
+        'Salt Lake City': 'America/Denver',
+        
+        # Central Time (UTC-6/-5)
+        'Houston': 'America/Chicago',
+        'Arlington': 'America/Chicago',
+        'St. Louis': 'America/Chicago',
+        'Nashville': 'America/Chicago',
+        'Birmingham': 'America/Chicago',
+        
+        # Eastern Time (UTC-5/-4)
+        'Daytona': 'America/New_York',
+        'Indianapolis': 'America/New_York',
+        'Detroit': 'America/New_York',
+        'Cleveland': 'America/New_York',
+        'Philadelphia': 'America/New_York',
+    }
+    return timezone_map.get(track_name, 'America/New_York')  # Default to Eastern
 
 
 def allowed_file(filename: str) -> bool:
@@ -2274,25 +2304,25 @@ def force_create_data_route():
     # Create competitions
     competitions = [
         # Western Regional 250SX Championship
-        {'name': 'Anaheim 1', 'event_date': '2026-01-10', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'San Diego', 'event_date': '2026-01-17', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Anaheim 2', 'event_date': '2026-01-24', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Houston', 'event_date': '2026-01-31', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-        {'name': 'Glendale', 'event_date': '2026-02-07', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Seattle', 'event_date': '2026-02-14', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+        {'name': 'Anaheim 1', 'event_date': '2026-01-10', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+        {'name': 'San Diego', 'event_date': '2026-01-17', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+        {'name': 'Anaheim 2', 'event_date': '2026-01-24', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+        {'name': 'Houston', 'event_date': '2026-01-31', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+        {'name': 'Glendale', 'event_date': '2026-02-07', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Phoenix'},
+        {'name': 'Seattle', 'event_date': '2026-02-14', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
         
         # Eastern Regional 250SX Championship
-        {'name': 'Arlington', 'event_date': '2026-02-21', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-        {'name': 'Daytona', 'event_date': '2026-02-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Indianapolis', 'event_date': '2026-03-07', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Birmingham', 'event_date': '2026-03-21', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-        {'name': 'Detroit', 'event_date': '2026-03-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'St. Louis', 'event_date': '2026-04-04', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Nashville', 'event_date': '2026-04-11', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Cleveland', 'event_date': '2026-04-18', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Philadelphia', 'event_date': '2026-04-25', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Denver', 'event_date': '2026-05-02', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-        {'name': 'Salt Lake City', 'event_date': '2026-05-09', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5}
+        {'name': 'Arlington', 'event_date': '2026-02-21', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+        {'name': 'Daytona', 'event_date': '2026-02-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+        {'name': 'Indianapolis', 'event_date': '2026-03-07', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+        {'name': 'Birmingham', 'event_date': '2026-03-21', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+        {'name': 'Detroit', 'event_date': '2026-03-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+        {'name': 'St. Louis', 'event_date': '2026-04-04', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
+        {'name': 'Nashville', 'event_date': '2026-04-11', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
+        {'name': 'Cleveland', 'event_date': '2026-04-18', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+        {'name': 'Philadelphia', 'event_date': '2026-04-25', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+        {'name': 'Denver', 'event_date': '2026-05-02', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Denver'},
+        {'name': 'Salt Lake City', 'event_date': '2026-05-09', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5, 'timezone': 'America/Denver'}
     ]
     
     for comp_data in competitions:
@@ -2301,7 +2331,9 @@ def force_create_data_route():
             event_date=datetime.strptime(comp_data['event_date'], '%Y-%m-%d').date(),
             coast_250=comp_data['coast_250'],
             series=comp_data['series'],
-            point_multiplier=comp_data['point_multiplier']
+            point_multiplier=comp_data['point_multiplier'],
+            is_triple_crown=comp_data.get('is_triple_crown', False),
+            timezone=comp_data.get('timezone', 'America/New_York')
         )
         db.session.add(comp)
     
@@ -2546,29 +2578,29 @@ def create_test_data():
         db.session.add(test_user)
         print("Created test user: test/password")
     
-    # Create all Supercross 2025 competitions
+    # Create all Supercross 2026 competitions
     if Competition.query.count() == 0:
         competitions = [
             # Western Regional 250SX Championship
-            {'name': 'Anaheim 1', 'event_date': '2026-01-10', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'San Diego', 'event_date': '2026-01-17', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Anaheim 2', 'event_date': '2026-01-24', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Houston', 'event_date': '2026-01-31', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-            {'name': 'Glendale', 'event_date': '2026-02-07', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Seattle', 'event_date': '2026-02-14', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
+            {'name': 'Anaheim 1', 'event_date': '2026-01-10', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+            {'name': 'San Diego', 'event_date': '2026-01-17', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+            {'name': 'Anaheim 2', 'event_date': '2026-01-24', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
+            {'name': 'Houston', 'event_date': '2026-01-31', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+            {'name': 'Glendale', 'event_date': '2026-02-07', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Phoenix'},
+            {'name': 'Seattle', 'event_date': '2026-02-14', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Los_Angeles'},
             
             # Eastern Regional 250SX Championship
-            {'name': 'Arlington', 'event_date': '2026-02-21', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-            {'name': 'Daytona', 'event_date': '2026-02-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Indianapolis', 'event_date': '2026-03-07', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Birmingham', 'event_date': '2026-03-21', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True},
-            {'name': 'Detroit', 'event_date': '2026-03-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'St. Louis', 'event_date': '2026-04-04', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Nashville', 'event_date': '2026-04-11', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Cleveland', 'event_date': '2026-04-18', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Philadelphia', 'event_date': '2026-04-25', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Denver', 'event_date': '2026-05-02', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0},
-            {'name': 'Salt Lake City', 'event_date': '2026-05-09', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5}
+            {'name': 'Arlington', 'event_date': '2026-02-21', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+            {'name': 'Daytona', 'event_date': '2026-02-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+            {'name': 'Indianapolis', 'event_date': '2026-03-07', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+            {'name': 'Birmingham', 'event_date': '2026-03-21', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'is_triple_crown': True, 'timezone': 'America/Chicago'},
+            {'name': 'Detroit', 'event_date': '2026-03-28', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+            {'name': 'St. Louis', 'event_date': '2026-04-04', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
+            {'name': 'Nashville', 'event_date': '2026-04-11', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Chicago'},
+            {'name': 'Cleveland', 'event_date': '2026-04-18', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+            {'name': 'Philadelphia', 'event_date': '2026-04-25', 'coast_250': 'east', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/New_York'},
+            {'name': 'Denver', 'event_date': '2026-05-02', 'coast_250': 'west', 'series': 'SX', 'point_multiplier': 1.0, 'timezone': 'America/Denver'},
+            {'name': 'Salt Lake City', 'event_date': '2026-05-09', 'coast_250': 'both', 'series': 'SX', 'point_multiplier': 1.5, 'timezone': 'America/Denver'}
         ]
         
         for comp_data in competitions:
@@ -2578,7 +2610,8 @@ def create_test_data():
                 coast_250=comp_data['coast_250'],
                 series=comp_data['series'],
                 point_multiplier=comp_data['point_multiplier'],
-                is_triple_crown=comp_data.get('is_triple_crown', False)
+                is_triple_crown=comp_data.get('is_triple_crown', False),
+                timezone=comp_data.get('timezone', 'America/New_York')
             )
             db.session.add(comp)
         print("Created 17 Supercross 2026 competitions")

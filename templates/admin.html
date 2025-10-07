@@ -68,6 +68,9 @@
         <div class="text-xs sm:text-sm text-blue-700 dark:text-blue-300 mt-1">
           Simuleringar och "nästa race" baseras på detta datum
         </div>
+        <div id="timezone-info" class="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mt-1">
+          <!-- Tidszon-information visas här -->
+        </div>
       </div>
 
       <!-- Välj tävling + kontroller -->
@@ -301,13 +304,43 @@
       const select = document.getElementById("competition-select");
       const infoDiv = document.getElementById("selected-competition-info");
       const nameSpan = document.getElementById("selected-competition-name");
+      const timezoneInfo = document.getElementById("timezone-info");
       
       if (select.value) {
         const selectedOption = select.options[select.selectedIndex];
         nameSpan.textContent = selectedOption.textContent;
         infoDiv.style.display = "block";
+        
+        // Visa tidszon-information för vald tävling
+        if (timezoneInfo) {
+          const timezoneMap = {
+            'Anaheim 1': 'Pacific Time (UTC-8/-7)',
+            'Anaheim 2': 'Pacific Time (UTC-8/-7)',
+            'San Diego': 'Pacific Time (UTC-8/-7)',
+            'Glendale': 'Mountain Time (UTC-7, no DST)',
+            'Seattle': 'Pacific Time (UTC-8/-7)',
+            'Houston': 'Central Time (UTC-6/-5)',
+            'Arlington': 'Central Time (UTC-6/-5)',
+            'St. Louis': 'Central Time (UTC-6/-5)',
+            'Nashville': 'Central Time (UTC-6/-5)',
+            'Birmingham': 'Central Time (UTC-6/-5)',
+            'Daytona': 'Eastern Time (UTC-5/-4)',
+            'Indianapolis': 'Eastern Time (UTC-5/-4)',
+            'Detroit': 'Eastern Time (UTC-5/-4)',
+            'Cleveland': 'Eastern Time (UTC-5/-4)',
+            'Philadelphia': 'Eastern Time (UTC-5/-4)',
+            'Denver': 'Mountain Time (UTC-7/-6)',
+            'Salt Lake City': 'Mountain Time (UTC-7/-6)'
+          };
+          
+          const timezone = timezoneMap[selectedOption.textContent] || 'Eastern Time (UTC-5/-4)';
+          timezoneInfo.innerHTML = `<strong>Tidszon:</strong> ${timezone}`;
+        }
       } else {
         infoDiv.style.display = "none";
+        if (timezoneInfo) {
+          timezoneInfo.innerHTML = "";
+        }
       }
     }
 
