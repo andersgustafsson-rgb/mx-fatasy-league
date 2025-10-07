@@ -365,6 +365,11 @@
       c250.innerHTML = "";
       if (hs450) hs450.value = "";
       if (hs250) hs250.value = "";
+      
+      // Clear any existing status text from options
+      document.querySelectorAll('option').forEach(opt => {
+        opt.textContent = opt.textContent.replace(/ \(OUT\)| \(Fel coast\)/g, '');
+      });
 
       // Get competition coast reliably using a map rendered from backend
       const selectEl = document.getElementById("competition-select");
@@ -413,6 +418,10 @@
 
         // Update holeshot dropdowns with coast validation
         updateHoleshotDropdowns();
+        
+        // Update all dropdowns with coast validation
+        validateAndUpdateDropdowns('450');
+        validateAndUpdateDropdowns('250');
 
         (data.holeshot_results || []).forEach((r) => {
           if (r.class && r.class.startsWith("450") && hs450) hs450.value = r.rider_id;
@@ -426,6 +435,11 @@
         while (document.getElementById("results-container-250").children.length < 6) {
           addResultRow("250");
         }
+        
+        // Update all dropdowns with coast validation
+        updateHoleshotDropdowns();
+        validateAndUpdateDropdowns('450');
+        validateAndUpdateDropdowns('250');
       }
     }
 
@@ -468,6 +482,7 @@
             
             if (isWrongCoast && !opt.textContent.includes('(Fel coast)')) {
               opt.textContent = opt.textContent + ' (Fel coast)';
+              console.log(`DEBUG: Holeshot - Disabling rider ${opt.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
             } else if (!isWrongCoast && opt.textContent.includes('(Fel coast)')) {
               opt.textContent = opt.textContent.replace(' (Fel coast)', '');
             }
@@ -697,6 +712,9 @@
               const riderCoast = option.getAttribute('data-coast');
               if (riderCoast) {
                 isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
+                if (isWrongCoast) {
+                  console.log(`DEBUG: Disabling rider ${option.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
+                }
               }
             }
             
