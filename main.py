@@ -1196,17 +1196,26 @@ def admin_set_out_status():
     rider_id = data.get("rider_id")
     status = (data.get("status") or "").upper()  # "OUT" eller "CLEAR"
 
+    print(f"DEBUG: admin_set_out_status called - comp_id: {comp_id}, rider_id: {rider_id}, status: {status}")
+
     try:
         comp_id = int(comp_id)
         rider_id = int(rider_id)
-    except Exception:
+    except Exception as e:
+        print(f"DEBUG: Error parsing IDs: {e}")
         return jsonify({"error": "invalid_payload"}), 400
 
     # Validera att tävling och förare finns
-    if not Competition.query.get(comp_id):
+    comp = Competition.query.get(comp_id)
+    rider = Rider.query.get(rider_id)
+    if not comp:
+        print(f"DEBUG: Competition {comp_id} not found")
         return jsonify({"error": "competition_not_found"}), 404
-    if not Rider.query.get(rider_id):
+    if not rider:
+        print(f"DEBUG: Rider {rider_id} not found")
         return jsonify({"error": "rider_not_found"}), 404
+
+    print(f"DEBUG: Found competition: {comp.name}, rider: {rider.name}")
 
     if status == "OUT":
         row = (
@@ -1219,16 +1228,20 @@ def admin_set_out_status():
                 competition_id=comp_id, rider_id=rider_id, status="OUT"
             )
             db.session.add(row)
+            print(f"DEBUG: Created new OUT status for {rider.name}")
         else:
             row.status = "OUT"
+            print(f"DEBUG: Updated existing OUT status for {rider.name}")
         db.session.commit()
+        print(f"DEBUG: Committed OUT status for {rider.name}")
         return jsonify({"ok": True, "message": "Rider set OUT"}), 200
 
     # CLEAR: rensa alla rader för kombinationen (robust)
-    CompetitionRiderStatus.query.filter_by(
+    deleted_count = CompetitionRiderStatus.query.filter_by(
         competition_id=comp_id, rider_id=rider_id
     ).delete()
     db.session.commit()
+    print(f"DEBUG: Cleared OUT status for {rider.name} (deleted {deleted_count} rows)")
     return jsonify({"ok": True, "message": "Rider cleared"}), 200
 
 

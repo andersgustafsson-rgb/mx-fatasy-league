@@ -695,13 +695,27 @@
 
     document.addEventListener("DOMContentLoaded", () => {
       const sel = document.getElementById("competition-select");
-      if (sel && sel.options.length > 1 && !sel.value) {
+      
+      // Restore selected competition from localStorage
+      const savedComp = localStorage.getItem('admin-selected-competition');
+      if (savedComp && sel) {
+        sel.value = savedComp;
+      } else if (sel && sel.options.length > 1 && !sel.value) {
         sel.selectedIndex = 1;
       }
+      
       loadSavedResults();
       
       // Update competition info on page load
       updateSelectedCompetitionInfo();
+      
+      // Save selected competition when it changes
+      if (sel) {
+        sel.addEventListener('change', function() {
+          localStorage.setItem('admin-selected-competition', this.value);
+          updateSelectedCompetitionInfo();
+        });
+      }
       
       // Update date display after form submissions
       document.querySelectorAll('form').forEach(form => {
