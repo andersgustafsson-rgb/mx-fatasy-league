@@ -573,6 +573,7 @@ def my_scores():
     if "user_id" not in session:
         return redirect(url_for("login"))
     uid = session["user_id"]
+    print(f"DEBUG: my_scores called for user ID {uid}")
 
     rows = (
         db.session.query(
@@ -588,7 +589,12 @@ def my_scores():
         .all()
     )
 
+    print(f"DEBUG: Found {len(rows)} score entries for user {uid}")
+    for r in rows:
+        print(f"DEBUG: Competition {r.name}: {r.total_points} points")
+
     total_points = sum((r.total_points or 0) for r in rows)
+    print(f"DEBUG: Total points for user {uid}: {total_points}")
     scores = [
         {
             "competition_id": r.competition_id,
@@ -1006,6 +1012,11 @@ def submit_results():
             db.session.add(CompetitionResult(competition_id=comp_id, rider_id=rid, position=pos))
 
     db.session.commit()
+    print(f"DEBUG: Results saved for competition {comp_id}")
+    print(f"DEBUG: 450cc results: {len(riders_450_filtered)} riders")
+    print(f"DEBUG: 250cc results: {len(riders_250_filtered)} riders")
+    print(f"DEBUG: Holeshot 450: {hs_450}, Holeshot 250: {hs_250}")
+    
     calculate_scores(comp_id)
 
     flash("Resultat sparade och poäng beräknade!", "success")
@@ -1595,17 +1606,23 @@ def get_my_race_results(competition_id):
 # Poängberäkning
 # -------------------------------------------------
 def calculate_scores(comp_id: int):
+    print(f"DEBUG: calculate_scores called for competition {comp_id}")
     users = User.query.all()
     actual_results = CompetitionResult.query.filter_by(competition_id=comp_id).all()
     actual_holeshots = HoleshotResult.query.filter_by(competition_id=comp_id).all()
 
+    print(f"DEBUG: Found {len(users)} users, {len(actual_results)} results, {len(actual_holeshots)} holeshots")
+    
     actual_results_dict = {res.rider_id: res for res in actual_results}
     actual_holeshots_dict = {hs.class_name: hs for hs in actual_holeshots}
 
     for user in users:
         total_points = 0
+        print(f"DEBUG: Calculating points for user {user.username} (ID: {user.id})")
 
         picks = RacePick.query.filter_by(user_id=user.id, competition_id=comp_id).all()
+        print(f"DEBUG: User {user.username} has {len(picks)} race picks")
+        
         for pick in picks:
             actual_pos_for_pick = (
                 actual_results_dict.get(pick.rider_id).position
@@ -1614,8 +1631,10 @@ def calculate_scores(comp_id: int):
             )
             if actual_pos_for_pick == pick.predicted_position:
                 total_points += 25
+                print(f"DEBUG: Perfect match! +25 points for {user.username}")
             elif actual_pos_for_pick is not None and actual_pos_for_pick <= 6:
                 total_points += 5
+                print(f"DEBUG: Top 6 finish! +5 points for {user.username}")
 
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -1641,7 +1660,11 @@ def calculate_scores(comp_id: int):
         if not score_entry:
             score_entry = CompetitionScore(user_id=user.id, competition_id=comp_id)
             db.session.add(score_entry)
+            print(f"DEBUG: Created new score entry for {user.username}")
+        else:
+            print(f"DEBUG: Updated existing score entry for {user.username}")
         score_entry.total_points = total_points
+        print(f"DEBUG: {user.username} total points: {total_points}")
 
     db.session.commit()
 
