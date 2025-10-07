@@ -348,6 +348,16 @@ function onPickChange(cls, pos) {
       if (sel450 && sel450.value) {
         console.log(`DEBUG: Found 450cc selection for position ${i}: ${sel450.value}`);
         onPickChange('450cc', i);
+      } else {
+        // Initialize empty image for 450cc position i
+        const imgId = `prev-450-${i}`;
+        const img = document.getElementById(imgId);
+        if (img) {
+          img.removeAttribute("src");
+          img.classList.remove("has-src");
+          img.style.background = "#4b5563";
+          console.log(`DEBUG: Initialized empty 450cc image for position ${i}`);
+        }
       }
       
       // 250cc
@@ -355,6 +365,16 @@ function onPickChange(cls, pos) {
       if (sel250 && sel250.value) {
         console.log(`DEBUG: Found 250cc selection for position ${i}: ${sel250.value}`);
         onPickChange('250cc', i);
+      } else {
+        // Initialize empty image for 250cc position i
+        const imgId = `prev-250-${i}`;
+        const img = document.getElementById(imgId);
+        if (img) {
+          img.removeAttribute("src");
+          img.classList.remove("has-src");
+          img.style.background = "#4b5563";
+          console.log(`DEBUG: Initialized empty 250cc image for position ${i}`);
+        }
       }
     }
   }

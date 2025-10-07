@@ -1517,8 +1517,16 @@ def save_picks():
         except Exception:
             pass
 
-    db.session.commit()
-    return jsonify({"message":"Picks sparade"}), 200
+    try:
+        db.session.commit()
+        print(f"DEBUG: Successfully saved picks for user {uid}, competition {comp_id}")
+        return jsonify({"message":"Picks sparade"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error saving picks: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
 
 
 
