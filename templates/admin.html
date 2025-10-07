@@ -287,7 +287,8 @@
   <!-- Script -->
   <script>
     // Make riders data available to JavaScript
-    window.riders_250_data = {{ riders_250|tojson }};
+    window.riders_250_data = {{ riders_250|tojson|safe }};
+    console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
     
     function syncHiddenCompetitionId() {
       const comp = document.getElementById("competition-select")?.value || "";
@@ -463,13 +464,13 @@
     // Update holeshot dropdowns with coast validation
     function updateHoleshotDropdowns() {
       const holeshot250 = document.getElementById('holeshot-250');
-      if (holeshot250 && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
+      if (holeshot250 && currentCompetitionCoast && currentCompetitionCoast !== 'both' && window.riders_250_data) {
         for (const opt of holeshot250.options) {
           if (!opt.value) continue;
           const riderNumberMatch = opt.textContent.match(/#(\d+)/);
           if (riderNumberMatch) {
             const riderNumber = riderNumberMatch[1];
-            const rider = window.riders_250_data?.find(r => r.rider_number === riderNumber);
+            const rider = window.riders_250_data.find(r => r.rider_number === riderNumber);
             if (rider && rider.coast_250) {
               const isWrongCoast = rider.coast_250 !== currentCompetitionCoast && rider.coast_250 !== 'both';
               opt.disabled = isWrongCoast;
@@ -703,13 +704,13 @@
             
             // Check coast for 250cc riders
             let isWrongCoast = false;
-            if (cls === '250' && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
+            if (cls === '250' && currentCompetitionCoast && currentCompetitionCoast !== 'both' && window.riders_250_data) {
               // Extract rider number from option text (format: "#18 Jett Lawrence (Honda)")
               const riderNumberMatch = option.textContent.match(/#(\d+)/);
               if (riderNumberMatch) {
                 const riderNumber = riderNumberMatch[1];
                 // Find rider data from the riders_250 list (passed from backend)
-                const rider = window.riders_250_data?.find(r => r.rider_number === riderNumber);
+                const rider = window.riders_250_data.find(r => r.rider_number === riderNumber);
                 if (rider && rider.coast_250) {
                   // Disable if rider coast doesn't match competition coast and rider is not 'both'
                   isWrongCoast = rider.coast_250 !== currentCompetitionCoast && rider.coast_250 !== 'both';
