@@ -579,6 +579,8 @@
         const isOut = checkbox.checked;
         const originalStatus = originalOutStatus[riderId];
         
+        console.log(`DEBUG: Rider ${riderId}, current: ${isOut}, original: ${originalStatus}`);
+        
         // Only save if status has changed
         if (originalStatus !== isOut) {
           changes++;
@@ -673,10 +675,14 @@
     }
 
     function validateResults() {
+      console.log("DEBUG: validateResults called");
+      
       // Check for duplicates in 450cc results
       const riders450 = Array.from(document.querySelectorAll('select[name="riders_450[]"]'))
         .map(sel => sel.value)
         .filter(val => val);
+      
+      console.log(`DEBUG: 450cc riders selected: ${riders450.length}`, riders450);
       
       if (riders450.length !== new Set(riders450).size) {
         alert("Du kan inte sätta samma 450cc-förare flera gånger.");
@@ -688,11 +694,20 @@
         .map(sel => sel.value)
         .filter(val => val);
       
+      console.log(`DEBUG: 250cc riders selected: ${riders250.length}`, riders250);
+      
       if (riders250.length !== new Set(riders250).size) {
         alert("Du kan inte sätta samma 250cc-förare flera gånger.");
         return false;
       }
       
+      // Check if any results are selected at all
+      if (riders450.length === 0 && riders250.length === 0) {
+        alert("Du måste välja minst en förare i resultaten.");
+        return false;
+      }
+      
+      console.log("DEBUG: Validation passed, submitting form");
       return true;
     }
 
