@@ -248,28 +248,30 @@ def get_today():
 def get_track_timezone(track_name):
     """Get timezone for a track based on its name"""
     timezone_map = {
-        # Pacific Time (UTC-8/-7)
-        'Anaheim 1': 'America/Los_Angeles',
-        'Anaheim 2': 'America/Los_Angeles', 
-        'San Diego': 'America/Los_Angeles',
-        'Glendale': 'America/Phoenix',  # Arizona (no DST)
-        'Seattle': 'America/Los_Angeles',
-        'Denver': 'America/Denver',
-        'Salt Lake City': 'America/Denver',
+        # Pacific Time (UTC-8/-7) - California, Washington
+        'Anaheim 1': 'America/Los_Angeles',      # Anaheim, CA
+        'Anaheim 2': 'America/Los_Angeles',      # Anaheim, CA
+        'San Diego': 'America/Los_Angeles',      # San Diego, CA
+        'Seattle': 'America/Los_Angeles',        # Seattle, WA
         
-        # Central Time (UTC-6/-5)
-        'Houston': 'America/Chicago',
-        'Arlington': 'America/Chicago',
-        'St. Louis': 'America/Chicago',
-        'Nashville': 'America/Chicago',
-        'Birmingham': 'America/Chicago',
+        # Mountain Time (UTC-7/-6) - Colorado, Utah, Arizona
+        'Denver': 'America/Denver',              # Denver, CO
+        'Salt Lake City': 'America/Denver',      # Salt Lake City, UT
+        'Glendale': 'America/Phoenix',           # Glendale, AZ (no DST)
         
-        # Eastern Time (UTC-5/-4)
-        'Daytona': 'America/New_York',
-        'Indianapolis': 'America/New_York',
-        'Detroit': 'America/New_York',
-        'Cleveland': 'America/New_York',
-        'Philadelphia': 'America/New_York',
+        # Central Time (UTC-6/-5) - Texas, Missouri, Tennessee, Alabama
+        'Houston': 'America/Chicago',            # Houston, TX
+        'Arlington': 'America/Chicago',          # Arlington, TX
+        'St. Louis': 'America/Chicago',          # St. Louis, MO
+        'Nashville': 'America/Chicago',          # Nashville, TN
+        'Birmingham': 'America/Chicago',         # Birmingham, AL
+        
+        # Eastern Time (UTC-5/-4) - Florida, Indiana, Michigan, Ohio, Pennsylvania
+        'Daytona': 'America/New_York',           # Daytona Beach, FL
+        'Indianapolis': 'America/New_York',      # Indianapolis, IN
+        'Detroit': 'America/New_York',           # Detroit, MI
+        'Cleveland': 'America/New_York',         # Cleveland, OH
+        'Philadelphia': 'America/New_York',      # Philadelphia, PA
     }
     return timezone_map.get(track_name, 'America/New_York')  # Default to Eastern
 
