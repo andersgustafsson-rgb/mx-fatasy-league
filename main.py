@@ -30,8 +30,14 @@ app = Flask(__name__)
 # Configuration from environment variables
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
-# Use in-memory database for Render deployment (filesystem is read-only)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+# Use file-based database for persistence
+# For Render deployment, use a persistent database
+if os.getenv('RENDER'):
+    # On Render, use a persistent database file
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
+else:
+    # For local development, use a local file
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
@@ -2746,9 +2752,17 @@ def init_database():
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
             
-            print("Creating test data...")
-            create_test_data()
-            print("Test data created successfully")
+            # Only create test data if database is empty
+            existing_competitions = Competition.query.count()
+            existing_riders = Rider.query.count()
+            existing_users = User.query.count()
+            
+            if existing_competitions == 0 and existing_riders == 0 and existing_users == 0:
+                print("Database is empty, creating test data...")
+                create_test_data()
+                print("Test data created successfully")
+            else:
+                print(f"Database already has data: {existing_competitions} competitions, {existing_riders} riders, {existing_users} users")
             
             print("Database initialized successfully")
             return True
