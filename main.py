@@ -573,15 +573,14 @@ def race_picks_page(competition_id):
     comp = Competition.query.get_or_404(competition_id)
 
     # 1) Hämta OUT-förare för detta race
-    out_ids = set(
-        rid
-        for (rid,) in db.session.query(CompetitionRiderStatus.rider_id)
-        .filter(
-            CompetitionRiderStatus.competition_id == comp.id,
-            CompetitionRiderStatus.status == "OUT",
-        )
-        .all()
-    )
+    out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(
+        CompetitionRiderStatus.competition_id == comp.id,
+        CompetitionRiderStatus.status == "OUT",
+    ).all()
+    out_ids = set(rid for (rid,) in out_rows)
+    
+    print(f"DEBUG: race_picks_page for {comp.name} (id: {comp.id})")
+    print(f"DEBUG: Found {len(out_ids)} OUT riders: {list(out_ids)}")
 
     # 2) Bygg listor (450 + 250 med coast-logik)
     # 450 – ingen coast-filtrering
@@ -626,6 +625,12 @@ def race_picks_page(competition_id):
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
+    
+    # Debug: Show which riders are marked as OUT
+    out_450 = [r for r in riders_450_json if r['is_out']]
+    out_250 = [r for r in riders_250_json if r['is_out']]
+    print(f"DEBUG: 450cc OUT riders: {[r['name'] for r in out_450]}")
+    print(f"DEBUG: 250cc OUT riders: {[r['name'] for r in out_250]}")
 
     # 4) Placeholder för resultat/holeshot (om ej klart)
     actual_results = []
