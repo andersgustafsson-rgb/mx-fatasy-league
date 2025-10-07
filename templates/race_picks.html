@@ -554,6 +554,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
   }
 
   async function savePicks() {
+    console.log("DEBUG: savePicks called");
+    
     const picks = Array.from(document.querySelectorAll(".pick-select"))
       .map((sel) => ({
         position: sel.dataset.position,
@@ -561,6 +563,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         class: sel.dataset.class,
       }))
       .filter((p) => p.rider_id);
+
+    console.log("DEBUG: Found picks:", picks);
 
     // Kontrollera dubletter
     const riderIds = picks.map(p => p.rider_id);
@@ -586,6 +590,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       wildcard_pick: document.getElementById("wildcard-pick")?.value,
       wildcard_pos: document.getElementById("wildcard-position")?.value,
     };
+
+    console.log("DEBUG: Sending payload:", payload);
 
     try {
       const resp = await fetch("/save_picks", {

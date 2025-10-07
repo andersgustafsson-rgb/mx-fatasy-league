@@ -1361,6 +1361,8 @@ def get_my_picks(competition_id):
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     uid = session["user_id"]
+    print(f"DEBUG: get_my_picks called for user {uid}, competition {competition_id}")
+    
     picks = (
         RacePick.query.filter_by(user_id=uid, competition_id=competition_id)
         .order_by(RacePick.predicted_position)
@@ -1369,24 +1371,30 @@ def get_my_picks(competition_id):
     holos = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
 
-    return jsonify(
-        {
-            "top6_picks": [
-                {
-                    "rider_id": p.rider_id,
-                    "predicted_position": p.predicted_position,
-                    "class": Rider.query.get(p.rider_id).class_name if p.rider_id else "",
-                }
-                for p in picks
-            ],
-            "holeshot_picks": {
-                "450cc": next((h.rider_id for h in holos if h.class_name == "450cc"), None),
-                "250cc": next((h.rider_id for h in holos if h.class_name == "250cc"), None),
-            },
-            "wildcard_pick": wc.rider_id if wc else None,
-            "wildcard_pos": wc.position if wc else None,
-        }
-    )
+    print(f"DEBUG: Found {len(picks)} picks, {len(holos)} holeshots, wildcard: {wc is not None}")
+    for p in picks:
+        rider = Rider.query.get(p.rider_id)
+        print(f"DEBUG: Pick - position {p.predicted_position}: {rider.name if rider else 'Unknown'} (ID: {p.rider_id})")
+
+    result = {
+        "top6_picks": [
+            {
+                "rider_id": p.rider_id,
+                "predicted_position": p.predicted_position,
+                "class": Rider.query.get(p.rider_id).class_name if p.rider_id else "",
+            }
+            for p in picks
+        ],
+        "holeshot_picks": {
+            "450cc": next((h.rider_id for h in holos if h.class_name == "450cc"), None),
+            "250cc": next((h.rider_id for h in holos if h.class_name == "250cc"), None),
+        },
+        "wildcard_pick": wc.rider_id if wc else None,
+        "wildcard_pos": wc.position if wc else None,
+    }
+    
+    print(f"DEBUG: Returning picks data: {result}")
+    return jsonify(result)
 
 
 @app.post("/save_picks")
@@ -1396,6 +1404,8 @@ def save_picks():
 
     data = request.get_json(force=True)
     uid = session["user_id"]
+    print(f"DEBUG: save_picks called for user {uid}")
+    print(f"DEBUG: Received data: {data}")
 
     # 1) Hämta tävlingen
     try:
@@ -1406,6 +1416,8 @@ def save_picks():
     comp = Competition.query.get(comp_id)
     if not comp:
         return jsonify({"error": "competition_not_found"}), 404
+    
+    print(f"DEBUG: Competition: {comp.name} (ID: {comp_id})")
 
     # 2) Hämta OUT‑förare för detta race (viktigt)
     out_ids = set(
@@ -1420,24 +1432,31 @@ def save_picks():
 
     # 3) Validera att inga dubletter finns i picks
     picks = data.get("picks", [])
+    print(f"DEBUG: Received {len(picks)} picks: {picks}")
+    
     rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
     if len(rider_ids) != len(set(rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
 
     # 4) Rensa tidigare picks/holeshot för användaren i denna tävling
-    RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    print(f"DEBUG: Deleted {deleted_picks} old picks and {deleted_holeshots} old holeshots")
 
     # 5) Spara Top-6 picks
+    saved_picks = 0
     for p in picks:
         try:
             pos = int(p.get("position"))
             rid = int(p.get("rider_id"))
-        except Exception:
+            print(f"DEBUG: Processing pick - position: {pos}, rider_id: {rid}")
+        except Exception as e:
+            print(f"DEBUG: Error parsing pick {p}: {e}")
             continue
 
         rider = Rider.query.get(rid)
         if not rider:
+            print(f"DEBUG: Rider {rid} not found")
             continue
 
         # 4a) Blockera OUT alltid
@@ -1459,6 +1478,10 @@ def save_picks():
                 predicted_position=pos
             )
         )
+        saved_picks += 1
+        print(f"DEBUG: Added pick - {rider.name} at position {pos}")
+    
+    print(f"DEBUG: Saved {saved_picks} picks total")
 
     # 5) Holeshot 450
     hs450 = data.get("holeshot_450")
