@@ -561,7 +561,15 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
   
 
 
-    document.addEventListener("DOMContentLoaded", fetchAndDisplayMyPicks);
+    document.addEventListener("DOMContentLoaded", () => {
+      // Initialize dropdowns with OUT filtering
+      updateDropdowns("450cc");
+      updateDropdowns("250cc");
+      updateHoleshotDropdowns();
+      
+      // Then load user picks
+      fetchAndDisplayMyPicks();
+    });
 
 window.addEventListener("focus", () => {
   if (localStorage.getItem("out-updated")) {
