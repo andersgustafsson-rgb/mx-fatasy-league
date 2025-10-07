@@ -5,38 +5,88 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registrera - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Force dark mode
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.remove('dark')
+    <style>
+        /* Fallback dark mode styles */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #111827 !important;
+                color: #f9fafb !important;
+            }
+            .login-container {
+                background-color: #1f2937 !important;
+                border: 1px solid #374151 !important;
+            }
+            .login-title {
+                color: #60a5fa !important;
+            }
+            .login-input {
+                background-color: #374151 !important;
+                border-color: #4b5563 !important;
+                color: #f9fafb !important;
+            }
+            .login-label {
+                color: #d1d5db !important;
+            }
+            .login-button {
+                background-color: #2563eb !important;
+            }
+            .login-button:hover {
+                background-color: #1d4ed8 !important;
+            }
+            .login-link {
+                color: #60a5fa !important;
+            }
         }
+    </style>
+    <script>
+        // Force dark mode - more aggressive approach
+        function applyDarkMode() {
+            const isDark = localStorage.theme === 'dark' || 
+                          (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+                          window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.body.classList.remove('dark');
+            }
+        }
+        
+        // Apply immediately
+        applyDarkMode();
+        
+        // Apply again after a short delay to ensure it sticks
+        setTimeout(applyDarkMode, 100);
+        
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyDarkMode);
     </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center h-screen">
-    <div class="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg border dark:border-gray-700">
+    <div class="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg border dark:border-gray-700 login-container">
         <div class="flex justify-center items-center gap-4 mb-6">
             <!-- STORLEKEN DUBBLAD HÄR -->
             <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League Logotyp" class="h-32 w-32">
-            <h1 class="text-3xl font-bold text-center text-blue-500 dark:text-blue-400">MX Fantasy League</h1>
+            <h1 class="text-3xl font-bold text-center text-blue-500 dark:text-blue-400 login-title">MX Fantasy League</h1>
         </div>
         
         <form method="POST" action="{{ url_for('register') }}">
             <div class="mb-4">
-                <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2">Användarnamn</label>
-                <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" required>
+                <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Användarnamn</label>
+                <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
             </div>
             <div class="mb-6">
-                <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2">Lösenord</label>
-                <input type="password" id="password" name="password" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400" required>
+                <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Lösenord</label>
+                <input type="password" id="password" name="password" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
             </div>
-            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors login-button">
                 Registrera
             </button>
         </form>
         <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
-            Har du redan ett konto? <a href="{{ url_for('login') }}" class="text-blue-500 dark:text-blue-400 hover:underline">Logga in här</a>
+            Har du redan ett konto? <a href="{{ url_for('login') }}" class="text-blue-500 dark:text-blue-400 hover:underline login-link">Logga in här</a>
         </p>
     </div>
 </body>
