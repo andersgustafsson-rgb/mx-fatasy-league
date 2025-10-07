@@ -881,31 +881,41 @@ def admin_get_results(competition_id):
     if session.get("username") != "test":
         return jsonify({"error": "unauthorized"}), 403
 
-    results = (
-        db.session.query(
-            CompetitionResult.rider_id,
-            CompetitionResult.position,
-            Rider.class_name.label("class_name"),
+    try:
+        print(f"DEBUG: admin_get_results called for competition {competition_id}")
+        
+        results = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.class_name.label("class_name"),
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(CompetitionResult.competition_id == competition_id)
+            .order_by(CompetitionResult.position.asc())
+            .all()
         )
-        .join(Rider, Rider.id == CompetitionResult.rider_id)
-        .filter(CompetitionResult.competition_id == competition_id)
-        .order_by(CompetitionResult.position.asc())
-        .all()
-    )
 
-    holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
+        holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
 
-    return jsonify(
-        {
-            "top_results": [
-                {"rider_id": r.rider_id, "position": r.position, "class": r.class_name}
-                for r in results
-            ],
-            "holeshot_results": [
-                {"rider_id": h.rider_id, "class": h.class_name} for h in holos
-            ],
-        }
-    )
+        print(f"DEBUG: Found {len(results)} results and {len(holos)} holeshot results")
+
+        return jsonify(
+            {
+                "top_results": [
+                    {"rider_id": r.rider_id, "position": r.position, "class": r.class_name}
+                    for r in results
+                ],
+                "holeshot_results": [
+                    {"rider_id": h.rider_id, "class": h.class_name} for h in holos
+                ],
+            }
+        )
+    except Exception as e:
+        print(f"DEBUG: Error in admin_get_results: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "internal_error"}), 500
 
 
 @app.post("/admin/submit_results")
@@ -1150,32 +1160,43 @@ def admin_get_out_status(competition_id):
     if session.get("username") != "test":
         return jsonify({"error": "unauthorized"}), 403
 
-    # all riders
-    riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.rider_number.asc()).all()
+    try:
+        print(f"DEBUG: admin_get_out_status called for competition {competition_id}")
+        
+        # all riders
+        riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.rider_number.asc()).all()
+        print(f"DEBUG: Found {len(riders)} riders")
 
-    # out set for this competition
-    out_rows = (
-        db.session.query(CompetitionRiderStatus.rider_id)
-        .filter(
-            CompetitionRiderStatus.competition_id == competition_id,
-            CompetitionRiderStatus.status == "OUT",
+        # out set for this competition
+        out_rows = (
+            db.session.query(CompetitionRiderStatus.rider_id)
+            .filter(
+                CompetitionRiderStatus.competition_id == competition_id,
+                CompetitionRiderStatus.status == "OUT",
+            )
+            .all()
         )
-        .all()
-    )
-    out_ids = {rid for (rid,) in out_rows}
+        out_ids = {rid for (rid,) in out_rows}
+        print(f"DEBUG: Found {len(out_ids)} OUT riders for competition {competition_id}")
 
-    result = [
-        {
-            "id": r.id,
-            "name": r.name,
-            "class": r.class_name,
-            "rider_number": r.rider_number,
-            "bike_brand": r.bike_brand,
-            "is_out": r.id in out_ids,
-        }
-        for r in riders
-    ]
-    return jsonify(result), 200
+        result = [
+            {
+                "id": r.id,
+                "name": r.name,
+                "class": r.class_name,
+                "rider_number": r.rider_number,
+                "bike_brand": r.bike_brand,
+                "is_out": r.id in out_ids,
+            }
+            for r in riders
+        ]
+        print(f"DEBUG: Returning {len(result)} riders with OUT status")
+        return jsonify(result), 200
+    except Exception as e:
+        print(f"DEBUG: Error in admin_get_out_status: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "internal_error"}), 500
 
 
 
