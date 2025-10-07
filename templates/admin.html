@@ -222,6 +222,7 @@
       Ladda lista
     </button>
     <button type="button"
+      id="save-all-btn"
       onclick="saveAllOutStatus()"
       class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
       Spara alla ändringar
@@ -484,11 +485,35 @@
       }
     }
 
+    let isSaving = false; // Prevent multiple simultaneous saves
+
     async function saveAllOutStatus() {
+      if (isSaving) {
+        console.log("Already saving, ignoring duplicate call");
+        return;
+      }
+      
+      isSaving = true;
       console.log("saveAllOutStatus called");
+      
+      // Update button to show loading state
+      const saveBtn = document.getElementById("save-all-btn");
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Sparar...";
+        saveBtn.classList.add("opacity-50");
+      }
+      
       const comp = document.getElementById("competition-select").value;
       if (!comp) { 
         alert("Välj en tävling först."); 
+        // Reset button state
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Spara alla ändringar";
+          saveBtn.classList.remove("opacity-50");
+        }
+        isSaving = false;
         return; 
       }
       
@@ -535,6 +560,15 @@
       } else {
         alert(`${saved} sparade, ${errors} fel`);
       }
+      
+      // Reset button state
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Spara alla ändringar";
+        saveBtn.classList.remove("opacity-50");
+      }
+      
+      isSaving = false;
     }
 
     function validateAndUpdateDropdowns(cls) {
