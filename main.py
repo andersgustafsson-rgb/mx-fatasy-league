@@ -2424,7 +2424,7 @@ def load_smx_2026_riders():
             # Reset file pointer
             file.seek(0)
             
-            reader = csv.DictReader(file, delimiter='|')
+            reader = csv.DictReader(file, delimiter=',')
             total_rows = 0
             skipped_rows = 0
             
