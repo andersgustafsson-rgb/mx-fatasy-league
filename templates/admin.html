@@ -221,7 +221,12 @@
       class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
       Ladda lista
     </button>
-    <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Markera föraren OUT för vald tävling</span>
+    <button type="button"
+      onclick="saveAllOutStatus()"
+      class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+      Spara alla ändringar
+    </button>
+    <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Markera förare OUT för vald tävling</span>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
     <div>
@@ -440,13 +445,7 @@
             row.innerHTML = `
               <input type="checkbox" id="${id}" ${r.is_out ? "checked" : ""}>
               <span class="flex-1">#${r.rider_number || "-"} ${r.name} <span class="text-gray-400 text-xs">(${r.bike_brand || "—"})</span></span>
-              <button class="text-xs bg-blue-600 text-white rounded px-2 py-1">Spara</button>
             `;
-            const btn = row.querySelector("button");
-            btn.onclick = async () => {
-              const checked = row.querySelector("input").checked;
-              await setOut(r.id, checked);
-            };
             container.appendChild(row);
           });
         };
@@ -477,12 +476,51 @@
 
         showToast(isOut ? "Föraren markerad OUT" : "OUT borttagen", true);
         localStorage.setItem("out-updated", String(Date.now()));
-        await loadOutList();
-        // Optionally refresh pick-forms if visible
-        // loadSavedResults();
+        // Don't reload the entire list, just update the UI
+        // await loadOutList();
       } catch (e) {
         console.error(e);
         showToast("Kunde inte spara OUT-status", false);
+      }
+    }
+
+    async function saveAllOutStatus() {
+      const comp = document.getElementById("competition-select").value;
+      if (!comp) { alert("Välj en tävling först."); return; }
+      
+      // Get all checkboxes
+      const checkboxes = document.querySelectorAll('#out-list-450 input[type="checkbox"], #out-list-250 input[type="checkbox"]');
+      let saved = 0;
+      let errors = 0;
+      
+      for (const checkbox of checkboxes) {
+        const riderId = checkbox.id.replace('out-', '');
+        const isOut = checkbox.checked;
+        
+        try {
+          const res = await fetch("/admin/set_out_status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              competition_id: parseInt(comp, 10),
+              rider_id: parseInt(riderId, 10),
+              status: isOut ? "OUT" : "CLEAR",
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "save failed");
+          saved++;
+        } catch (e) {
+          console.error(e);
+          errors++;
+        }
+      }
+      
+      if (errors === 0) {
+        showToast(`Alla ${saved} ändringar sparade!`, true);
+        localStorage.setItem("out-updated", String(Date.now()));
+      } else {
+        showToast(`${saved} sparade, ${errors} fel`, false);
       }
     }
 
