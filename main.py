@@ -917,6 +917,11 @@ def admin_page():
 
     riders_250_json = [serialize_rider(r) for r in riders_250]
 
+    # Create competition coast map for JavaScript
+    comp_coast_map = {}
+    for comp in competitions:
+        comp_coast_map[comp.id] = comp.coast_250
+
     race_scores = []
     last_scored = (
         db.session.query(CompetitionScore.competition_id)
@@ -940,6 +945,7 @@ def admin_page():
         riders_450=riders_450,
         riders_250=riders_250,
         riders_250_json=riders_250_json,
+        comp_coast_map=comp_coast_map,
         race_scores=race_scores,
         today=get_today(),
     )

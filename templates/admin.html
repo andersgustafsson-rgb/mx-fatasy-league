@@ -175,7 +175,7 @@
               <select name="holeshot_450" id="holeshot_450" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base text-gray-900 dark:text-gray-100">
                 <option value="">-- Välj förare --</option>
                 {% for rider in riders_450 %}
-                  <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+                  <option value="{{ rider.id }}" data-coast="{{ rider.coast_250 }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -184,7 +184,7 @@
               <select name="holeshot_250" id="holeshot_250" class="w-full p-2 border rounded bg-white dark:bg-gray-600 text-sm sm:text-base text-gray-900 dark:text-gray-100">
                 <option value="">-- Välj förare --</option>
                 {% for rider in riders_250 %}
-                  <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+                  <option value="{{ rider.id }}" data-coast="{{ rider.coast_250 }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
                 {% endfor %}
               </select>
             </div>
@@ -278,7 +278,7 @@
       <select name="riders_250[]" class="w-full p-1 sm:p-2 border rounded bg-white dark:bg-gray-600 text-xs sm:text-sm">
         <option value="">-- Välj förare --</option>
         {% for rider in riders_250 %}
-          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+          <option value="{{ rider.id }}" data-coast="{{ rider.coast_250 }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
         {% endfor %}
       </select>
     </div>
@@ -288,7 +288,9 @@
   <script>
     // Make riders data available to JavaScript
     window.riders_250_data = {{ riders_250_json|tojson|safe }};
+    window.__COMP_COAST_MAP__ = {{ comp_coast_map|tojson|safe }};
     console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
+    console.log('DEBUG: comp_coast_map loaded:', window.__COMP_COAST_MAP__);
     
     function syncHiddenCompetitionId() {
       const comp = document.getElementById("competition-select")?.value || "";
@@ -364,21 +366,12 @@
       if (hs450) hs450.value = "";
       if (hs250) hs250.value = "";
 
-      // Get competition coast from the selected option
-      const selectedOption = document.getElementById("competition-select").selectedOptions[0];
-      if (selectedOption) {
-        const optionText = selectedOption.textContent;
-        if (optionText.includes('[250SX West]')) {
-          currentCompetitionCoast = 'west';
-        } else if (optionText.includes('[250SX East]')) {
-          currentCompetitionCoast = 'east';
-        } else if (optionText.includes('[Showdown]')) {
-          currentCompetitionCoast = 'both';
-        } else {
-          currentCompetitionCoast = null;
-        }
-        console.log(`DEBUG: Competition coast set to: ${currentCompetitionCoast}`);
-      }
+      // Get competition coast reliably using a map rendered from backend
+      const selectEl = document.getElementById("competition-select");
+      const selectedId = selectEl.value;
+      const compMap = window.__COMP_COAST_MAP__ || {};
+      currentCompetitionCoast = compMap[selectedId] || null;
+      console.log(`DEBUG: Competition coast set to: ${currentCompetitionCoast}`);
       
       // Update competition info display
       updateSelectedCompetitionInfo();
@@ -464,23 +457,19 @@
     // Update holeshot dropdowns with coast validation
     function updateHoleshotDropdowns() {
       const holeshot250 = document.getElementById('holeshot-250');
-      if (holeshot250 && currentCompetitionCoast && currentCompetitionCoast !== 'both' && window.riders_250_data) {
+      if (holeshot250 && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
         for (const opt of holeshot250.options) {
           if (!opt.value) continue;
-          const riderNumberMatch = opt.textContent.match(/#(\d+)/);
-          if (riderNumberMatch) {
-            const riderNumber = riderNumberMatch[1];
-            const rider = window.riders_250_data.find(r => r.rider_number === riderNumber);
-            if (rider && rider.coast_250) {
-              const isWrongCoast = rider.coast_250 !== currentCompetitionCoast && rider.coast_250 !== 'both';
-              opt.disabled = isWrongCoast;
-              opt.style.color = isWrongCoast ? '#999' : '';
-              
-              if (isWrongCoast && !opt.textContent.includes('(Fel coast)')) {
-                opt.textContent = opt.textContent + ' (Fel coast)';
-              } else if (!isWrongCoast && opt.textContent.includes('(Fel coast)')) {
-                opt.textContent = opt.textContent.replace(' (Fel coast)', '');
-              }
+          const riderCoast = opt.getAttribute('data-coast');
+          if (riderCoast) {
+            const isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
+            opt.disabled = isWrongCoast;
+            opt.style.color = isWrongCoast ? '#999' : '';
+            
+            if (isWrongCoast && !opt.textContent.includes('(Fel coast)')) {
+              opt.textContent = opt.textContent + ' (Fel coast)';
+            } else if (!isWrongCoast && opt.textContent.includes('(Fel coast)')) {
+              opt.textContent = opt.textContent.replace(' (Fel coast)', '');
             }
           }
         }
@@ -704,17 +693,10 @@
             
             // Check coast for 250cc riders
             let isWrongCoast = false;
-            if (cls === '250' && currentCompetitionCoast && currentCompetitionCoast !== 'both' && window.riders_250_data) {
-              // Extract rider number from option text (format: "#18 Jett Lawrence (Honda)")
-              const riderNumberMatch = option.textContent.match(/#(\d+)/);
-              if (riderNumberMatch) {
-                const riderNumber = riderNumberMatch[1];
-                // Find rider data from the riders_250 list (passed from backend)
-                const rider = window.riders_250_data.find(r => r.rider_number === riderNumber);
-                if (rider && rider.coast_250) {
-                  // Disable if rider coast doesn't match competition coast and rider is not 'both'
-                  isWrongCoast = rider.coast_250 !== currentCompetitionCoast && rider.coast_250 !== 'both';
-                }
+            if (cls === '250' && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
+              const riderCoast = option.getAttribute('data-coast');
+              if (riderCoast) {
+                isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
               }
             }
             
