@@ -574,6 +574,20 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       return;
     }
 
+    // Kontrollera att exakt 6 förare är valda för varje klass
+    const picks450 = picks.filter(p => p.class === '450cc');
+    const picks250 = picks.filter(p => p.class === '250cc');
+    
+    if (picks450.length !== 6) {
+      alert("Du måste välja exakt 6 förare för 450cc (Top 6).");
+      return;
+    }
+    
+    if (picks250.length !== 6) {
+      alert("Du måste välja exakt 6 förare för 250cc (Top 6).");
+      return;
+    }
+
     // Extra säkerhet: client-side filter bort OUT
     for (const p of picks) {
       if (OUT_IDS.includes(Number(p.rider_id))) {

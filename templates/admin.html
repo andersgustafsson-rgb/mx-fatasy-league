@@ -195,16 +195,10 @@
           <div>
             <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 450cc</h2>
             <div id="results-container-450" class="space-y-1 sm:space-y-2"></div>
-            <button type="button" onclick="addResultRow('450')" class="mt-3 sm:mt-4 bg-blue-500 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
-              + Lägg till 450-rad
-            </button>
           </div>
           <div>
             <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 250cc</h2>
             <div id="results-container-250" class="space-y-1 sm:space-y-2"></div>
-            <button type="button" onclick="addResultRow('250')" class="mt-3 sm:mt-4 bg-blue-500 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
-              + Lägg till 250-rad
-            </button>
           </div>
         </div>
 
@@ -274,7 +268,6 @@
           <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
         {% endfor %}
       </select>
-      <button type="button" onclick="removeRow(this,'450')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
     </div>
   </template>
 
@@ -288,7 +281,6 @@
           <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
         {% endfor %}
       </select>
-      <button type="button" onclick="removeRow(this,'250')" class="flex-shrink-0 bg-red-500 text-white font-bold h-6 w-6 sm:h-8 sm:w-8 rounded text-xs sm:text-sm">✕</button>
     </div>
   </template>
 
@@ -395,11 +387,12 @@
           });
         });
 
-        if (!data.top_results || data.top_results.length === 0) {
-          for (let i = 0; i < 6; i++) {
-            addResultRow("450");
-            addResultRow("250");
-          }
+        // Always ensure we have exactly 6 rows for each class
+        while (document.getElementById("results-container-450").children.length < 6) {
+          addResultRow("450");
+        }
+        while (document.getElementById("results-container-250").children.length < 6) {
+          addResultRow("250");
         }
 
         (data.holeshot_results || []).forEach((r) => {
@@ -407,8 +400,11 @@
           if (r.class && r.class.startsWith("250") && hs250) hs250.value = r.rider_id;
         });
       } catch (e) {
-        for (let i = 0; i < 6; i++) {
+        // Always ensure we have exactly 6 rows for each class
+        while (document.getElementById("results-container-450").children.length < 6) {
           addResultRow("450");
+        }
+        while (document.getElementById("results-container-250").children.length < 6) {
           addResultRow("250");
         }
       }
@@ -416,6 +412,12 @@
 
     function addResultRow(cls, selectedId = null, pos = null) {
       const container = document.getElementById(`results-container-${cls}`);
+      
+      // Don't add more than 6 rows
+      if (container.children.length >= 6) {
+        return;
+      }
+      
       const template = document.getElementById(`result-row-template-${cls}`);
       const row = template.content.cloneNode(true);
       const idx = pos || container.children.length + 1;
@@ -433,18 +435,7 @@
       validateAndUpdateDropdowns(cls);
     }
 
-    function removeRow(btn, cls) {
-      btn.parentElement.remove();
-      renumberRows(cls);
-    }
 
-    function renumberRows(cls) {
-      const container = document.getElementById(`results-container-${cls}`);
-      container.querySelectorAll(".result-row").forEach((row, i) => {
-        row.querySelector(".position-label").textContent = `${i + 1}.`;
-        row.querySelector("input").value = i + 1;
-      });
-    }
 
     async function simulateForSelected() {
       const comp = document.getElementById("competition-select").value;
@@ -702,9 +693,14 @@
         return false;
       }
       
-      // Check if any results are selected at all
-      if (riders450.length === 0 && riders250.length === 0) {
-        alert("Du måste välja minst en förare i resultaten.");
+      // Check that exactly 6 riders are selected for each class
+      if (riders450.length !== 6) {
+        alert("Du måste välja exakt 6 förare för 450cc (Top 6).");
+        return false;
+      }
+      
+      if (riders250.length !== 6) {
+        alert("Du måste välja exakt 6 förare för 250cc (Top 6).");
         return false;
       }
       
