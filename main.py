@@ -2405,46 +2405,12 @@ def load_smx_2026_riders():
         import csv
         riders = []
         
-        print("DEBUG: Starting to load SMX 2026 riders...")
-        
-        # Check if file exists
-        import os
-        file_path = 'data/smx_2026_riders_numbers_best_effort.csv'
-        if not os.path.exists(file_path):
-            print(f"DEBUG: File not found at {file_path}")
-            return []
-        
-        print(f"DEBUG: File exists at {file_path}")
-        
-        with open(file_path, 'r', encoding='utf-8') as file:
-            # Read all lines first to debug
-            lines = file.readlines()
-            print(f"DEBUG: File has {len(lines)} lines")
-            
-            # Reset file pointer
-            file.seek(0)
-            
+        with open('data/smx_2026_riders_numbers_best_effort.csv', 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file, delimiter=',')
-            total_rows = 0
-            skipped_rows = 0
-            
-            # Debug: Print column names
-            print(f"DEBUG: Column names: {reader.fieldnames}")
             
             for row in reader:
-                total_rows += 1
-                
-                # Debug first few rows
-                if total_rows <= 5:
-                    print(f"DEBUG: Row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}', Nummer='{row.get('Nummer (career)')}'")
-                    print(f"DEBUG: Full row keys: {list(row.keys())}")
-                    print(f"DEBUG: Full row values: {list(row.values())}")
-                
                 # Skip empty rows or rows with missing essential data
                 if not row.get('Förare') or not row.get('Klass (best-effort)') or row.get('Förare').strip() == '' or row.get('Klass (best-effort)').strip() == '':
-                    skipped_rows += 1
-                    if total_rows <= 10:  # Only print first 10 skipped rows for debugging
-                        print(f"DEBUG: Skipped row {total_rows}: Förare='{row.get('Förare')}', Klass='{row.get('Klass (best-effort)')}'")
                     continue
                     
                 # Convert class format (450 -> 450cc, 250 -> 250cc)
@@ -2455,11 +2421,7 @@ def load_smx_2026_riders():
                 if row.get('Nummer (career)'):
                     try:
                         rider_number = int(row['Nummer (career)'])
-                        if total_rows <= 5:  # Debug first few
-                            print(f"DEBUG: Parsed rider number: {rider_number} from '{row['Nummer (career)']}'")
-                    except ValueError as e:
-                        if total_rows <= 5:  # Debug first few
-                            print(f"DEBUG: Failed to parse rider number '{row['Nummer (career)']}': {e}")
+                    except ValueError:
                         pass
                 
                 # Get coast for 250cc riders
@@ -2506,17 +2468,6 @@ def load_smx_2026_riders():
                 }
                 
                 riders.append(rider_data)
-                
-                # Debug first few riders being added
-                if len(riders) <= 5:
-                    print(f"DEBUG: Adding rider: {rider_data['name']} #{rider_data['rider_number']} ({rider_data['class_name']})")
-        
-        print(f"DEBUG: Loaded {len(riders)} riders from CSV (total rows: {total_rows}, skipped: {skipped_rows})")
-        
-        # Count by class
-        riders_450 = [r for r in riders if r['class_name'] == '450cc']
-        riders_250 = [r for r in riders if r['class_name'] == '250cc']
-        print(f"DEBUG: 450cc riders: {len(riders_450)}, 250cc riders: {len(riders_250)}")
         
         return riders
     except Exception as e:
@@ -2605,9 +2556,6 @@ def create_test_data():
             )
             db.session.add(rider)
             
-            # Debug first few riders being saved to database
-            if i < 5:
-                print(f"DEBUG: Saving to DB: {rider.name} #{rider.rider_number} ({rider.class_name})")
         
         # Count riders by class
         riders_450_count = len([r for r in all_riders if r['class_name'] == '450cc'])
