@@ -3142,7 +3142,7 @@ def init_database():
 print("Starting database initialization...")
 init_success = init_database()
 if init_success:
-    print("✅ Database initialization completed successfully")
+    print("✅ Database initialization completed successfully - pipeline minutes test")
     
     # Auto-create track map images only if none exist
     print("🖼️ Checking track map images...")
