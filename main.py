@@ -1945,8 +1945,9 @@ def calculate_scores(comp_id: int):
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
         all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
-        total_season_points = sum(s.total_points for s in all_user_scores if s.total_points)
+        total_season_points = sum(s.total_points for s in all_user_scores)
         team.total_points = total_season_points
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points")
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")
@@ -2051,17 +2052,17 @@ def clear_competition_results(competition_id):
     
     db.session.commit()
     
-    # Update season team total points after clearing scores
+    # Update season team points after clearing competition scores
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
         all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
-        total_season_points = sum(s.total_points for s in all_user_scores if s.total_points)
+        total_season_points = sum(s.total_points for s in all_user_scores)
         team.total_points = total_season_points
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points")
     
     db.session.commit()
     
     print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}")
-    print(f"DEBUG: Updated season team total points after clearing")
     
     return jsonify({
         "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}",
@@ -2072,6 +2073,37 @@ def clear_competition_results(competition_id):
         "deleted_race_picks": deleted_race_picks,
         "deleted_holeshot_picks": deleted_holeshot_picks,
         "deleted_wildcard_picks": deleted_wildcard_picks
+    })
+
+@app.get("/update_season_team_points")
+def update_season_team_points():
+    """Update all season team points based on current competition scores"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: update_season_team_points called")
+    
+    all_season_teams = SeasonTeam.query.all()
+    updated_teams = []
+    
+    for team in all_season_teams:
+        all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
+        total_season_points = sum(s.total_points for s in all_user_scores)
+        old_points = team.total_points
+        team.total_points = total_season_points
+        updated_teams.append({
+            "team_name": team.team_name,
+            "user_id": team.user_id,
+            "old_points": old_points,
+            "new_points": total_season_points
+        })
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) from {old_points} to {total_season_points} points")
+    
+    db.session.commit()
+    
+    return jsonify({
+        "message": f"Updated {len(updated_teams)} season teams",
+        "updated_teams": updated_teams
     })
 
 @app.get("/routes")
