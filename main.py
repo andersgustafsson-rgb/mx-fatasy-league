@@ -1738,6 +1738,31 @@ def calculate_scores(comp_id: int):
 # -------------------------------------------------
 # Felsökning: lista routes
 # -------------------------------------------------
+@app.get("/clear_my_picks")
+def clear_my_picks():
+    """Clear all picks for the current user - for debugging"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    uid = session["user_id"]
+    print(f"DEBUG: clear_my_picks called for user {uid}")
+    
+    # Delete all picks for this user
+    deleted_picks = RacePick.query.filter_by(user_id=uid).delete()
+    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid).delete()
+    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid).delete()
+    
+    db.session.commit()
+    
+    print(f"DEBUG: Deleted {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards")
+    
+    return jsonify({
+        "message": f"Cleared {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards",
+        "deleted_picks": deleted_picks,
+        "deleted_holeshots": deleted_holeshots,
+        "deleted_wildcards": deleted_wildcards
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []
