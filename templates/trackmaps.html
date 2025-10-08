@@ -29,6 +29,7 @@
           </div>
 
           {% set imgs = c.images.order_by('sort_order').all() %}
+          <!-- DEBUG: {{ c.name }} has {{ imgs|length }} images -->
           <div class="rounded bg-gray-50 dark:bg-gray-700 p-2 flex flex-col items-center">
             {% if imgs and imgs|length > 0 %}
               <img id="main-{{ c.id }}"
