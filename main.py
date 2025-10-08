@@ -281,6 +281,46 @@ def get_track_timezone(track_name):
     }
     return timezone_map.get(track_name, 'America/New_York')  # Default to Eastern
 
+def create_trackmap_images():
+    """Create CompetitionImage records for compressed track maps"""
+    print("Creating CompetitionImage records for compressed track maps...")
+    
+    # Map competition names to image files
+    COMP_TO_IMAGE = {
+        "Anaheim 1": "anaheim1.jpg",
+        "San Diego": "sandiego.jpg", 
+        "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
+        "Houston": "houston.jpg",
+        "Glendale": "glendale.jpg",
+        "Seattle": "seattle.jpg",
+        "Arlington": "arlington.jpg"
+    }
+    
+    # Get all competitions
+    competitions = Competition.query.all()
+    print(f"Found {len(competitions)} competitions")
+    
+    total_created = 0
+    
+    for comp in competitions:
+        if comp.name in COMP_TO_IMAGE:
+            # Clear existing images for this competition
+            CompetitionImage.query.filter_by(competition_id=comp.id).delete()
+            
+            # Create new image record
+            image_url = f"trackmaps/compressed/{COMP_TO_IMAGE[comp.name]}"
+            ci = CompetitionImage(
+                competition_id=comp.id,
+                image_url=image_url,
+                sort_order=0
+            )
+            db.session.add(ci)
+            total_created += 1
+            print(f"Created image for {comp.name}: {image_url}")
+    
+    db.session.commit()
+    print(f"Total CompetitionImage records created: {total_created}")
+
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in {"png", "jpg", "jpeg", "gif"}
@@ -1240,6 +1280,12 @@ def trackmaps_page():
         print(f"DEBUG: {comp.name} (ID: {comp.id}) has {len(images)} images")
         for img in images:
             print(f"  - Image: {img.image_url} (sort_order: {img.sort_order})")
+    
+    # Auto-create track map images if none exist
+    total_images = CompetitionImage.query.count()
+    if total_images == 0:
+        print("DEBUG: No CompetitionImage records found, creating them...")
+        create_trackmap_images()
     
     return render_template("trackmaps.html", competitions=comps, username=session.get("username"))
 
