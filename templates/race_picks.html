@@ -307,6 +307,20 @@ function imgSrcFor(riderId) {
   console.log(`DEBUG: No image or bike brand for ${r.name}`);
   return null;
 }
+
+// Function to handle image loading errors
+function handleImageError(img) {
+  console.log(`DEBUG: Image failed to load: ${img.src}`);
+  img.style.display = 'none';
+  
+  // Create a placeholder div
+  const placeholder = document.createElement('div');
+  placeholder.className = 'w-full h-full bg-gray-600 rounded flex items-center justify-center';
+  placeholder.innerHTML = '<div class="text-white text-xs text-center">🏍️<br/>Rider</div>';
+  
+  // Insert placeholder after the image
+  img.parentNode.insertBefore(placeholder, img.nextSibling);
+}
 function onPickChange(cls, pos) {
   console.log(`DEBUG: onPickChange called for ${cls} position ${pos}`);
   
@@ -328,6 +342,7 @@ function onPickChange(cls, pos) {
       img.src = src;
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
+      img.onerror = function() { handleImageError(this); };
       console.log(`DEBUG: Set image src to: ${src}`);
     } else {
       img.removeAttribute("src");

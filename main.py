@@ -2341,6 +2341,41 @@ def add_profile_columns():
             "error": f"Failed to add profile columns: {str(e)}"
         }), 500
 
+@app.get("/fix_missing_images")
+def fix_missing_images():
+    """Fix missing rider images by clearing invalid image_urls"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: fix_missing_images called")
+    
+    try:
+        riders = Rider.query.all()
+        fixed_count = 0
+        
+        for rider in riders:
+            if rider.image_url:
+                # Check if image file exists
+                image_path = os.path.join(app.static_folder, rider.image_url)
+                if not os.path.exists(image_path):
+                    print(f"DEBUG: Image file missing for {rider.name}: {rider.image_url}")
+                    rider.image_url = None
+                    fixed_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed {fixed_count} riders with missing images",
+            "fixed_count": fixed_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error fixing missing images: {e}")
+        return jsonify({
+            "error": f"Failed to fix missing images: {str(e)}"
+        }), 500
+
 @app.get("/routes")
 def list_routes():
     output = []
