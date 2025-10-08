@@ -1279,6 +1279,59 @@ def user_stats_page(username: str):
         history=history,
     )
 
+@app.get("/race_results")
+def race_results_page():
+    """Show actual race results for all competitions"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    competitions = (
+        Competition.query
+        .filter(Competition.series == "SX")
+        .order_by(Competition.event_date.asc())
+        .all()
+    )
+    
+    # Get results for each competition
+    competition_results = {}
+    for comp in competitions:
+        results = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.name,
+                Rider.class_name,
+                Rider.rider_number
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(CompetitionResult.competition_id == comp.id)
+            .order_by(CompetitionResult.position.asc())
+            .all()
+        )
+        
+        holeshots = (
+            db.session.query(
+                HoleshotResult.rider_id,
+                Rider.name,
+                HoleshotResult.class_name
+            )
+            .join(Rider, Rider.id == HoleshotResult.rider_id)
+            .filter(HoleshotResult.competition_id == comp.id)
+            .all()
+        )
+        
+        competition_results[comp.id] = {
+            'results': results,
+            'holeshots': holeshots
+        }
+    
+    return render_template(
+        "race_results.html", 
+        competitions=competitions, 
+        competition_results=competition_results,
+        username=session.get("username")
+    )
+
 @app.get("/trackmaps")
 def trackmaps_page():
     if "user_id" not in session:

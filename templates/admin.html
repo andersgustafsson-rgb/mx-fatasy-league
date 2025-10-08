@@ -482,9 +482,10 @@
           console.log(`DEBUG: Loaded results:`, data);
           
           // Populate 450cc results
-          if (data.results_450 && data.results_450.length > 0) {
-            data.results_450.forEach((result, index) => {
-              const select = document.querySelector(`select[name="riders_450[]"][data-position="${index + 1}"]`);
+          if (data.top_results && data.top_results.length > 0) {
+            const results450 = data.top_results.filter(r => r.class === '450cc').sort((a, b) => a.position - b.position);
+            results450.forEach((result, index) => {
+              const select = document.querySelector(`select[name="riders_450[]"][data-position="${result.position}"]`);
               if (select) {
                 select.value = result.rider_id;
               }
@@ -492,9 +493,10 @@
           }
           
           // Populate 250cc results
-          if (data.results_250 && data.results_250.length > 0) {
-            data.results_250.forEach((result, index) => {
-              const select = document.querySelector(`select[name="riders_250[]"][data-position="${index + 1}"]`);
+          if (data.top_results && data.top_results.length > 0) {
+            const results250 = data.top_results.filter(r => r.class === '250cc').sort((a, b) => a.position - b.position);
+            results250.forEach((result, index) => {
+              const select = document.querySelector(`select[name="riders_250[]"][data-position="${result.position}"]`);
               if (select) {
                 select.value = result.rider_id;
               }
@@ -502,13 +504,18 @@
           }
           
           // Populate holeshot results
-          if (data.holeshot_450) {
-            const hs450 = document.getElementById("holeshot_450");
-            if (hs450) hs450.value = data.holeshot_450;
-          }
-          if (data.holeshot_250) {
-            const hs250 = document.getElementById("holeshot_250");
-            if (hs250) hs250.value = data.holeshot_250;
+          if (data.holeshot_results && data.holeshot_results.length > 0) {
+            const hs450 = data.holeshot_results.find(h => h.class === '450cc');
+            const hs250 = data.holeshot_results.find(h => h.class === '250cc');
+            
+            if (hs450) {
+              const hs450Select = document.getElementById("holeshot_450");
+              if (hs450Select) hs450Select.value = hs450.rider_id;
+            }
+            if (hs250) {
+              const hs250Select = document.getElementById("holeshot_250");
+              if (hs250Select) hs250Select.value = hs250.rider_id;
+            }
           }
         } else {
           console.log('DEBUG: No existing results found');

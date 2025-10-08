@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Race Results – AMA Supercross 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+  <div class="container mx-auto p-4 sm:p-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6">
+      <h1 class="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2 sm:mb-0">
+        Race Results – AMA Supercross 2026
+      </h1>
+      <a href="{{ url_for('index') }}" 
+         class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded shadow text-sm sm:text-base">
+        ← Tillbaka
+      </a>
+    </div>
+
+    <!-- Competitions -->
+    <div class="space-y-6">
+      {% for comp in competitions %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2 sm:mb-0">
+              {{ comp.name }}
+            </h2>
+            <span class="text-sm text-gray-600 dark:text-gray-400">
+              {{ comp.event_date }}
+            </span>
+          </div>
+
+          {% set results = competition_results[comp.id] %}
+          {% if results.results or results.holeshots %}
+            <!-- 450cc Results -->
+            {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
+            {% if results450 %}
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {% for result in results450[:20] %}
+                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-lg">{{ result.position }}.</span>
+                        <div class="text-right">
+                          <div class="font-semibold">{{ result.name }}</div>
+                          <div class="text-sm text-gray-600 dark:text-gray-400">#{{ result.rider_number }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- 250cc Results -->
+            {% set results250 = results.results | selectattr('class_name', 'equalto', '250cc') | list %}
+            {% if results250 %}
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {% for result in results250[:6] %}
+                    <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                      <div class="flex items-center justify-between">
+                        <span class="font-bold text-lg">{{ result.position }}.</span>
+                        <div class="text-right">
+                          <div class="font-semibold">{{ result.name }}</div>
+                          <div class="text-sm text-gray-600 dark:text-gray-400">#{{ result.rider_number }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Holeshot Results -->
+            {% if results.holeshots %}
+              <div class="mb-4">
+                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">Holeshot Winners</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {% for holeshot in results.holeshots %}
+                    <div class="bg-yellow-50 dark:bg-yellow-900 p-3 rounded-lg border-l-4 border-yellow-500">
+                      <div class="font-semibold text-yellow-800 dark:text-yellow-200">
+                        {{ holeshot.class_name }}: {{ holeshot.name }}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+              <p class="text-lg">Inga resultat registrerade ännu</p>
+              <p class="text-sm mt-2">Resultat kommer att visas här när admin har registrerat dem</p>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>
