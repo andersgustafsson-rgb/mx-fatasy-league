@@ -3171,6 +3171,65 @@ def force_recreate_data():
         <p><a href="/admin">Go to Admin</a></p>
         """
 
+@app.get("/debug_points")
+def debug_points():
+    """Debug points calculation and display"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            # Check users
+            users = User.query.all()
+            user_info = f"<h2>Users ({len(users)}):</h2>"
+            for user in users:
+                user_info += f"<p>- {user.username} (ID: {user.id})</p>"
+            
+            # Check competitions
+            competitions = Competition.query.all()
+            comp_info = f"<h2>Competitions ({len(competitions)}):</h2>"
+            for comp in competitions:
+                comp_info += f"<p>- {comp.name} (ID: {comp.id})</p>"
+            
+            # Check race picks
+            race_picks = RacePick.query.all()
+            picks_info = f"<h2>Race Picks ({len(race_picks)}):</h2>"
+            for pick in race_picks:
+                picks_info += f"<p>- User {pick.user_id}, Competition {pick.competition_id}, Rider {pick.rider_id}, Position {pick.predicted_position}</p>"
+            
+            # Check competition results
+            results = CompetitionResult.query.all()
+            results_info = f"<h2>Competition Results ({len(results)}):</h2>"
+            for result in results:
+                results_info += f"<p>- Competition {result.competition_id}, Rider {result.rider_id}, Position {result.position}</p>"
+            
+            # Check competition scores
+            scores = CompetitionScore.query.all()
+            scores_info = f"<h2>Competition Scores ({len(scores)}):</h2>"
+            for score in scores:
+                scores_info += f"<p>- User {score.user_id}, Competition {score.competition_id}, Points: {score.total_points}</p>"
+            
+            # Check season teams
+            teams = SeasonTeam.query.all()
+            teams_info = f"<h2>Season Teams ({len(teams)}):</h2>"
+            for team in teams:
+                teams_info += f"<p>- User {team.user_id}, Team: {team.team_name}, Points: {team.total_points}</p>"
+            
+            return f"""
+            <h1>Points Debug Information</h1>
+            {user_info}
+            {comp_info}
+            {picks_info}
+            {results_info}
+            {scores_info}
+            {teams_info}
+            <hr>
+            <p><a href="/admin">Go to Admin</a></p>
+            <p><a href="/">Go to Home</a></p>
+            """
+    except Exception as e:
+        return f"<h1>Error</h1><p>{e}</p>"
+
 @app.get("/trackmap_status")
 def trackmap_status():
     """Show track map status for debugging"""
