@@ -73,6 +73,17 @@
         </div>
       </div>
 
+      <!-- Database persistence notice -->
+      <div class="mb-4 p-3 bg-green-100 dark:bg-green-900 border-l-4 border-green-500 rounded-r-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-green-600 dark:text-green-400">✅</span>
+          <span class="text-sm font-semibold text-green-800 dark:text-green-200">Databas-persistens aktiverad</span>
+        </div>
+        <div class="text-xs text-green-700 dark:text-green-300 mt-1">
+          Data raderas inte längre vid deploy. Alla resultat, picks och poäng bevaras.
+        </div>
+      </div>
+
       <!-- Välj tävling + kontroller -->
       <div class="mb-4 sm:mb-6">
         <div class="flex flex-col lg:flex-row lg:items-end gap-3">
@@ -95,6 +106,11 @@
                     onclick="simulateForSelected()"
                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
               ⚙️ Simulera
+            </button>
+            <button type="button"
+                    onclick="clearCurrentCompetitionResults()"
+                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
+              🗑️ Rensa Resultat
             </button>
             <button type="button"
                     onclick="loadSavedResults()"
@@ -514,11 +530,37 @@
         if (response.ok) {
           const data = await response.json();
           console.log(`DEBUG: Cleared results: ${data.message}`);
+          return data;
         } else {
           console.log('DEBUG: No results to clear or error occurred');
+          return null;
         }
       } catch (error) {
         console.log('DEBUG: Error clearing results:', error);
+        return null;
+      }
+    }
+
+    // Clear results for currently selected competition
+    async function clearCurrentCompetitionResults() {
+      const compId = document.getElementById("competition-select").value;
+      if (!compId) {
+        alert("Välj en tävling först!");
+        return;
+      }
+      
+      const compName = document.getElementById("competition-select").selectedOptions[0].textContent;
+      if (!confirm(`Är du säker på att du vill rensa alla resultat för ${compName}?\n\nDetta kommer att ta bort:\n- Alla race resultat\n- Alla holeshot resultat\n- Alla poäng\n- Alla OUT-statuser`)) {
+        return;
+      }
+      
+      const result = await clearCompetitionResults(compId);
+      if (result) {
+        alert(`Resultat rensade för ${compName}!\n\nRensade:\n- ${result.deleted_results} race resultat\n- ${result.deleted_holeshot_results} holeshot resultat\n- ${result.deleted_scores} poäng\n- ${result.deleted_out_status} OUT-statuser`);
+        // Reload the results to show empty state
+        loadSavedResults();
+      } else {
+        alert("Kunde inte rensa resultat. Kontrollera att du är inloggad som admin.");
       }
     }
 
