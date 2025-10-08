@@ -3040,6 +3040,52 @@ if init_success:
 else:
     print("❌ Database initialization failed")
 
+@app.get("/force_create_all_trackmaps")
+def force_create_all_trackmaps():
+    """Force create all track map images - bypasses existing check"""
+    print("FORCE CREATING ALL TRACKMAPS...")
+    
+    # Clear all existing
+    CompetitionImage.query.delete()
+    db.session.commit()
+    print("Cleared all existing CompetitionImage records")
+    
+    # Create all 16 manually
+    COMP_TO_IMAGE = {
+        "Anaheim 1": "anaheim1.jpg",
+        "San Diego": "sandiego.jpg", 
+        "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
+        "Houston": "houston.jpg",
+        "Glendale": "glendale.jpg",
+        "Seattle": "seattle.jpg",
+        "Arlington": "arlington.jpg",
+        "Daytona": "daytona.jpg",
+        "Indianapolis": "indianapolis.jpg",
+        "Birmingham": "birmingham.jpg",
+        "Detroit": "detroit.jpg",
+        "St. Louis": "stlouis.jpg",
+        "Nashville": "nashville.jpg",
+        "Cleveland": "cleveland.jpg",
+        "Philadelphia": "philadelphia.jpg",
+        "Denver": "denver.jpg",
+        "Salt Lake City": "saltlakecity.jpg"
+    }
+    
+    competitions = Competition.query.all()
+    created = 0
+    for comp in competitions:
+        if comp.name in COMP_TO_IMAGE:
+            image_url = f"trackmaps/compressed/{COMP_TO_IMAGE[comp.name]}"
+            ci = CompetitionImage(competition_id=comp.id, image_url=image_url, sort_order=0)
+            db.session.add(ci)
+            created += 1
+            print(f"Created: {comp.name} -> {image_url}")
+    
+    db.session.commit()
+    print(f"FORCE CREATED {created} track map records")
+    
+    return f"Created {created} track map records. <a href='/trackmaps'>Go to Track Maps</a>"
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
