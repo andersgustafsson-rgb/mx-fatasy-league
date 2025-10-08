@@ -548,12 +548,16 @@
           headers: { 'Content-Type': 'application/json' }
         });
         
+        console.log(`DEBUG: Response status: ${response.status}`);
+        console.log(`DEBUG: Response ok: ${response.ok}`);
+        
         if (response.ok) {
           const data = await response.json();
-          console.log(`DEBUG: Cleared results: ${data.message}`);
+          console.log(`DEBUG: Cleared results:`, data);
           return data;
         } else {
-          console.log('DEBUG: No results to clear or error occurred');
+          const errorText = await response.text();
+          console.log(`DEBUG: Error response: ${response.status} - ${errorText}`);
           return null;
         }
       } catch (error) {
@@ -575,13 +579,23 @@
         return;
       }
       
-      const result = await clearCompetitionResults(compId);
-      if (result) {
-        alert(`Resultat rensade för ${compName}!\n\nRensade:\n- ${result.deleted_results} race resultat\n- ${result.deleted_holeshot_results} holeshot resultat\n- ${result.deleted_scores} poäng\n- ${result.deleted_out_status} OUT-statuser\n- ${result.deleted_race_picks} race picks\n- ${result.deleted_holeshot_picks} holeshot picks\n- ${result.deleted_wildcard_picks} wildcard picks`);
-        // Reload the results to show empty state
-        loadSavedResults();
-      } else {
-        alert("Kunde inte rensa resultat. Kontrollera att du är inloggad som admin.");
+      console.log(`DEBUG: Starting clear for competition ${compId} (${compName})`);
+      
+      try {
+        const result = await clearCompetitionResults(compId);
+        console.log(`DEBUG: Clear result:`, result);
+        
+        if (result && result.deleted_results !== undefined) {
+          alert(`Resultat rensade för ${compName}!\n\nRensade:\n- ${result.deleted_results} race resultat\n- ${result.deleted_holeshot_results} holeshot resultat\n- ${result.deleted_scores} poäng\n- ${result.deleted_out_status} OUT-statuser\n- ${result.deleted_race_picks} race picks\n- ${result.deleted_holeshot_picks} holeshot picks\n- ${result.deleted_wildcard_picks} wildcard picks`);
+          // Reload the results to show empty state
+          loadSavedResults();
+        } else {
+          console.log(`DEBUG: Clear failed or returned unexpected result:`, result);
+          alert("Kunde inte rensa resultat. Kontrollera att du är inloggad som admin och att tävlingen finns.");
+        }
+      } catch (error) {
+        console.log(`DEBUG: Error in clearCurrentCompetitionResults:`, error);
+        alert("Ett fel uppstod vid rensning. Kontrollera konsolen för mer information.");
       }
     }
 
