@@ -1789,6 +1789,32 @@ def clear_admin_results():
         "deleted_out_status": deleted_out_status
     })
 
+@app.post("/clear_competition_results/<int:competition_id>")
+def clear_competition_results(competition_id):
+    """Clear results for a specific competition - called automatically when switching competitions"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print(f"DEBUG: clear_competition_results called for competition {competition_id}")
+    
+    # Delete results for this specific competition
+    deleted_results = CompetitionResult.query.filter_by(competition_id=competition_id).delete()
+    deleted_holeshot_results = HoleshotResult.query.filter_by(competition_id=competition_id).delete()
+    deleted_scores = CompetitionScore.query.filter_by(competition_id=competition_id).delete()
+    deleted_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).delete()
+    
+    db.session.commit()
+    
+    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses for competition {competition_id}")
+    
+    return jsonify({
+        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses for competition {competition_id}",
+        "deleted_results": deleted_results,
+        "deleted_holeshot_results": deleted_holeshot_results,
+        "deleted_scores": deleted_scores,
+        "deleted_out_status": deleted_out_status
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []

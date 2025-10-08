@@ -375,6 +375,11 @@
       document.querySelectorAll('select[name="riders_450[]"], select[name="riders_250[]"]').forEach(select => {
         select.value = '';
       });
+      
+      // Clear any saved results for this competition
+      if (comp) {
+        clearCompetitionResults(comp);
+      }
 
       // Get competition coast reliably using a map rendered from backend
       const selectEl = document.getElementById("competition-select");
@@ -471,6 +476,26 @@
       
       container.appendChild(row);
       validateAndUpdateDropdowns(cls);
+    }
+
+    // Clear saved results for a specific competition
+    async function clearCompetitionResults(compId) {
+      try {
+        console.log(`DEBUG: Clearing results for competition ${compId}`);
+        const response = await fetch(`/clear_competition_results/${compId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`DEBUG: Cleared results: ${data.message}`);
+        } else {
+          console.log('DEBUG: No results to clear or error occurred');
+        }
+      } catch (error) {
+        console.log('DEBUG: Error clearing results:', error);
+      }
     }
 
     // Update holeshot dropdowns with coast validation
