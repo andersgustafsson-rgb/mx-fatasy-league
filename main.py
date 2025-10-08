@@ -1763,6 +1763,32 @@ def clear_my_picks():
         "deleted_wildcards": deleted_wildcards
     })
 
+@app.get("/clear_admin_results")
+def clear_admin_results():
+    """Clear all admin results and scores - for debugging"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print(f"DEBUG: clear_admin_results called")
+    
+    # Delete all admin results
+    deleted_results = CompetitionResult.query.delete()
+    deleted_holeshot_results = HoleshotResult.query.delete()
+    deleted_scores = CompetitionScore.query.delete()
+    deleted_out_status = CompetitionRiderStatus.query.delete()
+    
+    db.session.commit()
+    
+    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses")
+    
+    return jsonify({
+        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses",
+        "deleted_results": deleted_results,
+        "deleted_holeshot_results": deleted_holeshot_results,
+        "deleted_scores": deleted_scores,
+        "deleted_out_status": deleted_out_status
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []
