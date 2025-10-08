@@ -1322,7 +1322,9 @@ def race_results_page():
                 CompetitionResult.position,
                 Rider.name,
                 Rider.class_name,
-                Rider.rider_number
+                Rider.rider_number,
+                Rider.image_url,
+                Rider.bike_brand
             )
             .join(Rider, Rider.id == CompetitionResult.rider_id)
             .filter(CompetitionResult.competition_id == comp.id)
@@ -1334,7 +1336,10 @@ def race_results_page():
             db.session.query(
                 HoleshotResult.rider_id,
                 Rider.name,
-                HoleshotResult.class_name
+                HoleshotResult.class_name,
+                Rider.rider_number,
+                Rider.image_url,
+                Rider.bike_brand
             )
             .join(Rider, Rider.id == HoleshotResult.rider_id)
             .filter(HoleshotResult.competition_id == comp.id)
