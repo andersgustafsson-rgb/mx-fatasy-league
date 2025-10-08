@@ -388,15 +388,9 @@
       
       if (!comp) return;
 
-      // Clear any saved results for this competition first
-      await clearCompetitionResults(comp);
-
-      // Don't load old results - keep dropdowns empty
-      // This ensures a clean slate for each competition
-      
       // Always ensure we have exactly 20 rows for 450cc and 6 rows for 250cc
       // Use setTimeout to prevent blocking the UI
-      setTimeout(() => {
+      setTimeout(async () => {
         while (document.getElementById("results-container-450").children.length < 20) {
           addResultRow("450");
         }
@@ -406,6 +400,9 @@
         
         // Add event listeners after all rows are created
         addEventListeners();
+        
+        // Load existing results after rows are created
+        await loadExistingResults(comp);
       }, 100);
 
       // Event listeners will be added by addEventListeners() function
@@ -458,7 +455,54 @@
       validateAndUpdateDropdowns(cls);
     }
 
-    // Clear saved results for a specific competition
+    // Load existing results for a specific competition
+    async function loadExistingResults(compId) {
+      try {
+        console.log(`DEBUG: Loading existing results for competition ${compId}`);
+        const response = await fetch(`/admin/get_results/${compId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`DEBUG: Loaded results:`, data);
+          
+          // Populate 450cc results
+          if (data.results_450 && data.results_450.length > 0) {
+            data.results_450.forEach((result, index) => {
+              const select = document.querySelector(`select[name="riders_450[]"][data-position="${index + 1}"]`);
+              if (select) {
+                select.value = result.rider_id;
+              }
+            });
+          }
+          
+          // Populate 250cc results
+          if (data.results_250 && data.results_250.length > 0) {
+            data.results_250.forEach((result, index) => {
+              const select = document.querySelector(`select[name="riders_250[]"][data-position="${index + 1}"]`);
+              if (select) {
+                select.value = result.rider_id;
+              }
+            });
+          }
+          
+          // Populate holeshot results
+          if (data.holeshot_450) {
+            const hs450 = document.getElementById("holeshot_450");
+            if (hs450) hs450.value = data.holeshot_450;
+          }
+          if (data.holeshot_250) {
+            const hs250 = document.getElementById("holeshot_250");
+            if (hs250) hs250.value = data.holeshot_250;
+          }
+        } else {
+          console.log('DEBUG: No existing results found');
+        }
+      } catch (error) {
+        console.log('DEBUG: Error loading results:', error);
+      }
+    }
+
+    // Clear saved results for a specific competition (keep for manual use)
     async function clearCompetitionResults(compId) {
       try {
         console.log(`DEBUG: Clearing results for competition ${compId}`);
