@@ -2051,7 +2051,17 @@ def clear_competition_results(competition_id):
     
     db.session.commit()
     
+    # Update season team total points after clearing scores
+    all_season_teams = SeasonTeam.query.all()
+    for team in all_season_teams:
+        all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
+        total_season_points = sum(s.total_points for s in all_user_scores if s.total_points)
+        team.total_points = total_season_points
+    
+    db.session.commit()
+    
     print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}")
+    print(f"DEBUG: Updated season team total points after clearing")
     
     return jsonify({
         "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}",
