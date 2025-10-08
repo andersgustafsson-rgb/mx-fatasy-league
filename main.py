@@ -3341,6 +3341,45 @@ def debug_database():
     except Exception as e:
         return f"<h1>Error</h1><p>{e}</p>"
 
+@app.get("/clear_anaheim1")
+def clear_anaheim1():
+    """Clear all data for Anaheim 1 specifically - for debugging"""
+    if session.get("username") != "test":
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            comp_id = 1  # Anaheim 1
+            
+            # Delete all data for Anaheim 1
+            deleted_results = CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+            deleted_holeshot_results = HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+            deleted_scores = CompetitionScore.query.filter_by(competition_id=comp_id).delete()
+            deleted_out_status = CompetitionRiderStatus.query.filter_by(competition_id=comp_id).delete()
+            deleted_race_picks = RacePick.query.filter_by(competition_id=comp_id).delete()
+            deleted_holeshot_picks = HoleshotPick.query.filter_by(competition_id=comp_id).delete()
+            deleted_wildcard_picks = WildcardPick.query.filter_by(competition_id=comp_id).delete()
+            
+            db.session.commit()
+            
+            return f"""
+            <h1>Anaheim 1 Cleared Successfully!</h1>
+            <p>Deleted:</p>
+            <ul>
+            <li>{deleted_results} race results</li>
+            <li>{deleted_holeshot_results} holeshot results</li>
+            <li>{deleted_scores} scores</li>
+            <li>{deleted_out_status} out statuses</li>
+            <li>{deleted_race_picks} race picks</li>
+            <li>{deleted_holeshot_picks} holeshot picks</li>
+            <li>{deleted_wildcard_picks} wildcard picks</li>
+            </ul>
+            <p><a href="/admin">Go to Admin</a></p>
+            <p><a href="/debug_database">Check Database</a></p>
+            """
+    except Exception as e:
+        return f"<h1>Error</h1><p>{e}</p>"
+
 @app.get("/debug_users")
 def debug_users():
     """Debug users and their data"""
