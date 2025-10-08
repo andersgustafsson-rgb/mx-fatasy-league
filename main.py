@@ -1293,9 +1293,12 @@ def trackmaps_page():
     
     # Auto-create track map images if none exist
     total_images = CompetitionImage.query.count()
+    print(f"DEBUG: Total CompetitionImage records: {total_images}")
     if total_images == 0:
         print("DEBUG: No CompetitionImage records found, creating them...")
         create_trackmap_images()
+    else:
+        print("DEBUG: CompetitionImage records already exist, skipping creation")
     
     return render_template("trackmaps.html", competitions=comps, username=session.get("username"))
 
@@ -1312,6 +1315,16 @@ def trackmaps_competition_page(competition_id):
         images=images,
         username=session.get("username"),
     )
+
+@app.get("/create_trackmaps")
+def create_trackmaps_route():
+    """Manual route to create track map images"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    print("DEBUG: Manual track map creation triggered")
+    create_trackmap_images()
+    return redirect(url_for("trackmaps_page"))
 @app.get("/admin/get_out_status/<int:competition_id>")
 def admin_get_out_status(competition_id):
     if session.get("username") != "test":
