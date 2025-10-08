@@ -31,17 +31,22 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
 # Database configuration
-# For Render deployment, use PostgreSQL if available, otherwise file-based SQLite
+# For Render deployment, use PostgreSQL if available, otherwise in-memory SQLite
 if os.getenv('DATABASE_URL') and 'postgresql' in os.getenv('DATABASE_URL', ''):
     # Use PostgreSQL on Render (persistent)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
-    print("Using PostgreSQL database from DATABASE_URL")
+    print("✅ Using PostgreSQL database from DATABASE_URL - DATA WILL PERSIST!")
 elif os.getenv('RENDER'):
-    # On Render without PostgreSQL, use file-based SQLite in /tmp (shared between workers)
-    db_path = '/tmp/fantasy_mx.db'
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-    print(f"Using file-based SQLite on Render: {db_path}")
-    print("WARNING: Data will be lost on Render restart - add PostgreSQL for persistence!")
+    # On Render without PostgreSQL, use in-memory SQLite (temporary)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    print("⚠️  WARNING: Using in-memory SQLite on Render - DATA WILL BE LOST ON RESTART!")
+    print("🔧 TO FIX: Add a PostgreSQL database on Render and set DATABASE_URL environment variable")
+    print("📋 Steps:")
+    print("   1. Go to Render Dashboard")
+    print("   2. Click 'New +' → 'PostgreSQL'")
+    print("   3. Choose 'PostgreSQL Free' plan")
+    print("   4. Copy the DATABASE_URL from database settings")
+    print("   5. Add DATABASE_URL environment variable to your web service")
 else:
     # For local development, use a local file
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
