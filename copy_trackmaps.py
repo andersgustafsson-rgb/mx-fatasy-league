@@ -31,6 +31,10 @@ def copy_trackmaps():
     source_dir = Path("static/trackmaps/2026")
     target_dir = Path("static/trackmaps/compressed")
     
+    print(f"Source directory: {source_dir}")
+    print(f"Target directory: {target_dir}")
+    print(f"Source exists: {source_dir.exists()}")
+    
     # Create target directory if it doesn't exist
     target_dir.mkdir(exist_ok=True)
     
@@ -38,7 +42,7 @@ def copy_trackmaps():
     
     for comp_name, round_num in NAME_TO_ROUND.items():
         # Find the first image for this round
-        pattern = f"Rd{round_num:02d}_*"
+        pattern = f"*Rd{round_num:02d}_*"
         images = list(source_dir.glob(pattern))
         
         if images:
