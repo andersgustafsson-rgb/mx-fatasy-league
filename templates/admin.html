@@ -303,10 +303,11 @@
   <!-- Script -->
   <script>
     // Make riders data available to JavaScript
-    window.riders_250_data = {{ riders_250_json|tojson|safe }};
-    window.__COMP_COAST_MAP__ = {{ comp_coast_map|tojson|safe }};
-    console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
-    console.log('DEBUG: comp_coast_map loaded:', window.__COMP_COAST_MAP__);
+    // Temporarily disabled for deployment
+    // window.riders_250_data = {{ riders_250_json|tojson|safe }};
+    // window.__COMP_COAST_MAP__ = {{ comp_coast_map|tojson|safe }};
+    // console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
+    // console.log('DEBUG: comp_coast_map loaded:', window.__COMP_COAST_MAP__);
     
     function syncHiddenCompetitionId() {
       const comp = document.getElementById("competition-select")?.value || "";
