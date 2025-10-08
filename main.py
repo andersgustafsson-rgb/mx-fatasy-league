@@ -3174,6 +3174,45 @@ def force_recreate_data():
         <p><a href="/admin">Go to Admin</a></p>
         """
 
+@app.get("/debug_users")
+def debug_users():
+    """Debug users and their data"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            # Check users
+            users = User.query.all()
+            user_info = f"<h2>Users ({len(users)}):</h2>"
+            for user in users:
+                user_info += f"<p>- {user.username} (ID: {user.id})</p>"
+            
+            # Check season teams
+            teams = SeasonTeam.query.all()
+            teams_info = f"<h2>Season Teams ({len(teams)}):</h2>"
+            for team in teams:
+                teams_info += f"<p>- User {team.user_id}, Team: {team.team_name}, Points: {team.total_points}</p>"
+            
+            # Check race picks
+            race_picks = RacePick.query.all()
+            picks_info = f"<h2>Race Picks ({len(race_picks)}):</h2>"
+            for pick in race_picks:
+                picks_info += f"<p>- User {pick.user_id}, Competition {pick.competition_id}, Rider {pick.rider_id}, Position {pick.predicted_position}</p>"
+            
+            return f"""
+            <h1>Users Debug Information</h1>
+            {user_info}
+            {teams_info}
+            {picks_info}
+            <hr>
+            <p><a href="/admin">Go to Admin</a></p>
+            <p><a href="/">Go to Home</a></p>
+            <p><a href="/force_recreate_data">Force Recreate All Data</a></p>
+            """
+    except Exception as e:
+        return f"<h1>Error</h1><p>{e}</p>"
+
 @app.get("/debug_points")
 def debug_points():
     """Debug points calculation and display"""
