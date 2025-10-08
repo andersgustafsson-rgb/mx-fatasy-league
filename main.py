@@ -599,9 +599,14 @@ def profile_page():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-    user = User.query.get(session["user_id"])
-    if not user:
-        flash("Användare hittades inte.", "error")
+    try:
+        user = User.query.get(session["user_id"])
+        if not user:
+            flash("Användare hittades inte.", "error")
+            return redirect(url_for("index"))
+    except Exception as e:
+        print(f"DEBUG: Error loading user profile: {e}")
+        flash("Databasen behöver uppdateras. Kontakta admin.", "error")
         return redirect(url_for("index"))
     
     # Hämta säsongsteam
@@ -2295,6 +2300,46 @@ def fix_league_images():
         "message": f"Fixed {fixed_count} leagues with missing images",
         "fixed_count": fixed_count
     })
+
+@app.get("/add_profile_columns")
+def add_profile_columns():
+    """Add missing profile columns to users table"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: add_profile_columns called")
+    
+    try:
+        # Add missing columns to users table
+        columns_to_add = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+        ]
+        
+        for sql in columns_to_add:
+            try:
+                db.session.execute(db.text(sql))
+                print(f"DEBUG: Executed: {sql}")
+            except Exception as e:
+                print(f"DEBUG: Error executing {sql}: {e}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Profile columns added successfully",
+            "columns_added": len(columns_to_add)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error adding profile columns: {e}")
+        return jsonify({
+            "error": f"Failed to add profile columns: {str(e)}"
+        }), 500
 
 @app.get("/routes")
 def list_routes():
