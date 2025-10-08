@@ -2888,20 +2888,20 @@ def init_database():
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
             
-                   # Only create test data if database is empty
-                   try:
-                       # Check if test user already exists
-                       existing_test_user = User.query.filter_by(username='test').first()
-                       if existing_test_user:
-                           print("Test user already exists, skipping test data creation")
-                       else:
-                           print("Database is empty, creating test data...")
-                           create_test_data()
-                           print("Test data created successfully")
-                   except Exception as e:
-                       print(f"Warning: Could not create test data: {e}")
-                       # Don't try to create test data if there's an error
-                       pass
+            # Only create test data if database is empty
+            try:
+                # Check if test user already exists
+                existing_test_user = User.query.filter_by(username='test').first()
+                if existing_test_user:
+                    print("Test user already exists, skipping test data creation")
+                else:
+                    print("Database is empty, creating test data...")
+                    create_test_data()
+                    print("Test data created successfully")
+            except Exception as e:
+                print(f"Warning: Could not create test data: {e}")
+                # Don't try to create test data if there's an error
+                pass
             
             print("Database initialized successfully")
             return True
