@@ -40,6 +40,12 @@ def main():
         for comp in competitions:
             print(f"  - {comp.name} (Round {NAME_TO_ROUND.get(comp.name, 'Unknown')})")
         
+        # Debug: print existing CompetitionImage records
+        existing_images = CompetitionImage.query.all()
+        print(f"DEBUG: Found {len(existing_images)} existing CompetitionImage records")
+        for img in existing_images:
+            print(f"  - Competition {img.competition_id}: {img.image_url}")
+        
         # Get all track images (try compressed first, then fallback to 2026)
         track_dir = Path("static/trackmaps/compressed")
         if not track_dir.exists():

@@ -1232,6 +1232,15 @@ def trackmaps_page():
         .order_by(Competition.event_date.asc())
         .all()
     )
+    
+    # Debug: Print competition and image information
+    print(f"DEBUG: Found {len(comps)} competitions for trackmaps")
+    for comp in comps:
+        images = comp.images.order_by('sort_order').all()
+        print(f"DEBUG: {comp.name} (ID: {comp.id}) has {len(images)} images")
+        for img in images:
+            print(f"  - Image: {img.image_url} (sort_order: {img.sort_order})")
+    
     return render_template("trackmaps.html", competitions=comps, username=session.get("username"))
 
 @app.get("/trackmaps/<int:competition_id>")
