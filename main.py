@@ -2888,26 +2888,20 @@ def init_database():
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
             
-            # Only create test data if database is empty
-            try:
-                existing_competitions = Competition.query.count()
-                existing_riders = Rider.query.count()
-                existing_users = User.query.count()
-                
-                if existing_competitions == 0 and existing_riders == 0 and existing_users == 0:
-                    print("Database is empty, creating test data...")
-                    create_test_data()
-                    print("Test data created successfully")
-                else:
-                    print(f"Database already has data: {existing_competitions} competitions, {existing_riders} riders, {existing_users} users")
-            except Exception as e:
-                print(f"Warning: Could not check existing data: {e}")
-                # Try to create test data anyway
-                try:
-                    create_test_data()
-                    print("Test data created successfully")
-                except Exception as e2:
-                    print(f"Warning: Could not create test data: {e2}")
+                   # Only create test data if database is empty
+                   try:
+                       # Check if test user already exists
+                       existing_test_user = User.query.filter_by(username='test').first()
+                       if existing_test_user:
+                           print("Test user already exists, skipping test data creation")
+                       else:
+                           print("Database is empty, creating test data...")
+                           create_test_data()
+                           print("Test data created successfully")
+                   except Exception as e:
+                       print(f"Warning: Could not create test data: {e}")
+                       # Don't try to create test data if there's an error
+                       pass
             
             print("Database initialized successfully")
             return True
