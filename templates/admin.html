@@ -376,11 +376,6 @@
         select.value = '';
       });
       
-      // Clear any saved results for this competition
-      if (comp) {
-        clearCompetitionResults(comp);
-      }
-
       // Get competition coast reliably using a map rendered from backend
       const selectEl = document.getElementById("competition-select");
       const selectedId = selectEl.value;
@@ -393,64 +388,38 @@
       
       if (!comp) return;
 
-      try {
-        const res = await fetch(`/admin/get_results/${comp}`);
-        if (!res.ok) throw new Error("fetch failed");
-        const data = await res.json();
+      // Clear any saved results for this competition first
+      await clearCompetitionResults(comp);
 
-        (data.top_results || []).forEach((r) =>
-          addResultRow(
-            r.class && r.class.startsWith("450") ? "450" : "250",
-            r.rider_id,
-            r.position
-          )
-        );
-        
-        // Add event listeners to existing rows
-        document.querySelectorAll('select[name="riders_450[]"]').forEach(select => {
-          select.addEventListener('change', function() {
-            validateAndUpdateDropdowns('450');
-          });
-        });
-        document.querySelectorAll('select[name="riders_250[]"]').forEach(select => {
-          select.addEventListener('change', function() {
-            validateAndUpdateDropdowns('250');
-          });
-        });
-
-        // Always ensure we have exactly 6 rows for each class
-        while (document.getElementById("results-container-450").children.length < 6) {
-          addResultRow("450");
-        }
-        while (document.getElementById("results-container-250").children.length < 6) {
-          addResultRow("250");
-        }
-
-        // Update holeshot dropdowns with coast validation
-        updateHoleshotDropdowns();
-        
-        // Update all dropdowns with coast validation
-        validateAndUpdateDropdowns('450');
-        validateAndUpdateDropdowns('250');
-
-        (data.holeshot_results || []).forEach((r) => {
-          if (r.class && r.class.startsWith("450") && hs450) hs450.value = r.rider_id;
-          if (r.class && r.class.startsWith("250") && hs250) hs250.value = r.rider_id;
-        });
-      } catch (e) {
-        // Always ensure we have exactly 6 rows for each class
-        while (document.getElementById("results-container-450").children.length < 6) {
-          addResultRow("450");
-        }
-        while (document.getElementById("results-container-250").children.length < 6) {
-          addResultRow("250");
-        }
-        
-        // Update all dropdowns with coast validation
-        updateHoleshotDropdowns();
-        validateAndUpdateDropdowns('450');
-        validateAndUpdateDropdowns('250');
+      // Don't load old results - keep dropdowns empty
+      // This ensures a clean slate for each competition
+      
+      // Always ensure we have exactly 6 rows for each class
+      while (document.getElementById("results-container-450").children.length < 6) {
+        addResultRow("450");
       }
+      while (document.getElementById("results-container-250").children.length < 6) {
+        addResultRow("250");
+      }
+
+      // Add event listeners to new rows
+      document.querySelectorAll('select[name="riders_450[]"]').forEach(select => {
+        select.addEventListener('change', function() {
+          validateAndUpdateDropdowns('450');
+        });
+      });
+      document.querySelectorAll('select[name="riders_250[]"]').forEach(select => {
+        select.addEventListener('change', function() {
+          validateAndUpdateDropdowns('250');
+        });
+      });
+
+      // Update holeshot dropdowns with coast validation
+      updateHoleshotDropdowns();
+      
+      // Update all dropdowns with coast validation
+      validateAndUpdateDropdowns('450');
+      validateAndUpdateDropdowns('250');
     }
 
     function addResultRow(cls, selectedId = null, pos = null) {
