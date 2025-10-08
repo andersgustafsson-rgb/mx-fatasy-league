@@ -2857,9 +2857,14 @@ def init_database():
     """Initialize database with tables and test data"""
     try:
         with app.app_context():
-            print("Creating database tables...")
-            db.create_all()
-            print("Database tables created successfully")
+            print("Starting database initialization...")
+            
+            # Create tables only if they don't exist
+            try:
+                db.create_all()
+                print("Database tables created successfully")
+            except Exception as e:
+                print(f"Warning: Could not create tables (they may already exist): {e}")
             
             # Handle timezone column migration for existing competitions
             try:
@@ -2884,16 +2889,25 @@ def init_database():
                 # Continue anyway, the column will be added when creating new competitions
             
             # Only create test data if database is empty
-            existing_competitions = Competition.query.count()
-            existing_riders = Rider.query.count()
-            existing_users = User.query.count()
-            
-            if existing_competitions == 0 and existing_riders == 0 and existing_users == 0:
-                print("Database is empty, creating test data...")
-                create_test_data()
-                print("Test data created successfully")
-            else:
-                print(f"Database already has data: {existing_competitions} competitions, {existing_riders} riders, {existing_users} users")
+            try:
+                existing_competitions = Competition.query.count()
+                existing_riders = Rider.query.count()
+                existing_users = User.query.count()
+                
+                if existing_competitions == 0 and existing_riders == 0 and existing_users == 0:
+                    print("Database is empty, creating test data...")
+                    create_test_data()
+                    print("Test data created successfully")
+                else:
+                    print(f"Database already has data: {existing_competitions} competitions, {existing_riders} riders, {existing_users} users")
+            except Exception as e:
+                print(f"Warning: Could not check existing data: {e}")
+                # Try to create test data anyway
+                try:
+                    create_test_data()
+                    print("Test data created successfully")
+                except Exception as e2:
+                    print(f"Warning: Could not create test data: {e2}")
             
             print("Database initialized successfully")
             return True
