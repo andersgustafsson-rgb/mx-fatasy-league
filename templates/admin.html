@@ -193,11 +193,11 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 450cc</h2>
+            <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 450cc (Top 20 för Wildcard)</h2>
             <div id="results-container-450" class="space-y-1 sm:space-y-2"></div>
           </div>
           <div>
-            <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 250cc</h2>
+            <h2 class="text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">Toppresultat 250cc (Top 6)</h2>
             <div id="results-container-250" class="space-y-1 sm:space-y-2"></div>
           </div>
         </div>
@@ -394,8 +394,8 @@
       // Don't load old results - keep dropdowns empty
       // This ensures a clean slate for each competition
       
-      // Always ensure we have exactly 6 rows for each class
-      while (document.getElementById("results-container-450").children.length < 6) {
+      // Always ensure we have exactly 20 rows for 450cc and 6 rows for 250cc
+      while (document.getElementById("results-container-450").children.length < 20) {
         addResultRow("450");
       }
       while (document.getElementById("results-container-250").children.length < 6) {
@@ -762,9 +762,9 @@
         return false;
       }
       
-      // Check that exactly 6 riders are selected for each class
-      if (riders450.length !== 6) {
-        alert("Du måste välja exakt 6 förare för 450cc (Top 6).");
+      // Check that exactly 20 riders are selected for 450cc and 6 for 250cc
+      if (riders450.length !== 20) {
+        alert("Du måste välja exakt 20 förare för 450cc (för wildcard-funktionen).");
         return false;
       }
       
