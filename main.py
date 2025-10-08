@@ -2106,6 +2106,39 @@ def update_season_team_points():
         "updated_teams": updated_teams
     })
 
+@app.get("/check_season_teams")
+def check_season_teams():
+    """Check if users have season teams and create them if missing"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: check_season_teams called")
+    
+    all_users = User.query.all()
+    missing_teams = []
+    existing_teams = []
+    
+    for user in all_users:
+        team = SeasonTeam.query.filter_by(user_id=user.id).first()
+        if not team:
+            missing_teams.append({
+                "user_id": user.id,
+                "username": user.username
+            })
+        else:
+            existing_teams.append({
+                "user_id": user.id,
+                "username": user.username,
+                "team_name": team.team_name,
+                "total_points": team.total_points
+            })
+    
+    return jsonify({
+        "message": f"Found {len(existing_teams)} existing teams, {len(missing_teams)} missing teams",
+        "existing_teams": existing_teams,
+        "missing_teams": missing_teams
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []
