@@ -3022,9 +3022,9 @@ def init_database():
                 user_count = User.query.count()
                 competition_count = Competition.query.count()
                 
-                # Only create test data if both users and competitions are empty AND we're not in production
-                if user_count == 0 and competition_count == 0 and os.getenv('FLASK_ENV') != 'production':
-                    print("Database is empty and not in production, creating test data...")
+                # Only create test data if both users and competitions are empty
+                if user_count == 0 and competition_count == 0:
+                    print("Database is empty, creating test data...")
                     create_test_data()
                     print("Test data created successfully")
                 else:
@@ -3107,12 +3107,14 @@ def create_test_data_route():
             # Check if data already exists
             user_count = User.query.count()
             competition_count = Competition.query.count()
+            rider_count = Rider.query.count()
             
-            if user_count > 0 or competition_count > 0:
+            if user_count > 0 or competition_count > 0 or rider_count > 0:
                 return f"""
-                <h1>Test Data Already Exists</h1>
-                <p>Database has {user_count} users and {competition_count} competitions.</p>
+                <h1>Data Already Exists</h1>
+                <p>Database has {user_count} users, {competition_count} competitions, and {rider_count} riders.</p>
                 <p><a href="/admin">Go to Admin</a></p>
+                <p><a href="/force_recreate_data">Force Recreate All Data</a></p>
                 """
             
             # Create test data
@@ -3125,6 +3127,46 @@ def create_test_data_route():
     except Exception as e:
         return f"""
         <h1>Error Creating Test Data</h1>
+        <p>Error: {e}</p>
+        <p><a href="/admin">Go to Admin</a></p>
+        """
+
+@app.get("/force_recreate_data")
+def force_recreate_data():
+    """Force recreate all data - clears everything and recreates"""
+    if session.get("username") != "test":
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            # Clear all data
+            print("Clearing all existing data...")
+            db.session.query(CompetitionImage).delete()
+            db.session.query(CompetitionRiderStatus).delete()
+            db.session.query(CompetitionScore).delete()
+            db.session.query(HoleshotPick).delete()
+            db.session.query(WildcardPick).delete()
+            db.session.query(RacePick).delete()
+            db.session.query(SeasonTeamRider).delete()
+            db.session.query(SeasonTeam).delete()
+            db.session.query(Rider).delete()
+            db.session.query(Competition).delete()
+            db.session.query(User).delete()
+            db.session.commit()
+            
+            # Create fresh data
+            print("Creating fresh data...")
+            create_test_data()
+            
+            return """
+            <h1>All Data Recreated Successfully!</h1>
+            <p>All data has been cleared and recreated with fresh test data.</p>
+            <p><a href="/admin">Go to Admin</a></p>
+            <p><a href="/trackmaps">Go to Track Maps</a></p>
+            """
+    except Exception as e:
+        return f"""
+        <h1>Error Recreating Data</h1>
         <p>Error: {e}</p>
         <p><a href="/admin">Go to Admin</a></p>
         """
