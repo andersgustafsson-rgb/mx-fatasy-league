@@ -395,14 +395,31 @@
       // This ensures a clean slate for each competition
       
       // Always ensure we have exactly 20 rows for 450cc and 6 rows for 250cc
-      while (document.getElementById("results-container-450").children.length < 20) {
-        addResultRow("450");
-      }
-      while (document.getElementById("results-container-250").children.length < 6) {
-        addResultRow("250");
-      }
+      // Use setTimeout to prevent blocking the UI
+      setTimeout(() => {
+        while (document.getElementById("results-container-450").children.length < 20) {
+          addResultRow("450");
+        }
+        while (document.getElementById("results-container-250").children.length < 6) {
+          addResultRow("250");
+        }
+        
+        // Add event listeners after all rows are created
+        addEventListeners();
+      }, 100);
 
-      // Add event listeners to new rows
+      // Event listeners will be added by addEventListeners() function
+
+      // Update holeshot dropdowns with coast validation
+      updateHoleshotDropdowns();
+      
+      // Update all dropdowns with coast validation
+      validateAndUpdateDropdowns('450');
+      validateAndUpdateDropdowns('250');
+    }
+
+    function addEventListeners() {
+      // Add event listeners to all dropdowns
       document.querySelectorAll('select[name="riders_450[]"]').forEach(select => {
         select.addEventListener('change', function() {
           validateAndUpdateDropdowns('450');
@@ -413,20 +430,14 @@
           validateAndUpdateDropdowns('250');
         });
       });
-
-      // Update holeshot dropdowns with coast validation
-      updateHoleshotDropdowns();
-      
-      // Update all dropdowns with coast validation
-      validateAndUpdateDropdowns('450');
-      validateAndUpdateDropdowns('250');
     }
 
     function addResultRow(cls, selectedId = null, pos = null) {
       const container = document.getElementById(`results-container-${cls}`);
       
-      // Don't add more than 6 rows
-      if (container.children.length >= 6) {
+      // Don't add more than 20 rows for 450cc or 6 rows for 250cc
+      const maxRows = cls === '450' ? 20 : 6;
+      if (container.children.length >= maxRows) {
         return;
       }
       
