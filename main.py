@@ -1290,6 +1290,10 @@ def trackmaps_page():
         print(f"DEBUG: {comp.name} (ID: {comp.id}) has {len(images)} images")
         for img in images:
             print(f"  - Image: {img.image_url} (sort_order: {img.sort_order})")
+            # Check if image file exists
+            from pathlib import Path
+            image_path = Path(f"static/{img.image_url}")
+            print(f"    File exists: {image_path.exists()}")
     
     # Auto-create track map images if none exist
     total_images = CompetitionImage.query.count()
@@ -1323,6 +1327,22 @@ def create_trackmaps_route():
         return redirect(url_for("login"))
     
     print("DEBUG: Manual track map creation triggered")
+    create_trackmap_images()
+    return redirect(url_for("trackmaps_page"))
+
+@app.get("/reset_trackmaps")
+def reset_trackmaps_route():
+    """Reset and recreate all track map images"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    print("DEBUG: Resetting all track map images")
+    # Clear all existing CompetitionImage records
+    CompetitionImage.query.delete()
+    db.session.commit()
+    print("DEBUG: Cleared all CompetitionImage records")
+    
+    # Recreate them
     create_trackmap_images()
     return redirect(url_for("trackmaps_page"))
 @app.get("/admin/get_out_status/<int:competition_id>")
