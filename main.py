@@ -3057,41 +3057,40 @@ if init_success:
             existing_images = CompetitionImage.query.count()
             if existing_images == 0:
                 print("No track map images found, creating them...")
+                
+                COMP_TO_IMAGE = {
+                    "Anaheim 1": "anaheim1.jpg",
+                    "San Diego": "sandiego.jpg", 
+                    "Anaheim 2": "anaheim2.jpg",
+                    "Houston": "houston.jpg",
+                    "Glendale": "glendale.jpg",
+                    "Seattle": "seattle.jpg",
+                    "Arlington": "arlington.jpg",
+                    "Daytona": "daytona.jpg",
+                    "Indianapolis": "indianapolis.jpg",
+                    "Birmingham": "birmingham.jpg",
+                    "Detroit": "detroit.jpg",
+                    "St. Louis": "stlouis.jpg",
+                    "Nashville": "nashville.jpg",
+                    "Cleveland": "cleveland.jpg",
+                    "Philadelphia": "philadelphia.jpg",
+                    "Denver": "denver.jpg",
+                    "Salt Lake City": "saltlakecity.jpg"
+                }
+                
+                competitions = Competition.query.all()
+                created = 0
+                for comp in competitions:
+                    if comp.name in COMP_TO_IMAGE:
+                        image_url = f"trackmaps/compressed/{COMP_TO_IMAGE[comp.name]}"
+                        ci = CompetitionImage(competition_id=comp.id, image_url=image_url, sort_order=0)
+                        db.session.add(ci)
+                        created += 1
+                
+                db.session.commit()
+                print(f"✅ Auto-created {created} track map records on startup")
             else:
                 print(f"Found {existing_images} existing track map images, skipping creation")
-                return
-            
-            COMP_TO_IMAGE = {
-                "Anaheim 1": "anaheim1.jpg",
-                "San Diego": "sandiego.jpg", 
-                "Anaheim 2": "anaheim2.jpg",
-                "Houston": "houston.jpg",
-                "Glendale": "glendale.jpg",
-                "Seattle": "seattle.jpg",
-                "Arlington": "arlington.jpg",
-                "Daytona": "daytona.jpg",
-                "Indianapolis": "indianapolis.jpg",
-                "Birmingham": "birmingham.jpg",
-                "Detroit": "detroit.jpg",
-                "St. Louis": "stlouis.jpg",
-                "Nashville": "nashville.jpg",
-                "Cleveland": "cleveland.jpg",
-                "Philadelphia": "philadelphia.jpg",
-                "Denver": "denver.jpg",
-                "Salt Lake City": "saltlakecity.jpg"
-            }
-            
-            competitions = Competition.query.all()
-            created = 0
-            for comp in competitions:
-                if comp.name in COMP_TO_IMAGE:
-                    image_url = f"trackmaps/compressed/{COMP_TO_IMAGE[comp.name]}"
-                    ci = CompetitionImage(competition_id=comp.id, image_url=image_url, sort_order=0)
-                    db.session.add(ci)
-                    created += 1
-            
-            db.session.commit()
-            print(f"✅ Auto-created {created} track map records on startup")
     except Exception as e:
         print(f"❌ Error auto-creating track maps on startup: {e}")
 else:
