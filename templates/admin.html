@@ -370,6 +370,11 @@
       document.querySelectorAll('option').forEach(opt => {
         opt.textContent = opt.textContent.replace(/ \(OUT\)| \(Fel coast\)/g, '');
       });
+      
+      // Clear all result dropdowns
+      document.querySelectorAll('select[name="riders_450[]"], select[name="riders_250[]"]').forEach(select => {
+        select.value = '';
+      });
 
       // Get competition coast reliably using a map rendered from backend
       const selectEl = document.getElementById("competition-select");

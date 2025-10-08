@@ -1143,21 +1143,30 @@ def admin_set_sim_date():
 # -------------------------------------------------
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
-    # Enkel version: använd SeasonTeam.total_points direkt
-    rows = (
-        db.session.query(User.username, SeasonTeam.team_name, SeasonTeam.total_points)
+    # Använd CompetitionScore direkt för att få korrekta poäng
+    from sqlalchemy import func
+    
+    # Hämta alla användare med deras totala poäng från CompetitionScore
+    user_scores = (
+        db.session.query(
+            User.username,
+            SeasonTeam.team_name,
+            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+        )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-        .order_by(SeasonTeam.total_points.desc().nullslast())
+        .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+        .group_by(User.id, User.username, SeasonTeam.team_name)
+        .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
         .all()
     )
     
     # Lägg till rank och delta (enkel version)
     result = []
-    for i, (username, team_name, total_points) in enumerate(rows, 1):
+    for i, (username, team_name, total_points) in enumerate(user_scores, 1):
         result.append({
             "username": username,
             "team_name": team_name or None,
-            "total_points": total_points or 0,
+            "total_points": int(total_points),
             "rank": i,
             "delta": 0  # TODO: implementera delta senare
         })
