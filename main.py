@@ -31,16 +31,17 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
 # Database configuration
-# For Render deployment, use PostgreSQL if available, otherwise in-memory SQLite
+# For Render deployment, use PostgreSQL if available, otherwise file-based SQLite
 if os.getenv('DATABASE_URL') and 'postgresql' in os.getenv('DATABASE_URL', ''):
     # Use PostgreSQL on Render (persistent)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     print("Using PostgreSQL database from DATABASE_URL")
 elif os.getenv('RENDER'):
-    # On Render without PostgreSQL, use in-memory SQLite (temporary)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    print("WARNING: Using in-memory SQLite on Render - data will be lost on restart!")
-    print("To fix this, add a PostgreSQL database on Render and set DATABASE_URL")
+    # On Render without PostgreSQL, use file-based SQLite in /tmp (shared between workers)
+    db_path = '/tmp/fantasy_mx.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+    print(f"Using file-based SQLite on Render: {db_path}")
+    print("WARNING: Data will be lost on Render restart - add PostgreSQL for persistence!")
 else:
     # For local development, use a local file
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
@@ -61,6 +62,7 @@ else:
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'connect_args': {'check_same_thread': False}  # Allow multiple threads
     }
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB default
 
