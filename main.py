@@ -3129,6 +3129,41 @@ def create_test_data_route():
         <p><a href="/admin">Go to Admin</a></p>
         """
 
+@app.get("/trackmap_status")
+def trackmap_status():
+    """Show track map status for debugging"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            competitions = Competition.query.all()
+            total_images = CompetitionImage.query.count()
+            
+            status = f"""
+            <h1>Track Map Status</h1>
+            <p><strong>Total competitions:</strong> {len(competitions)}</p>
+            <p><strong>Total CompetitionImage records:</strong> {total_images}</p>
+            <hr>
+            <h2>Competitions:</h2>
+            """
+            
+            for comp in competitions:
+                images = comp.images.all()
+                status += f"<p><strong>{comp.name}</strong> (ID: {comp.id}): {len(images)} images</p>"
+                for img in images:
+                    status += f"<p>&nbsp;&nbsp;- {img.image_url}</p>"
+            
+            status += """
+            <hr>
+            <p><a href="/trackmaps">Go to Track Maps</a></p>
+            <p><a href="/force_create_all_trackmaps">Force Create All Track Maps</a></p>
+            """
+            
+            return status
+    except Exception as e:
+        return f"<h1>Error</h1><p>{e}</p>"
+
 @app.get("/force_create_all_trackmaps")
 def force_create_all_trackmaps():
     """Force create all track map images - bypasses existing check"""
