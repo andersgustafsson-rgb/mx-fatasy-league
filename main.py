@@ -647,8 +647,7 @@ def my_scores():
             Competition.event_date,
             CompetitionScore.total_points,
         )
-        .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
-        .filter(CompetitionScore.user_id == uid)
+        .outerjoin(CompetitionScore, (Competition.id == CompetitionScore.competition_id) & (CompetitionScore.user_id == uid))
         .order_by(Competition.event_date.asc().nulls_last())
         .all()
     )
@@ -1852,6 +1851,10 @@ def calculate_scores(comp_id: int):
             print(f"DEBUG: Updated existing score entry for {user.username}")
         score_entry.total_points = total_points
         print(f"DEBUG: {user.username} total points: {total_points}")
+        
+        # Debug: Check if user has any picks at all
+        all_user_picks = RacePick.query.filter_by(user_id=user.id).all()
+        print(f"DEBUG: {user.username} has {len(all_user_picks)} total picks across all competitions")
 
     db.session.commit()
 
