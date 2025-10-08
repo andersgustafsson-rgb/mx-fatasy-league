@@ -98,6 +98,12 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    display_name = db.Column(db.String(100), nullable=True)  # Användarens riktiga namn
+    profile_picture_url = db.Column(db.String(300), nullable=True)  # Profilbild
+    bio = db.Column(db.Text, nullable=True)  # Kort beskrivning om sig själv
+    favorite_rider = db.Column(db.String(100), nullable=True)  # Favoritförare
+    favorite_team = db.Column(db.String(100), nullable=True)  # Favoritlag
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # När kontot skapades
     season_team = db.relationship(
         "SeasonTeam", backref="user", uselist=False, cascade="all, delete-orphan"
     )
@@ -587,6 +593,91 @@ def season_team_page():
             .all()
         )
     return render_template("season_team.html", team=team, riders=riders)
+
+@app.route("/profile")
+def profile_page():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    user = User.query.get(session["user_id"])
+    if not user:
+        flash("Användare hittades inte.", "error")
+        return redirect(url_for("index"))
+    
+    # Hämta säsongsteam
+    season_team = SeasonTeam.query.filter_by(user_id=user.id).first()
+    
+    # Beräkna statistik
+    competitions_played = CompetitionScore.query.filter_by(user_id=user.id).count()
+    
+    # Hitta bästa placering (lägsta position i leaderboard)
+    best_position = None
+    if competitions_played > 0:
+        # Hämta alla tävlingar där användaren har poäng
+        user_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
+        best_positions = []
+        
+        for score in user_scores:
+            # Hitta användarens placering i denna tävling
+            all_scores_for_comp = CompetitionScore.query.filter_by(competition_id=score.competition_id).order_by(CompetitionScore.total_points.desc()).all()
+            position = 1
+            for i, s in enumerate(all_scores_for_comp):
+                if s.user_id == user.id:
+                    position = i + 1
+                    break
+            best_positions.append(position)
+        
+        if best_positions:
+            best_position = min(best_positions)
+    
+    return render_template(
+        "profile.html",
+        user=user,
+        season_team=season_team,
+        competitions_played=competitions_played,
+        best_position=best_position
+    )
+
+@app.post("/update_profile")
+def update_profile():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    user = User.query.get(session["user_id"])
+    if not user:
+        flash("Användare hittades inte.", "error")
+        return redirect(url_for("profile_page"))
+    
+    try:
+        # Uppdatera grundläggande information
+        user.display_name = request.form.get("display_name", "").strip() or None
+        user.bio = request.form.get("bio", "").strip() or None
+        user.favorite_rider = request.form.get("favorite_rider", "").strip() or None
+        user.favorite_team = request.form.get("favorite_team", "").strip() or None
+        
+        # Hantera profilbild
+        file = request.files.get("profile_picture")
+        if file and file.filename and allowed_file(file.filename):
+            try:
+                # Skapa unikt filnamn
+                fname = secure_filename(f"profile_{user.id}_{file.filename}")
+                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                file.save(path)
+                user.profile_picture_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                print(f"Profile picture saved: {path}")
+            except Exception as e:
+                print(f"Error saving profile picture: {e}")
+                flash("Kunde inte spara profilbilden.", "error")
+        
+        db.session.commit()
+        flash("Profil uppdaterad!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating profile: {e}")
+        flash(f"Fel vid uppdatering av profil: {str(e)}", "error")
+    
+    return redirect(url_for("profile_page"))
 
 @app.route("/season_team_builder")
 def season_team_builder():

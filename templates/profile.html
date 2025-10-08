@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Min Profil - MX Fantasy League</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+  <div class="container mx-auto p-4 md:p-8">
+
+    <!-- Header -->
+    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
+      <header>
+        <h1 class="text-4xl md:text-5xl font-bold text-blue-500">Min Profil</h1>
+        <p class="text-lg mt-2 text-gray-400">
+          Hantera din profil och inställningar
+        </p>
+      </header>
+      <div class="flex gap-3">
+        <a href="{{ url_for('index') }}"
+           class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+           Tillbaka till Huvudsidan
+        </a>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+      <!-- Profilbild och grundinfo -->
+      <div class="lg:col-span-1">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-semibold mb-4">Profilbild</h2>
+          
+          <!-- Profilbild -->
+          <div class="flex justify-center mb-6">
+            <div class="relative">
+              {% if user.profile_picture_url %}
+                <img src="{{ user.profile_picture_url }}" alt="Profilbild"
+                     class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              {% endif %}
+              <div class="w-32 h-32 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center border-4 border-blue-500 {% if user.profile_picture_url %}hidden{% endif %}">
+                <div class="text-center text-gray-500 dark:text-gray-400">
+                  <div class="text-4xl mb-2">👤</div>
+                  <div class="text-sm font-semibold">Ingen bild</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grundläggande info -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Användarnamn</label>
+              <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
+                <span class="font-mono text-blue-600 dark:text-blue-400">{{ user.username }}</span>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medlem sedan</label>
+              <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
+                <span class="text-gray-600 dark:text-gray-400">
+                  {{ user.created_at.strftime('%d %B %Y') if user.created_at else 'Okänt' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profilformulär -->
+      <div class="lg:col-span-2">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-semibold mb-4">Redigera Profil</h2>
+          
+          <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            
+            <!-- Profilbild upload -->
+            <div>
+              <label for="profile_picture" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Ladda upp profilbild
+              </label>
+              <input type="file" name="profile_picture" id="profile_picture" accept="image/*"
+                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Rekommenderat: JPG, PNG eller GIF. Max storlek: 5MB
+              </p>
+            </div>
+
+            <!-- Visningsnamn -->
+            <div>
+              <label for="display_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Visningsnamn
+              </label>
+              <input type="text" name="display_name" id="display_name" 
+                     value="{{ user.display_name or '' }}"
+                     placeholder="Ditt riktiga namn (valfritt)"
+                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            </div>
+
+            <!-- Bio -->
+            <div>
+              <label for="bio" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Om mig
+              </label>
+              <textarea name="bio" id="bio" rows="4" 
+                        placeholder="Berätta lite om dig själv, dina intressen, favoritförare..."
+                        class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">{{ user.bio or '' }}</textarea>
+            </div>
+
+            <!-- Favoritförare -->
+            <div>
+              <label for="favorite_rider" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Favoritförare
+              </label>
+              <input type="text" name="favorite_rider" id="favorite_rider" 
+                     value="{{ user.favorite_rider or '' }}"
+                     placeholder="T.ex. Jett Lawrence, Chase Sexton..."
+                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            </div>
+
+            <!-- Favoritlag -->
+            <div>
+              <label for="favorite_team" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Favoritlag
+              </label>
+              <input type="text" name="favorite_team" id="favorite_team" 
+                     value="{{ user.favorite_team or '' }}"
+                     placeholder="T.ex. Honda, Kawasaki, Yamaha..."
+                     class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            </div>
+
+            <!-- Submit button -->
+            <div class="flex justify-end">
+              <button type="submit"
+                      class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+                Spara Profil
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistik och prestationer -->
+    <div class="mt-8">
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold mb-4">Min Statistik</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Säsongsteam -->
+          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+              {{ season_team.total_points if season_team else 0 }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Säsongspoäng</div>
+          </div>
+
+          <!-- Antal tävlingar -->
+          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
+              {{ competitions_played }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Tävlingar spelade</div>
+          </div>
+
+          <!-- Bästa placering -->
+          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
+              {{ best_position if best_position else '-' }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">Bästa placering</div>
+          </div>
+        </div>
+
+        <!-- Säsongsteam info -->
+        {% if season_team %}
+        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">Ditt Säsongsteam</h3>
+          <p class="text-blue-700 dark:text-blue-300">
+            <strong>{{ season_team.team_name }}</strong> med {{ season_team.riders|length }} förare
+          </p>
+          <a href="{{ url_for('season_team_page') }}" 
+             class="inline-block mt-2 text-blue-600 dark:text-blue-400 hover:underline">
+            Visa säsongsteam →
+          </a>
+        </div>
+        {% else %}
+        <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Inget säsongsteam än</h3>
+          <p class="text-yellow-700 dark:text-yellow-300 mb-2">
+            Skapa ditt säsongsteam för att börja samla poäng!
+          </p>
+          <a href="{{ url_for('season_team_page') }}" 
+             class="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition-colors">
+            Skapa Säsongsteam
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
