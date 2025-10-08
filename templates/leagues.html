@@ -77,10 +77,17 @@
             {% for league in my_leagues %}
               <div class="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-md shadow hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
                 <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block">
-                  {% if league.image_url %}
-                    <img src="{{ league.image_url }}" alt="Ligabild"
-                        class="h-20 sm:h-28 w-full object-contain bg-white dark:bg-gray-700 rounded mb-2 p-2">
-                  {% endif %}
+                  <div class="h-20 sm:h-28 w-full bg-gray-200 dark:bg-gray-700 rounded mb-2 p-2 flex items-center justify-center">
+                    {% if league.image_url %}
+                      <img src="{{ league.image_url }}" alt="Ligabild"
+                          class="h-full w-full object-contain"
+                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    {% endif %}
+                    <div class="text-center text-gray-500 dark:text-gray-400 {% if league.image_url %}hidden{% endif %}">
+                      <div class="text-2xl sm:text-3xl mb-1">🏆</div>
+                      <div class="text-xs sm:text-sm font-semibold">Ligabild</div>
+                    </div>
+                  </div>
                   <p class="font-bold text-base sm:text-lg">{{ league.name }}</p>
                   <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                     Inbjudningskod:

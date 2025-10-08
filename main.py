@@ -2175,6 +2175,36 @@ def debug_league_images():
         "leagues": league_info
     })
 
+@app.get("/fix_league_images")
+def fix_league_images():
+    """Fix league images by setting them to None if files don't exist (for Render compatibility)"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: fix_league_images called")
+    
+    all_leagues = League.query.all()
+    fixed_count = 0
+    
+    for league in all_leagues:
+        if league.image_url:
+            # Extract filename from URL
+            filename = league.image_url.split('/')[-1]
+            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            
+            # If image file doesn't exist, clear the image_url
+            if not os.path.exists(image_path):
+                print(f"DEBUG: Image file missing for league {league.name}, clearing image_url")
+                league.image_url = None
+                fixed_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        "message": f"Fixed {fixed_count} leagues with missing images",
+        "fixed_count": fixed_count
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []
