@@ -8,16 +8,25 @@ def create_trackmaps():
     with app.app_context():
         print("Creating CompetitionImage records for compressed track maps...")
         
-        # Map competition names to image files
-        COMP_TO_IMAGE = {
-            "Anaheim 1": "anaheim1.jpg",
-            "San Diego": "sandiego.jpg", 
-            "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
-            "Houston": "houston.jpg",
-            "Glendale": "glendale.jpg",
-            "Seattle": "seattle.jpg",
-            "Arlington": "arlington.jpg"
-        }
+    # Map competition names to image files
+    COMP_TO_IMAGE = {
+        "Anaheim 1": "anaheim1.jpg",
+        "San Diego": "sandiego.jpg", 
+        "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
+        "Houston": "houston.jpg",
+        "Glendale": "glendale.jpg",
+        "Seattle": "seattle.jpg",
+        "Arlington": "arlington.jpg",
+        "Indianapolis": "indianapolis.jpg",
+        "Birmingham": "birmingham.jpg",
+        "Detroit": "detroit.jpg",
+        "St. Louis": "stlouis.jpg",
+        "Nashville": "nashville.jpg",
+        "Cleveland": "cleveland.jpg",
+        "Philadelphia": "philadelphia.jpg",
+        "Denver": "denver.jpg",
+        "Salt Lake City": "saltlakecity.jpg"
+    }
         
         # Get all competitions
         competitions = Competition.query.all()
