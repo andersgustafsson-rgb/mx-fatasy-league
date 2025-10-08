@@ -1294,6 +1294,8 @@ def trackmaps_page():
             from pathlib import Path
             image_path = Path(f"static/{img.image_url}")
             print(f"    File exists: {image_path.exists()}")
+            if not image_path.exists():
+                print(f"    ERROR: Image file missing: static/{img.image_url}")
     
     # Auto-create track map images if none exist
     total_images = CompetitionImage.query.count()
@@ -1344,6 +1346,27 @@ def reset_trackmaps_route():
     
     # Recreate them
     create_trackmap_images()
+    return redirect(url_for("trackmaps_page"))
+
+@app.get("/list_trackmap_files")
+def list_trackmap_files():
+    """List all files in compressed trackmaps folder"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    from pathlib import Path
+    compressed_dir = Path("static/trackmaps/compressed")
+    print(f"DEBUG: Checking compressed directory: {compressed_dir}")
+    print(f"DEBUG: Directory exists: {compressed_dir.exists()}")
+    
+    if compressed_dir.exists():
+        files = list(compressed_dir.glob("*.jpg"))
+        print(f"DEBUG: Found {len(files)} .jpg files:")
+        for file in files:
+            print(f"  - {file.name}")
+    else:
+        print("DEBUG: Compressed directory does not exist!")
+    
     return redirect(url_for("trackmaps_page"))
 @app.get("/admin/get_out_status/<int:competition_id>")
 def admin_get_out_status(competition_id):
