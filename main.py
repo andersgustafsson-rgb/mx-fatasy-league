@@ -30,14 +30,20 @@ app = Flask(__name__)
 # Configuration from environment variables
 app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
 
-# Use file-based database for persistence
-# For Render deployment, use a persistent database
-if os.getenv('RENDER'):
-    # On Render, use a persistent database file
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
+# Database configuration
+# For Render deployment, use PostgreSQL if available, otherwise SQLite
+if os.getenv('DATABASE_URL'):
+    # Use PostgreSQL on Render (persistent)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    print("Using PostgreSQL database from DATABASE_URL")
+elif os.getenv('RENDER'):
+    # On Render without DATABASE_URL, use in-memory SQLite (temporary)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    print("WARNING: Using in-memory SQLite on Render - data will be lost on restart!")
 else:
     # For local development, use a local file
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
+    print("Using local SQLite database file")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,
@@ -3226,6 +3232,63 @@ def force_recreate_data():
         <p>Error: {e}</p>
         <p><a href="/admin">Go to Admin</a></p>
         """
+
+@app.get("/debug_database")
+def debug_database():
+    """Debug database configuration and status"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            # Database info
+            db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+            db_type = "PostgreSQL" if "postgresql" in db_uri else "SQLite"
+            is_memory = ":memory:" in db_uri
+            is_render = bool(os.getenv('RENDER'))
+            has_database_url = bool(os.getenv('DATABASE_URL'))
+            
+            # Check if tables exist
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            
+            # Count records in each table
+            table_counts = {}
+            for table in tables:
+                try:
+                    result = db.session.execute(db.text(f"SELECT COUNT(*) FROM {table}"))
+                    count = result.scalar()
+                    table_counts[table] = count
+                except Exception as e:
+                    table_counts[table] = f"Error: {e}"
+            
+            return f"""
+            <h1>Database Debug Information</h1>
+            <h2>Configuration:</h2>
+            <p><strong>Database Type:</strong> {db_type}</p>
+            <p><strong>Database URI:</strong> {db_uri}</p>
+            <p><strong>Is Memory Database:</strong> {is_memory}</p>
+            <p><strong>Running on Render:</strong> {is_render}</p>
+            <p><strong>Has DATABASE_URL:</strong> {has_database_url}</p>
+            
+            <h2>Tables ({len(tables)}):</h2>
+            <ul>
+            {''.join([f'<li><strong>{table}:</strong> {table_counts.get(table, "Unknown")} records</li>' for table in tables])}
+            </ul>
+            
+            <h2>Environment Variables:</h2>
+            <p><strong>RENDER:</strong> {os.getenv('RENDER', 'Not set')}</p>
+            <p><strong>DATABASE_URL:</strong> {'Set' if os.getenv('DATABASE_URL') else 'Not set'}</p>
+            <p><strong>FLASK_ENV:</strong> {os.getenv('FLASK_ENV', 'Not set')}</p>
+            
+            <hr>
+            <p><a href="/admin">Go to Admin</a></p>
+            <p><a href="/">Go to Home</a></p>
+            <p><a href="/force_recreate_data">Force Recreate All Data</a></p>
+            """
+    except Exception as e:
+        return f"<h1>Error</h1><p>{e}</p>"
 
 @app.get("/debug_users")
 def debug_users():
