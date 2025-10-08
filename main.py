@@ -2139,6 +2139,42 @@ def check_season_teams():
         "missing_teams": missing_teams
     })
 
+@app.get("/debug_league_images")
+def debug_league_images():
+    """Debug league images - check if they exist and are accessible"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    print("DEBUG: debug_league_images called")
+    
+    all_leagues = League.query.all()
+    league_info = []
+    
+    for league in all_leagues:
+        image_exists = False
+        image_path = None
+        
+        if league.image_url:
+            # Extract filename from URL
+            filename = league.image_url.split('/')[-1]
+            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            image_exists = os.path.exists(image_path)
+        
+        league_info.append({
+            "league_id": league.id,
+            "league_name": league.name,
+            "image_url": league.image_url,
+            "image_path": image_path,
+            "image_exists": image_exists,
+            "upload_folder": app.config["UPLOAD_FOLDER"],
+            "upload_folder_exists": os.path.exists(app.config["UPLOAD_FOLDER"])
+        })
+    
+    return jsonify({
+        "message": f"Checked {len(league_info)} leagues",
+        "leagues": league_info
+    })
+
 @app.get("/routes")
 def list_routes():
     output = []
