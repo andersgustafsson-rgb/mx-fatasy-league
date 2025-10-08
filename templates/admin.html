@@ -475,6 +475,20 @@
     async function loadExistingResults(compId) {
       try {
         console.log(`DEBUG: Loading existing results for competition ${compId}`);
+        
+        // FIRST: Clear all dropdowns to prevent old results from staying
+        console.log('DEBUG: Clearing all dropdowns first');
+        document.querySelectorAll('select[name="riders_450[]"]').forEach(select => {
+          select.value = '';
+        });
+        document.querySelectorAll('select[name="riders_250[]"]').forEach(select => {
+          select.value = '';
+        });
+        const hs450Select = document.getElementById("holeshot_450");
+        const hs250Select = document.getElementById("holeshot_250");
+        if (hs450Select) hs450Select.value = '';
+        if (hs250Select) hs250Select.value = '';
+        
         const response = await fetch(`/admin/get_results/${compId}`);
         
         if (response.ok) {
@@ -518,7 +532,7 @@
             }
           }
         } else {
-          console.log('DEBUG: No existing results found');
+          console.log('DEBUG: No existing results found - dropdowns already cleared');
         }
       } catch (error) {
         console.log('DEBUG: Error loading results:', error);
