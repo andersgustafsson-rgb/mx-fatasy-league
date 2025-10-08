@@ -289,7 +289,7 @@ def create_trackmap_images():
     COMP_TO_IMAGE = {
         "Anaheim 1": "anaheim1.jpg",
         "San Diego": "sandiego.jpg", 
-        "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
+        "Anaheim 2": "anaheim2.jpg",
         "Houston": "houston.jpg",
         "Glendale": "glendale.jpg",
         "Seattle": "seattle.jpg",
@@ -3054,7 +3054,7 @@ def force_create_all_trackmaps():
     COMP_TO_IMAGE = {
         "Anaheim 1": "anaheim1.jpg",
         "San Diego": "sandiego.jpg", 
-        "Anaheim 2 (Triple Crown)": "anaheim2.jpg",
+        "Anaheim 2": "anaheim2.jpg",
         "Houston": "houston.jpg",
         "Glendale": "glendale.jpg",
         "Seattle": "seattle.jpg",
