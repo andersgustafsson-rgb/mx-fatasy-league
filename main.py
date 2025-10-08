@@ -327,6 +327,14 @@ def create_trackmap_images():
             db.session.add(ci)
             total_created += 1
             print(f"Created image for {comp.name}: {image_url}")
+            
+            # Check if image file exists
+            from pathlib import Path
+            image_path = Path(f"static/{image_url}")
+            if image_path.exists():
+                print(f"  ✅ Image file exists: {image_path}")
+            else:
+                print(f"  ❌ Image file missing: {image_path}")
     
     db.session.commit()
     print(f"Total CompetitionImage records created: {total_created}")
