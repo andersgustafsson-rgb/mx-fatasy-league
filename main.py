@@ -2044,16 +2044,24 @@ def clear_competition_results(competition_id):
     deleted_scores = CompetitionScore.query.filter_by(competition_id=competition_id).delete()
     deleted_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).delete()
     
+    # ALSO delete user picks for this competition
+    deleted_race_picks = RacePick.query.filter_by(competition_id=competition_id).delete()
+    deleted_holeshot_picks = HoleshotPick.query.filter_by(competition_id=competition_id).delete()
+    deleted_wildcard_picks = WildcardPick.query.filter_by(competition_id=competition_id).delete()
+    
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses for competition {competition_id}")
+    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}")
     
     return jsonify({
-        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses for competition {competition_id}",
+        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}",
         "deleted_results": deleted_results,
         "deleted_holeshot_results": deleted_holeshot_results,
         "deleted_scores": deleted_scores,
-        "deleted_out_status": deleted_out_status
+        "deleted_out_status": deleted_out_status,
+        "deleted_race_picks": deleted_race_picks,
+        "deleted_holeshot_picks": deleted_holeshot_picks,
+        "deleted_wildcard_picks": deleted_wildcard_picks
     })
 
 @app.get("/routes")

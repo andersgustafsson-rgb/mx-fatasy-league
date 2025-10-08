@@ -571,13 +571,13 @@
       }
       
       const compName = document.getElementById("competition-select").selectedOptions[0].textContent;
-      if (!confirm(`Är du säker på att du vill rensa alla resultat för ${compName}?\n\nDetta kommer att ta bort:\n- Alla race resultat\n- Alla holeshot resultat\n- Alla poäng\n- Alla OUT-statuser`)) {
+      if (!confirm(`Är du säker på att du vill rensa alla resultat för ${compName}?\n\nDetta kommer att ta bort:\n- Alla race resultat\n- Alla holeshot resultat\n- Alla poäng\n- Alla OUT-statuser\n- Alla användares picks\n- Alla holeshot picks\n- Alla wildcard picks`)) {
         return;
       }
       
       const result = await clearCompetitionResults(compId);
       if (result) {
-        alert(`Resultat rensade för ${compName}!\n\nRensade:\n- ${result.deleted_results} race resultat\n- ${result.deleted_holeshot_results} holeshot resultat\n- ${result.deleted_scores} poäng\n- ${result.deleted_out_status} OUT-statuser`);
+        alert(`Resultat rensade för ${compName}!\n\nRensade:\n- ${result.deleted_results} race resultat\n- ${result.deleted_holeshot_results} holeshot resultat\n- ${result.deleted_scores} poäng\n- ${result.deleted_out_status} OUT-statuser\n- ${result.deleted_race_picks} race picks\n- ${result.deleted_holeshot_picks} holeshot picks\n- ${result.deleted_wildcard_picks} wildcard picks`);
         // Reload the results to show empty state
         loadSavedResults();
       } else {
