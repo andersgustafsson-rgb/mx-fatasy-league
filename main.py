@@ -3296,6 +3296,14 @@ def debug_database():
                 except Exception as e:
                     table_counts[table] = f"Error: {e}"
             
+            # Check specific data for Anaheim 1 (competition_id = 1)
+            anaheim1_results = CompetitionResult.query.filter_by(competition_id=1).all()
+            anaheim1_holeshots = HoleshotResult.query.filter_by(competition_id=1).all()
+            anaheim1_scores = CompetitionScore.query.filter_by(competition_id=1).all()
+            anaheim1_picks = RacePick.query.filter_by(competition_id=1).all()
+            anaheim1_holeshot_picks = HoleshotPick.query.filter_by(competition_id=1).all()
+            anaheim1_wildcard_picks = WildcardPick.query.filter_by(competition_id=1).all()
+            
             return f"""
             <h1>Database Debug Information</h1>
             <h2>Configuration:</h2>
@@ -3308,6 +3316,16 @@ def debug_database():
             <h2>Tables ({len(tables)}):</h2>
             <ul>
             {''.join([f'<li><strong>{table}:</strong> {table_counts.get(table, "Unknown")} records</li>' for table in tables])}
+            </ul>
+            
+            <h2>Anaheim 1 (Competition ID 1) Data:</h2>
+            <ul>
+            <li><strong>Results:</strong> {len(anaheim1_results)} records</li>
+            <li><strong>Holeshot Results:</strong> {len(anaheim1_holeshots)} records</li>
+            <li><strong>Scores:</strong> {len(anaheim1_scores)} records</li>
+            <li><strong>Race Picks:</strong> {len(anaheim1_picks)} records</li>
+            <li><strong>Holeshot Picks:</strong> {len(anaheim1_holeshot_picks)} records</li>
+            <li><strong>Wildcard Picks:</strong> {len(anaheim1_wildcard_picks)} records</li>
             </ul>
             
             <h2>Environment Variables:</h2>
