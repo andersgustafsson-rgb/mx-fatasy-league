@@ -3017,16 +3017,18 @@ def init_database():
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
             
-            # Only create test data if database is empty
+            # Only create test data if database is completely empty AND we're in development
             try:
-                # Check if test user already exists
-                existing_test_user = User.query.filter_by(username='test').first()
-                if existing_test_user:
-                    print("Test user already exists, skipping test data creation")
-                else:
-                    print("Database is empty, creating test data...")
+                user_count = User.query.count()
+                competition_count = Competition.query.count()
+                
+                # Only create test data if both users and competitions are empty AND we're not in production
+                if user_count == 0 and competition_count == 0 and os.getenv('FLASK_ENV') != 'production':
+                    print("Database is empty and not in production, creating test data...")
                     create_test_data()
                     print("Test data created successfully")
+                else:
+                    print(f"Database has {user_count} users and {competition_count} competitions, skipping test data creation")
             except Exception as e:
                 print(f"Warning: Could not create test data: {e}")
                 # Don't try to create test data if there's an error
@@ -3041,18 +3043,23 @@ def init_database():
         return False
 
 # Initialize database for Render
+# NOTE: Set FLASK_ENV=production in Render environment variables to prevent test data creation
 print("Starting database initialization...")
 init_success = init_database()
 if init_success:
     print("✅ Database initialization completed successfully")
     
-    # Auto-create track map images on every startup
-    print("🖼️ Auto-creating track map images on startup...")
+    # Auto-create track map images only if none exist
+    print("🖼️ Checking track map images...")
     try:
         with app.app_context():
-            # Always recreate track map images (in case database was reset)
-            CompetitionImage.query.delete()
-            db.session.commit()
+            # Only create track map images if none exist
+            existing_images = CompetitionImage.query.count()
+            if existing_images == 0:
+                print("No track map images found, creating them...")
+            else:
+                print(f"Found {existing_images} existing track map images, skipping creation")
+                return
             
             COMP_TO_IMAGE = {
                 "Anaheim 1": "anaheim1.jpg",
@@ -3089,6 +3096,39 @@ if init_success:
         print(f"❌ Error auto-creating track maps on startup: {e}")
 else:
     print("❌ Database initialization failed")
+
+@app.get("/create_test_data")
+def create_test_data_route():
+    """Manually create test data - useful for development"""
+    if session.get("username") != "test":
+        return redirect(url_for("login"))
+    
+    try:
+        with app.app_context():
+            # Check if data already exists
+            user_count = User.query.count()
+            competition_count = Competition.query.count()
+            
+            if user_count > 0 or competition_count > 0:
+                return f"""
+                <h1>Test Data Already Exists</h1>
+                <p>Database has {user_count} users and {competition_count} competitions.</p>
+                <p><a href="/admin">Go to Admin</a></p>
+                """
+            
+            # Create test data
+            create_test_data()
+            return """
+            <h1>Test Data Created Successfully!</h1>
+            <p>Test user, competitions, and riders have been created.</p>
+            <p><a href="/admin">Go to Admin</a></p>
+            """
+    except Exception as e:
+        return f"""
+        <h1>Error Creating Test Data</h1>
+        <p>Error: {e}</p>
+        <p><a href="/admin">Go to Admin</a></p>
+        """
 
 @app.get("/force_create_all_trackmaps")
 def force_create_all_trackmaps():
