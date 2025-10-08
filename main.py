@@ -293,7 +293,17 @@ def create_trackmap_images():
         "Houston": "houston.jpg",
         "Glendale": "glendale.jpg",
         "Seattle": "seattle.jpg",
-        "Arlington": "arlington.jpg"
+        "Arlington": "arlington.jpg",
+        "Daytona": "daytona.jpg",
+        "Indianapolis": "indianapolis.jpg",
+        "Birmingham": "birmingham.jpg",
+        "Detroit": "detroit.jpg",
+        "St. Louis": "stlouis.jpg",
+        "Nashville": "nashville.jpg",
+        "Cleveland": "cleveland.jpg",
+        "Philadelphia": "philadelphia.jpg",
+        "Denver": "denver.jpg",
+        "Salt Lake City": "saltlakecity.jpg"
     }
     
     # Get all competitions
