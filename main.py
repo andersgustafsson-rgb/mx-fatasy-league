@@ -1763,6 +1763,31 @@ def clear_my_picks():
         "deleted_wildcards": deleted_wildcards
     })
 
+@app.post("/clear_my_picks_for_competition/<int:competition_id>")
+def clear_my_picks_for_competition(competition_id):
+    """Clear picks for current user and specific competition - called automatically when loading race picks"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    uid = session["user_id"]
+    print(f"DEBUG: clear_my_picks_for_competition called for user {uid}, competition {competition_id}")
+    
+    # Delete picks for this user and competition
+    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    
+    db.session.commit()
+    
+    print(f"DEBUG: Deleted {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards for competition {competition_id}")
+    
+    return jsonify({
+        "message": f"Cleared {deleted_picks} picks, {deleted_holeshots} holeshots, {deleted_wildcards} wildcards for competition {competition_id}",
+        "deleted_picks": deleted_picks,
+        "deleted_holeshots": deleted_holeshots,
+        "deleted_wildcards": deleted_wildcards
+    })
+
 @app.get("/clear_admin_results")
 def clear_admin_results():
     """Clear all admin results and scores - for debugging"""
