@@ -581,27 +581,24 @@ def index():
             print(f"DEBUG: Found {len(race_picks)} race picks")
             if race_picks:
                 picks_status = "has_picks"
-                # Only show picks if they are locked (after deadline)
-                if picks_locked:
-                    for pick in race_picks:
-                        rider = Rider.query.get(pick.rider_id)
-                        if rider:
-                            pick_data = {
-                                "position": pick.predicted_position,
-                                "rider_name": rider.name,
-                                "rider_number": rider.rider_number,
-                                "class": rider.class_name
-                            }
-                            
-                            # Separate by class
-                            if rider.class_name == "450cc":
-                                current_picks_450.append(pick_data)
-                            elif rider.class_name == "250cc":
-                                current_picks_250.append(pick_data)
-                            
-                            print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
-                else:
-                    print("DEBUG: Picks not locked yet, hiding picks for security")
+                # Always show user's own picks (they can see their own choices)
+                for pick in race_picks:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        pick_data = {
+                            "position": pick.predicted_position,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name
+                        }
+                        
+                        # Separate by class
+                        if rider.class_name == "450cc":
+                            current_picks_450.append(pick_data)
+                        elif rider.class_name == "250cc":
+                            current_picks_250.append(pick_data)
+                        
+                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
         except Exception as e:
             print(f"Error getting current picks: {e}")
             current_picks_450 = []
