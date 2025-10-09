@@ -174,11 +174,29 @@ class BulletinPost(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(20), default="general")  # general, tips, question, discussion
+    parent_id = db.Column(db.Integer, db.ForeignKey("bulletin_posts.id"), nullable=True)  # For replies
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_deleted = db.Column(db.Boolean, default=False)
     
     # Relationships
     user = db.relationship("User", backref="bulletin_posts")
+    parent = db.relationship("BulletinPost", remote_side=[id], backref="replies")
+    reactions = db.relationship("BulletinReaction", backref="post", cascade="all, delete-orphan")
+
+class BulletinReaction(db.Model):
+    __tablename__ = "bulletin_reactions"
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey("bulletin_posts.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    emoji = db.Column(db.String(10), nullable=False)  # 🚀, 😂, 👍, etc.
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship("User", backref="bulletin_reactions")
+    
+    # Unique constraint - one reaction per user per post per emoji
+    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', 'emoji', name='unique_user_post_emoji'),)
 
 
 class RacePick(db.Model):
@@ -4879,10 +4897,10 @@ def bulletin_board():
         return redirect(url_for("login"))
     
     try:
-        # Hämta alla posts (ej borttagna) sorterade efter datum (nyaste först)
+        # Hämta alla posts (ej borttagna, ej replies) sorterade efter datum (nyaste först)
         posts = (
             BulletinPost.query
-            .filter_by(is_deleted=False)
+            .filter_by(is_deleted=False, parent_id=None)
             .order_by(BulletinPost.created_at.desc())
             .limit(50)  # Visa max 50 senaste posts
             .all()
@@ -4891,14 +4909,40 @@ def bulletin_board():
         # Formatera posts för template
         formatted_posts = []
         for post in posts:
+            # Hämta reactions för denna post
+            reactions = {}
+            for reaction in post.reactions:
+                if reaction.emoji not in reactions:
+                    reactions[reaction.emoji] = []
+                reactions[reaction.emoji].append({
+                    'user_id': reaction.user_id,
+                    'username': reaction.user.username if reaction.user else 'Okänd'
+                })
+            
+            # Hämta replies
+            replies = []
+            for reply in post.replies:
+                if not reply.is_deleted:
+                    replies.append({
+                        'id': reply.id,
+                        'content': reply.content,
+                        'author': reply.user.username if reply.user else 'Okänd',
+                        'author_display_name': getattr(reply.user, 'display_name', None) or reply.user.username if reply.user else 'Okänd',
+                        'created_at': reply.created_at,
+                        'is_own_post': reply.user_id == session.get('user_id')
+                    })
+            
             formatted_posts.append({
                 'id': post.id,
                 'content': post.content,
+                'category': post.category,
                 'author': post.user.username if post.user else 'Okänd',
                 'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
                 'created_at': post.created_at,
                 'is_own_post': post.user_id == session.get('user_id'),
-                'is_admin': session.get('username') == 'test'
+                'is_admin': session.get('username') == 'test',
+                'reactions': reactions,
+                'replies': replies
             })
         
         return render_template("bulletin.html", posts=formatted_posts)
@@ -4916,6 +4960,8 @@ def create_bulletin_post():
     try:
         data = request.get_json()
         content = data.get('content', '').strip()
+        category = data.get('category', 'general')
+        parent_id = data.get('parent_id')  # For replies
         
         # Validering
         if not content:
@@ -4924,24 +4970,33 @@ def create_bulletin_post():
         if len(content) > 500:
             return jsonify({"error": "Innehåll kan inte vara längre än 500 tecken"}), 400
         
+        # Validera kategori
+        valid_categories = ['general', 'tips', 'question', 'discussion']
+        if category not in valid_categories:
+            category = 'general'
+        
         # Skapa ny post
         post = BulletinPost(
             user_id=session['user_id'],
-            content=content
+            content=content,
+            category=category,
+            parent_id=parent_id
         )
         
         db.session.add(post)
         db.session.commit()
         
         return jsonify({
-            "message": "Post skapad!",
+            "message": "Post skapad!" if not parent_id else "Svar skickat!",
             "post": {
                 'id': post.id,
                 'content': post.content,
+                'category': post.category,
                 'author': post.user.username if post.user else 'Okänd',
                 'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
                 'created_at': post.created_at.isoformat(),
-                'is_own_post': True
+                'is_own_post': True,
+                'parent_id': post.parent_id
             }
         })
         
@@ -4970,6 +5025,65 @@ def delete_bulletin_post(post_id):
         
     except Exception as e:
         print(f"Error deleting bulletin post: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/bulletin/post/<int:post_id>/reaction")
+def add_bulletin_reaction(post_id):
+    """Lägg till eller ta bort reaction på post"""
+    if "user_id" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        emoji = data.get('emoji', '').strip()
+        
+        if not emoji:
+            return jsonify({"error": "Emoji krävs"}), 400
+        
+        # Kontrollera om posten finns
+        post = BulletinPost.query.get_or_404(post_id)
+        
+        # Kontrollera om användaren redan har reagerat med denna emoji
+        existing_reaction = BulletinReaction.query.filter_by(
+            post_id=post_id,
+            user_id=session['user_id'],
+            emoji=emoji
+        ).first()
+        
+        if existing_reaction:
+            # Ta bort befintlig reaction
+            db.session.delete(existing_reaction)
+            action = "removed"
+        else:
+            # Lägg till ny reaction
+            reaction = BulletinReaction(
+                post_id=post_id,
+                user_id=session['user_id'],
+                emoji=emoji
+            )
+            db.session.add(reaction)
+            action = "added"
+        
+        db.session.commit()
+        
+        # Hämta uppdaterade reactions
+        reactions = {}
+        for reaction in post.reactions:
+            if reaction.emoji not in reactions:
+                reactions[reaction.emoji] = []
+            reactions[reaction.emoji].append({
+                'user_id': reaction.user_id,
+                'username': reaction.user.username if reaction.user else 'Okänd'
+            })
+        
+        return jsonify({
+            "message": f"Reaction {action}!",
+            "reactions": reactions,
+            "action": action
+        })
+        
+    except Exception as e:
+        print(f"Error handling bulletin reaction: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

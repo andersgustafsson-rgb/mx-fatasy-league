@@ -11,6 +11,50 @@
             console.clear();
         }
     </script>
+    <style>
+        .reaction-btn {
+            padding: 4px 8px;
+            border-radius: 16px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+        }
+        .reaction-btn:hover {
+            background: #e5e7eb;
+            transform: scale(1.1);
+        }
+        .dark .reaction-btn {
+            background: #374151;
+            border-color: #4b5563;
+        }
+        .dark .reaction-btn:hover {
+            background: #4b5563;
+        }
+        .reaction-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            background: #f3f4f6;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .dark .reaction-display {
+            background: #374151;
+        }
+        .reaction-display .emoji {
+            font-size: 14px;
+        }
+        .reaction-display .count {
+            font-weight: 600;
+            color: #6b7280;
+        }
+        .dark .reaction-display .count {
+            color: #9ca3af;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
     <!-- Header -->
@@ -36,6 +80,29 @@
             <h2 class="text-lg font-semibold mb-4">✍️ Skriv ett meddelande</h2>
             <form id="post-form" class="space-y-4">
                 <div>
+                    <!-- Category Selection -->
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori:</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex items-center">
+                                <input type="radio" name="category" value="general" checked class="mr-2">
+                                <span class="text-sm">💬 Allmänt</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="category" value="tips" class="mr-2">
+                                <span class="text-sm">💡 Tips</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="category" value="question" class="mr-2">
+                                <span class="text-sm">❓ Fråga</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="category" value="discussion" class="mr-2">
+                                <span class="text-sm">🗣️ Diskussion</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <textarea 
                         id="post-content" 
                         name="content" 
@@ -65,7 +132,8 @@
             <div id="posts-container">
                 {% if posts %}
                     {% for post in posts %}
-                    <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4" data-post-id="{{ post.id }}">
+                    <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group" data-post-id="{{ post.id }}">
+                        <!-- Post Header -->
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex items-center space-x-2">
                                 <span class="font-semibold text-blue-600 dark:text-blue-400">
@@ -74,6 +142,16 @@
                                 <span class="text-sm text-gray-500 dark:text-gray-400">
                                     {{ post.created_at.strftime('%d/%m %H:%M') }}
                                 </span>
+                                <!-- Category Badge -->
+                                {% if post.category == 'tips' %}
+                                    <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">💡 Tips</span>
+                                {% elif post.category == 'question' %}
+                                    <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">❓ Fråga</span>
+                                {% elif post.category == 'discussion' %}
+                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">🗣️ Diskussion</span>
+                                {% else %}
+                                    <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">💬 Allmänt</span>
+                                {% endif %}
                             </div>
                             {% if post.is_own_post or post.is_admin %}
                             <button 
@@ -85,7 +163,91 @@
                             </button>
                             {% endif %}
                         </div>
-                        <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content }}</div>
+                        
+                        <!-- Post Content -->
+                        <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap mb-3">{{ post.content }}</div>
+                        
+                        <!-- Reactions -->
+                        <div class="flex items-center space-x-2 mb-3">
+                            <div class="flex items-center space-x-1">
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="🚀" title="Klicka för att reagera">🚀</button>
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="😂" title="Klicka för att reagera">😂</button>
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="👍" title="Klicka för att reagera">👍</button>
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="❤️" title="Klicka för att reagera">❤️</button>
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="🔥" title="Klicka för att reagera">🔥</button>
+                            </div>
+                            <div id="reactions-{{ post.id }}" class="flex items-center space-x-2">
+                                {% for emoji, users in post.reactions.items() %}
+                                <span class="reaction-display" data-emoji="{{ emoji }}">
+                                    <span class="emoji">{{ emoji }}</span>
+                                    <span class="count">{{ users|length }}</span>
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Reply Button -->
+                        <div class="flex items-center justify-between">
+                            <button class="reply-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-post-id="{{ post.id }}">
+                                💬 Svara
+                            </button>
+                            {% if post.replies %}
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ post.replies|length }} svar
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Replies Section -->
+                        {% if post.replies %}
+                        <div class="replies-section mt-3 ml-4 border-l-2 border-gray-200 dark:border-gray-600 pl-4">
+                            {% for reply in post.replies %}
+                            <div class="reply-item mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                                <div class="flex justify-between items-start mb-1">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-medium text-sm text-blue-600 dark:text-blue-400">
+                                            {{ reply.author_display_name }}
+                                        </span>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">
+                                            {{ reply.created_at.strftime('%d/%m %H:%M') }}
+                                        </span>
+                                    </div>
+                                    {% if reply.is_own_post or post.is_admin %}
+                                    <button 
+                                        class="delete-reply-btn text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                        data-reply-id="{{ reply.id }}"
+                                        title="Ta bort svar"
+                                    >
+                                        🗑️
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ reply.content }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Reply Form (Hidden by default) -->
+                        <div class="reply-form hidden mt-3 ml-4 border-l-2 border-blue-200 dark:border-blue-600 pl-4">
+                            <form class="reply-form-element">
+                                <textarea 
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                    rows="2"
+                                    maxlength="300"
+                                    placeholder="Skriv ditt svar..."
+                                    required
+                                ></textarea>
+                                <div class="flex justify-end space-x-2 mt-2">
+                                    <button type="button" class="cancel-reply-btn text-gray-500 hover:text-gray-700 text-sm">
+                                        Avbryt
+                                    </button>
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                        Skicka
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -129,6 +291,7 @@
             const content = contentTextarea.value.trim();
             if (!content) return;
             
+            const category = this.querySelector('input[name="category"]:checked').value;
             const submitBtn = this.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.textContent = '📤 Skickar...';
@@ -139,7 +302,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ content: content })
+                    body: JSON.stringify({ 
+                        content: content,
+                        category: category
+                    })
                 });
                 
                 const result = await response.json();
@@ -193,6 +359,102 @@
                     }
                 }
             }
+            
+            // Reaction functionality
+            if (e.target.classList.contains('reaction-btn')) {
+                const postId = e.target.getAttribute('data-post-id');
+                const emoji = e.target.getAttribute('data-emoji');
+                
+                try {
+                    const response = await fetch(`/bulletin/post/${postId}/reaction`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ emoji: emoji })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        updateReactions(postId, result.reactions);
+                        showToast(result.message, 'success');
+                    } else {
+                        showToast(result.error || 'Ett fel uppstod', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Ett fel uppstod', 'error');
+                }
+            }
+            
+            // Reply button functionality
+            if (e.target.classList.contains('reply-btn')) {
+                const postId = e.target.getAttribute('data-post-id');
+                const replyForm = document.querySelector(`[data-post-id="${postId}"] .reply-form`);
+                replyForm.classList.remove('hidden');
+                e.target.style.display = 'none';
+            }
+            
+            // Cancel reply functionality
+            if (e.target.classList.contains('cancel-reply-btn')) {
+                const replyForm = e.target.closest('.reply-form');
+                const postId = replyForm.closest('.post-item').getAttribute('data-post-id');
+                replyForm.classList.add('hidden');
+                document.querySelector(`[data-post-id="${postId}"] .reply-btn`).style.display = 'inline';
+            }
+        });
+        
+        // Reply form submission
+        document.addEventListener('submit', async function(e) {
+            if (e.target.classList.contains('reply-form-element')) {
+                e.preventDefault();
+                
+                const content = e.target.querySelector('textarea').value.trim();
+                if (!content) return;
+                
+                const postId = e.target.closest('.post-item').getAttribute('data-post-id');
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Skickar...';
+                
+                try {
+                    const response = await fetch('/bulletin/post', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            content: content,
+                            parent_id: parseInt(postId)
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        // Clear form and hide it
+                        e.target.querySelector('textarea').value = '';
+                        e.target.closest('.reply-form').classList.add('hidden');
+                        document.querySelector(`[data-post-id="${postId}"] .reply-btn`).style.display = 'inline';
+                        
+                        // Add reply to the post
+                        addReplyToPost(postId, result.post);
+                        
+                        showToast('Svar skickat!', 'success');
+                    } else {
+                        showToast(result.error || 'Ett fel uppstod', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Ett fel uppstod', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            }
         });
 
         // Add post to top of list
@@ -213,6 +475,9 @@
                 minute: '2-digit' 
             });
             
+            // Get category badge
+            const categoryBadge = getCategoryBadge(post.category);
+            
             const postHtml = `
                 <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group" data-post-id="${post.id}">
                     <div class="flex justify-between items-start mb-2">
@@ -223,6 +488,7 @@
                             <span class="text-sm text-gray-500 dark:text-gray-400">
                                 ${timeString}
                             </span>
+                            ${categoryBadge}
                         </div>
                         <button 
                             class="delete-post-btn text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -232,11 +498,140 @@
                             🗑️
                         </button>
                     </div>
-                    <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${post.content}</div>
+                    <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap mb-3">${post.content}</div>
+                    
+                    <!-- Reactions -->
+                    <div class="flex items-center space-x-2 mb-3">
+                        <div class="flex items-center space-x-1">
+                            <button class="reaction-btn" data-post-id="${post.id}" data-emoji="🚀" title="Klicka för att reagera">🚀</button>
+                            <button class="reaction-btn" data-post-id="${post.id}" data-emoji="😂" title="Klicka för att reagera">😂</button>
+                            <button class="reaction-btn" data-post-id="${post.id}" data-emoji="👍" title="Klicka för att reagera">👍</button>
+                            <button class="reaction-btn" data-post-id="${post.id}" data-emoji="❤️" title="Klicka för att reagera">❤️</button>
+                            <button class="reaction-btn" data-post-id="${post.id}" data-emoji="🔥" title="Klicka för att reagera">🔥</button>
+                        </div>
+                        <div id="reactions-${post.id}" class="flex items-center space-x-2">
+                        </div>
+                    </div>
+                    
+                    <!-- Reply Button -->
+                    <div class="flex items-center justify-between">
+                        <button class="reply-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-post-id="${post.id}">
+                            💬 Svara
+                        </button>
+                    </div>
+                    
+                    <!-- Reply Form (Hidden by default) -->
+                    <div class="reply-form hidden mt-3 ml-4 border-l-2 border-blue-200 dark:border-blue-600 pl-4">
+                        <form class="reply-form-element">
+                            <textarea 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                rows="2"
+                                maxlength="300"
+                                placeholder="Skriv ditt svar..."
+                                required
+                            ></textarea>
+                            <div class="flex justify-end space-x-2 mt-2">
+                                <button type="button" class="cancel-reply-btn text-gray-500 hover:text-gray-700 text-sm">
+                                    Avbryt
+                                </button>
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                    Skicka
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             `;
             
             postsContainer.insertAdjacentHTML('afterbegin', postHtml);
+        }
+        
+        // Get category badge HTML
+        function getCategoryBadge(category) {
+            switch(category) {
+                case 'tips':
+                    return '<span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">💡 Tips</span>';
+                case 'question':
+                    return '<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">❓ Fråga</span>';
+                case 'discussion':
+                    return '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">🗣️ Diskussion</span>';
+                default:
+                    return '<span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">💬 Allmänt</span>';
+            }
+        }
+        
+        // Update reactions display
+        function updateReactions(postId, reactions) {
+            const reactionsContainer = document.getElementById(`reactions-${postId}`);
+            reactionsContainer.innerHTML = '';
+            
+            for (const [emoji, users] of Object.entries(reactions)) {
+                const reactionHtml = `
+                    <span class="reaction-display" data-emoji="${emoji}">
+                        <span class="emoji">${emoji}</span>
+                        <span class="count">${users.length}</span>
+                    </span>
+                `;
+                reactionsContainer.insertAdjacentHTML('beforeend', reactionHtml);
+            }
+        }
+        
+        // Add reply to post
+        function addReplyToPost(postId, reply) {
+            const postElement = document.querySelector(`[data-post-id="${postId}"]`);
+            let repliesSection = postElement.querySelector('.replies-section');
+            
+            if (!repliesSection) {
+                // Create replies section if it doesn't exist
+                const replyButton = postElement.querySelector('.reply-btn').parentElement;
+                repliesSection = document.createElement('div');
+                repliesSection.className = 'replies-section mt-3 ml-4 border-l-2 border-gray-200 dark:border-gray-600 pl-4';
+                replyButton.parentElement.insertBefore(repliesSection, replyButton.nextSibling);
+            }
+            
+            const now = new Date();
+            const timeString = now.toLocaleDateString('sv-SE', { 
+                day: '2-digit', 
+                month: '2-digit' 
+            }) + ' ' + now.toLocaleTimeString('sv-SE', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            const replyHtml = `
+                <div class="reply-item mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium text-sm text-blue-600 dark:text-blue-400">
+                                ${reply.author_display_name}
+                            </span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                ${timeString}
+                            </span>
+                        </div>
+                        <button 
+                            class="delete-reply-btn text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            data-reply-id="${reply.id}"
+                            title="Ta bort svar"
+                        >
+                            🗑️
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">${reply.content}</div>
+                </div>
+            `;
+            
+            repliesSection.insertAdjacentHTML('beforeend', replyHtml);
+            
+            // Update reply count
+            const replyCount = repliesSection.querySelectorAll('.reply-item').length;
+            const replyCountSpan = postElement.querySelector('.reply-btn').parentElement.querySelector('span');
+            if (replyCountSpan) {
+                replyCountSpan.textContent = `${replyCount} svar`;
+            } else {
+                const replyButton = postElement.querySelector('.reply-btn').parentElement;
+                replyButton.insertAdjacentHTML('beforeend', `<span class="text-sm text-gray-500 dark:text-gray-400">${replyCount} svar</span>`);
+            }
         }
 
         // Show toast notification
