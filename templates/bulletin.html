@@ -619,7 +619,7 @@
         document.addEventListener('click', async function(e) {
             if (e.target.classList.contains('delete-post-btn')) {
                 const postId = e.target.getAttribute('data-post-id');
-                const postElement = e.target.closest('.post-item');
+                const postElement = e.target.closest('.vintage-note');
                 
                 if (confirm('Är du säker på att du vill ta bort detta meddelande?')) {
                     try {
@@ -681,7 +681,7 @@
             // Cancel reply functionality
             if (e.target.classList.contains('cancel-reply-btn')) {
                 const replyForm = e.target.closest('.reply-form');
-                const postId = replyForm.closest('.post-item').getAttribute('data-post-id');
+                const postId = replyForm.closest('.vintage-note').getAttribute('data-post-id');
                 replyForm.classList.add('hidden');
                 document.querySelector(`[data-post-id="${postId}"] .reply-btn`).style.display = 'inline';
             }
@@ -695,7 +695,7 @@
                 const content = e.target.querySelector('textarea').value.trim();
                 if (!content) return;
                 
-                const postId = e.target.closest('.post-item').getAttribute('data-post-id');
+                const postId = e.target.closest('.vintage-note').getAttribute('data-post-id');
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 const originalText = submitBtn.textContent;
                 
@@ -951,7 +951,7 @@
 
         // Add hover effects to posts
         document.addEventListener('DOMContentLoaded', function() {
-            const posts = document.querySelectorAll('.post-item');
+            const posts = document.querySelectorAll('.vintage-note');
             posts.forEach(post => {
                 post.classList.add('group');
             });
