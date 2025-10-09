@@ -825,52 +825,19 @@ def update_profile():
             print("DEBUG: Profile columns don't exist yet, skipping profile updates")
             flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
-        # Hantera profilbild - spara som base64 för att överleva deployment
+        # Hantera profilbild - enkel filbaserad lösning som fungerar
         file = request.files.get("profile_picture")
         if file and file.filename and allowed_file(file.filename):
             try:
-                import base64
-                from PIL import Image
-                import io
-                
-                # Läs och optimera bilden
-                file_data = file.read()
-                file.seek(0)
-                
-                # Öppna och optimera bilden
-                img = Image.open(io.BytesIO(file_data))
-                
-                # Konvertera till RGB om nödvändigt
-                if img.mode in ('RGBA', 'LA', 'P'):
-                    img = img.convert('RGB')
-                
-                # Resize till lämplig storlek för profilbilder
-                max_size = (150, 150)
-                img.thumbnail(max_size, Image.Resampling.LANCZOS)
-                
-                # Spara som JPEG med bra kvalitet
-                output = io.BytesIO()
-                img.save(output, format='JPEG', quality=80, optimize=True)
-                optimized_data = output.getvalue()
-                
-                # Konvertera till base64
-                base64_data = base64.b64encode(optimized_data).decode('utf-8')
-                data_url = f"data:image/jpeg;base64,{base64_data}"
+                # Skapa unikt filnamn
+                fname = secure_filename(f"profile_{user.id}_{file.filename}")
+                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                file.save(path)
                 
                 try:
-                    # Försök spara som base64 först
-                    user.profile_picture_url = data_url
-                    print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
-                    flash("Profilbild uppladdad och sparad permanent!", "success")
-                except Exception as base64_error:
-                    print(f"DEBUG: Base64 save failed: {base64_error}")
-                    # Fallback: spara som fil
-                    fname = secure_filename(f"profile_{user.id}_{file.filename}")
-                    path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                    file.save(path)
                     user.profile_picture_url = f"uploads/leagues/{fname}"
-                    print(f"Profile picture saved as file: {path}")
-                    flash("Profilbild uppladdad (kommer att försvinna vid deployment)", "warning")
+                    print(f"Profile picture saved: {path}")
+                    flash("Profilbild uppladdad och sparad!", "success")
                 except AttributeError:
                     print("DEBUG: profile_picture_url column doesn't exist yet")
                     flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
