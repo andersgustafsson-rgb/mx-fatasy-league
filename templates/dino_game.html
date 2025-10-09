@@ -284,8 +284,6 @@
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
                 
                 // Game state
                 this.gameRunning = false;
@@ -296,16 +294,20 @@
                 this.gravity = 0.6;
                 this.jumpPower = -12;
                 
-                // Cross (player)
+                // Cross (player) - initialize with default values first
                 this.cross = {
                     x: 100,
-                    y: this.height - 100,
+                    y: 300,
                     width: 40,
                     height: 40,
                     velocityY: 0,
                     isJumping: false,
-                    groundY: this.height - 100
+                    groundY: 300
                 };
+                
+                // Now resize canvas and update cross position
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
                 
                 // Obstacles (gupp)
                 this.obstacles = [];
