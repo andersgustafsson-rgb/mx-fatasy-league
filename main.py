@@ -5254,6 +5254,16 @@ def cleanup_duplicate_users():
         print(f"Error cleaning up duplicate users: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/debug_session")
+def debug_session():
+    """Debug session data"""
+    return jsonify({
+        "user_id": session.get("user_id"),
+        "username": session.get("username"),
+        "is_admin": session.get("username") == "test",
+        "all_session": dict(session)
+    })
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
