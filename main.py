@@ -784,72 +784,22 @@ def update_profile():
             print("DEBUG: Profile columns don't exist yet, skipping profile updates")
             flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
-        # Hantera profilbild - spara som base64 i databasen för att överleva deployment
+        # Hantera profilbild - enkel lösning som fungerade från början
         file = request.files.get("profile_picture")
         if file and file.filename and allowed_file(file.filename):
             try:
-                import base64
-                from PIL import Image
-                import io
+                # Skapa unikt filnamn
+                fname = secure_filename(f"profile_{user.id}_{file.filename}")
+                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                file.save(path)
                 
-                # Läs och validera bilden
-                file_data = file.read()
-                file.seek(0)  # Reset file pointer
-                
-                # Öppna bild med PIL för validering och optimering
                 try:
-                    img = Image.open(io.BytesIO(file_data))
-                    
-                    # Konvertera till RGB om nödvändigt (för JPEG)
-                    if img.mode in ('RGBA', 'LA', 'P'):
-                        img = img.convert('RGB')
-                    
-                    # Resize om för stor (max 100x100 för mindre base64-storlek)
-                    max_size = (100, 100)
-                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
-                    
-                    # Spara som JPEG med 70% kvalitet för mycket mindre storlek
-                    output = io.BytesIO()
-                    img.save(output, format='JPEG', quality=70, optimize=True)
-                    optimized_data = output.getvalue()
-                    
-                    # Konvertera till base64
-                    base64_data = base64.b64encode(optimized_data).decode('utf-8')
-                    data_url = f"data:image/jpeg;base64,{base64_data}"
-                    
-                    try:
-                        # Try to save the actual base64 data first
-                        user.profile_picture_url = data_url
-                        print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
-                        flash("Profilbild uppladdad och sparad!", "success")
-                    except Exception as save_error:
-                        print(f"DEBUG: Could not save base64 data: {save_error}")
-                        # If base64 fails, try to save as file instead
-                        try:
-                            # Save as file in uploads folder
-                            fname = secure_filename(f"profile_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
-                            file_path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                            
-                            # Save the optimized image data to file
-                            with open(file_path, 'wb') as f:
-                                f.write(optimized_data)
-                            
-                            user.profile_picture_url = f"uploads/leagues/{fname}"
-                            print(f"Profile picture saved as file: {file_path}")
-                            flash("Profilbild uppladdad och sparad som fil!", "success")
-                        except Exception as file_error:
-                            print(f"DEBUG: Could not save as file either: {file_error}")
-                            # Last resort: save as text indicator
-                            user.profile_picture_url = f"uploaded_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                            flash("Profilbild markerad som uppladdad (kolumn behöver uppdateras för full funktionalitet)", "warning")
-                    except AttributeError:
-                        print("DEBUG: profile_picture_url column doesn't exist yet")
-                        flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
-                        
-                except Exception as img_error:
-                    print(f"Error processing image: {img_error}")
-                    flash("Kunde inte bearbeta bilden. Kontrollera att det är en giltig bildfil.", "error")
-                    
+                    user.profile_picture_url = f"uploads/leagues/{fname}"
+                    print(f"Profile picture saved: {path}")
+                    flash("Profilbild uppladdad och sparad!", "success")
+                except AttributeError:
+                    print("DEBUG: profile_picture_url column doesn't exist yet")
+                    flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
             except Exception as e:
                 print(f"Error saving profile picture: {e}")
                 flash("Kunde inte spara profilbilden.", "error")
