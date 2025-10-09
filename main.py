@@ -3041,6 +3041,68 @@ def fix_existing_riders():
         print(f"Error fixing existing riders: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/fix_rider_coasts")
+def fix_rider_coasts():
+    """Fix coast assignments for 250cc riders based on correct 2025 data"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Correct coast assignments for 2025 season
+        EAST_RIDERS = [
+            "Tom Vialle", "RJ Hampshire", "Jordon Smith", "Cameron McAdoo", 
+            "Nate Thrasher", "Max Vohland", "Enzo Lopes", "Chance Hymas",
+            "Pierce Brown", "Mitchell Harrison", "Stilez Robertson", 
+            "Preston Kilroy", "Talon Hawkins", "Nick Romano", "Evan Ferry"
+        ]
+        
+        WEST_RIDERS = [
+            "Haiden Deegan", "Levi Kitchen", "Jo Shimoda", "Jalek Swoll",
+            "Ryder DiFrancesco", "Dilan Schwartz", "Guillem Farres", "Hardy Munoz",
+            "Carson Mumford", "Derek Kelley", "Cullin Park", "Daxton Bennick",
+            "Casey Cochran", "Hunter Yoder", "Jerry Robin"
+        ]
+        
+        # Fix East riders
+        east_fixed = 0
+        for name in EAST_RIDERS:
+            rider = Rider.query.filter_by(name=name, class_name="250cc").first()
+            if rider:
+                if rider.coast_250 != "east":
+                    rider.coast_250 = "east"
+                    east_fixed += 1
+        
+        # Fix West riders  
+        west_fixed = 0
+        for name in WEST_RIDERS:
+            rider = Rider.query.filter_by(name=name, class_name="250cc").first()
+            if rider:
+                if rider.coast_250 != "west":
+                    rider.coast_250 = "west"
+                    west_fixed += 1
+        
+        # Set remaining 250cc riders to "both" if they don't have coast set
+        remaining_fixed = 0
+        all_250_riders = Rider.query.filter_by(class_name="250cc").all()
+        for rider in all_250_riders:
+            if not rider.coast_250:
+                rider.coast_250 = "both"
+                remaining_fixed += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed coast assignments: {east_fixed} East riders, {west_fixed} West riders, {remaining_fixed} set to 'both'",
+            "east_fixed": east_fixed,
+            "west_fixed": west_fixed,
+            "remaining_fixed": remaining_fixed,
+            "total_250cc": len(all_250_riders)
+        })
+        
+    except Exception as e:
+        print(f"Error fixing rider coasts: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/profile/<int:user_id>")
 def view_user_profile(user_id):
     """View another user's profile"""
