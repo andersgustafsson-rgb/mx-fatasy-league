@@ -1318,6 +1318,12 @@ def save_season_team():
 def admin_page():
     if session.get("username") != "test":
         return redirect(url_for("index"))
+    return render_template("admin_new.html")
+
+@app.route("/admin_old")
+def admin_page_old():
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
     competitions = Competition.query.order_by(Competition.event_date).all()
     riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
     
@@ -5454,6 +5460,56 @@ def race_countdown():
     except Exception as e:
         print(f"Error getting race countdown: {e}")
         return jsonify({"error": str(e)}), 500
+
+# API routes for admin panel
+@app.route("/api/races")
+def api_races():
+    """Get all races for admin panel"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    races = Competition.query.order_by(Competition.event_date).all()
+    return jsonify([{
+        "id": race.id,
+        "name": race.name,
+        "date": race.event_date.isoformat()
+    } for race in races])
+
+@app.route("/api/riders")
+def api_riders():
+    """Get all riders for admin panel"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    riders = Rider.query.order_by(Rider.class_name, Rider.rider_number).all()
+    return jsonify([{
+        "id": rider.id,
+        "name": rider.name,
+        "class": rider.class_name.replace("cc", ""),
+        "number": rider.rider_number,
+        "bike_brand": rider.bike_brand
+    } for rider in riders])
+
+@app.route("/simulate_race/<int:race_id>", methods=['POST'])
+def simulate_race(race_id):
+    """Simulate a race - placeholder for now"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    # TODO: Implement actual race simulation
+    return jsonify({"message": f"Race {race_id} simulation not yet implemented"})
+
+@app.route("/reset_simulation", methods=['POST'])
+def reset_simulation():
+    """Reset simulation to real time"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    session.pop('simulation_active', None)
+    session.pop('simulation_start_time', None)
+    session.pop('initial_simulated_time', None)
+    
+    return jsonify({"message": "Simulation reset to real time"})
 
 @app.route("/test_countdown")
 def test_countdown():
