@@ -5363,6 +5363,7 @@ def race_countdown():
         if session.get('simulation_active'):
             # For fake race, use UTC directly
             race_datetime_utc = race_datetime_local
+            timezone = "UTC"
             print(f"DEBUG: Fake race datetime UTC: {race_datetime_utc}")
         else:
             # For real races, use timezone offsets
