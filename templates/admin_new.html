@@ -149,6 +149,36 @@
                             </button>
                         </div>
                     </form>
+
+                    <!-- OUT-status hantering -->
+                    <div class="mt-8 p-4 bg-gray-50 border-l-4 border-gray-500 rounded-r-lg">
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">🚫 OUT-status (skador/sjukdom)</h3>
+                        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                            <button type="button" onclick="loadOutList()" 
+                                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
+                                Ladda lista
+                            </button>
+                            <button type="button" onclick="saveAllOutStatus()" 
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">
+                                Spara alla ändringar
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-md font-medium text-gray-700 mb-2">450cc OUT-status</h4>
+                                <div id="out-list-450" class="space-y-2 max-h-60 overflow-y-auto">
+                                    <!-- OUT checkboxes will be populated here -->
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="text-md font-medium text-gray-700 mb-2">250cc OUT-status</h4>
+                                <div id="out-list-250" class="space-y-2 max-h-60 overflow-y-auto">
+                                    <!-- OUT checkboxes will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -263,6 +293,8 @@
         // Make coast map available to JavaScript
         window.__COMP_COAST_MAP__ = {{ comp_coast_map | tojson | safe }};
         let currentCompetitionCoast = null;
+        let isSaving = false; // Prevent multiple simultaneous saves
+        let originalOutStatus = {}; // Store original OUT status to detect changes
         
         // Initialize tabs when page loads
         document.addEventListener('DOMContentLoaded', () => {
@@ -426,6 +458,10 @@
                 
                 // Add event listeners after all rows are created
                 addEventListeners();
+                
+                // Apply coast filtering to all dropdowns
+                validateAndUpdateDropdowns('450');
+                validateAndUpdateDropdowns('250');
                 
                 // Load existing results after rows are created
                 await loadExistingResults(comp);
@@ -768,6 +804,132 @@
                     loadSavedResults();
                 });
             }
+        }
+
+        // OUT-status functions
+        async function loadOutList() {
+            const comp = document.getElementById("competition-select").value;
+            if (!comp) { 
+                alert("Välj en tävling först."); 
+                return; 
+            }
+            try {
+                const res = await fetch(`/admin/get_out_status/${comp}`);
+                if (!res.ok) throw new Error("fetch failed");
+                const riders = await res.json();
+
+                const c450 = document.getElementById("out-list-450");
+                const c250 = document.getElementById("out-list-250");
+                c450.innerHTML = "";
+                c250.innerHTML = "";
+
+                const render = (container, list) => {
+                    list.forEach(r => {
+                        const id = `out-${r.id}`;
+                        const row = document.createElement("label");
+                        row.className = "flex items-center gap-2 bg-white p-2 rounded border";
+                        row.innerHTML = `
+                            <input type="checkbox" id="${id}" ${r.is_out ? "checked" : ""}>
+                            <span class="flex-1 text-sm">#${r.rider_number || "-"} ${r.name} <span class="text-gray-400 text-xs">(${r.bike_brand || "—"})</span></span>
+                        `;
+                        container.appendChild(row);
+                    });
+                };
+
+                render(c450, riders.filter(r => r.class === "450cc"));
+                render(c250, riders.filter(r => r.class === "250cc"));
+                
+                // Store original OUT status for change detection
+                originalOutStatus = {};
+                riders.forEach(r => {
+                    originalOutStatus[r.id] = r.is_out;
+                });
+            } catch (e) {
+                console.error(e);
+                showToast("Kunde inte ladda OUT-lista", false);
+            }
+        }
+
+        async function saveAllOutStatus() {
+            if (isSaving) {
+                console.log("Already saving, ignoring duplicate call");
+                return;
+            }
+            
+            isSaving = true;
+            console.log("saveAllOutStatus called");
+            
+            const comp = document.getElementById("competition-select").value;
+            if (!comp) { 
+                alert("Välj en tävling först."); 
+                isSaving = false;
+                return; 
+            }
+            
+            console.log("Competition selected:", comp);
+            
+            // Get all checkboxes and only save those that have changed
+            const checkboxes = document.querySelectorAll('#out-list-450 input[type="checkbox"], #out-list-250 input[type="checkbox"]');
+            console.log("Found checkboxes:", checkboxes.length);
+            
+            let saved = 0;
+            let errors = 0;
+            let changes = 0;
+            
+            for (const checkbox of checkboxes) {
+                const riderId = checkbox.id.replace('out-', '');
+                const isOut = checkbox.checked;
+                const originalStatus = originalOutStatus[riderId];
+                
+                console.log(`DEBUG: Rider ${riderId}, current: ${isOut}, original: ${originalStatus}`);
+                
+                // Only save if status has changed
+                if (originalStatus !== isOut) {
+                    changes++;
+                    console.log(`Processing rider ${riderId}, isOut: ${isOut} (changed from ${originalStatus})`);
+                    
+                    try {
+                        const res = await fetch("/admin/set_out_status", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                competition_id: parseInt(comp, 10),
+                                rider_id: parseInt(riderId, 10),
+                                status: isOut ? "OUT" : "CLEAR",
+                            }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "save failed");
+                        saved++;
+                        console.log(`Saved rider ${riderId}`);
+                    } catch (e) {
+                        console.error(`Error saving rider ${riderId}:`, e);
+                        errors++;
+                    }
+                }
+            }
+            
+            console.log(`Final result: ${saved} saved, ${errors} errors, ${changes} changes detected`);
+            
+            if (changes === 0) {
+                alert("Inga ändringar att spara.");
+            } else if (errors === 0) {
+                alert(`${saved} ändringar sparade!`);
+                
+                // Update original status to current status
+                checkboxes.forEach(checkbox => {
+                    const riderId = checkbox.id.replace('out-', '');
+                    originalOutStatus[riderId] = checkbox.checked;
+                });
+                
+                // Update dropdowns to reflect OUT status changes
+                validateAndUpdateDropdowns('450');
+                validateAndUpdateDropdowns('250');
+            } else {
+                alert(`${saved} sparade, ${errors} fel`);
+            }
+            
+            isSaving = false;
         }
     </script>
 </body>
