@@ -125,6 +125,8 @@
         
         // Update countdown widget
         document.getElementById('countdown-race-name').textContent = data.next_race.name;
+        
+        // Update countdowns
         updateCountdowns(data);
         
         // Update picks status
@@ -141,6 +143,8 @@
         
         // Update debug info
         document.getElementById('debug-info').textContent = JSON.stringify(data, null, 2);
+        
+        console.log('Scenario loaded:', scenario, data);
         
         // Start countdown updates
         startCountdown(scenario);
@@ -174,8 +178,21 @@
         }
       }
       
-      document.getElementById('race-countdown').textContent = formatTime(raceCountdown);
-      document.getElementById('deadline-countdown').textContent = formatTime(deadlineCountdown);
+      // Update the countdown displays
+      const raceElement = document.getElementById('race-countdown');
+      const deadlineElement = document.getElementById('deadline-countdown');
+      
+      if (raceElement) {
+        raceElement.textContent = formatTime(raceCountdown);
+      }
+      if (deadlineElement) {
+        deadlineElement.textContent = formatTime(deadlineCountdown);
+      }
+      
+      console.log('Updated countdowns:', {
+        race: formatTime(raceCountdown),
+        deadline: formatTime(deadlineCountdown)
+      });
     }
     
     function startCountdown(scenario) {
