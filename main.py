@@ -508,6 +508,32 @@ def index():
         print(f"Error getting user profile picture: {e}")
         user_profile_picture = None
 
+    # Get user's picks for upcoming race
+    current_picks = []
+    picks_status = "no_picks"
+    if upcoming_race:
+        try:
+            # Get race picks for 450cc
+            race_picks = RacePick.query.filter_by(
+                user_id=uid, 
+                competition_id=upcoming_race.id
+            ).order_by(RacePick.position).all()
+            
+            if race_picks:
+                picks_status = "has_picks"
+                for pick in race_picks:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        current_picks.append({
+                            "position": pick.position,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": "450cc"
+                        })
+        except Exception as e:
+            print(f"Error getting current picks: {e}")
+            current_picks = []
+
     return render_template(
         "index.html",
         username=session["username"],
@@ -516,6 +542,8 @@ def index():
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team,
         team_riders=team_riders,
+        current_picks=current_picks,
+        picks_status=picks_status,
     )
 
 

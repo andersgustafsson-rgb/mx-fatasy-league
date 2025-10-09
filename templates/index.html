@@ -117,10 +117,42 @@
           <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
+          
+          <!-- Picks Status -->
+          {% if picks_status == "has_picks" %}
+            <div class="mb-4">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="text-green-500 text-lg">✅</span>
+                <span class="text-green-600 font-semibold">Dina val är gjorda!</span>
+              </div>
+              
+              <!-- Show top 6 picks -->
+              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-3">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Dina topp 6 (450cc):</h4>
+                <div class="space-y-1">
+                  {% for pick in current_picks[:6] %}
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">{{ pick.position }}.</span>
+                    <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="mb-4">
+              <div class="flex items-center gap-2 mb-3">
+                <span class="text-orange-500 text-lg">⚠️</span>
+                <span class="text-orange-600 font-semibold">Inga val gjorda än</span>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400">Gör dina picks för topp 6, holeshot och wildcard!</p>
+            </div>
+          {% endif %}
+          
           <a
             href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}"
             class="block bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-center nav-sound text-sm sm:text-base"
-            >Dina picks</a
+            >{% if picks_status == "has_picks" %}Uppdatera picks{% else %}Gör dina picks{% endif %}</a
           >
           {% else %}
           <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Race Picks</h2>
