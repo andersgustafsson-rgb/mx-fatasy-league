@@ -47,9 +47,15 @@
           <div class="flex justify-center mb-6">
             <div class="relative">
               {% if user.profile_picture_url %}
-                <img src="{{ url_for('static', filename=user.profile_picture_url) }}" alt="Profilbild"
-                     class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                {% if user.profile_picture_url.startswith('data:') %}
+                  <img src="{{ user.profile_picture_url }}" alt="Profilbild"
+                       class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                {% else %}
+                  <img src="{{ url_for('static', filename=user.profile_picture_url) }}" alt="Profilbild"
+                       class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                {% endif %}
               {% endif %}
               <div class="w-32 h-32 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center border-4 border-blue-500 {% if user.profile_picture_url %}hidden{% endif %}">
                 <div class="text-center text-gray-500 dark:text-gray-400">

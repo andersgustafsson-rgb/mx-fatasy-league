@@ -759,20 +759,50 @@ def update_profile():
             print("DEBUG: Profile columns don't exist yet, skipping profile updates")
             flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
-        # Hantera profilbild
+        # Hantera profilbild - spara som base64 i databasen för att överleva deployment
         file = request.files.get("profile_picture")
         if file and file.filename and allowed_file(file.filename):
             try:
-                # Skapa unikt filnamn
-                fname = secure_filename(f"profile_{user.id}_{file.filename}")
-                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                file.save(path)
+                import base64
+                from PIL import Image
+                import io
+                
+                # Läs och validera bilden
+                file_data = file.read()
+                file.seek(0)  # Reset file pointer
+                
+                # Öppna bild med PIL för validering och optimering
                 try:
-                    user.profile_picture_url = f"uploads/leagues/{fname}"
-                    print(f"Profile picture saved: {path}")
-                except AttributeError:
-                    print("DEBUG: profile_picture_url column doesn't exist yet")
-                    flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
+                    img = Image.open(io.BytesIO(file_data))
+                    
+                    # Konvertera till RGB om nödvändigt (för JPEG)
+                    if img.mode in ('RGBA', 'LA', 'P'):
+                        img = img.convert('RGB')
+                    
+                    # Resize om för stor (max 200x200 för profilbilder)
+                    max_size = (200, 200)
+                    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                    
+                    # Spara som JPEG med 85% kvalitet för mindre storlek
+                    output = io.BytesIO()
+                    img.save(output, format='JPEG', quality=85, optimize=True)
+                    optimized_data = output.getvalue()
+                    
+                    # Konvertera till base64
+                    base64_data = base64.b64encode(optimized_data).decode('utf-8')
+                    data_url = f"data:image/jpeg;base64,{base64_data}"
+                    
+                    try:
+                        user.profile_picture_url = data_url
+                        print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
+                    except AttributeError:
+                        print("DEBUG: profile_picture_url column doesn't exist yet")
+                        flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
+                        
+                except Exception as img_error:
+                    print(f"Error processing image: {img_error}")
+                    flash("Kunde inte bearbeta bilden. Kontrollera att det är en giltig bildfil.", "error")
+                    
             except Exception as e:
                 print(f"Error saving profile picture: {e}")
                 flash("Kunde inte spara profilbilden.", "error")
@@ -2463,12 +2493,17 @@ def backup_profiles():
         users = User.query.all()
         profile_backups = []
         for user in users:
+            profile_pic = getattr(user, 'profile_picture_url', None)
+            # Truncate base64 data for backup display (first 100 chars)
+            profile_pic_display = profile_pic[:100] + "..." if profile_pic and len(profile_pic) > 100 else profile_pic
+            
             backup = {
                 'id': user.id,
                 'username': user.username,
                 'password_hash': user.password_hash,
                 'display_name': getattr(user, 'display_name', None),
-                'profile_picture_url': getattr(user, 'profile_picture_url', None),
+                'profile_picture_url': profile_pic,
+                'profile_picture_display': profile_pic_display,  # For display purposes
                 'bio': getattr(user, 'bio', None),
                 'favorite_rider': getattr(user, 'favorite_rider', None),
                 'favorite_team': getattr(user, 'favorite_team', None),
