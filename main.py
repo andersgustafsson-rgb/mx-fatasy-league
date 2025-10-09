@@ -2772,6 +2772,159 @@ def update_rider_prices():
         print(f"Error updating rider prices: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/import_all_2025_riders")
+def import_all_2025_riders():
+    """Import all riders from 2025 point standings into database"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Read point standings file
+        with open('point standings 2025.txt', 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Parse the data
+        riders_data = {
+            '450cc': {},
+            '250cc': {}
+        }
+        
+        sections = content.split('\n\n')
+        current_class = None
+        
+        for section in sections:
+            lines = section.strip().split('\n')
+            if not lines:
+                continue
+                
+            # Check if this is a class header
+            if lines[0].lower() in ['250 west', '250 east', '450 point standings']:
+                if '250' in lines[0].lower():
+                    current_class = '250cc'
+                elif '450' in lines[0].lower():
+                    current_class = '450cc'
+                continue
+            
+            # Parse rider data
+            if current_class and len(lines) > 1:
+                for line in lines[1:]:  # Skip header line
+                    if not line.strip():
+                        continue
+                        
+                    # Parse format: "1	Haiden DeeganHaiden Deegan	Temecula, CAUnited States	221"
+                    parts = line.split('\t')
+                    if len(parts) >= 4:
+                        try:
+                            position = int(parts[0])
+                            name_part = parts[1]
+                            points = int(parts[-1]) if parts[-1].isdigit() else 0
+                            
+                            # Clean up name (remove duplicates)
+                            name = name_part
+                            if len(name) > 20:  # Likely has duplicate name
+                                # Find the middle point and split
+                                mid = len(name) // 2
+                                for i in range(mid-5, mid+5):
+                                    if i < len(name) and name[i].isupper():
+                                        name = name[:i]
+                                        break
+                            
+                            riders_data[current_class][name] = {
+                                'position': position,
+                                'points': points
+                            }
+                        except (ValueError, IndexError):
+                            continue
+        
+        # Import riders into database
+        imported_riders = []
+        updated_riders = []
+        
+        for class_name, riders in riders_data.items():
+            for name, data in riders.items():
+                position = data['position']
+                points = data['points']
+                
+                # Calculate price based on position and points
+                if class_name == '450cc':
+                    if position <= 5:
+                        price = 500000  # Top 5 riders
+                    elif position <= 10:
+                        price = 400000  # Top 10 riders
+                    elif position <= 15:
+                        price = 300000  # Top 15 riders
+                    elif position <= 20:
+                        price = 200000  # Top 20 riders
+                    elif points > 50:
+                        price = 150000  # Some points
+                    elif points > 0:
+                        price = 100000  # Few points
+                    else:
+                        price = 50000   # No points
+                else:  # 250cc
+                    if position <= 5:
+                        price = 300000  # Top 5 riders
+                    elif position <= 10:
+                        price = 250000  # Top 10 riders
+                    elif position <= 15:
+                        price = 200000  # Top 15 riders
+                    elif position <= 20:
+                        price = 150000  # Top 20 riders
+                    elif points > 30:
+                        price = 100000  # Some points
+                    elif points > 0:
+                        price = 75000   # Few points
+                    else:
+                        price = 50000   # No points
+                
+                # Check if rider already exists
+                existing_rider = Rider.query.filter_by(name=name, class_name=class_name).first()
+                
+                if existing_rider:
+                    # Update existing rider
+                    old_price = existing_rider.price
+                    existing_rider.price = price
+                    updated_riders.append({
+                        'name': name,
+                        'class': class_name,
+                        'position': position,
+                        'points': points,
+                        'old_price': old_price,
+                        'new_price': price
+                    })
+                else:
+                    # Create new rider
+                    new_rider = Rider(
+                        name=name,
+                        class_name=class_name,
+                        price=price,
+                        rider_number=None,  # Will be set later if needed
+                        bike_brand='Unknown',  # Will be set later if needed
+                        coast_250='east' if class_name == '250cc' else None
+                    )
+                    db.session.add(new_rider)
+                    imported_riders.append({
+                        'name': name,
+                        'class': class_name,
+                        'position': position,
+                        'points': points,
+                        'price': price
+                    })
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Imported {len(imported_riders)} new riders and updated {len(updated_riders)} existing riders from 2025 standings",
+            "imported_riders": imported_riders,
+            "updated_riders": updated_riders,
+            "total_450cc": len(riders_data['450cc']),
+            "total_250cc": len(riders_data['250cc'])
+        })
+        
+    except Exception as e:
+        print(f"Error importing 2025 riders: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/profile/<int:user_id>")
 def view_user_profile(user_id):
     """View another user's profile"""
