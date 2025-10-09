@@ -26,18 +26,35 @@
       </div>
     </div>
 
-    <!-- Competitions -->
-    <div class="space-y-6">
+    <!-- Competitions Accordion -->
+    <div class="space-y-4">
       {% for comp in competitions %}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
-          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4">
-            <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2 sm:mb-0">
-              {{ comp.name }}
-            </h2>
-            <span class="text-sm text-gray-600 dark:text-gray-400">
-              {{ comp.event_date }}
-            </span>
-          </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <!-- Accordion Header -->
+          <button 
+            class="w-full p-4 sm:p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onclick="toggleAccordion('comp-{{ comp.id }}')"
+            aria-expanded="false"
+            aria-controls="comp-{{ comp.id }}"
+          >
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+              <div class="flex items-center gap-3">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">
+                  {{ comp.name }}
+                </h2>
+                <!-- Expand/Collapse Icon -->
+                <svg id="icon-{{ comp.id }}" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </div>
+              <span class="text-sm text-gray-600 dark:text-gray-400 mt-2 sm:mt-0">
+                {{ comp.event_date }}
+              </span>
+            </div>
+          </button>
+          
+          <!-- Accordion Content -->
+          <div id="comp-{{ comp.id }}" class="hidden px-4 sm:px-6 pb-4 sm:pb-6">
 
           {% set results = competition_results[comp.id] %}
           {% if results.results or results.holeshots %}
@@ -191,9 +208,49 @@
               <p class="text-sm mt-2">Resultat kommer att visas här när admin har registrerat dem</p>
             </div>
           {% endif %}
+          </div> <!-- End accordion content -->
         </div>
       {% endfor %}
     </div>
   </div>
+
+  <!-- JavaScript for Accordion -->
+  <script>
+    function toggleAccordion(compId) {
+      const content = document.getElementById(compId);
+      const icon = document.getElementById('icon-' + compId.split('-')[1]);
+      const button = content.previousElementSibling;
+      
+      if (content.classList.contains('hidden')) {
+        // Expand
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+        button.setAttribute('aria-expanded', 'true');
+      } else {
+        // Collapse
+        content.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+        button.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    // Optional: Auto-expand the first competition with results
+    document.addEventListener('DOMContentLoaded', function() {
+      const competitions = document.querySelectorAll('[id^="comp-"]');
+      let firstWithResults = null;
+      
+      competitions.forEach(comp => {
+        const hasResults = comp.querySelector('.grid') !== null;
+        if (hasResults && !firstWithResults) {
+          firstWithResults = comp;
+        }
+      });
+      
+      if (firstWithResults) {
+        const compId = firstWithResults.id;
+        toggleAccordion(compId);
+      }
+    });
+  </script>
 </body>
 </html>
