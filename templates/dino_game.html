@@ -305,10 +305,6 @@
                     groundY: 300
                 };
                 
-                // Now resize canvas and update cross position
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
-                
                 // Obstacles (gupp)
                 this.obstacles = [];
                 this.obstacleTimer = 0;
@@ -326,6 +322,10 @@
                 // Update high score display
                 document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
                 
+                // Now resize canvas and update cross position after everything is initialized
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
                 // Start game loop
                 this.gameLoop();
             }
@@ -339,10 +339,12 @@
                 this.width = this.canvas.width;
                 this.height = this.canvas.height;
                 
-                // Update cross ground position
-                this.cross.groundY = this.height - 100;
-                if (!this.gameRunning) {
-                    this.cross.y = this.cross.groundY;
+                // Update cross ground position only if cross is defined
+                if (this.cross) {
+                    this.cross.groundY = this.height - 100;
+                    if (!this.gameRunning) {
+                        this.cross.y = this.cross.groundY;
+                    }
                 }
             }
             
