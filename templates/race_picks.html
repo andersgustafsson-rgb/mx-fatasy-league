@@ -330,15 +330,17 @@ function imgSrcFor(riderId) {
   // Function to handle image loading errors
 function handleImageError(img) {
   console.log(`DEBUG: Image failed to load: ${img.src}`);
+  
+  // Replace the image with a simple placeholder that doesn't break layout
   img.style.display = 'none';
   
-  // Create a placeholder div
+  // Create a small placeholder that fits in the same space
   const placeholder = document.createElement('div');
-  placeholder.className = 'w-full h-full bg-gray-600 rounded flex items-center justify-center';
-  placeholder.innerHTML = '<div class="text-white text-xs text-center">🏍️<br/>Rider</div>';
+  placeholder.className = 'w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0';
+  placeholder.innerHTML = '<span class="text-white text-xs">🏍️</span>';
   
-  // Insert placeholder after the image
-  img.parentNode.insertBefore(placeholder, img.nextSibling);
+  // Replace the image with placeholder
+  img.parentNode.replaceChild(placeholder, img);
 }
 
 // Function to update picks status indicator
