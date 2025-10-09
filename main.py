@@ -643,8 +643,17 @@ def profile_page():
             
             for sql in columns_to_add:
                 db.session.execute(db.text(sql))
+            
+            # Also try to fix existing profile_picture_url column if it's VARCHAR(300)
+            try:
+                if 'postgresql' in str(db.engine.url):
+                    db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
+                    print("DEBUG: Fixed existing profile_picture_url column to TEXT")
+            except Exception as alter_error:
+                print(f"DEBUG: Could not alter column (may already be TEXT): {alter_error}")
+            
             db.session.commit()
-            print("DEBUG: Successfully added profile columns")
+            print("DEBUG: Successfully added/fixed profile columns")
             
             # Now try to get user again
             user = User.query.get(session["user_id"])
@@ -738,8 +747,24 @@ def update_profile():
             return redirect(url_for("profile_page"))
     except Exception as e:
         print(f"DEBUG: Error loading user for update: {e}")
-        flash("Databasen behöver uppdateras. Kontakta admin.", "error")
-        return redirect(url_for("profile_page"))
+        # Try to fix the column issue automatically
+        try:
+            if 'postgresql' in str(db.engine.url):
+                db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
+                db.session.commit()
+                print("DEBUG: Fixed profile_picture_url column to TEXT in update_profile")
+                # Try to get user again
+                user = User.query.get(session["user_id"])
+                if not user:
+                    flash("Användare hittades inte.", "error")
+                    return redirect(url_for("profile_page"))
+            else:
+                flash("Databasen behöver uppdateras. Kontakta admin.", "error")
+                return redirect(url_for("profile_page"))
+        except Exception as fix_error:
+            print(f"DEBUG: Could not fix column: {fix_error}")
+            flash("Databasen behöver uppdateras. Kontakta admin.", "error")
+            return redirect(url_for("profile_page"))
     
     try:
         # Uppdatera grundläggande information (only if columns exist)
