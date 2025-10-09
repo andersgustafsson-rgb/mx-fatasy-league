@@ -2452,6 +2452,76 @@ def fix_profile_columns():
         except:
             pass
         return jsonify({"error": str(e)}), 500
+
+@app.get("/backup_profiles")
+def backup_profiles():
+    """Backup all user profile data to JSON"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        users = User.query.all()
+        profile_backups = []
+        for user in users:
+            backup = {
+                'id': user.id,
+                'username': user.username,
+                'password_hash': user.password_hash,
+                'display_name': getattr(user, 'display_name', None),
+                'profile_picture_url': getattr(user, 'profile_picture_url', None),
+                'bio': getattr(user, 'bio', None),
+                'favorite_rider': getattr(user, 'favorite_rider', None),
+                'favorite_team': getattr(user, 'favorite_team', None),
+                'created_at': getattr(user, 'created_at', None).isoformat() if getattr(user, 'created_at', None) else None
+            }
+            profile_backups.append(backup)
+        
+        return jsonify({
+            "message": f"Backed up {len(profile_backups)} user profiles",
+            "profiles": profile_backups,
+            "backup_date": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/restore_profiles")
+def restore_profiles():
+    """Restore user profile data from backup"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json()
+        if not data or 'profiles' not in data:
+            return jsonify({"error": "No profile data provided"}), 400
+        
+        restored_count = 0
+        for backup in data['profiles']:
+            user = User.query.filter_by(username=backup['username']).first()
+            if user:
+                # Update existing user with backup data
+                if backup.get('display_name'):
+                    user.display_name = backup['display_name']
+                if backup.get('profile_picture_url'):
+                    user.profile_picture_url = backup['profile_picture_url']
+                if backup.get('bio'):
+                    user.bio = backup['bio']
+                if backup.get('favorite_rider'):
+                    user.favorite_rider = backup['favorite_rider']
+                if backup.get('favorite_team'):
+                    user.favorite_team = backup['favorite_team']
+                if backup.get('created_at'):
+                    user.created_at = datetime.fromisoformat(backup['created_at'])
+                restored_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Restored {restored_count} user profiles",
+            "restored_count": restored_count
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
         
         # Add missing columns to users table
         columns_to_add = [
@@ -3705,6 +3775,25 @@ def force_recreate_data():
     
     try:
         with app.app_context():
+            # BACKUP USER PROFILE DATA BEFORE DELETION
+            print("Backing up user profile data...")
+            users = User.query.all()
+            profile_backups = []
+            for user in users:
+                backup = {
+                    'username': user.username,
+                    'password_hash': user.password_hash,
+                    'display_name': getattr(user, 'display_name', None),
+                    'profile_picture_url': getattr(user, 'profile_picture_url', None),
+                    'bio': getattr(user, 'bio', None),
+                    'favorite_rider': getattr(user, 'favorite_rider', None),
+                    'favorite_team': getattr(user, 'favorite_team', None),
+                    'created_at': getattr(user, 'created_at', None)
+                }
+                profile_backups.append(backup)
+            
+            print(f"Backed up {len(profile_backups)} user profiles")
+            
             # Clear all data
             print("Clearing all existing data...")
             db.session.query(CompetitionImage).delete()
@@ -3719,6 +3808,33 @@ def force_recreate_data():
             db.session.query(Competition).delete()
             db.session.query(User).delete()
             db.session.commit()
+            
+            # RESTORE USER PROFILE DATA
+            print("Restoring user profile data...")
+            for backup in profile_backups:
+                user = User(
+                    username=backup['username'],
+                    password_hash=backup['password_hash']
+                )
+                db.session.add(user)
+                db.session.flush()  # Get the user ID
+                
+                # Restore profile data if columns exist
+                if backup['display_name']:
+                    user.display_name = backup['display_name']
+                if backup['profile_picture_url']:
+                    user.profile_picture_url = backup['profile_picture_url']
+                if backup['bio']:
+                    user.bio = backup['bio']
+                if backup['favorite_rider']:
+                    user.favorite_rider = backup['favorite_rider']
+                if backup['favorite_team']:
+                    user.favorite_team = backup['favorite_team']
+                if backup['created_at']:
+                    user.created_at = backup['created_at']
+            
+            db.session.commit()
+            print(f"Restored {len(profile_backups)} user profiles with their data")
             
             # Create fresh data
             print("Creating fresh data...")
