@@ -4898,13 +4898,23 @@ def bulletin_board():
     
     try:
         # Hämta alla posts (ej borttagna, ej replies) sorterade efter datum (nyaste först)
-        posts = (
-            BulletinPost.query
-            .filter_by(is_deleted=False, parent_id=None)
-            .order_by(BulletinPost.created_at.desc())
-            .limit(50)  # Visa max 50 senaste posts
-            .all()
-        )
+        try:
+            posts = (
+                BulletinPost.query
+                .filter_by(is_deleted=False, parent_id=None)
+                .order_by(BulletinPost.created_at.desc())
+                .limit(50)  # Visa max 50 senaste posts
+                .all()
+            )
+        except Exception as e:
+            # Fallback if new columns don't exist yet
+            posts = (
+                BulletinPost.query
+                .filter_by(is_deleted=False)
+                .order_by(BulletinPost.created_at.desc())
+                .limit(50)
+                .all()
+            )
         
         # Formatera posts för template
         formatted_posts = []
@@ -4935,7 +4945,7 @@ def bulletin_board():
             formatted_posts.append({
                 'id': post.id,
                 'content': post.content,
-                'category': post.category,
+                'category': getattr(post, 'category', 'general'),  # Fallback if column doesn't exist
                 'author': post.user.username if post.user else 'Okänd',
                 'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
                 'created_at': post.created_at,
@@ -5094,22 +5104,22 @@ def fix_bulletin_columns():
     
     try:
         # Add missing columns to bulletin_posts table
-        db.engine.execute("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'general'")
-        db.engine.execute("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES bulletin_posts(id)")
-        
-        # Create bulletin_reactions table if it doesn't exist
-        db.engine.execute("""
-            CREATE TABLE IF NOT EXISTS bulletin_reactions (
-                id SERIAL PRIMARY KEY,
-                post_id INTEGER NOT NULL REFERENCES bulletin_posts(id),
-                user_id INTEGER NOT NULL REFERENCES users(id),
-                emoji VARCHAR(10) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(post_id, user_id, emoji)
-            )
-        """)
-        
-        db.session.commit()
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'general'"))
+            conn.execute(db.text("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES bulletin_posts(id)"))
+            
+            # Create bulletin_reactions table if it doesn't exist
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS bulletin_reactions (
+                    id SERIAL PRIMARY KEY,
+                    post_id INTEGER NOT NULL REFERENCES bulletin_posts(id),
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    emoji VARCHAR(10) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(post_id, user_id, emoji)
+                )
+            """))
+            conn.commit()
         
         return jsonify({
             "message": "Bulletin board columns fixed!",
