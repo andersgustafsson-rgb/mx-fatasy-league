@@ -12,160 +12,437 @@
         }
     </script>
     <style>
-        .reaction-btn {
-            padding: 4px 8px;
+        /* Import vintage fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Caveat:wght@400;600;700&family=Indie+Flower&display=swap');
+        
+        /* Cork board background */
+        body {
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #F5DEB3 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        
+        /* Wooden frame */
+        .bulletin-frame {
+            background: 
+                linear-gradient(45deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #8B4513 100%);
+            border: 8px solid;
+            border-image: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321) 1;
+            border-radius: 12px;
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.3),
+                0 0 30px rgba(0,0,0,0.5),
+                0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+            margin: 20px;
+            padding: 30px;
+        }
+        
+        .bulletin-frame::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            background: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321);
             border-radius: 16px;
-            background: #f3f4f6;
-            border: 1px solid #e5e7eb;
+            z-index: -1;
+        }
+        
+        /* Cork texture overlay */
+        .bulletin-frame::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.1) 0%, transparent 2px),
+                radial-gradient(circle at 75% 75%, rgba(160, 82, 45, 0.1) 0%, transparent 2px),
+                radial-gradient(circle at 50% 50%, rgba(139, 69, 19, 0.05) 0%, transparent 1px);
+            background-size: 20px 20px, 15px 15px, 10px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        
+        /* Vintage note papers */
+        .vintage-note {
+            background: 
+                linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%);
+            border: 1px solid #D2B48C;
+            border-radius: 2px;
+            box-shadow: 
+                0 2px 8px rgba(0,0,0,0.15),
+                0 1px 3px rgba(0,0,0,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            position: relative;
+            margin: 15px;
+            padding: 20px;
+            transform: rotate(0deg);
+            transition: all 0.3s ease;
+            font-family: 'Kalam', cursive;
+        }
+        
+        .vintage-note:hover {
+            transform: rotate(0deg) scale(1.02);
+            box-shadow: 
+                0 4px 15px rgba(0,0,0,0.2),
+                0 2px 6px rgba(0,0,0,0.15),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        
+        /* Random rotation for notes */
+        .vintage-note:nth-child(odd) { transform: rotate(-0.5deg); }
+        .vintage-note:nth-child(even) { transform: rotate(0.3deg); }
+        .vintage-note:nth-child(3n) { transform: rotate(0.8deg); }
+        .vintage-note:nth-child(4n) { transform: rotate(-0.2deg); }
+        .vintage-note:nth-child(5n) { transform: rotate(0.6deg); }
+        
+        /* Different paper colors */
+        .note-yellow { background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%); }
+        .note-pink { background: linear-gradient(135deg, #FFE4E1 0%, #FFB6C1 50%, #FFC0CB 100%); }
+        .note-blue { background: linear-gradient(135deg, #E6F3FF 0%, #B0E0E6 50%, #ADD8E6 100%); }
+        .note-green { background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 50%, #F5FFFA 100%); }
+        
+        /* Pins and tape */
+        .note-pin {
+            position: absolute;
+            top: -8px;
+            left: 20px;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #C0C0C0 30%, #A0A0A0 70%);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .note-tape {
+            position: absolute;
+            top: 10px;
+            right: -5px;
+            width: 30px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            transform: rotate(15deg);
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        /* Handwritten text */
+        .handwritten {
+            font-family: 'Kalam', cursive;
+            font-weight: 400;
+            line-height: 1.4;
+            color: #2F4F4F;
+        }
+        
+        .handwritten-title {
+            font-family: 'Caveat', cursive;
+            font-weight: 600;
+            font-size: 1.2em;
+            color: #8B4513;
+            margin-bottom: 8px;
+        }
+        
+        /* Vintage buttons */
+        .vintage-btn {
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            border: 2px solid #654321;
+            border-radius: 4px;
+            color: #FFF8DC;
+            font-family: 'Kalam', cursive;
+            font-weight: 600;
+            padding: 8px 16px;
+            box-shadow: 
+                0 2px 4px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .vintage-btn:hover {
+            background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
+            transform: translateY(-1px);
+            box-shadow: 
+                0 3px 6px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        
+        /* Reaction buttons - vintage style */
+        .reaction-btn {
+            padding: 6px 10px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
+            border: 1px solid #D2B48C;
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
+        
         .reaction-btn:hover {
-            background: #e5e7eb;
-            transform: scale(1.1);
+            background: linear-gradient(135deg, #F5F5DC 0%, #FFFACD 100%);
+            transform: scale(1.1) rotate(2deg);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
-        .dark .reaction-btn {
-            background: #374151;
-            border-color: #4b5563;
-        }
-        .dark .reaction-btn:hover {
-            background: #4b5563;
-        }
+        
         .reaction-display {
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            padding: 2px 6px;
-            background: #f3f4f6;
-            border-radius: 12px;
+            padding: 3px 8px;
+            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
+            border: 1px solid #D2B48C;
+            border-radius: 15px;
             font-size: 14px;
+            font-family: 'Kalam', cursive;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        .dark .reaction-display {
-            background: #374151;
-        }
+        
         .reaction-display .emoji {
             font-size: 14px;
         }
+        
         .reaction-display .count {
             font-weight: 600;
-            color: #6b7280;
+            color: #8B4513;
         }
-        .dark .reaction-display .count {
-            color: #9ca3af;
+        
+        /* Category badges - vintage style */
+        .vintage-badge {
+            font-family: 'Indie Flower', cursive;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .badge-tips { 
+            background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%); 
+            border-color: #DAA520;
+            color: #B8860B;
+        }
+        .badge-question { 
+            background: linear-gradient(135deg, #E6F3FF 0%, #B0E0E6 100%); 
+            border-color: #4682B4;
+            color: #2F4F4F;
+        }
+        .badge-discussion { 
+            background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%); 
+            border-color: #9ACD32;
+            color: #556B2F;
+        }
+        .badge-general { 
+            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%); 
+            border-color: #D2B48C;
+            color: #8B4513;
+        }
+        
+        /* Header styling */
+        .vintage-header {
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+            border: 3px solid #654321;
+            border-radius: 8px;
+            box-shadow: 
+                0 4px 8px rgba(0,0,0,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            margin-bottom: 20px;
+        }
+        
+        .vintage-header h1 {
+            font-family: 'Caveat', cursive;
+            font-weight: 700;
+            color: #FFF8DC;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        /* Form styling */
+        .vintage-form {
+            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
+            border: 2px solid #D2B48C;
+            border-radius: 8px;
+            box-shadow: 
+                0 3px 10px rgba(0,0,0,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+            padding: 25px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .vintage-form::before {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 20px;
+            width: 15px;
+            height: 15px;
+            background: radial-gradient(circle, #C0C0C0 30%, #A0A0A0 70%);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .vintage-textarea {
+            background: #FFF8DC;
+            border: 1px solid #D2B48C;
+            border-radius: 4px;
+            font-family: 'Kalam', cursive;
+            color: #2F4F4F;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .vintage-textarea:focus {
+            outline: none;
+            border-color: #8B4513;
+            box-shadow: 
+                inset 0 1px 3px rgba(0,0,0,0.1),
+                0 0 0 2px rgba(139, 69, 19, 0.2);
+        }
+        
+        /* Dark mode adjustments */
+        .dark body {
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(160, 82, 45, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, #2D1810 0%, #3D2315 25%, #4D2E1A 50%, #5D3920 75%, #6D4425 100%);
+        }
+        
+        .dark .vintage-note {
+            background: linear-gradient(135deg, #3D2F1F 0%, #4D3F2F 50%, #5D4F3F 100%);
+            border-color: #8B7355;
+            color: #F5DEB3;
+        }
+        
+        .dark .handwritten {
+            color: #F5DEB3;
+        }
+        
+        .dark .handwritten-title {
+            color: #DEB887;
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div class="max-w-4xl mx-auto px-4 py-4">
+<body class="min-h-screen">
+    <!-- Vintage Bulletin Board -->
+    <div class="bulletin-frame">
+        <!-- Header -->
+        <header class="vintage-header p-6 text-center">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-blue-600 dark:text-blue-400">🏁 MX Fantasy</a>
-                    <span class="text-gray-500 dark:text-gray-400">|</span>
-                    <h1 class="text-xl font-semibold">📋 Anslagstavla</h1>
+                    <a href="/" class="text-2xl font-bold text-yellow-200 hover:text-yellow-100 transition-colors">🏁 MX Fantasy</a>
+                    <span class="text-yellow-200">|</span>
+                    <h1 class="handwritten-title text-2xl">📋 Anslagstavla</h1>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-blue-600 dark:text-blue-400 hover:underline">← Tillbaka</a>
+                    <a href="/" class="text-yellow-200 hover:text-yellow-100 transition-colors handwritten">← Tillbaka</a>
                 </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6">
-        <!-- Post Form -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">✍️ Skriv ett meddelande</h2>
-            <form id="post-form" class="space-y-4">
-                <div>
-                    <!-- Category Selection -->
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Kategori:</label>
-                        <div class="flex flex-wrap gap-2">
-                            <label class="flex items-center">
-                                <input type="radio" name="category" value="general" checked class="mr-2">
-                                <span class="text-sm">💬 Allmänt</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="category" value="tips" class="mr-2">
-                                <span class="text-sm">💡 Tips</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="category" value="question" class="mr-2">
-                                <span class="text-sm">❓ Fråga</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="category" value="discussion" class="mr-2">
-                                <span class="text-sm">🗣️ Diskussion</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <textarea 
-                        id="post-content" 
-                        name="content" 
-                        rows="3" 
-                        maxlength="500"
-                        placeholder="Dela dina tankar, tips eller frågor med andra användare..."
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        required
-                    ></textarea>
-                    <div class="flex justify-between items-center mt-2">
-                        <span id="char-count" class="text-sm text-gray-500 dark:text-gray-400">0/500 tecken</span>
-                        <button 
-                            type="submit" 
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            📤 Publicera
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Posts -->
-        <div class="space-y-4">
-            <h2 class="text-lg font-semibold mb-4">💬 Senaste meddelanden</h2>
-            
-            <div id="posts-container">
-                {% if posts %}
-                    {% for post in posts %}
-                    <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group" data-post-id="{{ post.id }}">
-                        <!-- Post Header -->
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center space-x-2">
-                                <span class="font-semibold text-blue-600 dark:text-blue-400">
-                                    {{ post.author_display_name }}
-                                </span>
-                                <span class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ post.created_at.strftime('%d/%m %H:%M') }}
-                                </span>
-                                <!-- Category Badge -->
-                                {% if post.category == 'tips' %}
-                                    <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">💡 Tips</span>
-                                {% elif post.category == 'question' %}
-                                    <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">❓ Fråga</span>
-                                {% elif post.category == 'discussion' %}
-                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">🗣️ Diskussion</span>
-                                {% else %}
-                                    <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">💬 Allmänt</span>
-                                {% endif %}
+        <!-- Main Content -->
+        <main class="relative z-10">
+            <!-- Post Form -->
+            <div class="vintage-form">
+                <h2 class="handwritten-title mb-4">✍️ Skriv ett meddelande</h2>
+                <form id="post-form" class="space-y-4">
+                    <div>
+                        <!-- Category Selection -->
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium handwritten mb-2">Kategori:</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center">
+                                    <input type="radio" name="category" value="general" checked class="mr-2">
+                                    <span class="text-sm handwritten">💬 Allmänt</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="category" value="tips" class="mr-2">
+                                    <span class="text-sm handwritten">💡 Tips</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="category" value="question" class="mr-2">
+                                    <span class="text-sm handwritten">❓ Fråga</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="category" value="discussion" class="mr-2">
+                                    <span class="text-sm handwritten">🗣️ Diskussion</span>
+                                </label>
                             </div>
-                            {% if post.is_own_post or post.is_admin %}
-                            <button 
-                                class="delete-post-btn text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                data-post-id="{{ post.id }}"
-                                title="Ta bort post"
-                            >
-                                🗑️
-                            </button>
-                            {% endif %}
                         </div>
                         
-                        <!-- Post Content -->
-                        <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap mb-3">{{ post.content }}</div>
+                        <textarea 
+                            id="post-content" 
+                            name="content" 
+                            rows="3" 
+                            maxlength="500"
+                            placeholder="Dela dina tankar, tips eller frågor med andra användare..."
+                            class="w-full px-3 py-2 vintage-textarea resize-none"
+                            required
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <span id="char-count" class="text-sm handwritten">0/500 tecken</span>
+                            <button 
+                                type="submit" 
+                                class="vintage-btn disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                📤 Publicera
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Posts -->
+            <div class="space-y-4">
+                <h2 class="handwritten-title mb-4">💬 Senaste meddelanden</h2>
+                
+                <div id="posts-container">
+                    {% if posts %}
+                        {% for post in posts %}
+                        {% set note_colors = ['note-yellow', 'note-pink', 'note-blue', 'note-green'] %}
+                        {% set note_color = note_colors[loop.index0 % 4] %}
+                        <div class="vintage-note {{ note_color }} group" data-post-id="{{ post.id }}">
+                            <div class="note-pin"></div>
+                            <div class="note-tape"></div>
+                            
+                            <!-- Post Header -->
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center space-x-2 flex-wrap">
+                                    <span class="font-semibold handwritten-title">
+                                        {{ post.author_display_name }}
+                                    </span>
+                                    <span class="text-sm handwritten">
+                                        {{ post.created_at.strftime('%d/%m %H:%M') }}
+                                    </span>
+                                    <!-- Category Badge -->
+                                    {% if post.category == 'tips' %}
+                                        <span class="vintage-badge badge-tips">💡 Tips</span>
+                                    {% elif post.category == 'question' %}
+                                        <span class="vintage-badge badge-question">❓ Fråga</span>
+                                    {% elif post.category == 'discussion' %}
+                                        <span class="vintage-badge badge-discussion">🗣️ Diskussion</span>
+                                    {% else %}
+                                        <span class="vintage-badge badge-general">💬 Allmänt</span>
+                                    {% endif %}
+                                </div>
+                                {% if post.is_own_post or post.is_admin %}
+                                <button 
+                                    class="delete-post-btn text-red-600 hover:text-red-800 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 handwritten"
+                                    data-post-id="{{ post.id }}"
+                                    title="Ta bort post"
+                                >
+                                    🗑️
+                                </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Post Content -->
+                            <div class="post-content handwritten whitespace-pre-wrap mb-3">{{ post.content }}</div>
                         
                         <!-- Reactions -->
                         <div class="flex items-center space-x-2 mb-3">
@@ -186,79 +463,80 @@
                             </div>
                         </div>
                         
-                        <!-- Reply Button -->
-                        <div class="flex items-center justify-between">
-                            <button class="reply-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-post-id="{{ post.id }}">
-                                💬 Svara
-                            </button>
-                            {% if post.replies %}
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ post.replies|length }} svar
-                            </span>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- Replies Section -->
-                        {% if post.replies %}
-                        <div class="replies-section mt-3 ml-4 border-l-2 border-gray-200 dark:border-gray-600 pl-4">
-                            {% for reply in post.replies %}
-                            <div class="reply-item mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                                <div class="flex justify-between items-start mb-1">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="font-medium text-sm text-blue-600 dark:text-blue-400">
-                                            {{ reply.author_display_name }}
-                                        </span>
-                                        <span class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ reply.created_at.strftime('%d/%m %H:%M') }}
-                                        </span>
-                                    </div>
-                                    {% if reply.is_own_post or post.is_admin %}
-                                    <button 
-                                        class="delete-reply-btn text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                        data-reply-id="{{ reply.id }}"
-                                        title="Ta bort svar"
-                                    >
-                                        🗑️
-                                    </button>
-                                    {% endif %}
-                                </div>
-                                <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ reply.content }}</div>
+                            <!-- Reply Button -->
+                            <div class="flex items-center justify-between">
+                                <button class="reply-btn text-blue-700 hover:text-blue-900 text-sm font-medium handwritten" data-post-id="{{ post.id }}">
+                                    💬 Svara
+                                </button>
+                                {% if post.replies %}
+                                <span class="text-sm handwritten">
+                                    {{ post.replies|length }} svar
+                                </span>
+                                {% endif %}
                             </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Reply Form (Hidden by default) -->
-                        <div class="reply-form hidden mt-3 ml-4 border-l-2 border-blue-200 dark:border-blue-600 pl-4">
-                            <form class="reply-form-element">
-                                <textarea 
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-                                    rows="2"
-                                    maxlength="300"
-                                    placeholder="Skriv ditt svar..."
-                                    required
-                                ></textarea>
-                                <div class="flex justify-end space-x-2 mt-2">
-                                    <button type="button" class="cancel-reply-btn text-gray-500 hover:text-gray-700 text-sm">
-                                        Avbryt
-                                    </button>
-                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-                                        Skicka
-                                    </button>
+                            
+                            <!-- Replies Section -->
+                            {% if post.replies %}
+                            <div class="replies-section mt-3 ml-4 border-l-2 border-amber-300 pl-4">
+                                {% for reply in post.replies %}
+                                <div class="reply-item mb-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="font-medium text-sm handwritten-title">
+                                                {{ reply.author_display_name }}
+                                            </span>
+                                            <span class="text-xs handwritten">
+                                                {{ reply.created_at.strftime('%d/%m %H:%M') }}
+                                            </span>
+                                        </div>
+                                        {% if reply.is_own_post or post.is_admin %}
+                                        <button 
+                                            class="delete-reply-btn text-red-600 hover:text-red-800 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 handwritten"
+                                            data-reply-id="{{ reply.id }}"
+                                            title="Ta bort svar"
+                                        >
+                                            🗑️
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-sm handwritten whitespace-pre-wrap">{{ reply.content }}</div>
                                 </div>
-                            </form>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Reply Form (Hidden by default) -->
+                            <div class="reply-form hidden mt-3 ml-4 border-l-2 border-amber-400 pl-4">
+                                <form class="reply-form-element">
+                                    <textarea 
+                                        class="w-full px-3 py-2 vintage-textarea resize-none text-sm"
+                                        rows="2"
+                                        maxlength="300"
+                                        placeholder="Skriv ditt svar..."
+                                        required
+                                    ></textarea>
+                                    <div class="flex justify-end space-x-2 mt-2">
+                                        <button type="button" class="cancel-reply-btn text-amber-700 hover:text-amber-900 text-sm handwritten">
+                                            Avbryt
+                                        </button>
+                                        <button type="submit" class="vintage-btn text-sm">
+                                            Skicka
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <div class="text-4xl mb-2">📝</div>
-                        <p>Inga meddelanden än. Bli den första att skriva något!</p>
-                    </div>
-                {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8 handwritten">
+                            <div class="text-4xl mb-2">📝</div>
+                            <p>Inga meddelanden än. Bli den första att skriva något!</p>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
@@ -475,30 +753,34 @@
                 minute: '2-digit' 
             });
             
-            // Get category badge
+            // Get category badge and random note color
             const categoryBadge = getCategoryBadge(post.category);
+            const noteColor = getRandomNoteColor();
             
             const postHtml = `
-                <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group" data-post-id="${post.id}">
+                <div class="vintage-note ${noteColor} group" data-post-id="${post.id}">
+                    <div class="note-pin"></div>
+                    <div class="note-tape"></div>
+                    
                     <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center space-x-2">
-                            <span class="font-semibold text-blue-600 dark:text-blue-400">
+                        <div class="flex items-center space-x-2 flex-wrap">
+                            <span class="font-semibold handwritten-title">
                                 ${post.author_display_name}
                             </span>
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                            <span class="text-sm handwritten">
                                 ${timeString}
                             </span>
                             ${categoryBadge}
                         </div>
                         <button 
-                            class="delete-post-btn text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            class="delete-post-btn text-red-600 hover:text-red-800 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 handwritten"
                             data-post-id="${post.id}"
                             title="Ta bort post"
                         >
                             🗑️
                         </button>
                     </div>
-                    <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap mb-3">${post.content}</div>
+                    <div class="post-content handwritten whitespace-pre-wrap mb-3">${post.content}</div>
                     
                     <!-- Reactions -->
                     <div class="flex items-center space-x-2 mb-3">
@@ -515,26 +797,26 @@
                     
                     <!-- Reply Button -->
                     <div class="flex items-center justify-between">
-                        <button class="reply-btn text-blue-600 hover:text-blue-800 text-sm font-medium" data-post-id="${post.id}">
+                        <button class="reply-btn text-blue-700 hover:text-blue-900 text-sm font-medium handwritten" data-post-id="${post.id}">
                             💬 Svara
                         </button>
                     </div>
                     
                     <!-- Reply Form (Hidden by default) -->
-                    <div class="reply-form hidden mt-3 ml-4 border-l-2 border-blue-200 dark:border-blue-600 pl-4">
+                    <div class="reply-form hidden mt-3 ml-4 border-l-2 border-amber-400 pl-4">
                         <form class="reply-form-element">
                             <textarea 
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                class="w-full px-3 py-2 vintage-textarea resize-none text-sm"
                                 rows="2"
                                 maxlength="300"
                                 placeholder="Skriv ditt svar..."
                                 required
                             ></textarea>
                             <div class="flex justify-end space-x-2 mt-2">
-                                <button type="button" class="cancel-reply-btn text-gray-500 hover:text-gray-700 text-sm">
+                                <button type="button" class="cancel-reply-btn text-amber-700 hover:text-amber-900 text-sm handwritten">
                                     Avbryt
                                 </button>
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                <button type="submit" class="vintage-btn text-sm">
                                     Skicka
                                 </button>
                             </div>
@@ -550,14 +832,20 @@
         function getCategoryBadge(category) {
             switch(category) {
                 case 'tips':
-                    return '<span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">💡 Tips</span>';
+                    return '<span class="vintage-badge badge-tips">💡 Tips</span>';
                 case 'question':
-                    return '<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">❓ Fråga</span>';
+                    return '<span class="vintage-badge badge-question">❓ Fråga</span>';
                 case 'discussion':
-                    return '<span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">🗣️ Diskussion</span>';
+                    return '<span class="vintage-badge badge-discussion">🗣️ Diskussion</span>';
                 default:
-                    return '<span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">💬 Allmänt</span>';
+                    return '<span class="vintage-badge badge-general">💬 Allmänt</span>';
             }
+        }
+        
+        // Get random note color
+        function getRandomNoteColor() {
+            const colors = ['note-yellow', 'note-pink', 'note-blue', 'note-green'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
         
         // Update reactions display
@@ -599,25 +887,25 @@
             });
             
             const replyHtml = `
-                <div class="reply-item mb-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                <div class="reply-item mb-2 p-2 bg-amber-50 rounded border border-amber-200">
                     <div class="flex justify-between items-start mb-1">
                         <div class="flex items-center space-x-2">
-                            <span class="font-medium text-sm text-blue-600 dark:text-blue-400">
+                            <span class="font-medium text-sm handwritten-title">
                                 ${reply.author_display_name}
                             </span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="text-xs handwritten">
                                 ${timeString}
                             </span>
                         </div>
                         <button 
-                            class="delete-reply-btn text-red-500 hover:text-red-700 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            class="delete-reply-btn text-red-600 hover:text-red-800 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 handwritten"
                             data-reply-id="${reply.id}"
                             title="Ta bort svar"
                         >
                             🗑️
                         </button>
                     </div>
-                    <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">${reply.content}</div>
+                    <div class="text-sm handwritten whitespace-pre-wrap">${reply.content}</div>
                 </div>
             `;
             
