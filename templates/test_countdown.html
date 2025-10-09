@@ -226,20 +226,27 @@
     }
     
     function startCountdown(scenario) {
+      console.log('startCountdown called with scenario:', scenario);
+      
       // Update every second
       countdownInterval = setInterval(async () => {
         try {
+          console.log('Fetching countdown data for scenario:', scenario);
           const response = await fetch(`/test_countdown?scenario=${scenario}`);
           const data = await response.json();
           
           if (!data.error) {
             updateCountdowns(data);
             console.log('Countdown updated:', data.countdown);
+          } else {
+            console.error('Countdown data error:', data.error);
           }
         } catch (error) {
           console.error('Countdown update error:', error);
         }
       }, 1000);
+      
+      console.log('Countdown interval started:', countdownInterval);
     }
     
     // Test function to manually update countdown
@@ -341,12 +348,19 @@
     }
     
     function startTimer() {
+      console.log('Start Timer clicked!');
+      console.log('Current scenario:', window.currentScenario);
+      
       // Hide start button
       hideStartTimerButton();
       
       // Start countdown
       if (window.currentScenario) {
+        console.log('Starting countdown for scenario:', window.currentScenario);
         startCountdown(window.currentScenario);
+      } else {
+        console.error('No current scenario found!');
+        alert('Inget scenario valt! Välj ett scenario först.');
       }
     }
     
