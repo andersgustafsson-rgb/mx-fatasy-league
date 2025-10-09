@@ -3323,6 +3323,7 @@ def view_user_profile(user_id):
         current_picks_450 = []
         current_picks_250 = []
         upcoming_race = None
+        picks_locked = False
         
         try:
             today = get_today()
@@ -3331,25 +3332,53 @@ def view_user_profile(user_id):
             ).order_by(Competition.event_date).first()
             
             if upcoming_race:
+                # Check if picks are locked (2 hours before race)
+                race_time_str = "20:00"  # 8pm local time
+                race_hour, race_minute = map(int, race_time_str.split(':'))
+                race_date = upcoming_race.event_date
+                race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+                
+                # Convert to UTC for countdown calculation
+                timezone_offsets = {
+                    'America/Los_Angeles': -8,  # PST
+                    'America/Denver': -7,       # MST  
+                    'America/Phoenix': -7,      # MST (no DST)
+                    'America/Chicago': -6,      # CST
+                    'America/New_York': -5      # EST
+                }
+                
+                timezone = getattr(upcoming_race, 'timezone', 'America/Los_Angeles')
+                utc_offset = timezone_offsets.get(timezone, -8)
+                race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+                
+                # Check if picks are locked (2 hours before race)
+                current_time = get_current_time()
+                time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
+                picks_locked = time_to_deadline.total_seconds() <= 0
+                
                 race_picks = RacePick.query.filter_by(
                     user_id=user_id, 
                     competition_id=upcoming_race.id
                 ).order_by(RacePick.predicted_position).all()
                 
-                for pick in race_picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        pick_data = {
-                            "position": pick.predicted_position,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name
-                        }
-                        
-                        if rider.class_name == "450cc":
-                            current_picks_450.append(pick_data)
-                        elif rider.class_name == "250cc":
-                            current_picks_250.append(pick_data)
+                # Only show picks if they are locked (after deadline)
+                if picks_locked:
+                    for pick in race_picks:
+                        rider = Rider.query.get(pick.rider_id)
+                        if rider:
+                            pick_data = {
+                                "position": pick.predicted_position,
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name
+                            }
+                            
+                            if rider.class_name == "450cc":
+                                current_picks_450.append(pick_data)
+                            elif rider.class_name == "250cc":
+                                current_picks_250.append(pick_data)
+                else:
+                    print(f"DEBUG: Picks not locked yet, hiding other user's picks for security")
         except Exception as e:
             print(f"Error getting user picks: {e}")
         
@@ -3361,6 +3390,7 @@ def view_user_profile(user_id):
             current_picks_450=current_picks_450,
             current_picks_250=current_picks_250,
             upcoming_race=upcoming_race,
+            picks_locked=picks_locked,
             current_user_id=session["user_id"]
         )
         

@@ -206,37 +206,47 @@
             </p>
           {% endif %}
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- 450cc picks -->
-            {% if current_picks_450 %}
-            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-              <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">450cc Picks</h4>
-              <div class="space-y-2">
-                {% for pick in current_picks_450 %}
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
-                  <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+          {% if picks_locked %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- 450cc picks -->
+              {% if current_picks_450 %}
+              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">450cc Picks</h4>
+                <div class="space-y-2">
+                  {% for pick in current_picks_450 %}
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
+                    <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+                  </div>
+                  {% endfor %}
                 </div>
-                {% endfor %}
               </div>
-            </div>
-            {% endif %}
-            
-            <!-- 250cc picks -->
-            {% if current_picks_250 %}
-            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-              <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">250cc Picks</h4>
-              <div class="space-y-2">
-                {% for pick in current_picks_250 %}
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
-                  <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+              {% endif %}
+              
+              <!-- 250cc picks -->
+              {% if current_picks_250 %}
+              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-3">250cc Picks</h4>
+                <div class="space-y-2">
+                  {% for pick in current_picks_250 %}
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400 font-medium">{{ pick.position }}.</span>
+                    <span class="text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+                  </div>
+                  {% endfor %}
                 </div>
-                {% endfor %}
               </div>
+              {% endif %}
             </div>
-            {% endif %}
-          </div>
+          {% else %}
+            <div class="text-center py-8">
+              <div class="text-4xl mb-4">🔒</div>
+              <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Picks dolda</h3>
+              <p class="text-gray-600 dark:text-gray-400">
+                Picks visas efter deadline för att förhindra tjuvkikning.
+              </p>
+            </div>
+          {% endif %}
           
           <!-- Show deadline status -->
           {% if picks_locked %}
