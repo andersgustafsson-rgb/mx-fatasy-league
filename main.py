@@ -818,11 +818,30 @@ def update_profile():
                     data_url = f"data:image/jpeg;base64,{base64_data}"
                     
                     try:
-                        # For now, just save a simple text indicator that user has uploaded a picture
-                        # This avoids the VARCHAR(300) limit issue completely
-                        user.profile_picture_url = f"uploaded_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                        print(f"Profile picture uploaded - saved as text indicator: {user.profile_picture_url}")
-                        flash("Profilbild uppladdad! (Sparas som text-indikator tills kolumnen uppdateras)", "success")
+                        # Try to save the actual base64 data first
+                        user.profile_picture_url = data_url
+                        print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
+                        flash("Profilbild uppladdad och sparad!", "success")
+                    except Exception as save_error:
+                        print(f"DEBUG: Could not save base64 data: {save_error}")
+                        # If base64 fails, try to save as file instead
+                        try:
+                            # Save as file in uploads folder
+                            fname = secure_filename(f"profile_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg")
+                            file_path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                            
+                            # Save the optimized image data to file
+                            with open(file_path, 'wb') as f:
+                                f.write(optimized_data)
+                            
+                            user.profile_picture_url = f"uploads/leagues/{fname}"
+                            print(f"Profile picture saved as file: {file_path}")
+                            flash("Profilbild uppladdad och sparad som fil!", "success")
+                        except Exception as file_error:
+                            print(f"DEBUG: Could not save as file either: {file_error}")
+                            # Last resort: save as text indicator
+                            user.profile_picture_url = f"uploaded_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                            flash("Profilbild markerad som uppladdad (kolumn behöver uppdateras för full funktionalitet)", "warning")
                     except AttributeError:
                         print("DEBUG: profile_picture_url column doesn't exist yet")
                         flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
