@@ -127,11 +127,19 @@
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div>
                                 <h3 class="text-lg font-medium text-gray-800 mb-3">450cc Resultat (Top 20)</h3>
-                                <div id="results-container-450" class="space-y-2"></div>
+                                <div id="results-container-450" class="space-y-2">
+                                    <div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
+                                        Välj en tävling ovan för att lägga in resultat
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <h3 class="text-lg font-medium text-gray-800 mb-3">250cc Resultat (Top 6)</h3>
-                                <div id="results-container-250" class="space-y-2"></div>
+                                <div id="results-container-250" class="space-y-2">
+                                    <div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
+                                        Välj en tävling ovan för att lägga in resultat
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -257,6 +265,7 @@
             initTabs();
             loadRaces();
             loadRiders();
+            setupCompetitionListener();
             loadSavedResults();
             updateSelectedCompetitionInfo();
         });
@@ -441,16 +450,16 @@
             const select = div.querySelector('select');
             
             // Populate with riders
-            const riders = window.riders_450_data || window.riders_250_data || [];
-            riders.forEach(rider => {
-                if (rider.class_name === `${cls}cc`) {
+            const riders = cls === '450' ? window.riders_450_data : window.riders_250_data;
+            if (riders) {
+                riders.forEach(rider => {
                     const option = document.createElement('option');
                     option.value = rider.id;
                     option.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
                     option.setAttribute('data-coast', rider.coast_250 || '');
                     select.appendChild(option);
-                }
-            });
+                });
+            }
             
             if (riderId) {
                 select.value = riderId;
@@ -643,32 +652,42 @@
         }
 
         // Initialize result rows when competition is selected
-        document.getElementById("competition-select").addEventListener('change', function() {
-            syncHiddenCompetitionId();
-            updateSelectedCompetitionInfo();
-            
-            // Initialize result rows
-            const c450 = document.getElementById("results-container-450");
-            const c250 = document.getElementById("results-container-250");
-            
-            if (this.value) {
-                // Add 20 rows for 450cc
-                for (let i = 1; i <= 20; i++) {
-                    addResultRow('450', i);
-                }
-                
-                // Add 6 rows for 250cc
-                for (let i = 1; i <= 6; i++) {
-                    addResultRow('250', i);
-                }
-                
-                // Load saved results
-                loadSavedResults();
-            } else {
-                c450.innerHTML = "";
-                c250.innerHTML = "";
+        function setupCompetitionListener() {
+            const competitionSelect = document.getElementById("competition-select");
+            if (competitionSelect) {
+                competitionSelect.addEventListener('change', function() {
+                    syncHiddenCompetitionId();
+                    updateSelectedCompetitionInfo();
+                    
+                    // Initialize result rows
+                    const c450 = document.getElementById("results-container-450");
+                    const c250 = document.getElementById("results-container-250");
+                    
+                    if (this.value) {
+                        // Clear existing content
+                        c450.innerHTML = "";
+                        c250.innerHTML = "";
+                        
+                        // Add 20 rows for 450cc
+                        for (let i = 1; i <= 20; i++) {
+                            addResultRow('450', i);
+                        }
+                        
+                        // Add 6 rows for 250cc
+                        for (let i = 1; i <= 6; i++) {
+                            addResultRow('250', i);
+                        }
+                        
+                        // Load saved results
+                        loadSavedResults();
+                    } else {
+                        // Show placeholder when no competition selected
+                        c450.innerHTML = '<div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">Välj en tävling ovan för att lägga in resultat</div>';
+                        c250.innerHTML = '<div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">Välj en tävling ovan för att lägga in resultat</div>';
+                    }
+                });
             }
-        });
+        }
     </script>
 </body>
 </html>
