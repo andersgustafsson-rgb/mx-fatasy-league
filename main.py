@@ -99,7 +99,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     display_name = db.Column(db.String(100), nullable=True)  # Användarens riktiga namn
-    profile_picture_url = db.Column(db.String(300), nullable=True)  # Profilbild
+    profile_picture_url = db.Column(db.Text, nullable=True)  # Profilbild (base64 data)
     bio = db.Column(db.Text, nullable=True)  # Kort beskrivning om sig själv
     favorite_rider = db.Column(db.String(100), nullable=True)  # Favoritförare
     favorite_team = db.Column(db.String(100), nullable=True)  # Favoritlag
@@ -634,7 +634,7 @@ def profile_page():
             print("DEBUG: Attempting to add missing profile columns...")
             columns_to_add = [
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
@@ -2455,7 +2455,7 @@ def fix_profile_columns():
         # Add missing columns to users table
         columns_to_add = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
@@ -2557,11 +2557,44 @@ def restore_profiles():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.get("/fix_profile_picture_column")
+def fix_profile_picture_column():
+    """Fix profile_picture_url column to support base64 data"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
+        # Check if we need to alter the column type
+        if 'postgresql' in str(db.engine.url):
+            # PostgreSQL syntax - alter column type
+            db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
+            print("DEBUG: Changed profile_picture_url column to TEXT")
+        else:
+            # SQLite doesn't support ALTER COLUMN, but TEXT is default anyway
+            print("DEBUG: SQLite detected - TEXT is default for profile_picture_url")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Profile picture column updated to support base64 data",
+            "column_type": "TEXT"
+        })
+    except Exception as e:
+        print(f"DEBUG: Error updating column: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
         
         # Add missing columns to users table
         columns_to_add = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
