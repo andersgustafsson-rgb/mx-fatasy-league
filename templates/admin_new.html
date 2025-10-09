@@ -327,6 +327,14 @@
                     option.textContent = text;
                     select.appendChild(option);
                 });
+                
+                // Restore previously selected competition from localStorage
+                const savedCompetition = localStorage.getItem('admin_selected_competition');
+                if (savedCompetition) {
+                    select.value = savedCompetition;
+                    // Trigger change event to load results for saved competition
+                    select.dispatchEvent(new Event('change'));
+                }
             } catch (error) {
                 console.error('Error loading races:', error);
             }
@@ -801,6 +809,14 @@
             const competitionSelect = document.getElementById("competition-select");
             if (competitionSelect) {
                 competitionSelect.addEventListener('change', function() {
+                    // Save selected competition to localStorage
+                    const selectedValue = this.value;
+                    if (selectedValue) {
+                        localStorage.setItem('admin_selected_competition', selectedValue);
+                    } else {
+                        localStorage.removeItem('admin_selected_competition');
+                    }
+                    
                     loadSavedResults();
                 });
             }
