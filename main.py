@@ -596,13 +596,18 @@ def season_team_page():
 
 @app.route("/profile")
 def profile_page():
+    print(f"DEBUG: profile_page called, session: {dict(session)}")
     if "user_id" not in session:
+        print("DEBUG: No user_id in session, redirecting to login")
         return redirect(url_for("login"))
     
+    print(f"DEBUG: User ID in session: {session['user_id']}")
     try:
         # Try to get user with new columns first
         user = User.query.get(session["user_id"])
+        print(f"DEBUG: User query result: {user}")
         if not user:
+            print("DEBUG: User not found, redirecting to index")
             flash("Användare hittades inte.", "error")
             return redirect(url_for("index"))
     except Exception as e:
@@ -684,6 +689,7 @@ def profile_page():
         if best_positions:
             best_position = min(best_positions)
     
+    print(f"DEBUG: Rendering profile template with user: {user.username}")
     return render_template(
         "profile.html",
         user=user,

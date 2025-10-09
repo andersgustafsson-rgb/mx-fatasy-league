@@ -61,6 +61,7 @@
             <a
               href="{{ url_for('profile_page') }}"
               class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"
+              onclick="console.log('DEBUG: Profile link clicked, href:', this.href); return true;"
               >Min Profil</a
             >
         <a
@@ -222,11 +223,16 @@
       function attachNavSound(){
         document.querySelectorAll('a.nav-sound').forEach(a => {
           a.addEventListener('click', (e) => {
+            console.log('DEBUG: Nav sound click handler triggered for:', a.href);
             // Spela ton och fördröj navigationen lite så ljudet hinner höras
             e.preventDefault();
             const d = playNavSound(300);
             const href = a.getAttribute('href');
-            setTimeout(() => { window.location.href = href; }, d);
+            console.log('DEBUG: Navigating to:', href, 'after', d, 'ms');
+            setTimeout(() => { 
+              console.log('DEBUG: Actually navigating now to:', href);
+              window.location.href = href; 
+            }, d);
           });
         });
       }
