@@ -126,17 +126,37 @@
                 <span class="text-green-600 font-semibold">Dina val är gjorda!</span>
               </div>
               
-              <!-- Show top 6 picks -->
-              <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-3">
-                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Dina topp 6 (450cc):</h4>
-                <div class="space-y-1">
-                  {% for pick in current_picks[:6] %}
-                  <div class="flex items-center justify-between text-sm">
-                    <span class="text-gray-600 dark:text-gray-400">{{ pick.position }}.</span>
-                    <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+              <!-- Show picks for both classes -->
+              <div class="space-y-3 mb-3">
+                <!-- 450cc picks -->
+                {% if current_picks_450 %}
+                <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                  <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Dina topp 6 (450cc):</h4>
+                  <div class="space-y-1">
+                    {% for pick in current_picks_450[:6] %}
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">{{ pick.position }}.</span>
+                      <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+                    </div>
+                    {% endfor %}
                   </div>
-                  {% endfor %}
                 </div>
+                {% endif %}
+                
+                <!-- 250cc picks -->
+                {% if current_picks_250 %}
+                <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                  <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Dina topp 6 (250cc):</h4>
+                  <div class="space-y-1">
+                    {% for pick in current_picks_250[:6] %}
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">{{ pick.position }}.</span>
+                      <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% endif %}
               </div>
             </div>
           {% else %}

@@ -509,12 +509,13 @@ def index():
         user_profile_picture = None
 
     # Get user's picks for upcoming race
-    current_picks = []
+    current_picks_450 = []
+    current_picks_250 = []
     picks_status = "no_picks"
     if upcoming_race:
         try:
             print(f"DEBUG: Looking for picks for user {uid}, competition {upcoming_race.id}")
-            # Get race picks for 450cc
+            # Get race picks for both classes
             race_picks = RacePick.query.filter_by(
                 user_id=uid, 
                 competition_id=upcoming_race.id
@@ -526,16 +527,24 @@ def index():
                 for pick in race_picks:
                     rider = Rider.query.get(pick.rider_id)
                     if rider:
-                        current_picks.append({
+                        pick_data = {
                             "position": pick.predicted_position,
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
-                            "class": "450cc"
-                        })
-                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name}")
+                            "class": rider.class_name
+                        }
+                        
+                        # Separate by class
+                        if rider.class_name == "450cc":
+                            current_picks_450.append(pick_data)
+                        elif rider.class_name == "250cc":
+                            current_picks_250.append(pick_data)
+                        
+                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
         except Exception as e:
             print(f"Error getting current picks: {e}")
-            current_picks = []
+            current_picks_450 = []
+            current_picks_250 = []
 
     return render_template(
         "index.html",
@@ -545,7 +554,8 @@ def index():
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team,
         team_riders=team_riders,
-        current_picks=current_picks,
+        current_picks_450=current_picks_450,
+        current_picks_250=current_picks_250,
         picks_status=picks_status,
     )
 
