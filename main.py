@@ -2588,6 +2588,10 @@ def fix_profile_picture_column():
     """Fix profile_picture_url column to support base64 data"""
     if session.get("username") != "test":
         return jsonify({"error": "admin_only"}), 403
+
+@app.get("/fix_column_public")
+def fix_column_public():
+    """Fix profile_picture_url column - no login required for emergency fix"""
     
     try:
         # Rollback any existing transaction first
@@ -2606,7 +2610,8 @@ def fix_profile_picture_column():
         
         return jsonify({
             "message": "Profile picture column updated to support base64 data",
-            "column_type": "TEXT"
+            "column_type": "TEXT",
+            "status": "success"
         })
     except Exception as e:
         print(f"DEBUG: Error updating column: {e}")
@@ -2614,6 +2619,7 @@ def fix_profile_picture_column():
             db.session.rollback()
         except:
             pass
+        return jsonify({"error": str(e), "status": "failed"}), 500
         return jsonify({"error": str(e)}), 500
         
         # Add missing columns to users table
