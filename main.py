@@ -541,9 +541,36 @@ def index():
     current_picks_450 = []
     current_picks_250 = []
     picks_status = "no_picks"
+    picks_locked = False
+    
     if upcoming_race:
         try:
+            # Check if picks are locked (2 hours before race)
+            race_time_str = "20:00"  # 8pm local time
+            race_hour, race_minute = map(int, race_time_str.split(':'))
+            race_date = upcoming_race.event_date
+            race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+            
+            # Convert to UTC for countdown calculation
+            timezone_offsets = {
+                'America/Los_Angeles': -8,  # PST
+                'America/Denver': -7,       # MST  
+                'America/Phoenix': -7,      # MST (no DST)
+                'America/Chicago': -6,      # CST
+                'America/New_York': -5      # EST
+            }
+            
+            timezone = getattr(upcoming_race, 'timezone', 'America/Los_Angeles')
+            utc_offset = timezone_offsets.get(timezone, -8)
+            race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+            
+            # Check if picks are locked (2 hours before race)
+            time_to_deadline = race_datetime_utc - timedelta(hours=2) - datetime.utcnow()
+            picks_locked = time_to_deadline.total_seconds() <= 0
+            
             print(f"DEBUG: Looking for picks for user {uid}, competition {upcoming_race.id}")
+            print(f"DEBUG: Picks locked: {picks_locked}")
+            
             # Get race picks for both classes
             race_picks = RacePick.query.filter_by(
                 user_id=uid, 
@@ -553,23 +580,27 @@ def index():
             print(f"DEBUG: Found {len(race_picks)} race picks")
             if race_picks:
                 picks_status = "has_picks"
-                for pick in race_picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        pick_data = {
-                            "position": pick.predicted_position,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name
-                        }
-                        
-                        # Separate by class
-                        if rider.class_name == "450cc":
-                            current_picks_450.append(pick_data)
-                        elif rider.class_name == "250cc":
-                            current_picks_250.append(pick_data)
-                        
-                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
+                # Only show picks if they are locked (after deadline)
+                if picks_locked:
+                    for pick in race_picks:
+                        rider = Rider.query.get(pick.rider_id)
+                        if rider:
+                            pick_data = {
+                                "position": pick.predicted_position,
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name
+                            }
+                            
+                            # Separate by class
+                            if rider.class_name == "450cc":
+                                current_picks_450.append(pick_data)
+                            elif rider.class_name == "250cc":
+                                current_picks_250.append(pick_data)
+                            
+                            print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
+                else:
+                    print("DEBUG: Picks not locked yet, hiding picks for security")
         except Exception as e:
             print(f"Error getting current picks: {e}")
             current_picks_450 = []
