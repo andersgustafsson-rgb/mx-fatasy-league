@@ -65,6 +65,25 @@
 
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
+    
+    <!-- Picks Status Indicator -->
+    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div id="status-icon" class="text-2xl">⏳</div>
+          <div>
+            <h3 id="status-title" class="text-lg font-semibold text-gray-700 dark:text-gray-300">Laddar picks-status...</h3>
+            <p id="status-message" class="text-sm text-gray-500 dark:text-gray-400">Kontrollerar om du har gjort dina val</p>
+          </div>
+        </div>
+        <div id="status-actions" class="hidden">
+          <button onclick="clearAllPicks()" class="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+            Rensa alla val
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Gissa topp 6, Holeshot & Wildcard</h2>
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
@@ -308,7 +327,7 @@ function imgSrcFor(riderId) {
   return null;
 }
 
-// Function to handle image loading errors
+  // Function to handle image loading errors
 function handleImageError(img) {
   console.log(`DEBUG: Image failed to load: ${img.src}`);
   img.style.display = 'none';
@@ -320,6 +339,86 @@ function handleImageError(img) {
   
   // Insert placeholder after the image
   img.parentNode.insertBefore(placeholder, img.nextSibling);
+}
+
+// Function to update picks status indicator
+function updatePicksStatus(myPicks) {
+  const statusIcon = document.getElementById('status-icon');
+  const statusTitle = document.getElementById('status-title');
+  const statusMessage = document.getElementById('status-message');
+  const statusActions = document.getElementById('status-actions');
+  const statusContainer = document.getElementById('picks-status');
+  
+  if (!statusIcon || !statusTitle || !statusMessage) return;
+  
+  const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
+  const hasHoleshotPicks = myPicks.holeshot_picks && 
+    (myPicks.holeshot_picks['450cc'] || myPicks.holeshot_picks['250cc']);
+  const hasWildcardPick = myPicks.wildcard_pick;
+  
+  const totalPicks = (myPicks.top6_picks?.length || 0) + 
+    (hasHoleshotPicks ? 1 : 0) + 
+    (hasWildcardPick ? 1 : 0);
+  
+  if (totalPicks === 0) {
+    // No picks made
+    statusIcon.textContent = '📝';
+    statusTitle.textContent = 'Inga val gjorda än';
+    statusMessage.textContent = 'Gör dina val för topp 6, holeshot och wildcard';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+    statusActions.classList.add('hidden');
+  } else if (totalPicks < 8) {
+    // Partial picks
+    statusIcon.textContent = '⚠️';
+    statusTitle.textContent = `Delvis klart (${totalPicks}/8 val)`;
+    statusMessage.textContent = 'Du har gjort några val, men inte alla. Komplettera dina picks!';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20';
+    statusActions.classList.remove('hidden');
+  } else {
+    // All picks made
+    statusIcon.textContent = '✅';
+    statusTitle.textContent = 'Alla val gjorda!';
+    statusMessage.textContent = 'Du har gjort alla dina val för detta race. Lycka till!';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20';
+    statusActions.classList.remove('hidden');
+  }
+}
+
+// Function to clear all picks
+async function clearAllPicks() {
+  if (!confirm('Är du säker på att du vill rensa alla dina val för detta race?')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/clear_my_picks_for_competition/${competitionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (response.ok) {
+      // Clear all form fields
+      document.querySelectorAll('.pick-select').forEach(select => {
+        select.value = '';
+      });
+      
+      // Clear preview images
+      document.querySelectorAll('.preview-img').forEach(img => {
+        img.removeAttribute('src');
+        img.style.background = '#4b5563';
+      });
+      
+      // Update status
+      updatePicksStatus({ top6_picks: [], holeshot_picks: {}, wildcard_pick: null });
+      
+      alert('Alla val har rensats!');
+    } else {
+      alert('Kunde inte rensa valen. Försök igen.');
+    }
+  } catch (error) {
+    console.error('Error clearing picks:', error);
+    alert('Ett fel uppstod vid rensning av val.');
+  }
 }
 function onPickChange(cls, pos) {
   console.log(`DEBUG: onPickChange called for ${cls} position ${pos}`);
@@ -353,6 +452,11 @@ function onPickChange(cls, pos) {
   }
 
   updateDropdowns(cls);
+  
+  // Update picks status after changes
+  setTimeout(() => {
+    fetchAndDisplayMyPicks();
+  }, 100);
 }
 
   function initializePreviewImages() {
@@ -451,6 +555,9 @@ function onPickChange(cls, pos) {
       const res = await fetch(`/get_my_picks/${competitionId}`);
       if (!res.ok) throw new Error("Kunde inte hämta dina val");
       const myPicks = await res.json();
+
+      // Update picks status
+      updatePicksStatus(myPicks);
 
       if (!actualResults || actualResults.length === 0) {
         // Återställ tidigare val i UI
@@ -631,6 +738,11 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       });
       const data = await resp.json();
       alert(data.message || data.error || "Ok");
+      
+      // Update picks status after saving
+      setTimeout(() => {
+        fetchAndDisplayMyPicks();
+      }, 500);
     } catch (e) {
       alert("Ett fel uppstod vid sparning.");
     }
