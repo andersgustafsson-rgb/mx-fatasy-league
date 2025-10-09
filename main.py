@@ -5528,6 +5528,11 @@ def reset_simulation():
     
     return jsonify({"message": "Simulation reset to real time"})
 
+@app.route("/dino_game")
+def dino_game():
+    """Cross Dino game - Chrome Dino clone with motocross theme"""
+    return render_template("dino_game.html")
+
 @app.route("/test_countdown")
 def test_countdown():
     """Test countdown with simulated time - for development only"""

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross Dino - Mitt Fantasy Spel</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 70%, #8FBC8F 100%);
+            border: 3px solid #2F4F2F;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        #gameCanvas {
+            display: block;
+            background: transparent;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #2F4F2F;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+            z-index: 5;
+        }
+
+        #highScore {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #2F4F2F;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+            z-index: 5;
+        }
+
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .instructions {
+            margin: 20px 0;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .cross {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #FF6B6B;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .obstacle {
+            position: absolute;
+            background: #8B4513;
+            border-radius: 5px;
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 20px;
+            background: #8FBC8F;
+            border-top: 2px solid #2F4F2F;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div id="startScreen">
+            <h2>🏁 Cross Dino 🏁</h2>
+            <p>Hoppa över guppen med din cross!</p>
+            <div class="instructions">
+                <strong>Kontroller:</strong><br>
+                SPACE eller ↑ för att hoppa<br>
+                ESC för att pausa
+            </div>
+            <button class="button" onclick="startGame()">Starta Spel</button>
+            <button class="button" onclick="window.location.href='/'">Tillbaka</button>
+        </div>
+
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Poäng: <span id="finalScore">0</span></p>
+            <p>Bästa poäng: <span id="finalHighScore">0</span></p>
+            <button class="button" onclick="restartGame()">Spela Igen</button>
+            <button class="button" onclick="window.location.href='/'">Tillbaka</button>
+        </div>
+
+        <div id="score">Poäng: 0</div>
+        <div id="highScore">Bästa: 0</div>
+    </div>
+
+    <script>
+        class CrossDinoGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                // Game state
+                this.gameRunning = false;
+                this.gamePaused = false;
+                this.score = 0;
+                this.highScore = localStorage.getItem('crossDinoHighScore') || 0;
+                this.gameSpeed = 2;
+                this.gravity = 0.6;
+                this.jumpPower = -12;
+                
+                // Cross (player)
+                this.cross = {
+                    x: 100,
+                    y: this.height - 100,
+                    width: 40,
+                    height: 40,
+                    velocityY: 0,
+                    isJumping: false,
+                    groundY: this.height - 100
+                };
+                
+                // Obstacles (gupp)
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.obstacleInterval = 120; // frames between obstacles
+                
+                // Clouds for background
+                this.clouds = [];
+                this.initClouds();
+                
+                // Input handling
+                this.keys = {};
+                this.setupInput();
+                
+                // Update high score display
+                document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
+                
+                // Start game loop
+                this.gameLoop();
+            }
+            
+            initClouds() {
+                for (let i = 0; i < 5; i++) {
+                    this.clouds.push({
+                        x: Math.random() * this.width,
+                        y: Math.random() * 150 + 50,
+                        size: Math.random() * 30 + 20,
+                        speed: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+            
+            setupInput() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        e.preventDefault();
+                        if (this.gameRunning && !this.gamePaused) {
+                            this.jump();
+                        }
+                    }
+                    
+                    if (e.code === 'Escape') {
+                        e.preventDefault();
+                        this.togglePause();
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+            }
+            
+            start() {
+                this.gameRunning = true;
+                this.gamePaused = false;
+                this.score = 0;
+                this.gameSpeed = 2;
+                this.cross.y = this.cross.groundY;
+                this.cross.velocityY = 0;
+                this.cross.isJumping = false;
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                
+                document.getElementById('startScreen').style.display = 'none';
+                document.getElementById('gameOver').style.display = 'none';
+            }
+            
+            jump() {
+                if (!this.cross.isJumping) {
+                    this.cross.velocityY = this.jumpPower;
+                    this.cross.isJumping = true;
+                }
+            }
+            
+            togglePause() {
+                if (this.gameRunning) {
+                    this.gamePaused = !this.gamePaused;
+                }
+            }
+            
+            update() {
+                if (!this.gameRunning || this.gamePaused) return;
+                
+                // Update cross physics
+                this.cross.velocityY += this.gravity;
+                this.cross.y += this.cross.velocityY;
+                
+                // Ground collision
+                if (this.cross.y >= this.cross.groundY) {
+                    this.cross.y = this.cross.groundY;
+                    this.cross.velocityY = 0;
+                    this.cross.isJumping = false;
+                }
+                
+                // Update obstacles
+                this.obstacleTimer++;
+                if (this.obstacleTimer >= this.obstacleInterval) {
+                    this.addObstacle();
+                    this.obstacleTimer = 0;
+                }
+                
+                // Move obstacles
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obstacle = this.obstacles[i];
+                    obstacle.x -= this.gameSpeed;
+                    
+                    // Remove obstacles that are off screen
+                    if (obstacle.x + obstacle.width < 0) {
+                        this.obstacles.splice(i, 1);
+                        this.score += 10;
+                        this.updateScore();
+                    }
+                    
+                    // Check collision
+                    if (this.checkCollision(this.cross, obstacle)) {
+                        this.gameOver();
+                        return;
+                    }
+                }
+                
+                // Update clouds
+                this.clouds.forEach(cloud => {
+                    cloud.x -= cloud.speed;
+                    if (cloud.x + cloud.size < 0) {
+                        cloud.x = this.width + cloud.size;
+                        cloud.y = Math.random() * 150 + 50;
+                    }
+                });
+                
+                // Increase game speed
+                if (this.score > 0 && this.score % 100 === 0) {
+                    this.gameSpeed += 0.1;
+                    this.obstacleInterval = Math.max(60, this.obstacleInterval - 2);
+                }
+            }
+            
+            addObstacle() {
+                const height = Math.random() * 30 + 20;
+                const width = Math.random() * 20 + 15;
+                
+                this.obstacles.push({
+                    x: this.width,
+                    y: this.height - height - 20, // Ground level
+                    width: width,
+                    height: height
+                });
+            }
+            
+            checkCollision(rect1, rect2) {
+                return rect1.x < rect2.x + rect2.width &&
+                       rect1.x + rect1.width > rect2.x &&
+                       rect1.y < rect2.y + rect2.height &&
+                       rect1.y + rect1.height > rect2.y;
+            }
+            
+            updateScore() {
+                document.getElementById('score').textContent = `Poäng: ${this.score}`;
+            }
+            
+            gameOver() {
+                this.gameRunning = false;
+                
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('crossDinoHighScore', this.highScore);
+                    document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
+                }
+                
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalHighScore').textContent = this.highScore;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                
+                // Draw background gradient
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(0.7, '#98FB98');
+                gradient.addColorStop(1, '#8FBC8F');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Draw clouds
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                this.clouds.forEach(cloud => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+                
+                // Draw ground
+                this.ctx.fillStyle = '#8FBC8F';
+                this.ctx.fillRect(0, this.height - 20, this.width, 20);
+                this.ctx.strokeStyle = '#2F4F2F';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, this.height - 20);
+                this.ctx.lineTo(this.width, this.height - 20);
+                this.ctx.stroke();
+                
+                // Draw cross (player)
+                this.ctx.fillStyle = '#FF6B6B';
+                this.ctx.beginPath();
+                this.ctx.arc(this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2, this.cross.width/2, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Draw cross symbol
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 20px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('🏁', this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2 + 7);
+                
+                // Draw obstacles (gupp)
+                this.ctx.fillStyle = '#8B4513';
+                this.obstacles.forEach(obstacle => {
+                    this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                    
+                    // Add some texture to obstacles
+                    this.ctx.fillStyle = '#A0522D';
+                    this.ctx.fillRect(obstacle.x + 2, obstacle.y + 2, obstacle.width - 4, obstacle.height - 4);
+                    this.ctx.fillStyle = '#8B4513';
+                });
+                
+                // Draw pause overlay
+                if (this.gamePaused) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.fillRect(0, 0, this.width, this.height);
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = 'bold 48px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('PAUSAD', this.width/2, this.height/2);
+                    this.ctx.font = '24px Arial';
+                    this.ctx.fillText('Tryck ESC för att fortsätta', this.width/2, this.height/2 + 50);
+                }
+            }
+            
+            gameLoop() {
+                this.update();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        // Global functions for buttons
+        let game;
+        
+        function startGame() {
+            if (!game) {
+                game = new CrossDinoGame();
+            }
+            game.start();
+        }
+        
+        function restartGame() {
+            if (game) {
+                game.start();
+            }
+        }
+        
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            game = new CrossDinoGame();
+        });
+    </script>
+</body>
+</html>
