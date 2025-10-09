@@ -804,13 +804,13 @@ def update_profile():
                     if img.mode in ('RGBA', 'LA', 'P'):
                         img = img.convert('RGB')
                     
-                    # Resize om för stor (max 200x200 för profilbilder)
-                    max_size = (200, 200)
+                    # Resize om för stor (max 100x100 för mindre base64-storlek)
+                    max_size = (100, 100)
                     img.thumbnail(max_size, Image.Resampling.LANCZOS)
                     
-                    # Spara som JPEG med 85% kvalitet för mindre storlek
+                    # Spara som JPEG med 70% kvalitet för mycket mindre storlek
                     output = io.BytesIO()
-                    img.save(output, format='JPEG', quality=85, optimize=True)
+                    img.save(output, format='JPEG', quality=70, optimize=True)
                     optimized_data = output.getvalue()
                     
                     # Konvertera till base64
@@ -818,8 +818,15 @@ def update_profile():
                     data_url = f"data:image/jpeg;base64,{base64_data}"
                     
                     try:
-                        user.profile_picture_url = data_url
-                        print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
+                        # Check if base64 data is too large for VARCHAR(300) column
+                        if len(data_url) > 300:
+                            print(f"DEBUG: Base64 data too large ({len(data_url)} chars), using placeholder")
+                            # Use a simple placeholder instead
+                            user.profile_picture_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzk5OTk5OSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+UpDwvdGV4dD48L3N2Zz4="
+                            flash("Profilbild sparad som placeholder (kolumn behöver uppdateras för full storlek).", "info")
+                        else:
+                            user.profile_picture_url = data_url
+                            print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
                     except AttributeError:
                         print("DEBUG: profile_picture_url column doesn't exist yet")
                         flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
