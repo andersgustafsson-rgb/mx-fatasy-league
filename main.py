@@ -3043,29 +3043,90 @@ def fix_existing_riders():
 
 @app.get("/fix_rider_coasts")
 def fix_rider_coasts():
-    """Fix coast assignments for 250cc riders based on correct 2025 data"""
+    """Fix coast assignments for 250cc riders based on point standings 2025.txt"""
     if session.get("username") != "test":
         return jsonify({"error": "admin_only"}), 403
     
     try:
-        # Correct coast assignments for 2025 season
-        EAST_RIDERS = [
-            "Tom Vialle", "RJ Hampshire", "Jordon Smith", "Cameron McAdoo", 
-            "Nate Thrasher", "Max Vohland", "Enzo Lopes", "Chance Hymas",
-            "Pierce Brown", "Mitchell Harrison", "Stilez Robertson", 
-            "Preston Kilroy", "Talon Hawkins", "Nick Romano", "Evan Ferry"
-        ]
+        # Read point standings file to get correct coast assignments
+        with open('point standings 2025.txt', 'r', encoding='utf-8') as f:
+            content = f.read()
         
-        WEST_RIDERS = [
-            "Haiden Deegan", "Levi Kitchen", "Jo Shimoda", "Jalek Swoll",
-            "Ryder DiFrancesco", "Dilan Schwartz", "Guillem Farres", "Hardy Munoz",
-            "Carson Mumford", "Derek Kelley", "Cullin Park", "Daxton Bennick",
-            "Casey Cochran", "Hunter Yoder", "Jerry Robin"
-        ]
+        # Parse the data to extract east/west riders
+        sections = content.split('\n\n')
+        east_riders = []
+        west_riders = []
+        current_coast = None
+        
+        for section in sections:
+            lines = section.strip().split('\n')
+            if not lines:
+                continue
+                
+            # Check if this is a coast header
+            if lines[0].lower() in ['250 west', '250 east']:
+                current_coast = lines[0].lower().replace('250 ', '')
+                continue
+            
+            # Parse rider data
+            if current_coast and len(lines) > 1:
+                for line in lines[1:]:  # Skip header line
+                    if not line.strip():
+                        continue
+                        
+                    # Parse format: "1	Haiden DeeganHaiden Deegan	Temecula, CAUnited States	221"
+                    parts = line.split('\t')
+                    if len(parts) >= 4:
+                        try:
+                            name_part = parts[1]
+                            
+                            # Clean up name (remove duplicates) - same logic as import
+                            name = name_part.strip()
+                            if len(name) > 15:  # Likely has duplicate name
+                                mid = len(name) // 2
+                                for i in range(mid-3, mid+3):
+                                    if i < len(name) and name[i].isupper() and i > 0:
+                                        first_part = name[:i]
+                                        second_part = name[i:]
+                                        if first_part == second_part:
+                                            name = first_part
+                                            break
+                                        elif second_part.startswith(first_part):
+                                            name = first_part
+                                            break
+                            
+                            # Additional cleanup
+                            if name.endswith(name[:len(name)//2]):
+                                name = name[:len(name)//2]
+                            
+                            words = name.split()
+                            if len(words) >= 4:
+                                mid = len(words) // 2
+                                first_half = words[:mid]
+                                second_half = words[mid:]
+                                if first_half == second_half:
+                                    name = ' '.join(first_half)
+                            
+                            if ' ' in name:
+                                parts = name.split(' ')
+                                if len(parts) >= 2:
+                                    if len(parts) >= 4 and parts[0] == parts[2] and parts[1] == parts[3]:
+                                        name = f"{parts[0]} {parts[1]}"
+                                    elif len(parts) == 2 and parts[0] == parts[1]:
+                                        name = parts[0]
+                            
+                            # Add to appropriate coast list
+                            if current_coast == 'east':
+                                east_riders.append(name)
+                            elif current_coast == 'west':
+                                west_riders.append(name)
+                                
+                        except (ValueError, IndexError):
+                            continue
         
         # Fix East riders
         east_fixed = 0
-        for name in EAST_RIDERS:
+        for name in east_riders:
             rider = Rider.query.filter_by(name=name, class_name="250cc").first()
             if rider:
                 if rider.coast_250 != "east":
@@ -3074,7 +3135,7 @@ def fix_rider_coasts():
         
         # Fix West riders  
         west_fixed = 0
-        for name in WEST_RIDERS:
+        for name in west_riders:
             rider = Rider.query.filter_by(name=name, class_name="250cc").first()
             if rider:
                 if rider.coast_250 != "west":
@@ -3092,7 +3153,9 @@ def fix_rider_coasts():
         db.session.commit()
         
         return jsonify({
-            "message": f"Fixed coast assignments: {east_fixed} East riders, {west_fixed} West riders, {remaining_fixed} set to 'both'",
+            "message": f"Fixed coast assignments from point standings: {east_fixed} East riders, {west_fixed} West riders, {remaining_fixed} set to 'both'",
+            "east_riders_found": len(east_riders),
+            "west_riders_found": len(west_riders),
             "east_fixed": east_fixed,
             "west_fixed": west_fixed,
             "remaining_fixed": remaining_fixed,
@@ -3102,6 +3165,54 @@ def fix_rider_coasts():
     except Exception as e:
         print(f"Error fixing rider coasts: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.get("/debug_rider_coasts")
+def debug_rider_coasts():
+    """Debug coast assignments for 250cc riders"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all 250cc riders
+        riders_250 = Rider.query.filter_by(class_name="250cc").all()
+        
+        # Group by coast
+        coast_groups = {}
+        for rider in riders_250:
+            coast = rider.coast_250 or "None"
+            if coast not in coast_groups:
+                coast_groups[coast] = []
+            coast_groups[coast].append(f"{rider.name} (#{rider.rider_number})")
+        
+        # Check specific riders
+        tom_vialle = Rider.query.filter_by(name="Tom Vialle", class_name="250cc").first()
+        haiden_deegan = Rider.query.filter_by(name="Haiden Deegan", class_name="250cc").first()
+        
+        result = f"""
+        <h1>250cc Rider Coast Debug</h1>
+        <p><strong>Total 250cc riders:</strong> {len(riders_250)}</p>
+        
+        <h2>Coast Distribution:</h2>
+        """
+        
+        for coast, riders in coast_groups.items():
+            result += f"<h3>{coast}: {len(riders)} riders</h3><ul>"
+            for rider in riders[:10]:  # Show first 10
+                result += f"<li>{rider}</li>"
+            if len(riders) > 10:
+                result += f"<li>... and {len(riders) - 10} more</li>"
+            result += "</ul>"
+        
+        result += f"""
+        <h2>Specific Riders:</h2>
+        <p><strong>Tom Vialle:</strong> {tom_vialle.coast_250 if tom_vialle else 'Not found'}</p>
+        <p><strong>Haiden Deegan:</strong> {haiden_deegan.coast_250 if haiden_deegan else 'Not found'}</p>
+        """
+        
+        return result
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 @app.route("/profile/<int:user_id>")
 def view_user_profile(user_id):
