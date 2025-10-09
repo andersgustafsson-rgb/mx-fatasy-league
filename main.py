@@ -5505,6 +5505,11 @@ def test_countdown():
         print(f"Error in test countdown: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/test_countdown_page")
+def test_countdown_page():
+    """Test countdown page with scenario buttons"""
+    return render_template('test_countdown.html')
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
