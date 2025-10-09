@@ -5086,6 +5086,41 @@ def add_bulletin_reaction(post_id):
         print(f"Error handling bulletin reaction: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/fix_bulletin_columns")
+def fix_bulletin_columns():
+    """Fix missing columns in bulletin_posts table"""
+    if session.get('username') != 'test':
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Add missing columns to bulletin_posts table
+        db.engine.execute("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS category VARCHAR(20) DEFAULT 'general'")
+        db.engine.execute("ALTER TABLE bulletin_posts ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES bulletin_posts(id)")
+        
+        # Create bulletin_reactions table if it doesn't exist
+        db.engine.execute("""
+            CREATE TABLE IF NOT EXISTS bulletin_reactions (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES bulletin_posts(id),
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                emoji VARCHAR(10) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(post_id, user_id, emoji)
+            )
+        """)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Bulletin board columns fixed!",
+            "added_columns": ["category", "parent_id"],
+            "created_table": "bulletin_reactions"
+        })
+        
+    except Exception as e:
+        print(f"Error fixing bulletin columns: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
