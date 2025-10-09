@@ -565,7 +565,8 @@ def index():
             race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
             
             # Check if picks are locked (2 hours before race)
-            time_to_deadline = race_datetime_utc - timedelta(hours=2) - datetime.utcnow()
+            current_time = get_current_time()
+            time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
             picks_locked = time_to_deadline.total_seconds() <= 0
             
             print(f"DEBUG: Looking for picks for user {uid}, competition {upcoming_race.id}")
@@ -5300,7 +5301,7 @@ def race_countdown():
     """Get countdown data for next race"""
     try:
         # Get current time (or simulated time for testing)
-        current_time = datetime.utcnow()
+        current_time = get_current_time()
         
         # Get next upcoming race
         next_race = (
@@ -5544,6 +5545,57 @@ def test_countdown():
 def test_countdown_page():
     """Test countdown page with scenario buttons"""
     return render_template('test_countdown.html')
+
+@app.route("/set_simulated_time")
+def set_simulated_time():
+    """Set simulated time for testing - affects entire application"""
+    try:
+        scenario = request.args.get('scenario', 'race_in_3h')
+        
+        # Store simulated time in session
+        if scenario == 'reset':
+            session.pop('simulated_time', None)
+            session.pop('simulation_active', None)
+            return jsonify({"message": "Simulated time reset to real time", "scenario": "reset"})
+        
+        # Create fake race date for testing
+        fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
+        fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
+        
+        # Calculate simulated time based on scenario
+        if scenario == 'race_in_3h':
+            simulated_time = fake_race_datetime_utc - timedelta(hours=3)
+        elif scenario == 'race_in_1h':
+            simulated_time = fake_race_datetime_utc - timedelta(hours=1)
+        elif scenario == 'race_in_30m':
+            simulated_time = fake_race_datetime_utc - timedelta(minutes=30)
+        elif scenario == 'race_tomorrow':
+            simulated_time = fake_race_datetime_utc - timedelta(days=1)
+        else:
+            return jsonify({"error": "Invalid scenario"}), 400
+        
+        # Store in session
+        session['simulated_time'] = simulated_time.isoformat()
+        session['simulation_active'] = True
+        
+        return jsonify({
+            "message": f"Simulated time set for scenario: {scenario}",
+            "simulated_time": simulated_time.isoformat(),
+            "scenario": scenario
+        })
+        
+    except Exception as e:
+        print(f"Error setting simulated time: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def get_current_time():
+    """Get current time - either real or simulated"""
+    if session.get('simulation_active') and session.get('simulated_time'):
+        try:
+            return datetime.fromisoformat(session['simulated_time'])
+        except:
+            pass
+    return datetime.utcnow()
 
 if __name__ == "__main__":
     # Production vs Development configuration

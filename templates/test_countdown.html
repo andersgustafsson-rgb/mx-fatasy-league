@@ -118,6 +118,18 @@
           clearInterval(countdownInterval);
         }
 
+        // Set simulated time for entire application
+        const setTimeResponse = await fetch(`/set_simulated_time?scenario=${scenario}`);
+        const setTimeData = await setTimeResponse.json();
+        
+        if (setTimeData.error) {
+          document.getElementById('countdown-race-name').textContent = 'Fel: ' + setTimeData.error;
+          return;
+        }
+
+        // Show confirmation
+        document.getElementById('countdown-race-name').textContent = `✅ Simulerad tid aktiverad: ${scenario}`;
+
         // Fetch test data
         const response = await fetch(`/test_countdown?scenario=${scenario}`);
         const data = await response.json();
@@ -248,6 +260,18 @@
         if (countdownInterval) {
           clearInterval(countdownInterval);
         }
+
+        // Reset simulated time
+        const resetResponse = await fetch('/set_simulated_time?scenario=reset');
+        const resetData = await resetResponse.json();
+        
+        if (resetData.error) {
+          document.getElementById('countdown-race-name').textContent = 'Fel: ' + resetData.error;
+          return;
+        }
+
+        // Show confirmation
+        document.getElementById('countdown-race-name').textContent = '✅ Återställt till riktig tid';
 
         // Fetch real countdown data
         const response = await fetch('/race_countdown');
