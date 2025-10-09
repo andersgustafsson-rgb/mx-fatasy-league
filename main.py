@@ -4331,6 +4331,47 @@ def force_recreate_data():
         <p><a href="/admin">Go to Admin</a></p>
         """
 
+@app.get("/debug_riders")
+def debug_riders():
+    """Debug riders in database"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        all_riders = Rider.query.all()
+        riders_450 = [r for r in all_riders if r.class_name == '450cc']
+        riders_250 = [r for r in all_riders if r.class_name == '250cc']
+        
+        result = f"""
+        <h1>Riders Debug</h1>
+        <p><strong>Total riders:</strong> {len(all_riders)}</p>
+        <p><strong>450cc riders:</strong> {len(riders_450)}</p>
+        <p><strong>250cc riders:</strong> {len(riders_250)}</p>
+        
+        <h2>450cc Riders (first 10):</h2>
+        <ul>
+        """
+        
+        for rider in riders_450[:10]:
+            result += f"<li>{rider.name} (#{rider.rider_number}) - {rider.bike_brand} - ${rider.price}</li>"
+        
+        result += "</ul>"
+        
+        result += """
+        <h2>250cc Riders (first 10):</h2>
+        <ul>
+        """
+        
+        for rider in riders_250[:10]:
+            result += f"<li>{rider.name} (#{rider.rider_number}) - {rider.bike_brand} - ${rider.price} - {rider.coast_250}</li>"
+        
+        result += "</ul>"
+        
+        return result
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
 @app.get("/debug_database")
 def debug_database():
     """Debug database configuration and status"""
