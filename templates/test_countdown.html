@@ -70,6 +70,11 @@
             📅 Race imorgon<br><small>Picks öppna</small>
           </button>
         </div>
+        <div class="mt-4 text-center">
+          <button onclick="resetToRealTime()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded shadow">
+            🔄 Återställ till riktig tid
+          </button>
+        </div>
       </div>
 
       <!-- Countdown Widget -->
@@ -204,11 +209,84 @@
           
           if (!data.error) {
             updateCountdowns(data);
+            console.log('Countdown updated:', data.countdown);
           }
         } catch (error) {
           console.error('Countdown update error:', error);
         }
       }, 1000);
+    }
+    
+    // Test function to manually update countdown
+    function testCountdownUpdate() {
+      const testData = {
+        countdown: {
+          race_start: {
+            days: 7,
+            hours: 3,
+            minutes: 0,
+            seconds: 0,
+            total_seconds: 615600
+          },
+          pick_deadline: {
+            days: 7,
+            hours: 1,
+            minutes: 0,
+            seconds: 0,
+            total_seconds: 608400
+          }
+        }
+      };
+      
+      console.log('Testing countdown update with:', testData);
+      updateCountdowns(testData);
+    }
+    
+    async function resetToRealTime() {
+      try {
+        // Clear existing interval
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+        }
+
+        // Fetch real countdown data
+        const response = await fetch('/race_countdown');
+        const data = await response.json();
+        
+        if (data.error) {
+          document.getElementById('countdown-race-name').textContent = 'Fel: ' + data.error;
+          document.getElementById('debug-info').textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+        
+        // Update countdown widget
+        document.getElementById('countdown-race-name').textContent = data.next_race.name;
+        
+        // Update countdowns
+        updateCountdowns(data);
+        
+        // Update picks status
+        const lockedStatus = document.getElementById('picks-locked-status');
+        const openStatus = document.getElementById('picks-open-status');
+        
+        if (data.picks_locked) {
+          lockedStatus.classList.remove('hidden');
+          openStatus.classList.add('hidden');
+        } else {
+          lockedStatus.classList.add('hidden');
+          openStatus.classList.remove('hidden');
+        }
+        
+        // Update debug info
+        document.getElementById('debug-info').textContent = JSON.stringify(data, null, 2);
+        
+        console.log('Reset to real time:', data);
+        
+      } catch (error) {
+        console.error('Error resetting to real time:', error);
+        document.getElementById('countdown-race-name').textContent = 'Fel vid återställning';
+        document.getElementById('debug-info').textContent = 'Error: ' + error.message;
+      }
     }
     
     // Clean up on page unload

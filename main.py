@@ -5397,12 +5397,16 @@ def test_countdown():
         utc_offset = timezone_offsets.get(timezone, -8)
         race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
-        # Simulate different times for testing based on the actual race time
+        # Simulate different times for testing - create a fake race that's closer
+        # Use a fake race date that's closer to now for testing
+        fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
+        fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
+        
         test_scenarios = {
-            "race_in_3h": race_datetime_utc - timedelta(hours=3),  # 3 hours before race
-            "race_in_1h": race_datetime_utc - timedelta(hours=1),  # 1 hour before race (picks locked)
-            "race_in_30m": race_datetime_utc - timedelta(minutes=30),  # 30 minutes before race
-            "race_tomorrow": race_datetime_utc - timedelta(days=1),  # 1 day before race
+            "race_in_3h": fake_race_datetime_utc - timedelta(hours=3),  # 3 hours before fake race
+            "race_in_1h": fake_race_datetime_utc - timedelta(hours=1),  # 1 hour before fake race (picks locked)
+            "race_in_30m": fake_race_datetime_utc - timedelta(minutes=30),  # 30 minutes before fake race
+            "race_tomorrow": fake_race_datetime_utc - timedelta(days=1),  # 1 day before fake race
         }
         
         # Get the scenario from query parameter
@@ -5465,19 +5469,19 @@ def test_countdown():
         race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
         # Calculate time differences using simulated time
-        time_to_race = race_datetime_utc - simulated_time
-        time_to_deadline = race_datetime_utc - timedelta(hours=2) - simulated_time
+        time_to_race = fake_race_datetime_utc - simulated_time
+        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - simulated_time
         
         # Check if picks are locked (2 hours before race)
         picks_locked = time_to_deadline.total_seconds() <= 0
         
         return jsonify({
             "next_race": {
-                "name": next_race.name,
-                "date": next_race.event_date.isoformat(),
-                "timezone": timezone,
-                "local_time": race_time_str,
-                "utc_time": race_datetime_utc.isoformat()
+                "name": f"Test Race ({scenario})",
+                "date": fake_race_date.date().isoformat(),
+                "timezone": "UTC",
+                "local_time": "20:00",
+                "utc_time": fake_race_datetime_utc.isoformat()
             },
             "countdown": {
                 "race_start": {
