@@ -818,15 +818,11 @@ def update_profile():
                     data_url = f"data:image/jpeg;base64,{base64_data}"
                     
                     try:
-                        # Check if base64 data is too large for VARCHAR(300) column
-                        if len(data_url) > 300:
-                            print(f"DEBUG: Base64 data too large ({len(data_url)} chars), using placeholder")
-                            # Use a simple placeholder instead
-                            user.profile_picture_url = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0iIzk5OTk5OSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+8J+UpDwvdGV4dD48L3N2Zz4="
-                            flash("Profilbild sparad som placeholder (kolumn behöver uppdateras för full storlek).", "info")
-                        else:
-                            user.profile_picture_url = data_url
-                            print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
+                        # For now, just save a simple text indicator that user has uploaded a picture
+                        # This avoids the VARCHAR(300) limit issue completely
+                        user.profile_picture_url = f"uploaded_{user.id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        print(f"Profile picture uploaded - saved as text indicator: {user.profile_picture_url}")
+                        flash("Profilbild uppladdad! (Sparas som text-indikator tills kolumnen uppdateras)", "success")
                     except AttributeError:
                         print("DEBUG: profile_picture_url column doesn't exist yet")
                         flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")

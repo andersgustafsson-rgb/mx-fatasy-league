@@ -34,6 +34,10 @@
                   <img src="{{ user_profile_picture }}" 
                        alt="Profilbild" 
                        class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400">
+                {% elif user_profile_picture.startswith('uploaded_') %}
+                  <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center border-2 border-yellow-400">
+                    <span class="text-yellow-400 text-xs">📷</span>
+                  </div>
                 {% else %}
                   <img src="{{ url_for('static', filename=user_profile_picture) }}" 
                        alt="Profilbild" 

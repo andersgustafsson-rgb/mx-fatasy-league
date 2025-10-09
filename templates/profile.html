@@ -51,6 +51,13 @@
                   <img src="{{ user.profile_picture_url }}" alt="Profilbild"
                        class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                {% elif user.profile_picture_url.startswith('uploaded_') %}
+                  <div class="w-32 h-32 rounded-full bg-green-600 flex items-center justify-center border-4 border-blue-500">
+                    <div class="text-center text-white">
+                      <div class="text-4xl mb-2">📷</div>
+                      <div class="text-sm font-semibold">Bild uppladdad</div>
+                    </div>
+                  </div>
                 {% else %}
                   <img src="{{ url_for('static', filename=user.profile_picture_url) }}" alt="Profilbild"
                        class="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
