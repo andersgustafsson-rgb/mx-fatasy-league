@@ -291,8 +291,8 @@
                 this.score = 0;
                 this.highScore = localStorage.getItem('crossDinoHighScore') || 0;
                 this.gameSpeed = 2;
-                this.gravity = 0.6;
-                this.jumpPower = -12;
+                this.gravity = 0.8;
+                this.jumpPower = -16;
                 
                 // Cross (player) - initialize with default values first
                 this.cross = {
@@ -310,9 +310,7 @@
                 this.obstacleTimer = 0;
                 this.obstacleInterval = 120; // frames between obstacles
                 
-                // Clouds for background
-                this.clouds = [];
-                this.initClouds();
+                // No clouds needed with white background
                 
                 // Input handling
                 this.keys = {};
@@ -348,16 +346,6 @@
                 }
             }
             
-            initClouds() {
-                for (let i = 0; i < 5; i++) {
-                    this.clouds.push({
-                        x: Math.random() * this.width,
-                        y: Math.random() * 150 + 50,
-                        size: Math.random() * 30 + 20,
-                        speed: Math.random() * 0.5 + 0.2
-                    });
-                }
-            }
             
             setupInput() {
                 document.addEventListener('keydown', (e) => {
@@ -519,14 +507,6 @@
                     }
                 }
                 
-                // Update clouds
-                this.clouds.forEach(cloud => {
-                    cloud.x -= cloud.speed;
-                    if (cloud.x + cloud.size < 0) {
-                        cloud.x = this.width + cloud.size;
-                        cloud.y = Math.random() * 150 + 50;
-                    }
-                });
                 
                 // Increase game speed
                 if (this.score > 0 && this.score % 100 === 0) {
@@ -573,24 +553,9 @@
             }
             
             draw() {
-                // Clear canvas
-                this.ctx.clearRect(0, 0, this.width, this.height);
-                
-                // Draw background gradient
-                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
-                gradient.addColorStop(0, '#87CEEB');
-                gradient.addColorStop(0.7, '#98FB98');
-                gradient.addColorStop(1, '#8FBC8F');
-                this.ctx.fillStyle = gradient;
+                // Clear canvas with white background
+                this.ctx.fillStyle = '#FFFFFF';
                 this.ctx.fillRect(0, 0, this.width, this.height);
-                
-                // Draw clouds
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                this.clouds.forEach(cloud => {
-                    this.ctx.beginPath();
-                    this.ctx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                });
                 
                 // Draw ground
                 this.ctx.fillStyle = '#8FBC8F';
@@ -602,27 +567,86 @@
                 this.ctx.lineTo(this.width, this.height - 20);
                 this.ctx.stroke();
                 
-                // Draw cross (player)
-                this.ctx.fillStyle = '#FF6B6B';
+                // Draw animated cross (player)
+                this.ctx.save();
+                
+                // Add bounce animation when jumping
+                let bounceOffset = 0;
+                if (this.cross.isJumping) {
+                    bounceOffset = Math.sin(Date.now() * 0.01) * 2;
+                }
+                
+                // Draw cross body with gradient
+                const crossGradient = this.ctx.createRadialGradient(
+                    this.cross.x + this.cross.width/2, 
+                    this.cross.y + this.cross.height/2, 
+                    0,
+                    this.cross.x + this.cross.width/2, 
+                    this.cross.y + this.cross.height/2, 
+                    this.cross.width/2
+                );
+                crossGradient.addColorStop(0, '#FF6B6B');
+                crossGradient.addColorStop(1, '#CC5555');
+                
+                this.ctx.fillStyle = crossGradient;
                 this.ctx.beginPath();
-                this.ctx.arc(this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2, this.cross.width/2, 0, Math.PI * 2);
+                this.ctx.arc(
+                    this.cross.x + this.cross.width/2, 
+                    this.cross.y + this.cross.height/2 + bounceOffset, 
+                    this.cross.width/2, 
+                    0, 
+                    Math.PI * 2
+                );
                 this.ctx.fill();
                 
-                // Draw cross motorcycle
+                // Add shadow
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                this.ctx.beginPath();
+                this.ctx.arc(
+                    this.cross.x + this.cross.width/2 + 2, 
+                    this.cross.y + this.cross.height/2 + bounceOffset + 2, 
+                    this.cross.width/2, 
+                    0, 
+                    Math.PI * 2
+                );
+                this.ctx.fill();
+                
+                // Draw cross motorcycle with rotation animation
+                this.ctx.translate(
+                    this.cross.x + this.cross.width/2, 
+                    this.cross.y + this.cross.height/2 + bounceOffset
+                );
+                
+                // Rotate wheels when moving
+                if (this.gameRunning) {
+                    this.ctx.rotate(Date.now() * 0.01);
+                }
+                
                 this.ctx.fillStyle = 'white';
                 this.ctx.font = 'bold 20px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('🏍️', this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2 + 7);
+                this.ctx.fillText('🏍️', 0, 7);
                 
-                // Draw obstacles (gupp)
-                this.ctx.fillStyle = '#8B4513';
+                this.ctx.restore();
+                
+                // Draw obstacles (triangular gupp)
                 this.obstacles.forEach(obstacle => {
-                    this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                    this.ctx.fillStyle = '#8B4513';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+                    this.ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y);
+                    this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                    this.ctx.closePath();
+                    this.ctx.fill();
                     
                     // Add some texture to obstacles
                     this.ctx.fillStyle = '#A0522D';
-                    this.ctx.fillRect(obstacle.x + 2, obstacle.y + 2, obstacle.width - 4, obstacle.height - 4);
-                    this.ctx.fillStyle = '#8B4513';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(obstacle.x + 2, obstacle.y + obstacle.height - 2);
+                    this.ctx.lineTo(obstacle.x + obstacle.width / 2, obstacle.y + 2);
+                    this.ctx.lineTo(obstacle.x + obstacle.width - 2, obstacle.y + obstacle.height - 2);
+                    this.ctx.closePath();
+                    this.ctx.fill();
                 });
                 
                 // Draw pause overlay
