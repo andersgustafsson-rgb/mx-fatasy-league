@@ -498,9 +498,20 @@ def index():
             print(f"Error getting team riders: {e}")
             team_riders = []
 
+    # Get user profile picture
+    user_profile_picture = None
+    try:
+        user = User.query.get(uid)
+        if user and hasattr(user, 'profile_picture_url') and user.profile_picture_url:
+            user_profile_picture = user.profile_picture_url
+    except Exception as e:
+        print(f"Error getting user profile picture: {e}")
+        user_profile_picture = None
+
     return render_template(
         "index.html",
         username=session["username"],
+        user_profile_picture=user_profile_picture,
         upcoming_race=upcoming_race,
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team,
