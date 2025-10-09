@@ -2819,27 +2819,45 @@ def import_all_2025_riders_fixed():
                             name_part = parts[1]
                             points = int(parts[-1]) if parts[-1].isdigit() else 0
                             
-                            # Clean up name (remove duplicates) - IMPROVED VERSION
-                            name = name_part
-                            if len(name) > 20:  # Likely has duplicate name
-                                # Find the middle point and split
+                            # Clean up name (remove duplicates) - SUPER IMPROVED VERSION
+                            name = name_part.strip()
+                            
+                            # Method 1: Check for exact duplicate patterns like "Drew AdamsDrew Adams"
+                            if len(name) > 15:  # Likely has duplicate name
+                                # Find the middle point and look for capital letters
                                 mid = len(name) // 2
-                                for i in range(mid-5, mid+5):
-                                    if i < len(name) and name[i].isupper():
-                                        name = name[:i]
-                                        break
+                                for i in range(mid-3, mid+3):
+                                    if i < len(name) and name[i].isupper() and i > 0:
+                                        # Check if this looks like a duplicate
+                                        first_part = name[:i]
+                                        second_part = name[i:]
+                                        if first_part == second_part:
+                                            name = first_part
+                                            break
+                                        # Also check if second part starts with first part
+                                        elif second_part.startswith(first_part):
+                                            name = first_part
+                                            break
                             
-                            # Additional cleanup for common patterns
-                            if name.endswith(name[:len(name)//2]):
-                                name = name[:len(name)//2]
-                            
-                            # Remove any remaining duplicates at the end
+                            # Method 2: Check for word-level duplicates
                             words = name.split()
-                            if len(words) >= 2:
-                                first_half = ' '.join(words[:len(words)//2])
-                                second_half = ' '.join(words[len(words)//2:])
+                            if len(words) >= 4:  # At least 4 words suggests duplication
+                                mid = len(words) // 2
+                                first_half = words[:mid]
+                                second_half = words[mid:]
                                 if first_half == second_half:
-                                    name = first_half
+                                    name = ' '.join(first_half)
+                            
+                            # Method 3: Remove any remaining obvious duplicates
+                            if ' ' in name:
+                                parts = name.split(' ')
+                                if len(parts) >= 2:
+                                    # Check if first two words repeat
+                                    if len(parts) >= 4 and parts[0] == parts[2] and parts[1] == parts[3]:
+                                        name = f"{parts[0]} {parts[1]}"
+                                    # Check if the name is just repeated
+                                    elif len(parts) == 2 and parts[0] == parts[1]:
+                                        name = parts[0]
                             
                             riders_data[current_class][name] = {
                                 'position': position,

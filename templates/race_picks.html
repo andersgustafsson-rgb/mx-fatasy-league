@@ -252,14 +252,19 @@
       }
     });
 
-    // 2) Håll övriga regler (unika val per klass) + OUT alltid disabled
+    // 2) Hämta alla valda riders i denna klass
     const chosenRiderIds = Array.from(selects)
       .map((s) => s.value)
       .filter(Boolean);
 
+    // 3) Uppdatera varje dropdown - TA BORT valda riders helt istället för att bara disablea
     selects.forEach((sel) => {
+      const currentValue = sel.value;
+      const optionsToRemove = [];
+      
       for (const opt of sel.options) {
         if (!opt.value) continue;
+        
         const isChosenElsewhere =
           chosenRiderIds.includes(opt.value) && sel.value !== opt.value;
         const isOut = OUT_IDS.includes(Number(opt.value));
@@ -274,8 +279,18 @@
           }
         }
         
-        opt.disabled = isChosenElsewhere || isOut || isWrongCoast;
+        // Ta bort option helt om den är vald någon annanstans, OUT, eller fel coast
+        if (isChosenElsewhere || isOut || isWrongCoast) {
+          optionsToRemove.push(opt);
+        }
       }
+      
+      // Ta bort options som inte ska visas
+      optionsToRemove.forEach(opt => {
+        if (opt.value !== currentValue) { // Behåll den som är vald
+          opt.remove();
+        }
+      });
     });
   }
 
@@ -283,14 +298,29 @@
   function updateHoleshotDropdowns() {
     const holeshot250 = document.getElementById('holeshot-250');
     if (holeshot250 && competitionCoast && competitionCoast !== "both") {
+      const currentValue = holeshot250.value;
+      const optionsToRemove = [];
+      
       for (const opt of holeshot250.options) {
         if (!opt.value) continue;
         const rider = allRiders.find(r => String(r.id) === String(opt.value));
         if (rider && rider.class === "250cc") {
           const isWrongCoast = rider.coast_250 && rider.coast_250 !== competitionCoast && rider.coast_250 !== "both";
-          opt.disabled = isWrongCoast || OUT_IDS.includes(Number(opt.value));
+          const isOut = OUT_IDS.includes(Number(opt.value));
+          
+          // Ta bort option helt om den har fel coast eller är OUT
+          if (isWrongCoast || isOut) {
+            optionsToRemove.push(opt);
+          }
         }
       }
+      
+      // Ta bort options som inte ska visas
+      optionsToRemove.forEach(opt => {
+        if (opt.value !== currentValue) { // Behåll den som är vald
+          opt.remove();
+        }
+      });
     }
   }
 
