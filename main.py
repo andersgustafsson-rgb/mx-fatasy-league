@@ -607,32 +607,56 @@ def profile_page():
             return redirect(url_for("index"))
     except Exception as e:
         print(f"DEBUG: Error loading user profile (likely missing columns): {e}")
-        # If error, try to get user with basic query
+        # Try to add missing columns automatically
         try:
-            user = db.session.execute(
-                db.text("SELECT id, username, password_hash FROM users WHERE id = :user_id"),
-                {"user_id": session["user_id"]}
-            ).fetchone()
+            print("DEBUG: Attempting to add missing profile columns...")
+            columns_to_add = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+            ]
+            
+            for sql in columns_to_add:
+                db.session.execute(db.text(sql))
+            db.session.commit()
+            print("DEBUG: Successfully added profile columns")
+            
+            # Now try to get user again
+            user = User.query.get(session["user_id"])
             if not user:
                 flash("Användare hittades inte.", "error")
                 return redirect(url_for("index"))
-            # Create a simple user object
-            class SimpleUser:
-                def __init__(self, id, username, password_hash):
-                    self.id = id
-                    self.username = username
-                    self.password_hash = password_hash
-                    self.display_name = None
-                    self.profile_picture_url = None
-                    self.bio = None
-                    self.favorite_rider = None
-                    self.favorite_team = None
-                    self.created_at = None
-            user = SimpleUser(user.id, user.username, user.password_hash)
         except Exception as e2:
-            print(f"DEBUG: Error with basic user query: {e2}")
-            flash("Databasen behöver uppdateras. Kontakta admin.", "error")
-            return redirect(url_for("index"))
+            print(f"DEBUG: Error adding columns or loading user: {e2}")
+            # If error, try to get user with basic query
+            try:
+                user = db.session.execute(
+                    db.text("SELECT id, username, password_hash FROM users WHERE id = :user_id"),
+                    {"user_id": session["user_id"]}
+                ).fetchone()
+                if not user:
+                    flash("Användare hittades inte.", "error")
+                    return redirect(url_for("index"))
+                # Create a simple user object
+                class SimpleUser:
+                    def __init__(self, id, username, password_hash):
+                        self.id = id
+                        self.username = username
+                        self.password_hash = password_hash
+                        self.display_name = None
+                        self.profile_picture_url = None
+                        self.bio = None
+                        self.favorite_rider = None
+                        self.favorite_team = None
+                        self.created_at = None
+                user = SimpleUser(user.id, user.username, user.password_hash)
+            except Exception as e3:
+                print(f"DEBUG: Error with basic user query: {e3}")
+                flash("Databasen behöver uppdateras. Kontakta admin.", "error")
+                return redirect(url_for("index"))
     
     # Hämta säsongsteam
     season_team = SeasonTeam.query.filter_by(user_id=user.id).first()
@@ -2349,8 +2373,9 @@ def fix_league_images():
 @app.get("/add_profile_columns")
 def add_profile_columns():
     """Add missing profile columns to users table"""
-    if session.get("username") != "test":
-        return jsonify({"error": "admin_only"}), 403
+    # Allow any logged-in user to add columns (needed for profile page)
+    if "user_id" not in session:
+        return jsonify({"error": "login_required"}), 401
     
     print("DEBUG: add_profile_columns called")
     
