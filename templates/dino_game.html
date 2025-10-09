@@ -248,8 +248,8 @@
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         
         <div id="startScreen">
-            <h2>🏁 Cross Dino 🏁</h2>
-            <p>Hoppa över guppen med din cross!</p>
+            <h2>🏍️ Cross Dino 🏍️</h2>
+            <p>Hoppa över guppen med din cross-motorcykel!</p>
             <div class="instructions">
                 <strong>Kontroller:</strong><br>
                 <span class="desktop-only">SPACE eller ↑ för att hoppa<br>
@@ -385,13 +385,20 @@
                 if (jumpButton) {
                     jumpButton.addEventListener('touchstart', (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if (this.gameRunning && !this.gamePaused) {
                             this.jump();
                         }
                     });
                     
+                    jumpButton.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    
                     jumpButton.addEventListener('click', (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         if (this.gameRunning && !this.gamePaused) {
                             this.jump();
                         }
@@ -401,11 +408,18 @@
                 if (pauseButton) {
                     pauseButton.addEventListener('touchstart', (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.togglePause();
+                    });
+                    
+                    pauseButton.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                     });
                     
                     pauseButton.addEventListener('click', (e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.togglePause();
                     });
                 }
@@ -413,13 +427,20 @@
                 // Also allow tapping anywhere on the game area to jump
                 this.canvas.addEventListener('touchstart', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     if (this.gameRunning && !this.gamePaused) {
                         this.jump();
                     }
                 });
                 
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
                 this.canvas.addEventListener('click', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     if (this.gameRunning && !this.gamePaused) {
                         this.jump();
                     }
@@ -511,8 +532,8 @@
             }
             
             addObstacle() {
-                const height = Math.random() * 30 + 20;
-                const width = Math.random() * 20 + 15;
+                const height = Math.random() * 40 + 50; // Higher obstacles (50-90px)
+                const width = Math.random() * 25 + 20; // Wider obstacles
                 
                 this.obstacles.push({
                     x: this.width,
@@ -583,11 +604,11 @@
                 this.ctx.arc(this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2, this.cross.width/2, 0, Math.PI * 2);
                 this.ctx.fill();
                 
-                // Draw cross symbol
+                // Draw cross motorcycle
                 this.ctx.fillStyle = 'white';
                 this.ctx.font = 'bold 20px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('🏁', this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2 + 7);
+                this.ctx.fillText('🏍️', this.cross.x + this.cross.width/2, this.cross.y + this.cross.height/2 + 7);
                 
                 // Draw obstacles (gupp)
                 this.ctx.fillStyle = '#8B4513';
@@ -639,6 +660,13 @@
         // Initialize game when page loads
         window.addEventListener('load', () => {
             game = new CrossDinoGame();
+        });
+        
+        // Also initialize on DOMContentLoaded for better mobile compatibility
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!game) {
+                game = new CrossDinoGame();
+            }
         });
     </script>
 </body>
