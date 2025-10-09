@@ -5369,20 +5369,47 @@ def race_countdown():
 def test_countdown():
     """Test countdown with simulated time - for development only"""
     try:
-        # Simulate different times for testing
-        # You can change this to test different scenarios
+        # Get the next race first to base our test scenarios on
+        next_race_date = (
+            Competition.query
+            .filter(Competition.event_date >= datetime.utcnow().date())
+            .order_by(Competition.event_date)
+            .first()
+        )
+        
+        if not next_race_date:
+            return jsonify({"error": "No upcoming races found for testing"})
+        
+        # Create race datetime for testing (8pm local time)
+        race_date = next_race_date.event_date
+        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=20, minute=0))
+        
+        # Convert to UTC for testing
+        timezone_offsets = {
+            'America/Los_Angeles': -8,  # PST
+            'America/Denver': -7,       # MST  
+            'America/Phoenix': -7,      # MST (no DST)
+            'America/Chicago': -6,      # CST
+            'America/New_York': -5      # EST
+        }
+        
+        timezone = getattr(next_race_date, 'timezone', 'America/Los_Angeles')
+        utc_offset = timezone_offsets.get(timezone, -8)
+        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        # Simulate different times for testing based on the actual race time
         test_scenarios = {
-            "race_in_3h": datetime.utcnow() + timedelta(hours=3),  # Race in 3 hours
-            "race_in_1h": datetime.utcnow() + timedelta(hours=1),  # Race in 1 hour (picks locked)
-            "race_in_30m": datetime.utcnow() + timedelta(minutes=30),  # Race in 30 minutes
-            "race_tomorrow": datetime.utcnow() + timedelta(days=1),  # Race tomorrow
+            "race_in_3h": race_datetime_utc - timedelta(hours=3),  # 3 hours before race
+            "race_in_1h": race_datetime_utc - timedelta(hours=1),  # 1 hour before race (picks locked)
+            "race_in_30m": race_datetime_utc - timedelta(minutes=30),  # 30 minutes before race
+            "race_tomorrow": race_datetime_utc - timedelta(days=1),  # 1 day before race
         }
         
         # Get the scenario from query parameter
         scenario = request.args.get('scenario', 'race_in_3h')
         simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
         
-        # Get next upcoming race
+        # Get next upcoming race (use simulated time for testing)
         next_race = (
             Competition.query
             .filter(Competition.event_date >= simulated_time.date())
