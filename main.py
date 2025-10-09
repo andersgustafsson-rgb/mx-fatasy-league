@@ -2401,10 +2401,46 @@ def add_profile_columns():
         return jsonify({"error": "login_required"}), 401
     
     print("DEBUG: add_profile_columns called")
+
+@app.get("/fix_profile_columns")
+def fix_profile_columns():
+    """Fix profile columns - no login required for debugging"""
+    print("DEBUG: fix_profile_columns called")
     
     try:
         # Rollback any existing transaction first
         db.session.rollback()
+        
+        # Add missing columns to users table
+        columns_to_add = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url VARCHAR(300);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_rider VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS favorite_team VARCHAR(100);",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;"
+        ]
+        
+        for sql in columns_to_add:
+            try:
+                db.session.execute(db.text(sql))
+                print(f"DEBUG: Executed: {sql}")
+            except Exception as e:
+                print(f"DEBUG: Error executing {sql}: {e}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Profile columns added successfully",
+            "columns_added": len(columns_to_add)
+        })
+    except Exception as e:
+        print(f"DEBUG: Error adding profile columns: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
         
         # Add missing columns to users table
         columns_to_add = [
