@@ -1,0 +1,129 @@
+250 west
+
+1	Haiden DeeganHaiden Deegan	Temecula, CAUnited States	221
+2	Julien BeaumerJulien Beaumer	Lake Havasu City, AZUnited States	189
+3	Cole DaviesCole Davies	Waitoki, New ZealandNew Zealand	171
+4	Jo ShimodaJo Shimoda	Suzuka, JapanJapan	163
+5	Garrett MarchbanksGarrett Marchbanks	Coalville, UTUnited States	145
+6	Coty SchockCoty Schock	Dover, DEUnited States	139
+7	Michael MosimanMichael Mosiman	Sebastopol, CAUnited States	131
+8	Jordon SmithJordon Smith	Belmont, NCUnited States	126
+9	Hunter YoderHunter Yoder	Menifee, CAUnited States	78
+10	Lux TurnerLux Turner	Gardnerville, NVUnited States	71
+11	Cole ThompsonCole Thompson	Brigden, ONCanada	58
+12	Enzo LopesEnzo Lopes	Rio Grande do Sul, BrazilBrazil	57
+13	Parker RossParker Ross	Herald, CAUnited States	57
+14	Anthony BourdonAnthony Bourdon	Hossegor, FranceFrance	54
+15	Gavin TowersGavin Towers	Venetia, PAUnited States	46
+16	Dylan WalshDylan Walsh	Wildomar, United KingdomUnited Kingdom	41
+17	Drew AdamsDrew Adams	Chattanooga, TNUnited States	40
+18	TJ AlbrightTJ Albright	Mt Marion, NYUnited States	36
+19	Ryder DiFrancescoRyder DiFrancesco	Bakersfield, CAUnited States	35
+20	Jett ReynoldsJett Reynolds	Bakersfield, CAUnited States	34
+21	Avery LongAvery Long	New London, MNUnited States	29
+22	Brad WestBrad West	Menifee, CAUnited States	17
+23	Joshua VarizeJoshua Varize	Perris, CAUnited States	14
+24	Derek KelleyDerek Kelley	Riverside, CAUnited States	13
+25	Dominique ThuryDominique Thury	Schneeberg, GermanyGermany	12
+26	Marshal WeltinMarshal Weltin	Ubly, MIUnited States	9
+27	Max MillerMax Miller	Springfield, ORUnited States	8
+28	Dilan SchwartzDilan Schwartz	Alpine, CAUnited States	7
+29	Robbie WagemanRobbie Wageman	Newhall, CAUnited States	7
+30	Nico KochNico Koch	GermanyGermany	5
+31	Noah VineyNoah Viney	Murrieta, CAUnited States	4
+32	Stav OrlandStav Orland	Kampala, UgandaUganda	4
+33	Stilez RobertsonStilez Robertson	Bakersfield, CAUnited States	2
+34	Collin JurinCollin Jurin	Kirkland, WAUnited States	2
+35	Ty MasterpoolTy Masterpool	Paradise, TXUnited States	1
+36	Preston MasciangeloPreston Masciangelo	Brantford, ONCanada	1
+37	Billy LaninovichBilly Laninovich	Temecula, CAUnited States	1
+38	Anton NordstromAnton Nordstrom	Göteborg, SwedenSweden	1
+39	CJ BenardCJ Benard	Peoria, AZUnited States	
+
+
+
+250 east
+
+1	Tom VialleTom Vialle	Avignon, FranceFrance	180
+2	Seth HammakerSeth Hammaker	Bainbridge, PAUnited States	177
+3	R.J. HampshireR.J. Hampshire	Hudson, FLUnited States	173
+4	Nate ThrasherNate Thrasher	Livingston, TNUnited States	137
+5	Cullin ParkCullin Park	Clermont, FLUnited States	131
+6	Chance HymasChance Hymas	Pocatello, IDUnited States	130
+7	Max VohlandMax Vohland	Sacramento, CAUnited States	120
+8	Henry MillerHenry Miller	Rochester, MNUnited States	85
+9	Max AnstieMax Anstie	Newbury, England, United KingdomUnited Kingdom	78
+10	Daxton BennickDaxton Bennick	Morganton, NCUnited States	77
+11	Austin ForknerAustin Forkner	Richards, MOUnited States	75
+12	Hardy MunozHardy Munoz	Temuco, ChileChile	58
+13	Carson MumfordCarson Mumford	Simi Valley, CAUnited States	51
+14	Trevor ColipTrevor Colip	Bowling Green, INUnited States	51
+15	Jack ChambersJack Chambers	Auburndale, FLUnited States	48
+16	Lance KobuschLance Kobusch	New Florence, MOUnited States	43
+17	Gage LinvilleGage Linville	Lake Park, GAUnited States	42
+18	Levi KitchenLevi Kitchen	Washougal, WAUnited States	39
+19	Justin RodbellJustin Rodbell	Prince Frederick, MDUnited States	34
+20	Devin SimonsonDevin Simonson	Laurinburg, NCUnited States	30
+21	Izaih ClarkIzaih Clark	Fort Dodge, IAUnited States	29
+22	Luke NeeseLuke Neese	Jamestown, NCUnited States	25
+23	Cameron McAdooCameron McAdoo	Sioux City, IAUnited States	20
+24	Mark FineisMark Fineis	Indianapolis, INUnited States	20
+25	Bryce ShellyBryce Shelly	Telford, PAUnited States	20
+26	Lorenzo LocurcioLorenzo Locurcio	VenezuelaVenezuela	14
+27	Ayden ShiveAyden Shive	Dade City, FLUnited States	13
+28	Michael HicksMichael Hicks	Fenton, MOUnited States	13
+29	Preston TaylorPreston Taylor	Hastings, NEUnited States	12
+30	Chandler BakerChandler Baker	Tulsa, OKUnited States	11
+31	Ricci RandanellaRicci Randanella	Marlton, NJUnited States	10
+32	Crockett MyersCrockett Myers	Navasota, TXUnited States	10
+33	Vincent LuhoveyVincent Luhovey	Greensburg, PAUnited States	9
+34	Hamden HudsonHamden Hudson	Danville, VAUnited States	7
+35	Jack RogersJack Rogers	Brookeville, MDUnited States	7
+36	Lane ShawLane Shaw	Alvin, TXUnited States	6
+37	Dayton BriggsDayton Briggs	Riverside, CAUnited States	5
+38	Coty SchockCoty Schock	Dover, DEUnited States	5
+39	Chase MarquierChase Marquier	Newcastle, OKUnited States	4
+40	Preston BoespflugPreston Boespflug	Battle Ground, WAUnited States	3
+41	Nick RomanoNick Romano	Bayside, NYUnited States	3
+42	Pierce BrownPierce Brown	Sandy, UTUnited States	2
+43	Matti JorgensenMatti Jorgensen	Helirod, DenmarkDenmark	1
+
+450 Point standings
+
+1	Cooper WebbCooper Webb	Newport, NCUnited States	365
+2	Chase SextonChase Sexton	La Moille, ILUnited States	363
+3	Justin CooperJustin Cooper	Cold Spring Harbor, NYUnited States	281
+4	Malcolm StewartMalcolm Stewart	Haines City, FLUnited States	277
+5	Ken RoczenKen Roczen	Mattstedt, GermanyGermany	271
+6	Aaron PlessingerAaron Plessinger	Hamilton, OHUnited States	255
+7	Dylan FerrandisDylan Ferrandis	Avignon, FranceFrance	194
+8	Justin HillJustin Hill	Yoncalla, ORUnited States	194
+9	Shane McElrathShane McElrath	Canton, NCUnited States	192
+10	Justin BarciaJustin Barcia	Monroe, NYUnited States	185
+11	Joey SavatgyJoey Savatgy	Thomasville, GAUnited States	153
+12	Jason AndersonJason Anderson	Edgewood, NMUnited States	151
+13	Mitchell OldenburgMitchell Oldenburg	Alvord, TXUnited States	134
+14	Colt NicholsColt Nichols	Muskogee, OKUnited States	130
+15	Benny BlossBenny Bloss	Oak Grove, MOUnited States	113
+16	Eli TomacEli Tomac	Cortez, COUnited States	80
+17	Kyle ChisholmKyle Chisholm	Clearwater, FLUnited States	78
+18	Jett LawrenceJett Lawrence	Landsborough, AustraliaAustralia	71
+19	Christian CraigChristian Craig	Temecula, CAUnited States	69
+20	Mitchell HarrisonMitchell Harrison	Lansing, MIUnited States	65
+21	Hunter LawrenceHunter Lawrence	Landsborough, AustraliaAustralia	62
+22	Dean WilsonDean Wilson	Scotland, United KingdomUnited Kingdom	57
+23	Fredrik NorenFredrik Noren	Lidköping, SwedenSweden	43
+24	Kevin MoranzKevin Moranz	Topeka, KSUnited States	42
+25	Jerry RobinJerry Robin	Hamel, MNUnited States	39
+26	Justin StarlingJustin Starling	Deland, FLUnited States	22
+27	Grant HarlanGrant Harlan	Justin, TXUnited States	22
+28	Tristan LaneTristan Lane	Deland, FLUnited States	19
+29	Jeremy HandJeremy Hand	Mantua, OHUnited States	19
+30	Jorge PradoJorge Prado	Lugo, SpainSpain	18
+31	Anthony RodriguezAnthony Rodriguez	Caracacus, VenezuelaVenezuela	18
+32	Cade ClasonCade Clason	Arcadia, OHUnited States	15
+33	Vince FrieseVince Friese	Cape Girardeau, MOUnited States	14
+34	Logan LeitzelLogan Leitzel	Dillsburg, PAUnited States	13
+35	Coty SchockCoty Schock	Dover, DEUnited States	8
+36	Theodore PauliTheodore Pauli	Edwardsville, ILUnited States	6
+37	Ryan BreeceRyan Breece	Coeur D' Alene, IDUnited States	3
