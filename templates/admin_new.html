@@ -55,61 +55,92 @@
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <h2 class="text-xl font-semibold text-gray-900 mb-4">🏁 Race Management</h2>
                     
-                    <!-- Simulate Race Section -->
-                    <div class="mb-8">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">Simulera Race</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Välj Race:</label>
-                                <select id="raceSelect" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Välj ett race att simulera...</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <button id="simulateBtn" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    Simulera Race
-                                </button>
-                            </div>
+                    <!-- Simulated Date Section -->
+                    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                        <h3 class="text-lg font-medium text-blue-800 mb-3">📅 Simulerat Datum</h3>
+                        <p class="text-sm text-blue-700 mb-3">
+                            Sätt ett simulerat datum (YYYY-MM-DD) för att styra vilket race som anses vara "nästa/aktuellt".
+                        </p>
+                        
+                        <form action="/admin/set_sim_date" method="POST" class="flex flex-col sm:flex-row gap-3">
+                            <input type="text" name="sim_date" placeholder="2026-01-17" 
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                Sätt Datum
+                            </button>
+                            <button type="submit" name="sim_date" value="" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                                Rensa
+                            </button>
+                        </form>
+                        
+                        <div class="mt-3 p-2 bg-blue-100 rounded">
+                            <span class="text-sm font-medium text-blue-800">Aktuellt simulerat datum: </span>
+                            <span id="current-sim-date" class="font-bold text-blue-900">{{ today if today else 'Idag' }}</span>
                         </div>
                     </div>
 
-                    <!-- Race Picks Section -->
-                    <div class="mb-8">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">Race Picks</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">450cc Picks:</label>
-                                <div id="picks450" class="space-y-2">
-                                    <!-- 450cc picks will be populated here -->
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">250cc Picks:</label>
-                                <div id="picks250" class="space-y-2">
-                                    <!-- 250cc picks will be populated here -->
-                                </div>
-                            </div>
+                    <!-- Competition Selection -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">🏆 Välj Tävling</h3>
+                        <div class="flex flex-col sm:flex-row gap-3">
+                            <select id="competition-select" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- Välj tävling --</option>
+                            </select>
+                            <button onclick="simulateForSelected()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                                ⚙️ Simulera
+                            </button>
+                            <button onclick="clearCurrentCompetitionResults()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                                🗑️ Rensa
+                            </button>
+                        </div>
+                        
+                        <div id="selected-competition-info" class="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-r-lg" style="display: none;">
+                            <span class="text-sm font-medium text-green-800">Aktuell tävling: </span>
+                            <span id="selected-competition-name" class="font-bold text-green-900"></span>
                         </div>
                     </div>
 
-                    <!-- Holeshot Picks Section -->
-                    <div class="mb-8">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">Holeshot Picks</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">450cc Holeshot:</label>
-                                <select id="holeshot450" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Välj 450cc holeshot...</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">250cc Holeshot:</label>
-                                <select id="holeshot250" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    <option value="">Välj 250cc holeshot...</option>
-                                </select>
+                    <!-- Results Form -->
+                    <form method="POST" action="/submit_results" onsubmit="return validateResults()">
+                        <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+                        
+                        <!-- Holeshot Winners -->
+                        <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
+                            <h3 class="text-lg font-medium text-yellow-800 mb-3">🏁 Holeshot Vinnare</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">450cc:</label>
+                                    <select name="holeshot_450" id="holeshot_450" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">-- Välj förare --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">250cc:</label>
+                                    <select name="holeshot_250" id="holeshot_250" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">-- Välj förare --</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- Race Results -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-800 mb-3">450cc Resultat (Top 20)</h3>
+                                <div id="results-container-450" class="space-y-2"></div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-800 mb-3">250cc Resultat (Top 6)</h3>
+                                <div id="results-container-250" class="space-y-2"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-medium">
+                                ✅ Spara Resultat & Räkna Poäng
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -226,21 +257,29 @@
             initTabs();
             loadRaces();
             loadRiders();
+            loadSavedResults();
+            updateSelectedCompetitionInfo();
         });
 
         // Load races for simulation
         async function loadRaces() {
             try {
-                const response = await fetch('/api/races');
-                const races = await response.json();
+                // Use the same data as the old admin page
+                const competitions = {{ competitions | tojson }};
                 
-                const select = document.getElementById('raceSelect');
-                select.innerHTML = '<option value="">Välj ett race att simulera...</option>';
+                const select = document.getElementById('competition-select');
+                select.innerHTML = '<option value="">-- Välj tävling --</option>';
                 
-                races.forEach(race => {
+                competitions.forEach(comp => {
                     const option = document.createElement('option');
-                    option.value = race.id;
-                    option.textContent = `${race.name} - ${race.date}`;
+                    option.value = comp.id;
+                    let text = `${comp.name} (${comp.event_date})`;
+                    if (comp.coast_250 === 'both') {
+                        text += ' [Showdown]';
+                    } else if (comp.coast_250) {
+                        text += ` [250SX ${comp.coast_250.charAt(0).toUpperCase() + comp.coast_250.slice(1)}]`;
+                    }
+                    option.textContent = text;
                     select.appendChild(option);
                 });
             } catch (error) {
@@ -251,55 +290,32 @@
         // Load riders for picks
         async function loadRiders() {
             try {
-                const response = await fetch('/api/riders');
-                const riders = await response.json();
+                // Use the same data as the old admin page
+                const riders_450 = {{ riders_450 | tojson }};
+                const riders_250 = {{ riders_250 | tojson }};
                 
-                // Populate 450cc picks
-                const picks450 = document.getElementById('picks450');
-                for (let i = 1; i <= 5; i++) {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Pick ${i}...</option>
-                            ${riders.filter(r => r.class === '450').map(r => 
-                                `<option value="${r.id}">${r.name} #${r.number}</option>`
-                            ).join('')}
-                        </select>
-                    `;
-                    picks450.appendChild(div);
-                }
-
-                // Populate 250cc picks
-                const picks250 = document.getElementById('picks250');
-                for (let i = 1; i <= 5; i++) {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Pick ${i}...</option>
-                            ${riders.filter(r => r.class === '250').map(r => 
-                                `<option value="${r.id}">${r.name} #${r.number}</option>`
-                            ).join('')}
-                        </select>
-                    `;
-                    picks250.appendChild(div);
-                }
+                // Store riders data globally for use in other functions
+                window.riders_450_data = riders_450;
+                window.riders_250_data = riders_250;
 
                 // Populate holeshot dropdowns
-                const holeshot450 = document.getElementById('holeshot450');
-                holeshot450.innerHTML = '<option value="">Välj 450cc holeshot...</option>';
-                riders.filter(r => r.class === '450').forEach(r => {
+                const holeshot450 = document.getElementById('holeshot_450');
+                holeshot450.innerHTML = '<option value="">-- Välj förare --</option>';
+                riders_450.forEach(rider => {
                     const option = document.createElement('option');
-                    option.value = r.id;
-                    option.textContent = `${r.name} #${r.number}`;
+                    option.value = rider.id;
+                    option.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+                    option.setAttribute('data-coast', rider.coast_250 || '');
                     holeshot450.appendChild(option);
                 });
 
-                const holeshot250 = document.getElementById('holeshot250');
-                holeshot250.innerHTML = '<option value="">Välj 250cc holeshot...</option>';
-                riders.filter(r => r.class === '250').forEach(r => {
+                const holeshot250 = document.getElementById('holeshot_250');
+                holeshot250.innerHTML = '<option value="">-- Välj förare --</option>';
+                riders_250.forEach(rider => {
                     const option = document.createElement('option');
-                    option.value = r.id;
-                    option.textContent = `${r.name} #${r.number}`;
+                    option.value = rider.id;
+                    option.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+                    option.setAttribute('data-coast', rider.coast_250 || '');
                     holeshot250.appendChild(option);
                 });
 
@@ -308,29 +324,6 @@
             }
         }
 
-        // Simulate race
-        document.getElementById('simulateBtn').addEventListener('click', async () => {
-            const raceId = document.getElementById('raceSelect').value;
-            if (!raceId) {
-                alert('Välj ett race först!');
-                return;
-            }
-
-            try {
-                const response = await fetch(`/simulate_race/${raceId}`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    alert('Race simulerat framgångsrikt!');
-                } else {
-                    alert('Fel vid simulering av race');
-                }
-            } catch (error) {
-                console.error('Error simulating race:', error);
-                alert('Fel vid simulering av race');
-            }
-        });
 
         // Countdown test functions
         async function testScenario(scenario) {
@@ -371,6 +364,311 @@
                 alert('Fel vid återställning');
             }
         }
+
+        // Core admin functions from old admin page
+        async function loadSavedResults() {
+            syncHiddenCompetitionId();
+            const comp = document.getElementById("competition-select").value;
+            const c450 = document.getElementById("results-container-450");
+            const c250 = document.getElementById("results-container-250");
+            const hs450 = document.getElementById("holeshot_450");
+            const hs250 = document.getElementById("holeshot_250");
+
+            c450.innerHTML = "";
+            c250.innerHTML = "";
+            if (hs450) hs450.value = "";
+            if (hs250) hs250.value = "";
+            
+            // Clear any existing status text from options
+            document.querySelectorAll('option').forEach(opt => {
+                opt.textContent = opt.textContent.replace(/ \(OUT\)| \(Fel coast\)/g, '');
+            });
+            
+            // Clear all result dropdowns
+            document.querySelectorAll('select[name="riders_450[]"], select[name="riders_250[]"]').forEach(select => {
+                select.value = '';
+            });
+
+            if (!comp) return;
+
+            try {
+                const res = await fetch(`/admin/get_results/${comp}`);
+                const data = await res.json();
+                
+                if (data.results_450) {
+                    data.results_450.forEach((r, i) => {
+                        addResultRow('450', i + 1, r.rider_id, r.rider_name);
+                    });
+                }
+                
+                if (data.results_250) {
+                    data.results_250.forEach((r, i) => {
+                        addResultRow('250', i + 1, r.rider_id, r.rider_name);
+                    });
+                }
+                
+                if (data.holeshot_450) {
+                    hs450.value = data.holeshot_450;
+                }
+                if (data.holeshot_250) {
+                    hs250.value = data.holeshot_250;
+                }
+                
+                // Update dropdowns after loading results
+                validateAndUpdateDropdowns('450');
+                validateAndUpdateDropdowns('250');
+                
+            } catch (e) {
+                console.error('Error loading saved results:', e);
+            }
+        }
+
+        function addResultRow(cls, position, riderId = '', riderName = '') {
+            const container = document.getElementById(`results-container-${cls}`);
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            
+            const maxRiders = cls === '450' ? 20 : 6;
+            const selectName = `riders_${cls}[]`;
+            
+            div.innerHTML = `
+                <span class="w-8 text-sm font-medium text-gray-600">${position}.</span>
+                <select name="${selectName}" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- Välj förare --</option>
+                </select>
+            `;
+            
+            const select = div.querySelector('select');
+            
+            // Populate with riders
+            const riders = window.riders_450_data || window.riders_250_data || [];
+            riders.forEach(rider => {
+                if (rider.class_name === `${cls}cc`) {
+                    const option = document.createElement('option');
+                    option.value = rider.id;
+                    option.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+                    option.setAttribute('data-coast', rider.coast_250 || '');
+                    select.appendChild(option);
+                }
+            });
+            
+            if (riderId) {
+                select.value = riderId;
+            }
+            
+            container.appendChild(div);
+            
+            // Add event listener for validation
+            select.addEventListener('change', () => {
+                validateAndUpdateDropdowns(cls);
+            });
+        }
+
+        async function simulateForSelected() {
+            const comp = document.getElementById("competition-select").value;
+            if (!comp) {
+                alert("Välj en tävling först.");
+                return;
+            }
+            try {
+                const res = await fetch(`/admin/simulate/${comp}`, { method: "POST" });
+                if (res.redirected) {
+                    window.location.href = res.url;
+                    return;
+                }
+                await loadSavedResults();
+                showToast("Simulering klar!", true);
+            } catch (e) {
+                console.error(e);
+                showToast("Kunde inte köra simuleringen.", false);
+            }
+        }
+
+        async function clearCurrentCompetitionResults() {
+            const comp = document.getElementById("competition-select").value;
+            if (!comp) {
+                alert("Välj en tävling först.");
+                return;
+            }
+            
+            if (!confirm("Är du säker på att du vill rensa alla resultat för denna tävling?")) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/admin/clear_results/${comp}`, { method: "POST" });
+                if (res.ok) {
+                    await loadSavedResults();
+                    showToast("Resultat rensade!", true);
+                } else {
+                    showToast("Kunde inte rensa resultat.", false);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Kunde inte rensa resultat.", false);
+            }
+        }
+
+        function syncHiddenCompetitionId() {
+            const comp = document.getElementById("competition-select").value;
+            const hidden = document.getElementById("competition_id_hidden");
+            if (hidden) {
+                hidden.value = comp;
+            }
+        }
+
+        function validateAndUpdateDropdowns(cls) {
+            const selects = document.querySelectorAll(`select[name="riders_${cls}[]"]`);
+            const selectedValues = Array.from(selects)
+                .map(sel => sel.value)
+                .filter(val => val);
+            
+            // Get current OUT riders for this competition
+            const outCheckboxes = document.querySelectorAll('#out-list-450 input[type="checkbox"]:checked, #out-list-250 input[type="checkbox"]:checked');
+            const outRiderIds = Array.from(outCheckboxes).map(cb => cb.id.replace('out-', ''));
+            
+            // Remove options that are selected elsewhere, OUT, or wrong coast
+            selects.forEach(select => {
+                const currentValue = select.value;
+                const optionsToRemove = [];
+                
+                Array.from(select.options).forEach(option => {
+                    if (option.value && option.value !== currentValue) {
+                        // Check if this option is selected in another dropdown
+                        const isSelectedElsewhere = Array.from(selects)
+                            .some(otherSelect => otherSelect !== select && otherSelect.value === option.value);
+                        
+                        // Check if this rider is OUT
+                        const isOut = outRiderIds.includes(option.value);
+                        
+                        // Check coast for 250cc riders
+                        let isWrongCoast = false;
+                        if (cls === '250' && window.currentCompetitionCoast && window.currentCompetitionCoast !== 'both') {
+                            const riderCoast = option.getAttribute('data-coast');
+                            if (riderCoast) {
+                                isWrongCoast = riderCoast !== window.currentCompetitionCoast && riderCoast !== 'both';
+                            }
+                        }
+                        
+                        // Remove option if it's selected elsewhere, OUT, or wrong coast
+                        if (isSelectedElsewhere || isOut || isWrongCoast) {
+                            optionsToRemove.push(option);
+                        }
+                    }
+                });
+                
+                // Remove options that shouldn't be shown
+                optionsToRemove.forEach(opt => {
+                    if (opt.value !== currentValue) {
+                        opt.remove();
+                    }
+                });
+            });
+        }
+
+        function validateResults() {
+            console.log("DEBUG: validateResults called");
+            
+            // Check for duplicates in 450cc results
+            const riders450 = Array.from(document.querySelectorAll('select[name="riders_450[]"]'))
+                .map(sel => sel.value)
+                .filter(val => val);
+            
+            if (riders450.length !== new Set(riders450).size) {
+                alert("Du kan inte sätta samma 450cc-förare flera gånger.");
+                return false;
+            }
+            
+            // Check for duplicates in 250cc results
+            const riders250 = Array.from(document.querySelectorAll('select[name="riders_250[]"]'))
+                .map(sel => sel.value)
+                .filter(val => val);
+            
+            if (riders250.length !== new Set(riders250).size) {
+                alert("Du kan inte sätta samma 250cc-förare flera gånger.");
+                return false;
+            }
+            
+            // Check that exactly 20 riders are selected for 450cc and 6 for 250cc
+            if (riders450.length !== 20) {
+                alert("Du måste välja exakt 20 förare för 450cc (för wildcard-funktionen).");
+                return false;
+            }
+            
+            if (riders250.length !== 6) {
+                alert("Du måste välja exakt 6 förare för 250cc (Top 6).");
+                return false;
+            }
+            
+            console.log("DEBUG: Validation passed, submitting form");
+            return true;
+        }
+
+        function showToast(msg, ok = true) {
+            let t = document.getElementById("toast");
+            if (!t) {
+                t = document.createElement("div");
+                t.id = "toast";
+                t.style.position = "fixed";
+                t.style.bottom = "20px";
+                t.style.right = "20px";
+                t.style.padding = "12px 16px";
+                t.style.borderRadius = "8px";
+                t.style.color = "#fff";
+                t.style.fontWeight = "bold";
+                t.style.zIndex = "9999";
+                t.style.transition = "opacity .25s ease";
+                document.body.appendChild(t);
+            }
+            t.style.background = ok ? "#16a34a" : "#dc2626";
+            t.textContent = msg;
+            t.style.opacity = "1";
+            setTimeout(() => (t.style.opacity = "0"), 1800);
+        }
+
+        function updateSelectedCompetitionInfo() {
+            const comp = document.getElementById("competition-select").value;
+            const info = document.getElementById("selected-competition-info");
+            const name = document.getElementById("selected-competition-name");
+            
+            if (comp && info && name) {
+                const selectedOption = document.querySelector(`#competition-select option[value="${comp}"]`);
+                if (selectedOption) {
+                    name.textContent = selectedOption.textContent;
+                    info.style.display = "block";
+                }
+            } else if (info) {
+                info.style.display = "none";
+            }
+        }
+
+        // Initialize result rows when competition is selected
+        document.getElementById("competition-select").addEventListener('change', function() {
+            syncHiddenCompetitionId();
+            updateSelectedCompetitionInfo();
+            
+            // Initialize result rows
+            const c450 = document.getElementById("results-container-450");
+            const c250 = document.getElementById("results-container-250");
+            
+            if (this.value) {
+                // Add 20 rows for 450cc
+                for (let i = 1; i <= 20; i++) {
+                    addResultRow('450', i);
+                }
+                
+                // Add 6 rows for 250cc
+                for (let i = 1; i <= 6; i++) {
+                    addResultRow('250', i);
+                }
+                
+                // Load saved results
+                loadSavedResults();
+            } else {
+                c450.innerHTML = "";
+                c250.innerHTML = "";
+            }
+        });
     </script>
 </body>
 </html>

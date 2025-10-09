@@ -1318,7 +1318,24 @@ def save_season_team():
 def admin_page():
     if session.get("username") != "test":
         return redirect(url_for("index"))
-    return render_template("admin_new.html")
+    
+    # Get the same data as the old admin page
+    competitions = Competition.query.order_by(Competition.event_date).all()
+    riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
+    riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
+    
+    # Get current simulated date
+    try:
+        result = db.session.execute(db.text("SELECT value FROM sim_date LIMIT 1")).fetchone()
+        today = result[0] if result else None
+    except:
+        today = None
+    
+    return render_template("admin_new.html", 
+                         competitions=competitions,
+                         riders_450=riders_450,
+                         riders_250=riders_250,
+                         today=today)
 
 @app.route("/admin_old")
 def admin_page_old():
