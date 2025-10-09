@@ -1635,10 +1635,42 @@ def race_results_page():
             'holeshots': holeshots
         }
     
+    # Determine status for each competition and find the latest one
+    today = get_today()
+    latest_competition_id = None
+    
+    for comp in competitions:
+        # Check if competition has results
+        has_results = len(competition_results[comp.id]['results']) > 0 or len(competition_results[comp.id]['holeshots']) > 0
+        
+        # Determine status
+        if has_results:
+            comp.status = "completed"
+            comp.status_text = "Körda race"
+            comp.status_color = "text-green-600"
+            comp.status_bg = "bg-green-100"
+        elif comp.event_date and comp.event_date < today:
+            comp.status = "missed"
+            comp.status_text = "Missade race"
+            comp.status_color = "text-red-600"
+            comp.status_bg = "bg-red-100"
+        else:
+            comp.status = "upcoming"
+            comp.status_text = "Uppkommande"
+            comp.status_color = "text-blue-600"
+            comp.status_bg = "bg-blue-100"
+        
+        # Find the latest competition (most recent with results, or most recent upcoming)
+        if has_results and (latest_competition_id is None or comp.event_date > competitions[latest_competition_id].event_date):
+            latest_competition_id = comp.id
+        elif not latest_competition_id and comp.event_date and comp.event_date >= today:
+            latest_competition_id = comp.id
+    
     return render_template(
         "race_results.html", 
         competitions=competitions, 
         competition_results=competition_results,
+        latest_competition_id=latest_competition_id,
         username=session.get("username")
     )
 

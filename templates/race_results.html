@@ -42,6 +42,10 @@
                 <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">
                   {{ comp.name }}
                 </h2>
+                <!-- Status Badge -->
+                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ comp.status_bg }} {{ comp.status_color }}">
+                  {{ comp.status_text }}
+                </span>
                 <!-- Expand/Collapse Icon -->
                 <svg id="icon-{{ comp.id }}" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -234,22 +238,29 @@
       }
     }
 
-    // Optional: Auto-expand the first competition with results
+    // Auto-expand the latest competition
     document.addEventListener('DOMContentLoaded', function() {
-      const competitions = document.querySelectorAll('[id^="comp-"]');
-      let firstWithResults = null;
-      
-      competitions.forEach(comp => {
-        const hasResults = comp.querySelector('.grid') !== null;
-        if (hasResults && !firstWithResults) {
-          firstWithResults = comp;
+      {% if latest_competition_id %}
+        // Expand the latest competition
+        const latestCompId = 'comp-{{ latest_competition_id }}';
+        toggleAccordion(latestCompId);
+      {% else %}
+        // Fallback: expand first competition with results
+        const competitions = document.querySelectorAll('[id^="comp-"]');
+        let firstWithResults = null;
+        
+        competitions.forEach(comp => {
+          const hasResults = comp.querySelector('.grid') !== null;
+          if (hasResults && !firstWithResults) {
+            firstWithResults = comp;
+          }
+        });
+        
+        if (firstWithResults) {
+          const compId = firstWithResults.id;
+          toggleAccordion(compId);
         }
-      });
-      
-      if (firstWithResults) {
-        const compId = firstWithResults.id;
-        toggleAccordion(compId);
-      }
+      {% endif %}
     });
   </script>
 </body>
