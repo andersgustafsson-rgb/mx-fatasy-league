@@ -1354,10 +1354,16 @@ def admin_page():
     riders_450_data = [serialize_rider(rider) for rider in riders_450]
     riders_250_data = [serialize_rider(rider) for rider in riders_250]
     
+    # Create competition coast map for JavaScript
+    comp_coast_map = {}
+    for comp in competitions:
+        comp_coast_map[comp.id] = comp.coast_250
+    
     return render_template("admin_new.html", 
                          competitions=competitions_data,
                          riders_450=riders_450_data,
                          riders_250=riders_250_data,
+                         comp_coast_map=comp_coast_map,
                          today=today)
 
 @app.route("/admin_old")

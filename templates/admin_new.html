@@ -260,6 +260,10 @@
             });
         }
 
+        // Make coast map available to JavaScript
+        window.__COMP_COAST_MAP__ = {{ comp_coast_map | tojson | safe }};
+        let currentCompetitionCoast = null;
+        
         // Initialize tabs when page loads
         document.addEventListener('DOMContentLoaded', () => {
             initTabs();
@@ -398,6 +402,13 @@
                 select.value = '';
             });
             
+            // Get competition coast reliably using a map rendered from backend
+            const selectEl = document.getElementById("competition-select");
+            const selectedId = selectEl.value;
+            const compMap = window.__COMP_COAST_MAP__ || {};
+            currentCompetitionCoast = compMap[selectedId] || null;
+            console.log(`DEBUG: Competition coast set to: ${currentCompetitionCoast}`);
+            
             // Update competition info display
             updateSelectedCompetitionInfo();
             
@@ -465,6 +476,32 @@
                     validateAndUpdateDropdowns('250');
                 });
             });
+            
+            // Update holeshot dropdowns with coast validation
+            updateHoleshotDropdowns();
+        }
+
+        // Update holeshot dropdowns with coast validation
+        function updateHoleshotDropdowns() {
+            const holeshot250 = document.getElementById('holeshot_250');
+            if (holeshot250 && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
+                for (const opt of holeshot250.options) {
+                    if (!opt.value) continue;
+                    const riderCoast = opt.getAttribute('data-coast');
+                    if (riderCoast) {
+                        const isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
+                        opt.disabled = isWrongCoast;
+                        opt.style.color = isWrongCoast ? '#999' : '';
+                        
+                        if (isWrongCoast && !opt.textContent.includes('(Fel coast)')) {
+                            opt.textContent = opt.textContent + ' (Fel coast)';
+                            console.log(`DEBUG: Holeshot - Disabling rider ${opt.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
+                        } else if (!isWrongCoast && opt.textContent.includes('(Fel coast)')) {
+                            opt.textContent = opt.textContent.replace(' (Fel coast)', '');
+                        }
+                    }
+                }
+            }
         }
 
         async function loadExistingResults(compId) {
@@ -621,10 +658,13 @@
                         
                         // Check coast for 250cc riders
                         let isWrongCoast = false;
-                        if (cls === '250' && window.currentCompetitionCoast && window.currentCompetitionCoast !== 'both') {
+                        if (cls === '250' && currentCompetitionCoast && currentCompetitionCoast !== 'both') {
                             const riderCoast = option.getAttribute('data-coast');
                             if (riderCoast) {
-                                isWrongCoast = riderCoast !== window.currentCompetitionCoast && riderCoast !== 'both';
+                                isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
+                                if (isWrongCoast) {
+                                    console.log(`DEBUG: Removing rider ${option.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
+                                }
                             }
                         }
                         
