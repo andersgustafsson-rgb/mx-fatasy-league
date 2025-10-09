@@ -15,31 +15,34 @@
         /* Import vintage fonts */
         @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Caveat:wght@400;600;700&family=Indie+Flower&display=swap');
         
+        /* TEST STYLE - Should make everything red if CSS is loading */
+        body { border: 5px solid red !important; }
+        
         /* Cork board background */
         body {
             background: 
                 radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
                 radial-gradient(circle at 40% 60%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
-                linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #F5DEB3 100%);
-            background-attachment: fixed;
-            min-height: 100vh;
+                linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #F5DEB3 100%) !important;
+            background-attachment: fixed !important;
+            min-height: 100vh !important;
         }
         
         /* Wooden frame */
         .bulletin-frame {
             background: 
-                linear-gradient(45deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #8B4513 100%);
-            border: 8px solid;
-            border-image: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321) 1;
-            border-radius: 12px;
+                linear-gradient(45deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #8B4513 100%) !important;
+            border: 8px solid !important;
+            border-image: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321) 1 !important;
+            border-radius: 12px !important;
             box-shadow: 
                 inset 0 0 20px rgba(0,0,0,0.3),
                 0 0 30px rgba(0,0,0,0.5),
-                0 10px 40px rgba(0,0,0,0.3);
-            position: relative;
-            margin: 20px;
-            padding: 30px;
+                0 10px 40px rgba(0,0,0,0.3) !important;
+            position: relative !important;
+            margin: 20px !important;
+            padding: 30px !important;
         }
         
         .bulletin-frame::before {
@@ -74,19 +77,19 @@
         /* Vintage note papers */
         .vintage-note {
             background: 
-                linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%);
-            border: 1px solid #D2B48C;
-            border-radius: 2px;
+                linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%) !important;
+            border: 1px solid #D2B48C !important;
+            border-radius: 2px !important;
             box-shadow: 
                 0 2px 8px rgba(0,0,0,0.15),
                 0 1px 3px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-            position: relative;
-            margin: 15px;
-            padding: 20px;
-            transform: rotate(0deg);
-            transition: all 0.3s ease;
-            font-family: 'Kalam', cursive;
+                inset 0 1px 0 rgba(255,255,255,0.3) !important;
+            position: relative !important;
+            margin: 15px !important;
+            padding: 20px !important;
+            transform: rotate(0deg) !important;
+            transition: all 0.3s ease !important;
+            font-family: 'Kalam', cursive !important;
         }
         
         .vintage-note:hover {
