@@ -1331,10 +1331,33 @@ def admin_page():
     except:
         today = None
     
+    # Serialize data for JavaScript
+    def serialize_competition(comp):
+        return {
+            "id": comp.id,
+            "name": comp.name,
+            "event_date": comp.event_date.isoformat(),
+            "coast_250": comp.coast_250
+        }
+    
+    def serialize_rider(rider):
+        return {
+            "id": rider.id,
+            "name": rider.name,
+            "class_name": rider.class_name,
+            "rider_number": rider.rider_number,
+            "bike_brand": rider.bike_brand,
+            "coast_250": rider.coast_250
+        }
+    
+    competitions_data = [serialize_competition(comp) for comp in competitions]
+    riders_450_data = [serialize_rider(rider) for rider in riders_450]
+    riders_250_data = [serialize_rider(rider) for rider in riders_250]
+    
     return render_template("admin_new.html", 
-                         competitions=competitions,
-                         riders_450=riders_450,
-                         riders_250=riders_250,
+                         competitions=competitions_data,
+                         riders_450=riders_450_data,
+                         riders_250=riders_250_data,
                          today=today)
 
 @app.route("/admin_old")
