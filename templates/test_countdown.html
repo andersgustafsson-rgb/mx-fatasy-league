@@ -70,11 +70,18 @@
             📅 Race imorgon<br><small>Picks öppna</small>
           </button>
         </div>
-        <div class="mt-4 text-center">
+      <div class="mt-4 text-center space-y-3">
+        <div>
+          <button id="start-timer-btn" onclick="startTimer()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow hidden">
+            ▶️ Starta Timer
+          </button>
+        </div>
+        <div>
           <button onclick="resetToRealTime()" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded shadow">
             🔄 Återställ till riktig tid
           </button>
         </div>
+      </div>
       </div>
 
       <!-- Countdown Widget -->
@@ -118,6 +125,9 @@
           clearInterval(countdownInterval);
         }
 
+        // Store current scenario
+        window.currentScenario = scenario;
+
         // Set simulated time for entire application
         const setTimeResponse = await fetch(`/set_simulated_time?scenario=${scenario}`);
         const setTimeData = await setTimeResponse.json();
@@ -133,6 +143,9 @@
         // Fetch test data
         const response = await fetch(`/test_countdown?scenario=${scenario}`);
         const data = await response.json();
+        
+        // Show start timer button
+        showStartTimerButton();
         
         if (data.error) {
           document.getElementById('countdown-race-name').textContent = 'Fel: ' + data.error;
@@ -310,6 +323,30 @@
         console.error('Error resetting to real time:', error);
         document.getElementById('countdown-race-name').textContent = 'Fel vid återställning';
         document.getElementById('debug-info').textContent = 'Error: ' + error.message;
+      }
+    }
+    
+    function showStartTimerButton() {
+      const startBtn = document.getElementById('start-timer-btn');
+      if (startBtn) {
+        startBtn.classList.remove('hidden');
+      }
+    }
+    
+    function hideStartTimerButton() {
+      const startBtn = document.getElementById('start-timer-btn');
+      if (startBtn) {
+        startBtn.classList.add('hidden');
+      }
+    }
+    
+    function startTimer() {
+      // Hide start button
+      hideStartTimerButton();
+      
+      // Start countdown
+      if (window.currentScenario) {
+        startCountdown(window.currentScenario);
       }
     }
     
