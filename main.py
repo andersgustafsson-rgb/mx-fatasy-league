@@ -612,6 +612,12 @@ def profile_page():
             return redirect(url_for("index"))
     except Exception as e:
         print(f"DEBUG: Error loading user profile (likely missing columns): {e}")
+        # Rollback any failed transaction
+        try:
+            db.session.rollback()
+        except:
+            pass
+        
         # Try to add missing columns automatically
         try:
             print("DEBUG: Attempting to add missing profile columns...")
@@ -636,6 +642,12 @@ def profile_page():
                 return redirect(url_for("index"))
         except Exception as e2:
             print(f"DEBUG: Error adding columns or loading user: {e2}")
+            # Rollback any failed transaction
+            try:
+                db.session.rollback()
+            except:
+                pass
+            
             # If error, try to get user with basic query
             try:
                 user = db.session.execute(
@@ -660,6 +672,11 @@ def profile_page():
                 user = SimpleUser(user.id, user.username, user.password_hash)
             except Exception as e3:
                 print(f"DEBUG: Error with basic user query: {e3}")
+                # Rollback any failed transaction
+                try:
+                    db.session.rollback()
+                except:
+                    pass
                 flash("Databasen behöver uppdateras. Kontakta admin.", "error")
                 return redirect(url_for("index"))
     
@@ -2386,6 +2403,9 @@ def add_profile_columns():
     print("DEBUG: add_profile_columns called")
     
     try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
         # Add missing columns to users table
         columns_to_add = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
@@ -3480,15 +3500,31 @@ def init_database():
             
             # Handle timezone column migration for existing competitions
             try:
-                # Check if timezone column exists, if not add it
-                result = db.session.execute(db.text("PRAGMA table_info(competitions)"))
-                columns = [row[1] for row in result.fetchall()]
-                
-                if 'timezone' not in columns:
-                    print("Adding timezone column to competitions table...")
-                    db.session.execute(db.text("ALTER TABLE competitions ADD COLUMN timezone VARCHAR(50)"))
-                    db.session.commit()
-                    print("Timezone column added successfully")
+                # Check if timezone column exists, if not add it (PostgreSQL compatible)
+                if 'postgresql' in str(db.engine.url):
+                    # PostgreSQL syntax
+                    result = db.session.execute(db.text("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'competitions' AND column_name = 'timezone'
+                    """))
+                    columns = [row[0] for row in result.fetchall()]
+                    
+                    if not columns:  # timezone column doesn't exist
+                        print("Adding timezone column to competitions table...")
+                        db.session.execute(db.text("ALTER TABLE competitions ADD COLUMN timezone VARCHAR(50)"))
+                        db.session.commit()
+                        print("Timezone column added successfully")
+                else:
+                    # SQLite syntax (fallback)
+                    result = db.session.execute(db.text("PRAGMA table_info(competitions)"))
+                    columns = [row[1] for row in result.fetchall()]
+                    
+                    if 'timezone' not in columns:
+                        print("Adding timezone column to competitions table...")
+                        db.session.execute(db.text("ALTER TABLE competitions ADD COLUMN timezone VARCHAR(50)"))
+                        db.session.commit()
+                        print("Timezone column added successfully")
                     
                     # Update existing competitions with timezone data
                     competitions = Competition.query.all()
