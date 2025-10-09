@@ -5217,6 +5217,43 @@ def delete_user(user_id):
         print(f"Error deleting user: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/cleanup_duplicate_users")
+def cleanup_duplicate_users():
+    """Remove duplicate test users - keep only the first one"""
+    if session.get('username') != 'test':
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find all test users
+        test_users = User.query.filter_by(username='test').all()
+        
+        if len(test_users) <= 1:
+            return jsonify({
+                "message": "No duplicate test users found",
+                "count": len(test_users)
+            })
+        
+        # Keep the first one (oldest), delete the rest
+        first_user = test_users[0]
+        duplicates = test_users[1:]
+        
+        deleted_count = 0
+        for user in duplicates:
+            db.session.delete(user)
+            deleted_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Cleaned up {deleted_count} duplicate test users",
+            "kept_user_id": first_user.id,
+            "deleted_count": deleted_count
+        })
+        
+    except Exception as e:
+        print(f"Error cleaning up duplicate users: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
