@@ -5299,6 +5299,7 @@ def race_countdown():
     try:
         # Get current time (or simulated time for testing)
         current_time = get_current_time()
+        print(f"DEBUG: race_countdown using time: {current_time}")
         
         # Get next upcoming race
         next_race = (
@@ -5589,9 +5590,13 @@ def get_current_time():
     """Get current time - either real or simulated"""
     if session.get('simulation_active') and session.get('simulated_time'):
         try:
-            return datetime.fromisoformat(session['simulated_time'])
-        except:
+            simulated_time = datetime.fromisoformat(session['simulated_time'])
+            print(f"DEBUG: Using simulated time: {simulated_time}")
+            return simulated_time
+        except Exception as e:
+            print(f"DEBUG: Error parsing simulated time: {e}")
             pass
+    print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
 
 if __name__ == "__main__":
