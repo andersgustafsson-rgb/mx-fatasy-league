@@ -325,11 +325,10 @@
   <!-- Script -->
   <script>
     // Make riders data available to JavaScript
-    // Temporarily disabled for deployment
-    // window.riders_250_data = {{ riders_250_json|tojson|safe }};
-    // window.__COMP_COAST_MAP__ = {{ comp_coast_map|tojson|safe }};
-    // console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
-    // console.log('DEBUG: comp_coast_map loaded:', window.__COMP_COAST_MAP__);
+    window.riders_250_data = {{ riders_250_json|tojson|safe }};
+    window.__COMP_COAST_MAP__ = {{ comp_coast_map|tojson|safe }};
+    console.log('DEBUG: riders_250_data loaded:', window.riders_250_data);
+    console.log('DEBUG: comp_coast_map loaded:', window.__COMP_COAST_MAP__);
     
     function syncHiddenCompetitionId() {
       const comp = document.getElementById("competition-select")?.value || "";
@@ -338,6 +337,8 @@
       console.log(`DEBUG: syncHiddenCompetitionId - competition: ${comp}, hidden field: ${h ? h.value : 'not found'}`);
     }
 
+    let currentCompetitionCoast = null;
+    
     function updateSelectedCompetitionInfo() {
       const select = document.getElementById("competition-select");
       const infoDiv = document.getElementById("selected-competition-info");
@@ -348,6 +349,10 @@
         const selectedOption = select.options[select.selectedIndex];
         nameSpan.textContent = selectedOption.textContent;
         infoDiv.style.display = "block";
+        
+        // Set current competition coast for filtering
+        currentCompetitionCoast = window.__COMP_COAST_MAP__[select.value];
+        console.log(`DEBUG: Competition coast set to: ${currentCompetitionCoast}`);
         
         // Visa tidszon-information för vald tävling
         if (timezoneInfo) {

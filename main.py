@@ -1262,6 +1262,9 @@ def admin_page():
         return redirect(url_for("index"))
     competitions = Competition.query.order_by(Competition.event_date).all()
     riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
+    
+    # For admin page, we need ALL 250cc riders (not filtered by coast)
+    # Coast filtering will be handled by JavaScript based on selected competition
     riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
 
     # Serialize riders data for JavaScript
