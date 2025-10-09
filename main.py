@@ -600,14 +600,39 @@ def profile_page():
         return redirect(url_for("login"))
     
     try:
+        # Try to get user with new columns first
         user = User.query.get(session["user_id"])
         if not user:
             flash("Användare hittades inte.", "error")
             return redirect(url_for("index"))
     except Exception as e:
-        print(f"DEBUG: Error loading user profile: {e}")
-        flash("Databasen behöver uppdateras. Kontakta admin.", "error")
-        return redirect(url_for("index"))
+        print(f"DEBUG: Error loading user profile (likely missing columns): {e}")
+        # If error, try to get user with basic query
+        try:
+            user = db.session.execute(
+                db.text("SELECT id, username, password_hash FROM users WHERE id = :user_id"),
+                {"user_id": session["user_id"]}
+            ).fetchone()
+            if not user:
+                flash("Användare hittades inte.", "error")
+                return redirect(url_for("index"))
+            # Create a simple user object
+            class SimpleUser:
+                def __init__(self, id, username, password_hash):
+                    self.id = id
+                    self.username = username
+                    self.password_hash = password_hash
+                    self.display_name = None
+                    self.profile_picture_url = None
+                    self.bio = None
+                    self.favorite_rider = None
+                    self.favorite_team = None
+                    self.created_at = None
+            user = SimpleUser(user.id, user.username, user.password_hash)
+        except Exception as e2:
+            print(f"DEBUG: Error with basic user query: {e2}")
+            flash("Databasen behöver uppdateras. Kontakta admin.", "error")
+            return redirect(url_for("index"))
     
     # Hämta säsongsteam
     season_team = SeasonTeam.query.filter_by(user_id=user.id).first()
@@ -648,17 +673,33 @@ def update_profile():
     if "user_id" not in session:
         return redirect(url_for("login"))
     
-    user = User.query.get(session["user_id"])
-    if not user:
-        flash("Användare hittades inte.", "error")
+    try:
+        user = User.query.get(session["user_id"])
+        if not user:
+            flash("Användare hittades inte.", "error")
+            return redirect(url_for("profile_page"))
+    except Exception as e:
+        print(f"DEBUG: Error loading user for update: {e}")
+        flash("Databasen behöver uppdateras. Kontakta admin.", "error")
         return redirect(url_for("profile_page"))
     
     try:
-        # Uppdatera grundläggande information
-        user.display_name = request.form.get("display_name", "").strip() or None
-        user.bio = request.form.get("bio", "").strip() or None
-        user.favorite_rider = request.form.get("favorite_rider", "").strip() or None
-        user.favorite_team = request.form.get("favorite_team", "").strip() or None
+        # Uppdatera grundläggande information (only if columns exist)
+        display_name = request.form.get("display_name", "").strip() or None
+        bio = request.form.get("bio", "").strip() or None
+        favorite_rider = request.form.get("favorite_rider", "").strip() or None
+        favorite_team = request.form.get("favorite_team", "").strip() or None
+        
+        # Try to update profile fields
+        try:
+            user.display_name = display_name
+            user.bio = bio
+            user.favorite_rider = favorite_rider
+            user.favorite_team = favorite_team
+        except AttributeError:
+            # Columns don't exist yet, skip profile updates
+            print("DEBUG: Profile columns don't exist yet, skipping profile updates")
+            flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
         # Hantera profilbild
         file = request.files.get("profile_picture")
@@ -668,8 +709,12 @@ def update_profile():
                 fname = secure_filename(f"profile_{user.id}_{file.filename}")
                 path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
                 file.save(path)
-                user.profile_picture_url = url_for("static", filename=f"uploads/leagues/{fname}")
-                print(f"Profile picture saved: {path}")
+                try:
+                    user.profile_picture_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                    print(f"Profile picture saved: {path}")
+                except AttributeError:
+                    print("DEBUG: profile_picture_url column doesn't exist yet")
+                    flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
             except Exception as e:
                 print(f"Error saving profile picture: {e}")
                 flash("Kunde inte spara profilbilden.", "error")
