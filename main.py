@@ -513,23 +513,26 @@ def index():
     picks_status = "no_picks"
     if upcoming_race:
         try:
+            print(f"DEBUG: Looking for picks for user {uid}, competition {upcoming_race.id}")
             # Get race picks for 450cc
             race_picks = RacePick.query.filter_by(
                 user_id=uid, 
                 competition_id=upcoming_race.id
-            ).order_by(RacePick.position).all()
+            ).order_by(RacePick.predicted_position).all()
             
+            print(f"DEBUG: Found {len(race_picks)} race picks")
             if race_picks:
                 picks_status = "has_picks"
                 for pick in race_picks:
                     rider = Rider.query.get(pick.rider_id)
                     if rider:
                         current_picks.append({
-                            "position": pick.position,
+                            "position": pick.predicted_position,
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
                             "class": "450cc"
                         })
+                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name}")
         except Exception as e:
             print(f"Error getting current picks: {e}")
             current_picks = []
