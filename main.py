@@ -5257,12 +5257,226 @@ def cleanup_duplicate_users():
 @app.route("/debug_session")
 def debug_session():
     """Debug session data"""
-    return jsonify({
-        "user_id": session.get("user_id"),
-        "username": session.get("username"),
-        "is_admin": session.get("username") == "test",
-        "all_session": dict(session)
-    })
+        return jsonify({
+            "user_id": session.get("user_id"),
+            "username": session.get("username"),
+            "is_admin": session.get("username") == "test",
+            "all_session": dict(session)
+        })
+
+@app.route("/race_countdown")
+def race_countdown():
+    """Get countdown data for next race"""
+    try:
+        # Get current time (or simulated time for testing)
+        current_time = datetime.utcnow()
+        
+        # Get next upcoming race
+        next_race = (
+            Competition.query
+            .filter(Competition.event_date >= current_time.date())
+            .order_by(Competition.event_date)
+            .first()
+        )
+        
+        if not next_race:
+            return jsonify({
+                "error": "No upcoming races found",
+                "current_time": current_time.isoformat()
+            })
+        
+        # Race time mapping (8pm local time for each race)
+        race_times = {
+            'Anaheim 1': '20:00',
+            'San Diego': '20:00', 
+            'Anaheim 2': '20:00',
+            'Houston': '20:00',
+            'Tampa': '20:00',
+            'Glendale': '20:00',
+            'Arlington': '20:00',
+            'Daytona': '20:00',
+            'Indianapolis': '20:00',
+            'Detroit': '20:00',
+            'Nashville': '20:00',
+            'Denver': '20:00',
+            'Salt Lake City': '20:00'
+        }
+        
+        # Get race time (8pm local)
+        race_time_str = race_times.get(next_race.name, '20:00')
+        race_hour, race_minute = map(int, race_time_str.split(':'))
+        
+        # Create race datetime in local timezone
+        race_date = next_race.event_date
+        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+        
+        # Convert to UTC for countdown calculation
+        # For testing, we'll use a simple offset based on timezone
+        timezone_offsets = {
+            'America/Los_Angeles': -8,  # PST
+            'America/Denver': -7,       # MST  
+            'America/Phoenix': -7,      # MST (no DST)
+            'America/Chicago': -6,      # CST
+            'America/New_York': -5      # EST
+        }
+        
+        timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
+        utc_offset = timezone_offsets.get(timezone, -8)
+        
+        # Convert local time to UTC
+        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        # Calculate time differences
+        time_to_race = race_datetime_utc - current_time
+        time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
+        
+        # Check if picks are locked (2 hours before race)
+        picks_locked = time_to_deadline.total_seconds() <= 0
+        
+        return jsonify({
+            "next_race": {
+                "name": next_race.name,
+                "date": next_race.event_date.isoformat(),
+                "timezone": timezone,
+                "local_time": race_time_str,
+                "utc_time": race_datetime_utc.isoformat()
+            },
+            "countdown": {
+                "race_start": {
+                    "total_seconds": max(0, int(time_to_race.total_seconds())),
+                    "days": max(0, time_to_race.days),
+                    "hours": max(0, time_to_race.seconds // 3600),
+                    "minutes": max(0, (time_to_race.seconds % 3600) // 60),
+                    "seconds": max(0, time_to_race.seconds % 60)
+                },
+                "pick_deadline": {
+                    "total_seconds": max(0, int(time_to_deadline.total_seconds())),
+                    "days": max(0, time_to_deadline.days),
+                    "hours": max(0, time_to_deadline.seconds // 3600),
+                    "minutes": max(0, (time_to_deadline.seconds % 3600) // 60),
+                    "seconds": max(0, time_to_deadline.seconds % 60)
+                }
+            },
+            "picks_locked": picks_locked,
+            "current_time": current_time.isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting race countdown: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/test_countdown")
+def test_countdown():
+    """Test countdown with simulated time - for development only"""
+    try:
+        # Simulate different times for testing
+        # You can change this to test different scenarios
+        test_scenarios = {
+            "race_in_3h": datetime.utcnow() + timedelta(hours=3),  # Race in 3 hours
+            "race_in_1h": datetime.utcnow() + timedelta(hours=1),  # Race in 1 hour (picks locked)
+            "race_in_30m": datetime.utcnow() + timedelta(minutes=30),  # Race in 30 minutes
+            "race_tomorrow": datetime.utcnow() + timedelta(days=1),  # Race tomorrow
+        }
+        
+        # Get the scenario from query parameter
+        scenario = request.args.get('scenario', 'race_in_3h')
+        simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
+        
+        # Get next upcoming race
+        next_race = (
+            Competition.query
+            .filter(Competition.event_date >= simulated_time.date())
+            .order_by(Competition.event_date)
+            .first()
+        )
+        
+        if not next_race:
+            return jsonify({
+                "error": "No upcoming races found",
+                "simulated_time": simulated_time.isoformat(),
+                "scenario": scenario
+            })
+        
+        # Race time mapping (8pm local time for each race)
+        race_times = {
+            'Anaheim 1': '20:00',
+            'San Diego': '20:00', 
+            'Anaheim 2': '20:00',
+            'Houston': '20:00',
+            'Tampa': '20:00',
+            'Glendale': '20:00',
+            'Arlington': '20:00',
+            'Daytona': '20:00',
+            'Indianapolis': '20:00',
+            'Detroit': '20:00',
+            'Nashville': '20:00',
+            'Denver': '20:00',
+            'Salt Lake City': '20:00'
+        }
+        
+        # Get race time (8pm local)
+        race_time_str = race_times.get(next_race.name, '20:00')
+        race_hour, race_minute = map(int, race_time_str.split(':'))
+        
+        # Create race datetime in local timezone
+        race_date = next_race.event_date
+        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+        
+        # Convert to UTC for countdown calculation
+        timezone_offsets = {
+            'America/Los_Angeles': -8,  # PST
+            'America/Denver': -7,       # MST  
+            'America/Phoenix': -7,      # MST (no DST)
+            'America/Chicago': -6,      # CST
+            'America/New_York': -5      # EST
+        }
+        
+        timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
+        utc_offset = timezone_offsets.get(timezone, -8)
+        
+        # Convert local time to UTC
+        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        # Calculate time differences using simulated time
+        time_to_race = race_datetime_utc - simulated_time
+        time_to_deadline = race_datetime_utc - timedelta(hours=2) - simulated_time
+        
+        # Check if picks are locked (2 hours before race)
+        picks_locked = time_to_deadline.total_seconds() <= 0
+        
+        return jsonify({
+            "next_race": {
+                "name": next_race.name,
+                "date": next_race.event_date.isoformat(),
+                "timezone": timezone,
+                "local_time": race_time_str,
+                "utc_time": race_datetime_utc.isoformat()
+            },
+            "countdown": {
+                "race_start": {
+                    "total_seconds": max(0, int(time_to_race.total_seconds())),
+                    "days": max(0, time_to_race.days),
+                    "hours": max(0, time_to_race.seconds // 3600),
+                    "minutes": max(0, (time_to_race.seconds % 3600) // 60),
+                    "seconds": max(0, time_to_race.seconds % 60)
+                },
+                "pick_deadline": {
+                    "total_seconds": max(0, int(time_to_deadline.total_seconds())),
+                    "days": max(0, time_to_deadline.days),
+                    "hours": max(0, time_to_deadline.seconds // 3600),
+                    "minutes": max(0, (time_to_deadline.seconds % 3600) // 60),
+                    "seconds": max(0, time_to_deadline.seconds % 60)
+                }
+            },
+            "picks_locked": picks_locked,
+            "simulated_time": simulated_time.isoformat(),
+            "scenario": scenario,
+            "available_scenarios": list(test_scenarios.keys())
+        })
+        
+    except Exception as e:
+        print(f"Error in test countdown: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     # Production vs Development configuration

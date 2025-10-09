@@ -58,7 +58,29 @@
             </div>
           </header>
           
-          <!-- Navigation - Responsiv knapplayout -->
+          <!-- Race Countdown Widget -->
+          <div id="countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 min-w-[280px]">
+            <div class="text-center">
+              <h3 class="text-yellow-400 font-bold text-lg mb-2" id="countdown-race-name">Laddar...</h3>
+              <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="bg-red-900 bg-opacity-50 rounded p-2">
+                  <div class="text-red-300 font-semibold">🏁 Race Start</div>
+                  <div id="race-countdown" class="text-red-200 font-mono">--:--:--</div>
+                </div>
+                <div class="bg-orange-900 bg-opacity-50 rounded p-2">
+                  <div class="text-orange-300 font-semibold">⏰ Pick Deadline</div>
+                  <div id="deadline-countdown" class="text-orange-200 font-mono">--:--:--</div>
+                </div>
+              </div>
+              <div id="picks-status" class="mt-2 text-xs">
+                <span id="picks-locked-status" class="hidden bg-red-600 text-white px-2 py-1 rounded">🔒 Picks låsta</span>
+                <span id="picks-open-status" class="hidden bg-green-600 text-white px-2 py-1 rounded">✅ Picks öppna</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Navigation - Responsiv knapplayout -->
           <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
             {% if username == 'test' %}
             <a
@@ -363,10 +385,98 @@
       }
     }
     
+    // Race Countdown System
+    let countdownInterval;
+    
+    async function fetchCountdownData() {
+      try {
+        const response = await fetch('/race_countdown');
+        const data = await response.json();
+        
+        if (data.error) {
+          document.getElementById('countdown-race-name').textContent = 'Inga races';
+          document.getElementById('race-countdown').textContent = '--:--:--';
+          document.getElementById('deadline-countdown').textContent = '--:--:--';
+          return;
+        }
+        
+        // Update race name
+        document.getElementById('countdown-race-name').textContent = data.next_race.name;
+        
+        // Update countdowns
+        updateCountdowns(data);
+        
+        // Update picks status
+        const lockedStatus = document.getElementById('picks-locked-status');
+        const openStatus = document.getElementById('picks-open-status');
+        
+        if (data.picks_locked) {
+          lockedStatus.classList.remove('hidden');
+          openStatus.classList.add('hidden');
+        } else {
+          lockedStatus.classList.add('hidden');
+          openStatus.classList.remove('hidden');
+        }
+        
+      } catch (error) {
+        console.error('Error fetching countdown data:', error);
+        document.getElementById('countdown-race-name').textContent = 'Fel vid laddning';
+      }
+    }
+    
+    function updateCountdowns(data) {
+      const raceCountdown = data.countdown.race_start;
+      const deadlineCountdown = data.countdown.pick_deadline;
+      
+      // Format time display
+      function formatTime(countdown) {
+        if (countdown.total_seconds <= 0) {
+          return '00:00:00';
+        }
+        
+        const days = countdown.days;
+        const hours = countdown.hours;
+        const minutes = countdown.minutes;
+        const seconds = countdown.seconds;
+        
+        if (days > 0) {
+          return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+      }
+      
+      document.getElementById('race-countdown').textContent = formatTime(raceCountdown);
+      document.getElementById('deadline-countdown').textContent = formatTime(deadlineCountdown);
+    }
+    
+    function startCountdown() {
+      // Fetch initial data
+      fetchCountdownData();
+      
+      // Update every second
+      countdownInterval = setInterval(() => {
+        fetchCountdownData();
+      }, 1000);
+    }
+    
+    function stopCountdown() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+    }
+    
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
+      
+      // Start countdown system
+      startCountdown();
     });
+    
+    // Clean up on page unload
+    window.addEventListener('beforeunload', stopCountdown);
   </script>
 </body>
 </html>
