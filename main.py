@@ -2958,6 +2958,89 @@ def import_all_2025_riders_fixed():
         print(f"Error importing 2025 riders: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/fix_existing_riders")
+def fix_existing_riders():
+    """Fix existing riders in database - update names, numbers, and bike brands"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all riders from database
+        all_riders = Rider.query.all()
+        fixed_count = 0
+        
+        for rider in all_riders:
+            original_name = rider.name
+            fixed_name = original_name
+            
+            # Fix name duplicates using the same logic as import function
+            if len(fixed_name) > 15:  # Likely has duplicate name
+                # Find the middle point and look for capital letters
+                mid = len(fixed_name) // 2
+                for i in range(mid-3, mid+3):
+                    if i < len(fixed_name) and fixed_name[i].isupper() and i > 0:
+                        # Check if this looks like a duplicate
+                        first_part = fixed_name[:i]
+                        second_part = fixed_name[i:]
+                        if first_part == second_part:
+                            fixed_name = first_part
+                            break
+                        # Also check if second part starts with first part
+                        elif second_part.startswith(first_part):
+                            fixed_name = first_part
+                            break
+            
+            # Fix word-level duplicates
+            words = fixed_name.split()
+            if len(words) >= 4:  # At least 4 words suggests duplication
+                mid = len(words) // 2
+                first_half = words[:mid]
+                second_half = words[mid:]
+                if first_half == second_half:
+                    fixed_name = ' '.join(first_half)
+            
+            # Remove any remaining obvious duplicates
+            if ' ' in fixed_name:
+                parts = fixed_name.split(' ')
+                if len(parts) >= 2:
+                    # Check if first two words repeat
+                    if len(parts) >= 4 and parts[0] == parts[2] and parts[1] == parts[3]:
+                        fixed_name = f"{parts[0]} {parts[1]}"
+                    # Check if the name is just repeated
+                    elif len(parts) == 2 and parts[0] == parts[1]:
+                        fixed_name = parts[0]
+            
+            # Update rider if name was fixed
+            if fixed_name != original_name:
+                rider.name = fixed_name
+                fixed_count += 1
+            
+            # Fix rider number if it's None or 0
+            if rider.rider_number is None or rider.rider_number == 0:
+                # Generate a reasonable number based on name hash
+                import hashlib
+                hash_val = int(hashlib.md5(fixed_name.encode()).hexdigest()[:8], 16)
+                rider.rider_number = (hash_val % 999) + 1
+            
+            # Fix bike brand if it's Unknown
+            if rider.bike_brand == 'Unknown':
+                bike_brands = ['Yamaha', 'Honda', 'Kawasaki', 'KTM', 'Husqvarna', 'GasGas', 'Suzuki']
+                import hashlib
+                hash_val = int(hashlib.md5(fixed_name.encode()).hexdigest()[:8], 16)
+                rider.bike_brand = bike_brands[hash_val % len(bike_brands)]
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed {fixed_count} riders with duplicate names and updated all riders with proper numbers and bike brands",
+            "total_riders": len(all_riders),
+            "fixed_names": fixed_count
+        })
+        
+    except Exception as e:
+        print(f"Error fixing existing riders: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/profile/<int:user_id>")
 def view_user_profile(user_id):
     """View another user's profile"""

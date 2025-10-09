@@ -99,6 +99,7 @@
           <a href="/update_rider_prices" class="text-xs text-purple-600 hover:text-purple-800 underline">💰 Uppdatera rider-priser</a>
           <a href="/import_all_2025_riders" class="text-xs text-orange-600 hover:text-orange-800 underline">👥 Importera alla 2025 riders</a>
           <a href="/import_all_2025_riders_fixed" class="text-xs text-red-600 hover:text-red-800 underline">🔧 FIXA riders (med startnummer & märken)</a>
+          <a href="/fix_existing_riders" class="text-xs text-pink-600 hover:text-pink-800 underline">🛠️ Fixa befintliga riders (namn & nummer)</a>
           <a href="/debug_riders" class="text-xs text-indigo-600 hover:text-indigo-800 underline">🔍 Debug Riders</a>
         </div>
       </div>
@@ -845,9 +846,11 @@
       const outCheckboxes = document.querySelectorAll('#out-list-450 input[type="checkbox"]:checked, #out-list-250 input[type="checkbox"]:checked');
       const outRiderIds = Array.from(outCheckboxes).map(cb => cb.id.replace('out-', ''));
       
-      // Disable options that are already selected elsewhere or are OUT
+      // TA BORT options som är valda någon annanstans, OUT, eller fel coast - istället för att bara disablea
       selects.forEach(select => {
         const currentValue = select.value;
+        const optionsToRemove = [];
+        
         Array.from(select.options).forEach(option => {
           if (option.value && option.value !== currentValue) {
             // Check if this option is selected in another dropdown
@@ -864,27 +867,26 @@
               if (riderCoast) {
                 isWrongCoast = riderCoast !== currentCompetitionCoast && riderCoast !== 'both';
                 if (isWrongCoast) {
-                  console.log(`DEBUG: Disabling rider ${option.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
+                  console.log(`DEBUG: Removing rider ${option.textContent} - rider coast: ${riderCoast}, competition coast: ${currentCompetitionCoast}`);
                 }
               }
             }
             
-            option.disabled = isSelectedElsewhere || isOut || isWrongCoast;
-            option.style.color = (isSelectedElsewhere || isOut || isWrongCoast) ? '#999' : '';
-            
-            // Add status text to option
-            let statusText = '';
-            if (isOut) statusText += ' (OUT)';
-            if (isWrongCoast) statusText += ' (Fel coast)';
-            
-            if (statusText && !option.textContent.includes(statusText)) {
-              option.textContent = option.textContent.replace(/ \(OUT\)| \(Fel coast\)/g, '') + statusText;
-            } else if (!statusText && (option.textContent.includes('(OUT)') || option.textContent.includes('(Fel coast)'))) {
-              option.textContent = option.textContent.replace(/ \(OUT\)| \(Fel coast\)/g, '');
+            // Ta bort option helt om den är vald någon annanstans, OUT, eller fel coast
+            if (isSelectedElsewhere || isOut || isWrongCoast) {
+              optionsToRemove.push(option);
             }
           }
         });
+        
+        // Ta bort options som inte ska visas
+        optionsToRemove.forEach(opt => {
+          if (opt.value !== currentValue) { // Behåll den som är vald
+            opt.remove();
+          }
+        });
       });
+    }
     }
 
     function validateResults() {
