@@ -5301,19 +5301,38 @@ def race_countdown():
         current_time = get_current_time()
         print(f"DEBUG: race_countdown using time: {current_time}")
         
-        # Get next upcoming race
-        next_race = (
-            Competition.query
-            .filter(Competition.event_date >= current_time.date())
-            .order_by(Competition.event_date)
-            .first()
-        )
-        
-        if not next_race:
-            return jsonify({
-                "error": "No upcoming races found",
-                "current_time": current_time.isoformat()
-            })
+        # Check if we're in simulation mode
+        if session.get('simulation_active'):
+            # Use fake race for testing
+            fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
+            fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            
+            # Create a fake race object for testing
+            class FakeRace:
+                def __init__(self):
+                    self.name = "Test Race (Simulated)"
+                    self.event_date = fake_race_date.date()
+                    self.timezone = "UTC"
+            
+            next_race = FakeRace()
+            print(f"DEBUG: Using fake race for simulation: {next_race.name} on {next_race.event_date}")
+        else:
+            # Get next upcoming race
+            next_race = (
+                Competition.query
+                .filter(Competition.event_date >= current_time.date())
+                .order_by(Competition.event_date)
+                .first()
+            )
+            
+            print(f"DEBUG: Found next race: {next_race.name if next_race else 'None'} on {next_race.event_date if next_race else 'None'}")
+            print(f"DEBUG: Current time date: {current_time.date()}")
+            
+            if not next_race:
+                return jsonify({
+                    "error": "No upcoming races found",
+                    "current_time": current_time.isoformat()
+                })
         
         # Race time mapping (8pm local time for each race)
         race_times = {
@@ -5341,20 +5360,26 @@ def race_countdown():
         race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
         
         # Convert to UTC for countdown calculation
-        # For testing, we'll use a simple offset based on timezone
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
-        }
-        
-        timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
-        
-        # Convert local time to UTC
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        if session.get('simulation_active'):
+            # For fake race, use UTC directly
+            race_datetime_utc = race_datetime_local
+            print(f"DEBUG: Fake race datetime UTC: {race_datetime_utc}")
+        else:
+            # For real races, use timezone offsets
+            timezone_offsets = {
+                'America/Los_Angeles': -8,  # PST
+                'America/Denver': -7,       # MST  
+                'America/Phoenix': -7,      # MST (no DST)
+                'America/Chicago': -6,      # CST
+                'America/New_York': -5      # EST
+            }
+            
+            timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
+            utc_offset = timezone_offsets.get(timezone, -8)
+            
+            # Convert local time to UTC
+            race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+            print(f"DEBUG: Real race datetime UTC: {race_datetime_utc}")
         
         # Calculate time differences
         time_to_race = race_datetime_utc - current_time
