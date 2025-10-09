@@ -5257,12 +5257,12 @@ def cleanup_duplicate_users():
 @app.route("/debug_session")
 def debug_session():
     """Debug session data"""
-        return jsonify({
-            "user_id": session.get("user_id"),
-            "username": session.get("username"),
-            "is_admin": session.get("username") == "test",
-            "all_session": dict(session)
-        })
+    return jsonify({
+        "user_id": session.get("user_id"),
+        "username": session.get("username"),
+        "is_admin": session.get("username") == "test",
+        "all_session": dict(session)
+    })
 
 @app.route("/race_countdown")
 def race_countdown():
