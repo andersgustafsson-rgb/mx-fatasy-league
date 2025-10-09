@@ -169,6 +169,17 @@ class LeagueMembership(db.Model):
     league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
+class BulletinPost(db.Model):
+    __tablename__ = "bulletin_posts"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_deleted = db.Column(db.Boolean, default=False)
+    
+    # Relationships
+    user = db.relationship("User", backref="bulletin_posts")
+
 
 class RacePick(db.Model):
     __tablename__ = "race_picks"
@@ -4860,6 +4871,106 @@ def force_create_all_trackmaps():
     print(f"FORCE CREATED {created} track map records")
     
     return f"Created {created} track map records. <a href='/trackmaps'>Go to Track Maps</a>"
+
+@app.route("/bulletin")
+def bulletin_board():
+    """Anslagstavla - visa alla posts"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Hämta alla posts (ej borttagna) sorterade efter datum (nyaste först)
+        posts = (
+            BulletinPost.query
+            .filter_by(is_deleted=False)
+            .order_by(BulletinPost.created_at.desc())
+            .limit(50)  # Visa max 50 senaste posts
+            .all()
+        )
+        
+        # Formatera posts för template
+        formatted_posts = []
+        for post in posts:
+            formatted_posts.append({
+                'id': post.id,
+                'content': post.content,
+                'author': post.user.username if post.user else 'Okänd',
+                'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
+                'created_at': post.created_at,
+                'is_own_post': post.user_id == session.get('user_id'),
+                'is_admin': session.get('username') == 'test'
+            })
+        
+        return render_template("bulletin.html", posts=formatted_posts)
+        
+    except Exception as e:
+        print(f"Error loading bulletin board: {e}")
+        return f"Error loading bulletin board: {str(e)}", 500
+
+@app.post("/bulletin/post")
+def create_bulletin_post():
+    """Skapa ny post på anslagstavlan"""
+    if "user_id" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        data = request.get_json()
+        content = data.get('content', '').strip()
+        
+        # Validering
+        if not content:
+            return jsonify({"error": "Innehåll kan inte vara tomt"}), 400
+        
+        if len(content) > 500:
+            return jsonify({"error": "Innehåll kan inte vara längre än 500 tecken"}), 400
+        
+        # Skapa ny post
+        post = BulletinPost(
+            user_id=session['user_id'],
+            content=content
+        )
+        
+        db.session.add(post)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Post skapad!",
+            "post": {
+                'id': post.id,
+                'content': post.content,
+                'author': post.user.username if post.user else 'Okänd',
+                'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
+                'created_at': post.created_at.isoformat(),
+                'is_own_post': True
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error creating bulletin post: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.delete("/bulletin/post/<int:post_id>")
+def delete_bulletin_post(post_id):
+    """Ta bort post från anslagstavlan"""
+    if "user_id" not in session:
+        return jsonify({"error": "Not logged in"}), 401
+    
+    try:
+        post = BulletinPost.query.get_or_404(post_id)
+        
+        # Kontrollera att användaren äger posten eller är admin
+        if post.user_id != session['user_id'] and session.get('username') != 'test':
+            return jsonify({"error": "Du kan bara ta bort dina egna posts"}), 403
+        
+        # Markera som borttagen istället för att ta bort
+        post.is_deleted = True
+        db.session.commit()
+        
+        return jsonify({"message": "Post borttagen!"})
+        
+    except Exception as e:
+        print(f"Error deleting bulletin post: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     # Production vs Development configuration

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anslagstavla - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind CDN warning in production
+        if (window.location.hostname !== 'localhost') {
+            console.clear();
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold text-blue-600 dark:text-blue-400">🏁 MX Fantasy</a>
+                    <span class="text-gray-500 dark:text-gray-400">|</span>
+                    <h1 class="text-xl font-semibold">📋 Anslagstavla</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-blue-600 dark:text-blue-400 hover:underline">← Tillbaka</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-6">
+        <!-- Post Form -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">✍️ Skriv ett meddelande</h2>
+            <form id="post-form" class="space-y-4">
+                <div>
+                    <textarea 
+                        id="post-content" 
+                        name="content" 
+                        rows="3" 
+                        maxlength="500"
+                        placeholder="Dela dina tankar, tips eller frågor med andra användare..."
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        required
+                    ></textarea>
+                    <div class="flex justify-between items-center mt-2">
+                        <span id="char-count" class="text-sm text-gray-500 dark:text-gray-400">0/500 tecken</span>
+                        <button 
+                            type="submit" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            📤 Publicera
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Posts -->
+        <div class="space-y-4">
+            <h2 class="text-lg font-semibold mb-4">💬 Senaste meddelanden</h2>
+            
+            <div id="posts-container">
+                {% if posts %}
+                    {% for post in posts %}
+                    <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4" data-post-id="{{ post.id }}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-semibold text-blue-600 dark:text-blue-400">
+                                    {{ post.author_display_name }}
+                                </span>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ post.created_at.strftime('%d/%m %H:%M') }}
+                                </span>
+                            </div>
+                            {% if post.is_own_post or post.is_admin %}
+                            <button 
+                                class="delete-post-btn text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                data-post-id="{{ post.id }}"
+                                title="Ta bort post"
+                            >
+                                🗑️
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ post.content }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <div class="text-4xl mb-2">📝</div>
+                        <p>Inga meddelanden än. Bli den första att skriva något!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <div class="flex items-center space-x-2">
+            <span>✅</span>
+            <span id="toast-message">Meddelande skickat!</span>
+        </div>
+    </div>
+
+    <script>
+        // Character counter
+        const contentTextarea = document.getElementById('post-content');
+        const charCount = document.getElementById('char-count');
+        
+        contentTextarea.addEventListener('input', function() {
+            const length = this.value.length;
+            charCount.textContent = `${length}/500 tecken`;
+            
+            if (length > 450) {
+                charCount.classList.add('text-red-500');
+            } else {
+                charCount.classList.remove('text-red-500');
+            }
+        });
+
+        // Post form submission
+        document.getElementById('post-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const content = contentTextarea.value.trim();
+            if (!content) return;
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '📤 Skickar...';
+            
+            try {
+                const response = await fetch('/bulletin/post', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Clear form
+                    contentTextarea.value = '';
+                    charCount.textContent = '0/500 tecken';
+                    charCount.classList.remove('text-red-500');
+                    
+                    // Add new post to top of list
+                    addPostToTop(result.post);
+                    
+                    // Show success toast
+                    showToast('Meddelande skickat!', 'success');
+                } else {
+                    showToast(result.error || 'Ett fel uppstod', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Ett fel uppstod', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📤 Publicera';
+            }
+        });
+
+        // Delete post functionality
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('delete-post-btn')) {
+                const postId = e.target.getAttribute('data-post-id');
+                const postElement = e.target.closest('.post-item');
+                
+                if (confirm('Är du säker på att du vill ta bort detta meddelande?')) {
+                    try {
+                        const response = await fetch(`/bulletin/post/${postId}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            postElement.remove();
+                            showToast('Meddelande borttaget!', 'success');
+                        } else {
+                            showToast(result.error || 'Ett fel uppstod', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('Ett fel uppstod', 'error');
+                    }
+                }
+            }
+        });
+
+        // Add post to top of list
+        function addPostToTop(post) {
+            const postsContainer = document.getElementById('posts-container');
+            const emptyState = postsContainer.querySelector('.text-center');
+            
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            const now = new Date();
+            const timeString = now.toLocaleDateString('sv-SE', { 
+                day: '2-digit', 
+                month: '2-digit' 
+            }) + ' ' + now.toLocaleTimeString('sv-SE', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            const postHtml = `
+                <div class="post-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 group" data-post-id="${post.id}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-semibold text-blue-600 dark:text-blue-400">
+                                ${post.author_display_name}
+                            </span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                ${timeString}
+                            </span>
+                        </div>
+                        <button 
+                            class="delete-post-btn text-red-500 hover:text-red-700 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            data-post-id="${post.id}"
+                            title="Ta bort post"
+                        >
+                            🗑️
+                        </button>
+                    </div>
+                    <div class="post-content text-gray-800 dark:text-gray-200 whitespace-pre-wrap">${post.content}</div>
+                </div>
+            `;
+            
+            postsContainer.insertAdjacentHTML('afterbegin', postHtml);
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            
+            // Set color based on type
+            toast.className = `fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            }`;
+            
+            // Show toast
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Hide toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        // Add hover effects to posts
+        document.addEventListener('DOMContentLoaded', function() {
+            const posts = document.querySelectorAll('.post-item');
+            posts.forEach(post => {
+                post.classList.add('group');
+            });
+        });
+    </script>
+</body>
+</html>
