@@ -5131,6 +5131,92 @@ def fix_bulletin_columns():
         print(f"Error fixing bulletin columns: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/create_admin")
+def create_admin():
+    """Create admin user - emergency route"""
+    try:
+        # Check if test user exists
+        existing_user = User.query.filter_by(username='test').first()
+        
+        if existing_user:
+            return jsonify({
+                "message": "Admin user 'test' already exists",
+                "user_id": existing_user.id,
+                "username": existing_user.username
+            })
+        
+        # Create admin user
+        admin_user = User(
+            username='test',
+            password_hash=generate_password_hash('test123'),
+            display_name='Admin'
+        )
+        
+        db.session.add(admin_user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Admin user created successfully!",
+            "username": "test",
+            "password": "test123",
+            "user_id": admin_user.id
+        })
+        
+    except Exception as e:
+        print(f"Error creating admin: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/users")
+def admin_users():
+    """Admin page to manage users"""
+    if session.get('username') != 'test':
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        users = User.query.all()
+        user_list = []
+        
+        for user in users:
+            user_list.append({
+                'id': user.id,
+                'username': user.username,
+                'display_name': getattr(user, 'display_name', None),
+                'created_at': user.created_at.isoformat() if hasattr(user, 'created_at') else None,
+                'is_admin': user.username == 'test'
+            })
+        
+        return render_template("admin_users.html", users=user_list)
+        
+    except Exception as e:
+        print(f"Error loading users: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/delete_user/<int:user_id>", methods=['DELETE'])
+def delete_user(user_id):
+    """Delete a user - admin only"""
+    if session.get('username') != 'test':
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Don't allow deleting admin user
+        if user.username == 'test':
+            return jsonify({"error": "Cannot delete admin user"}), 400
+        
+        # Delete user and all related data
+        username = user.username
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"User '{username}' deleted successfully"
+        })
+        
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
