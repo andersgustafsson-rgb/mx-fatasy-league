@@ -5389,6 +5389,10 @@ def race_countdown():
         # Check if picks are locked (2 hours before race)
         picks_locked = time_to_deadline.total_seconds() <= 0
         
+        print(f"DEBUG: Time to race: {time_to_race}")
+        print(f"DEBUG: Time to deadline: {time_to_deadline}")
+        print(f"DEBUG: Picks locked: {picks_locked}")
+        
         return jsonify({
             "next_race": {
                 "name": next_race.name,

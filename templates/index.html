@@ -494,8 +494,12 @@
           document.getElementById('countdown-race-name').textContent = 'Inga races';
           document.getElementById('race-countdown').textContent = '--:--:--';
           document.getElementById('deadline-countdown').textContent = '--:--:--';
+          window.simulationActive = false;
           return;
         }
+        
+        // Check if we're in simulation mode
+        window.simulationActive = data.next_race.name.includes('Test Race') || data.next_race.name.includes('Simulated');
         
         // Update race name
         document.getElementById('countdown-race-name').textContent = data.next_race.name;
@@ -518,6 +522,7 @@
       } catch (error) {
         console.error('Error fetching countdown data:', error);
         document.getElementById('countdown-race-name').textContent = 'Fel vid laddning';
+        window.simulationActive = false;
       }
     }
     
@@ -553,8 +558,32 @@
       
       // Update every second
       countdownInterval = setInterval(() => {
-        fetchCountdownData();
+        // For simulation mode, update countdown locally
+        if (window.simulationActive) {
+          updateCountdownLocally();
+        } else {
+          fetchCountdownData();
+        }
       }, 1000);
+    }
+    
+    function updateCountdownLocally() {
+      // Get current countdown data and decrement by 1 second
+      const raceElement = document.getElementById('race-countdown');
+      const deadlineElement = document.getElementById('deadline-countdown');
+      
+      if (raceElement && deadlineElement) {
+        // Parse current time and decrement
+        const raceText = raceElement.textContent;
+        const deadlineText = deadlineElement.textContent;
+        
+        // Simple countdown logic - just decrement seconds
+        if (raceText !== '--:--:--' && deadlineText !== '--:--:--') {
+          // This is a simplified countdown - in real implementation we'd parse and decrement properly
+          // For now, just fetch fresh data every few seconds during simulation
+          fetchCountdownData();
+        }
+      }
     }
     
     function stopCountdown() {
