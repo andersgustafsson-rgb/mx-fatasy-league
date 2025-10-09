@@ -5529,8 +5529,10 @@ def test_countdown():
         race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
         # Calculate time differences using simulated time
-        time_to_race = fake_race_datetime_utc - simulated_time
-        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - simulated_time
+        # For countdown, we need to use the current simulated time, not the fixed simulated time
+        current_simulated_time = get_current_time()
+        time_to_race = fake_race_datetime_utc - current_simulated_time
+        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_simulated_time
         
         # Check if picks are locked (2 hours before race)
         picks_locked = time_to_deadline.total_seconds() <= 0
@@ -5584,6 +5586,8 @@ def set_simulated_time():
         if scenario == 'reset':
             session.pop('simulated_time', None)
             session.pop('simulation_active', None)
+            session.pop('simulation_start_time', None)
+            session.pop('simulation_scenario', None)
             return jsonify({"message": "Simulated time reset to real time", "scenario": "reset"})
         
         # Create fake race date for testing
@@ -5602,9 +5606,11 @@ def set_simulated_time():
         else:
             return jsonify({"error": "Invalid scenario"}), 400
         
-        # Store in session
+        # Store in session with start time for countdown
         session['simulated_time'] = simulated_time.isoformat()
         session['simulation_active'] = True
+        session['simulation_start_time'] = datetime.utcnow().isoformat()  # When simulation started
+        session['simulation_scenario'] = scenario
         
         return jsonify({
             "message": f"Simulated time set for scenario: {scenario}",
@@ -5618,11 +5624,20 @@ def set_simulated_time():
 
 def get_current_time():
     """Get current time - either real or simulated"""
-    if session.get('simulation_active') and session.get('simulated_time'):
+    if session.get('simulation_active') and session.get('simulated_time') and session.get('simulation_start_time'):
         try:
-            simulated_time = datetime.fromisoformat(session['simulated_time'])
-            print(f"DEBUG: Using simulated time: {simulated_time}")
-            return simulated_time
+            # Get the initial simulated time
+            initial_simulated_time = datetime.fromisoformat(session['simulated_time'])
+            simulation_start_time = datetime.fromisoformat(session['simulation_start_time'])
+            
+            # Calculate how much real time has passed since simulation started
+            real_time_elapsed = datetime.utcnow() - simulation_start_time
+            
+            # Add the elapsed time to the initial simulated time
+            current_simulated_time = initial_simulated_time + real_time_elapsed
+            
+            print(f"DEBUG: Using simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            return current_simulated_time
         except Exception as e:
             print(f"DEBUG: Error parsing simulated time: {e}")
             pass
