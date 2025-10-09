@@ -1136,29 +1136,6 @@ def create_league():
         flash(f"Fel vid skapande av liga: {str(e)}", "error")
         return redirect(url_for("leagues_page"))
 
-@app.get("/debug_league")
-def debug_league():
-    """Debug league creation"""
-    try:
-        # Test database connection
-        league_count = League.query.count()
-        user_count = User.query.count()
-        
-        # Test file upload folder
-        upload_folder = app.config["UPLOAD_FOLDER"]
-        folder_exists = os.path.exists(upload_folder)
-        
-        return f"""
-        <h1>League Debug Info</h1>
-        <p>Leagues in database: {league_count}</p>
-        <p>Users in database: {user_count}</p>
-        <p>Upload folder: {upload_folder}</p>
-        <p>Upload folder exists: {folder_exists}</p>
-        <p>Current user: {session.get('username', 'Not logged in')}</p>
-        <p>User ID: {session.get('user_id', 'None')}</p>
-        """
-    except Exception as e:
-        return f"<h1>Debug Error</h1><p>{str(e)}</p>"
 
 @app.get("/reset_database")
 def reset_database():
@@ -2441,41 +2418,6 @@ def check_season_teams():
         "missing_teams": missing_teams
     })
 
-@app.get("/debug_league_images")
-def debug_league_images():
-    """Debug league images - check if they exist and are accessible"""
-    if session.get("username") != "test":
-        return jsonify({"error": "admin_only"}), 403
-    
-    print("DEBUG: debug_league_images called")
-    
-    all_leagues = League.query.all()
-    league_info = []
-    
-    for league in all_leagues:
-        image_exists = False
-        image_path = None
-        
-        if league.image_url:
-            # Extract filename from URL
-            filename = league.image_url.split('/')[-1]
-            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            image_exists = os.path.exists(image_path)
-        
-        league_info.append({
-            "league_id": league.id,
-            "league_name": league.name,
-            "image_url": league.image_url,
-            "image_path": image_path,
-            "image_exists": image_exists,
-            "upload_folder": app.config["UPLOAD_FOLDER"],
-            "upload_folder_exists": os.path.exists(app.config["UPLOAD_FOLDER"])
-        })
-    
-    return jsonify({
-        "message": f"Checked {len(league_info)} leagues",
-        "leagues": league_info
-    })
 
 @app.get("/fix_league_images")
 def fix_league_images():
@@ -2974,54 +2916,6 @@ def fix_user_roles_route():
     except Exception as e:
         return f"<h1>Error:</h1><p>{str(e)}</p>"
 
-@app.get("/debug_users")
-def debug_users_route():
-    """Debug users - show all users and create missing ones"""
-    try:
-        # Show all existing users
-        all_users = User.query.all()
-        user_list = []
-        for user in all_users:
-            user_list.append(f"ID: {user.id}, Username: '{user.username}'")
-        
-        # Create test user if missing
-        test_user = User.query.filter_by(username='test').first()
-        if not test_user:
-            test_user = User(
-                username='test',
-                password_hash=generate_password_hash('password'),
-                email='test@example.com'
-            )
-            db.session.add(test_user)
-            db.session.commit()
-            user_list.append("CREATED: test user")
-        else:
-            user_list.append("EXISTS: test user")
-        
-        # Create test2 user if missing
-        test2_user = User.query.filter_by(username='test2').first()
-        if not test2_user:
-            test2_user = User(
-                username='test2',
-                password_hash=generate_password_hash('password'),
-                email='test2@example.com'
-            )
-            db.session.add(test2_user)
-            db.session.commit()
-            user_list.append("CREATED: test2 user")
-        else:
-            user_list.append("EXISTS: test2 user")
-        
-        return f"""
-        <h1>Debug Users</h1>
-        <h2>All Users in Database:</h2>
-        <ul>
-        {''.join([f'<li>{user}</li>' for user in user_list])}
-        </ul>
-        <p><a href="/login">Go to Login</a></p>
-        """
-    except Exception as e:
-        return f"<h1>Error:</h1><p>{str(e)}</p>"
 
 @app.get("/force_create_users")
 def force_create_users_route():
@@ -4237,103 +4131,7 @@ def clear_anaheim1():
     except Exception as e:
         return f"<h1>Error</h1><p>{e}</p>"
 
-@app.get("/debug_users")
-def debug_users():
-    """Debug users and their data"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        with app.app_context():
-            # Check users
-            users = User.query.all()
-            user_info = f"<h2>Users ({len(users)}):</h2>"
-            for user in users:
-                user_info += f"<p>- {user.username} (ID: {user.id})</p>"
-            
-            # Check season teams
-            teams = SeasonTeam.query.all()
-            teams_info = f"<h2>Season Teams ({len(teams)}):</h2>"
-            for team in teams:
-                teams_info += f"<p>- User {team.user_id}, Team: {team.team_name}, Points: {team.total_points}</p>"
-            
-            # Check race picks
-            race_picks = RacePick.query.all()
-            picks_info = f"<h2>Race Picks ({len(race_picks)}):</h2>"
-            for pick in race_picks:
-                picks_info += f"<p>- User {pick.user_id}, Competition {pick.competition_id}, Rider {pick.rider_id}, Position {pick.predicted_position}</p>"
-            
-            return f"""
-            <h1>Users Debug Information</h1>
-            {user_info}
-            {teams_info}
-            {picks_info}
-            <hr>
-            <p><a href="/admin">Go to Admin</a></p>
-            <p><a href="/">Go to Home</a></p>
-            <p><a href="/force_recreate_data">Force Recreate All Data</a></p>
-            """
-    except Exception as e:
-        return f"<h1>Error</h1><p>{e}</p>"
 
-@app.get("/debug_points")
-def debug_points():
-    """Debug points calculation and display"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    try:
-        with app.app_context():
-            # Check users
-            users = User.query.all()
-            user_info = f"<h2>Users ({len(users)}):</h2>"
-            for user in users:
-                user_info += f"<p>- {user.username} (ID: {user.id})</p>"
-            
-            # Check competitions
-            competitions = Competition.query.all()
-            comp_info = f"<h2>Competitions ({len(competitions)}):</h2>"
-            for comp in competitions:
-                comp_info += f"<p>- {comp.name} (ID: {comp.id})</p>"
-            
-            # Check race picks
-            race_picks = RacePick.query.all()
-            picks_info = f"<h2>Race Picks ({len(race_picks)}):</h2>"
-            for pick in race_picks:
-                picks_info += f"<p>- User {pick.user_id}, Competition {pick.competition_id}, Rider {pick.rider_id}, Position {pick.predicted_position}</p>"
-            
-            # Check competition results
-            results = CompetitionResult.query.all()
-            results_info = f"<h2>Competition Results ({len(results)}):</h2>"
-            for result in results:
-                results_info += f"<p>- Competition {result.competition_id}, Rider {result.rider_id}, Position {result.position}</p>"
-            
-            # Check competition scores
-            scores = CompetitionScore.query.all()
-            scores_info = f"<h2>Competition Scores ({len(scores)}):</h2>"
-            for score in scores:
-                scores_info += f"<p>- User {score.user_id}, Competition {score.competition_id}, Points: {score.total_points}</p>"
-            
-            # Check season teams
-            teams = SeasonTeam.query.all()
-            teams_info = f"<h2>Season Teams ({len(teams)}):</h2>"
-            for team in teams:
-                teams_info += f"<p>- User {team.user_id}, Team: {team.team_name}, Points: {team.total_points}</p>"
-            
-            return f"""
-            <h1>Points Debug Information</h1>
-            {user_info}
-            {comp_info}
-            {picks_info}
-            {results_info}
-            {scores_info}
-            {teams_info}
-            <hr>
-            <p><a href="/admin">Go to Admin</a></p>
-            <p><a href="/">Go to Home</a></p>
-            """
-    except Exception as e:
-        return f"<h1>Error</h1><p>{e}</p>"
 
 @app.get("/trackmap_status")
 def trackmap_status():
