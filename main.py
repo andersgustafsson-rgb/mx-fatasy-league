@@ -601,7 +601,7 @@ def league_detail_page(league_id):
         return redirect(url_for("leagues_page"))
 
     members = (
-        db.session.query(User.username)
+        db.session.query(User.id, User.username)
         .join(LeagueMembership, User.id == LeagueMembership.user_id)
         .filter(LeagueMembership.league_id == league_id)
         .all()
@@ -611,7 +611,7 @@ def league_detail_page(league_id):
     season_leaderboard = []
     if member_user_ids:
         season_leaderboard = (
-            db.session.query(User.username, SeasonTeam.team_name, SeasonTeam.total_points)
+            db.session.query(User.id, User.username, SeasonTeam.team_name, SeasonTeam.total_points)
             .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
             .filter(User.id.in_(member_user_ids))
             .order_by(SeasonTeam.total_points.desc().nullslast())
@@ -623,10 +623,10 @@ def league_detail_page(league_id):
     return render_template(
         "league_detail.html",
         league=league,
-        members=[type("Row", (), {"username": m.username}) for m in members],
+        members=[type("Row", (), {"id": m.id, "username": m.username}) for m in members],
         competitions=competitions,
         season_leaderboard=[
-            {"username": row.username, "team_name": row.team_name, "total_points": row.total_points or 0}
+            {"user_id": row.id, "username": row.username, "team_name": row.team_name, "total_points": row.total_points or 0}
             for row in season_leaderboard
         ],
     )
@@ -1499,6 +1499,7 @@ def get_season_leaderboard():
     # Hämta alla användare med deras totala poäng från CompetitionScore
     user_scores = (
         db.session.query(
+            User.id,
             User.username,
             SeasonTeam.team_name,
             func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
@@ -1512,8 +1513,9 @@ def get_season_leaderboard():
     
     # Lägg till rank och delta (enkel version)
     result = []
-    for i, (username, team_name, total_points) in enumerate(user_scores, 1):
+    for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         result.append({
+            "user_id": user_id,
             "username": username,
             "team_name": team_name or None,
             "total_points": int(total_points),
@@ -2633,6 +2635,100 @@ def fix_column_public():
         except:
             pass
         return jsonify({"error": str(e), "status": "failed"}), 500
+
+@app.route("/profile/<int:user_id>")
+def view_user_profile(user_id):
+    """View another user's profile"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Get the user to view
+        target_user = User.query.get(user_id)
+        if not target_user:
+            flash("Användaren hittades inte.", "error")
+            return redirect(url_for("index"))
+        
+        # Don't allow viewing your own profile through this route
+        if target_user.id == session["user_id"]:
+            return redirect(url_for("profile_page"))
+        
+        # Get user's season team
+        season_team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        team_riders = []
+        if season_team:
+            try:
+                rs = (
+                    db.session.query(Rider)
+                    .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+                    .filter(SeasonTeamRider.season_team_id == season_team.id)
+                    .order_by(Rider.class_name.desc(), Rider.price.desc())
+                    .all()
+                )
+                team_riders = [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "number": r.rider_number,
+                        "brand": (r.bike_brand or "").lower(),
+                        "class": r.class_name,
+                        "image_url": r.image_url or None,
+                    }
+                    for r in rs
+                ]
+            except Exception as e:
+                print(f"Error getting team riders: {e}")
+                team_riders = []
+        
+        # Get user's recent picks for current race
+        current_picks_450 = []
+        current_picks_250 = []
+        upcoming_race = None
+        
+        try:
+            today = get_today()
+            upcoming_race = Competition.query.filter(
+                Competition.event_date >= today
+            ).order_by(Competition.event_date).first()
+            
+            if upcoming_race:
+                race_picks = RacePick.query.filter_by(
+                    user_id=user_id, 
+                    competition_id=upcoming_race.id
+                ).order_by(RacePick.predicted_position).all()
+                
+                for pick in race_picks:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        pick_data = {
+                            "position": pick.predicted_position,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name
+                        }
+                        
+                        if rider.class_name == "450cc":
+                            current_picks_450.append(pick_data)
+                        elif rider.class_name == "250cc":
+                            current_picks_250.append(pick_data)
+        except Exception as e:
+            print(f"Error getting user picks: {e}")
+        
+        return render_template(
+            "user_profile.html",
+            target_user=target_user,
+            season_team=season_team,
+            team_riders=team_riders,
+            current_picks_450=current_picks_450,
+            current_picks_250=current_picks_250,
+            upcoming_race=upcoming_race,
+            current_user_id=session["user_id"]
+        )
+        
+    except Exception as e:
+        print(f"Error viewing user profile: {e}")
+        flash("Ett fel uppstod vid visning av profilen.", "error")
+        return redirect(url_for("index"))
 
 @app.get("/fix_column_now")
 def fix_column_now():

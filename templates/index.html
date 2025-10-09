@@ -341,7 +341,7 @@
             const el = document.createElement("div");
             el.className = "flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-100 dark:bg-gray-700 p-2 sm:p-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 gap-1 sm:gap-0";
             el.innerHTML = `
-              <a class="flex-1 flex items-center gap-2" href="/user/${encodeURIComponent(row.username)}">
+              <a class="flex-1 flex items-center gap-2" href="/profile/${row.user_id}">
                 <span class="font-bold w-6 text-right text-sm sm:text-base text-gray-800 dark:text-gray-200">${i + 1}.</span>
                 <span class="text-sm sm:text-base truncate text-gray-800 dark:text-gray-200">${row.team_name || "—"} <span class="text-xs sm:text-sm text-gray-600 dark:text-gray-400">/ ${row.username}</span></span>
               </a>
