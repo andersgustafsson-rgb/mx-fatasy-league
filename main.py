@@ -768,7 +768,7 @@ def update_profile():
                 path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
                 file.save(path)
                 try:
-                    user.profile_picture_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                    user.profile_picture_url = f"uploads/leagues/{fname}"
                     print(f"Profile picture saved: {path}")
                 except AttributeError:
                     print("DEBUG: profile_picture_url column doesn't exist yet")
