@@ -784,19 +784,52 @@ def update_profile():
             print("DEBUG: Profile columns don't exist yet, skipping profile updates")
             flash("Profilfunktioner kommer att fungera efter databas-uppdatering.", "info")
         
-        # Hantera profilbild - enkel lösning som fungerade från början
+        # Hantera profilbild - spara som base64 för att överleva deployment
         file = request.files.get("profile_picture")
         if file and file.filename and allowed_file(file.filename):
             try:
-                # Skapa unikt filnamn
-                fname = secure_filename(f"profile_{user.id}_{file.filename}")
-                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                file.save(path)
+                import base64
+                from PIL import Image
+                import io
+                
+                # Läs och optimera bilden
+                file_data = file.read()
+                file.seek(0)
+                
+                # Öppna och optimera bilden
+                img = Image.open(io.BytesIO(file_data))
+                
+                # Konvertera till RGB om nödvändigt
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                
+                # Resize till lämplig storlek för profilbilder
+                max_size = (150, 150)
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Spara som JPEG med bra kvalitet
+                output = io.BytesIO()
+                img.save(output, format='JPEG', quality=80, optimize=True)
+                optimized_data = output.getvalue()
+                
+                # Konvertera till base64
+                base64_data = base64.b64encode(optimized_data).decode('utf-8')
+                data_url = f"data:image/jpeg;base64,{base64_data}"
                 
                 try:
+                    # Försök spara som base64 först
+                    user.profile_picture_url = data_url
+                    print(f"Profile picture saved as base64 (size: {len(base64_data)} chars)")
+                    flash("Profilbild uppladdad och sparad permanent!", "success")
+                except Exception as base64_error:
+                    print(f"DEBUG: Base64 save failed: {base64_error}")
+                    # Fallback: spara som fil
+                    fname = secure_filename(f"profile_{user.id}_{file.filename}")
+                    path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                    file.save(path)
                     user.profile_picture_url = f"uploads/leagues/{fname}"
-                    print(f"Profile picture saved: {path}")
-                    flash("Profilbild uppladdad och sparad!", "success")
+                    print(f"Profile picture saved as file: {path}")
+                    flash("Profilbild uppladdad (kommer att försvinna vid deployment)", "warning")
                 except AttributeError:
                     print("DEBUG: profile_picture_url column doesn't exist yet")
                     flash("Profilbild sparad, men kommer att visas efter databas-uppdatering.", "info")
@@ -2592,7 +2625,36 @@ def fix_column_public():
         except:
             pass
         return jsonify({"error": str(e), "status": "failed"}), 500
-        return jsonify({"error": str(e)}), 500
+
+@app.get("/fix_column_now")
+def fix_column_now():
+    """Emergency fix for profile picture column - no login required"""
+    try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
+        # Check if we need to alter the column type
+        if 'postgresql' in str(db.engine.url):
+            # PostgreSQL syntax - alter column type
+            db.session.execute(db.text("ALTER TABLE users ALTER COLUMN profile_picture_url TYPE TEXT;"))
+            print("DEBUG: Changed profile_picture_url column to TEXT")
+            db.session.commit()
+            return jsonify({
+                "message": "Profile picture column updated to TEXT - base64 images will now work!",
+                "status": "success"
+            })
+        else:
+            return jsonify({
+                "message": "SQLite detected - TEXT is default, column should already support base64",
+                "status": "info"
+            })
+    except Exception as e:
+        print(f"DEBUG: Error updating column: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+        return jsonify({"error": str(e), "status": "failed"}), 500
         
         # Add missing columns to users table
         columns_to_add = [
