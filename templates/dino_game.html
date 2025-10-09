@@ -291,8 +291,8 @@
                 this.score = 0;
                 this.highScore = localStorage.getItem('crossDinoHighScore') || 0;
                 this.gameSpeed = 2;
-                this.gravity = 0.8;
-                this.jumpPower = -16;
+                this.gravity = 0.5;
+                this.jumpPower = -20;
                 
                 // Cross (player) - initialize with default values first
                 this.cross = {
@@ -516,8 +516,8 @@
             }
             
             addObstacle() {
-                const height = Math.random() * 40 + 50; // Higher obstacles (50-90px)
-                const width = Math.random() * 25 + 20; // Wider obstacles
+                const height = Math.random() * 25 + 30; // Lower obstacles (30-55px)
+                const width = Math.random() * 20 + 15; // Smaller obstacles
                 
                 this.obstacles.push({
                     x: this.width,
@@ -611,21 +611,35 @@
                 );
                 this.ctx.fill();
                 
-                // Draw cross motorcycle with rotation animation
+                // Draw cross motorcycle as a simple bike shape
+                this.ctx.save();
                 this.ctx.translate(
                     this.cross.x + this.cross.width/2, 
                     this.cross.y + this.cross.height/2 + bounceOffset
                 );
                 
-                // Rotate wheels when moving
-                if (this.gameRunning) {
-                    this.ctx.rotate(Date.now() * 0.01);
-                }
+                // Draw motorcycle body
+                this.ctx.fillStyle = '#FF6B6B';
+                this.ctx.fillRect(-15, -8, 30, 16);
                 
-                this.ctx.fillStyle = 'white';
-                this.ctx.font = 'bold 20px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('🏍️', 0, 7);
+                // Draw wheels
+                this.ctx.fillStyle = '#333';
+                this.ctx.beginPath();
+                this.ctx.arc(-8, 8, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(8, 8, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Draw handlebars
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-15, -8);
+                this.ctx.lineTo(-20, -12);
+                this.ctx.moveTo(15, -8);
+                this.ctx.lineTo(20, -12);
+                this.ctx.stroke();
                 
                 this.ctx.restore();
                 
