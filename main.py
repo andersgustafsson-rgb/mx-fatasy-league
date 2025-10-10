@@ -1170,6 +1170,51 @@ def my_scores():
     return render_template("my_scores.html", scores=scores, total_points=total_points)
 
 
+@app.route("/series/<int:series_id>")
+def series_page(series_id):
+    """Dedicated page for a specific series (SX/MX/SMX)"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Get series info
+        series = Series.query.get_or_404(series_id)
+        
+        # Get all competitions in this series
+        competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        
+        # Get current date
+        current_date = date.today()
+        
+        # Find next race
+        next_race = None
+        for comp in competitions:
+            if comp.event_date >= current_date:
+                next_race = comp
+                break
+        
+        # Check if picks should be open
+        picks_open = False
+        if series.start_date:
+            days_until_start = (series.start_date - current_date).days
+            picks_open = days_until_start <= 7  # Open 1 week before season start
+        
+        # If series is active, check if picks are locked for next race
+        if next_race and picks_open:
+            picks_locked = is_picks_locked(next_race.id)
+            picks_open = not picks_locked
+        
+        return render_template('series_page.html',
+                             series=series,
+                             competitions=competitions,
+                             next_race=next_race,
+                             picks_open=picks_open,
+                             current_date=current_date)
+        
+    except Exception as e:
+        print(f"Error in series_page: {e}")
+        return redirect(url_for("index"))
+
 @app.route("/race_picks/<int:competition_id>")
 def race_picks_page(competition_id):
     if "user_id" not in session:
