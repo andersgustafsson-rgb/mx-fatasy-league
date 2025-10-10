@@ -381,6 +381,8 @@
                 this.gravity = 0.7;
                 this.jumpPower = -20; // Increased a bit more for better clearance
                 this.jumpCooldown = 0; // Cooldown to prevent spam jumping
+                this.spacePressed = false; // Track if space key is currently pressed
+                this.touchPressed = false; // Track if touch button is currently pressed
                 
                 // Cross (player) - initialize with default values first
                 this.cross = {
@@ -447,7 +449,8 @@
                     
                     if (e.code === 'Space' || e.code === 'ArrowUp') {
                         e.preventDefault();
-                        if (this.gameRunning && !this.gamePaused) {
+                        if (this.gameRunning && !this.gamePaused && !this.spacePressed) {
+                            this.spacePressed = true;
                             this.jump();
                         }
                     }
@@ -460,6 +463,10 @@
                 
                 document.addEventListener('keyup', (e) => {
                     this.keys[e.code] = false;
+                    
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        this.spacePressed = false;
+                    }
                 });
             }
             
@@ -472,7 +479,8 @@
                     jumpButton.addEventListener('touchstart', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (this.gameRunning && !this.gamePaused) {
+                        if (this.gameRunning && !this.gamePaused && !this.touchPressed) {
+                            this.touchPressed = true;
                             this.jump();
                         }
                     });
@@ -480,12 +488,14 @@
                     jumpButton.addEventListener('touchend', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        this.touchPressed = false;
                     });
                     
                     jumpButton.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (this.gameRunning && !this.gamePaused) {
+                        if (this.gameRunning && !this.gamePaused && !this.touchPressed) {
+                            this.touchPressed = true;
                             this.jump();
                         }
                     });
@@ -514,7 +524,8 @@
                 this.canvas.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (this.gameRunning && !this.gamePaused) {
+                    if (this.gameRunning && !this.gamePaused && !this.touchPressed) {
+                        this.touchPressed = true;
                         this.jump();
                     }
                 });
@@ -522,12 +533,14 @@
                 this.canvas.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    this.touchPressed = false;
                 });
                 
                 this.canvas.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (this.gameRunning && !this.gamePaused) {
+                    if (this.gameRunning && !this.gamePaused && !this.touchPressed) {
+                        this.touchPressed = true;
                         this.jump();
                     }
                 });
