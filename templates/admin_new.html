@@ -494,6 +494,7 @@
             
             div.innerHTML = `
                 <span class="w-8 text-sm font-medium text-gray-600">${currentPosition}.</span>
+                <input type="hidden" name="positions_${cls}[]" value="${currentPosition}">
                 <select name="${selectName}" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">-- Välj förare --</option>
                 </select>
