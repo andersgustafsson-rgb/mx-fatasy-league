@@ -110,16 +110,16 @@
         }
 
         .leaderboard {
-            margin: 20px 0;
-            padding: 15px;
+            margin: 15px 0;
+            padding: 10px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .leaderboard h3 {
-            margin: 0 0 10px 0;
-            font-size: 16px;
+            margin: 0 0 8px 0;
+            font-size: 14px;
             color: #fff;
             text-align: center;
         }
@@ -128,8 +128,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 5px 0;
-            font-size: 14px;
+            padding: 3px 0;
+            font-size: 12px;
             color: #fff;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -230,13 +230,33 @@
             }
             
             #startScreen, #gameOver {
-                padding: 20px;
+                padding: 15px;
                 margin: 0 10px;
             }
             
             .button {
-                padding: 10px 20px;
-                font-size: 14px;
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .leaderboard {
+                margin: 10px 0;
+                padding: 8px;
+            }
+            
+            .leaderboard h3 {
+                font-size: 12px;
+                margin: 0 0 6px 0;
+            }
+            
+            .leaderboard-item {
+                padding: 2px 0;
+                font-size: 11px;
+            }
+            
+            .instructions {
+                margin: 15px 0;
+                font-size: 12px;
             }
             
             #touchControls {
@@ -340,7 +360,8 @@
                 this.gameRunning = false;
                 this.gamePaused = false;
                 this.score = 0;
-                this.highScore = localStorage.getItem('crossDinoGlobalHighScore') || 0;
+                this.highScore = parseInt(localStorage.getItem('crossDinoGlobalHighScore') || 0);
+                console.log('DEBUG: Loaded highscore:', this.highScore);
                 this.gameSpeed = 2;
                 this.gravity = 0.7;
                 this.jumpPower = -20; // Increased a bit more for better clearance
@@ -599,6 +620,7 @@
                     this.highScore = this.score;
                     localStorage.setItem('crossDinoGlobalHighScore', this.highScore);
                     document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
+                    console.log('DEBUG: New highscore saved:', this.highScore);
                 }
                 
                 // Update leaderboard if this is a new high score
@@ -616,24 +638,30 @@
             
             updateLeaderboard(score) {
                 const leaderboard = JSON.parse(localStorage.getItem('crossDinoLeaderboard') || '[]');
-                const playerName = prompt('Grattis! Du fick ett nytt rekord! Vad heter du?') || 'Anonym';
                 
-                // Add new score
-                leaderboard.push({
-                    name: playerName,
-                    score: score,
-                    date: new Date().toLocaleDateString()
-                });
+                // Check if this score qualifies for leaderboard (top 5)
+                const minScore = leaderboard.length < 5 ? 0 : leaderboard[4].score;
                 
-                // Sort by score (highest first) and keep only top 5
-                leaderboard.sort((a, b) => b.score - a.score);
-                leaderboard.splice(5);
-                
-                // Save back to localStorage
-                localStorage.setItem('crossDinoLeaderboard', JSON.stringify(leaderboard));
-                
-                // Update display
-                this.displayLeaderboard(leaderboard);
+                if (score > minScore) {
+                    const playerName = prompt('Grattis! Du fick ett nytt rekord! Vad heter du?') || 'Anonym';
+                    
+                    // Add new score
+                    leaderboard.push({
+                        name: playerName,
+                        score: score,
+                        date: new Date().toLocaleDateString()
+                    });
+                    
+                    // Sort by score (highest first) and keep only top 5
+                    leaderboard.sort((a, b) => b.score - a.score);
+                    leaderboard.splice(5);
+                    
+                    // Save back to localStorage
+                    localStorage.setItem('crossDinoLeaderboard', JSON.stringify(leaderboard));
+                    
+                    // Update display
+                    this.displayLeaderboard(leaderboard);
+                }
             }
             
             displayLeaderboard(leaderboard) {
