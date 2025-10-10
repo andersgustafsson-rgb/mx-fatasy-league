@@ -438,6 +438,9 @@
   </audio>
 
   <script>
+    // Set race picks URL for JavaScript
+    window.racePicksUrl = "{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}";
+    
     // Litet klickljud vid navigering till t.ex. "Dina picks"
     (function(){
       let ctx = null;
@@ -589,7 +592,8 @@
             deadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">⏰ <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.</p>';
           }
           if (racePicksButton) {
-            racePicksButton.innerHTML = '<a href="{{ url_for(\'race_picks_page\', competition_id=upcoming_race.id) if upcoming_race else \'#\' }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">🏁 Race Picks</a>';
+            const racePicksUrl = window.racePicksUrl || '#';
+            racePicksButton.innerHTML = `<a href="${racePicksUrl}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">🏁 Race Picks</a>`;
           }
         }
         
