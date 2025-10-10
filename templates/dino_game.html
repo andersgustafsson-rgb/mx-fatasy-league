@@ -297,12 +297,12 @@
                 // Cross (player) - initialize with default values first
                 this.cross = {
                     x: 100,
-                    y: 320,
+                    y: 350,
                     width: 40,
                     height: 40,
                     velocityY: 0,
                     isJumping: false,
-                    groundY: 320
+                    groundY: 350
                 };
                 
                 // Obstacles (gupp)
@@ -594,83 +594,69 @@
                 this.ctx.strokeStyle = '#000';
                 this.ctx.lineWidth = 2;
                 
-                // Draw motorcycle from side view - much better design
-                // Main frame (tank to seat)
+                // Draw CLEAR motorcycle from side view
+                // Front wheel (big and clear)
+                this.ctx.beginPath();
+                this.ctx.arc(-15, 10, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Rear wheel (big and clear)
+                this.ctx.beginPath();
+                this.ctx.arc(15, 10, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Main frame (clear motorcycle shape)
                 this.ctx.beginPath();
                 this.ctx.moveTo(-15, 2);
-                this.ctx.lineTo(-10, -2);
-                this.ctx.lineTo(8, -2);
-                this.ctx.lineTo(12, 2);
-                this.ctx.lineTo(8, 6);
-                this.ctx.lineTo(-10, 6);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                // Front wheel (larger)
-                this.ctx.beginPath();
-                this.ctx.arc(-12, 8, 7, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Rear wheel (larger)
-                this.ctx.beginPath();
-                this.ctx.arc(12, 8, 7, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Front fork (suspension)
-                this.ctx.beginPath();
-                this.ctx.moveTo(-15, 2);
-                this.ctx.lineTo(-12, 8);
-                this.ctx.stroke();
-                
-                // Rear swingarm
-                this.ctx.beginPath();
-                this.ctx.moveTo(12, 2);
+                this.ctx.lineTo(-8, -3);
+                this.ctx.lineTo(8, -3);
+                this.ctx.lineTo(15, 2);
                 this.ctx.lineTo(12, 8);
-                this.ctx.stroke();
-                
-                // Handlebars (wider)
-                this.ctx.beginPath();
-                this.ctx.moveTo(-15, 2);
-                this.ctx.lineTo(-18, 0);
-                this.ctx.moveTo(-15, 2);
-                this.ctx.lineTo(-12, 0);
-                this.ctx.stroke();
-                
-                // Exhaust pipe
-                this.ctx.beginPath();
-                this.ctx.moveTo(8, 2);
-                this.ctx.lineTo(15, 0);
-                this.ctx.stroke();
-                
-                // Rider silhouette
-                // Helmet (larger)
-                this.ctx.beginPath();
-                this.ctx.arc(0, -6, 7, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Body (better proportions)
-                this.ctx.beginPath();
-                this.ctx.moveTo(-3, 0);
-                this.ctx.lineTo(3, 0);
-                this.ctx.lineTo(5, 4);
-                this.ctx.lineTo(-5, 4);
+                this.ctx.lineTo(-12, 8);
                 this.ctx.closePath();
                 this.ctx.fill();
                 
-                // Arms (reaching to handlebars)
+                // Front fork (clear suspension)
                 this.ctx.beginPath();
-                this.ctx.moveTo(-3, 0);
-                this.ctx.lineTo(-12, 2);
-                this.ctx.moveTo(3, 0);
-                this.ctx.lineTo(-8, 2);
+                this.ctx.moveTo(-15, 2);
+                this.ctx.lineTo(-15, 10);
                 this.ctx.stroke();
                 
-                // Legs
+                // Rear swingarm (clear)
                 this.ctx.beginPath();
-                this.ctx.moveTo(-2, 4);
-                this.ctx.lineTo(-4, 8);
-                this.ctx.moveTo(2, 4);
-                this.ctx.lineTo(4, 8);
+                this.ctx.moveTo(15, 2);
+                this.ctx.lineTo(15, 10);
+                this.ctx.stroke();
+                
+                // Handlebars (very clear)
+                this.ctx.beginPath();
+                this.ctx.moveTo(-15, 2);
+                this.ctx.lineTo(-20, -1);
+                this.ctx.moveTo(-15, 2);
+                this.ctx.lineTo(-10, -1);
+                this.ctx.stroke();
+                
+                // Rider (clear and simple)
+                // Helmet
+                this.ctx.beginPath();
+                this.ctx.arc(0, -8, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Body
+                this.ctx.beginPath();
+                this.ctx.moveTo(-2, -2);
+                this.ctx.lineTo(2, -2);
+                this.ctx.lineTo(3, 2);
+                this.ctx.lineTo(-3, 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Arms to handlebars
+                this.ctx.beginPath();
+                this.ctx.moveTo(-2, -2);
+                this.ctx.lineTo(-12, 2);
+                this.ctx.moveTo(2, -2);
+                this.ctx.lineTo(-8, 2);
                 this.ctx.stroke();
                 
                 this.ctx.restore();
