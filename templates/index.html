@@ -115,7 +115,9 @@
           <div class="flex flex-col lg:flex-row gap-4 min-w-[280px] sm:min-w-[400px] lg:min-w-[1000px]">
             
             <!-- Real Time Countdown Widget -->
-            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 flex-1">
+            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 flex-1 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
+              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
+              <div class="relative z-10">
               <div class="text-center">
                 <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-3" id="real-countdown-race-name">Laddar...</h3>
                 <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
@@ -133,10 +135,13 @@
                   <span id="real-picks-open-status" class="hidden bg-green-600 text-white px-3 py-2 rounded-lg font-semibold">✅ Picks öppna</span>
                 </div>
               </div>
+              </div>
             </div>
             
             <!-- Test Countdown Widget -->
-            <div id="test-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-purple-400 flex-1">
+            <div id="test-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-purple-400 flex-1 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}'); background-size: cover; background-position: center;">
+              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
+              <div class="relative z-10">
               <div class="text-center">
                 <h3 class="text-purple-400 font-bold text-lg sm:text-xl lg:text-2xl mb-3" id="test-countdown-race-name">Test Mode</h3>
                 <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
@@ -153,6 +158,7 @@
                   <span id="test-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
                   <span id="test-picks-open-status" class="hidden bg-green-600 text-white px-3 py-2 rounded-lg font-semibold">✅ Picks öppna</span>
                 </div>
+              </div>
               </div>
             </div>
           </div>
