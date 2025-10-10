@@ -291,7 +291,22 @@ class CompetitionImage(db.Model):
 class SimDate(db.Model):
     __tablename__ = "sim_date"
     id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format    
+    value = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format
+
+class CrossDinoHighScore(db.Model):
+    __tablename__ = 'cross_dino_highscores'
+    id = db.Column(db.Integer, primary_key=True)
+    player_name = db.Column(db.String(100), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.player_name,
+            'score': self.score,
+            'created_at': self.created_at.isoformat()
+        }    
 
 # -------------------------------------------------
 # Helpers
@@ -5974,6 +5989,45 @@ def reset_simulation():
 def dino_game():
     """Cross Dino game - Chrome Dino clone with motocross theme"""
     return render_template("dino_game.html")
+
+@app.route("/api/cross_dino/highscores", methods=["GET"])
+def get_cross_dino_highscores():
+    """Get top 5 Cross Dino highscores"""
+    try:
+        highscores = CrossDinoHighScore.query.order_by(CrossDinoHighScore.score.desc()).limit(5).all()
+        return jsonify([score.to_dict() for score in highscores])
+    except Exception as e:
+        print(f"Error getting highscores: {e}")
+        return jsonify([])
+
+@app.route("/api/cross_dino/highscores", methods=["POST"])
+def submit_cross_dino_highscore():
+    """Submit a new Cross Dino highscore"""
+    try:
+        data = request.get_json()
+        player_name = data.get('player_name', 'Anonym')
+        score = int(data.get('score', 0))
+        
+        if score <= 0:
+            return jsonify({"error": "Invalid score"}), 400
+        
+        # Create new highscore
+        highscore = CrossDinoHighScore(
+            player_name=player_name,
+            score=score
+        )
+        
+        db.session.add(highscore)
+        db.session.commit()
+        
+        # Return top 5 highscores
+        highscores = CrossDinoHighScore.query.order_by(CrossDinoHighScore.score.desc()).limit(5).all()
+        return jsonify([score.to_dict() for score in highscores])
+        
+    except Exception as e:
+        print(f"Error submitting highscore: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to submit highscore"}), 500
 
 @app.route("/test_countdown")
 def test_countdown():
