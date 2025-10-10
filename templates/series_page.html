@@ -87,11 +87,23 @@
         <!-- Next Race / Current Race -->
         {% if next_race %}
         <div class="mb-6">
+            {% if next_race.id == 9999 %}
+            <!-- Test Race - use Seattle track map -->
+            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
+                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
+            {% else %}
+            <!-- Real Race -->
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
                  style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/" + next_race.name.lower().replace(" ", "").replace("national", "").replace("classic", "") + ".jpg") }}');">
+            {% endif %}
                 <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                 <div class="relative z-10">
-                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-4">🏁 {{ next_race.name }}</h2>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-4">
+                        🏁 {{ next_race.name }}
+                        {% if next_race.id == 9999 %}
+                        <span class="text-yellow-400 text-sm ml-2">🧪 TEST MODE</span>
+                        {% endif %}
+                    </h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div class="bg-black bg-opacity-50 rounded-lg p-4">
@@ -109,10 +121,19 @@
                     </div>
                     
                     {% if picks_open %}
+                        {% if next_race.id == 9999 %}
+                        <!-- Test Race - link to test race picks -->
+                        <a href="/race_picks_test" 
+                           class="inline-block bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
+                            🧪 Test Race Picks
+                        </a>
+                        {% else %}
+                        <!-- Real Race -->
                         <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}" 
                            class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
                             🏁 Make Your Picks
                         </a>
+                        {% endif %}
                     {% else %}
                         {% if series.start_date %}
                             {% set days_until_start = (series.start_date - current_date).days %}

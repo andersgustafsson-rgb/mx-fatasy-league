@@ -1188,21 +1188,42 @@ def series_page(series_id):
         # Get current date (use simulated date if available)
         current_date = get_today()
         
-        # Find next race
-        next_race = None
-        for comp in competitions:
-            if comp.event_date >= current_date:
-                next_race = comp
-                break
+        # Check if we're in test simulation mode
+        simulation_active = False
+        test_race = None
+        try:
+            global_sim = GlobalSimulation.query.first()
+            if global_sim and global_sim.active:
+                simulation_active = True
+                # Create a fake test race for the series
+                test_race = type('TestRace', (), {
+                    'id': 9999,
+                    'name': f'Test Race ({global_sim.scenario})',
+                    'event_date': current_date,
+                    'series_id': series_id
+                })()
+        except:
+            pass
+        
+        # Find next race (use test race if in simulation mode)
+        next_race = test_race if simulation_active else None
+        if not next_race:
+            for comp in competitions:
+                if comp.event_date >= current_date:
+                    next_race = comp
+                    break
         
         # Check if picks should be open
         picks_open = False
-        if series.start_date:
+        if simulation_active:
+            # In test mode, picks are always open
+            picks_open = True
+        elif series.start_date:
             days_until_start = (series.start_date - current_date).days
             picks_open = days_until_start <= 7  # Open 1 week before season start
         
         # If series is active, check if picks are locked for next race
-        if next_race and picks_open:
+        if next_race and picks_open and not simulation_active:
             picks_locked = is_picks_locked(next_race.id)
             picks_open = not picks_locked
         
