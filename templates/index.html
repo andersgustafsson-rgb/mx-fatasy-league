@@ -106,10 +106,10 @@
                 </div>
               {% endif %}
               <p class="text-base md:text-lg text-gray-200">
-                Välkommen, <strong>{{ username }}</strong>!
-              </p>
+            Välkommen, <strong>{{ username }}</strong>!
+          </p>
             </div>
-          </header>
+        </header>
           
           <!-- Race Countdown Widget -->
           <div id="countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 min-w-[280px] sm:min-w-[400px] lg:min-w-[500px]">
@@ -186,17 +186,17 @@
                   <a href="{{ url_for('my_scores') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
                     🏆 Mina Poäng
                   </a>
-                </div>
-              </div>
-              
+        </div>
+      </div>
+
               <!-- Race Info -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                {% if upcoming_race %}
+          {% if upcoming_race %}
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Aktuellt Race</h2>
                 <p class="text-base sm:text-lg font-semibold break-words text-gray-800 dark:text-gray-200">{{ upcoming_race.name }}</p>
                 <p class="text-sm sm:text-base text-gray-700 dark:text-gray-300 mb-4">
-                  {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
-                </p>
+            {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
+          </p>
                 
                 <!-- Picks Status -->
                 {% if picks_status == "has_picks" %}
@@ -222,17 +222,17 @@
                                 <span class="text-2xl">🥈</span>
                               {% elif pick.position == 3 %}
                                 <span class="text-2xl">🥉</span>
-                              {% else %}
+          {% else %}
                                 <span class="text-gray-600 dark:text-gray-400 font-bold">{{ pick.position }}.</span>
-                              {% endif %}
-                            </div>
+          {% endif %}
+        </div>
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
                           </div>
                           {% endfor %}
                         </div>
                       </div>
-                      {% endif %}
-                      
+    {% endif %}
+
                       <!-- 250cc picks -->
                       {% if current_picks_250 %}
                       <div class="bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg p-3">
@@ -252,9 +252,9 @@
                               {% endif %}
                             </div>
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-                          </div>
-                          {% endfor %}
-                        </div>
+  </div>
+  {% endfor %}
+</div>
                       </div>
                       {% endif %}
                       
@@ -283,8 +283,8 @@
                           {% endif %}
                         </div>
                       </div>
-                      {% endif %}
-                      
+          {% endif %}
+
                       <!-- Wildcard pick -->
                       {% if current_wildcard %}
                       <div class="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
@@ -325,10 +325,10 @@
                     </div>
                   </div>
                 {% endif %}
-                {% else %}
+          {% else %}
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Inget kommande race</h2>
                 <p class="text-gray-600 dark:text-gray-400">Inga races planerade just nu.</p>
-                {% endif %}
+          {% endif %}
               </div>
             </div>
           </div>
@@ -409,9 +409,9 @@
                   <a href="{{ url_for('trackmaps_page') }}" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
                     Track Maps
                   </a>
-                </div>
-              </div>
-              
+        </div>
+      </div>
+
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🔧 Admin & System</h2>
                 <div class="space-y-3">

@@ -563,15 +563,20 @@ def index():
             
             if simulation_active:
                 # Use the same logic as race_countdown for consistency
-                scenario = session.get('test_scenario', 'race_in_3h')
-                
-                # Get current time first
-                current_time = get_current_time()
+                # Get the scenario from global database state or use default
+                try:
+                    result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
+                    scenario = result[0] if result and result[0] else 'race_in_3h'
+                    print(f"DEBUG: get_current_time - using scenario from database: {scenario}")
+                except Exception as e:
+                    print(f"DEBUG: Error getting scenario from database: {e}")
+                    scenario = session.get('test_scenario', 'race_in_3h')
+                    print(f"DEBUG: get_current_time - using scenario from session: {scenario}")
                 
                 # Create fake race based on scenario - use a fixed future time for the race
                 # This ensures the countdown actually counts down
-                fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
-                fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
+                # Use a fixed base time that doesn't change between calls
+                fake_race_base_time = datetime.utcnow() + timedelta(hours=3)  # 3 hours from now
                 
                 # Adjust fake race time based on scenario
                 if scenario == "race_in_3h":
@@ -589,8 +594,24 @@ def index():
                 time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
                 picks_locked = time_to_deadline.total_seconds() <= 0
                 
-                print(f"DEBUG: index - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
-                print(f"DEBUG: index - Picks locked: {picks_locked}")
+                print(f"DEBUG: get_current_time - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
+                print(f"DEBUG: get_current_time - Picks locked: {picks_locked}")
+                
+                # Return the simulated time for the current scenario
+                # Calculate simulated time based on scenario
+                if scenario == "race_in_3h":
+                    simulated_time = fake_race_datetime_utc - timedelta(hours=3)  # 3 hours before race
+                elif scenario == "race_in_1h":
+                    simulated_time = fake_race_datetime_utc - timedelta(hours=1)  # 1 hour before race
+                elif scenario == "race_in_30m":
+                    simulated_time = fake_race_datetime_utc - timedelta(minutes=30)  # 30 minutes before race
+                elif scenario == "race_tomorrow":
+                    simulated_time = fake_race_datetime_utc - timedelta(days=1)  # 1 day before race
+                else:
+                    simulated_time = fake_race_datetime_utc - timedelta(hours=3)  # Default to 3 hours before
+                
+                print(f"DEBUG: get_current_time - returning simulated time: {simulated_time}")
+                return simulated_time
             else:
                 # Check if picks are locked (2 hours before race)
                 race_time_str = "20:00"  # 8pm local time
@@ -5625,33 +5646,38 @@ def race_countdown():
         current_time = get_current_time()
         print(f"DEBUG: race_countdown using time: {current_time}")
         
-        # Check if we're in simulation mode (check both session and global state)
-        simulation_active = session.get('simulation_active')
-        print(f"DEBUG: race_countdown - session simulation_active: {simulation_active}")
+        # Check if we're in simulation mode (use only global database state for consistency)
+        simulation_active = False
+        print(f"DEBUG: race_countdown - checking global database simulation only")
         
-        if not simulation_active:
-            try:
-                # Rollback any existing transaction first
-                db.session.rollback()
-                
-                result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
-                simulation_active = result and result[0] if result else False
-                print(f"DEBUG: race_countdown - database simulation_active: {simulation_active}")
-            except Exception as e:
-                print(f"DEBUG: Error checking global simulation: {e}")
-                # Rollback and fallback to app globals if database table doesn't exist
-                db.session.rollback()
-                simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
-                print(f"DEBUG: race_countdown - app global simulation_active: {simulation_active}")
+        try:
+            # Rollback any existing transaction first
+            db.session.rollback()
+            
+            result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
+            simulation_active = result and result[0] if result else False
+            print(f"DEBUG: race_countdown - database simulation_active: {simulation_active}")
+        except Exception as e:
+            print(f"DEBUG: Error checking global simulation: {e}")
+            # Rollback and fallback to app globals if database table doesn't exist
+            db.session.rollback()
+            simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
+            print(f"DEBUG: race_countdown - app global simulation_active: {simulation_active}")
         
         print(f"DEBUG: race_countdown - final simulation_active: {simulation_active}")
         
         if simulation_active:
             print(f"DEBUG: race_countdown - ENTERING SIMULATION MODE")
             # Use the same logic as test_countdown for consistency
-            # Get the scenario from session or use default
-            scenario = session.get('test_scenario', 'race_in_3h')
-            print(f"DEBUG: race_countdown - using scenario: {scenario}")
+            # Get the scenario from global database state or use default
+            try:
+                result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
+                scenario = result[0] if result and result[0] else 'race_in_3h'
+                print(f"DEBUG: race_countdown - using scenario from database: {scenario}")
+            except Exception as e:
+                print(f"DEBUG: Error getting scenario from database: {e}")
+                scenario = session.get('test_scenario', 'race_in_3h')
+                print(f"DEBUG: race_countdown - using scenario from session: {scenario}")
             
             # Create fake race based on scenario - use a fixed future time for the race
             # This ensures the countdown actually counts down
@@ -5837,7 +5863,7 @@ def reset_simulation():
     if session.get("username") != "test":
         return jsonify({"error": "Unauthorized"}), 403
     
-    # Clear session-based simulation
+    # Clear session-based simulation (for backward compatibility, but we'll use global database state)
     session.pop('simulation_active', None)
     session.pop('simulation_start_time', None)
     session.pop('initial_simulated_time', None)
@@ -5919,7 +5945,7 @@ def test_countdown():
         scenario = request.args.get('scenario', 'race_in_3h')
         simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
         
-        # Set the simulated time in session for global use
+        # Set the simulated time in session for global use (for backward compatibility, but we'll use global database state)
         session['simulation_active'] = True
         session['simulated_time'] = simulated_time.isoformat()
         session['simulation_start_time'] = datetime.utcnow().isoformat()
@@ -5934,18 +5960,20 @@ def test_countdown():
             db.session.rollback()
             
             db.session.execute(text("""
-                INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time) 
-                VALUES (1, :active, :simulated_time, :start_time, :initial_time)
+                INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time, scenario) 
+                VALUES (1, :active, :simulated_time, :start_time, :initial_time, :scenario)
                 ON CONFLICT (id) DO UPDATE SET 
                     active = :active,
                     simulated_time = :simulated_time,
                     start_time = :start_time,
-                    initial_time = :initial_time
+                    initial_time = :initial_time,
+                    scenario = :scenario
             """), {
                 'active': True,
                 'simulated_time': simulated_time.isoformat(),
                 'start_time': datetime.utcnow().isoformat(),
-                'initial_time': simulated_time.isoformat()
+                'initial_time': simulated_time.isoformat(),
+                'scenario': scenario
             })
             db.session.commit()
         except Exception as e:
@@ -6111,25 +6139,8 @@ def get_current_time():
     """Get current time - either real or simulated"""
     print(f"DEBUG: get_current_time() called - session simulation_active: {session.get('simulation_active')}")
     
-    # Check session-based simulation first
-    if session.get('simulation_active') and session.get('simulated_time') and session.get('simulation_start_time'):
-        try:
-            # Get the initial simulated time
-            initial_simulated_time = datetime.fromisoformat(session['simulated_time'])
-            simulation_start_time = datetime.fromisoformat(session['simulation_start_time'])
-            
-            # Calculate how much real time has passed since simulation started
-            real_time_elapsed = datetime.utcnow() - simulation_start_time
-            
-            # Add the elapsed time to the initial simulated time
-            current_simulated_time = initial_simulated_time + real_time_elapsed
-            
-            print(f"DEBUG: Using session simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
-            print(f"DEBUG: Session data - active: {session.get('simulation_active')}, time: {session.get('simulated_time')}, start: {session.get('simulation_start_time')}")
-            return current_simulated_time
-        except Exception as e:
-            print(f"DEBUG: Error parsing session simulated time: {e}")
-            pass
+    # Skip session-based simulation - use only global database simulation for consistency
+    print(f"DEBUG: Skipping session simulation, using only global database simulation")
     
     # Check global simulation state for cross-device sync using database
     print(f"DEBUG: Checking database global simulation state...")
