@@ -561,103 +561,11 @@ def index():
     
     if upcoming_race:
         try:
-            # Check if we're in simulation mode (same logic as race_countdown)
-            simulation_active = session.get('simulation_active')
-            if not simulation_active:
-                try:
-                    # Rollback any existing transaction first
-                    db.session.rollback()
-                    
-                    result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
-                    simulation_active = result and result[0] if result else False
-                except Exception as e:
-                    print(f"DEBUG: Error checking global simulation in index: {e}")
-                    # Rollback and fallback to app globals if database table doesn't exist
-                    db.session.rollback()
-                    simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
-            
-            if simulation_active:
-                # Use the same logic as race_countdown for consistency
-                # Get the scenario from global database state or use default
-                try:
-                    result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
-                    scenario = result[0] if result and result[0] else 'race_in_3h'
-                    print(f"DEBUG: get_current_time - using scenario from database: {scenario}")
-                except Exception as e:
-                    print(f"DEBUG: Error getting scenario from database: {e}")
-                    scenario = session.get('test_scenario', 'race_in_3h')
-                    print(f"DEBUG: get_current_time - using scenario from session: {scenario}")
-                
-                # Create fake race based on scenario - use a fixed future time for the race
-                # This ensures the countdown actually counts down
-                # Use a fixed base time that doesn't change between calls
-                fake_race_base_time = datetime.utcnow() + timedelta(hours=3)  # 3 hours from now
-                
-                # Adjust fake race time based on scenario
-                if scenario == "race_in_3h":
-                    fake_race_datetime_utc = fake_race_base_time
-                elif scenario == "race_in_1h":
-                    fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2)  # Race in 1h, deadline in -1h
-                elif scenario == "race_in_30m":
-                    fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2, minutes=30)  # Race in 30m, deadline in -1.5h
-                elif scenario == "race_tomorrow":
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)  # Race tomorrow
-                else:
-                    fake_race_datetime_utc = fake_race_base_time
-                
-                # Check if picks are locked (2 hours before fake race)
-                time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
-                picks_locked = time_to_deadline.total_seconds() <= 0
-                
-                print(f"DEBUG: get_current_time - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
-                print(f"DEBUG: get_current_time - Picks locked: {picks_locked}")
-                
-                # Return the simulated time for the current scenario
-                # Calculate simulated time based on scenario
-                if scenario == "race_in_3h":
-                    simulated_time = fake_race_datetime_utc - timedelta(hours=3)  # 3 hours before race
-                elif scenario == "race_in_1h":
-                    simulated_time = fake_race_datetime_utc - timedelta(hours=1)  # 1 hour before race
-                elif scenario == "race_in_30m":
-                    simulated_time = fake_race_datetime_utc - timedelta(minutes=30)  # 30 minutes before race
-                elif scenario == "race_tomorrow":
-                    simulated_time = fake_race_datetime_utc - timedelta(days=1)  # 1 day before race
-                else:
-                    simulated_time = fake_race_datetime_utc - timedelta(hours=3)  # Default to 3 hours before
-                
-                print(f"DEBUG: get_current_time - returning simulated time: {simulated_time}")
-                return simulated_time
-            else:
-                # Check if picks are locked (2 hours before race)
-                race_time_str = "20:00"  # 8pm local time
-                race_hour, race_minute = map(int, race_time_str.split(':'))
-                race_date = upcoming_race.event_date
-                race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
-                
-                # Convert to UTC for countdown calculation
-                timezone_offsets = {
-                    'America/Los_Angeles': -8,  # PST
-                    'America/Denver': -7,       # MST  
-                    'America/Phoenix': -7,      # MST (no DST)
-                    'America/Chicago': -6,      # CST
-                    'America/New_York': -5      # EST
-                }
-                
-                timezone = getattr(upcoming_race, 'timezone', 'America/Los_Angeles')
-                utc_offset = timezone_offsets.get(timezone, -8)
-                race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-                
-                # Check if picks are locked (2 hours before race)
-                current_time = get_current_time()
-                time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
-                picks_locked = time_to_deadline.total_seconds() <= 0
+            # Use the unified picks lock check function
+            picks_locked = is_picks_locked(upcoming_race)
             
             # Use the correct competition_id for picks lookup
             competition_id_for_picks = upcoming_race.id
-            if simulation_active:
-                # During simulation, we still want to show picks for the real upcoming race
-                # The simulation only affects the countdown and picks_locked status
-                competition_id_for_picks = upcoming_race.id
             
             print(f"DEBUG: Looking for picks for user {uid}, competition {competition_id_for_picks}")
             print(f"DEBUG: Picks locked: {picks_locked}")
@@ -1201,91 +1109,8 @@ def race_picks_page(competition_id):
 
     comp = Competition.query.get_or_404(competition_id)
     
-    # Check if we're in simulation mode (use only global database state for consistency)
-    simulation_active = False
-    print(f"DEBUG: race_picks_page - checking global database simulation only")
-    
-    try:
-        # Rollback any existing transaction first
-        db.session.rollback()
-        
-        result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
-        simulation_active = result and result[0] if result else False
-        print(f"DEBUG: race_picks_page - database simulation_active: {simulation_active}")
-    except Exception as e:
-        print(f"DEBUG: Error checking global simulation in race_picks_page: {e}")
-        # Rollback and fallback to app globals if database table doesn't exist
-        db.session.rollback()
-        simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
-        print(f"DEBUG: race_picks_page - app global simulation_active: {simulation_active}")
-    
-    if simulation_active:
-        # Use the same logic as race_countdown for consistency
-        # Get the scenario from global database state or use default
-        try:
-            result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
-            scenario = result[0] if result and result[0] else 'race_in_3h'
-            print(f"DEBUG: race_picks_page - using scenario from database: {scenario}")
-        except Exception as e:
-            print(f"DEBUG: Error getting scenario from database: {e}")
-            scenario = session.get('test_scenario', 'race_in_3h')
-            print(f"DEBUG: race_picks_page - using scenario from session: {scenario}")
-        
-        # Get current time first
-        current_time = get_current_time()
-        
-        # Create fake race based on scenario - use a fixed future time for the race
-        # This ensures the countdown actually counts down
-        fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
-        fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
-        
-        # Adjust fake race time based on scenario
-        if scenario == "race_in_3h":
-            fake_race_datetime_utc = fake_race_base_time
-        elif scenario == "race_in_1h":
-            fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2)  # Race in 1h, deadline in -1h
-        elif scenario == "race_in_30m":
-            fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2, minutes=30)  # Race in 30m, deadline in -1.5h
-        elif scenario == "race_tomorrow":
-            fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)  # Race tomorrow
-        else:
-            fake_race_datetime_utc = fake_race_base_time
-        
-        # Check if picks are locked (2 hours before fake race)
-        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
-        picks_locked = time_to_deadline.total_seconds() <= 0
-        
-        print(f"DEBUG: race_picks_page - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
-    else:
-        # Check if picks are locked (2 hours before race)
-        race_time_str = "20:00"  # 8pm local time
-        race_hour, race_minute = map(int, race_time_str.split(':'))
-        race_date = comp.event_date
-        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
-        
-        # Convert to UTC for countdown calculation
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
-        }
-        
-        timezone = getattr(comp, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-        
-        # Check if picks are locked (2 hours before race)
-        current_time = get_current_time()
-        time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
-        picks_locked = time_to_deadline.total_seconds() <= 0
-    
-    print(f"DEBUG: race_picks_page - Picks locked: {picks_locked}")
-    print(f"DEBUG: race_picks_page - Current time: {current_time}")
-    print(f"DEBUG: race_picks_page - Race datetime UTC: {race_datetime_utc}")
-    print(f"DEBUG: race_picks_page - Time to deadline: {time_to_deadline}")
-    print(f"DEBUG: race_picks_page - Time to deadline seconds: {time_to_deadline.total_seconds()}")
+    # Use the unified picks lock check function
+    picks_locked = is_picks_locked(comp)
     
     # If picks are locked, show locked page instead of redirect
     if picks_locked:
@@ -2322,87 +2147,8 @@ def save_picks():
     
     print(f"DEBUG: Competition: {comp.name} (ID: {comp_id})")
     
-    # Check if we're in simulation mode (use only global database state for consistency)
-    simulation_active = False
-    print(f"DEBUG: save_picks - checking global database simulation only")
-    
-    try:
-        # Rollback any existing transaction first
-        db.session.rollback()
-        
-        result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
-        simulation_active = result and result[0] if result else False
-        print(f"DEBUG: save_picks - database simulation_active: {simulation_active}")
-    except Exception as e:
-        print(f"DEBUG: Error checking global simulation in save_picks: {e}")
-        # Rollback and fallback to app globals if database table doesn't exist
-        db.session.rollback()
-        simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
-        print(f"DEBUG: save_picks - app global simulation_active: {simulation_active}")
-    
-    if simulation_active:
-        # Use the same logic as race_countdown for consistency
-        # Get the scenario from global database state or use default
-        try:
-            result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
-            scenario = result[0] if result and result[0] else 'race_in_3h'
-            print(f"DEBUG: save_picks - using scenario from database: {scenario}")
-        except Exception as e:
-            print(f"DEBUG: Error getting scenario from database: {e}")
-            scenario = session.get('test_scenario', 'race_in_3h')
-            print(f"DEBUG: save_picks - using scenario from session: {scenario}")
-        
-        # Get current time first
-        current_time = get_current_time()
-        
-        # Create fake race based on scenario - use a fixed future time for the race
-        # This ensures the countdown actually counts down
-        # Use a fixed base time that doesn't change between calls
-        fake_race_base_time = current_time + timedelta(hours=3)  # 3 hours from current simulated time
-        
-        # Adjust fake race time based on scenario
-        if scenario == "race_in_3h":
-            fake_race_datetime_utc = fake_race_base_time
-        elif scenario == "race_in_1h":
-            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2)  # 1 hour before race
-        elif scenario == "race_in_30m":
-            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2, minutes=30)  # 30 minutes before race
-        elif scenario == "race_tomorrow":
-            fake_race_datetime_utc = fake_race_base_time - timedelta(days=1)  # 1 day before race
-        else:
-            fake_race_datetime_utc = fake_race_base_time
-        
-        # Check if picks are locked (2 hours before fake race)
-        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
-        picks_locked = time_to_deadline.total_seconds() <= 0
-        
-        print(f"DEBUG: save_picks - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
-    else:
-        # Check if picks are locked (2 hours before race)
-        race_time_str = "20:00"  # 8pm local time
-        race_hour, race_minute = map(int, race_time_str.split(':'))
-        race_date = comp.event_date
-        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
-        
-        # Convert to UTC for countdown calculation
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
-        }
-        
-        timezone = getattr(comp, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
-        
-        # Check if picks are locked (2 hours before race)
-        current_time = get_current_time()
-        time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
-        picks_locked = time_to_deadline.total_seconds() <= 0
-    
-    print(f"DEBUG: save_picks - Picks locked: {picks_locked}")
+    # Use the unified picks lock check function
+    picks_locked = is_picks_locked(comp)
     
     # If picks are locked, reject the save
     if picks_locked:
@@ -6325,6 +6071,98 @@ def get_current_time():
     
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
+
+def is_picks_locked(competition):
+    """Check if picks are locked for a specific competition"""
+    print(f"DEBUG: is_picks_locked() called for competition: {competition.name}")
+    
+    # Check if we're in simulation mode (use only global database state for consistency)
+    simulation_active = False
+    print(f"DEBUG: is_picks_locked - checking global database simulation only")
+    
+    try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
+        result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
+        simulation_active = result and result[0] if result else False
+        print(f"DEBUG: is_picks_locked - database simulation_active: {simulation_active}")
+    except Exception as e:
+        print(f"DEBUG: Error checking global simulation in is_picks_locked: {e}")
+        # Rollback and fallback to app globals if database table doesn't exist
+        db.session.rollback()
+        simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
+        print(f"DEBUG: is_picks_locked - app global simulation_active: {simulation_active}")
+    
+    if simulation_active:
+        # Use the same logic as race_countdown for consistency
+        # Get the scenario from global database state or use default
+        try:
+            result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
+            scenario = result[0] if result and result[0] else 'race_in_3h'
+            print(f"DEBUG: is_picks_locked - using scenario from database: {scenario}")
+        except Exception as e:
+            print(f"DEBUG: Error getting scenario from database: {e}")
+            scenario = session.get('test_scenario', 'race_in_3h')
+            print(f"DEBUG: is_picks_locked - using scenario from session: {scenario}")
+        
+        # Get current time first
+        current_time = get_current_time()
+        
+        # Create fake race based on scenario - use a fixed future time for the race
+        # This ensures the countdown actually counts down
+        # Use a fixed base time that doesn't change between calls
+        fake_race_base_time = current_time + timedelta(hours=3)  # 3 hours from current simulated time
+        
+        # Adjust fake race time based on scenario
+        if scenario == "race_in_3h":
+            fake_race_datetime_utc = fake_race_base_time
+        elif scenario == "race_in_1h":
+            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2)  # 1 hour before race
+        elif scenario == "race_in_30m":
+            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2, minutes=30)  # 30 minutes before race
+        elif scenario == "race_tomorrow":
+            fake_race_datetime_utc = fake_race_base_time - timedelta(days=1)  # 1 day before race
+        else:
+            fake_race_datetime_utc = fake_race_base_time
+        
+        # Check if picks are locked (2 hours before fake race)
+        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
+        picks_locked = time_to_deadline.total_seconds() <= 0
+        
+        print(f"DEBUG: is_picks_locked - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
+    else:
+        # Check if picks are locked (2 hours before race)
+        race_time_str = "20:00"  # 8pm local time
+        race_hour, race_minute = map(int, race_time_str.split(':'))
+        race_date = competition.event_date
+        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+        
+        # Convert to UTC for countdown calculation
+        timezone_offsets = {
+            'America/Los_Angeles': -8,  # PST
+            'America/Denver': -7,       # MST  
+            'America/Phoenix': -7,      # MST (no DST)
+            'America/Chicago': -6,      # CST
+            'America/New_York': -5      # EST
+        }
+        
+        timezone = getattr(competition, 'timezone', 'America/Los_Angeles')
+        utc_offset = timezone_offsets.get(timezone, -8)
+        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        # Check if picks are locked (2 hours before race)
+        current_time = get_current_time()
+        time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
+        picks_locked = time_to_deadline.total_seconds() <= 0
+    
+    print(f"DEBUG: is_picks_locked - Picks locked: {picks_locked}")
+    print(f"DEBUG: is_picks_locked - Current time: {current_time}")
+    print(f"DEBUG: is_picks_locked - Race datetime UTC: {race_datetime_utc}")
+    print(f"DEBUG: is_picks_locked - Time to deadline: {time_to_deadline}")
+    print(f"DEBUG: is_picks_locked - Time to deadline seconds: {time_to_deadline.total_seconds()}")
+    
+    return picks_locked
 
 if __name__ == "__main__":
     # Production vs Development configuration
