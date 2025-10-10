@@ -1018,16 +1018,16 @@
             } else {
               statusText = `Startar om ${daysUntilStart} dagar`;
               statusColor = 'text-gray-400';
-              buttonClass = 'bg-gray-600 cursor-not-allowed';
-              buttonText = 'Picks stängda';
-              isClickable = false;
+              buttonClass = 'bg-blue-600 hover:bg-blue-700';
+              buttonText = 'Visa schema';
+              isClickable = true; // Always allow viewing schedule
             }
           } else {
             statusText = 'Avslutad';
             statusColor = 'text-gray-400';
-            buttonClass = 'bg-gray-600 cursor-not-allowed';
-            buttonText = 'Säsong slut';
-            isClickable = false;
+            buttonClass = 'bg-blue-600 hover:bg-blue-700';
+            buttonText = 'Visa schema';
+            isClickable = true; // Always allow viewing schedule
           }
           
           const buttonHtml = isClickable 

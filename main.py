@@ -520,7 +520,9 @@ def series_status():
     """Get status of all series for user interface"""
     try:
         series = Series.query.filter_by(year=2025, is_active=True).all()
-        current_date = date.today()
+        
+        # Use simulated date if available, otherwise use real date
+        current_date = get_today()
         
         series_data = []
         for s in series:
@@ -1183,8 +1185,8 @@ def series_page(series_id):
         # Get all competitions in this series
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         
-        # Get current date
-        current_date = date.today()
+        # Get current date (use simulated date if available)
+        current_date = get_today()
         
         # Find next race
         next_race = None
