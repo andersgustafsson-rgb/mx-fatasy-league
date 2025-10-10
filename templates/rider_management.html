@@ -32,30 +32,26 @@
 
         <!-- Tab Navigation -->
         <div class="flex flex-wrap gap-2 mb-6">
-            <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250-east">
-                250cc East
-            </button>
-            <button class="tab-button px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250-west">
-                250cc West
+            <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250">
+                250cc
             </button>
             <button class="tab-button px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="450">
                 450cc
             </button>
         </div>
 
-        <!-- 250cc East Tab -->
-        <div id="250-east" class="tab-content active">
+        <!-- 250cc Tab -->
+        <div id="250" class="tab-content active">
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                 <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc East Riders</h2>
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc Riders</h2>
                 </div>
                 <div class="p-4 bg-gray-900">
                     <!-- Add New Rider Form -->
                     <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
                         <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
-                        <form id="add-rider-form-250-east" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <form id="add-rider-form-250" class="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <input type="hidden" name="class_name" value="250cc">
-                            <input type="hidden" name="coast_250" value="east">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
                                 <input type="number" name="rider_number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
@@ -63,6 +59,14 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
                                 <input type="text" name="name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Coast</label>
+                                <select name="coast_250" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                    <option value="">Välj coast</option>
+                                    <option value="east">East</option>
+                                    <option value="west">West</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
@@ -93,15 +97,19 @@
                                 <tr class="bg-gray-800 border-b border-cyan-400">
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Coast</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
                                     <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
                                 </tr>
                             </thead>
-                            <tbody id="riders-250-east">
+                            <tbody id="riders-250">
                                 {% for rider in riders_250_east %}
                                 <tr class="border-b border-gray-700 hover:bg-gray-800">
                                     <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">East</span>
+                                    </td>
                                     <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east')" 
@@ -115,72 +123,13 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 250cc West Tab -->
-        <div id="250-west" class="tab-content">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc West Riders</h2>
-                </div>
-                <div class="p-4 bg-gray-900">
-                    <!-- Add New Rider Form -->
-                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
-                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
-                        <form id="add-rider-form-250-west" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <input type="hidden" name="class_name" value="250cc">
-                            <input type="hidden" name="coast_250" value="west">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
-                                <input type="number" name="rider_number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
-                                <input type="text" name="name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
-                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
-                                    <option value="">Välj märke</option>
-                                    <option value="Honda">Honda</option>
-                                    <option value="Yamaha">Yamaha</option>
-                                    <option value="KTM">KTM</option>
-                                    <option value="Kawasaki">Kawasaki</option>
-                                    <option value="Suzuki">Suzuki</option>
-                                    <option value="Husqvarna">Husqvarna</option>
-                                    <option value="GasGas">GasGas</option>
-                                    <option value="Beta">Beta</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                                    Lägg till
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- Riders Table -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="bg-gray-800 border-b border-cyan-400">
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
-                                    <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
-                                </tr>
-                            </thead>
-                            <tbody id="riders-250-west">
                                 {% for rider in riders_250_west %}
                                 <tr class="border-b border-gray-700 hover:bg-gray-800">
                                     <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-600 text-white">West</span>
+                                    </td>
                                     <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west')" 
@@ -297,6 +246,14 @@
                             <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
                             <input type="text" id="edit-rider-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
                         </div>
+                        <div id="edit-coast-section" style="display: none;">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Coast</label>
+                            <select id="edit-rider-coast" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                                <option value="">Välj coast</option>
+                                <option value="east">East</option>
+                                <option value="west">West</option>
+                            </select>
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
                             <select id="edit-rider-brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
@@ -376,6 +333,16 @@
             document.getElementById('edit-rider-name').value = name;
             document.getElementById('edit-rider-number').value = number;
             document.getElementById('edit-rider-brand').value = brand;
+            
+            // Show/hide coast section based on class
+            const coastSection = document.getElementById('edit-coast-section');
+            if (className === '250cc') {
+                coastSection.style.display = 'block';
+                document.getElementById('edit-rider-coast').value = coast;
+            } else {
+                coastSection.style.display = 'none';
+            }
+            
             document.getElementById('edit-modal').classList.remove('hidden');
         }
 
@@ -394,6 +361,12 @@
                 rider_number: parseInt(document.getElementById('edit-rider-number').value),
                 bike_brand: document.getElementById('edit-rider-brand').value
             };
+            
+            // Add coast if it's a 250cc rider
+            const coastSection = document.getElementById('edit-coast-section');
+            if (coastSection.style.display !== 'none') {
+                data.coast_250 = document.getElementById('edit-rider-coast').value;
+            }
             
             try {
                 const response = await fetch(`/api/riders/${id}`, {

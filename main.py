@@ -1475,6 +1475,10 @@ def update_rider(rider_id):
     rider.rider_number = data['rider_number']
     rider.bike_brand = data['bike_brand']
     
+    # Update coast_250 if provided (for 250cc riders)
+    if 'coast_250' in data:
+        rider.coast_250 = data['coast_250']
+    
     db.session.commit()
     
     return jsonify({'success': True})
