@@ -821,8 +821,11 @@
                     this.ctx.globalAlpha = 1.0;
                 }
                 
-                // Draw racing car emoji (clean and simple)
-                this.ctx.fillText('🏎️', emojiX, emojiY);
+                // Draw motorbike emoji flipped to face right
+                this.ctx.save();
+                this.ctx.scale(-1, 1); // Flip horizontally
+                this.ctx.fillText('🏍️', -emojiX, emojiY);
+                this.ctx.restore();
                 
                 this.ctx.restore();
                 
