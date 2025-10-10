@@ -1195,13 +1195,33 @@ def series_page(series_id):
             global_sim = GlobalSimulation.query.first()
             if global_sim and global_sim.active:
                 simulation_active = True
-                # Create a fake test race for the series
-                test_race = type('TestRace', (), {
-                    'id': 9999,
-                    'name': f'Test Race ({global_sim.scenario})',
-                    'event_date': current_date,
-                    'series_id': series_id
-                })()
+                scenario = global_sim.scenario or 'race_in_3h'
+                
+                # Use same logic as race_countdown for test race
+                from datetime import datetime, timedelta
+                fake_race_base_time = datetime.now()
+                
+                if scenario == "race_in_3h":
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                elif scenario == "race_in_1h":
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
+                elif scenario == "race_in_30m":
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
+                elif scenario == "race_tomorrow":
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
+                else:
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                
+                # Create a fake test race object
+                class FakeRace:
+                    def __init__(self):
+                        self.id = 9999
+                        self.name = f"Test Race ({scenario})"
+                        self.event_date = fake_race_datetime_utc.date()
+                        self.series_id = series_id
+                        self.timezone = "UTC"
+                
+                test_race = FakeRace()
         except:
             pass
         

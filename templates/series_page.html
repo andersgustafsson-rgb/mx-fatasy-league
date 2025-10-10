@@ -88,9 +88,20 @@
         {% if next_race %}
         <div class="mb-6">
             {% if next_race.id == 9999 %}
-            <!-- Test Race - use Seattle track map -->
+            <!-- Test Race - use track map based on scenario -->
+            {% if "race_in_3h" in next_race.name %}
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
                  style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
+            {% elif "race_in_1h" in next_race.name %}
+            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
+                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}');">
+            {% elif "race_in_30m" in next_race.name %}
+            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
+                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/daytona.jpg") }}');">
+            {% else %}
+            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
+                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
+            {% endif %}
             {% else %}
             <!-- Real Race -->
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
