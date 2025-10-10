@@ -835,7 +835,7 @@
                 if (this.bikerImage.complete) {
                     this.ctx.save();
                     // No need to flip - the SVG already faces the right direction
-                    this.ctx.drawImage(this.bikerImage, emojiX - 60, emojiY - 60, 120, 120); // 4x bigger (30*4=120)
+                    this.ctx.drawImage(this.bikerImage, emojiX - 60, emojiY - 90, 120, 120); // 4x bigger, moved up 30px
                     this.ctx.restore();
                 } else {
                     // Fallback to emoji if SVG not loaded yet
