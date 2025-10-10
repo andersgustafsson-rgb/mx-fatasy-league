@@ -689,6 +689,7 @@
       const openStatus = document.getElementById('real-picks-open-status');
       const racePicksButton = document.getElementById('race-picks-button');
       const raceResultsButton = document.getElementById('race-results-button');
+      const picksDeadlineStatus = document.getElementById('picks-deadline-status');
       
       if (data.picks_locked) {
         lockedStatus.classList.remove('hidden');
@@ -702,6 +703,12 @@
         // Disable Race Results button
         if (raceResultsButton) {
           raceResultsButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Resultat (Låsta)</span>';
+        }
+        
+        // Update picks deadline status
+        if (picksDeadlineStatus) {
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300">🔒 <strong>Picks låsta.</strong> Du kan inte längre ändra dina val.</p>';
+          picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
         }
       } else {
         lockedStatus.classList.add('hidden');
@@ -717,19 +724,38 @@
         if (raceResultsButton) {
           raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
         }
+        
+        // Update picks deadline status
+        if (picksDeadlineStatus) {
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">⏰ <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.</p>';
+          picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
+        }
       }
     }
     
     function updateTestPicksStatus(data) {
       const lockedStatus = document.getElementById('test-picks-locked-status');
       const openStatus = document.getElementById('test-picks-open-status');
+      const picksDeadlineStatus = document.getElementById('picks-deadline-status');
       
       if (data.picks_locked) {
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
+        
+        // Update picks deadline status for test mode
+        if (picksDeadlineStatus) {
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300">🔒 <strong>Picks låsta (Test Mode).</strong> Du kan inte längre ändra dina val.</p>';
+          picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
+        }
       } else {
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
+        
+        // Update picks deadline status for test mode
+        if (picksDeadlineStatus) {
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">⏰ <strong>Picks öppna (Test Mode).</strong> Andra användares picks är dolda tills deadline.</p>';
+          picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
+        }
       }
     }
     
