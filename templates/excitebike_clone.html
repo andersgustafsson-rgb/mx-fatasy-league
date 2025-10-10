@@ -129,6 +129,12 @@
                 <div>High Score: <span id="highScore">0</span></div>
             </div>
             
+            <div id="startScreen" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center;">
+                <h2 style="margin-bottom: 20px; color: #4CAF50;">🏍️ Excitebike Clone</h2>
+                <p style="margin-bottom: 20px;">Ready to race?</p>
+                <button class="restart-btn" onclick="startGame()" style="font-size: 18px; padding: 15px 30px;">Start Game</button>
+            </div>
+            
             <div class="game-over" id="gameOver">
                 <h2>Game Over!</h2>
                 <p>Final Score: <span id="finalScore">0</span></p>
@@ -170,8 +176,8 @@
                 this.player = {
                     x: 100,
                     y: 0,
-                    width: 30,
-                    height: 20,
+                    width: 40,
+                    height: 30,
                     velocityY: 0,
                     velocityX: 0,
                     isJumping: false,
@@ -441,9 +447,9 @@
                 this.ctx.translate(playerScreenX + this.player.width/2, this.player.y + this.player.height/2);
                 
                 // Draw motorbike emoji
-                this.ctx.font = '20px Arial';
+                this.ctx.font = '30px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('🏍️', 0, 5);
+                this.ctx.fillText('🏍️', 0, 8);
                 
                 this.ctx.restore();
                 
@@ -494,7 +500,10 @@
         let game;
         
         function startGame() {
-            game = new ExcitebikeGame();
+            document.getElementById('startScreen').style.display = 'none';
+            if (!game) {
+                game = new ExcitebikeGame();
+            }
             game.start();
         }
         
@@ -504,9 +513,9 @@
             }
         }
         
-        // Start game when page loads
+        // Initialize game when page loads (but don't start it)
         window.addEventListener('load', () => {
-            startGame();
+            game = new ExcitebikeGame();
         });
     </script>
 </body>
