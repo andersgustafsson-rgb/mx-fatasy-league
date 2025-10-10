@@ -5540,15 +5540,29 @@ def race_countdown():
                 simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
         
         if simulation_active:
-            # Use fake race for testing
+            # Use the same logic as test_countdown for consistency
+            # Get the scenario from session or use default
+            scenario = session.get('test_scenario', 'race_in_3h')
+            
+            # Create fake race based on scenario
             fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
             fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            
+            # Adjust fake race time based on scenario
+            if scenario == "race_in_3h":
+                fake_race_datetime_utc = current_time + timedelta(hours=3)
+            elif scenario == "race_in_1h":
+                fake_race_datetime_utc = current_time + timedelta(hours=1)
+            elif scenario == "race_in_30m":
+                fake_race_datetime_utc = current_time + timedelta(minutes=30)
+            elif scenario == "race_tomorrow":
+                fake_race_datetime_utc = current_time + timedelta(days=1)
             
             # Create a fake race object for testing
             class FakeRace:
                 def __init__(self):
-                    self.name = "Test Race (Simulated)"
-                    self.event_date = fake_race_date.date()
+                    self.name = f"Test Race ({scenario})"
+                    self.event_date = fake_race_datetime_utc.date()
                     self.timezone = "UTC"
             
             next_race = FakeRace()
@@ -5711,6 +5725,7 @@ def reset_simulation():
     session.pop('simulation_start_time', None)
     session.pop('initial_simulated_time', None)
     session.pop('simulated_time', None)
+    session.pop('test_scenario', None)
     
     # Clear global simulation state from database
     try:
@@ -5792,6 +5807,7 @@ def test_countdown():
         session['simulated_time'] = simulated_time.isoformat()
         session['simulation_start_time'] = datetime.utcnow().isoformat()
         session['initial_simulated_time'] = simulated_time.isoformat()
+        session['test_scenario'] = scenario  # Store the scenario for race_countdown to use
         
         # Also set global simulation state for cross-device sync using database
         # Create or update global simulation record
