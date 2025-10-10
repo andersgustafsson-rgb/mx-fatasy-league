@@ -310,20 +310,16 @@
                         <h4 class="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-2">🏁 Dina Holeshot-val:</h4>
                         <div class="space-y-1">
                           {% if current_holeshot_450 %}
-                          <div class="flex items-center justify-between text-sm">
-                            <div class="flex items-center gap-2">
-                              <span class="text-yellow-600 dark:text-yellow-400 font-bold">450cc:</span>
-                              <span class="text-lg">🏁</span>
-                            </div>
+                          <div class="flex items-center gap-3 text-sm">
+                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">450cc:</span>
+                            <span class="text-lg">🏁</span>
                             <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_450.rider_number }} {{ current_holeshot_450.rider_name }}</span>
                           </div>
                           {% endif %}
                           {% if current_holeshot_250 %}
-                          <div class="flex items-center justify-between text-sm">
-                            <div class="flex items-center gap-2">
-                              <span class="text-yellow-600 dark:text-yellow-400 font-bold">250cc:</span>
-                              <span class="text-lg">🏁</span>
-                            </div>
+                          <div class="flex items-center gap-3 text-sm">
+                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">250cc:</span>
+                            <span class="text-lg">🏁</span>
                             <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_250.rider_number }} {{ current_holeshot_250.rider_name }}</span>
                           </div>
                           {% endif %}
@@ -335,11 +331,9 @@
                       {% if current_wildcard %}
                       <div class="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
                         <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">🃏 Ditt Wildcard-val:</h4>
-                        <div class="flex items-center justify-between text-sm">
-                          <div class="flex items-center gap-2">
-                            <span class="text-purple-600 dark:text-purple-400 font-bold">Position {{ current_wildcard.position }}:</span>
-                            <span class="text-lg">🃏</span>
-                          </div>
+                        <div class="flex items-center gap-3 text-sm">
+                          <span class="text-purple-600 dark:text-purple-400 font-bold">Position {{ current_wildcard.position }}:</span>
+                          <span class="text-lg">🃏</span>
                           <span class="font-medium text-purple-800 dark:text-purple-200">#{{ current_wildcard.rider_number }} {{ current_wildcard.rider_name }} ({{ current_wildcard.class }})</span>
                         </div>
                       </div>
