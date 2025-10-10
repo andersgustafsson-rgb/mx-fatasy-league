@@ -980,11 +980,15 @@
         console.log('Series data:', series);
         
         const seriesContainer = document.getElementById('series-selection');
+        console.log('Series container found:', seriesContainer);
         
         if (series.length === 0) {
+          console.log('No series found, showing message');
           seriesContainer.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
           return;
         }
+        
+        console.log('Rendering', series.length, 'series');
         
         seriesContainer.innerHTML = series.map(serie => {
           const isActive = serie.is_active;
@@ -1055,6 +1059,7 @@
       fetchCrossDinoHighscores();
       
       // Load series selection
+      console.log('About to load series selection...');
       loadSeriesSelection();
       
       // Start countdown system
