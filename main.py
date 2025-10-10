@@ -1650,51 +1650,104 @@ def create_default_series_2025():
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
     """Fix missing database tables and columns"""
+    print("DEBUG: fix_database_tables() called")
+    
     if session.get("username") != "test":
+        print("DEBUG: Unauthorized access attempt")
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
+        print("DEBUG: Starting database fix process")
+        
         # Create all tables
+        print("DEBUG: Creating all tables with db.create_all()")
         db.create_all()
+        print("DEBUG: db.create_all() completed")
         
         # Manually add missing columns to competitions table
+        print("DEBUG: Starting manual column addition")
         try:
             # Check if series_id column exists
+            print("DEBUG: Checking if series_id column exists")
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='series_id'"))
-            if not result.fetchone():
+            series_id_exists = result.fetchone()
+            print(f"DEBUG: series_id column exists: {series_id_exists is not None}")
+            
+            if not series_id_exists:
+                print("DEBUG: Adding series_id column")
                 db.session.execute(text("ALTER TABLE competitions ADD COLUMN series_id INTEGER"))
-                print("Added series_id column to competitions")
+                print("DEBUG: Added series_id column to competitions")
+            else:
+                print("DEBUG: series_id column already exists")
             
             # Check if phase column exists
+            print("DEBUG: Checking if phase column exists")
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='phase'"))
-            if not result.fetchone():
+            phase_exists = result.fetchone()
+            print(f"DEBUG: phase column exists: {phase_exists is not None}")
+            
+            if not phase_exists:
+                print("DEBUG: Adding phase column")
                 db.session.execute(text("ALTER TABLE competitions ADD COLUMN phase VARCHAR(20)"))
-                print("Added phase column to competitions")
+                print("DEBUG: Added phase column to competitions")
+            else:
+                print("DEBUG: phase column already exists")
             
             # Check if is_qualifying column exists
+            print("DEBUG: Checking if is_qualifying column exists")
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='is_qualifying'"))
-            if not result.fetchone():
-                db.session.execute(text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
-                print("Added is_qualifying column to competitions")
+            is_qualifying_exists = result.fetchone()
+            print(f"DEBUG: is_qualifying column exists: {is_qualifying_exists is not None}")
             
+            if not is_qualifying_exists:
+                print("DEBUG: Adding is_qualifying column")
+                db.session.execute(text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
+                print("DEBUG: Added is_qualifying column to competitions")
+            else:
+                print("DEBUG: is_qualifying column already exists")
+            
+            print("DEBUG: Committing column changes")
             db.session.commit()
+            print("DEBUG: Column changes committed successfully")
+            
         except Exception as col_error:
-            print(f"Column addition error (might already exist): {col_error}")
+            print(f"DEBUG: Column addition error: {col_error}")
+            print(f"DEBUG: Error type: {type(col_error)}")
             db.session.rollback()
+            print("DEBUG: Rolled back column changes")
         
         # Check if global_simulation exists and create default entry
-        if not GlobalSimulation.query.first():
-            global_sim = GlobalSimulation(
-                active=False,
-                simulated_time=None,
-                start_time=None,
-                scenario=None
-            )
-            db.session.add(global_sim)
-            db.session.commit()
+        print("DEBUG: Checking global_simulation table")
+        try:
+            global_sim_exists = GlobalSimulation.query.first()
+            print(f"DEBUG: global_simulation entry exists: {global_sim_exists is not None}")
+            
+            if not global_sim_exists:
+                print("DEBUG: Creating default global_simulation entry")
+                global_sim = GlobalSimulation(
+                    active=False,
+                    simulated_time=None,
+                    start_time=None,
+                    scenario=None
+                )
+                db.session.add(global_sim)
+                db.session.commit()
+                print("DEBUG: Created default global_simulation entry")
+            else:
+                print("DEBUG: global_simulation entry already exists")
+                
+        except Exception as global_error:
+            print(f"DEBUG: Global simulation error: {global_error}")
+            print(f"DEBUG: Error type: {type(global_error)}")
         
+        print("DEBUG: Database fix completed successfully")
         return jsonify({'success': True, 'message': 'Database tables and columns fixed'})
+        
     except Exception as e:
+        print(f"DEBUG: Main error in fix_database_tables: {e}")
+        print(f"DEBUG: Error type: {type(e)}")
+        import traceback
+        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @app.route("/admin_old")
