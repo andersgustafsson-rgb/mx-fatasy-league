@@ -1062,6 +1062,37 @@ def race_picks_page(competition_id):
         return redirect(url_for("login"))
 
     comp = Competition.query.get_or_404(competition_id)
+    
+    # Check if picks are locked (2 hours before race)
+    race_time_str = "20:00"  # 8pm local time
+    race_hour, race_minute = map(int, race_time_str.split(':'))
+    race_date = comp.event_date
+    race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+    
+    # Convert to UTC for countdown calculation
+    timezone_offsets = {
+        'America/Los_Angeles': -8,  # PST
+        'America/Denver': -7,       # MST  
+        'America/Phoenix': -7,      # MST (no DST)
+        'America/Chicago': -6,      # CST
+        'America/New_York': -5      # EST
+    }
+    
+    timezone = getattr(comp, 'timezone', 'America/Los_Angeles')
+    utc_offset = timezone_offsets.get(timezone, -8)
+    race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+    
+    # Check if picks are locked (2 hours before race)
+    current_time = get_current_time()
+    time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
+    picks_locked = time_to_deadline.total_seconds() <= 0
+    
+    print(f"DEBUG: race_picks_page - Picks locked: {picks_locked}")
+    
+    # If picks are locked, redirect to homepage with message
+    if picks_locked:
+        flash("Picks är låsta! Du kan inte längre ändra dina val.", "error")
+        return redirect(url_for("index"))
 
     # 1) Hämta OUT-förare för detta race
     out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(
@@ -2089,6 +2120,36 @@ def save_picks():
         return jsonify({"error": "competition_not_found"}), 404
     
     print(f"DEBUG: Competition: {comp.name} (ID: {comp_id})")
+    
+    # Check if picks are locked (2 hours before race)
+    race_time_str = "20:00"  # 8pm local time
+    race_hour, race_minute = map(int, race_time_str.split(':'))
+    race_date = comp.event_date
+    race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+    
+    # Convert to UTC for countdown calculation
+    timezone_offsets = {
+        'America/Los_Angeles': -8,  # PST
+        'America/Denver': -7,       # MST  
+        'America/Phoenix': -7,      # MST (no DST)
+        'America/Chicago': -6,      # CST
+        'America/New_York': -5      # EST
+    }
+    
+    timezone = getattr(comp, 'timezone', 'America/Los_Angeles')
+    utc_offset = timezone_offsets.get(timezone, -8)
+    race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+    
+    # Check if picks are locked (2 hours before race)
+    current_time = get_current_time()
+    time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
+    picks_locked = time_to_deadline.total_seconds() <= 0
+    
+    print(f"DEBUG: save_picks - Picks locked: {picks_locked}")
+    
+    # If picks are locked, reject the save
+    if picks_locked:
+        return jsonify({"error": "Picks är låsta! Du kan inte längre ändra dina val."}), 403
 
     # 2) Hämta OUT‑förare för detta race (viktigt)
     out_ids = set(
