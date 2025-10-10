@@ -5707,7 +5707,9 @@ def debug_session():
 def race_countdown():
     """Get countdown data for next race"""
     try:
-        print(f"DEBUG: race_countdown() called - session simulation_active: {session.get('simulation_active')}")
+        # Get mode parameter (real or test)
+        mode = request.args.get('mode', 'real')
+        print(f"DEBUG: race_countdown() called with mode: {mode}")
         
         # Get current time (or simulated time for testing)
         current_time = get_current_time()
@@ -5732,6 +5734,15 @@ def race_countdown():
             print(f"DEBUG: race_countdown - app global simulation_active: {simulation_active}")
         
         print(f"DEBUG: race_countdown - final simulation_active: {simulation_active}")
+        
+        # For real mode, always use real race data
+        if mode == 'real':
+            simulation_active = False
+            print(f"DEBUG: race_countdown - forcing real mode, simulation_active: {simulation_active}")
+        # For test mode, always use simulation
+        elif mode == 'test':
+            simulation_active = True
+            print(f"DEBUG: race_countdown - forcing test mode, simulation_active: {simulation_active}")
         
         if simulation_active:
             print(f"DEBUG: race_countdown - ENTERING SIMULATION MODE")
