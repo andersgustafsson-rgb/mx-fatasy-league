@@ -5645,8 +5645,9 @@ def race_countdown():
             
             # Create fake race based on scenario - use a fixed future time for the race
             # This ensures the countdown actually counts down
-            fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
-            fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
+            # Use a fixed base time that doesn't change between calls
+            fake_race_base_time = current_time + timedelta(hours=3)  # 3 hours from current simulated time
+            fake_race_base_time = fake_race_base_time.replace(minute=0, second=0, microsecond=0)
             
             # Adjust fake race time based on scenario
             if scenario == "race_in_3h":
