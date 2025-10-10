@@ -1407,10 +1407,26 @@ def admin_page():
     if session.get("username") != "test":
         return redirect(url_for("index"))
     
-    # Get the same data as the old admin page
-    competitions = Competition.query.order_by(Competition.event_date).all()
-    riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
-    riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
+    try:
+        # Get the same data as the old admin page
+        competitions = Competition.query.order_by(Competition.event_date).all()
+        riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
+        riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.rider_number).all()
+    except Exception as e:
+        print(f"DEBUG: Error in admin_page: {e}")
+        return f'''
+        <html>
+        <head><title>Database Error</title></head>
+        <body style="font-family: Arial; margin: 50px; background: #1a1a1a; color: white;">
+            <h1>🔧 Database Error</h1>
+            <p>Admin page requires database fixes. Please fix the database first:</p>
+            <a href="/fix_database" style="background: #22d3ee; color: black; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">
+                Fix Database
+            </a>
+            <p>Error: {str(e)}</p>
+        </body>
+        </html>
+        '''
     
     # Get current simulated date
     try:
@@ -1459,15 +1475,31 @@ def rider_management():
     if session.get("username") != "test":
         return redirect(url_for("index"))
     
-    # Get riders by class and coast
-    riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number).all()
-    riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number).all()
-    riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number).all()
-    
-    return render_template('rider_management.html',
-                         riders_450=riders_450,
-                         riders_250_east=riders_250_east,
-                         riders_250_west=riders_250_west)
+    try:
+        # Get riders by class and coast
+        riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number).all()
+        riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number).all()
+        riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number).all()
+        
+        return render_template('rider_management.html',
+                             riders_450=riders_450,
+                             riders_250_east=riders_250_east,
+                             riders_250_west=riders_250_west)
+    except Exception as e:
+        print(f"DEBUG: Error in rider_management: {e}")
+        return f'''
+        <html>
+        <head><title>Database Error</title></head>
+        <body style="font-family: Arial; margin: 50px; background: #1a1a1a; color: white;">
+            <h1>🔧 Database Error</h1>
+            <p>Rider management requires database fixes. Please fix the database first:</p>
+            <a href="/fix_database" style="background: #22d3ee; color: black; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">
+                Fix Database
+            </a>
+            <p>Error: {str(e)}</p>
+        </body>
+        </html>
+        '''
 
 # API endpoints for rider management
 @app.route('/api/riders', methods=['POST'])
