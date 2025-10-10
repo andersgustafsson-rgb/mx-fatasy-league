@@ -387,12 +387,12 @@
                 // Cross (player) - initialize with default values first
                 this.cross = {
                     x: 100,
-                    y: 400,
+                    y: 0, // Will be set properly in resizeCanvas
                     width: 40,
                     height: 40,
                     velocityY: 0,
                     isJumping: false,
-                    groundY: 400
+                    groundY: 0 // Will be set properly in resizeCanvas
                 };
                 
                 // Obstacles (gupp)
@@ -435,9 +435,9 @@
                 
                 // Update cross ground position only if cross is defined
                 if (this.cross) {
-                    this.cross.groundY = this.height - 60;
+                    this.cross.groundY = this.height - 40;
                     if (!this.gameRunning) {
-                        this.cross.y = this.cross.groundY;
+                        this.cross.y = this.cross.groundY - this.cross.height;
                     }
                 }
             }
@@ -551,7 +551,7 @@
                 this.gamePaused = false;
                 this.score = 0;
                 this.gameSpeed = 2;
-                this.cross.y = this.cross.groundY;
+                this.cross.y = this.cross.groundY - this.cross.height;
                 this.cross.velocityY = 0;
                 this.cross.isJumping = false;
                 this.obstacles = [];
@@ -597,8 +597,8 @@
                 this.cross.y += this.cross.velocityY;
                 
                 // Ground collision
-                if (this.cross.y >= this.cross.groundY) {
-                    this.cross.y = this.cross.groundY;
+                if (this.cross.y >= this.cross.groundY - this.cross.height) {
+                    this.cross.y = this.cross.groundY - this.cross.height;
                     this.cross.velocityY = 0;
                     this.cross.isJumping = false;
                 }
