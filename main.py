@@ -5444,8 +5444,10 @@ def race_countdown():
         current_time = get_current_time()
         print(f"DEBUG: race_countdown using time: {current_time}")
         
-        # Check if we're in simulation mode
-        if session.get('simulation_active'):
+        # Check if we're in simulation mode (check both session and global state)
+        simulation_active = session.get('simulation_active') or (hasattr(app, 'global_simulation_active') and app.global_simulation_active)
+        
+        if simulation_active:
             # Use fake race for testing
             fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
             fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
@@ -5612,9 +5614,21 @@ def reset_simulation():
     if session.get("username") != "test":
         return jsonify({"error": "Unauthorized"}), 403
     
+    # Clear session-based simulation
     session.pop('simulation_active', None)
     session.pop('simulation_start_time', None)
     session.pop('initial_simulated_time', None)
+    session.pop('simulated_time', None)
+    
+    # Clear global simulation state
+    if hasattr(app, 'global_simulation_active'):
+        app.global_simulation_active = False
+    if hasattr(app, 'global_simulation_start_time'):
+        delattr(app, 'global_simulation_start_time')
+    if hasattr(app, 'global_initial_simulated_time'):
+        delattr(app, 'global_initial_simulated_time')
+    if hasattr(app, 'global_simulated_time'):
+        delattr(app, 'global_simulated_time')
     
     return jsonify({"message": "Simulation reset to real time"})
 
@@ -5676,6 +5690,12 @@ def test_countdown():
         session['simulated_time'] = simulated_time.isoformat()
         session['simulation_start_time'] = datetime.utcnow().isoformat()
         session['initial_simulated_time'] = simulated_time.isoformat()
+        
+        # Also set global simulation state for cross-device sync
+        app.global_simulation_active = True
+        app.global_simulated_time = simulated_time.isoformat()
+        app.global_simulation_start_time = datetime.utcnow().isoformat()
+        app.global_initial_simulated_time = simulated_time.isoformat()
         
         # Get next upcoming race (use simulated time for testing)
         next_race = (
@@ -5829,6 +5849,7 @@ def set_simulated_time():
 
 def get_current_time():
     """Get current time - either real or simulated"""
+    # Check session-based simulation first
     if session.get('simulation_active') and session.get('simulated_time') and session.get('simulation_start_time'):
         try:
             # Get the initial simulated time
@@ -5841,11 +5862,31 @@ def get_current_time():
             # Add the elapsed time to the initial simulated time
             current_simulated_time = initial_simulated_time + real_time_elapsed
             
-            print(f"DEBUG: Using simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            print(f"DEBUG: Using session simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
             return current_simulated_time
         except Exception as e:
-            print(f"DEBUG: Error parsing simulated time: {e}")
+            print(f"DEBUG: Error parsing session simulated time: {e}")
             pass
+    
+    # Check global simulation state for cross-device sync
+    if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
+        try:
+            # Get the initial simulated time
+            initial_simulated_time = datetime.fromisoformat(app.global_simulated_time)
+            simulation_start_time = datetime.fromisoformat(app.global_simulation_start_time)
+            
+            # Calculate how much real time has passed since simulation started
+            real_time_elapsed = datetime.utcnow() - simulation_start_time
+            
+            # Add the elapsed time to the initial simulated time
+            current_simulated_time = initial_simulated_time + real_time_elapsed
+            
+            print(f"DEBUG: Using global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            return current_simulated_time
+        except Exception as e:
+            print(f"DEBUG: Error parsing global simulated time: {e}")
+            pass
+    
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
 
