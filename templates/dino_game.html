@@ -435,7 +435,7 @@
                 
                 // Update cross ground position only if cross is defined
                 if (this.cross) {
-                    this.cross.groundY = this.height - 40;
+                    this.cross.groundY = this.height - 20; // Lower the ground position
                     if (!this.gameRunning) {
                         this.cross.y = this.cross.groundY - this.cross.height;
                     }
@@ -829,52 +829,42 @@
                 
                 this.ctx.restore();
                 
-                // Draw obstacles (soft, rounded bumps like hills)
+                // Draw obstacles (sharp triangular jumps like pixel art)
                 this.obstacles.forEach(obstacle => {
-                    // Create a soft, rounded bump using curves
-                    this.ctx.fillStyle = '#8B4513';
+                    // Create sharp triangular jump
+                    this.ctx.fillStyle = '#8B4513'; // Brown color
                     this.ctx.beginPath();
                     
                     // Start from bottom left
                     this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
                     
-                    // Create smooth curve to top center
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + obstacle.width/4, obstacle.y + obstacle.height/3,
-                        obstacle.x + obstacle.width/2, obstacle.y
-                    );
+                    // Go to sharp peak at top center
+                    this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y);
                     
-                    // Create smooth curve from top center to bottom right
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + 3*obstacle.width/4, obstacle.y + obstacle.height/3,
-                        obstacle.x + obstacle.width, obstacle.y + obstacle.height
-                    );
+                    // Go to bottom right
+                    this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
                     
-                    // Close the shape
+                    // Close the triangle
                     this.ctx.closePath();
                     this.ctx.fill();
                     
-                    // Add a subtle highlight on top
-                    this.ctx.fillStyle = '#A0522D';
-                    this.ctx.beginPath();
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + obstacle.width/4, obstacle.y + obstacle.height/4,
-                        obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/6
-                    );
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + 3*obstacle.width/4, obstacle.y + obstacle.height/4,
-                        obstacle.x + obstacle.width, obstacle.y + obstacle.height/6
-                    );
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + 3*obstacle.width/4, obstacle.y + obstacle.height/3,
-                        obstacle.x + obstacle.width/2, obstacle.y
-                    );
-                    this.ctx.quadraticCurveTo(
-                        obstacle.x + obstacle.width/4, obstacle.y + obstacle.height/3,
-                        obstacle.x, obstacle.y + obstacle.height/6
-                    );
-                    this.ctx.closePath();
-                    this.ctx.fill();
+                    // Add darker outline for pixel art effect
+                    this.ctx.strokeStyle = '#654321';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    // Add horizontal lines for texture (like pixel art)
+                    this.ctx.strokeStyle = '#654321';
+                    this.ctx.lineWidth = 1;
+                    for (let i = 1; i < 4; i++) {
+                        const y = obstacle.y + (obstacle.height * i / 4);
+                        const leftX = obstacle.x + (obstacle.width * (4-i) / 8);
+                        const rightX = obstacle.x + obstacle.width - (obstacle.width * (4-i) / 8);
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(leftX, y);
+                        this.ctx.lineTo(rightX, y);
+                        this.ctx.stroke();
+                    }
                 });
                 
                 // Draw pause overlay
