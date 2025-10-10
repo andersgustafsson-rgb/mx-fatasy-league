@@ -297,12 +297,12 @@
                 // Cross (player) - initialize with default values first
                 this.cross = {
                     x: 100,
-                    y: 380,
+                    y: 420,
                     width: 40,
                     height: 40,
                     velocityY: 0,
                     isJumping: false,
-                    groundY: 380
+                    groundY: 420
                 };
                 
                 // Obstacles (gupp)
@@ -339,7 +339,7 @@
                 
                 // Update cross ground position only if cross is defined
                 if (this.cross) {
-                    this.cross.groundY = this.height - 100;
+                    this.cross.groundY = this.height - 40;
                     if (!this.gameRunning) {
                         this.cross.y = this.cross.groundY;
                     }
