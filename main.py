@@ -5532,7 +5532,8 @@ def race_countdown():
                 simulation_active = result and result[0] if result else False
             except Exception as e:
                 print(f"DEBUG: Error checking global simulation: {e}")
-                simulation_active = False
+                # Fallback to app globals if database table doesn't exist
+                simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
         
         if simulation_active:
             # Use fake race for testing
@@ -5713,7 +5714,15 @@ def reset_simulation():
         db.session.commit()
     except Exception as e:
         print(f"DEBUG: Error clearing global simulation: {e}")
-        pass
+        # Fallback to app globals if database table doesn't exist
+        if hasattr(app, 'global_simulation_active'):
+            app.global_simulation_active = False
+        if hasattr(app, 'global_simulation_start_time'):
+            delattr(app, 'global_simulation_start_time')
+        if hasattr(app, 'global_initial_simulated_time'):
+            delattr(app, 'global_initial_simulated_time')
+        if hasattr(app, 'global_simulated_time'):
+            delattr(app, 'global_simulated_time')
     
     return jsonify({"message": "Simulation reset to real time"})
 
@@ -5778,22 +5787,30 @@ def test_countdown():
         
         # Also set global simulation state for cross-device sync using database
         # Create or update global simulation record
-        from sqlalchemy import text
-        db.session.execute(text("""
-            INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time) 
-            VALUES (1, :active, :simulated_time, :start_time, :initial_time)
-            ON CONFLICT (id) DO UPDATE SET 
-                active = :active,
-                simulated_time = :simulated_time,
-                start_time = :start_time,
-                initial_time = :initial_time
-        """), {
-            'active': True,
-            'simulated_time': simulated_time.isoformat(),
-            'start_time': datetime.utcnow().isoformat(),
-            'initial_time': simulated_time.isoformat()
-        })
-        db.session.commit()
+        try:
+            from sqlalchemy import text
+            db.session.execute(text("""
+                INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time) 
+                VALUES (1, :active, :simulated_time, :start_time, :initial_time)
+                ON CONFLICT (id) DO UPDATE SET 
+                    active = :active,
+                    simulated_time = :simulated_time,
+                    start_time = :start_time,
+                    initial_time = :initial_time
+            """), {
+                'active': True,
+                'simulated_time': simulated_time.isoformat(),
+                'start_time': datetime.utcnow().isoformat(),
+                'initial_time': simulated_time.isoformat()
+            })
+            db.session.commit()
+        except Exception as e:
+            print(f"DEBUG: Error setting global simulation (table might not exist): {e}")
+            # Fallback to app globals if database table doesn't exist yet
+            app.global_simulation_active = True
+            app.global_simulated_time = simulated_time.isoformat()
+            app.global_simulation_start_time = datetime.utcnow().isoformat()
+            app.global_initial_simulated_time = simulated_time.isoformat()
         
         # Get next upcoming race (use simulated time for testing)
         next_race = (
@@ -5983,7 +6000,24 @@ def get_current_time():
             return current_simulated_time
     except Exception as e:
         print(f"DEBUG: Error parsing database global simulated time: {e}")
-        pass
+        # Fallback to app globals if database table doesn't exist
+        if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
+            try:
+                # Get the initial simulated time
+                initial_simulated_time = datetime.fromisoformat(app.global_simulated_time)
+                simulation_start_time = datetime.fromisoformat(app.global_simulation_start_time)
+                
+                # Calculate how much real time has passed since simulation started
+                real_time_elapsed = datetime.utcnow() - simulation_start_time
+                
+                # Add the elapsed time to the initial simulated time
+                current_simulated_time = initial_simulated_time + real_time_elapsed
+                
+                print(f"DEBUG: Using app global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+                return current_simulated_time
+            except Exception as e2:
+                print(f"DEBUG: Error parsing app global simulated time: {e2}")
+                pass
     
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
