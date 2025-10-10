@@ -578,9 +578,23 @@ def index():
                 competition_id=upcoming_race.id
             ).order_by(RacePick.predicted_position).all()
             
-            print(f"DEBUG: Found {len(race_picks)} race picks")
-            if race_picks:
+            # Get holeshot picks
+            holeshot_picks = HoleshotPick.query.filter_by(
+                user_id=uid,
+                competition_id=upcoming_race.id
+            ).all()
+            
+            # Get wildcard pick
+            wildcard_pick = WildcardPick.query.filter_by(
+                user_id=uid,
+                competition_id=upcoming_race.id
+            ).first()
+            
+            print(f"DEBUG: Found {len(race_picks)} race picks, {len(holeshot_picks)} holeshot picks, wildcard: {wildcard_pick is not None}")
+            
+            if race_picks or holeshot_picks or wildcard_pick:
                 picks_status = "has_picks"
+                
                 # Always show user's own picks (they can see their own choices)
                 for pick in race_picks:
                     rider = Rider.query.get(pick.rider_id)
@@ -599,6 +613,37 @@ def index():
                             current_picks_250.append(pick_data)
                         
                         print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
+                
+                # Process holeshot picks
+                current_holeshot_450 = None
+                current_holeshot_250 = None
+                for holeshot in holeshot_picks:
+                    rider = Rider.query.get(holeshot.rider_id)
+                    if rider:
+                        if rider.class_name == "450cc":
+                            current_holeshot_450 = {
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name
+                            }
+                        elif rider.class_name == "250cc":
+                            current_holeshot_250 = {
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name
+                            }
+                
+                # Process wildcard pick
+                current_wildcard = None
+                if wildcard_pick:
+                    rider = Rider.query.get(wildcard_pick.rider_id)
+                    if rider:
+                        current_wildcard = {
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name,
+                            "position": wildcard_pick.position
+                        }
         except Exception as e:
             print(f"Error getting current picks: {e}")
             current_picks_450 = []
@@ -614,6 +659,9 @@ def index():
         team_riders=team_riders,
         current_picks_450=current_picks_450,
         current_picks_250=current_picks_250,
+        current_holeshot_450=current_holeshot_450 if 'current_holeshot_450' in locals() else None,
+        current_holeshot_250=current_holeshot_250 if 'current_holeshot_250' in locals() else None,
+        current_wildcard=current_wildcard if 'current_wildcard' in locals() else None,
         picks_status=picks_status,
     )
 
@@ -1089,10 +1137,13 @@ def race_picks_page(competition_id):
     
     print(f"DEBUG: race_picks_page - Picks locked: {picks_locked}")
     
-    # If picks are locked, redirect to homepage with message
+    # If picks are locked, show locked page instead of redirect
     if picks_locked:
-        flash("Picks är låsta! Du kan inte längre ändra dina val.", "error")
-        return redirect(url_for("index"))
+        return render_template(
+            "race_picks_locked.html",
+            competition=comp,
+            picks_locked=True
+        )
 
     # 1) Hämta OUT-förare för detta race
     out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(

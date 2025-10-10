@@ -235,8 +235,40 @@
                         </div>
                       </div>
                       {% endif %}
+                      
+                      <!-- Holeshot picks -->
+                      {% if current_holeshot_450 or current_holeshot_250 %}
+                      <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-yellow-700 dark:text-yellow-300 mb-2">🏁 Dina Holeshot-val:</h4>
+                        <div class="space-y-1">
+                          {% if current_holeshot_450 %}
+                          <div class="flex items-center justify-between text-sm">
+                            <span class="text-yellow-600 dark:text-yellow-400">450cc:</span>
+                            <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_450.rider_number }} {{ current_holeshot_450.rider_name }}</span>
+                          </div>
+                          {% endif %}
+                          {% if current_holeshot_250 %}
+                          <div class="flex items-center justify-between text-sm">
+                            <span class="text-yellow-600 dark:text-yellow-400">250cc:</span>
+                            <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_250.rider_number }} {{ current_holeshot_250.rider_name }}</span>
+                          </div>
+                          {% endif %}
+                        </div>
+                      </div>
+                      {% endif %}
+                      
+                      <!-- Wildcard pick -->
+                      {% if current_wildcard %}
+                      <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">🃏 Ditt Wildcard-val:</h4>
+                        <div class="flex items-center justify-between text-sm">
+                          <span class="text-purple-600 dark:text-purple-400">Position {{ current_wildcard.position }}:</span>
+                          <span class="font-medium text-purple-800 dark:text-purple-200">#{{ current_wildcard.rider_number }} {{ current_wildcard.rider_name }} ({{ current_wildcard.class }})</span>
+                        </div>
+                      </div>
+                      {% endif %}
                     </div>
-                    
+
                     <!-- Show deadline status -->
                     {% if picks_locked %}
                       <div class="mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg">

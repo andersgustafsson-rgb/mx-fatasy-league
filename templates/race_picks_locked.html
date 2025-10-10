@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Picks Låsta - {{ competition.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">🔒 Picks Låsta</h1>
+                    <p class="text-gray-600">{{ competition.name }} - {{ competition.event_date }}</p>
+                </div>
+                <a href="{{ url_for('index') }}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    ← Tillbaka till Huvudsidan
+                </a>
+            </div>
+        </div>
+
+        <!-- Locked Message -->
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-red-800">
+                        Picks är låsta!
+                    </h3>
+                    <div class="mt-2 text-sm text-red-700">
+                        <p>Du kan inte längre ändra dina val för detta race. Deadline har passerat.</p>
+                        <p class="mt-1">Du kan fortfarande se dina val på huvudsidan.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Information -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-medium text-blue-800 mb-3">ℹ️ Information</h3>
+            <ul class="text-sm text-blue-700 space-y-2">
+                <li>• Picks låses 2 timmar före racet startar</li>
+                <li>• Du kan se dina val på huvudsidan</li>
+                <li>• Andra användares picks visas efter deadline</li>
+                <li>• Nästa race kommer att ha öppna picks</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
