@@ -109,6 +109,44 @@
             color: #ccc;
         }
 
+        .leaderboard {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .leaderboard h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 14px;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+
+        .player-name {
+            font-weight: bold;
+        }
+
+        .score {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
         .cross {
             position: absolute;
             width: 40px;
@@ -257,6 +295,19 @@
                 <span class="mobile-only">Tryck på skärmen eller ⬆️ för att hoppa<br>
                 ⏸️ för att pausa</span>
             </div>
+            
+            <!-- Leaderboard -->
+            <div id="leaderboard" class="leaderboard">
+                <h3>🏆 Topp 5 Spelare</h3>
+                <div id="leaderboardList">
+                    <div class="leaderboard-item">1. <span class="player-name">-</span> <span class="score">0</span></div>
+                    <div class="leaderboard-item">2. <span class="player-name">-</span> <span class="score">0</span></div>
+                    <div class="leaderboard-item">3. <span class="player-name">-</span> <span class="score">0</span></div>
+                    <div class="leaderboard-item">4. <span class="player-name">-</span> <span class="score">0</span></div>
+                    <div class="leaderboard-item">5. <span class="player-name">-</span> <span class="score">0</span></div>
+                </div>
+            </div>
+            
             <button class="button" onclick="startGame()">Starta Spel</button>
             <button class="button" onclick="window.location.href='/'">Tillbaka</button>
         </div>
@@ -289,7 +340,7 @@
                 this.gameRunning = false;
                 this.gamePaused = false;
                 this.score = 0;
-                this.highScore = localStorage.getItem('crossDinoHighScore') || 0;
+                this.highScore = localStorage.getItem('crossDinoGlobalHighScore') || 0;
                 this.gameSpeed = 2;
                 this.gravity = 0.7;
                 this.jumpPower = -20; // Increased a bit more for better clearance
@@ -319,6 +370,9 @@
                 
                 // Update high score display
                 document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
+                
+                // Load and display leaderboard
+                this.loadLeaderboard();
                 
                 // Now resize canvas and update cross position after everything is initialized
                 this.resizeCanvas();
@@ -543,13 +597,59 @@
                 
                 if (this.score > this.highScore) {
                     this.highScore = this.score;
-                    localStorage.setItem('crossDinoHighScore', this.highScore);
+                    localStorage.setItem('crossDinoGlobalHighScore', this.highScore);
                     document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
                 }
+                
+                // Update leaderboard if this is a new high score
+                this.updateLeaderboard(this.score);
                 
                 document.getElementById('finalScore').textContent = this.score;
                 document.getElementById('finalHighScore').textContent = this.highScore;
                 document.getElementById('gameOver').style.display = 'block';
+            }
+            
+            loadLeaderboard() {
+                const leaderboard = JSON.parse(localStorage.getItem('crossDinoLeaderboard') || '[]');
+                this.displayLeaderboard(leaderboard);
+            }
+            
+            updateLeaderboard(score) {
+                const leaderboard = JSON.parse(localStorage.getItem('crossDinoLeaderboard') || '[]');
+                const playerName = prompt('Grattis! Du fick ett nytt rekord! Vad heter du?') || 'Anonym';
+                
+                // Add new score
+                leaderboard.push({
+                    name: playerName,
+                    score: score,
+                    date: new Date().toLocaleDateString()
+                });
+                
+                // Sort by score (highest first) and keep only top 5
+                leaderboard.sort((a, b) => b.score - a.score);
+                leaderboard.splice(5);
+                
+                // Save back to localStorage
+                localStorage.setItem('crossDinoLeaderboard', JSON.stringify(leaderboard));
+                
+                // Update display
+                this.displayLeaderboard(leaderboard);
+            }
+            
+            displayLeaderboard(leaderboard) {
+                const items = document.querySelectorAll('.leaderboard-item');
+                items.forEach((item, index) => {
+                    const playerName = item.querySelector('.player-name');
+                    const score = item.querySelector('.score');
+                    
+                    if (leaderboard[index]) {
+                        playerName.textContent = leaderboard[index].name;
+                        score.textContent = leaderboard[index].score;
+                    } else {
+                        playerName.textContent = '-';
+                        score.textContent = '0';
+                    }
+                });
             }
             
             draw() {
