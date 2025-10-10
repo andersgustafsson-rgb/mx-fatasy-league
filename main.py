@@ -564,6 +564,9 @@ def index():
                 # Use the same logic as race_countdown for consistency
                 scenario = session.get('test_scenario', 'race_in_3h')
                 
+                # Get current time first
+                current_time = get_current_time()
+                
                 # Create fake race based on scenario - use the same logic as test_countdown
                 test_scenarios = {
                     "race_in_3h": current_time + timedelta(hours=3),
@@ -575,7 +578,6 @@ def index():
                 fake_race_datetime_utc = test_scenarios.get(scenario, current_time + timedelta(hours=3))
                 
                 # Check if picks are locked (2 hours before fake race)
-                current_time = get_current_time()
                 time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
                 picks_locked = time_to_deadline.total_seconds() <= 0
                 
@@ -606,25 +608,32 @@ def index():
                 time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
                 picks_locked = time_to_deadline.total_seconds() <= 0
             
-            print(f"DEBUG: Looking for picks for user {uid}, competition {upcoming_race.id}")
+            # Use the correct competition_id for picks lookup
+            competition_id_for_picks = upcoming_race.id
+            if simulation_active:
+                # During simulation, we still want to show picks for the real upcoming race
+                # The simulation only affects the countdown and picks_locked status
+                competition_id_for_picks = upcoming_race.id
+            
+            print(f"DEBUG: Looking for picks for user {uid}, competition {competition_id_for_picks}")
             print(f"DEBUG: Picks locked: {picks_locked}")
             
             # Get race picks for both classes
             race_picks = RacePick.query.filter_by(
                 user_id=uid, 
-                competition_id=upcoming_race.id
+                competition_id=competition_id_for_picks
             ).order_by(RacePick.predicted_position).all()
             
             # Get holeshot picks
             holeshot_picks = HoleshotPick.query.filter_by(
                 user_id=uid,
-                competition_id=upcoming_race.id
+                competition_id=competition_id_for_picks
             ).all()
             
             # Get wildcard pick
             wildcard_pick = WildcardPick.query.filter_by(
                 user_id=uid,
-                competition_id=upcoming_race.id
+                competition_id=competition_id_for_picks
             ).first()
             
             print(f"DEBUG: Found {len(race_picks)} race picks, {len(holeshot_picks)} holeshot picks, wildcard: {wildcard_pick is not None}")
@@ -1167,6 +1176,9 @@ def race_picks_page(competition_id):
         # Use the same logic as race_countdown for consistency
         scenario = session.get('test_scenario', 'race_in_3h')
         
+        # Get current time first
+        current_time = get_current_time()
+        
         # Create fake race based on scenario - use the same logic as test_countdown
         test_scenarios = {
             "race_in_3h": current_time + timedelta(hours=3),
@@ -1178,7 +1190,6 @@ def race_picks_page(competition_id):
         fake_race_datetime_utc = test_scenarios.get(scenario, current_time + timedelta(hours=3))
         
         # Check if picks are locked (2 hours before fake race)
-        current_time = get_current_time()
         time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
         picks_locked = time_to_deadline.total_seconds() <= 0
         
