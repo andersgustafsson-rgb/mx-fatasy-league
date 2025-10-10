@@ -1649,13 +1649,38 @@ def create_default_series_2025():
 
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
-    """Fix missing database tables"""
+    """Fix missing database tables and columns"""
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
         # Create all tables
         db.create_all()
+        
+        # Manually add missing columns to competitions table
+        try:
+            # Check if series_id column exists
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='series_id'"))
+            if not result.fetchone():
+                db.session.execute(text("ALTER TABLE competitions ADD COLUMN series_id INTEGER"))
+                print("Added series_id column to competitions")
+            
+            # Check if phase column exists
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='phase'"))
+            if not result.fetchone():
+                db.session.execute(text("ALTER TABLE competitions ADD COLUMN phase VARCHAR(20)"))
+                print("Added phase column to competitions")
+            
+            # Check if is_qualifying column exists
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='is_qualifying'"))
+            if not result.fetchone():
+                db.session.execute(text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
+                print("Added is_qualifying column to competitions")
+            
+            db.session.commit()
+        except Exception as col_error:
+            print(f"Column addition error (might already exist): {col_error}")
+            db.session.rollback()
         
         # Check if global_simulation exists and create default entry
         if not GlobalSimulation.query.first():
@@ -1668,7 +1693,7 @@ def fix_database_tables():
             db.session.add(global_sim)
             db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Database tables fixed'})
+        return jsonify({'success': True, 'message': 'Database tables and columns fixed'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
