@@ -205,9 +205,11 @@
                   <a href="{{ url_for('season_team_page') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
                     👥 Säsongsteam
                   </a>
-                  <a href="{{ url_for('race_results_page') }}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
-                    📊 Race Resultat
-                  </a>
+                  <div id="race-results-button">
+                    <a href="{{ url_for('race_results_page') }}" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
+                      📊 Race Resultat
+                    </a>
+                  </div>
                   <a href="{{ url_for('my_scores') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
                     🏆 Mina Poäng
                   </a>
@@ -685,13 +687,36 @@
     function updateRealPicksStatus(data) {
       const lockedStatus = document.getElementById('real-picks-locked-status');
       const openStatus = document.getElementById('real-picks-open-status');
+      const racePicksButton = document.getElementById('race-picks-button');
+      const raceResultsButton = document.getElementById('race-results-button');
       
       if (data.picks_locked) {
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
+        
+        // Disable Race Picks button
+        if (racePicksButton) {
+          racePicksButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Picks (Låsta)</span>';
+        }
+        
+        // Disable Race Results button
+        if (raceResultsButton) {
+          raceResultsButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Resultat (Låsta)</span>';
+        }
       } else {
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
+        
+        // Enable Race Picks button
+        if (racePicksButton) {
+          const racePicksUrl = window.racePicksUrl || '#';
+          racePicksButton.innerHTML = `<a href="${racePicksUrl}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">🏁 Race Picks</a>`;
+        }
+        
+        // Enable Race Results button
+        if (raceResultsButton) {
+          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
+        }
       }
     }
     
@@ -782,6 +807,11 @@
       
       // Initialize tabs
       initTabs();
+      
+      // Set race picks URL for dynamic updates
+      {% if upcoming_race %}
+        window.racePicksUrl = "{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}";
+      {% endif %}
     });
     
     // Clean up on page unload
