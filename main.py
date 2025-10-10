@@ -1679,6 +1679,124 @@ def create_default_series_2025():
         ]
     })
 
+@app.route('/api/competitions/create_motocross_2025', methods=['POST'])
+def create_motocross_competitions_2025():
+    """Create all Motocross competitions for 2025"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Get Motocross series
+        motocross_series = Series.query.filter_by(name="Motocross", year=2025).first()
+        if not motocross_series:
+            return jsonify({'error': 'Motocross series not found. Create series first.'}), 400
+        
+        # Motocross races 2025
+        motocross_races = [
+            {"name": "Fox Raceway National", "date": "2025-05-24", "location": "Pala, CA"},
+            {"name": "Hangtown Classic", "date": "2025-05-31", "location": "Rancho Cordova, CA"},
+            {"name": "Thunder Valley National", "date": "2025-06-07", "location": "Lakewood, CO"},
+            {"name": "High Point National", "date": "2025-06-14", "location": "Mt. Morris, PA"},
+            {"name": "Southwick National", "date": "2025-06-28", "location": "Southwick, MA"},
+            {"name": "RedBud National", "date": "2025-07-05", "location": "Buchanan, MI"},
+            {"name": "Spring Creek National", "date": "2025-07-12", "location": "Millville, MN"},
+            {"name": "Washougal National", "date": "2025-07-19", "location": "Washougal, WA"},
+            {"name": "Unadilla National", "date": "2025-08-16", "location": "New Berlin, NY"},
+            {"name": "Budds Creek National", "date": "2025-08-23", "location": "Mechanicsville, MD"},
+            {"name": "Ironman National", "date": "2025-08-09", "location": "Crawfordsville, IN"}
+        ]
+        
+        created_competitions = []
+        
+        for race in motocross_races:
+            # Check if competition already exists
+            existing = Competition.query.filter_by(name=race["name"]).first()
+            if existing:
+                continue
+                
+            competition = Competition(
+                name=race["name"],
+                event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
+                series="450cc",  # Motocross is 450cc only
+                point_multiplier=1.0,
+                is_triple_crown=0,
+                coast_250=None,
+                timezone="America/Los_Angeles",
+                series_id=motocross_series.id,
+                phase="regular",
+                is_qualifying=False
+            )
+            
+            db.session.add(competition)
+            created_competitions.append(race["name"])
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'competitions_created': created_competitions,
+            'message': f'Created {len(created_competitions)} Motocross competitions'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/competitions/create_smx_finals_2025', methods=['POST'])
+def create_smx_finals_competitions_2025():
+    """Create SMX Finals competitions for 2025"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Get SMX Finals series
+        smx_series = Series.query.filter_by(name="SMX Finals", year=2025).first()
+        if not smx_series:
+            return jsonify({'error': 'SMX Finals series not found. Create series first.'}), 400
+        
+        # SMX Finals races 2025
+        smx_races = [
+            {"name": "SMX Playoff 1", "date": "2025-09-06", "phase": "playoff1"},
+            {"name": "SMX Playoff 2", "date": "2025-09-13", "phase": "playoff2"},
+            {"name": "SMX Final", "date": "2025-09-20", "phase": "final"}
+        ]
+        
+        created_competitions = []
+        
+        for race in smx_races:
+            # Check if competition already exists
+            existing = Competition.query.filter_by(name=race["name"]).first()
+            if existing:
+                continue
+                
+            competition = Competition(
+                name=race["name"],
+                event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
+                series="450cc",  # SMX Finals is 450cc only
+                point_multiplier=3.0,  # Triple points for SMX Finals
+                is_triple_crown=0,
+                coast_250=None,
+                timezone="America/Los_Angeles",
+                series_id=smx_series.id,
+                phase=race["phase"],
+                is_qualifying=False
+            )
+            
+            db.session.add(competition)
+            created_competitions.append(race["name"])
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'competitions_created': created_competitions,
+            'message': f'Created {len(created_competitions)} SMX Finals competitions'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
     """Fix missing database tables and columns"""

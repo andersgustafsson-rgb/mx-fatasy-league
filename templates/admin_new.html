@@ -370,6 +370,16 @@
                         </div>
                         
                         <div class="space-y-3">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Competitions</h3>
+                            <button onclick="createMotocrossCompetitions()" class="block w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-center">
+                                🏍️ Skapa Motocross 2025
+                            </button>
+                            <button onclick="createSMXFinalsCompetitions()" class="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-center">
+                                🏆 Skapa SMX Finals 2025
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">Database Fix</h3>
                             <button onclick="fixDatabaseTables()" class="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500 text-center">
                                 🔧 Fixa Databas Tabeller
@@ -1378,6 +1388,58 @@
                     console.error('Error:', error);
                     alert('❌ Fel vid borttagning av serie');
                 });
+            }
+        }
+        
+        async function createMotocrossCompetitions() {
+            if (!confirm('Skapa alla Motocross competitions för 2025?\n\nDetta skapar 11 Motocross races från maj till augusti.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/competitions/create_motocross_2025', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ Motocross competitions skapade!\n\n${result.competitions_created.join('\n')}`);
+                } else {
+                    alert(`❌ Fel: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fel vid skapande av Motocross competitions');
+            }
+        }
+        
+        async function createSMXFinalsCompetitions() {
+            if (!confirm('Skapa SMX Finals competitions för 2025?\n\nDetta skapar 3 SMX races (Playoff 1, Playoff 2, Final) i september.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/competitions/create_smx_finals_2025', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ SMX Finals competitions skapade!\n\n${result.competitions_created.join('\n')}`);
+                } else {
+                    alert(`❌ Fel: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fel vid skapande av SMX Finals competitions');
             }
         }
 
