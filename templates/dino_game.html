@@ -376,9 +376,9 @@
                 this.score = 0;
                 this.highScore = parseInt(localStorage.getItem('crossDinoGlobalHighScore') || 0);
                 
-                // Load biker SVG image
+                // Load blue biker SVG image
                 this.bikerImage = new Image();
-                this.bikerImage.src = '/static/images/bikers.svg';
+                this.bikerImage.src = '/static/images/blue_biker.svg';
                 console.log('DEBUG: Loaded highscore from localStorage:', this.highScore);
                 console.log('DEBUG: localStorage crossDinoGlobalHighScore:', localStorage.getItem('crossDinoGlobalHighScore'));
                 this.gameSpeed = 2;
