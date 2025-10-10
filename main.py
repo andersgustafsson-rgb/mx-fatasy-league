@@ -5528,11 +5528,15 @@ def race_countdown():
         simulation_active = session.get('simulation_active')
         if not simulation_active:
             try:
+                # Rollback any existing transaction first
+                db.session.rollback()
+                
                 result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
                 simulation_active = result and result[0] if result else False
             except Exception as e:
                 print(f"DEBUG: Error checking global simulation: {e}")
-                # Fallback to app globals if database table doesn't exist
+                # Rollback and fallback to app globals if database table doesn't exist
+                db.session.rollback()
                 simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
         
         if simulation_active:
@@ -5710,11 +5714,15 @@ def reset_simulation():
     
     # Clear global simulation state from database
     try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
         db.session.execute(text("UPDATE global_simulation SET active = FALSE WHERE id = 1"))
         db.session.commit()
     except Exception as e:
         print(f"DEBUG: Error clearing global simulation: {e}")
-        # Fallback to app globals if database table doesn't exist
+        # Rollback and fallback to app globals if database table doesn't exist
+        db.session.rollback()
         if hasattr(app, 'global_simulation_active'):
             app.global_simulation_active = False
         if hasattr(app, 'global_simulation_start_time'):
@@ -5789,6 +5797,9 @@ def test_countdown():
         # Create or update global simulation record
         try:
             from sqlalchemy import text
+            # Rollback any existing transaction first
+            db.session.rollback()
+            
             db.session.execute(text("""
                 INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time) 
                 VALUES (1, :active, :simulated_time, :start_time, :initial_time)
@@ -5806,7 +5817,8 @@ def test_countdown():
             db.session.commit()
         except Exception as e:
             print(f"DEBUG: Error setting global simulation (table might not exist): {e}")
-            # Fallback to app globals if database table doesn't exist yet
+            # Rollback and fallback to app globals if database table doesn't exist yet
+            db.session.rollback()
             app.global_simulation_active = True
             app.global_simulated_time = simulated_time.isoformat()
             app.global_simulation_start_time = datetime.utcnow().isoformat()
@@ -5985,6 +5997,9 @@ def get_current_time():
     
     # Check global simulation state for cross-device sync using database
     try:
+        # Rollback any existing transaction first
+        db.session.rollback()
+        
         result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
         if result and result[0]:  # active is True
             initial_simulated_time = datetime.fromisoformat(result[1])  # simulated_time
@@ -6000,7 +6015,8 @@ def get_current_time():
             return current_simulated_time
     except Exception as e:
         print(f"DEBUG: Error parsing database global simulated time: {e}")
-        # Fallback to app globals if database table doesn't exist
+        # Rollback and fallback to app globals if database table doesn't exist
+        db.session.rollback()
         if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
             try:
                 # Get the initial simulated time
