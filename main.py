@@ -1748,6 +1748,58 @@ def fix_database_tables():
             db.session.rollback()
             print("DEBUG: Rolled back column changes")
         
+        # Check and add missing columns to riders table
+        print("DEBUG: Checking for missing columns in riders table")
+        try:
+            # Check if series_participation column exists
+            print("DEBUG: Checking if series_participation column exists")
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='series_participation'"))
+            series_participation_exists = result.fetchone()
+            print(f"DEBUG: series_participation column exists: {series_participation_exists is not None}")
+            
+            if not series_participation_exists:
+                print("DEBUG: Adding series_participation column")
+                db.session.execute(text("ALTER TABLE riders ADD COLUMN series_participation VARCHAR(50) DEFAULT 'all'"))
+                print("DEBUG: Added series_participation column to riders")
+            else:
+                print("DEBUG: series_participation column already exists")
+            
+            # Check if smx_qualified column exists
+            print("DEBUG: Checking if smx_qualified column exists")
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_qualified'"))
+            smx_qualified_exists = result.fetchone()
+            print(f"DEBUG: smx_qualified column exists: {smx_qualified_exists is not None}")
+            
+            if not smx_qualified_exists:
+                print("DEBUG: Adding smx_qualified column")
+                db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_qualified BOOLEAN DEFAULT FALSE"))
+                print("DEBUG: Added smx_qualified column to riders")
+            else:
+                print("DEBUG: smx_qualified column already exists")
+            
+            # Check if smx_seed_points column exists
+            print("DEBUG: Checking if smx_seed_points column exists")
+            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_seed_points'"))
+            smx_seed_points_exists = result.fetchone()
+            print(f"DEBUG: smx_seed_points column exists: {smx_seed_points_exists is not None}")
+            
+            if not smx_seed_points_exists:
+                print("DEBUG: Adding smx_seed_points column")
+                db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_seed_points INTEGER DEFAULT 0"))
+                print("DEBUG: Added smx_seed_points column to riders")
+            else:
+                print("DEBUG: smx_seed_points column already exists")
+            
+            print("DEBUG: Committing riders column changes")
+            db.session.commit()
+            print("DEBUG: Riders column changes committed successfully")
+            
+        except Exception as riders_error:
+            print(f"DEBUG: Riders column addition error: {riders_error}")
+            print(f"DEBUG: Error type: {type(riders_error)}")
+            db.session.rollback()
+            print("DEBUG: Rolled back riders column changes")
+        
         # Check if global_simulation exists and create default entry
         print("DEBUG: Checking global_simulation table")
         try:
