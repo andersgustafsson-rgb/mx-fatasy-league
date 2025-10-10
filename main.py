@@ -1423,6 +1423,73 @@ def admin_page():
                          comp_coast_map=comp_coast_map,
                          today=today)
 
+@app.route('/rider_management')
+def rider_management():
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    # Get riders by class and coast
+    riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number).all()
+    riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number).all()
+    riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number).all()
+    
+    return render_template('rider_management.html',
+                         riders_450=riders_450,
+                         riders_250_east=riders_250_east,
+                         riders_250_west=riders_250_west)
+
+# API endpoints for rider management
+@app.route('/api/riders', methods=['POST'])
+def add_rider():
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    
+    # Set default price based on class
+    price = 450000 if data['class_name'] == '450cc' else 50000
+    
+    rider = Rider(
+        name=data['name'],
+        class_name=data['class_name'],
+        rider_number=data['rider_number'],
+        bike_brand=data['bike_brand'],
+        coast_250=data.get('coast_250'),
+        price=price
+    )
+    
+    db.session.add(rider)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'id': rider.id})
+
+@app.route('/api/riders/<int:rider_id>', methods=['PUT'])
+def update_rider(rider_id):
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    rider = Rider.query.get_or_404(rider_id)
+    data = request.get_json()
+    
+    rider.name = data['name']
+    rider.rider_number = data['rider_number']
+    rider.bike_brand = data['bike_brand']
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/riders/<int:rider_id>', methods=['DELETE'])
+def delete_rider(rider_id):
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    rider = Rider.query.get_or_404(rider_id)
+    db.session.delete(rider)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
 @app.route("/admin_old")
 def admin_page_old():
     if session.get("username") != "test":

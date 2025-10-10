@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider Management - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button.active { 
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-color: #22d3ee;
+            color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
+    <div class="container mx-auto p-4 sm:p-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors">🏁 MX Fantasy</a>
+                <span class="text-cyan-400">|</span>
+                <h1 class="text-2xl font-bold text-cyan-400">👥 Rider Management</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/admin" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors">← Tillbaka till Admin</a>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex flex-wrap gap-2 mb-6">
+            <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250-east">
+                250cc East
+            </button>
+            <button class="tab-button px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250-west">
+                250cc West
+            </button>
+            <button class="tab-button px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="450">
+                450cc
+            </button>
+        </div>
+
+        <!-- 250cc East Tab -->
+        <div id="250-east" class="tab-content active">
+            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc East Riders</h2>
+                </div>
+                <div class="p-4 bg-gray-900">
+                    <!-- Add New Rider Form -->
+                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
+                        <form id="add-rider-form-250-east" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="hidden" name="class_name" value="250cc">
+                            <input type="hidden" name="coast_250" value="east">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
+                                <input type="number" name="rider_number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
+                                <input type="text" name="name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
+                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                    <option value="">Välj märke</option>
+                                    <option value="Honda">Honda</option>
+                                    <option value="Yamaha">Yamaha</option>
+                                    <option value="KTM">KTM</option>
+                                    <option value="Kawasaki">Kawasaki</option>
+                                    <option value="Suzuki">Suzuki</option>
+                                    <option value="Husqvarna">Husqvarna</option>
+                                    <option value="GasGas">GasGas</option>
+                                    <option value="Beta">Beta</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                    Lägg till
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Riders Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riders-250-east">
+                                {% for rider in riders_250_east %}
+                                <tr class="border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east')" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
+                                            Redigera
+                                        </button>
+                                        <button onclick="deleteRider({{ rider.id }}, '{{ rider.name }}')" 
+                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                            Ta bort
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 250cc West Tab -->
+        <div id="250-west" class="tab-content">
+            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 250cc West Riders</h2>
+                </div>
+                <div class="p-4 bg-gray-900">
+                    <!-- Add New Rider Form -->
+                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
+                        <form id="add-rider-form-250-west" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="hidden" name="class_name" value="250cc">
+                            <input type="hidden" name="coast_250" value="west">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
+                                <input type="number" name="rider_number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
+                                <input type="text" name="name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
+                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                    <option value="">Välj märke</option>
+                                    <option value="Honda">Honda</option>
+                                    <option value="Yamaha">Yamaha</option>
+                                    <option value="KTM">KTM</option>
+                                    <option value="Kawasaki">Kawasaki</option>
+                                    <option value="Suzuki">Suzuki</option>
+                                    <option value="Husqvarna">Husqvarna</option>
+                                    <option value="GasGas">GasGas</option>
+                                    <option value="Beta">Beta</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                    Lägg till
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Riders Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riders-250-west">
+                                {% for rider in riders_250_west %}
+                                <tr class="border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west')" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
+                                            Redigera
+                                        </button>
+                                        <button onclick="deleteRider({{ rider.id }}, '{{ rider.name }}')" 
+                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                            Ta bort
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 450cc Tab -->
+        <div id="450" class="tab-content">
+            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏍️ 450cc Riders</h2>
+                </div>
+                <div class="p-4 bg-gray-900">
+                    <!-- Add New Rider Form -->
+                    <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
+                        <form id="add-rider-form-450" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="hidden" name="class_name" value="450cc">
+                            <input type="hidden" name="coast_250" value="">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
+                                <input type="number" name="rider_number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
+                                <input type="text" name="name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
+                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                    <option value="">Välj märke</option>
+                                    <option value="Honda">Honda</option>
+                                    <option value="Yamaha">Yamaha</option>
+                                    <option value="KTM">KTM</option>
+                                    <option value="Kawasaki">Kawasaki</option>
+                                    <option value="Suzuki">Suzuki</option>
+                                    <option value="Husqvarna">Husqvarna</option>
+                                    <option value="GasGas">GasGas</option>
+                                    <option value="Beta">Beta</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
+                                    Lägg till
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Riders Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-800 border-b border-cyan-400">
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riders-450">
+                                {% for rider in riders_450 %}
+                                <tr class="border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '450cc', '')" 
+                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
+                                            Redigera
+                                        </button>
+                                        <button onclick="deleteRider({{ rider.id }}, '{{ rider.name }}')" 
+                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                            Ta bort
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 p-6 w-full max-w-md" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                <h3 class="text-lg font-semibold text-cyan-400 mb-4">Redigera förare</h3>
+                <form id="edit-rider-form">
+                    <input type="hidden" id="edit-rider-id">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
+                            <input type="number" id="edit-rider-number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
+                            <input type="text" id="edit-rider-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
+                            <select id="edit-rider-brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                <option value="">Välj märke</option>
+                                <option value="Honda">Honda</option>
+                                <option value="Yamaha">Yamaha</option>
+                                <option value="KTM">KTM</option>
+                                <option value="Kawasaki">Kawasaki</option>
+                                <option value="Suzuki">Suzuki</option>
+                                <option value="Husqvarna">Husqvarna</option>
+                                <option value="GasGas">GasGas</option>
+                                <option value="Beta">Beta</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors">
+                            Avbryt
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors">
+                            Spara
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                
+                // Remove active class from all buttons and content
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Add rider forms
+        document.querySelectorAll('[id^="add-rider-form-"]').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    const response = await fetch('/api/riders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Fel vid tillägg av förare');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Fel vid tillägg av förare');
+                }
+            });
+        });
+
+        // Edit rider
+        function editRider(id, name, number, brand, className, coast) {
+            document.getElementById('edit-rider-id').value = id;
+            document.getElementById('edit-rider-name').value = name;
+            document.getElementById('edit-rider-number').value = number;
+            document.getElementById('edit-rider-brand').value = brand;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        // Edit rider form
+        document.getElementById('edit-rider-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('edit-rider-id').value;
+            const data = {
+                name: document.getElementById('edit-rider-name').value,
+                rider_number: parseInt(document.getElementById('edit-rider-number').value),
+                bike_brand: document.getElementById('edit-rider-brand').value
+            };
+            
+            try {
+                const response = await fetch(`/api/riders/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Fel vid uppdatering av förare');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Fel vid uppdatering av förare');
+            }
+        });
+
+        // Delete rider
+        function deleteRider(id, name) {
+            if (confirm(`Är du säker på att du vill ta bort ${name}?`)) {
+                fetch(`/api/riders/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Fel vid borttagning av förare');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Fel vid borttagning av förare');
+                });
+            }
+        }
+    </script>
+</body>
+</html>
