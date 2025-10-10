@@ -1714,12 +1714,41 @@ def create_default_series_2025():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Check if series already exist
+    # Check if series already exist and update them
     existing = Series.query.filter_by(year=2025).first()
     if existing:
-        return jsonify({'error': 'Series for 2025 already exist'}), 400
+        # Update existing series with correct dates
+        supercross = Series.query.filter_by(name='Supercross', year=2025).first()
+        if supercross:
+            supercross.start_date = date(2025, 1, 4)
+            supercross.end_date = date(2025, 5, 10)
+            supercross.is_active = True
+        
+        motocross = Series.query.filter_by(name='Motocross', year=2025).first()
+        if motocross:
+            motocross.start_date = date(2025, 5, 24)
+            motocross.end_date = date(2025, 8, 23)
+            motocross.is_active = True
+        
+        smx_finals = Series.query.filter_by(name='SMX Finals', year=2025).first()
+        if smx_finals:
+            smx_finals.start_date = date(2025, 9, 6)
+            smx_finals.end_date = date(2025, 9, 20)
+            smx_finals.is_active = True
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Updated existing series with correct dates',
+            'series_updated': [
+                {'name': 'Supercross', 'start': '2025-01-04', 'end': '2025-05-10'},
+                {'name': 'Motocross', 'start': '2025-05-24', 'end': '2025-08-23'},
+                {'name': 'SMX Finals', 'start': '2025-09-06', 'end': '2025-09-20'}
+            ]
+        })
     
-    # Create Supercross series
+    # Create Supercross series (should be active now)
     supercross = Series(
         name='Supercross',
         year=2025,
@@ -1729,7 +1758,7 @@ def create_default_series_2025():
         points_system='standard'
     )
     
-    # Create Motocross series
+    # Create Motocross series (starts in May 2025)
     motocross = Series(
         name='Motocross',
         year=2025,
@@ -1739,7 +1768,7 @@ def create_default_series_2025():
         points_system='standard'
     )
     
-    # Create SMX Finals series
+    # Create SMX Finals series (starts in September 2025)
     smx_finals = Series(
         name='SMX Finals',
         year=2025,
