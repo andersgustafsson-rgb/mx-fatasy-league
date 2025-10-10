@@ -821,8 +821,56 @@
                     this.ctx.globalAlpha = 1.0;
                 }
                 
-                // Draw racing car emoji (better direction and has driver)
-                this.ctx.fillText('🏎️', emojiX, emojiY);
+                // Draw bike silhouette using a simple bike shape
+                this.ctx.save();
+                this.ctx.fillStyle = '#000000'; // Black silhouette
+                
+                // Draw a simple bike silhouette
+                // Front wheel
+                this.ctx.beginPath();
+                this.ctx.arc(emojiX - 15, emojiY + 10, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Rear wheel
+                this.ctx.beginPath();
+                this.ctx.arc(emojiX + 15, emojiY + 10, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Frame
+                this.ctx.beginPath();
+                this.ctx.moveTo(emojiX - 15, emojiY + 2);
+                this.ctx.lineTo(emojiX - 5, emojiY - 5);
+                this.ctx.lineTo(emojiX + 5, emojiY - 8);
+                this.ctx.lineTo(emojiX + 15, emojiY - 2);
+                this.ctx.lineTo(emojiX + 12, emojiY + 2);
+                this.ctx.lineTo(emojiX - 12, emojiY + 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Handlebars
+                this.ctx.beginPath();
+                this.ctx.moveTo(emojiX - 15, emojiY + 2);
+                this.ctx.lineTo(emojiX - 20, emojiY - 2);
+                this.ctx.moveTo(emojiX - 15, emojiY + 2);
+                this.ctx.lineTo(emojiX - 10, emojiY - 2);
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+                
+                // Rider (simple silhouette)
+                this.ctx.beginPath();
+                this.ctx.arc(emojiX, emojiY - 12, 6, 0, Math.PI * 2); // Head
+                this.ctx.fill();
+                
+                // Body
+                this.ctx.beginPath();
+                this.ctx.moveTo(emojiX - 3, emojiY - 6);
+                this.ctx.lineTo(emojiX + 3, emojiY - 6);
+                this.ctx.lineTo(emojiX + 4, emojiY - 2);
+                this.ctx.lineTo(emojiX - 4, emojiY - 2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                this.ctx.restore();
                 
                 this.ctx.restore();
                 
