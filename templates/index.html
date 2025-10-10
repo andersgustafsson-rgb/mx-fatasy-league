@@ -973,8 +973,11 @@
     
     async function loadSeriesSelection() {
       try {
+        console.log('Loading series selection...');
         const response = await fetch('/api/series_status');
+        console.log('Response status:', response.status);
         const series = await response.json();
+        console.log('Series data:', series);
         
         const seriesContainer = document.getElementById('series-selection');
         
