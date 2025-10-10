@@ -872,11 +872,20 @@
     
     // Cross Dino Highscores
     async function fetchCrossDinoHighscores() {
+      console.log('DEBUG: Fetching Cross Dino highscores...');
       try {
         const response = await fetch('/api/cross_dino/highscores');
+        console.log('DEBUG: Response status:', response.status);
         const highscores = await response.json();
+        console.log('DEBUG: Highscores data:', highscores);
         
         const container = document.getElementById('cross-dino-highscores');
+        console.log('DEBUG: Container found:', container);
+        
+        if (!container) {
+          console.error('DEBUG: Cross Dino highscores container not found!');
+          return;
+        }
         
         if (highscores.length === 0) {
           container.innerHTML = `
@@ -928,6 +937,7 @@
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
+      console.log("DEBUG: About to fetch Cross Dino highscores...");
       fetchCrossDinoHighscores();
       
       // Start countdown system
