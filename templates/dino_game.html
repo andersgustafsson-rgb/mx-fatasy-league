@@ -640,10 +640,11 @@
                 }
                 
                 
-                // Increase game speed
+                // Increase game speed and obstacle frequency
                 if (this.score > 0 && this.score % 100 === 0) {
                     this.gameSpeed += 0.1;
-                    this.obstacleInterval = Math.max(60, this.obstacleInterval - 2);
+                    // Make obstacles more frequent as game gets faster
+                    this.obstacleInterval = Math.max(40, this.obstacleInterval - 3);
                 }
             }
             
