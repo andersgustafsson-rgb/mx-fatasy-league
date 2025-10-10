@@ -5647,6 +5647,7 @@ def race_countdown():
         print(f"DEBUG: race_countdown - final simulation_active: {simulation_active}")
         
         if simulation_active:
+            print(f"DEBUG: race_countdown - ENTERING SIMULATION MODE")
             # Use the same logic as test_countdown for consistency
             # Get the scenario from session or use default
             scenario = session.get('test_scenario', 'race_in_3h')
@@ -5682,6 +5683,7 @@ def race_countdown():
             print(f"DEBUG: Using fake race for simulation: {next_race.name} on {next_race.event_date} at {fake_race_datetime_utc}")
         else:
             # Get next upcoming race
+            print(f"DEBUG: race_countdown - ENTERING REAL RACE MODE")
             print(f"DEBUG: race_countdown - getting real race, current_time.date(): {current_time.date()}")
             next_race = (
                 Competition.query
