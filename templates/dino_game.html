@@ -821,54 +821,243 @@
                     this.ctx.globalAlpha = 1.0;
                 }
                 
-                // Draw bike silhouette using a simple bike shape
+                // Draw professional motocross bike and rider from side view (flipped to face right)
                 this.ctx.save();
-                this.ctx.fillStyle = '#000000'; // Black silhouette
+                this.ctx.translate(
+                    this.cross.x + this.cross.width/2, 
+                    this.cross.y + this.cross.height/2
+                );
                 
-                // Draw a simple bike silhouette
-                // Front wheel
+                // Scale for better proportions
+                this.ctx.scale(1.2, 1.2);
+                
+                // Flip horizontally to face right
+                this.ctx.scale(-1, 1);
+                
+                // === MOTORCYCLE ===
+                
+                // Front wheel (larger, more realistic)
+                this.ctx.fillStyle = '#1a1a1a';
                 this.ctx.beginPath();
-                this.ctx.arc(emojiX - 15, emojiY + 10, 8, 0, Math.PI * 2);
+                this.ctx.arc(-20, 15, 12, 0, Math.PI * 2);
                 this.ctx.fill();
                 
-                // Rear wheel
+                // Front wheel rim (gold/brass)
+                this.ctx.fillStyle = '#DAA520';
                 this.ctx.beginPath();
-                this.ctx.arc(emojiX + 15, emojiY + 10, 8, 0, Math.PI * 2);
+                this.ctx.arc(-20, 15, 8, 0, Math.PI * 2);
                 this.ctx.fill();
                 
-                // Frame
+                // Front wheel spokes
+                this.ctx.strokeStyle = '#B8860B';
+                this.ctx.lineWidth = 1;
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI * 2) / 6;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-20, 15);
+                    this.ctx.lineTo(-20 + Math.cos(angle) * 6, 15 + Math.sin(angle) * 6);
+                    this.ctx.stroke();
+                }
+                
+                // Rear wheel (larger)
+                this.ctx.fillStyle = '#1a1a1a';
                 this.ctx.beginPath();
-                this.ctx.moveTo(emojiX - 15, emojiY + 2);
-                this.ctx.lineTo(emojiX - 5, emojiY - 5);
-                this.ctx.lineTo(emojiX + 5, emojiY - 8);
-                this.ctx.lineTo(emojiX + 15, emojiY - 2);
-                this.ctx.lineTo(emojiX + 12, emojiY + 2);
-                this.ctx.lineTo(emojiX - 12, emojiY + 2);
+                this.ctx.arc(20, 15, 12, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Rear wheel rim (gold/brass)
+                this.ctx.fillStyle = '#DAA520';
+                this.ctx.beginPath();
+                this.ctx.arc(20, 15, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Rear wheel spokes
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * Math.PI * 2) / 6;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(20, 15);
+                    this.ctx.lineTo(20 + Math.cos(angle) * 6, 15 + Math.sin(angle) * 6);
+                    this.ctx.stroke();
+                }
+                
+                // Main frame (sleek red design)
+                this.ctx.fillStyle = '#DC143C';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-20, 3);   // Front wheel connection
+                this.ctx.lineTo(-12, -8);  // Front of frame
+                this.ctx.lineTo(0, -12);   // Tank area
+                this.ctx.lineTo(8, -10);   // Seat front
+                this.ctx.lineTo(20, -5);   // Rear wheel connection
+                this.ctx.lineTo(18, 3);    // Bottom rear
+                this.ctx.lineTo(-18, 3);   // Bottom front
                 this.ctx.closePath();
                 this.ctx.fill();
                 
-                // Handlebars
-                this.ctx.beginPath();
-                this.ctx.moveTo(emojiX - 15, emojiY + 2);
-                this.ctx.lineTo(emojiX - 20, emojiY - 2);
-                this.ctx.moveTo(emojiX - 15, emojiY + 2);
-                this.ctx.lineTo(emojiX - 10, emojiY - 2);
-                this.ctx.lineWidth = 3;
+                // Frame outline
+                this.ctx.strokeStyle = '#8B0000';
+                this.ctx.lineWidth = 2;
                 this.ctx.stroke();
                 
-                // Rider (simple silhouette)
+                // Front fork with suspension (chrome)
+                this.ctx.strokeStyle = '#C0C0C0';
+                this.ctx.lineWidth = 4;
                 this.ctx.beginPath();
-                this.ctx.arc(emojiX, emojiY - 12, 6, 0, Math.PI * 2); // Head
-                this.ctx.fill();
+                this.ctx.moveTo(-20, 3);
+                this.ctx.lineTo(-20, 15);
+                this.ctx.moveTo(-18, 3);
+                this.ctx.lineTo(-18, 15);
+                this.ctx.stroke();
                 
-                // Body
+                // Rear swingarm (chrome)
                 this.ctx.beginPath();
-                this.ctx.moveTo(emojiX - 3, emojiY - 6);
-                this.ctx.lineTo(emojiX + 3, emojiY - 6);
-                this.ctx.lineTo(emojiX + 4, emojiY - 2);
-                this.ctx.lineTo(emojiX - 4, emojiY - 2);
+                this.ctx.moveTo(20, -5);
+                this.ctx.lineTo(20, 15);
+                this.ctx.moveTo(18, -5);
+                this.ctx.lineTo(18, 15);
+                this.ctx.stroke();
+                
+                // Handlebars (chrome, wider)
+                this.ctx.strokeStyle = '#C0C0C0';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-20, 3);
+                this.ctx.lineTo(-28, -3);
+                this.ctx.moveTo(-20, 3);
+                this.ctx.lineTo(-12, -3);
+                this.ctx.stroke();
+                
+                // Seat (black leather with texture)
+                this.ctx.fillStyle = '#2F2F2F';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-2, -12);
+                this.ctx.lineTo(10, -12);
+                this.ctx.lineTo(12, -8);
+                this.ctx.lineTo(0, -8);
                 this.ctx.closePath();
                 this.ctx.fill();
+                
+                // Seat stitching
+                this.ctx.strokeStyle = '#1a1a1a';
+                this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-1, -10);
+                this.ctx.lineTo(9, -10);
+                this.ctx.stroke();
+                
+                // Engine/exhaust (black)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-8, 3);
+                this.ctx.lineTo(8, 3);
+                this.ctx.lineTo(6, 0);
+                this.ctx.lineTo(-6, 0);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // === RIDER ===
+                
+                // Helmet (white with red racing stripe)
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.beginPath();
+                this.ctx.arc(-2, -15, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Helmet racing stripe
+                this.ctx.fillStyle = '#DC143C';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-8, -15);
+                this.ctx.lineTo(4, -15);
+                this.ctx.lineTo(4, -12);
+                this.ctx.lineTo(-8, -12);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Helmet visor (dark)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-6, -17);
+                this.ctx.lineTo(2, -17);
+                this.ctx.lineTo(2, -14);
+                this.ctx.lineTo(-6, -14);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Body/torso (blue racing jersey)
+                this.ctx.fillStyle = '#4169E1';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-4, -8);
+                this.ctx.lineTo(4, -8);
+                this.ctx.lineTo(5, -2);
+                this.ctx.lineTo(-5, -2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Jersey number
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.font = 'bold 6px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('22', 0, -4);
+                
+                // Arms to handlebars (blue sleeves)
+                this.ctx.strokeStyle = '#4169E1';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-4, -8);
+                this.ctx.lineTo(-18, 3);
+                this.ctx.moveTo(4, -8);
+                this.ctx.lineTo(-12, 3);
+                this.ctx.stroke();
+                
+                // Gloves (black)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.beginPath();
+                this.ctx.arc(-18, 3, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(-12, 3, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Legs (black racing pants)
+                this.ctx.strokeStyle = '#1a1a1a';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-3, -2);
+                this.ctx.lineTo(-6, 10);
+                this.ctx.moveTo(3, -2);
+                this.ctx.lineTo(6, 10);
+                this.ctx.stroke();
+                
+                // Racing boots (black with white sole)
+                this.ctx.fillStyle = '#1a1a1a';
+                this.ctx.beginPath();
+                this.ctx.arc(-6, 10, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(6, 10, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Boot soles (white)
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.beginPath();
+                this.ctx.arc(-6, 12, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(6, 12, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Add some motion blur effect when jumping
+                if (this.cross.isJumping) {
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fillStyle = '#87CEEB';
+                    this.ctx.beginPath();
+                    this.ctx.arc(-2, -15, 12, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1.0;
+                }
                 
                 this.ctx.restore();
                 
