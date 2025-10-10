@@ -200,14 +200,29 @@
           <div id="race-info" class="tab-panel active">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Quick Actions -->
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
+              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden" 
+                   style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/" + (upcoming_race.name.lower().replace(" ", "") if upcoming_race else "anaheim1") + ".jpg") }}'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+                <div class="relative z-10">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🚀 Snabba Åtgärder</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div id="race-picks-button">
-                    <a href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
-                      🏁 Race Picks
-                    </a>
+                
+                <!-- Current Race Track Image with Race Picks Button -->
+                <div class="mb-4">
+                  <div class="relative rounded-lg overflow-hidden shadow-lg">
+                    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+                    <div class="relative z-10 p-4 text-center">
+                      <h3 class="text-white font-bold text-lg mb-2">🏁 {{ upcoming_race.name if upcoming_race else 'Race' }}</h3>
+                      <div id="race-picks-button">
+                        <a href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg text-sm">
+                          🏁 Make Your Picks
+                        </a>
+                      </div>
+                    </div>
                   </div>
+                </div>
+                
+                <!-- Other Quick Actions -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <a href="{{ url_for('season_team_page') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
                     👥 Säsongsteam
                   </a>
@@ -219,8 +234,10 @@
                   <a href="{{ url_for('my_scores') }}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm">
                     🏆 Mina Poäng
                   </a>
-        </div>
-      </div>
+                </div>
+                </div>
+              </div>
+              </div>
 
               <!-- Race Info -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
