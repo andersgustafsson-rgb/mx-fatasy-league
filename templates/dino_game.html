@@ -661,7 +661,7 @@
             
             checkCollision(rect1, rect2) {
                 // Reduce collision box for more forgiving gameplay
-                const margin = 15; // Allow getting closer before collision
+                const margin = 7; // Allow getting closer before collision (half of previous)
                 return rect1.x + margin < rect2.x + rect2.width - margin &&
                        rect1.x + rect1.width - margin > rect2.x + margin &&
                        rect1.y + margin < rect2.y + rect2.height - margin &&
