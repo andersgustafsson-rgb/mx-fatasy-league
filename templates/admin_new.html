@@ -370,6 +370,13 @@
                         </div>
                         
                         <div class="space-y-3">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Database Fix</h3>
+                            <button onclick="fixDatabaseTables()" class="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500 text-center">
+                                🔧 Fixa Databas Tabeller
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">Cross Jump Game</h3>
                             <a href="/dino_game" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 🎮 Live Version
@@ -1196,6 +1203,34 @@
 
         function showSeriesManager() {
             alert('🚧 Series Manager kommer snart!\n\nHär kan du:\n• Hantera befintliga serier\n• Skapa nya serier\n• Konfigurera poängsystem\n• Hantera SMX-kvalificering');
+        }
+
+        async function fixDatabaseTables() {
+            if (!confirm('⚠️ VARNING: Detta kommer att skapa saknade databas-tabeller.\n\nÄr du säker på att du vill fortsätta?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/fix_database_tables', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ Databas fixad!\n\n${result.message}`);
+                    // Reload page to refresh
+                    location.reload();
+                } else {
+                    alert(`❌ Fel: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fel vid fixning av databas');
+            }
         }
     </script>
 </body>

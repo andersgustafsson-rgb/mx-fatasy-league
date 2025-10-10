@@ -110,6 +110,14 @@ class User(db.Model):
     )
 
 
+class GlobalSimulation(db.Model):
+    __tablename__ = "global_simulation"
+    id = db.Column(db.Integer, primary_key=True)
+    active = db.Column(db.Boolean, default=False)
+    simulated_time = db.Column(db.String(50), nullable=True)
+    start_time = db.Column(db.String(50), nullable=True)
+    scenario = db.Column(db.String(50), nullable=True)
+
 class Series(db.Model):
     __tablename__ = "series"
     id = db.Column(db.Integer, primary_key=True)
@@ -1638,6 +1646,31 @@ def create_default_series_2025():
             {'id': smx_finals.id, 'name': 'SMX Finals'}
         ]
     })
+
+@app.route('/api/fix_database_tables', methods=['POST'])
+def fix_database_tables():
+    """Fix missing database tables"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Create all tables
+        db.create_all()
+        
+        # Check if global_simulation exists and create default entry
+        if not GlobalSimulation.query.first():
+            global_sim = GlobalSimulation(
+                active=False,
+                simulated_time=None,
+                start_time=None,
+                scenario=None
+            )
+            db.session.add(global_sim)
+            db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Database tables fixed'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route("/admin_old")
 def admin_page_old():
