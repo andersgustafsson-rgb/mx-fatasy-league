@@ -1202,7 +1202,183 @@
         }
 
         function showSeriesManager() {
-            alert('🚧 Series Manager kommer snart!\n\nHär kan du:\n• Hantera befintliga serier\n• Skapa nya serier\n• Konfigurera poängsystem\n• Hantera SMX-kvalificering');
+            // Create modal for series management
+            const modal = document.createElement('div');
+            modal.id = 'series-manager-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-cyan-400 neon-text">🏁 SMX Series Manager</h2>
+                        <button onclick="closeSeriesManager()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Series List -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-cyan-400 mb-4">📋 Befintliga Serier</h3>
+                            <div id="series-list" class="space-y-3">
+                                <div class="text-center text-gray-400 py-8">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-2"></div>
+                                    Laddar serier...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Series Form -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Skapa Ny Serie</h3>
+                            <form id="series-form" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-cyan-300 mb-1">Namn</label>
+                                    <input type="text" id="series-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" placeholder="t.ex. Supercross 2025" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-cyan-300 mb-1">År</label>
+                                    <input type="number" id="series-year" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" value="2025" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-cyan-300 mb-1">Startdatum</label>
+                                    <input type="date" id="series-start-date" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-cyan-300 mb-1">Slutdatum</label>
+                                    <input type="date" id="series-end-date" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-cyan-300 mb-1">Poängsystem</label>
+                                    <select id="series-points-system" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                                        <option value="standard">Standard</option>
+                                        <option value="double">Dubbel poäng</option>
+                                        <option value="triple">Trippel poäng</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="series-active" class="mr-2" checked>
+                                    <label class="text-cyan-300">Aktiv serie</label>
+                                </div>
+                                <button type="submit" class="w-full cyberpunk-button px-4 py-2 rounded-md">
+                                    🏁 Skapa Serie
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            loadSeriesList();
+            setupSeriesForm();
+        }
+        
+        function closeSeriesManager() {
+            const modal = document.getElementById('series-manager-modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        async function loadSeriesList() {
+            try {
+                const response = await fetch('/api/series');
+                const series = await response.json();
+                
+                const seriesList = document.getElementById('series-list');
+                if (series.length === 0) {
+                    seriesList.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
+                    return;
+                }
+                
+                seriesList.innerHTML = series.map(serie => `
+                    <div class="bg-gray-800 border border-cyan-400 rounded-lg p-4" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-cyan-300">${serie.name}</h4>
+                            <span class="text-xs px-2 py-1 rounded ${serie.is_active ? 'bg-green-600' : 'bg-gray-600'} text-white">
+                                ${serie.is_active ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-300 mb-2">År: ${serie.year}</p>
+                        <p class="text-sm text-gray-300 mb-2">Poängsystem: ${serie.points_system}</p>
+                        ${serie.start_date ? `<p class="text-sm text-gray-300 mb-2">Start: ${new Date(serie.start_date).toLocaleDateString('sv-SE')}</p>` : ''}
+                        ${serie.end_date ? `<p class="text-sm text-gray-300 mb-2">Slut: ${new Date(serie.end_date).toLocaleDateString('sv-SE')}</p>` : ''}
+                        <div class="flex space-x-2 mt-3">
+                            <button onclick="editSeries(${serie.id})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">
+                                Redigera
+                            </button>
+                            <button onclick="deleteSeries(${serie.id}, '${serie.name}')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                Ta bort
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading series:', error);
+                document.getElementById('series-list').innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
+            }
+        }
+        
+        function setupSeriesForm() {
+            document.getElementById('series-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const data = {
+                    name: document.getElementById('series-name').value,
+                    year: parseInt(document.getElementById('series-year').value),
+                    start_date: document.getElementById('series-start-date').value || null,
+                    end_date: document.getElementById('series-end-date').value || null,
+                    points_system: document.getElementById('series-points-system').value,
+                    is_active: document.getElementById('series-active').checked
+                };
+                
+                try {
+                    const response = await fetch('/api/series', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        alert('✅ Serie skapad!');
+                        loadSeriesList();
+                        document.getElementById('series-form').reset();
+                        document.getElementById('series-year').value = '2025';
+                    } else {
+                        alert(`❌ Fel: ${result.error}`);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('❌ Fel vid skapande av serie');
+                }
+            });
+        }
+        
+        function editSeries(seriesId) {
+            alert('🚧 Redigering av serier kommer snart!');
+        }
+        
+        function deleteSeries(seriesId, seriesName) {
+            if (confirm(`Är du säker på att du vill ta bort serien "${seriesName}"?`)) {
+                fetch(`/api/series/${seriesId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert('✅ Serie borttagen!');
+                        loadSeriesList();
+                    } else {
+                        alert(`❌ Fel: ${result.error}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ Fel vid borttagning av serie');
+                });
+            }
         }
 
         async function fixDatabaseTables() {
