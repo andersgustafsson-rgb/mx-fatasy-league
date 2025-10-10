@@ -834,8 +834,8 @@
                 // Draw blue biker SVG image
                 if (this.bikerImage.complete) {
                     this.ctx.save();
-                    this.ctx.scale(-1, 1); // Flip horizontally to face right
-                    this.ctx.drawImage(this.bikerImage, -emojiX - 15, emojiY - 15, 30, 30);
+                    // No need to flip - the SVG already faces the right direction
+                    this.ctx.drawImage(this.bikerImage, emojiX - 60, emojiY - 60, 120, 120); // 4x bigger (30*4=120)
                     this.ctx.restore();
                 } else {
                     // Fallback to emoji if SVG not loaded yet
