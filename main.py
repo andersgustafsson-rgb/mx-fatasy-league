@@ -6172,7 +6172,11 @@ def is_picks_locked(competition):
     
     print(f"DEBUG: is_picks_locked - Picks locked: {picks_locked}")
     print(f"DEBUG: is_picks_locked - Current time: {current_time}")
-    print(f"DEBUG: is_picks_locked - Race datetime UTC: {race_datetime_utc}")
+    if simulation_active:
+        print(f"DEBUG: is_picks_locked - Fake race datetime UTC: {fake_race_datetime_utc}")
+        print(f"DEBUG: is_picks_locked - Time to race: {time_to_race}")
+    else:
+        print(f"DEBUG: is_picks_locked - Race datetime UTC: {race_datetime_utc}")
     print(f"DEBUG: is_picks_locked - Time to deadline: {time_to_deadline}")
     print(f"DEBUG: is_picks_locked - Time to deadline seconds: {time_to_deadline.total_seconds()}")
     
