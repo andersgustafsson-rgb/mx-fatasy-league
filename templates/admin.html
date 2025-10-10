@@ -245,11 +245,19 @@
       </div>
 
       <!-- Resultatformulär -->
-      <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="console.log('Form submitted'); return validateResults()">
-        <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+      <div class="mb-4 sm:mb-6">
+        <button type="button" onclick="toggleRaceResults()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-between">
+          <span>🏁 Race Results & Holeshot</span>
+          <span id="race-results-toggle">▼</span>
+        </button>
+      </div>
 
-        <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
-          <h2 class="text-lg sm:text-xl font-semibold mb-3 text-yellow-800 dark:text-yellow-300">Holeshot Vinnare</h2>
+      <div id="race-results-section" class="hidden">
+        <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="console.log('Form submitted'); return validateResults()">
+          <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+
+          <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
+            <h2 class="text-lg sm:text-xl font-semibold mb-3 text-yellow-800 dark:text-yellow-300">Holeshot Vinnare</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label for="holeshot_450" class="block mb-1 text-sm sm:text-base text-gray-800 dark:text-gray-200">450cc:</label>
@@ -283,12 +291,13 @@
           </div>
         </div>
 
-        <div class="mt-6 sm:mt-8 border-t pt-4">
-          <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-base sm:text-lg">
-            ✅ Spara Resultat & Räkna Poäng
-          </button>
-        </div>
-      </form>
+          <div class="mt-6 sm:mt-8 border-t pt-4">
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-base sm:text-lg">
+              ✅ Spara Resultat & Räkna Poäng
+            </button>
+          </div>
+        </form>
+      </div>
 
         <!-- OUT-status hantering -->
 <div class="mb-4 sm:mb-6 rounded bg-gray-50 dark:bg-gray-700 p-2 sm:p-3">
@@ -382,6 +391,19 @@
 
     let currentCompetitionCoast = null;
     
+    function toggleRaceResults() {
+      const section = document.getElementById('race-results-section');
+      const toggle = document.getElementById('race-results-toggle');
+      
+      if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        toggle.textContent = '▲';
+      } else {
+        section.classList.add('hidden');
+        toggle.textContent = '▼';
+      }
+    }
+
     function updateSelectedCompetitionInfo() {
       const select = document.getElementById("competition-select");
       const infoDiv = document.getElementById("selected-competition-info");

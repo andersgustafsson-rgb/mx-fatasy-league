@@ -113,12 +113,20 @@
                     </div>
 
                     <!-- Results Form -->
-                    <form method="POST" action="/admin/submit_results" onsubmit="return validateResults()">
-                        <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
-                        
-                        <!-- Holeshot Winners -->
-                        <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
-                            <h3 class="text-lg font-medium text-yellow-800 mb-3">🏁 Holeshot Vinnare</h3>
+                    <div class="mb-6">
+                        <button type="button" onclick="toggleRaceResults()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-between">
+                            <span>🏁 Race Results & Holeshot</span>
+                            <span id="race-results-toggle">▼</span>
+                        </button>
+                    </div>
+
+                    <div id="race-results-section" class="hidden">
+                        <form method="POST" action="/admin/submit_results" onsubmit="return validateResults()">
+                            <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+                            
+                            <!-- Holeshot Winners -->
+                            <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
+                                <h3 class="text-lg font-medium text-yellow-800 mb-3">🏁 Holeshot Vinnare</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">450cc:</label>
@@ -155,12 +163,13 @@
                             </div>
                         </div>
 
-                        <div class="mt-6">
-                            <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-medium">
-                                ✅ Spara Resultat & Räkna Poäng
-                            </button>
-                        </div>
-                    </form>
+                            <div class="mt-6">
+                                <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-medium">
+                                    ✅ Spara Resultat & Räkna Poäng
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
                     <!-- OUT-status hantering -->
                     <div class="mt-8 p-4 bg-gray-50 border-l-4 border-gray-500 rounded-r-lg">
@@ -856,6 +865,19 @@
             if (select && select.options.length > 1) {
                 select.selectedIndex = 1; // First upcoming race (skip "-- Välj tävling --")
                 select.dispatchEvent(new Event('change'));
+            }
+        }
+        
+        function toggleRaceResults() {
+            const section = document.getElementById('race-results-section');
+            const toggle = document.getElementById('race-results-toggle');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                toggle.textContent = '▲';
+            } else {
+                section.classList.add('hidden');
+                toggle.textContent = '▼';
             }
         }
 
