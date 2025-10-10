@@ -379,6 +379,12 @@
                 // Load blue biker SVG image
                 this.bikerImage = new Image();
                 this.bikerImage.src = '/static/images/blue_biker_correct.svg';
+                this.bikerImage.onload = () => {
+                    console.log('DEBUG: Blue biker SVG loaded successfully');
+                };
+                this.bikerImage.onerror = () => {
+                    console.log('DEBUG: Failed to load blue biker SVG, using emoji fallback');
+                };
                 console.log('DEBUG: Loaded highscore from localStorage:', this.highScore);
                 console.log('DEBUG: localStorage crossDinoGlobalHighScore:', localStorage.getItem('crossDinoGlobalHighScore'));
                 this.gameSpeed = 2;
@@ -825,13 +831,21 @@
                     this.ctx.globalAlpha = 1.0;
                 }
                 
-                // Draw simple motorbike emoji (back to working version)
-                this.ctx.save();
-                this.ctx.scale(-1, 1); // Flip horizontally to face right
-                this.ctx.font = '30px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('🏍️', -emojiX, emojiY);
-                this.ctx.restore();
+                // Draw blue biker SVG image
+                if (this.bikerImage.complete) {
+                    this.ctx.save();
+                    this.ctx.scale(-1, 1); // Flip horizontally to face right
+                    this.ctx.drawImage(this.bikerImage, -emojiX - 15, emojiY - 15, 30, 30);
+                    this.ctx.restore();
+                } else {
+                    // Fallback to emoji if SVG not loaded yet
+                    this.ctx.save();
+                    this.ctx.scale(-1, 1); // Flip horizontally
+                    this.ctx.font = '30px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('🏍️', -emojiX, emojiY);
+                    this.ctx.restore();
+                }
                 
                 this.ctx.restore();
                 
