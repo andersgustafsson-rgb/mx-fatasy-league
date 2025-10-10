@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vintage Anslagstavla - MX Fantasy League</title>
+    <title>Cyberpunk Anslagstavla - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // Suppress Tailwind CDN warning in production
@@ -12,54 +12,37 @@
         }
     </script>
     <style>
-        /* Import vintage fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Caveat:wght@400;600;700&family=Indie+Flower&display=swap');
+        /* Import cyberpunk fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap');
         
-        /* TEST STYLE - Should make everything red if CSS is loading */
-        body { border: 5px solid red !important; }
-        /* Force deployment trigger */
-        
-        /* Cork board background */
+        /* Cyberpunk background */
         body {
             background: 
-                radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(139, 69, 19, 0.05) 0%, transparent 50%),
-                linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #F5DEB3 100%) !important;
+                radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #64748b 100%) !important;
             background-attachment: fixed !important;
             min-height: 100vh !important;
+            font-family: 'Rajdhani', sans-serif !important;
         }
         
-        /* Wooden frame */
+        /* Cyberpunk frame */
         .bulletin-frame {
-            background: 
-                linear-gradient(45deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DEB887 75%, #8B4513 100%) !important;
-            border: 8px solid !important;
-            border-image: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321) 1 !important;
+            background: linear-gradient(45deg, #0f172a 0%, #1e293b 25%, #334155 50%, #475569 75%, #0f172a 100%) !important;
+            border: 3px solid #22d3ee !important;
             border-radius: 12px !important;
             box-shadow: 
-                inset 0 0 20px rgba(0,0,0,0.3),
-                0 0 30px rgba(0,0,0,0.5),
-                0 10px 40px rgba(0,0,0,0.3) !important;
+                0 0 30px rgba(34, 211, 238, 0.3),
+                inset 0 0 20px rgba(34, 211, 238, 0.1),
+                0 10px 40px rgba(0,0,0,0.5) !important;
             position: relative !important;
             margin: 20px !important;
             padding: 30px !important;
         }
         
+        /* Cyberpunk grid overlay */
         .bulletin-frame::before {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            right: -4px;
-            bottom: -4px;
-            background: linear-gradient(45deg, #654321, #8B4513, #A0522D, #8B4513, #654321);
-            border-radius: 16px;
-            z-index: -1;
-        }
-        
-        /* Cork texture overlay */
-        .bulletin-frame::after {
             content: '';
             position: absolute;
             top: 0;
@@ -67,63 +50,64 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.1) 0%, transparent 2px),
-                radial-gradient(circle at 75% 75%, rgba(160, 82, 45, 0.1) 0%, transparent 2px),
-                radial-gradient(circle at 50% 50%, rgba(139, 69, 19, 0.05) 0%, transparent 1px);
-            background-size: 20px 20px, 15px 15px, 10px 10px;
-            border-radius: 4px;
+                linear-gradient(90deg, rgba(34, 211, 238, 0.1) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(34, 211, 238, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 8px;
             pointer-events: none;
         }
         
-        /* Vintage note papers */
+        /* Cyberpunk message cards */
         .vintage-note {
-            background: 
-                linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%) !important;
-            border: 1px solid #D2B48C !important;
-            border-radius: 2px !important;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%) !important;
+            border: 2px solid #22d3ee !important;
+            border-radius: 8px !important;
             box-shadow: 
-                0 2px 8px rgba(0,0,0,0.15),
-                0 1px 3px rgba(0,0,0,0.1),
-                inset 0 1px 0 rgba(255,255,255,0.3) !important;
+                0 0 15px rgba(34, 211, 238, 0.3),
+                inset 0 0 10px rgba(34, 211, 238, 0.1) !important;
             position: relative !important;
             margin: 15px !important;
             padding: 20px !important;
             transform: rotate(0deg) !important;
             transition: all 0.3s ease !important;
-            font-family: 'Kalam', cursive !important;
+            font-family: 'Rajdhani', sans-serif !important;
         }
         
         .vintage-note:hover {
-            transform: rotate(0deg) scale(1.02);
+            transform: scale(1.02);
             box-shadow: 
-                0 4px 15px rgba(0,0,0,0.2),
-                0 2px 6px rgba(0,0,0,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.4);
+                0 0 25px rgba(34, 211, 238, 0.5),
+                inset 0 0 15px rgba(34, 211, 238, 0.2);
         }
         
-        /* Random rotation for notes */
-        .vintage-note:nth-child(odd) { transform: rotate(-0.5deg); }
-        .vintage-note:nth-child(even) { transform: rotate(0.3deg); }
-        .vintage-note:nth-child(3n) { transform: rotate(0.8deg); }
-        .vintage-note:nth-child(4n) { transform: rotate(-0.2deg); }
-        .vintage-note:nth-child(5n) { transform: rotate(0.6deg); }
+        /* Different neon colors */
+        .note-yellow { 
+            border-color: #fbbf24 !important;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.3), inset 0 0 10px rgba(251, 191, 36, 0.1) !important;
+        }
+        .note-pink { 
+            border-color: #ec4899 !important;
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.3), inset 0 0 10px rgba(236, 72, 153, 0.1) !important;
+        }
+        .note-blue { 
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(59, 130, 246, 0.1) !important;
+        }
+        .note-green { 
+            border-color: #10b981 !important;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3), inset 0 0 10px rgba(16, 185, 129, 0.1) !important;
+        }
         
-        /* Different paper colors */
-        .note-yellow { background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 50%, #FFFACD 100%); }
-        .note-pink { background: linear-gradient(135deg, #FFE4E1 0%, #FFB6C1 50%, #FFC0CB 100%); }
-        .note-blue { background: linear-gradient(135deg, #E6F3FF 0%, #B0E0E6 50%, #ADD8E6 100%); }
-        .note-green { background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 50%, #F5FFFA 100%); }
-        
-        /* Pins and tape */
+        /* Cyberpunk elements */
         .note-pin {
             position: absolute;
             top: -8px;
             left: 20px;
             width: 12px;
             height: 12px;
-            background: radial-gradient(circle, #C0C0C0 30%, #A0A0A0 70%);
+            background: radial-gradient(circle, #22d3ee 30%, #0891b2 70%);
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
             z-index: 10;
         }
         
@@ -133,67 +117,70 @@
             right: -5px;
             width: 30px;
             height: 8px;
-            background: rgba(255, 255, 255, 0.7);
+            background: linear-gradient(45deg, #22d3ee, #0891b2);
             transform: rotate(15deg);
             border-radius: 2px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            box-shadow: 0 0 5px rgba(34, 211, 238, 0.4);
         }
         
-        /* Handwritten text */
+        /* Cyberpunk text */
         .handwritten {
-            font-family: 'Kalam', cursive;
+            font-family: 'Rajdhani', sans-serif;
             font-weight: 400;
             line-height: 1.4;
-            color: #2F4F4F;
+            color: #e2e8f0;
+            text-shadow: 0 0 3px rgba(226, 232, 240, 0.3);
         }
         
         .handwritten-title {
-            font-family: 'Caveat', cursive;
-            font-weight: 600;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
             font-size: 1.2em;
-            color: #8B4513;
+            color: #22d3ee;
             margin-bottom: 8px;
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
         }
         
-        /* Vintage buttons */
+        /* Cyberpunk buttons */
         .vintage-btn {
-            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
-            border: 2px solid #654321;
-            border-radius: 4px;
-            color: #FFF8DC;
-            font-family: 'Kalam', cursive;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
             font-weight: 600;
             padding: 8px 16px;
             box-shadow: 
-                0 2px 4px rgba(0,0,0,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+                0 0 10px rgba(34, 211, 238, 0.3),
+                inset 0 0 5px rgba(34, 211, 238, 0.1);
             transition: all 0.2s ease;
+            text-shadow: 0 0 3px rgba(226, 232, 240, 0.3);
         }
         
         .vintage-btn:hover {
-            background: linear-gradient(135deg, #A0522D 0%, #CD853F 100%);
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
             transform: translateY(-1px);
             box-shadow: 
-                0 3px 6px rgba(0,0,0,0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+                0 0 15px rgba(34, 211, 238, 0.5),
+                inset 0 0 8px rgba(34, 211, 238, 0.2);
         }
         
-        /* Reaction buttons - vintage style */
+        /* Reaction buttons - cyberpunk style */
         .reaction-btn {
             padding: 6px 10px;
             border-radius: 20px;
-            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
-            border: 1px solid #D2B48C;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #22d3ee;
             cursor: pointer;
             transition: all 0.2s ease;
             font-size: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 0 8px rgba(34, 211, 238, 0.3);
         }
         
         .reaction-btn:hover {
-            background: linear-gradient(135deg, #F5F5DC 0%, #FFFACD 100%);
-            transform: scale(1.1) rotate(2deg);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #334155 0%, #475569 100%);
+            transform: scale(1.1);
+            box-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
         }
         
         .reaction-display {
@@ -201,12 +188,12 @@
             align-items: center;
             gap: 4px;
             padding: 3px 8px;
-            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
-            border: 1px solid #D2B48C;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #22d3ee;
             border-radius: 15px;
             font-size: 14px;
-            font-family: 'Kalam', cursive;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            font-family: 'Rajdhani', sans-serif;
+            box-shadow: 0 0 5px rgba(34, 211, 238, 0.2);
         }
         
         .reaction-display .emoji {
@@ -215,66 +202,70 @@
         
         .reaction-display .count {
             font-weight: 600;
-            color: #8B4513;
+            color: #22d3ee;
+            text-shadow: 0 0 3px rgba(34, 211, 238, 0.3);
         }
         
-        /* Category badges - vintage style */
+        /* Category badges - cyberpunk style */
         .vintage-badge {
-            font-family: 'Indie Flower', cursive;
+            font-family: 'Rajdhani', sans-serif;
             font-weight: 600;
             padding: 4px 8px;
             border-radius: 12px;
-            border: 1px solid;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border: 1px solid #22d3ee;
+            box-shadow: 0 0 5px rgba(34, 211, 238, 0.2);
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #e2e8f0;
+            text-shadow: 0 0 3px rgba(226, 232, 240, 0.3);
         }
         
         .badge-tips { 
-            background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%); 
-            border-color: #DAA520;
-            color: #B8860B;
+            border-color: #fbbf24 !important;
+            color: #fbbf24 !important;
+            box-shadow: 0 0 5px rgba(251, 191, 36, 0.3) !important;
         }
         .badge-question { 
-            background: linear-gradient(135deg, #E6F3FF 0%, #B0E0E6 100%); 
-            border-color: #4682B4;
-            color: #2F4F4F;
+            border-color: #3b82f6 !important;
+            color: #3b82f6 !important;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.3) !important;
         }
         .badge-discussion { 
-            background: linear-gradient(135deg, #F0FFF0 0%, #E0FFE0 100%); 
-            border-color: #9ACD32;
-            color: #556B2F;
+            border-color: #10b981 !important;
+            color: #10b981 !important;
+            box-shadow: 0 0 5px rgba(16, 185, 129, 0.3) !important;
         }
         .badge-general { 
-            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%); 
-            border-color: #D2B48C;
-            color: #8B4513;
+            border-color: #22d3ee !important;
+            color: #22d3ee !important;
+            box-shadow: 0 0 5px rgba(34, 211, 238, 0.3) !important;
         }
         
         /* Header styling */
         .vintage-header {
-            background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
-            border: 3px solid #654321;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border: 3px solid #22d3ee;
             border-radius: 8px;
             box-shadow: 
-                0 4px 8px rgba(0,0,0,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.2);
+                0 0 20px rgba(34, 211, 238, 0.3),
+                inset 0 0 10px rgba(34, 211, 238, 0.1);
             margin-bottom: 20px;
         }
         
         .vintage-header h1 {
-            font-family: 'Caveat', cursive;
+            font-family: 'Orbitron', monospace;
             font-weight: 700;
-            color: #FFF8DC;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            color: #22d3ee;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
         }
         
         /* Form styling */
         .vintage-form {
-            background: linear-gradient(135deg, #FFF8DC 0%, #F5F5DC 100%);
-            border: 2px solid #D2B48C;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
             border-radius: 8px;
             box-shadow: 
-                0 3px 10px rgba(0,0,0,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+                0 0 15px rgba(34, 211, 238, 0.3),
+                inset 0 0 10px rgba(34, 211, 238, 0.1);
             padding: 25px;
             margin-bottom: 20px;
             position: relative;
@@ -287,40 +278,31 @@
             left: 20px;
             width: 15px;
             height: 15px;
-            background: radial-gradient(circle, #C0C0C0 30%, #A0A0A0 70%);
+            background: radial-gradient(circle, #22d3ee 30%, #0891b2 70%);
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            box-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
         }
         
         .vintage-textarea {
-            background: #FFF8DC;
-            border: 1px solid #D2B48C;
+            background: #0f172a;
+            border: 1px solid #22d3ee;
             border-radius: 4px;
-            font-family: 'Kalam', cursive;
-            color: #2F4F4F;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            font-family: 'Rajdhani', sans-serif;
+            color: #e2e8f0;
+            box-shadow: inset 0 0 5px rgba(34, 211, 238, 0.1);
         }
         
         .vintage-textarea:focus {
             outline: none;
-            border-color: #8B4513;
+            border-color: #22d3ee;
             box-shadow: 
-                inset 0 1px 3px rgba(0,0,0,0.1),
-                0 0 0 2px rgba(139, 69, 19, 0.2);
+                inset 0 0 5px rgba(34, 211, 238, 0.1),
+                0 0 0 2px rgba(34, 211, 238, 0.3);
         }
         
-        /* Dark mode adjustments */
-        .dark body {
-            background: 
-                radial-gradient(circle at 20% 20%, rgba(139, 69, 19, 0.2) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(160, 82, 45, 0.2) 0%, transparent 50%),
-                linear-gradient(135deg, #2D1810 0%, #3D2315 25%, #4D2E1A 50%, #5D3920 75%, #6D4425 100%);
-        }
-        
-        .dark .vintage-note {
-            background: linear-gradient(135deg, #3D2F1F 0%, #4D3F2F 50%, #5D4F3F 100%);
-            border-color: #8B7355;
-            color: #F5DEB3;
+        /* Additional cyberpunk elements */
+        .cyberpunk-glow {
+            text-shadow: 0 0 10px currentColor;
         }
         
         .dark .handwritten {
@@ -339,12 +321,12 @@
         <header class="vintage-header p-6 text-center">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-yellow-200 hover:text-yellow-100 transition-colors">🏁 MX Fantasy</a>
-                    <span class="text-yellow-200">|</span>
+                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors cyberpunk-glow">🏁 MX Fantasy</a>
+                    <span class="text-cyan-400">|</span>
                     <h1 class="handwritten-title text-2xl">📋 Anslagstavla</h1>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-yellow-200 hover:text-yellow-100 transition-colors handwritten">← Tillbaka</a>
+                    <a href="/" class="text-cyan-400 hover:text-cyan-300 transition-colors handwritten">← Tillbaka</a>
                 </div>
             </div>
         </header>
