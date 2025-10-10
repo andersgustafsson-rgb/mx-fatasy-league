@@ -448,7 +448,7 @@
                     Anslagstavla
                   </a>
                   <a href="{{ url_for('dino_game') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
-                    🏁 Cross Dino
+                    🏁 Cross Jump
                   </a>
                   <a href="{{ url_for('trackmaps_page') }}" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
                     Track Maps
@@ -456,12 +456,12 @@
                 </div>
               </div>
               
-              <!-- Cross Dino Highscore Widget -->
+              <!-- Cross Jump Highscore Widget -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                   <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-3 py-2" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
                     <h3 class="text-sm font-bold text-center text-white flex items-center justify-center gap-1" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">
-                      🏍️ Cross Dino Top 3
+                      🏍️ Cross Jump Top 3
                     </h3>
                   </div>
                   <div class="p-3 bg-gray-900">
@@ -892,9 +892,9 @@
       });
     }
     
-    // Cross Dino Highscores
+    // Cross Jump Highscores
     async function fetchCrossDinoHighscores() {
-      console.log('DEBUG: Fetching Cross Dino highscores...');
+      console.log('DEBUG: Fetching Cross Jump highscores...');
       try {
         const response = await fetch('/api/cross_dino/highscores');
         console.log('DEBUG: Response status:', response.status);
@@ -905,7 +905,7 @@
         console.log('DEBUG: Container found:', container);
         
         if (!container) {
-          console.error('DEBUG: Cross Dino highscores container not found!');
+          console.error('DEBUG: Cross Jump highscores container not found!');
           return;
         }
         
@@ -943,7 +943,7 @@
         }).join('');
         
       } catch (error) {
-        console.error('Error fetching Cross Dino highscores:', error);
+        console.error('Error fetching Cross Jump highscores:', error);
         const container = document.getElementById('cross-dino-highscores');
         container.innerHTML = `
           <div class="text-center text-red-400 py-4">
@@ -957,7 +957,7 @@
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
-      console.log("DEBUG: About to fetch Cross Dino highscores...");
+      console.log("DEBUG: About to fetch Cross Jump highscores...");
       fetchCrossDinoHighscores();
       
       // Start countdown system
