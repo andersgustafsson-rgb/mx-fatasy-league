@@ -5358,6 +5358,31 @@ def fix_bulletin_columns():
         print(f"Error fixing bulletin columns: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/create_global_simulation_table")
+def create_global_simulation_table():
+    """Create global simulation table for cross-device sync"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        # Create global_simulation table
+        with db.engine.connect() as conn:
+            conn.execute(db.text("""
+                CREATE TABLE IF NOT EXISTS global_simulation (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    active BOOLEAN DEFAULT FALSE,
+                    simulated_time TEXT,
+                    start_time TEXT,
+                    initial_time TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()
+        return jsonify({"message": "Global simulation table created successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create_admin")
 def create_admin():
     """Create admin user - emergency route"""
@@ -5500,7 +5525,14 @@ def race_countdown():
         print(f"DEBUG: race_countdown using time: {current_time}")
         
         # Check if we're in simulation mode (check both session and global state)
-        simulation_active = session.get('simulation_active') or (hasattr(app, 'global_simulation_active') and app.global_simulation_active)
+        simulation_active = session.get('simulation_active')
+        if not simulation_active:
+            try:
+                result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
+                simulation_active = result and result[0] if result else False
+            except Exception as e:
+                print(f"DEBUG: Error checking global simulation: {e}")
+                simulation_active = False
         
         if simulation_active:
             # Use fake race for testing
@@ -5675,15 +5707,13 @@ def reset_simulation():
     session.pop('initial_simulated_time', None)
     session.pop('simulated_time', None)
     
-    # Clear global simulation state
-    if hasattr(app, 'global_simulation_active'):
-        app.global_simulation_active = False
-    if hasattr(app, 'global_simulation_start_time'):
-        delattr(app, 'global_simulation_start_time')
-    if hasattr(app, 'global_initial_simulated_time'):
-        delattr(app, 'global_initial_simulated_time')
-    if hasattr(app, 'global_simulated_time'):
-        delattr(app, 'global_simulated_time')
+    # Clear global simulation state from database
+    try:
+        db.session.execute(text("UPDATE global_simulation SET active = FALSE WHERE id = 1"))
+        db.session.commit()
+    except Exception as e:
+        print(f"DEBUG: Error clearing global simulation: {e}")
+        pass
     
     return jsonify({"message": "Simulation reset to real time"})
 
@@ -5746,11 +5776,24 @@ def test_countdown():
         session['simulation_start_time'] = datetime.utcnow().isoformat()
         session['initial_simulated_time'] = simulated_time.isoformat()
         
-        # Also set global simulation state for cross-device sync
-        app.global_simulation_active = True
-        app.global_simulated_time = simulated_time.isoformat()
-        app.global_simulation_start_time = datetime.utcnow().isoformat()
-        app.global_initial_simulated_time = simulated_time.isoformat()
+        # Also set global simulation state for cross-device sync using database
+        # Create or update global simulation record
+        from sqlalchemy import text
+        db.session.execute(text("""
+            INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time) 
+            VALUES (1, :active, :simulated_time, :start_time, :initial_time)
+            ON CONFLICT (id) DO UPDATE SET 
+                active = :active,
+                simulated_time = :simulated_time,
+                start_time = :start_time,
+                initial_time = :initial_time
+        """), {
+            'active': True,
+            'simulated_time': simulated_time.isoformat(),
+            'start_time': datetime.utcnow().isoformat(),
+            'initial_time': simulated_time.isoformat()
+        })
+        db.session.commit()
         
         # Get next upcoming race (use simulated time for testing)
         next_race = (
@@ -5923,12 +5966,12 @@ def get_current_time():
             print(f"DEBUG: Error parsing session simulated time: {e}")
             pass
     
-    # Check global simulation state for cross-device sync
-    if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
-        try:
-            # Get the initial simulated time
-            initial_simulated_time = datetime.fromisoformat(app.global_simulated_time)
-            simulation_start_time = datetime.fromisoformat(app.global_simulation_start_time)
+    # Check global simulation state for cross-device sync using database
+    try:
+        result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
+        if result and result[0]:  # active is True
+            initial_simulated_time = datetime.fromisoformat(result[1])  # simulated_time
+            simulation_start_time = datetime.fromisoformat(result[2])   # start_time
             
             # Calculate how much real time has passed since simulation started
             real_time_elapsed = datetime.utcnow() - simulation_start_time
@@ -5936,11 +5979,11 @@ def get_current_time():
             # Add the elapsed time to the initial simulated time
             current_simulated_time = initial_simulated_time + real_time_elapsed
             
-            print(f"DEBUG: Using global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            print(f"DEBUG: Using database global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
             return current_simulated_time
-        except Exception as e:
-            print(f"DEBUG: Error parsing global simulated time: {e}")
-            pass
+    except Exception as e:
+        print(f"DEBUG: Error parsing database global simulated time: {e}")
+        pass
     
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()

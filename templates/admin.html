@@ -17,20 +17,48 @@
 
       <!-- Header - Responsiv layout -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 md:mb-8 gap-4">
-        <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 text-center sm:text-left">Resultathantering</h1>
+        <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 text-center sm:text-left">Admin Panel</h1>
         <div class="flex gap-2">
           <a href="{{ url_for('index') }}"
              class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base">
             Tillbaka till Huvudsidan
           </a>
-          <a href="/admin/users"
-             class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base">
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="mb-6">
+        <div class="flex flex-wrap justify-center gap-1 bg-black bg-opacity-40 rounded-lg p-1">
+          <button 
+            class="tab-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-blue-500 text-white"
+            data-tab="race-management"
+          >
+            🏁 Race Management
+          </button>
+          <button 
+            class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+            data-tab="user-management"
+          >
             👥 Användarhantering
-          </a>
-          <a href="/test_countdown_page"
-             class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base">
-            ⏰ Test Countdown
-          </a>
+          </button>
+          <button 
+            class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+            data-tab="data-management"
+          >
+            📊 Data Management
+          </button>
+          <button 
+            class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+            data-tab="system-tools"
+          >
+            🔧 System Tools
+          </button>
+          <button 
+            class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+            data-tab="testing"
+          >
+            🧪 Testing
+          </button>
         </div>
       </div>
 
@@ -44,7 +72,12 @@
         {% endif %}
       {% endwith %}
 
-      <!-- Simulerat datum -->
+      <!-- Tab Content -->
+      <!-- Race Management Tab -->
+      <div id="race-management" class="tab-panel active">
+        <h2 class="text-xl font-bold text-blue-600 mb-4">🏁 Race Management</h2>
+        
+        <!-- Simulerat datum -->
       <div class="mb-4 sm:mb-6">
         <h2 class="text-lg sm:text-xl font-semibold mb-2">Simulerat datum</h2>
         <p class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mb-3">
