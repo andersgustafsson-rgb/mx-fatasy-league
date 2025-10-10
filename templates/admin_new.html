@@ -3,14 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Mitt Fantasy Spel</title>
+    <title>Admin Panel - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background-attachment: fixed;
+        }
+        
+        .cyberpunk-header {
+            font-family: 'Orbitron', monospace;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        }
+        
         .tab-btn {
-            @apply px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 border-b-2 border-transparent hover:border-gray-300 transition-colors;
+            @apply px-4 py-2 text-sm font-medium border-b-2 border-transparent transition-all duration-300;
+            color: #94a3b8;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 500;
+        }
+        .tab-btn:hover {
+            color: #22d3ee;
+            border-color: #22d3ee;
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
         }
         .tab-btn.active {
-            @apply text-blue-600 border-blue-600;
+            color: #22d3ee;
+            border-color: #22d3ee;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+            box-shadow: 0 2px 0 rgba(34, 211, 238, 0.3);
         }
         .tab-panel {
             @apply hidden;
@@ -18,19 +41,97 @@
         .tab-panel.active {
             @apply block;
         }
+        
+        .cyberpunk-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+        
+        .cyberpunk-button {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .cyberpunk-button:hover {
+            background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+            color: #0f172a;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
+            text-shadow: none;
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        }
+        
+        .neon-input {
+            background: #0f172a;
+            border: 2px solid #22d3ee;
+            color: #e2e8f0;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+        }
+        
+        .neon-input:focus {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+            outline: none;
+        }
+        
+        .neon-select {
+            background: #0f172a;
+            border: 2px solid #22d3ee;
+            color: #e2e8f0;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+        }
+        
+        .neon-textarea {
+            background: #0f172a;
+            border: 2px solid #22d3ee;
+            color: #e2e8f0;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+        }
+        
+        .neon-textarea:focus {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+            outline: none;
+        }
+        
+        .cyberpunk-table {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+        
+        .cyberpunk-table th {
+            background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+            color: #0f172a;
+            font-weight: 600;
+            text-shadow: none;
+        }
+        
+        .cyberpunk-table td {
+            border-color: #22d3ee;
+            color: #e2e8f0;
+        }
+        
+        .cyberpunk-table tr:hover {
+            background: rgba(34, 211, 238, 0.1);
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <!-- Header -->
-        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="cyberpunk-card rounded-lg p-6 mb-6">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Admin Panel</h1>
-                    <p class="text-gray-600">Hantera tävlingar, användare och systeminställningar</p>
+                    <h1 class="text-3xl font-bold cyberpunk-header text-cyan-400 mb-2">⚡ ADMIN PANEL ⚡</h1>
+                    <p class="text-cyan-300 neon-text">Hantera tävlingar, användare och systeminställningar</p>
                 </div>
                 <div>
-                    <a href="{{ url_for('index') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    <a href="{{ url_for('index') }}" class="cyberpunk-button font-medium py-2 px-4 rounded-lg">
                         🏠 Till huvudsidan
                     </a>
                 </div>
@@ -38,8 +139,8 @@
         </div>
 
         <!-- Tab Navigation -->
-        <div class="bg-white rounded-lg shadow-sm mb-6">
-            <div class="border-b border-gray-200">
+        <div class="cyberpunk-card rounded-lg mb-6">
+            <div class="border-b border-cyan-400">
                 <nav class="flex space-x-8 px-6">
                     <button class="tab-btn active" data-tab="race-management">
                         🏁 Race Management
@@ -61,60 +162,60 @@
         <div class="space-y-6">
             <!-- Race Management Tab -->
             <div id="race-management" class="tab-panel active">
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">🏁 Race Management</h2>
+                <div class="cyberpunk-card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">🏁 Race Management</h2>
                     
                     <!-- Simulated Date Section -->
-                    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
-                        <h3 class="text-lg font-medium text-blue-800 mb-3">📅 Simulerat Datum</h3>
-                        <p class="text-sm text-blue-700 mb-3">
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-cyan-400 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);">
+                        <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">📅 Simulerat Datum</h3>
+                        <p class="text-sm text-cyan-300 mb-3">
                             Sätt ett simulerat datum (YYYY-MM-DD) för att styra vilket race som anses vara "nästa/aktuellt".
                         </p>
                         
                         <form action="/admin/set_sim_date" method="POST" class="flex flex-col sm:flex-row gap-3">
                             <input type="text" name="sim_date" placeholder="2026-01-17" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                   class="flex-1 px-3 py-2 neon-input rounded-md">
+                            <button type="submit" class="cyberpunk-button px-4 py-2 rounded-md">
                                 Sätt Datum
                             </button>
-                            <button type="submit" name="sim_date" value="" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                            <button type="submit" name="sim_date" value="" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md border border-gray-500">
                                 Rensa
                             </button>
                         </form>
                         
-                        <div class="mt-3 p-2 bg-blue-100 rounded">
-                            <span class="text-sm font-medium text-blue-800">Aktuellt simulerat datum: </span>
-                            <span id="current-sim-date" class="font-bold text-blue-900">{{ today if today else 'Idag' }}</span>
+                        <div class="mt-3 p-2 bg-gray-800 border border-cyan-400 rounded" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                            <span class="text-sm font-medium text-cyan-400">Aktuellt simulerat datum: </span>
+                            <span id="current-sim-date" class="font-bold text-cyan-300 neon-text">{{ today if today else 'Idag' }}</span>
                         </div>
                     </div>
 
                     <!-- Competition Selection -->
                     <div class="mb-6">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">🏆 Välj Tävling</h3>
+                        <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">🏆 Välj Tävling</h3>
                         <div class="flex flex-col sm:flex-row gap-3">
-                            <select id="competition-select" class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select id="competition-select" class="flex-1 px-3 py-2 neon-select rounded-md">
                                 <option value="">-- Välj tävling --</option>
                             </select>
-                            <button onclick="simulateForSelected()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                            <button onclick="simulateForSelected()" class="cyberpunk-button px-4 py-2 rounded-md">
                                 ⚙️ Simulera
                             </button>
-                            <button onclick="clearCurrentCompetitionResults()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                            <button onclick="clearCurrentCompetitionResults()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500">
                                 🗑️ Rensa
                             </button>
-                            <button onclick="syncWithHomepage()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            <button onclick="syncWithHomepage()" class="cyberpunk-button px-4 py-2 rounded-md">
                                 🔄 Synka med huvudsida
                             </button>
                         </div>
                         
-                        <div id="selected-competition-info" class="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-r-lg" style="display: none;">
-                            <span class="text-sm font-medium text-green-800">Aktuell tävling: </span>
-                            <span id="selected-competition-name" class="font-bold text-green-900"></span>
+                        <div id="selected-competition-info" class="mt-3 p-3 bg-gray-800 border-l-4 border-cyan-400 rounded-r-lg" style="display: none; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                            <span class="text-sm font-medium text-cyan-400">Aktuell tävling: </span>
+                            <span id="selected-competition-name" class="font-bold text-cyan-300 neon-text"></span>
                         </div>
                     </div>
 
                     <!-- Results Form -->
                     <div class="mb-6">
-                        <button type="button" onclick="toggleRaceResults()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-between">
+                        <button type="button" onclick="toggleRaceResults()" class="w-full cyberpunk-button font-bold py-3 px-4 rounded-lg text-lg flex items-center justify-between">
                             <span>🏁 Race Results & Holeshot</span>
                             <span id="race-results-toggle">▼</span>
                         </button>
@@ -125,18 +226,18 @@
                             <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
                             
                             <!-- Holeshot Winners -->
-                            <div class="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
-                                <h3 class="text-lg font-medium text-yellow-800 mb-3">🏁 Holeshot Vinnare</h3>
+                            <div class="mb-6 p-4 bg-gray-800 border-l-4 border-cyan-400 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);">
+                                <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">🏁 Holeshot Vinnare</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">450cc:</label>
-                                    <select name="holeshot_450" id="holeshot_450" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label class="block text-sm font-medium text-cyan-300 mb-2">450cc:</label>
+                                    <select name="holeshot_450" id="holeshot_450" class="w-full px-3 py-2 neon-select rounded-md">
                                         <option value="">-- Välj förare --</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">250cc:</label>
-                                    <select name="holeshot_250" id="holeshot_250" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <label class="block text-sm font-medium text-cyan-300 mb-2">250cc:</label>
+                                    <select name="holeshot_250" id="holeshot_250" class="w-full px-3 py-2 neon-select rounded-md">
                                         <option value="">-- Välj förare --</option>
                                     </select>
                                 </div>
@@ -146,17 +247,17 @@
                         <!-- Race Results -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div>
-                                <h3 class="text-lg font-medium text-gray-800 mb-3">450cc Resultat (Top 20)</h3>
+                                <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">450cc Resultat (Top 20)</h3>
                                 <div id="results-container-450" class="space-y-2">
-                                    <div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
+                                    <div class="p-4 bg-gray-800 border border-cyan-400 rounded-lg text-center text-cyan-300" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
                                         Välj en tävling ovan för att lägga in resultat
                                     </div>
                                 </div>
                             </div>
                             <div>
-                                <h3 class="text-lg font-medium text-gray-800 mb-3">250cc Resultat (Top 6)</h3>
+                                <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">250cc Resultat (Top 6)</h3>
                                 <div id="results-container-250" class="space-y-2">
-                                    <div class="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
+                                    <div class="p-4 bg-gray-800 border border-cyan-400 rounded-lg text-center text-cyan-300" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
                                         Välj en tävling ovan för att lägga in resultat
                                     </div>
                                 </div>
@@ -164,7 +265,7 @@
                         </div>
 
                             <div class="mt-6">
-                                <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-medium">
+                                <button type="submit" class="w-full cyberpunk-button px-4 py-3 rounded-md font-medium">
                                     ✅ Spara Resultat & Räkna Poäng
                                 </button>
                             </div>
@@ -172,8 +273,8 @@
                     </div>
 
                     <!-- OUT-status hantering -->
-                    <div class="mt-8 p-4 bg-gray-50 border-l-4 border-gray-500 rounded-r-lg">
-                        <h3 class="text-lg font-medium text-gray-800 mb-3">🚫 OUT-status (skador/sjukdom)</h3>
+                    <div class="mt-8 p-4 bg-gray-800 border-l-4 border-cyan-400 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);">
+                        <h3 class="text-lg font-medium text-cyan-400 neon-text mb-3">🚫 OUT-status (skador/sjukdom)</h3>
                         <div class="flex flex-col sm:flex-row gap-3 mb-4">
                             <button type="button" onclick="loadOutList()" 
                                     class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
@@ -205,14 +306,14 @@
 
             <!-- User Management Tab -->
             <div id="user-management" class="tab-panel">
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">👥 Användarhantering</h2>
+                <div class="cyberpunk-card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">👥 Användarhantering</h2>
                     
                     <div class="space-y-4">
-                        <a href="/admin/users" class="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                        <a href="/admin/users" class="inline-block cyberpunk-button px-4 py-2 rounded-md">
                             Visa alla användare
                         </a>
-                        <a href="/cleanup_duplicate_users" class="inline-block bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700">
+                        <a href="/cleanup_duplicate_users" class="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md border border-yellow-500">
                             Rensa duplicerade användare
                         </a>
                         <a href="/admin_old" class="inline-block bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
@@ -224,46 +325,46 @@
 
             <!-- System Tools Tab -->
             <div id="system-tools" class="tab-panel">
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">🔧 Systemverktyg</h2>
+                <div class="cyberpunk-card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">🔧 Systemverktyg</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-gray-800">Rider Data</h3>
-                            <a href="/fix_existing_riders" class="block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-center">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Rider Data</h3>
+                            <a href="/fix_existing_riders" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 Fixa rider data
                             </a>
-                            <a href="/fix_rider_coasts" class="block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-center">
+                            <a href="/fix_rider_coasts" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 Fixa rider coasts
                             </a>
-                            <a href="/debug_rider_coasts" class="block bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 text-center">
+                            <a href="/debug_rider_coasts" class="block bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md border border-gray-500 text-center">
                                 Debug rider coasts
                             </a>
                         </div>
                         
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-gray-800">Database</h3>
-                            <a href="/fix_bulletin_columns" class="block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-center">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Database</h3>
+                            <a href="/fix_bulletin_columns" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 Fixa bulletin kolumner
                             </a>
-                            <a href="/create_admin" class="block bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-center">
+                            <a href="/create_admin" class="block bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500 text-center">
                                 Skapa admin användare
                             </a>
                         </div>
                         
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-gray-800">Rider Management</h3>
-                            <a href="/rider_management" class="block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-center">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Rider Management</h3>
+                            <a href="/rider_management" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 👥 Hantera Förare
                             </a>
                         </div>
                         
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-gray-800">Cross Jump Game</h3>
-                            <a href="/dino_game" class="block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-center">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Cross Jump Game</h3>
+                            <a href="/dino_game" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 🎮 Live Version
                             </a>
-                            <a href="/dino_game_dev" class="block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-center">
+                            <a href="/dino_game_dev" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 🎮 Dev Version (Excitebike Style)
                             </a>
                             <a href="/excitebike_clone" class="block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-center">
@@ -279,31 +380,31 @@
 
             <!-- Countdown Test Tab -->
             <div id="countdown-test" class="tab-panel">
-                <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">⏰ Countdown Test</h2>
+                <div class="cyberpunk-card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">⏰ Countdown Test</h2>
                     
                     <div class="space-y-4">
-                        <a href="/test_countdown_page" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        <a href="/test_countdown_page" class="inline-block cyberpunk-button px-4 py-2 rounded-md">
                             Testa Countdown Scenarios
                         </a>
                         
-                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                            <h3 class="text-lg font-medium text-gray-800 mb-2">Snabb Test</h3>
+                        <div class="mt-6 p-4 bg-gray-800 border border-cyan-400 rounded-lg" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text mb-2">Snabb Test</h3>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                <button onclick="testScenario('race_in_3h')" class="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600">
+                                <button onclick="testScenario('race_in_3h')" class="cyberpunk-button px-3 py-2 rounded text-sm">
                                     3h till race
                                 </button>
-                                <button onclick="testScenario('race_in_1h')" class="bg-orange-500 text-white px-3 py-2 rounded text-sm hover:bg-orange-600">
+                                <button onclick="testScenario('race_in_1h')" class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded text-sm border border-orange-500">
                                     1h till race
                                 </button>
-                                <button onclick="testScenario('race_in_30m')" class="bg-red-500 text-white px-3 py-2 rounded text-sm hover:bg-red-600">
+                                <button onclick="testScenario('race_in_30m')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm border border-red-500">
                                     30m till race
                                 </button>
-                                <button onclick="testScenario('race_tomorrow')" class="bg-green-500 text-white px-3 py-2 rounded text-sm hover:bg-green-600">
+                                <button onclick="testScenario('race_tomorrow')" class="cyberpunk-button px-3 py-2 rounded text-sm">
                                     Imorgon
                                 </button>
                             </div>
-                            <button onclick="resetToRealTime()" class="mt-3 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                            <button onclick="resetToRealTime()" class="mt-3 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded border border-gray-500">
                                 Återställ till riktig tid
                             </button>
                         </div>
