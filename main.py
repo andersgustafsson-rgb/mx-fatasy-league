@@ -1750,6 +1750,89 @@ def fix_database_tables():
         print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/fix_database')
+def fix_database_page():
+    """Simple page to fix database issues"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Fix Database</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 50px; background: #1a1a1a; color: white; }
+            .container { max-width: 600px; margin: 0 auto; }
+            button { 
+                background: #22d3ee; 
+                color: black; 
+                border: none; 
+                padding: 15px 30px; 
+                font-size: 16px; 
+                border-radius: 5px; 
+                cursor: pointer; 
+                margin: 10px;
+            }
+            button:hover { background: #0891b2; }
+            .result { margin: 20px 0; padding: 15px; border-radius: 5px; }
+            .success { background: #065f46; border: 1px solid #10b981; }
+            .error { background: #7f1d1d; border: 1px solid #ef4444; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔧 Database Fix Tool</h1>
+            <p>This tool will fix missing database tables and columns.</p>
+            
+            <button onclick="fixDatabase()">Fix Database</button>
+            <button onclick="window.location.href='/'">Back to Home</button>
+            
+            <div id="result"></div>
+        </div>
+        
+        <script>
+            async function fixDatabase() {
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = '<p>Fixing database...</p>';
+                
+                try {
+                    const response = await fetch('/api/fix_database_tables', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        resultDiv.innerHTML = `
+                            <div class="result success">
+                                <h3>✅ Success!</h3>
+                                <p>${result.message}</p>
+                                <p>You can now go back to the admin page.</p>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="result error">
+                                <h3>❌ Error</h3>
+                                <p>${result.error}</p>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <h3>❌ Network Error</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+        </script>
+    </body>
+    </html>
+    '''
+
 @app.route("/admin_old")
 def admin_page_old():
     if session.get("username") != "test":
