@@ -101,6 +101,9 @@
                             <button onclick="clearCurrentCompetitionResults()" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                                 🗑️ Rensa
                             </button>
+                            <button onclick="syncWithHomepage()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                                🔄 Synka med huvudsida
+                            </button>
                         </div>
                         
                         <div id="selected-competition-info" class="mt-3 p-3 bg-green-50 border-l-4 border-green-500 rounded-r-lg" style="display: none;">
@@ -337,12 +340,28 @@
                     select.appendChild(option);
                 });
                 
-                // Restore previously selected competition from localStorage
+                // Restore previously selected competition from localStorage, but prioritize upcoming race
                 const savedCompetition = localStorage.getItem('admin_selected_competition');
                 if (savedCompetition) {
-                    select.value = savedCompetition;
-                    // Trigger change event to load results for saved competition
-                    select.dispatchEvent(new Event('change'));
+                    // Check if saved competition is still available
+                    const savedOption = Array.from(select.options).find(opt => opt.value === savedCompetition);
+                    if (savedOption) {
+                        select.value = savedCompetition;
+                        // Trigger change event to load results for saved competition
+                        select.dispatchEvent(new Event('change'));
+                    } else {
+                        // If saved competition is not found, select first upcoming race
+                        if (select.options.length > 1) {
+                            select.selectedIndex = 1;
+                            select.dispatchEvent(new Event('change'));
+                        }
+                    }
+                } else {
+                    // If no saved competition, select first upcoming race
+                    if (select.options.length > 1) {
+                        select.selectedIndex = 1;
+                        select.dispatchEvent(new Event('change'));
+                    }
                 }
             } catch (error) {
                 console.error('Error loading races:', error);
@@ -828,6 +847,15 @@
                     
                     loadSavedResults();
                 });
+            }
+        }
+        
+        function syncWithHomepage() {
+            // Force select the first upcoming race to match homepage logic
+            const select = document.getElementById('competition-select');
+            if (select && select.options.length > 1) {
+                select.selectedIndex = 1; // First upcoming race (skip "-- Välj tävling --")
+                select.dispatchEvent(new Event('change'));
             }
         }
 

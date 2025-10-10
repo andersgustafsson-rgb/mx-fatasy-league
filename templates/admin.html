@@ -1024,10 +1024,19 @@
     document.addEventListener("DOMContentLoaded", () => {
       const sel = document.getElementById("competition-select");
       
-      // Restore selected competition from localStorage
+      // Restore selected competition from localStorage, but prioritize upcoming race
       const savedComp = localStorage.getItem('admin-selected-competition');
       if (savedComp && sel) {
-        sel.value = savedComp;
+        // Check if saved competition is still upcoming
+        const savedOption = Array.from(sel.options).find(opt => opt.value === savedComp);
+        if (savedOption) {
+          sel.value = savedComp;
+        } else {
+          // If saved competition is not found or not upcoming, select first upcoming race
+          if (sel.options.length > 1) {
+            sel.selectedIndex = 1;
+          }
+        }
       } else if (sel && sel.options.length > 1 && !sel.value) {
         sel.selectedIndex = 1;
       }
