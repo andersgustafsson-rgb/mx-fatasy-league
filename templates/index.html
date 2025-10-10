@@ -198,6 +198,23 @@
         <div class="tab-content">
           <!-- Race Info Tab -->
           <div id="race-info" class="tab-panel active">
+            <!-- Series Selection -->
+            <div class="mb-6">
+              <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
+                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
+                  <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 Välj Serie</h2>
+                </div>
+                <div class="p-4 bg-gray-900">
+                  <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="text-center text-gray-400 py-8">
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-2"></div>
+                      Laddar serier...
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Quick Actions -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden" 
@@ -954,11 +971,88 @@
       }
     }
     
+    async function loadSeriesSelection() {
+      try {
+        const response = await fetch('/api/series_status');
+        const series = await response.json();
+        
+        const seriesContainer = document.getElementById('series-selection');
+        
+        if (series.length === 0) {
+          seriesContainer.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
+          return;
+        }
+        
+        seriesContainer.innerHTML = series.map(serie => {
+          const isActive = serie.is_active;
+          const nextRace = serie.next_race;
+          const startDate = serie.start_date ? new Date(serie.start_date) : null;
+          const daysUntilStart = startDate ? Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+          
+          let statusText = '';
+          let statusColor = '';
+          let buttonClass = '';
+          let buttonText = '';
+          let isClickable = false;
+          
+          if (isActive) {
+            statusText = 'Aktiv';
+            statusColor = 'text-green-400';
+            buttonClass = 'bg-green-600 hover:bg-green-700';
+            buttonText = 'Gå till picks';
+            isClickable = true;
+          } else if (daysUntilStart && daysUntilStart > 0) {
+            if (daysUntilStart <= 7) {
+              statusText = `Öppnar om ${daysUntilStart} dag${daysUntilStart !== 1 ? 'ar' : ''}`;
+              statusColor = 'text-yellow-400';
+              buttonClass = 'bg-yellow-600 hover:bg-yellow-700';
+              buttonText = 'Gå till picks';
+              isClickable = true;
+            } else {
+              statusText = `Startar om ${daysUntilStart} dagar`;
+              statusColor = 'text-gray-400';
+              buttonClass = 'bg-gray-600 cursor-not-allowed';
+              buttonText = 'Picks stängda';
+              isClickable = false;
+            }
+          } else {
+            statusText = 'Avslutad';
+            statusColor = 'text-gray-400';
+            buttonClass = 'bg-gray-600 cursor-not-allowed';
+            buttonText = 'Säsong slut';
+            isClickable = false;
+          }
+          
+          const buttonHtml = isClickable 
+            ? `<a href="/race_picks?series=${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
+            : `<span class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</span>`;
+          
+          return `
+            <div class="bg-gray-800 border border-cyan-400 rounded-lg p-4" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
+              <div class="text-center">
+                <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
+                <p class="text-sm ${statusColor} mb-2">${statusText}</p>
+                ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${new Date(nextRace.date).toLocaleDateString('sv-SE')}</p>` : ''}
+                ${buttonHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading series:', error);
+        document.getElementById('series-selection').innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
+      }
+    }
+    
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
       console.log("DEBUG: About to fetch Cross Jump highscores...");
       fetchCrossDinoHighscores();
+      
+      // Load series selection
+      loadSeriesSelection();
       
       // Start countdown system
       startCountdown();
