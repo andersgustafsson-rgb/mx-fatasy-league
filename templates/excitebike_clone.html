@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excitebike Clone - Cross Dino Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #game {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #87CEEB;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        .controls h3 {
+            margin-bottom: 10px;
+        }
+
+        .controls p {
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+
+        .back-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .back-button:hover {
+            background: #45a049;
+        }
+
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .game-over h2 {
+            margin-top: 0;
+            color: #ff6b6b;
+        }
+
+        .restart-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .restart-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🏍️ Excitebike Clone</h1>
+        
+        <div style="position: relative; display: inline-block;">
+            <canvas id="game" width="640" height="480">
+                Your browser is really old, dude - no canvas support! Update this thing!
+            </canvas>
+            
+            <div class="score-display">
+                <div>Score: <span id="score">0</span></div>
+                <div>High Score: <span id="highScore">0</span></div>
+            </div>
+            
+            <div class="game-over" id="gameOver">
+                <h2>Game Over!</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>High Score: <span id="finalHighScore">0</span></p>
+                <button class="restart-btn" onclick="restartGame()">Play Again</button>
+                <button class="restart-btn" onclick="window.location.href='/'">Back to Home</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <h3>Controls</h3>
+            <p><strong>Space</strong> or <strong>Up Arrow</strong> - Jump</p>
+            <p><strong>Left/Right Arrow</strong> - Move</p>
+            <p><strong>P</strong> - Pause</p>
+        </div>
+        
+        <button class="back-button" onclick="window.location.href='/'">🏠 Back to Home</button>
+    </div>
+
+    <script>
+        // Excitebike Clone Game
+        class ExcitebikeGame {
+            constructor() {
+                this.canvas = document.getElementById('game');
+                this.ctx = this.canvas.getContext('2d');
+                
+                // Game state
+                this.gameRunning = false;
+                this.gamePaused = false;
+                this.score = 0;
+                this.highScore = parseInt(localStorage.getItem('excitebikeHighScore') || 0);
+                
+                // Game settings
+                this.gameSpeed = 2;
+                this.gravity = 0.8;
+                this.jumpPower = -15;
+                
+                // Player (motorbike)
+                this.player = {
+                    x: 100,
+                    y: 0,
+                    width: 30,
+                    height: 20,
+                    velocityY: 0,
+                    velocityX: 0,
+                    isJumping: false,
+                    groundY: 0,
+                    maxSpeed: 8,
+                    acceleration: 0.5,
+                    friction: 0.8
+                };
+                
+                // Track/terrain
+                this.track = [];
+                this.trackWidth = 20;
+                this.generateTrack();
+                
+                // Obstacles
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                this.obstacleInterval = 180;
+                
+                // Camera
+                this.camera = {
+                    x: 0,
+                    y: 0
+                };
+                
+                // Input
+                this.keys = {};
+                this.setupInput();
+                
+                // Initialize
+                this.resizeCanvas();
+                this.updateHighScoreDisplay();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            resizeCanvas() {
+                const container = document.querySelector('.game-container');
+                const maxWidth = Math.min(640, container.clientWidth - 40);
+                const maxHeight = Math.min(480, window.innerHeight * 0.6);
+                
+                this.canvas.width = maxWidth;
+                this.canvas.height = maxHeight;
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+                
+                // Set player ground position
+                this.player.groundY = this.height - 60;
+                if (!this.gameRunning) {
+                    this.player.y = this.player.groundY - this.player.height;
+                }
+            }
+            
+            generateTrack() {
+                // Generate a simple track with hills and jumps
+                this.track = [];
+                const trackLength = 2000;
+                const baseHeight = this.height - 60;
+                
+                for (let x = 0; x < trackLength; x += this.trackWidth) {
+                    let height = baseHeight;
+                    
+                    // Add some hills and jumps
+                    if (x > 200 && x < 400) {
+                        height = baseHeight - Math.sin((x - 200) / 50) * 30;
+                    } else if (x > 600 && x < 800) {
+                        height = baseHeight - Math.sin((x - 600) / 40) * 40;
+                    } else if (x > 1000 && x < 1200) {
+                        height = baseHeight - Math.sin((x - 1000) / 60) * 50;
+                    }
+                    
+                    this.track.push({
+                        x: x,
+                        y: height,
+                        width: this.trackWidth,
+                        height: this.height - height
+                    });
+                }
+            }
+            
+            setupInput() {
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    
+                    if (e.code === 'KeyP') {
+                        this.togglePause();
+                    }
+                    
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        e.preventDefault();
+                        if (this.gameRunning && !this.gamePaused) {
+                            this.jump();
+                        }
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+            }
+            
+            start() {
+                this.gameRunning = true;
+                this.gamePaused = false;
+                this.score = 0;
+                this.player.x = 100;
+                this.player.y = this.player.groundY - this.player.height;
+                this.player.velocityY = 0;
+                this.player.velocityX = 0;
+                this.camera.x = 0;
+                this.obstacles = [];
+                this.obstacleTimer = 0;
+                
+                document.getElementById('gameOver').style.display = 'none';
+                this.gameLoop();
+            }
+            
+            jump() {
+                if (!this.player.isJumping) {
+                    this.player.velocityY = this.jumpPower;
+                    this.player.isJumping = true;
+                }
+            }
+            
+            togglePause() {
+                if (this.gameRunning) {
+                    this.gamePaused = !this.gamePaused;
+                }
+            }
+            
+            update() {
+                if (!this.gameRunning || this.gamePaused) return;
+                
+                // Handle input
+                if (this.keys['ArrowLeft']) {
+                    this.player.velocityX = Math.max(this.player.velocityX - this.player.acceleration, -this.player.maxSpeed);
+                } else if (this.keys['ArrowRight']) {
+                    this.player.velocityX = Math.min(this.player.velocityX + this.player.acceleration, this.player.maxSpeed);
+                } else {
+                    this.player.velocityX *= this.player.friction;
+                }
+                
+                // Update player position
+                this.player.x += this.player.velocityX;
+                
+                // Apply gravity
+                this.player.velocityY += this.gravity;
+                this.player.y += this.player.velocityY;
+                
+                // Ground collision
+                const groundY = this.getGroundY(this.player.x);
+                if (this.player.y >= groundY - this.player.height) {
+                    this.player.y = groundY - this.player.height;
+                    this.player.velocityY = 0;
+                    this.player.isJumping = false;
+                }
+                
+                // Update camera to follow player
+                this.camera.x = this.player.x - 200;
+                
+                // Generate obstacles
+                this.obstacleTimer++;
+                if (this.obstacleTimer >= this.obstacleInterval) {
+                    this.obstacleTimer = 0;
+                    this.addObstacle();
+                }
+                
+                // Update obstacles
+                this.obstacles.forEach(obstacle => {
+                    obstacle.x -= this.gameSpeed;
+                });
+                
+                // Remove off-screen obstacles
+                this.obstacles = this.obstacles.filter(obstacle => obstacle.x > this.camera.x - 100);
+                
+                // Check collisions
+                this.checkCollisions();
+                
+                // Update score
+                this.score += 1;
+                this.updateScoreDisplay();
+                
+                // Increase game speed over time
+                this.gameSpeed += 0.001;
+            }
+            
+            getGroundY(x) {
+                // Find the ground height at a given x position
+                for (let i = 0; i < this.track.length; i++) {
+                    if (x >= this.track[i].x && x < this.track[i].x + this.track[i].width) {
+                        return this.track[i].y;
+                    }
+                }
+                return this.height - 60; // Default ground level
+            }
+            
+            addObstacle() {
+                const obstacleX = this.player.x + 400 + Math.random() * 200;
+                const groundY = this.getGroundY(obstacleX);
+                
+                this.obstacles.push({
+                    x: obstacleX,
+                    y: groundY - 30,
+                    width: 20,
+                    height: 30,
+                    type: 'jump'
+                });
+            }
+            
+            checkCollisions() {
+                this.obstacles.forEach(obstacle => {
+                    if (this.player.x < obstacle.x + obstacle.width &&
+                        this.player.x + this.player.width > obstacle.x &&
+                        this.player.y < obstacle.y + obstacle.height &&
+                        this.player.y + this.player.height > obstacle.y) {
+                        this.gameOver();
+                    }
+                });
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.width, this.height);
+                
+                // Draw sky gradient
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(1, '#98FB98');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Draw track
+                this.ctx.fillStyle = '#8B4513';
+                this.track.forEach(segment => {
+                    const screenX = segment.x - this.camera.x;
+                    if (screenX > -50 && screenX < this.width + 50) {
+                        this.ctx.fillRect(screenX, segment.y, segment.width, segment.height);
+                    }
+                });
+                
+                // Draw track outline
+                this.ctx.strokeStyle = '#654321';
+                this.ctx.lineWidth = 2;
+                this.track.forEach(segment => {
+                    const screenX = segment.x - this.camera.x;
+                    if (screenX > -50 && screenX < this.width + 50) {
+                        this.ctx.strokeRect(screenX, segment.y, segment.width, segment.height);
+                    }
+                });
+                
+                // Draw obstacles
+                this.ctx.fillStyle = '#FF6B6B';
+                this.obstacles.forEach(obstacle => {
+                    const screenX = obstacle.x - this.camera.x;
+                    if (screenX > -50 && screenX < this.width + 50) {
+                        this.ctx.fillRect(screenX, obstacle.y, obstacle.width, obstacle.height);
+                        
+                        // Draw obstacle outline
+                        this.ctx.strokeStyle = '#D63031';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.strokeRect(screenX, obstacle.y, obstacle.width, obstacle.height);
+                    }
+                });
+                
+                // Draw player (motorbike)
+                const playerScreenX = this.player.x - this.camera.x;
+                this.ctx.save();
+                this.ctx.translate(playerScreenX + this.player.width/2, this.player.y + this.player.height/2);
+                
+                // Draw motorbike emoji
+                this.ctx.font = '20px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('🏍️', 0, 5);
+                
+                this.ctx.restore();
+                
+                // Draw pause overlay
+                if (this.gamePaused) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    this.ctx.fillRect(0, 0, this.width, this.height);
+                    
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = 'bold 24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('PAUSED', this.width/2, this.height/2);
+                    this.ctx.fillText('Press P to resume', this.width/2, this.height/2 + 30);
+                }
+            }
+            
+            gameOver() {
+                this.gameRunning = false;
+                
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('excitebikeHighScore', this.highScore.toString());
+                }
+                
+                document.getElementById('finalScore').textContent = this.score;
+                document.getElementById('finalHighScore').textContent = this.highScore;
+                document.getElementById('gameOver').style.display = 'block';
+            }
+            
+            updateScoreDisplay() {
+                document.getElementById('score').textContent = this.score;
+            }
+            
+            updateHighScoreDisplay() {
+                document.getElementById('highScore').textContent = this.highScore;
+            }
+            
+            gameLoop() {
+                if (this.gameRunning) {
+                    this.update();
+                    this.draw();
+                    requestAnimationFrame(() => this.gameLoop());
+                }
+            }
+        }
+        
+        // Initialize game
+        let game;
+        
+        function startGame() {
+            game = new ExcitebikeGame();
+            game.start();
+        }
+        
+        function restartGame() {
+            if (game) {
+                game.start();
+            }
+        }
+        
+        // Start game when page loads
+        window.addEventListener('load', () => {
+            startGame();
+        });
+    </script>
+</body>
+</html>

@@ -5741,6 +5741,11 @@ def dino_game_dev():
     """Cross Dino game development version - Excitebike style"""
     return render_template("dino_game_dev.html")
 
+@app.route("/excitebike_clone")
+def excitebike_clone():
+    """Excitebike Clone game - Based on AlamantusGameDev repository"""
+    return render_template("excitebike_clone.html")
+
 @app.route("/api/cross_dino/highscores", methods=["GET"])
 def get_cross_dino_highscores():
     """Get top 5 Cross Dino highscores"""
