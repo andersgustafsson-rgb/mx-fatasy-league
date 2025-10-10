@@ -158,24 +158,24 @@
           </div>
         </div>
         
-        <!-- Cross Dino Highscore -->
-        <div class="mb-6">
-          <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-2xl border-4 border-yellow-400 overflow-hidden">
-            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 p-3">
-              <h2 class="text-xl sm:text-2xl font-bold text-center text-white flex items-center justify-center gap-2">
-                🏍️ Cross Dino Top 5 🏍️
-              </h2>
+        <!-- Cross Dino Highscore (Side Widget) -->
+        <div class="mb-4 flex justify-center">
+          <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-lg border-2 border-yellow-400 overflow-hidden max-w-sm">
+            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 px-3 py-2">
+              <h3 class="text-sm font-bold text-center text-white flex items-center justify-center gap-1">
+                🏍️ Cross Dino Top 3
+              </h3>
             </div>
-            <div class="p-4 bg-white bg-opacity-95">
-              <div id="cross-dino-highscores" class="space-y-2">
+            <div class="p-3 bg-white bg-opacity-95">
+              <div id="cross-dino-highscores" class="space-y-1">
                 <div class="text-center text-gray-600">
-                  <div class="animate-spin inline-block w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full"></div>
-                  <span class="ml-2">Laddar highscores...</span>
+                  <div class="animate-spin inline-block w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full"></div>
+                  <span class="ml-1 text-xs">Laddar...</span>
                 </div>
               </div>
-              <div class="mt-4 text-center">
-                <a href="{{ url_for('dino_game') }}" class="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105">
-                  🎮 Spela Cross Dino
+              <div class="mt-2 text-center">
+                <a href="{{ url_for('dino_game') }}" class="inline-block bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-1 px-3 rounded text-xs transition-all duration-200">
+                  🎮 Spela
                 </a>
               </div>
             </div>
@@ -889,34 +889,32 @@
         
         if (highscores.length === 0) {
           container.innerHTML = `
-            <div class="text-center text-gray-600 py-4">
-              <div class="text-4xl mb-2">🏍️</div>
-              <p class="text-sm">Inga highscores än!</p>
-              <p class="text-xs text-gray-500">Var den första att spela!</p>
+            <div class="text-center text-gray-600 py-2">
+              <div class="text-2xl mb-1">🏍️</div>
+              <p class="text-xs">Inga highscores än!</p>
             </div>
           `;
           return;
         }
         
-        container.innerHTML = highscores.map((score, index) => {
-          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏍️';
+        container.innerHTML = highscores.slice(0, 3).map((score, index) => {
+          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
           const bgColor = index === 0 ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 border-yellow-300' : 
                           index === 1 ? 'bg-gradient-to-r from-gray-100 to-gray-200 border-gray-300' :
-                          index === 2 ? 'bg-gradient-to-r from-orange-100 to-orange-200 border-orange-300' :
-                          'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200';
+                          'bg-gradient-to-r from-orange-100 to-orange-200 border-orange-300';
           
           return `
-            <div class="flex items-center justify-between p-3 rounded-lg border-2 ${bgColor} shadow-sm">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">${medal}</span>
+            <div class="flex items-center justify-between p-2 rounded border ${bgColor} shadow-sm">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">${medal}</span>
                 <div>
-                  <div class="font-bold text-gray-800">${score.name}</div>
+                  <div class="font-bold text-gray-800 text-sm">${score.name}</div>
                   <div class="text-xs text-gray-600">${new Date(score.created_at).toLocaleDateString('sv-SE')}</div>
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-2xl font-bold text-purple-600">${score.score}</div>
-                <div class="text-xs text-gray-600">poäng</div>
+                <div class="text-lg font-bold text-purple-600">${score.score}</div>
+                <div class="text-xs text-gray-600">p</div>
               </div>
             </div>
           `;
