@@ -103,7 +103,7 @@
                  style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
             {% endif %}
             {% else %}
-            <!-- Real Race -->
+            <!-- Real Race or Selected Competition from Admin -->
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
                  style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/" + next_race.name.lower().replace(" ", "").replace("national", "").replace("classic", "") + ".jpg") }}');">
             {% endif %}
@@ -139,7 +139,7 @@
                             🧪 Test Race Picks
                         </a>
                         {% else %}
-                        <!-- Real Race -->
+                        <!-- Real Race or Selected Competition from Admin -->
                         <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}" 
                            class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
                             🏁 Make Your Picks

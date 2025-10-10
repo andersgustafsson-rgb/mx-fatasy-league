@@ -1195,33 +1195,68 @@ def series_page(series_id):
             global_sim = GlobalSimulation.query.first()
             if global_sim and global_sim.active:
                 simulation_active = True
-                scenario = global_sim.scenario or 'race_in_3h'
                 
-                # Use same logic as race_countdown for test race
-                from datetime import datetime, timedelta
-                fake_race_base_time = datetime.now()
-                
-                if scenario == "race_in_3h":
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                elif scenario == "race_in_1h":
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
-                elif scenario == "race_in_30m":
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
-                elif scenario == "race_tomorrow":
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
+                # Check if there's a selected competition in admin
+                selected_comp_id = global_sim.simulated_time  # This stores the selected competition ID
+                if selected_comp_id and selected_comp_id.isdigit():
+                    # Use the selected competition from admin
+                    selected_comp = Competition.query.get(int(selected_comp_id))
+                    if selected_comp and selected_comp.series_id == series_id:
+                        test_race = selected_comp
+                    else:
+                        # Fallback to scenario-based test race
+                        scenario = global_sim.scenario or 'race_in_3h'
+                        from datetime import datetime, timedelta
+                        fake_race_base_time = datetime.now()
+                        
+                        if scenario == "race_in_3h":
+                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                        elif scenario == "race_in_1h":
+                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
+                        elif scenario == "race_in_30m":
+                            fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
+                        elif scenario == "race_tomorrow":
+                            fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
+                        else:
+                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                        
+                        # Create a fake test race object
+                        class FakeRace:
+                            def __init__(self):
+                                self.id = 9999
+                                self.name = f"Test Race ({scenario})"
+                                self.event_date = fake_race_datetime_utc.date()
+                                self.series_id = series_id
+                                self.timezone = "UTC"
+                        
+                        test_race = FakeRace()
                 else:
-                    fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                
-                # Create a fake test race object
-                class FakeRace:
-                    def __init__(self):
-                        self.id = 9999
-                        self.name = f"Test Race ({scenario})"
-                        self.event_date = fake_race_datetime_utc.date()
-                        self.series_id = series_id
-                        self.timezone = "UTC"
-                
-                test_race = FakeRace()
+                    # No selected competition, use scenario-based test race
+                    scenario = global_sim.scenario or 'race_in_3h'
+                    from datetime import datetime, timedelta
+                    fake_race_base_time = datetime.now()
+                    
+                    if scenario == "race_in_3h":
+                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                    elif scenario == "race_in_1h":
+                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
+                    elif scenario == "race_in_30m":
+                        fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
+                    elif scenario == "race_tomorrow":
+                        fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
+                    else:
+                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
+                    
+                    # Create a fake test race object
+                    class FakeRace:
+                        def __init__(self):
+                            self.id = 9999
+                            self.name = f"Test Race ({scenario})"
+                            self.event_date = fake_race_datetime_utc.date()
+                            self.series_id = series_id
+                            self.timezone = "UTC"
+                    
+                    test_race = FakeRace()
         except:
             pass
         
