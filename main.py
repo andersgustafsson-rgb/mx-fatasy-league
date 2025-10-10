@@ -5610,6 +5610,12 @@ def test_countdown():
         scenario = request.args.get('scenario', 'race_in_3h')
         simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
         
+        # Set the simulated time in session for global use
+        session['simulation_active'] = True
+        session['simulated_time'] = simulated_time.isoformat()
+        session['simulation_start_time'] = datetime.utcnow().isoformat()
+        session['initial_simulated_time'] = simulated_time.isoformat()
+        
         # Get next upcoming race (use simulated time for testing)
         next_race = (
             Competition.query
@@ -5675,6 +5681,7 @@ def test_countdown():
         picks_locked = time_to_deadline.total_seconds() <= 0
         
         return jsonify({
+            "success": True,
             "next_race": {
                 "name": f"Test Race ({scenario})",
                 "date": fake_race_date.date().isoformat(),

@@ -381,19 +381,18 @@
         // Countdown test functions
         async function testScenario(scenario) {
             try {
-                const response = await fetch('/test_countdown', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ scenario })
+                const response = await fetch(`/test_countdown?scenario=${scenario}`, {
+                    method: 'GET'
                 });
                 
                 const result = await response.json();
-                if (result.success) {
-                    alert(`Scenario "${scenario}" aktiverat!`);
+                
+                if (result.error) {
+                    alert(`Fel: ${result.error}`);
                 } else {
-                    alert('Fel vid aktivering av scenario');
+                    alert(`Scenario "${scenario}" aktiverat!`);
+                    // Reload the page to see the countdown changes
+                    window.location.reload();
                 }
             } catch (error) {
                 console.error('Error testing scenario:', error);
