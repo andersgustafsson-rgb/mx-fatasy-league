@@ -463,9 +463,9 @@
                             
                             <!-- Replies Section -->
                             {% if post.replies %}
-                            <div class="replies-section mt-3 ml-4 border-l-2 border-amber-300 pl-4">
+                            <div class="replies-section mt-3 ml-4 border-l-2 border-cyan-400 pl-4" style="box-shadow: -2px 0 5px rgba(34, 211, 238, 0.2);">
                                 {% for reply in post.replies %}
-                                <div class="reply-item mb-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                <div class="reply-item mb-2 p-2 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);">
                                     <div class="flex justify-between items-start mb-1">
                                         <div class="flex items-center space-x-2">
                                             <span class="font-medium text-sm handwritten-title">
@@ -492,7 +492,7 @@
                             {% endif %}
                             
                             <!-- Reply Form (Hidden by default) -->
-                            <div class="reply-form hidden mt-3 ml-4 border-l-2 border-amber-400 pl-4">
+                            <div class="reply-form hidden mt-3 ml-4 border-l-2 border-cyan-400 pl-4" style="box-shadow: -2px 0 5px rgba(34, 211, 238, 0.2);">
                                 <form class="reply-form-element">
                                     <textarea 
                                         class="w-full px-3 py-2 vintage-textarea resize-none text-sm"
@@ -859,7 +859,8 @@
                 // Create replies section if it doesn't exist
                 const replyButton = postElement.querySelector('.reply-btn').parentElement;
                 repliesSection = document.createElement('div');
-                repliesSection.className = 'replies-section mt-3 ml-4 border-l-2 border-gray-200 dark:border-gray-600 pl-4';
+                repliesSection.className = 'replies-section mt-3 ml-4 border-l-2 border-cyan-400 pl-4';
+                repliesSection.style.boxShadow = '-2px 0 5px rgba(34, 211, 238, 0.2)';
                 replyButton.parentElement.insertBefore(repliesSection, replyButton.nextSibling);
             }
             
@@ -873,7 +874,7 @@
             });
             
             const replyHtml = `
-                <div class="reply-item mb-2 p-2 bg-amber-50 rounded border border-amber-200">
+                <div class="reply-item mb-2 p-2 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);">
                     <div class="flex justify-between items-start mb-1">
                         <div class="flex items-center space-x-2">
                             <span class="font-medium text-sm handwritten-title">
