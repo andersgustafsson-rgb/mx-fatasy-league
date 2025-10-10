@@ -365,7 +365,8 @@
                 this.gamePaused = false;
                 this.score = 0;
                 this.highScore = parseInt(localStorage.getItem('crossDinoGlobalHighScore') || 0);
-                console.log('DEBUG: Loaded highscore:', this.highScore);
+                console.log('DEBUG: Loaded highscore from localStorage:', this.highScore);
+                console.log('DEBUG: localStorage crossDinoGlobalHighScore:', localStorage.getItem('crossDinoGlobalHighScore'));
                 this.gameSpeed = 2;
                 this.gravity = 0.7;
                 this.jumpPower = -20; // Increased a bit more for better clearance
@@ -395,6 +396,9 @@
                 
                 // Update high score display
                 document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
+                
+                // Also sync highscore when game is initialized
+                this.syncHighscore();
                 
                 // Load and display leaderboard
                 this.loadLeaderboard();
@@ -529,6 +533,9 @@
                 this.obstacles = [];
                 this.obstacleTimer = 0;
                 
+                // Sync highscore before starting
+                this.syncHighscore();
+                
                 document.getElementById('startScreen').style.display = 'none';
                 document.getElementById('gameOver').style.display = 'none';
             }
@@ -544,6 +551,12 @@
                 if (this.gameRunning) {
                     this.gamePaused = !this.gamePaused;
                 }
+            }
+            
+            restart() {
+                // Sync highscore before restarting
+                this.syncHighscore();
+                this.start();
             }
             
             update() {
@@ -625,6 +638,9 @@
                     localStorage.setItem('crossDinoGlobalHighScore', this.highScore);
                     document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
                     console.log('DEBUG: New highscore saved:', this.highScore);
+                    console.log('DEBUG: localStorage after save:', localStorage.getItem('crossDinoGlobalHighScore'));
+                } else {
+                    console.log('DEBUG: Score', this.score, 'not higher than highscore', this.highScore);
                 }
                 
                 // Update leaderboard if this is a new high score
@@ -638,6 +654,17 @@
             loadLeaderboard() {
                 const leaderboard = JSON.parse(localStorage.getItem('crossDinoLeaderboard') || '[]');
                 this.displayLeaderboard(leaderboard);
+            }
+            
+            syncHighscore() {
+                // Always reload highscore from localStorage to ensure it's up to date
+                const storedHighscore = parseInt(localStorage.getItem('crossDinoGlobalHighScore') || 0);
+                if (storedHighscore > this.highScore) {
+                    this.highScore = storedHighscore;
+                    console.log('DEBUG: Synced highscore from localStorage:', this.highScore);
+                }
+                // Always update the display to show current highscore
+                document.getElementById('highScore').textContent = `Bästa: ${this.highScore}`;
             }
             
             updateLeaderboard(score) {
