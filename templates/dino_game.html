@@ -292,17 +292,17 @@
                 this.highScore = localStorage.getItem('crossDinoHighScore') || 0;
                 this.gameSpeed = 2;
                 this.gravity = 0.7;
-                this.jumpPower = -13;
+                this.jumpPower = -17; // Increased by 1/3 (was -13, now -17)
                 
                 // Cross (player) - initialize with default values first
                 this.cross = {
                     x: 100,
-                    y: 380,
+                    y: 400,
                     width: 40,
                     height: 40,
                     velocityY: 0,
                     isJumping: false,
-                    groundY: 380
+                    groundY: 400
                 };
                 
                 // Obstacles (gupp)
@@ -339,7 +339,7 @@
                 
                 // Update cross ground position only if cross is defined
                 if (this.cross) {
-                    this.cross.groundY = this.height - 80;
+                    this.cross.groundY = this.height - 60;
                     if (!this.gameRunning) {
                         this.cross.y = this.cross.groundY;
                     }
@@ -583,28 +583,42 @@
                 this.ctx.lineTo(this.width, this.height - 20);
                 this.ctx.stroke();
                 
-                // Draw realistic motocross bike from side view
+                // Draw realistic colorful motocross bike from side view
                 this.ctx.save();
                 this.ctx.translate(
                     this.cross.x + this.cross.width/2, 
                     this.cross.y + this.cross.height/2
                 );
                 
-                this.ctx.fillStyle = '#000';
                 this.ctx.strokeStyle = '#000';
                 this.ctx.lineWidth = 2;
                 
-                // Front wheel (larger, more realistic)
+                // Front wheel (black tire with silver rim)
+                this.ctx.fillStyle = '#000';
                 this.ctx.beginPath();
                 this.ctx.arc(-18, 12, 10, 0, Math.PI * 2);
                 this.ctx.fill();
                 
-                // Rear wheel (larger, more realistic)
+                // Front wheel rim
+                this.ctx.fillStyle = '#C0C0C0';
+                this.ctx.beginPath();
+                this.ctx.arc(-18, 12, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Rear wheel (black tire with silver rim)
+                this.ctx.fillStyle = '#000';
                 this.ctx.beginPath();
                 this.ctx.arc(18, 12, 10, 0, Math.PI * 2);
                 this.ctx.fill();
                 
-                // Main frame - more motorcycle-like shape
+                // Rear wheel rim
+                this.ctx.fillStyle = '#C0C0C0';
+                this.ctx.beginPath();
+                this.ctx.arc(18, 12, 6, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Main frame - red motorcycle frame
+                this.ctx.fillStyle = '#DC143C';
                 this.ctx.beginPath();
                 this.ctx.moveTo(-18, 2);  // Front wheel connection
                 this.ctx.lineTo(-10, -5); // Front of frame
@@ -615,7 +629,12 @@
                 this.ctx.closePath();
                 this.ctx.fill();
                 
-                // Front fork with suspension
+                // Frame outline
+                this.ctx.stroke();
+                
+                // Front fork with suspension (silver)
+                this.ctx.strokeStyle = '#C0C0C0';
+                this.ctx.lineWidth = 3;
                 this.ctx.beginPath();
                 this.ctx.moveTo(-18, 2);
                 this.ctx.lineTo(-18, 12);
@@ -623,7 +642,7 @@
                 this.ctx.lineTo(-16, 12);
                 this.ctx.stroke();
                 
-                // Rear swingarm
+                // Rear swingarm (silver)
                 this.ctx.beginPath();
                 this.ctx.moveTo(18, 2);
                 this.ctx.lineTo(18, 12);
@@ -631,7 +650,9 @@
                 this.ctx.lineTo(16, 12);
                 this.ctx.stroke();
                 
-                // Handlebars - wider and more realistic
+                // Handlebars - wider and more realistic (silver)
+                this.ctx.strokeStyle = '#C0C0C0';
+                this.ctx.lineWidth = 2;
                 this.ctx.beginPath();
                 this.ctx.moveTo(-18, 2);
                 this.ctx.lineTo(-25, -2);
@@ -639,8 +660,8 @@
                 this.ctx.lineTo(-11, -2);
                 this.ctx.stroke();
                 
-                // Seat
-                this.ctx.fillStyle = '#333';
+                // Seat (black leather)
+                this.ctx.fillStyle = '#2F2F2F';
                 this.ctx.beginPath();
                 this.ctx.moveTo(-5, -8);
                 this.ctx.lineTo(8, -8);
@@ -649,15 +670,29 @@
                 this.ctx.closePath();
                 this.ctx.fill();
                 
-                // Rider - more realistic proportions
-                this.ctx.fillStyle = '#000';
+                // Rider - colorful gear
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 2;
                 
-                // Helmet
+                // Helmet (white with red stripe)
+                this.ctx.fillStyle = '#FFFFFF';
                 this.ctx.beginPath();
                 this.ctx.arc(-2, -12, 7, 0, Math.PI * 2);
                 this.ctx.fill();
+                this.ctx.stroke();
                 
-                // Body/torso
+                // Helmet stripe
+                this.ctx.fillStyle = '#DC143C';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-7, -12);
+                this.ctx.lineTo(3, -12);
+                this.ctx.lineTo(3, -10);
+                this.ctx.lineTo(-7, -10);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                // Body/torso (blue jersey)
+                this.ctx.fillStyle = '#4169E1';
                 this.ctx.beginPath();
                 this.ctx.moveTo(-3, -5);
                 this.ctx.lineTo(3, -5);
@@ -665,8 +700,11 @@
                 this.ctx.lineTo(-4, 0);
                 this.ctx.closePath();
                 this.ctx.fill();
+                this.ctx.stroke();
                 
-                // Arms to handlebars
+                // Arms to handlebars (blue sleeves)
+                this.ctx.strokeStyle = '#4169E1';
+                this.ctx.lineWidth = 3;
                 this.ctx.beginPath();
                 this.ctx.moveTo(-3, -5);
                 this.ctx.lineTo(-15, 2);
@@ -674,13 +712,24 @@
                 this.ctx.lineTo(-10, 2);
                 this.ctx.stroke();
                 
-                // Legs
+                // Legs (black pants)
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 3;
                 this.ctx.beginPath();
                 this.ctx.moveTo(-2, 0);
                 this.ctx.lineTo(-5, 8);
                 this.ctx.moveTo(2, 0);
                 this.ctx.lineTo(5, 8);
                 this.ctx.stroke();
+                
+                // Boots (brown)
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.beginPath();
+                this.ctx.arc(-5, 8, 3, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.beginPath();
+                this.ctx.arc(5, 8, 3, 0, Math.PI * 2);
+                this.ctx.fill();
                 
                 this.ctx.restore();
                 
