@@ -408,7 +408,7 @@
                 // Obstacles (gupp)
                 this.obstacles = [];
                 this.obstacleTimer = 0;
-                this.obstacleInterval = 120; // frames between obstacles
+                this.obstacleInterval = 180; // frames between obstacles - more space to land
                 
                 // No clouds needed with white background
                 
@@ -643,8 +643,8 @@
                 // Increase game speed and obstacle frequency
                 if (this.score > 0 && this.score % 100 === 0) {
                     this.gameSpeed += 0.1;
-                    // Make obstacles more frequent as game gets faster
-                    this.obstacleInterval = Math.max(40, this.obstacleInterval - 3);
+                    // Make obstacles more frequent as game gets faster, but not too tight
+                    this.obstacleInterval = Math.max(80, this.obstacleInterval - 2);
                 }
             }
             
