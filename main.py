@@ -5619,12 +5619,16 @@ def debug_session():
 def race_countdown():
     """Get countdown data for next race"""
     try:
+        print(f"DEBUG: race_countdown() called - session simulation_active: {session.get('simulation_active')}")
+        
         # Get current time (or simulated time for testing)
         current_time = get_current_time()
         print(f"DEBUG: race_countdown using time: {current_time}")
         
         # Check if we're in simulation mode (check both session and global state)
         simulation_active = session.get('simulation_active')
+        print(f"DEBUG: race_countdown - session simulation_active: {simulation_active}")
+        
         if not simulation_active:
             try:
                 # Rollback any existing transaction first
@@ -5632,22 +5636,28 @@ def race_countdown():
                 
                 result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
                 simulation_active = result and result[0] if result else False
+                print(f"DEBUG: race_countdown - database simulation_active: {simulation_active}")
             except Exception as e:
                 print(f"DEBUG: Error checking global simulation: {e}")
                 # Rollback and fallback to app globals if database table doesn't exist
                 db.session.rollback()
                 simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
+                print(f"DEBUG: race_countdown - app global simulation_active: {simulation_active}")
+        
+        print(f"DEBUG: race_countdown - final simulation_active: {simulation_active}")
         
         if simulation_active:
             # Use the same logic as test_countdown for consistency
             # Get the scenario from session or use default
             scenario = session.get('test_scenario', 'race_in_3h')
+            print(f"DEBUG: race_countdown - using scenario: {scenario}")
             
             # Create fake race based on scenario - use a fixed future time for the race
             # This ensures the countdown actually counts down
             # Use a fixed base time that doesn't change between calls
             fake_race_base_time = current_time + timedelta(hours=3)  # 3 hours from current simulated time
             fake_race_base_time = fake_race_base_time.replace(minute=0, second=0, microsecond=0)
+            print(f"DEBUG: race_countdown - fake_race_base_time: {fake_race_base_time}")
             
             # Adjust fake race time based on scenario
             if scenario == "race_in_3h":
@@ -5672,6 +5682,7 @@ def race_countdown():
             print(f"DEBUG: Using fake race for simulation: {next_race.name} on {next_race.event_date} at {fake_race_datetime_utc}")
         else:
             # Get next upcoming race
+            print(f"DEBUG: race_countdown - getting real race, current_time.date(): {current_time.date()}")
             next_race = (
                 Competition.query
                 .filter(Competition.event_date >= current_time.date())
@@ -5683,6 +5694,7 @@ def race_countdown():
             print(f"DEBUG: Current time date: {current_time.date()}")
             
             if not next_race:
+                print(f"DEBUG: No upcoming races found, returning error")
                 return jsonify({
                     "error": "No upcoming races found",
                     "current_time": current_time.isoformat()
@@ -6095,6 +6107,8 @@ def set_simulated_time():
 
 def get_current_time():
     """Get current time - either real or simulated"""
+    print(f"DEBUG: get_current_time() called - session simulation_active: {session.get('simulation_active')}")
+    
     # Check session-based simulation first
     if session.get('simulation_active') and session.get('simulated_time') and session.get('simulation_start_time'):
         try:
@@ -6109,17 +6123,20 @@ def get_current_time():
             current_simulated_time = initial_simulated_time + real_time_elapsed
             
             print(f"DEBUG: Using session simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            print(f"DEBUG: Session data - active: {session.get('simulation_active')}, time: {session.get('simulated_time')}, start: {session.get('simulation_start_time')}")
             return current_simulated_time
         except Exception as e:
             print(f"DEBUG: Error parsing session simulated time: {e}")
             pass
     
     # Check global simulation state for cross-device sync using database
+    print(f"DEBUG: Checking database global simulation state...")
     try:
         # Rollback any existing transaction first
         db.session.rollback()
         
         result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
+        print(f"DEBUG: Database query result: {result}")
         if result and result[0]:  # active is True
             initial_simulated_time = datetime.fromisoformat(result[1])  # simulated_time
             simulation_start_time = datetime.fromisoformat(result[2])   # start_time
@@ -6131,11 +6148,15 @@ def get_current_time():
             current_simulated_time = initial_simulated_time + real_time_elapsed
             
             print(f"DEBUG: Using database global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+            print(f"DEBUG: Database data - active: {result[0]}, time: {result[1]}, start: {result[2]}")
             return current_simulated_time
+        else:
+            print(f"DEBUG: Database simulation not active or no result")
     except Exception as e:
         print(f"DEBUG: Error parsing database global simulated time: {e}")
         # Rollback and fallback to app globals if database table doesn't exist
         db.session.rollback()
+        print(f"DEBUG: Checking app global simulation state...")
         if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
             try:
                 # Get the initial simulated time
@@ -6149,10 +6170,13 @@ def get_current_time():
                 current_simulated_time = initial_simulated_time + real_time_elapsed
                 
                 print(f"DEBUG: Using app global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
+                print(f"DEBUG: App global data - active: {app.global_simulation_active}, time: {app.global_simulated_time}, start: {app.global_simulation_start_time}")
                 return current_simulated_time
             except Exception as e2:
                 print(f"DEBUG: Error parsing app global simulated time: {e2}")
                 pass
+        else:
+            print(f"DEBUG: App global simulation not active or missing data")
     
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
