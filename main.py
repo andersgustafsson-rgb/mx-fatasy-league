@@ -567,15 +567,22 @@ def index():
                 # Get current time first
                 current_time = get_current_time()
                 
-                # Create fake race based on scenario - use the same logic as test_countdown
-                test_scenarios = {
-                    "race_in_3h": current_time + timedelta(hours=3),
-                    "race_in_1h": current_time + timedelta(hours=1),
-                    "race_in_30m": current_time + timedelta(minutes=30),
-                    "race_tomorrow": current_time + timedelta(days=1)
-                }
+                # Create fake race based on scenario - use a fixed future time for the race
+                # This ensures the countdown actually counts down
+                fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
+                fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
                 
-                fake_race_datetime_utc = test_scenarios.get(scenario, current_time + timedelta(hours=3))
+                # Adjust fake race time based on scenario
+                if scenario == "race_in_3h":
+                    fake_race_datetime_utc = fake_race_base_time
+                elif scenario == "race_in_1h":
+                    fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2)  # Race in 1h, deadline in -1h
+                elif scenario == "race_in_30m":
+                    fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2, minutes=30)  # Race in 30m, deadline in -1.5h
+                elif scenario == "race_tomorrow":
+                    fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)  # Race tomorrow
+                else:
+                    fake_race_datetime_utc = fake_race_base_time
                 
                 # Check if picks are locked (2 hours before fake race)
                 time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
@@ -1179,15 +1186,22 @@ def race_picks_page(competition_id):
         # Get current time first
         current_time = get_current_time()
         
-        # Create fake race based on scenario - use the same logic as test_countdown
-        test_scenarios = {
-            "race_in_3h": current_time + timedelta(hours=3),
-            "race_in_1h": current_time + timedelta(hours=1),
-            "race_in_30m": current_time + timedelta(minutes=30),
-            "race_tomorrow": current_time + timedelta(days=1)
-        }
+        # Create fake race based on scenario - use a fixed future time for the race
+        # This ensures the countdown actually counts down
+        fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
+        fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
         
-        fake_race_datetime_utc = test_scenarios.get(scenario, current_time + timedelta(hours=3))
+        # Adjust fake race time based on scenario
+        if scenario == "race_in_3h":
+            fake_race_datetime_utc = fake_race_base_time
+        elif scenario == "race_in_1h":
+            fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2)  # Race in 1h, deadline in -1h
+        elif scenario == "race_in_30m":
+            fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2, minutes=30)  # Race in 30m, deadline in -1.5h
+        elif scenario == "race_tomorrow":
+            fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)  # Race tomorrow
+        else:
+            fake_race_datetime_utc = fake_race_base_time
         
         # Check if picks are locked (2 hours before fake race)
         time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
@@ -5628,15 +5642,22 @@ def race_countdown():
             # Get the scenario from session or use default
             scenario = session.get('test_scenario', 'race_in_3h')
             
-            # Create fake race based on scenario - use the same logic as test_countdown
-            test_scenarios = {
-                "race_in_3h": current_time + timedelta(hours=3),
-                "race_in_1h": current_time + timedelta(hours=1),
-                "race_in_30m": current_time + timedelta(minutes=30),
-                "race_tomorrow": current_time + timedelta(days=1)
-            }
+            # Create fake race based on scenario - use a fixed future time for the race
+            # This ensures the countdown actually counts down
+            fake_race_base_time = datetime.utcnow() + timedelta(days=1)  # Tomorrow at 8pm UTC
+            fake_race_base_time = fake_race_base_time.replace(hour=20, minute=0, second=0, microsecond=0)
             
-            fake_race_datetime_utc = test_scenarios.get(scenario, current_time + timedelta(hours=3))
+            # Adjust fake race time based on scenario
+            if scenario == "race_in_3h":
+                fake_race_datetime_utc = fake_race_base_time
+            elif scenario == "race_in_1h":
+                fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2)  # Race in 1h, deadline in -1h
+            elif scenario == "race_in_30m":
+                fake_race_datetime_utc = fake_race_base_time - timedelta(hours=2, minutes=30)  # Race in 30m, deadline in -1.5h
+            elif scenario == "race_tomorrow":
+                fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)  # Race tomorrow
+            else:
+                fake_race_datetime_utc = fake_race_base_time
             
             # Create a fake race object for testing
             class FakeRace:
