@@ -6095,7 +6095,7 @@ def is_picks_locked(competition):
         print(f"DEBUG: is_picks_locked - app global simulation_active: {simulation_active}")
     
     if simulation_active:
-        # Use the same logic as race_countdown for consistency
+        # Use the same logic as test_countdown for consistency
         # Get the scenario from global database state or use default
         try:
             result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
@@ -6109,28 +6109,23 @@ def is_picks_locked(competition):
         # Get current time first
         current_time = get_current_time()
         
-        # Create fake race based on scenario - use a fixed future time for the race
-        # This ensures the countdown actually counts down
-        # Use a fixed base time that doesn't change between calls
-        fake_race_base_time = current_time + timedelta(hours=3)  # 3 hours from current simulated time
+        # Use the same fake race logic as test_countdown
+        # Create a fake race date that's closer to now for testing
+        fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
+        fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
         
-        # Adjust fake race time based on scenario
-        if scenario == "race_in_3h":
-            fake_race_datetime_utc = fake_race_base_time
-        elif scenario == "race_in_1h":
-            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2)  # 1 hour before race
-        elif scenario == "race_in_30m":
-            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=2, minutes=30)  # 30 minutes before race
-        elif scenario == "race_tomorrow":
-            fake_race_datetime_utc = fake_race_base_time - timedelta(days=1)  # 1 day before race
-        else:
-            fake_race_datetime_utc = fake_race_base_time
+        # Calculate time differences using simulated time
+        # For countdown, we need to use the current simulated time, not the fixed simulated time
+        time_to_race = fake_race_datetime_utc - current_time
+        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
         
         # Check if picks are locked (2 hours before fake race)
-        time_to_deadline = fake_race_datetime_utc - timedelta(hours=2) - current_time
         picks_locked = time_to_deadline.total_seconds() <= 0
         
         print(f"DEBUG: is_picks_locked - Using fake race for picks_locked calculation: {fake_race_datetime_utc}")
+        print(f"DEBUG: is_picks_locked - Current simulated time: {current_time}")
+        print(f"DEBUG: is_picks_locked - Time to race: {time_to_race}")
+        print(f"DEBUG: is_picks_locked - Time to deadline: {time_to_deadline}")
     else:
         # Check if picks are locked (2 hours before race)
         race_time_str = "20:00"  # 8pm local time
