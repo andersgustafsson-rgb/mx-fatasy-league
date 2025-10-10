@@ -1136,6 +1136,10 @@ def race_picks_page(competition_id):
     picks_locked = time_to_deadline.total_seconds() <= 0
     
     print(f"DEBUG: race_picks_page - Picks locked: {picks_locked}")
+    print(f"DEBUG: race_picks_page - Current time: {current_time}")
+    print(f"DEBUG: race_picks_page - Race datetime UTC: {race_datetime_utc}")
+    print(f"DEBUG: race_picks_page - Time to deadline: {time_to_deadline}")
+    print(f"DEBUG: race_picks_page - Time to deadline seconds: {time_to_deadline.total_seconds()}")
     
     # If picks are locked, show locked page instead of redirect
     if picks_locked:
