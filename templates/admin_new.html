@@ -360,6 +360,16 @@
                         </div>
                         
                         <div class="space-y-3">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Series</h3>
+                            <button onclick="createDefaultSeries2025()" class="block w-full cyberpunk-button px-4 py-2 rounded-md text-center">
+                                🏁 Skapa SMX 2025 Serier
+                            </button>
+                            <button onclick="showSeriesManager()" class="block w-full cyberpunk-button px-4 py-2 rounded-md text-center">
+                                ⚙️ Hantera Serier
+                            </button>
+                        </div>
+                        
+                        <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">Cross Jump Game</h3>
                             <a href="/dino_game" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
                                 🎮 Live Version
@@ -1155,6 +1165,37 @@
             }
             
             isSaving = false;
+        }
+
+        // SMX Series Management Functions
+        async function createDefaultSeries2025() {
+            if (!confirm('Skapa standard SMX-serier för 2025? Detta skapar Supercross, Motocross och SMX Finals.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/series/create_default_2025', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ SMX-serier skapade för 2025!\n\n${result.series_created.map(s => `• ${s.name}`).join('\n')}`);
+                } else {
+                    alert(`❌ Fel: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('❌ Fel vid skapande av serier');
+            }
+        }
+
+        function showSeriesManager() {
+            alert('🚧 Series Manager kommer snart!\n\nHär kan du:\n• Hantera befintliga serier\n• Skapa nya serier\n• Konfigurera poängsystem\n• Hantera SMX-kvalificering');
         }
     </script>
 </body>

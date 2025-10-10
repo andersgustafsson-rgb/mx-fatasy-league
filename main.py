@@ -110,6 +110,19 @@ class User(db.Model):
     )
 
 
+class Series(db.Model):
+    __tablename__ = "series"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)  # 'Supercross', 'Motocross', 'SMX Finals'
+    year = db.Column(db.Integer, nullable=False)
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    points_system = db.Column(db.String(20), default='standard')  # 'standard', 'double', 'triple'
+    
+    # Relationship
+    competitions = db.relationship('Competition', backref='series_ref', lazy=True)
+
 class Competition(db.Model):
     __tablename__ = "competitions"
     id = db.Column(db.Integer, primary_key=True)
@@ -120,6 +133,11 @@ class Competition(db.Model):
     is_triple_crown = db.Column(db.Integer, default=0)
     coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
     timezone = db.Column(db.String(50), nullable=True)  # <-- tidszon för banan
+    
+    # New SMX fields
+    series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
+    phase = db.Column(db.String(20), nullable=True)  # 'regular', 'playoff1', 'playoff2', 'final'
+    is_qualifying = db.Column(db.Boolean, default=False)  # For SMX Finals qualification
 
 class Rider(db.Model):
     __tablename__ = "riders"
@@ -131,6 +149,11 @@ class Rider(db.Model):
     image_url = db.Column(db.String(200))
     price = db.Column(db.Integer, nullable=False)
     coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
+    
+    # New SMX fields
+    series_participation = db.Column(db.String(50), default='all')  # 'supercross', 'motocross', 'all'
+    smx_qualified = db.Column(db.Boolean, default=False)  # Qualified for SMX Finals
+    smx_seed_points = db.Column(db.Integer, default=0)  # Starting points for SMX Finals
     
 
 
@@ -1493,6 +1516,128 @@ def delete_rider(rider_id):
     db.session.commit()
     
     return jsonify({'success': True})
+
+# API endpoints for series management
+@app.route('/api/series', methods=['GET'])
+def get_series():
+    """Get all series"""
+    series = Series.query.order_by(Series.year.desc(), Series.start_date.asc()).all()
+    return jsonify([{
+        'id': s.id,
+        'name': s.name,
+        'year': s.year,
+        'start_date': s.start_date.isoformat() if s.start_date else None,
+        'end_date': s.end_date.isoformat() if s.end_date else None,
+        'is_active': s.is_active,
+        'points_system': s.points_system
+    } for s in series])
+
+@app.route('/api/series', methods=['POST'])
+def create_series():
+    """Create a new series"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    
+    series = Series(
+        name=data['name'],
+        year=data['year'],
+        start_date=datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None,
+        end_date=datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None,
+        is_active=data.get('is_active', True),
+        points_system=data.get('points_system', 'standard')
+    )
+    
+    db.session.add(series)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'id': series.id})
+
+@app.route('/api/series/<int:series_id>', methods=['PUT'])
+def update_series(series_id):
+    """Update a series"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    series = Series.query.get_or_404(series_id)
+    data = request.get_json()
+    
+    series.name = data['name']
+    series.year = data['year']
+    series.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date() if data.get('start_date') else None
+    series.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date() if data.get('end_date') else None
+    series.is_active = data.get('is_active', True)
+    series.points_system = data.get('points_system', 'standard')
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/series/<int:series_id>', methods=['DELETE'])
+def delete_series(series_id):
+    """Delete a series"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    series = Series.query.get_or_404(series_id)
+    db.session.delete(series)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/series/create_default_2025', methods=['POST'])
+def create_default_series_2025():
+    """Create default SMX series for 2025"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Check if series already exist
+    existing = Series.query.filter_by(year=2025).first()
+    if existing:
+        return jsonify({'error': 'Series for 2025 already exist'}), 400
+    
+    # Create Supercross series
+    supercross = Series(
+        name='Supercross',
+        year=2025,
+        start_date=date(2025, 1, 4),  # Anaheim 1
+        end_date=date(2025, 5, 10),   # Salt Lake City
+        is_active=True,
+        points_system='standard'
+    )
+    
+    # Create Motocross series
+    motocross = Series(
+        name='Motocross',
+        year=2025,
+        start_date=date(2025, 5, 24),  # Pala
+        end_date=date(2025, 8, 23),    # Ironman
+        is_active=True,
+        points_system='standard'
+    )
+    
+    # Create SMX Finals series
+    smx_finals = Series(
+        name='SMX Finals',
+        year=2025,
+        start_date=date(2025, 9, 6),   # Playoff 1
+        end_date=date(2025, 9, 20),    # Final
+        is_active=True,
+        points_system='playoff'
+    )
+    
+    db.session.add_all([supercross, motocross, smx_finals])
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'series_created': [
+            {'id': supercross.id, 'name': 'Supercross'},
+            {'id': motocross.id, 'name': 'Motocross'},
+            {'id': smx_finals.id, 'name': 'SMX Finals'}
+        ]
+    })
 
 @app.route("/admin_old")
 def admin_page_old():
