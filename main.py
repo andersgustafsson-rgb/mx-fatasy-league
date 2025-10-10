@@ -119,9 +119,6 @@ class Series(db.Model):
     end_date = db.Column(db.Date, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     points_system = db.Column(db.String(20), default='standard')  # 'standard', 'double', 'triple'
-    
-    # Relationship
-    competitions = db.relationship('Competition', backref='series_ref', lazy=True)
 
 class Competition(db.Model):
     __tablename__ = "competitions"
@@ -138,6 +135,9 @@ class Competition(db.Model):
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
     phase = db.Column(db.String(20), nullable=True)  # 'regular', 'playoff1', 'playoff2', 'final'
     is_qualifying = db.Column(db.Boolean, default=False)  # For SMX Finals qualification
+    
+    # Relationship
+    series_ref = db.relationship('Series', backref='competitions', lazy=True)
 
 class Rider(db.Model):
     __tablename__ = "riders"
