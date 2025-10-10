@@ -380,6 +380,7 @@
                 this.gameSpeed = 2;
                 this.gravity = 0.7;
                 this.jumpPower = -20; // Increased a bit more for better clearance
+                this.jumpCooldown = 0; // Cooldown to prevent spam jumping
                 
                 // Cross (player) - initialize with default values first
                 this.cross = {
@@ -551,9 +552,10 @@
             }
             
             jump() {
-                if (!this.cross.isJumping) {
+                if (!this.cross.isJumping && this.jumpCooldown <= 0) {
                     this.cross.velocityY = this.jumpPower;
                     this.cross.isJumping = true;
+                    this.jumpCooldown = 10; // 10 frames cooldown (about 1/6 second at 60fps)
                 }
             }
             
@@ -571,6 +573,11 @@
             
             update() {
                 if (!this.gameRunning || this.gamePaused) return;
+                
+                // Update jump cooldown
+                if (this.jumpCooldown > 0) {
+                    this.jumpCooldown--;
+                }
                 
                 // Update cross physics
                 this.cross.velocityY += this.gravity;

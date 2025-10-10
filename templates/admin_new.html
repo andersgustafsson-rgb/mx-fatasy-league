@@ -250,6 +250,13 @@
                                 Skapa admin användare
                             </a>
                         </div>
+                        
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-medium text-gray-800">Cross Dino Game</h3>
+                            <button onclick="resetCrossDinoHighscores()" class="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 text-center">
+                                🎮 Nollställ Highscore
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -451,6 +458,32 @@
             } catch (error) {
                 console.error('Error resetting time:', error);
                 alert('Fel vid återställning');
+            }
+        }
+
+        async function resetCrossDinoHighscores() {
+            if (!confirm('Är du säker på att du vill nollställa alla Cross Dino highscores? Detta går inte att ångra!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/cross_dino/reset_highscores', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Alla Cross Dino highscores har nollställts!');
+                } else {
+                    const error = await response.json();
+                    alert('Fel vid nollställning: ' + (error.error || 'Okänt fel'));
+                }
+            } catch (error) {
+                console.error('Error resetting highscores:', error);
+                alert('Fel vid nollställning av highscores');
             }
         }
 

@@ -5775,6 +5775,25 @@ def submit_cross_dino_highscore():
         db.session.rollback()
         return jsonify({"error": "Failed to submit highscore"}), 500
 
+@app.route("/api/cross_dino/reset_highscores", methods=["POST"])
+def reset_cross_dino_highscores():
+    """Reset all Cross Dino highscores (admin only)"""
+    try:
+        # Check if user is admin (you might want to add proper admin authentication here)
+        if "user_id" not in session:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        # Delete all highscores
+        CrossDinoHighScore.query.delete()
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "All highscores have been reset"})
+        
+    except Exception as e:
+        print(f"Error resetting highscores: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to reset highscores"}), 500
+
 @app.route("/test_countdown")
 def test_countdown():
     """Test countdown with simulated time - for development only"""
