@@ -1147,7 +1147,7 @@
             
             // 450cc Leader
             if (data.leaders['450cc']) {
-              const leader = data.leaders['450cc'];
+              const leader = data.leaders['450cc'].leader;
               html += `
                 <div class="flex justify-between items-center text-xs mb-1">
                   <span class="text-yellow-400">450cc:</span>
@@ -1161,7 +1161,7 @@
             
             // 250cc East Leader
             if (data.leaders['250cc_east']) {
-              const leader = data.leaders['250cc_east'];
+              const leader = data.leaders['250cc_east'].leader;
               html += `
                 <div class="flex justify-between items-center text-xs mb-1">
                   <span class="text-green-400">250E:</span>
@@ -1175,7 +1175,7 @@
             
             // 250cc West Leader
             if (data.leaders['250cc_west']) {
-              const leader = data.leaders['250cc_west'];
+              const leader = data.leaders['250cc_west'].leader;
               html += `
                 <div class="flex justify-between items-center text-xs mb-1">
                   <span class="text-blue-400">250W:</span>
@@ -1186,6 +1186,32 @@
             } else {
               html += '<div class="text-xs text-gray-400 mb-1">250W: Inga resultat ännu</div>';
             }
+            
+            // Add expand buttons for each series
+            html += `
+              <div class="mt-2 space-y-1">
+                <button onclick="toggleSeriesExpansion('450cc')" class="w-full text-xs text-yellow-400 hover:text-yellow-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa 450cc Top 5
+                </button>
+                <div id="450cc-full-list" class="hidden mt-1 space-y-1">
+                  <!-- 450cc top 5 will be loaded here -->
+                </div>
+                
+                <button onclick="toggleSeriesExpansion('250cc_east')" class="w-full text-xs text-green-400 hover:text-green-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa 250E Top 5
+                </button>
+                <div id="250cc_east-full-list" class="hidden mt-1 space-y-1">
+                  <!-- 250cc East top 5 will be loaded here -->
+                </div>
+                
+                <button onclick="toggleSeriesExpansion('250cc_west')" class="w-full text-xs text-blue-400 hover:text-blue-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa 250W Top 5
+                </button>
+                <div id="250cc_west-full-list" class="hidden mt-1 space-y-1">
+                  <!-- 250cc West top 5 will be loaded here -->
+                </div>
+              </div>
+            `;
             
             html += '</div>';
             
@@ -1205,6 +1231,16 @@
                   </div>
                 `;
               });
+              
+              // Add expand button for SMX
+              html += `
+                <button onclick="toggleSMXExpansion()" class="w-full mt-2 text-xs text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa alla SMX (Top 20)
+                </button>
+                <div id="smx-full-list" class="hidden mt-2 space-y-1">
+                  <!-- Full SMX list will be loaded here -->
+                </div>
+              `;
             } else {
               html += '<div class="text-xs text-gray-400">Inga SMX resultat ännu</div>';
             }
@@ -1218,6 +1254,91 @@
         }
       } catch (error) {
         console.error('Error fetching series leaders:', error);
+      }
+    }
+
+    async function toggleSMXExpansion() {
+      const fullListDiv = document.getElementById('smx-full-list');
+      const button = event.target;
+      
+      if (fullListDiv.classList.contains('hidden')) {
+        // Show full list
+        try {
+          const response = await fetch('/api/smx_qualification');
+          const result = await response.json();
+          
+          if (result.success) {
+            let html = '';
+            result.qualification.forEach((rider, index) => {
+              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+              const coast = rider.coast_250 ? ` (${rider.coast_250.toUpperCase()})` : '';
+              const bgColor = rider.qualified ? 'bg-green-900 bg-opacity-30' : 'bg-gray-800 bg-opacity-30';
+              const textColor = rider.qualified ? 'text-green-300' : 'text-gray-400';
+              
+              html += `
+                <div class="flex justify-between items-center text-xs mb-1 p-1 rounded ${bgColor}">
+                  <span class="text-cyan-400">${medal} #${rider.rider_number}</span>
+                  <span class="${textColor}">${rider.rider_name}${coast}</span>
+                  <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                </div>
+              `;
+            });
+            
+            fullListDiv.innerHTML = html;
+            fullListDiv.classList.remove('hidden');
+            button.textContent = '📋 Dölj SMX lista';
+          }
+        } catch (error) {
+          console.error('Error loading full SMX list:', error);
+        }
+      } else {
+        // Hide full list
+        fullListDiv.classList.add('hidden');
+        button.textContent = '📋 Visa alla SMX (Top 20)';
+      }
+    }
+
+    async function toggleSeriesExpansion(series) {
+      const fullListDiv = document.getElementById(`${series}-full-list`);
+      const button = event.target;
+      
+      if (fullListDiv.classList.contains('hidden')) {
+        // Show top 5 for this series
+        try {
+          const response = await fetch('/api/series_leaders');
+          const result = await response.json();
+          
+          if (result.success && result.leaders[series]) {
+            const seriesData = result.leaders[series];
+            let html = '';
+            
+            seriesData.top_5.forEach((rider, index) => {
+              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+              const color = series === '450cc' ? 'text-yellow-400' : 
+                          series === '250cc_east' ? 'text-green-400' : 'text-blue-400';
+              
+              html += `
+                <div class="flex justify-between items-center text-xs mb-1 p-1 rounded bg-gray-800 bg-opacity-30">
+                  <span class="${color}">${medal} #${rider.rider_number}</span>
+                  <span class="text-white">${rider.rider_name}</span>
+                  <span class="text-cyan-400 font-bold">${rider.points}pts</span>
+                </div>
+              `;
+            });
+            
+            fullListDiv.innerHTML = html;
+            fullListDiv.classList.remove('hidden');
+            button.textContent = `📋 Dölj ${series} Top 5`;
+          }
+        } catch (error) {
+          console.error(`Error loading ${series} top 5:`, error);
+        }
+      } else {
+        // Hide full list
+        fullListDiv.classList.add('hidden');
+        const seriesName = series === '450cc' ? '450cc' : 
+                          series === '250cc_east' ? '250E' : '250W';
+        button.textContent = `📋 Visa ${seriesName} Top 5`;
       }
     }
     

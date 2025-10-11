@@ -6859,10 +6859,20 @@ def get_series_leaders():
             if data['leader']:
                 rider = data['leader']
                 leaders_data[series] = {
-                    'rider_name': rider.name,
-                    'rider_number': rider.rider_number,
-                    'bike_brand': rider.bike_brand,
-                    'points': data['points']
+                    'leader': {
+                        'rider_name': rider.name,
+                        'rider_number': rider.rider_number,
+                        'bike_brand': rider.bike_brand,
+                        'points': data['points']
+                    },
+                    'top_5': [
+                        {
+                            'rider_name': item['rider'].name,
+                            'rider_number': item['rider'].rider_number,
+                            'bike_brand': item['rider'].bike_brand,
+                            'points': item['points']
+                        } for item in data['top_5']
+                    ]
                 }
             else:
                 leaders_data[series] = None
@@ -7266,14 +7276,16 @@ def get_series_leaders():
     print("DEBUG: Getting series leaders...")
     
     leaders = {
-        '450cc': {'leader': None, 'points': 0},
-        '250cc_east': {'leader': None, 'points': 0},
-        '250cc_west': {'leader': None, 'points': 0}
+        '450cc': {'leader': None, 'points': 0, 'top_5': []},
+        '250cc_east': {'leader': None, 'points': 0, 'top_5': []},
+        '250cc_west': {'leader': None, 'points': 0, 'top_5': []}
     }
     
     # Get all riders
     riders = Rider.query.all()
     
+    # Calculate points for all riders
+    rider_points = {}
     for rider in riders:
         total_points = 0
         
@@ -7296,17 +7308,37 @@ def get_series_leaders():
                 points = get_smx_qualification_points(result.position)
                 total_points += points
         
-        # Update leader for appropriate series
+        rider_points[rider.id] = {
+            'rider': rider,
+            'points': total_points
+        }
+    
+    # Sort riders by class and coast, get top 5 for each
+    for rider_id, data in rider_points.items():
+        rider = data['rider']
+        points = data['points']
+        
         if rider.class_name == '450cc':
-            if total_points > leaders['450cc']['points']:
-                leaders['450cc'] = {'leader': rider, 'points': total_points}
+            leaders['450cc']['top_5'].append({'rider': rider, 'points': points})
+            if points > leaders['450cc']['points']:
+                leaders['450cc']['leader'] = rider
+                leaders['450cc']['points'] = points
         elif rider.class_name == '250cc':
             if rider.coast_250 == 'east':
-                if total_points > leaders['250cc_east']['points']:
-                    leaders['250cc_east'] = {'leader': rider, 'points': total_points}
+                leaders['250cc_east']['top_5'].append({'rider': rider, 'points': points})
+                if points > leaders['250cc_east']['points']:
+                    leaders['250cc_east']['leader'] = rider
+                    leaders['250cc_east']['points'] = points
             elif rider.coast_250 == 'west':
-                if total_points > leaders['250cc_west']['points']:
-                    leaders['250cc_west'] = {'leader': rider, 'points': total_points}
+                leaders['250cc_west']['top_5'].append({'rider': rider, 'points': points})
+                if points > leaders['250cc_west']['points']:
+                    leaders['250cc_west']['leader'] = rider
+                    leaders['250cc_west']['points'] = points
+    
+    # Sort top 5 for each series
+    for series in leaders:
+        leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
+        leaders[series]['top_5'] = leaders[series]['top_5'][:5]
     
     print(f"DEBUG: Series leaders calculated:")
     for series, data in leaders.items():
