@@ -519,7 +519,7 @@ def logout():
 def series_status():
     """Get status of all series for user interface"""
     try:
-        series = Series.query.filter_by(year=2025, is_active=True).all()
+        series = Series.query.filter_by(year=2026, is_active=True).all()
         
         # Use simulated date if available, otherwise use real date
         current_date = get_today()
