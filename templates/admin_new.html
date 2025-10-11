@@ -379,47 +379,75 @@
                             </button>
                         </div>
                         
+                        <!-- Debug & Tools Section -->
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Database Fix</h3>
-                            <button onclick="fixDatabaseTables()" class="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500 text-center">
-                                🔧 Fixa Databas Tabeller
+                            <button onclick="toggleSection('debug-tools')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 flex justify-between items-center">
+                                <span class="text-lg font-medium">🔧 Debug & Tools</span>
+                                <span id="debug-tools-toggle">▼</span>
                             </button>
                         </div>
 
-                        <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-cyan-400 neon-text">🔍 Debug Användare</h3>
-                            <div class="flex space-x-2">
-                                <input type="text" id="debug-username" placeholder="Användarnamn" class="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600">
-                                <button onclick="debugUserScores()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md border border-purple-500">
-                                    🔍 Kolla Poäng
+                        <div id="debug-tools-section" class="hidden space-y-4">
+                            <div class="space-y-3">
+                                <h3 class="text-lg font-medium text-cyan-400 neon-text">🔧 Database Fix</h3>
+                                <button onclick="fixDatabaseTables()" class="block w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md border border-red-500 text-center">
+                                    🔧 Fixa Databas Tabeller
                                 </button>
                             </div>
-                            <div id="debug-user-results" class="hidden mt-3 p-3 bg-gray-800 rounded border border-gray-600">
-                                <!-- Debug results will be shown here -->
+                            
+                            <div class="space-y-3">
+                                <h3 class="text-lg font-medium text-cyan-400 neon-text">🔍 Debug Användare</h3>
+                                <div class="flex space-x-2">
+                                    <input type="text" id="debug-username" placeholder="Användarnamn" class="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600">
+                                    <button onclick="debugUserScores()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md border border-purple-500">
+                                        🔍 Kolla Poäng
+                                    </button>
+                                </div>
+                                <div id="debug-user-results" class="hidden mt-3 p-3 bg-gray-800 rounded border border-gray-600">
+                                    <!-- Debug results will be shown here -->
+                                </div>
                             </div>
                         </div>
 
+            <!-- SMX Kvalificering Section -->
             <div class="space-y-3">
-                <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Kvalificering</h3>
-                <button onclick="loadSMXQualification()" class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md border border-cyan-500 text-center">
-                    🏆 Visa SMX Kvalificering
+                <button onclick="toggleSection('smx-qualification')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 flex justify-between items-center">
+                    <span class="text-lg font-medium">🏆 SMX Kvalificering</span>
+                    <span id="smx-qualification-toggle">▼</span>
                 </button>
             </div>
+
+            <div id="smx-qualification-section" class="hidden space-y-4">
+                <div class="space-y-3">
+                    <button onclick="loadSMXQualification()" class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md border border-cyan-500 text-center">
+                        🏆 Visa SMX Kvalificering
+                    </button>
+                </div>
+            </div>
                         
+                        <!-- Cross Jump Game Section -->
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Cross Jump Game</h3>
-                            <a href="/dino_game" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
-                                🎮 Live Version
-                            </a>
-                            <a href="/dino_game_dev" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
-                                🎮 Dev Version (Excitebike Style)
-                            </a>
-                            <a href="/excitebike_clone" class="block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-center">
-                                🏍️ Excitebike Clone (GitHub)
-                            </a>
-                            <button onclick="resetCrossDinoHighscores()" class="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 text-center">
-                                🎮 Nollställ Highscore
+                            <button onclick="toggleSection('cross-jump')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-4 py-3 rounded-lg border border-gray-600 flex justify-between items-center">
+                                <span class="text-lg font-medium">🎮 Cross Jump Game</span>
+                                <span id="cross-jump-toggle">▼</span>
                             </button>
+                        </div>
+
+                        <div id="cross-jump-section" class="hidden space-y-4">
+                            <div class="space-y-3">
+                                <a href="/dino_game" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
+                                    🎮 Live Version
+                                </a>
+                                <a href="/dino_game_dev" class="block cyberpunk-button px-4 py-2 rounded-md text-center">
+                                    🎮 Dev Version (Excitebike Style)
+                                </a>
+                                <a href="/excitebike_clone" class="block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 text-center">
+                                    🏍️ Excitebike Clone (GitHub)
+                                </a>
+                                <button onclick="resetCrossDinoHighscores()" class="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 text-center">
+                                    🎮 Nollställ Highscore
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1113,9 +1141,9 @@
             }
         }
         
-        function toggleRaceResults() {
-            const section = document.getElementById('race-results-section');
-            const toggle = document.getElementById('race-results-toggle');
+        function toggleSection(sectionName) {
+            const section = document.getElementById(sectionName + '-section');
+            const toggle = document.getElementById(sectionName + '-toggle');
             
             if (section.classList.contains('hidden')) {
                 section.classList.remove('hidden');
@@ -1124,6 +1152,10 @@
                 section.classList.add('hidden');
                 toggle.textContent = '▼';
             }
+        }
+
+        function toggleRaceResults() {
+            toggleSection('race-results');
         }
 
         // OUT-status functions
