@@ -2820,6 +2820,8 @@ def race_results_page():
         # Check if competition has results
         has_results = len(competition_results[comp.id]['results']) > 0 or len(competition_results[comp.id]['holeshots']) > 0
         
+        print(f"DEBUG: Competition {comp.name} (ID: {comp.id}) - Results: {len(competition_results[comp.id]['results'])}, Holeshots: {len(competition_results[comp.id]['holeshots'])}, Has Results: {has_results}")
+        
         # Determine status
         if has_results:
             comp.status = "completed"
@@ -3535,6 +3537,18 @@ def clear_competition_results(competition_id):
         return jsonify({"error": "admin_only"}), 403
     
     print(f"DEBUG: clear_competition_results called for competition {competition_id}")
+    
+    # Get competition name for debugging
+    comp = Competition.query.get(competition_id)
+    comp_name = comp.name if comp else f"Unknown (ID: {competition_id})"
+    print(f"DEBUG: Clearing results for competition: {comp_name}")
+    
+    # Check what exists before deletion
+    existing_results = CompetitionResult.query.filter_by(competition_id=competition_id).count()
+    existing_holeshots = HoleshotResult.query.filter_by(competition_id=competition_id).count()
+    existing_scores = CompetitionScore.query.filter_by(competition_id=competition_id).count()
+    existing_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).count()
+    print(f"DEBUG: Before deletion - Results: {existing_results}, Holeshots: {existing_holeshots}, Scores: {existing_scores}, Out Status: {existing_out_status}")
     
     # Delete results for this specific competition
     deleted_results = CompetitionResult.query.filter_by(competition_id=competition_id).delete()
