@@ -671,16 +671,16 @@ def index():
                             "position": pick.predicted_position,
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
-                            "class": rider.class_name_name
+                            "class": rider.class_name
                         }
                         
                         # Separate by class
-                        if rider.class_name_name == "450cc":
+                        if rider.class_name == "450cc":
                             current_picks_450.append(pick_data)
-                        elif rider.class_name_name == "250cc":
+                        elif rider.class_name == "250cc":
                             current_picks_250.append(pick_data)
                         
-                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name_name})")
+                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
                 
                 # Process holeshot picks
                 current_holeshot_450 = None
@@ -688,17 +688,17 @@ def index():
                 for holeshot in holeshot_picks:
                     rider = Rider.query.get(holeshot.rider_id)
                     if rider:
-                        if rider.class_name_name == "450cc":
+                        if rider.class_name == "450cc":
                             current_holeshot_450 = {
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
-                                "class": rider.class_name_name
+                                "class": rider.class_name
                             }
-                        elif rider.class_name_name == "250cc":
+                        elif rider.class_name == "250cc":
                             current_holeshot_250 = {
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
-                                "class": rider.class_name_name
+                                "class": rider.class_name
                             }
                 
                 # Process wildcard pick
@@ -709,7 +709,7 @@ def index():
                         current_wildcard = {
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
-                            "class": rider.class_name_name,
+                            "class": rider.class_name,
                             "position": wildcard_pick.position
                         }
         except Exception as e:
@@ -1078,7 +1078,7 @@ def season_team_builder():
             riders_data.append({
                 'id': rider.id,
                 'name': rider.name,
-                'class': rider.class_name_name,
+                'class': rider.class_name,
                 'rider_number': rider.rider_number,
                 'bike_brand': rider.bike_brand,
                 'image_url': rider.image_url,
@@ -1647,7 +1647,7 @@ def admin_page():
         return {
             "id": rider.id,
             "name": rider.name,
-            "class_name": rider.class_name_name,
+            "class_name": rider.class_name,
             "rider_number": rider.rider_number,
             "bike_brand": rider.bike_brand,
             "coast_250": rider.coast_250
@@ -3206,7 +3206,7 @@ def save_picks():
             return jsonify({"error": "Förare är OUT för detta race"}), 400
 
         # 4b) Coast‑validering för 250cc
-        if rider.class_name_name == "250cc" and comp.coast_250 in ("east","west"):
+        if rider.class_name == "250cc" and comp.coast_250 in ("east","west"):
             # Tillåt endast exakt match eller 'both'
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error":"250-förare matchar inte denna coast"}), 400
@@ -4493,12 +4493,12 @@ def view_user_profile(user_id):
                                 "position": pick.predicted_position,
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
-                                "class": rider.class_name_name
+                                "class": rider.class_name
                             }
                             
-                            if rider.class_name_name == "450cc":
+                            if rider.class_name == "450cc":
                                 current_picks_450.append(pick_data)
-                            elif rider.class_name_name == "250cc":
+                            elif rider.class_name == "250cc":
                                 current_picks_250.append(pick_data)
                 else:
                     print(f"DEBUG: Picks not locked yet, hiding other user's picks for security")
@@ -6689,7 +6689,7 @@ def api_riders():
     return jsonify([{
         "id": rider.id,
         "name": rider.name,
-        "class": rider.class_name_name.replace("cc", ""),
+        "class": rider.class_name.replace("cc", ""),
         "number": rider.rider_number,
         "bike_brand": rider.bike_brand
     } for rider in riders])
