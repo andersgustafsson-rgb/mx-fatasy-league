@@ -1179,11 +1179,15 @@ def series_page(series_id):
         return redirect(url_for("login"))
     
     try:
+        print(f"DEBUG: series_page called with series_id: {series_id}")
+        
         # Get series info
         series = Series.query.get_or_404(series_id)
+        print(f"DEBUG: Found series: {series.name} (ID: {series.id})")
         
         # Get all competitions in this series
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        print(f"DEBUG: Found {len(competitions)} competitions for series {series.name}")
         
         # Get current date (use simulated date if available)
         current_date = get_today()
@@ -1282,6 +1286,7 @@ def series_page(series_id):
             picks_locked = is_picks_locked(next_race.id)
             picks_open = not picks_locked
         
+        print(f"DEBUG: Rendering series_page.html for {series.name}")
         return render_template('series_page.html',
                              series=series,
                              competitions=competitions,
@@ -1290,7 +1295,9 @@ def series_page(series_id):
                              current_date=current_date)
         
     except Exception as e:
-        print(f"Error in series_page: {e}")
+        print(f"ERROR in series_page: {e}")
+        import traceback
+        print(f"ERROR traceback: {traceback.format_exc()}")
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
