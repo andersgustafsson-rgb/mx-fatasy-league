@@ -3181,9 +3181,11 @@ def save_picks():
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
 
     # 4) Rensa tidigare picks/holeshot för användaren i denna tävling
+    # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
     deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    print(f"DEBUG: Deleted {deleted_picks} old picks and {deleted_holeshots} old holeshots")
+    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
 
     # 5) Spara Top-6 picks
     saved_picks = 0
@@ -7208,7 +7210,7 @@ def calculate_smx_qualification_points():
         
         # Filter 250cc results by coast if applicable
         if rider.class_name == '250cc':
-            sx_results = [r for r in sx_results if r.competition.coast_250 == rider.coast_250]
+            sx_results = [r for r in sx_results if hasattr(r, 'competition') and r.competition.coast_250 == rider.coast_250]
         
         # Get Motocross results for this rider (considering coast for 250cc)
         mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
@@ -7218,7 +7220,7 @@ def calculate_smx_qualification_points():
         
         # Filter 250cc results by coast if applicable
         if rider.class_name == '250cc':
-            mx_results = [r for r in mx_results if r.competition.coast_250 == rider.coast_250]
+            mx_results = [r for r in mx_results if hasattr(r, 'competition') and r.competition.coast_250 == rider.coast_250]
         
         # Calculate points from Supercross (top 17 rounds)
         sx_points = []
