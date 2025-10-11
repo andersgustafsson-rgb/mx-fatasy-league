@@ -140,30 +140,23 @@
 
         <!-- Tab Navigation -->
         <div class="cyberpunk-card rounded-lg mb-6">
-            <div class="border-b border-cyan-400">
-                <nav class="flex space-x-8 px-6">
-                    <button class="tab-btn active" data-tab="race-management">
-                        🏁 Race Management
-                    </button>
-                    <button class="tab-btn" data-tab="user-management">
-                        👥 Användare
-                    </button>
-                    <button class="tab-btn" data-tab="system-tools">
-                        🔧 Systemverktyg
-                    </button>
-                    <button class="tab-btn" data-tab="countdown-test">
-                        ⏰ Countdown Test
-                    </button>
-                </nav>
+            <!-- Admin Sections Header -->
+            <div class="border-b border-cyan-400 px-6 py-4">
+                <h2 class="text-xl font-bold text-cyan-400 neon-text">Admin Panel - Kollapsbara Sektioner</h2>
+                <p class="text-gray-400 text-sm mt-1">Klicka på sektioner för att expandera/kollapsa</p>
             </div>
         </div>
 
-        <!-- Tab Panels -->
+        <!-- Admin Sections -->
         <div class="space-y-6">
-            <!-- Race Management Tab -->
-            <div id="race-management" class="tab-panel active">
-                <div class="cyberpunk-card rounded-lg p-6">
-                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">🏁 Race Management</h2>
+            <!-- Tävlingssimulering Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('race-simulation')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">🏁 Tävlingssimulering</span>
+                    <span id="race-simulation-toggle">▼</span>
+                </button>
+                
+                <div id="race-simulation-section" class="hidden p-6">
                     
                     <!-- Simulated Date Section -->
                     <div class="mb-6 p-4 bg-gray-800 border-l-4 border-cyan-400 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);">
@@ -304,10 +297,14 @@
                 </div>
             </div>
 
-            <!-- User Management Tab -->
-            <div id="user-management" class="tab-panel">
-                <div class="cyberpunk-card rounded-lg p-6">
-                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">👥 Användarhantering</h2>
+            <!-- Användarhantering Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('user-management')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">👥 Användarhantering</span>
+                    <span id="user-management-toggle">▼</span>
+                </button>
+                
+                <div id="user-management-section" class="hidden p-6">
                     
                     <div class="space-y-4">
                         <a href="/admin/users" class="inline-block cyberpunk-button px-4 py-2 rounded-md">
@@ -323,10 +320,14 @@
                 </div>
             </div>
 
-            <!-- System Tools Tab -->
-            <div id="system-tools" class="tab-panel">
-                <div class="cyberpunk-card rounded-lg p-6">
-                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">🔧 Systemverktyg</h2>
+            <!-- Systemverktyg Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('system-tools')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">🔧 Systemverktyg</span>
+                    <span id="system-tools-toggle">▼</span>
+                </button>
+                
+                <div id="system-tools-section" class="hidden p-6">
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-3">
@@ -453,10 +454,14 @@
                 </div>
             </div>
 
-            <!-- Countdown Test Tab -->
-            <div id="countdown-test" class="tab-panel">
-                <div class="cyberpunk-card rounded-lg p-6">
-                    <h2 class="text-xl font-semibold text-cyan-400 neon-text mb-4">⏰ Countdown Test</h2>
+            <!-- Countdown Test Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('countdown-test')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">⏰ Countdown Test</span>
+                    <span id="countdown-test-toggle">▼</span>
+                </button>
+                
+                <div id="countdown-test-section" class="hidden p-6">
                     
                     <div class="space-y-4">
                         <a href="/test_countdown_page" class="inline-block cyberpunk-button px-4 py-2 rounded-md">
@@ -491,23 +496,9 @@
 
     <script>
         // Tab functionality
-        function initTabs() {
-            const tabBtns = document.querySelectorAll('.tab-btn');
-            const tabPanels = document.querySelectorAll('.tab-panel');
-
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const targetTab = btn.getAttribute('data-tab');
-                    
-                    // Remove active class from all tabs and panels
-                    tabBtns.forEach(b => b.classList.remove('active'));
-                    tabPanels.forEach(p => p.classList.remove('active'));
-                    
-                    // Add active class to clicked tab and corresponding panel
-                    btn.classList.add('active');
-                    document.getElementById(targetTab).classList.add('active');
-                });
-            });
+        function initSections() {
+            // All sections start collapsed by default
+            console.log('Admin sections initialized - all collapsed by default');
         }
 
         // Make coast map available to JavaScript
@@ -516,9 +507,9 @@
         let isSaving = false; // Prevent multiple simultaneous saves
         let originalOutStatus = {}; // Store original OUT status to detect changes
         
-        // Initialize tabs when page loads
+        // Initialize sections when page loads
         document.addEventListener('DOMContentLoaded', () => {
-            initTabs();
+            initSections();
             loadRaces();
             loadRiders();
             setupCompetitionListener();
