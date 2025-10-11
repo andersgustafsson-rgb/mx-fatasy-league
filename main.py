@@ -1313,15 +1313,34 @@ def series_page(series_id):
         
         # Get results for each competition to show status
         competition_results = {}
+        user_picks_status = {}
         for comp in competitions:
             results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
             competition_results[comp.id] = results
+            
+            # Check if current user has made picks for this competition
+            if "user_id" in session:
+                user_id = session["user_id"]
+                race_picks = RacePick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
+                holeshot_picks = HoleshotPick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
+                wildcard_pick = WildcardPick.query.filter_by(user_id=user_id, competition_id=comp.id).first()
+                
+                has_picks = race_picks > 0 or holeshot_picks > 0 or wildcard_pick is not None
+                user_picks_status[comp.id] = {
+                    'has_picks': has_picks,
+                    'race_picks_count': race_picks,
+                    'holeshot_picks_count': holeshot_picks,
+                    'has_wildcard': wildcard_pick is not None
+                }
+            else:
+                user_picks_status[comp.id] = {'has_picks': False}
         
         print(f"DEBUG: Rendering series_page.html for {series.name}")
         return render_template('series_page.html',
                              series=series,
                              competitions=competitions,
                              competition_results=competition_results,
+                             user_picks_status=user_picks_status,
                              next_race=next_race,
                              picks_open=picks_open,
                              current_date=current_date)

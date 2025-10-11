@@ -123,10 +123,23 @@
                         </div>
                         <div class="bg-black bg-opacity-50 rounded-lg p-4">
                             <h3 class="text-white font-semibold mb-2">⏰ Picks Status</h3>
+                            {% set user_has_picks = user_picks_status[next_race.id].has_picks %}
                             {% if picks_open %}
-                                <p class="text-green-400 text-lg font-bold">✅ Picks Öppna</p>
+                                {% if user_has_picks %}
+                                    <p class="text-cyan-400 text-lg font-bold">✅ Picks Klara</p>
+                                    <p class="text-sm text-gray-300">Du har gjort dina picks</p>
+                                {% else %}
+                                    <p class="text-green-400 text-lg font-bold">✅ Picks Öppna</p>
+                                    <p class="text-sm text-gray-300">Gör dina picks nu</p>
+                                {% endif %}
                             {% else %}
-                                <p class="text-red-400 text-lg font-bold">🔒 Picks Stängda</p>
+                                {% if user_has_picks %}
+                                    <p class="text-cyan-400 text-lg font-bold">✅ Picks Klara</p>
+                                    <p class="text-sm text-gray-300">Du har gjort dina picks</p>
+                                {% else %}
+                                    <p class="text-red-400 text-lg font-bold">🔒 Picks Stängda</p>
+                                    <p class="text-sm text-gray-300">Du har inte gjort picks</p>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </div>
@@ -135,14 +148,14 @@
                         {% if next_race.id == 9999 %}
                         <!-- Test Race - link to test race picks -->
                         <a href="/race_picks_test" 
-                           class="inline-block bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
-                            🧪 Test Race Picks
+                           class="inline-block {% if user_has_picks %}bg-cyan-600 hover:bg-cyan-700{% else %}bg-yellow-600 hover:bg-yellow-700{% endif %} text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
+                            {% if user_has_picks %}🧪 Visa Test Picks{% else %}🧪 Test Race Picks{% endif %}
                         </a>
                         {% else %}
                         <!-- Real Race or Selected Competition from Admin -->
                         <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}" 
-                           class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
-                            🏁 Make Your Picks
+                           class="inline-block {% if user_has_picks %}bg-cyan-600 hover:bg-cyan-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
+                            {% if user_has_picks %}🏁 Visa Mina Picks{% else %}🏁 Make Your Picks{% endif %}
                         </a>
                         {% endif %}
                     {% else %}
@@ -204,6 +217,8 @@
                                     <td class="px-4 py-3 text-white">{{ comp.name }}</td>
                                     <td class="px-4 py-3">
                                         {% set has_results = competition_results[comp.id]|length > 0 %}
+                                        {% set user_has_picks = user_picks_status[comp.id].has_picks %}
+                                        
                                         {% if has_results %}
                                             <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-600 text-white">Avslutad</span>
                                         {% elif comp.event_date == current_date %}
@@ -212,6 +227,12 @@
                                             <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-600 text-white">Nästa</span>
                                         {% else %}
                                             <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">Kommande</span>
+                                        {% endif %}
+                                        
+                                        {% if user_has_picks and not has_results %}
+                                            <div class="mt-1">
+                                                <span class="px-2 py-1 rounded text-xs font-semibold bg-cyan-600 text-white">✅ Picks Klara</span>
+                                            </div>
                                         {% endif %}
                                     </td>
                                     <td class="px-4 py-3 text-center">
