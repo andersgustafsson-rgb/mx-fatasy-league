@@ -1267,8 +1267,15 @@ def series_page(series_id):
         # Find next race (use test race if in simulation mode)
         next_race = test_race if simulation_active else None
         if not next_race:
+            # Find the first competition that doesn't have results yet (hasn't been run)
             for comp in competitions:
-                if comp.event_date >= current_date:
+                # Check if this competition has results
+                has_results = (
+                    CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+                )
+                
+                # If no results, this is the next race to run
+                if not has_results:
                     next_race = comp
                     break
         
@@ -1277,19 +1284,39 @@ def series_page(series_id):
         if simulation_active:
             # In test mode, picks are always open
             picks_open = True
+        elif next_race:
+            # For real races, picks are open if:
+            # 1. The next race doesn't have results yet (hasn't been run)
+            # 2. The race is not locked (not within 2 hours of start)
+            
+            # Check if next race has results
+            has_results = (
+                CompetitionResult.query.filter_by(competition_id=next_race.id).first() is not None
+            )
+            
+            if not has_results:
+                # Race hasn't been run yet, check if picks are locked
+                picks_locked = is_picks_locked(next_race.id)
+                picks_open = not picks_locked
+            else:
+                # Race has been run, picks should be closed
+                picks_open = False
         elif series.start_date:
+            # No next race found, check if series hasn't started yet
             days_until_start = (series.start_date - current_date).days
             picks_open = days_until_start <= 7  # Open 1 week before season start
         
-        # If series is active, check if picks are locked for next race
-        if next_race and picks_open and not simulation_active:
-            picks_locked = is_picks_locked(next_race.id)
-            picks_open = not picks_locked
+        # Get results for each competition to show status
+        competition_results = {}
+        for comp in competitions:
+            results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
+            competition_results[comp.id] = results
         
         print(f"DEBUG: Rendering series_page.html for {series.name}")
         return render_template('series_page.html',
                              series=series,
                              competitions=competitions,
+                             competition_results=competition_results,
                              next_race=next_race,
                              picks_open=picks_open,
                              current_date=current_date)
