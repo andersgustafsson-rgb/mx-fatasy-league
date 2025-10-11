@@ -649,9 +649,12 @@
             }
             
             addObstacle() {
-                // Create only rounded jumps with different heights
-                const heights = [25, 35, 45, 55]; // Different heights for variety
-                const height = heights[Math.floor(Math.random() * heights.length)];
+                // Create only rounded jumps with heights that increase with game speed
+                const baseHeights = [25, 35, 45, 55]; // Base heights for variety
+                const speedMultiplier = Math.min(1 + (this.gameSpeed - 3) * 0.3, 2.5); // Increase height with speed, max 2.5x
+                
+                const baseHeight = baseHeights[Math.floor(Math.random() * baseHeights.length)];
+                const height = Math.round(baseHeight * speedMultiplier);
                 const width = 40; // Consistent width
                 
                 const obstacle = {
