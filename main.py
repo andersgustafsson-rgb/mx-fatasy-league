@@ -6811,6 +6811,37 @@ def reset_cross_dino_highscores():
         db.session.rollback()
         return jsonify({"error": "Failed to reset highscores"}), 500
 
+@app.route("/api/smx_qualification")
+def get_smx_qualification():
+    """Get current SMX qualification standings"""
+    try:
+        top_20 = calculate_smx_qualification_points()
+        
+        qualification_data = []
+        for i, (rider_id, data) in enumerate(top_20, 1):
+            rider = data['rider']
+            qualification_data.append({
+                'position': i,
+                'rider_id': rider.id,
+                'rider_name': rider.name,
+                'rider_number': rider.rider_number,
+                'bike_brand': rider.bike_brand,
+                'total_points': data['total_points'],
+                'sx_points': data['sx_points'],
+                'mx_points': data['mx_points'],
+                'qualified': i <= 20
+            })
+        
+        return jsonify({
+            'success': True,
+            'qualification': qualification_data,
+            'total_qualified': len(qualification_data)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in get_smx_qualification: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/test_countdown")
 def test_countdown():
     """Test countdown with simulated time - for development only"""
@@ -7107,6 +7138,76 @@ def get_current_time():
     
     print(f"DEBUG: Using real time: {datetime.utcnow()}")
     return datetime.utcnow()
+
+def calculate_smx_qualification_points():
+    """Calculate SMX qualification points for all riders based on Supercross and Motocross results"""
+    print("DEBUG: Calculating SMX qualification points...")
+    
+    # Get all riders
+    riders = Rider.query.all()
+    smx_points = {}
+    
+    for rider in riders:
+        total_points = 0
+        
+        # Get Supercross results for this rider
+        sx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+            CompetitionResult.rider_id == rider.id,
+            Series.name.ilike('%supercross%')
+        ).all()
+        
+        # Get Motocross results for this rider  
+        mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+            CompetitionResult.rider_id == rider.id,
+            Series.name.ilike('%motocross%')
+        ).all()
+        
+        # Calculate points from Supercross (top 17 rounds)
+        sx_points = []
+        for result in sx_results:
+            if result.position and result.position <= 20:  # Only top 20 get points
+                points = get_smx_qualification_points(result.position)
+                sx_points.append(points)
+        
+        # Take best 17 rounds from Supercross
+        sx_points.sort(reverse=True)
+        total_points += sum(sx_points[:17])
+        
+        # Calculate points from Motocross (top 11 rounds)
+        mx_points = []
+        for result in mx_results:
+            if result.position and result.position <= 20:  # Only top 20 get points
+                points = get_smx_qualification_points(result.position)
+                mx_points.append(points)
+        
+        # Take best 11 rounds from Motocross
+        mx_points.sort(reverse=True)
+        total_points += sum(mx_points[:11])
+        
+        smx_points[rider.id] = {
+            'rider': rider,
+            'total_points': total_points,
+            'sx_points': sum(sx_points[:17]),
+            'mx_points': sum(mx_points[:11])
+        }
+    
+    # Sort by total points and get top 20
+    sorted_riders = sorted(smx_points.items(), key=lambda x: x[1]['total_points'], reverse=True)
+    top_20 = sorted_riders[:20]
+    
+    print(f"DEBUG: SMX qualification calculated. Top 20 riders:")
+    for i, (rider_id, data) in enumerate(top_20, 1):
+        print(f"  {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
+    
+    return top_20
+
+def get_smx_qualification_points(position):
+    """Get SMX qualification points based on position (1st = 25 points, 2nd = 22, etc.)"""
+    points_map = {
+        1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
+        11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1
+    }
+    return points_map.get(position, 0)
 
 def is_picks_locked(competition):
     """Check if picks are locked for a specific competition"""
