@@ -6826,7 +6826,7 @@ def get_smx_qualification():
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
                 'bike_brand': rider.bike_brand,
-                'class': rider.class,
+                'rider_class': rider.class,
                 'coast_250': rider.coast_250 if rider.class == '250cc' else None,
                 'total_points': data['total_points'],
                 'sx_points': data['sx_points'],
@@ -6877,7 +6877,7 @@ def get_series_leaders():
                 'position': i,
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
-                'class': rider.class,
+                'rider_class': rider.class,
                 'coast_250': rider.coast_250 if rider.class == '250cc' else None,
                 'total_points': data['total_points']
             })
