@@ -223,20 +223,6 @@
                 <div class="relative z-10">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🚀 Snabba Åtgärder</h2>
                 
-                <!-- Current Race Track Image with Race Picks Button -->
-                <div class="mb-4">
-                  <div class="relative rounded-lg overflow-hidden shadow-lg">
-                    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
-                    <div class="relative z-10 p-4 text-center">
-                      <h3 class="text-white font-bold text-lg mb-2">🏁 {{ upcoming_race.name if upcoming_race else 'Race' }}</h3>
-                      <div id="race-picks-button">
-                        <a href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) if upcoming_race else '#' }}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg text-sm">
-                          🏁 Make Your Picks
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
                 
                 <!-- Other Quick Actions -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -749,7 +735,6 @@
     function updateRealPicksStatus(data) {
       const lockedStatus = document.getElementById('real-picks-locked-status');
       const openStatus = document.getElementById('real-picks-open-status');
-      const racePicksButton = document.getElementById('race-picks-button');
       const raceResultsButton = document.getElementById('race-results-button');
       const picksDeadlineStatus = document.getElementById('picks-deadline-status');
       
@@ -757,10 +742,6 @@
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
         
-        // Disable Race Picks button
-        if (racePicksButton) {
-          racePicksButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Picks (Låsta)</span>';
-        }
         
         // Disable Race Results button
         if (raceResultsButton) {
@@ -776,11 +757,6 @@
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
         
-        // Enable Race Picks button
-        if (racePicksButton) {
-          const racePicksUrl = window.racePicksUrl || '#';
-          racePicksButton.innerHTML = `<a href="${racePicksUrl}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">🏁 Race Picks</a>`;
-        }
         
         // Enable Race Results button
         if (raceResultsButton) {
@@ -798,7 +774,6 @@
     function updateTestPicksStatus(data) {
       const lockedStatus = document.getElementById('test-picks-locked-status');
       const openStatus = document.getElementById('test-picks-open-status');
-      const racePicksButton = document.getElementById('race-picks-button');
       const raceResultsButton = document.getElementById('race-results-button');
       const picksDeadlineStatus = document.getElementById('picks-deadline-status');
       
@@ -806,10 +781,6 @@
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
         
-        // Disable Race Picks button
-        if (racePicksButton) {
-          racePicksButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Picks (Låsta)</span>';
-        }
         
         // Disable Race Results button
         if (raceResultsButton) {
@@ -825,11 +796,6 @@
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
         
-        // Enable Race Picks button
-        if (racePicksButton) {
-          const racePicksUrl = window.racePicksUrl || '#';
-          racePicksButton.innerHTML = `<a href="${racePicksUrl}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">🏁 Race Picks</a>`;
-        }
         
         // Enable Race Results button
         if (raceResultsButton) {
