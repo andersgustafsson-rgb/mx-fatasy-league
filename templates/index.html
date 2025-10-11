@@ -1006,14 +1006,14 @@
             statusText = 'Aktiv';
             statusColor = 'text-green-400';
             buttonClass = 'bg-green-600 hover:bg-green-700';
-            buttonText = 'Race Picks';
+            buttonText = 'Gå till serie';
             isClickable = true;
           } else if (daysUntilStart && daysUntilStart > 0) {
             if (daysUntilStart <= 7) {
               statusText = `Öppnar om ${daysUntilStart} dag${daysUntilStart !== 1 ? 'ar' : ''}`;
               statusColor = 'text-yellow-400';
               buttonClass = 'bg-yellow-600 hover:bg-yellow-700';
-              buttonText = 'Gå till picks';
+              buttonText = 'Gå till serie';
               isClickable = true;
             } else {
               statusText = `Startar om ${daysUntilStart} dagar`;
@@ -1031,7 +1031,7 @@
           }
           
           const buttonHtml = isClickable 
-            ? `<a href="${buttonText === 'Race Picks' ? (nextRace ? `/race_picks/${nextRace.id}` : '/race_picks_test') : `/series/${serie.id}`}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
+            ? `<a href="/series/${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
             : `<span class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</span>`;
           
           return `
