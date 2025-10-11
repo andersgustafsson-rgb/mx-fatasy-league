@@ -29,6 +29,52 @@
       background-position: center;
     }
     
+    /* Racing Logo Styling */
+    .racing-logo {
+      background: linear-gradient(45deg, #ff6b35, #f7931e, #ff6b35);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(255, 107, 53, 0.8);
+      animation: racing-glow 3s ease-in-out infinite alternate;
+      position: relative;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    
+    .racing-logo::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -10px;
+      right: -10px;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 107, 53, 0.1), transparent);
+      animation: racing-stripes 2s linear infinite;
+      z-index: -1;
+    }
+    
+    @keyframes racing-glow {
+      0% {
+        text-shadow: 0 0 20px rgba(255, 107, 53, 0.8), 0 0 40px rgba(255, 107, 53, 0.4);
+        background-position: 0% 50%;
+      }
+      100% {
+        text-shadow: 0 0 30px rgba(255, 107, 53, 1), 0 0 60px rgba(255, 107, 53, 0.6);
+        background-position: 100% 50%;
+      }
+    }
+    
+    @keyframes racing-stripes {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(100%);
+      }
+    }
+    
     /* Countdown Widget Animations */
     #countdown-widget {
       box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
@@ -97,7 +143,7 @@
       <div class="mb-6 md:mb-8">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <header class="text-center sm:text-left">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-yellow-400">MX Fantasy League</h1>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold font-rajdhani racing-logo">MX Fantasy League</h1>
             <div class="flex items-center gap-3 mt-2">
               {% if user_profile_picture %}
                 {% if user_profile_picture.startswith('data:') %}
