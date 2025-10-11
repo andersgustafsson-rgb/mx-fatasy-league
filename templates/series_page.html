@@ -212,11 +212,29 @@
                                         {% endif %}
                                     </td>
                                     <td class="px-4 py-3 text-center">
-                                        {% if comp.event_date >= current_date %}
-                                            <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
-                                               class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">
-                                                Picks
+                                        {% if comp.id == next_race.id and picks_open %}
+                                            {% if next_race.id == 9999 %}
+                                            <a href="/race_picks_test" 
+                                               class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-xs">
+                                                🧪 Test Picks
                                             </a>
+                                            {% else %}
+                                            <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
+                                               class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs">
+                                                🏁 Picks
+                                            </a>
+                                            {% endif %}
+                                        {% elif comp.event_date >= current_date %}
+                                            {% if series.start_date %}
+                                                {% set days_until_start = (series.start_date - current_date).days %}
+                                                {% if days_until_start > 7 %}
+                                                    <span class="text-yellow-400 text-xs">Upcoming</span>
+                                                {% else %}
+                                                    <span class="text-blue-400 text-xs">Soon</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-blue-400 text-xs">Upcoming</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-gray-400 text-xs">-</span>
                                         {% endif %}
