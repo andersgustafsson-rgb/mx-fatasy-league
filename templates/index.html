@@ -997,16 +997,27 @@
             isClickable = true; // Always allow viewing schedule
           }
           
-          const cardClass = isClickable 
-            ? `bg-gray-800 border border-cyan-400 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition-all duration-300 hover:border-cyan-300 hover:shadow-lg` 
-            : `bg-gray-800 border border-cyan-400 rounded-lg p-4`;
+          // Set background image based on series name
+          let backgroundImage = '';
+          if (serie.name.toLowerCase().includes('supercross')) {
+            backgroundImage = 'url("/static/images/2024-jett-1.jpg")';
+          } else if (serie.name.toLowerCase().includes('motocross')) {
+            backgroundImage = 'url("/static/images/deegan.jpg")';
+          } else if (serie.name.toLowerCase().includes('smx')) {
+            backgroundImage = 'url("/static/images/smx.jpg")';
+          }
           
-          const cardStyle = isClickable 
-            ? `box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);` 
-            : `box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`;
+          const cardClass = isClickable 
+            ? `border border-cyan-400 rounded-lg p-4 cursor-pointer hover:border-cyan-300 hover:shadow-lg transition-all duration-300 relative overflow-hidden` 
+            : `border border-cyan-400 rounded-lg p-4 relative overflow-hidden`;
+          
+          const cardStyle = backgroundImage 
+            ? `background-image: ${backgroundImage}; background-size: cover; background-position: center; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`
+            : `background-color: #1a202c; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`;
           
           const cardContent = `
-            <div class="text-center">
+            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="relative z-10 text-center">
               <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${new Date(nextRace.date).toLocaleDateString('sv-SE')}</p>` : ''}
