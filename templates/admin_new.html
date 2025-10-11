@@ -222,7 +222,7 @@
                     </div>
 
                     <div id="race-results-section" class="hidden">
-                        <form method="POST" action="/admin/submit_results" onsubmit="return validateResults()">
+                        <form method="POST" action="/admin/submit_results" onsubmit="return validateResults()" onsubmit="return submitResultsAndReload()">
                             <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
                             
                             <!-- Holeshot Winners -->
@@ -639,6 +639,54 @@
         }
 
         // Core admin functions from old admin page
+        async function submitResultsAndReload() {
+            // First validate results
+            if (!validateResults()) {
+                return false;
+            }
+            
+            // Submit the form
+            const form = document.querySelector('form[action="/admin/submit_results"]');
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/admin/submit_results', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    // Reload the results after successful submission
+                    await loadSavedResults();
+                    // Update dropdowns to show all available riders
+                    updateAllDropdowns();
+                    showToast("Resultat sparade!", true);
+                    return false; // Prevent default form submission
+                } else {
+                    showToast("Fel vid sparande av resultat", false);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error submitting results:', error);
+                showToast("Fel vid sparande av resultat", false);
+                return false;
+            }
+        }
+
+        function updateAllDropdowns() {
+            // Update all dropdowns to show all available riders
+            console.log('DEBUG: Updating all dropdowns after results submission');
+            
+            // Update 450cc dropdowns
+            validateAndUpdateDropdowns('450');
+            
+            // Update 250cc dropdowns  
+            validateAndUpdateDropdowns('250');
+            
+            // Update holeshot dropdowns
+            updateHoleshotDropdowns();
+        }
+
         async function loadSavedResults() {
             syncHiddenCompetitionId();
             const comp = document.getElementById("competition-select").value;
