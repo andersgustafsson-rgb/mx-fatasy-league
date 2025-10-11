@@ -2270,8 +2270,27 @@ def fix_database_tables():
             print(f"DEBUG: Global simulation error: {global_error}")
             print(f"DEBUG: Error type: {type(global_error)}")
         
+        # Fix all 2025 competitions to 2026
+        print("DEBUG: Fixing 2025 competitions to 2026...")
+        try:
+            competitions_2025 = Competition.query.filter(Competition.event_date.like('2025-%')).all()
+            print(f"DEBUG: Found {len(competitions_2025)} competitions with 2025 dates")
+            
+            for comp in competitions_2025:
+                old_date = comp.event_date
+                # Convert 2025 to 2026
+                new_date = comp.event_date.replace(year=2026)
+                comp.event_date = new_date
+                print(f"DEBUG: Updated {comp.name}: {old_date} -> {new_date}")
+            
+            db.session.commit()
+            print(f"DEBUG: Updated {len(competitions_2025)} competitions from 2025 to 2026")
+        except Exception as date_error:
+            print(f"DEBUG: Date fix error: {date_error}")
+            db.session.rollback()
+        
         print("DEBUG: Database fix completed successfully")
-        return jsonify({'success': True, 'message': 'Database tables and columns fixed'})
+        return jsonify({'success': True, 'message': f'Database tables and columns fixed. Updated {len(competitions_2025) if "competitions_2025" in locals() else 0} competitions from 2025 to 2026'})
         
     except Exception as e:
         print(f"DEBUG: Main error in fix_database_tables: {e}")
