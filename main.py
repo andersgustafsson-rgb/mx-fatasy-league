@@ -1792,6 +1792,15 @@ def create_default_series_2025():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
+    # First, delete any old 2025 series
+    old_2025_series = Series.query.filter_by(year=2025).all()
+    if old_2025_series:
+        print(f"Deleting {len(old_2025_series)} old 2025 series")
+        for series in old_2025_series:
+            db.session.delete(series)
+        db.session.commit()
+        print("Deleted old 2025 series")
+    
     # Check if series already exist and update them
     existing = Series.query.filter_by(year=2026).first()
     if existing:

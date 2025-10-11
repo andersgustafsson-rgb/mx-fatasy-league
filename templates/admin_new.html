@@ -362,7 +362,7 @@
                         <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Series</h3>
                             <button onclick="createDefaultSeries2025()" class="block w-full cyberpunk-button px-4 py-2 rounded-md text-center">
-                                🏁 Skapa SMX 2025 Serier
+                                🏁 Skapa SMX 2026 Serier
                             </button>
                             <button onclick="showSeriesManager()" class="block w-full cyberpunk-button px-4 py-2 rounded-md text-center">
                                 ⚙️ Hantera Serier
@@ -372,10 +372,10 @@
                         <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">Competitions</h3>
                             <button onclick="createMotocrossCompetitions()" class="block w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-center">
-                                🏍️ Skapa Motocross 2025
+                                🏍️ Skapa Motocross 2026
                             </button>
                             <button onclick="createSMXFinalsCompetitions()" class="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-center">
-                                🏆 Skapa SMX Finals 2025
+                                🏆 Skapa SMX Finals 2026
                             </button>
                         </div>
                         
@@ -1186,7 +1186,7 @@
 
         // SMX Series Management Functions
         async function createDefaultSeries2025() {
-            if (!confirm('Skapa standard SMX-serier för 2025? Detta skapar Supercross, Motocross och SMX Finals.')) {
+            if (!confirm('Skapa standard SMX-serier för 2026? Detta skapar Supercross, Motocross och SMX Finals.')) {
                 return;
             }
             
@@ -1201,7 +1201,7 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    alert(`✅ SMX-serier skapade för 2025!\n\n${result.series_created.map(s => `• ${s.name}`).join('\n')}`);
+                    alert(`✅ SMX-serier skapade för 2026!\n\n${result.series_created.map(s => `• ${s.name}`).join('\n')}`);
                 } else {
                     alert(`❌ Fel: ${result.error}`);
                 }
@@ -1241,11 +1241,11 @@
                             <form id="series-form" class="space-y-4">
                                 <div>
                                     <label class="block text-sm font-medium text-cyan-300 mb-1">Namn</label>
-                                    <input type="text" id="series-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" placeholder="t.ex. Supercross 2025" required>
+                                    <input type="text" id="series-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" placeholder="t.ex. Supercross 2026" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-cyan-300 mb-1">År</label>
-                                    <input type="number" id="series-year" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" value="2025" required>
+                                    <input type="number" id="series-year" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" value="2026" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-cyan-300 mb-1">Startdatum</label>
@@ -1355,7 +1355,7 @@
                         alert('✅ Serie skapad!');
                         loadSeriesList();
                         document.getElementById('series-form').reset();
-                        document.getElementById('series-year').value = '2025';
+                        document.getElementById('series-year').value = '2026';
                     } else {
                         alert(`❌ Fel: ${result.error}`);
                     }
@@ -1392,7 +1392,7 @@
         }
         
         async function createMotocrossCompetitions() {
-            if (!confirm('Skapa alla Motocross competitions för 2025?\n\nDetta skapar 11 Motocross races från maj till augusti.')) {
+            if (!confirm('Skapa alla Motocross competitions för 2026?\n\nDetta skapar 11 Motocross races från maj till augusti.')) {
                 return;
             }
             
@@ -1418,7 +1418,7 @@
         }
         
         async function createSMXFinalsCompetitions() {
-            if (!confirm('Skapa SMX Finals competitions för 2025?\n\nDetta skapar 3 SMX races (Playoff 1, Playoff 2, Final) i september.')) {
+            if (!confirm('Skapa SMX Finals competitions för 2026?\n\nDetta skapar 3 SMX races (Playoff 1, Playoff 2, Final) i september.')) {
                 return;
             }
             
