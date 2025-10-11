@@ -737,18 +737,18 @@
                                rect1.y + rect1.height - margin > rect2.y + 8;
                                
                     case 'barrier':
-                        // Barrier requires precise timing
+                        // Rounded barriers are more forgiving - only check the rounded top part
                         return rect1.x + margin < rect2.x + rect2.width - margin &&
                                rect1.x + rect1.width - margin > rect2.x + margin &&
-                               rect1.y + margin < rect2.y + rect2.height - margin &&
-                               rect1.y + rect1.height - margin > rect2.y + margin;
+                               rect1.y + margin < rect2.y + rect2.height/2 + 5 && // Only check top half (rounded part)
+                               rect1.y + rect1.height - margin > rect2.y + 5;
                                
                     case 'double':
-                        // Double jump is challenging
+                        // Rounded double jump - more forgiving
                         return rect1.x + margin < rect2.x + rect2.width - margin &&
                                rect1.x + rect1.width - margin > rect2.x + margin &&
-                               rect1.y + margin < rect2.y + rect2.height - margin &&
-                               rect1.y + rect1.height - margin > rect2.y + margin;
+                               rect1.y + margin < rect2.y + rect2.height/2 + 5 && // Only check top half (rounded part)
+                               rect1.y + rect1.height - margin > rect2.y + 5;
                                
                     default:
                         // Default collision
@@ -988,9 +988,16 @@
                             break;
                             
                         case 'barrier':
-                            // Simple rectangular barrier
+                            // Rounded half-circle barrier
                             this.ctx.fillStyle = '#8B4513';
-                            this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                            this.ctx.beginPath();
+                            // Draw rounded top (half circle)
+                            this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, obstacle.height/2, Math.PI, 0, false);
+                            // Draw straight bottom
+                            this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                            this.ctx.lineTo(obstacle.x, obstacle.y + obstacle.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
                             
                             // Add shadow
                             this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -998,9 +1005,16 @@
                             break;
                             
                         case 'double':
-                            // Double jump obstacle
+                            // Rounded half-circle for double jump
                             this.ctx.fillStyle = '#8B4513';
-                            this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                            this.ctx.beginPath();
+                            // Draw rounded top (half circle)
+                            this.ctx.arc(obstacle.x + obstacle.width/2, obstacle.y + obstacle.height/2, obstacle.height/2, Math.PI, 0, false);
+                            // Draw straight bottom
+                            this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                            this.ctx.lineTo(obstacle.x, obstacle.y + obstacle.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
                             
                             // Add shadow
                             this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
