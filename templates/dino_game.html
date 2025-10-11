@@ -560,7 +560,7 @@
                 this.gameRunning = true;
                 this.gamePaused = false;
                 this.score = 0;
-                this.gameSpeed = 2;
+                this.gameSpeed = 3; // Faster starting speed
                 this.cross.y = this.cross.groundY - this.cross.height;
                 this.cross.velocityY = 0;
                 this.cross.isJumping = false;
@@ -640,11 +640,11 @@
                 }
                 
                 
-                // Increase game speed and obstacle frequency
-                if (this.score > 0 && this.score % 100 === 0) {
-                    this.gameSpeed += 0.1;
+                // Increase game speed and obstacle frequency gradually
+                if (this.score > 0 && this.score % 50 === 0) {
+                    this.gameSpeed += 0.05; // Smaller increments for smoother progression
                     // Make obstacles more frequent as game gets faster, but not too tight
-                    this.obstacleInterval = Math.max(80, this.obstacleInterval - 2);
+                    this.obstacleInterval = Math.max(80, this.obstacleInterval - 1);
                 }
             }
             
@@ -657,46 +657,46 @@
                 
                 switch(type) {
                     case 'jump':
-                        // Realistic jump with landing area
+                        // Realistic jump with landing area - made larger
                         obstacle = {
                             x: this.width,
-                            y: this.height - 40 - 20, // Ground level
-                            width: 40,
-                            height: 40,
+                            y: this.height - 50 - 20, // Ground level
+                            width: 50,
+                            height: 50,
                             type: 'jump',
-                            jumpHeight: 25
+                            jumpHeight: 30
                         };
                         break;
                         
                     case 'ramp':
-                        // Ramp obstacle
+                        // Ramp obstacle - made larger
                         obstacle = {
                             x: this.width,
-                            y: this.height - 30 - 20,
-                            width: 60,
-                            height: 30,
+                            y: this.height - 40 - 20,
+                            width: 70,
+                            height: 40,
                             type: 'ramp'
                         };
                         break;
                         
                     case 'barrier':
-                        // Low barrier to jump over
+                        // Low barrier to jump over - made larger
                         obstacle = {
                             x: this.width,
-                            y: this.height - 20 - 20,
-                            width: 25,
-                            height: 20,
+                            y: this.height - 30 - 20,
+                            width: 35,
+                            height: 30,
                             type: 'barrier'
                         };
                         break;
                         
                     case 'double':
-                        // Double jump challenge
+                        // Double jump challenge - made larger
                         obstacle = {
                             x: this.width,
-                            y: this.height - 35 - 20,
-                            width: 30,
-                            height: 35,
+                            y: this.height - 45 - 20,
+                            width: 40,
+                            height: 45,
                             type: 'double',
                             gap: 80 // Much larger gap between obstacles
                         };
@@ -708,10 +708,10 @@
                 // Add second obstacle for double jump
                 if (type === 'double') {
                     this.obstacles.push({
-                        x: this.width + 30 + 80, // First obstacle + width + larger gap
-                        y: this.height - 35 - 20,
-                        width: 30,
-                        height: 35,
+                        x: this.width + 40 + 80, // First obstacle + width + larger gap
+                        y: this.height - 45 - 20,
+                        width: 40,
+                        height: 45,
                         type: 'double'
                     });
                 }
