@@ -1006,7 +1006,7 @@
             statusText = 'Aktiv';
             statusColor = 'text-green-400';
             buttonClass = 'bg-green-600 hover:bg-green-700';
-            buttonText = 'Gå till picks';
+            buttonText = 'Race Picks';
             isClickable = true;
           } else if (daysUntilStart && daysUntilStart > 0) {
             if (daysUntilStart <= 7) {
@@ -1031,7 +1031,7 @@
           }
           
           const buttonHtml = isClickable 
-            ? `<a href="/series/${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
+            ? `<a href="${buttonText === 'Race Picks' ? (nextRace ? `/race_picks/${nextRace.id}` : '/race_picks_test') : `/series/${serie.id}`}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
             : `<span class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</span>`;
           
           return `
