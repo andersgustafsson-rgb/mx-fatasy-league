@@ -773,6 +773,21 @@
       const raceCountdown = data.countdown.race_start;
       const deadlineCountdown = data.countdown.pick_deadline;
       
+      // Check if countdown has finished
+      if (raceCountdown.total_seconds <= 0 && deadlineCountdown.total_seconds <= 0) {
+        // Stop the countdown when both reach zero
+        document.getElementById('test-race-countdown').textContent = '00:00:00';
+        document.getElementById('test-deadline-countdown').textContent = '00:00:00';
+        
+        // Stop the test countdown interval
+        if (testCountdownInterval) {
+          clearInterval(testCountdownInterval);
+          testCountdownInterval = null;
+          console.log('Test countdown finished - stopped interval');
+        }
+        return;
+      }
+      
       // Format time display
       function formatTime(countdown) {
         if (countdown.total_seconds <= 0) {
