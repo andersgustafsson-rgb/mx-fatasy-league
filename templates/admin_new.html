@@ -386,24 +386,24 @@
                             </button>
                         </div>
 
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">🔍 Debug Användare</h3>
+                            <div class="flex space-x-2">
+                                <input type="text" id="debug-username" placeholder="Användarnamn" class="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600">
+                                <button onclick="debugUserScores()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md border border-purple-500">
+                                    🔍 Kolla Poäng
+                                </button>
+                            </div>
+                            <div id="debug-user-results" class="hidden mt-3 p-3 bg-gray-800 rounded border border-gray-600">
+                                <!-- Debug results will be shown here -->
+                            </div>
+                        </div>
+
             <div class="space-y-3">
                 <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Kvalificering</h3>
                 <button onclick="loadSMXQualification()" class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md border border-cyan-500 text-center">
                     🏆 Visa SMX Kvalificering
                 </button>
-            </div>
-            
-            <div class="space-y-3">
-                <h3 class="text-lg font-medium text-cyan-400 neon-text">Debug Användare</h3>
-                <div class="flex space-x-2">
-                    <input type="text" id="debug-username" placeholder="Användarnamn" class="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600">
-                    <button onclick="debugUserScores()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md border border-purple-500">
-                        🔍 Kolla Poäng
-                    </button>
-                </div>
-                <div id="debug-user-results" class="hidden mt-3 p-3 bg-gray-800 rounded border border-gray-600">
-                    <!-- Debug results will be shown here -->
-                </div>
             </div>
                         
                         <div class="space-y-3">
