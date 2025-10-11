@@ -1001,10 +1001,13 @@
           let backgroundImage = '';
           if (serie.name.toLowerCase().includes('supercross')) {
             backgroundImage = 'url("/static/images/2024-jett-1.jpg")';
+            console.log('DEBUG: Setting Supercross background to:', backgroundImage);
           } else if (serie.name.toLowerCase().includes('motocross')) {
             backgroundImage = 'url("/static/images/deegan motoacross.avif")';
+            console.log('DEBUG: Setting Motocross background to:', backgroundImage);
           } else if (serie.name.toLowerCase().includes('smx')) {
             backgroundImage = 'url("/static/images/smx playoffs.webp")';
+            console.log('DEBUG: Setting SMX background to:', backgroundImage);
           }
           
           const cardClass = isClickable 
@@ -1014,6 +1017,8 @@
           const cardStyle = backgroundImage 
             ? `background-image: ${backgroundImage}; background-size: cover; background-position: center; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`
             : `background-color: #1a202c; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`;
+          
+          console.log(`DEBUG: Card style for ${serie.name}:`, cardStyle);
           
           const cardContent = `
             <div class="absolute inset-0 bg-black bg-opacity-50"></div>
