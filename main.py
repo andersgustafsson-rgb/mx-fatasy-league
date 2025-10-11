@@ -6826,6 +6826,8 @@ def get_smx_qualification():
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
                 'bike_brand': rider.bike_brand,
+                'class': rider.class,
+                'coast_250': rider.coast_250 if rider.class == '250cc' else None,
                 'total_points': data['total_points'],
                 'sx_points': data['sx_points'],
                 'mx_points': data['mx_points'],
@@ -6840,6 +6842,54 @@ def get_smx_qualification():
         
     except Exception as e:
         print(f"ERROR in get_smx_qualification: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/series_leaders")
+def get_series_leaders():
+    """Get current leaders for each series and SMX overview"""
+    try:
+        leaders = get_series_leaders()
+        smx_qualification = calculate_smx_qualification_points()
+        
+        # Format leaders data
+        leaders_data = {}
+        for series, data in leaders.items():
+            if data['leader']:
+                rider = data['leader']
+                leaders_data[series] = {
+                    'rider_name': rider.name,
+                    'rider_number': rider.rider_number,
+                    'bike_brand': rider.bike_brand,
+                    'points': data['points']
+                }
+            else:
+                leaders_data[series] = None
+        
+        # Format SMX qualification overview
+        smx_overview = {
+            'total_qualified': len(smx_qualification),
+            'top_5': []
+        }
+        
+        for i, (rider_id, data) in enumerate(smx_qualification[:5], 1):
+            rider = data['rider']
+            smx_overview['top_5'].append({
+                'position': i,
+                'rider_name': rider.name,
+                'rider_number': rider.rider_number,
+                'class': rider.class,
+                'coast_250': rider.coast_250 if rider.class == '250cc' else None,
+                'total_points': data['total_points']
+            })
+        
+        return jsonify({
+            'success': True,
+            'leaders': leaders_data,
+            'smx_overview': smx_overview
+        })
+        
+    except Exception as e:
+        print(f"ERROR in get_series_leaders: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route("/test_countdown")
@@ -7150,17 +7200,25 @@ def calculate_smx_qualification_points():
     for rider in riders:
         total_points = 0
         
-        # Get Supercross results for this rider
+        # Get Supercross results for this rider (considering coast for 250cc)
         sx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
             CompetitionResult.rider_id == rider.id,
             Series.name.ilike('%supercross%')
         ).all()
         
-        # Get Motocross results for this rider  
+        # Filter 250cc results by coast if applicable
+        if rider.class == '250cc':
+            sx_results = [r for r in sx_results if r.competition.coast_250 == rider.coast_250]
+        
+        # Get Motocross results for this rider (considering coast for 250cc)
         mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
             CompetitionResult.rider_id == rider.id,
             Series.name.ilike('%motocross%')
         ).all()
+        
+        # Filter 250cc results by coast if applicable
+        if rider.class == '250cc':
+            mx_results = [r for r in mx_results if r.competition.coast_250 == rider.coast_250]
         
         # Calculate points from Supercross (top 17 rounds)
         sx_points = []
@@ -7200,6 +7258,62 @@ def calculate_smx_qualification_points():
         print(f"  {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
     
     return top_20
+
+def get_series_leaders():
+    """Get current leaders for each series (450cc, 250cc East, 250cc West)"""
+    print("DEBUG: Getting series leaders...")
+    
+    leaders = {
+        '450cc': {'leader': None, 'points': 0},
+        '250cc_east': {'leader': None, 'points': 0},
+        '250cc_west': {'leader': None, 'points': 0}
+    }
+    
+    # Get all riders
+    riders = Rider.query.all()
+    
+    for rider in riders:
+        total_points = 0
+        
+        # Get results for this rider based on their class and coast
+        if rider.class == '450cc':
+            # 450cc riders compete in all series
+            results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+                CompetitionResult.rider_id == rider.id
+            ).all()
+        else:
+            # 250cc riders only compete in their coast
+            results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+                CompetitionResult.rider_id == rider.id,
+                Competition.coast_250 == rider.coast_250
+            ).all()
+        
+        # Calculate total points
+        for result in results:
+            if result.position and result.position <= 20:
+                points = get_smx_qualification_points(result.position)
+                total_points += points
+        
+        # Update leader for appropriate series
+        if rider.class == '450cc':
+            if total_points > leaders['450cc']['points']:
+                leaders['450cc'] = {'leader': rider, 'points': total_points}
+        elif rider.class == '250cc':
+            if rider.coast_250 == 'east':
+                if total_points > leaders['250cc_east']['points']:
+                    leaders['250cc_east'] = {'leader': rider, 'points': total_points}
+            elif rider.coast_250 == 'west':
+                if total_points > leaders['250cc_west']['points']:
+                    leaders['250cc_west'] = {'leader': rider, 'points': total_points}
+    
+    print(f"DEBUG: Series leaders calculated:")
+    for series, data in leaders.items():
+        if data['leader']:
+            print(f"  {series}: {data['leader'].name} - {data['points']} points")
+        else:
+            print(f"  {series}: No leader yet")
+    
+    return leaders
 
 def get_smx_qualification_points(position):
     """Get SMX qualification points based on position (1st = 25 points, 2nd = 22, etc.)"""
