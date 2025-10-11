@@ -7078,7 +7078,20 @@ def get_current_time():
 
 def is_picks_locked(competition):
     """Check if picks are locked for a specific competition"""
-    print(f"DEBUG: is_picks_locked() called for competition: {competition.name}")
+    # Handle both Competition objects and competition IDs
+    if isinstance(competition, int):
+        # If it's an ID, fetch the competition object
+        competition_obj = Competition.query.get(competition)
+        if not competition_obj:
+            print(f"DEBUG: is_picks_locked() called with invalid competition ID: {competition}")
+            return False
+        competition_name = f"ID {competition}"
+    else:
+        # If it's a Competition object
+        competition_obj = competition
+        competition_name = competition.name if hasattr(competition, 'name') else f"ID {competition.id}"
+    
+    print(f"DEBUG: is_picks_locked() called for competition: {competition_name}")
     
     # Check if we're in simulation mode (use only global database state for consistency)
     simulation_active = False
@@ -7134,7 +7147,7 @@ def is_picks_locked(competition):
         # Check if picks are locked (2 hours before race)
         race_time_str = "20:00"  # 8pm local time
         race_hour, race_minute = map(int, race_time_str.split(':'))
-        race_date = competition.event_date
+        race_date = competition_obj.event_date
         race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
         
         # Convert to UTC for countdown calculation
@@ -7146,7 +7159,7 @@ def is_picks_locked(competition):
             'America/New_York': -5      # EST
         }
         
-        timezone = getattr(competition, 'timezone', 'America/Los_Angeles')
+        timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
         utc_offset = timezone_offsets.get(timezone, -8)
         race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
