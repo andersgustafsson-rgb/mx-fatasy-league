@@ -1284,8 +1284,17 @@ def series_page(series_id):
         if simulation_active:
             # In test mode, picks are always open
             picks_open = True
+        elif series.start_date:
+            # Check if we're within 1 week of season start
+            days_until_start = (series.start_date - current_date).days
+            picks_open = days_until_start <= 7  # Open 1 week before season start
+            
+            # If picks are open and we have a next race, check if it's locked
+            if picks_open and next_race:
+                picks_locked = is_picks_locked(next_race.id)
+                picks_open = not picks_locked
         elif next_race:
-            # For real races, picks are open if:
+            # For races after season has started, picks are open if:
             # 1. The next race doesn't have results yet (hasn't been run)
             # 2. The race is not locked (not within 2 hours of start)
             
@@ -1301,10 +1310,6 @@ def series_page(series_id):
             else:
                 # Race has been run, picks should be closed
                 picks_open = False
-        elif series.start_date:
-            # No next race found, check if series hasn't started yet
-            days_until_start = (series.start_date - current_date).days
-            picks_open = days_until_start <= 7  # Open 1 week before season start
         
         # Get results for each competition to show status
         competition_results = {}

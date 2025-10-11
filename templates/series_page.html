@@ -153,7 +153,7 @@
                                     <p class="text-white font-semibold">
                                         📅 Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
                                     </p>
-                                    <p class="text-sm text-yellow-100">(En vecka före säsongstart)</p>
+                                    <p class="text-sm text-yellow-100">(En vecka före säsongstart {{ series.start_date.strftime('%d %B %Y') }})</p>
                                 </div>
                             {% else %}
                                 <div class="bg-red-600 bg-opacity-80 rounded-lg p-4">
