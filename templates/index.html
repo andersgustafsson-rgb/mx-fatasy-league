@@ -12,6 +12,37 @@
     }
   </script>
   <style>
+    /* Mobile Scroll Fix */
+    html, body {
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    
+    /* Prevent scroll jumping on mobile */
+    * {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+    
+    /* Optimize animations for mobile */
+    @media (max-width: 768px) {
+      .racing-logo {
+        animation-duration: 6s; /* Slower animation on mobile */
+      }
+      
+      .racing-logo::before {
+        animation-duration: 4s; /* Slower stripes on mobile */
+      }
+      
+      #countdown-widget {
+        animation-duration: 4s; /* Slower pulse on mobile */
+      }
+      
+      #race-countdown, #deadline-countdown {
+        animation-duration: 2s; /* Slower countdown pulse on mobile */
+      }
+    }
+    
     /* Series Background Images */
     .bg-supercross {
       background-image: url('/static/images/2024-jett-1.jpg');
@@ -893,15 +924,19 @@
       fetchRealCountdownData();
       fetchTestCountdownData();
       
-      // Update real countdown every second
+      // Check if mobile device
+      const isMobile = window.innerWidth <= 768;
+      const updateInterval = isMobile ? 2000 : 1000; // Slower updates on mobile
+      
+      // Update real countdown
       realCountdownInterval = setInterval(() => {
         fetchRealCountdownData();
-      }, 1000);
+      }, updateInterval);
       
-      // Update test countdown every second
+      // Update test countdown
       testCountdownInterval = setInterval(() => {
         fetchTestCountdownData();
-      }, 1000);
+      }, updateInterval);
     }
     
     function stopCountdown() {
