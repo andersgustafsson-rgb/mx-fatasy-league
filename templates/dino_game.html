@@ -649,24 +649,114 @@
             }
             
             addObstacle() {
-                const height = Math.random() * 25 + 30; // Lower obstacles (30-55px)
-                const width = Math.random() * 20 + 15; // Smaller obstacles
+                // Create different types of obstacles
+                const obstacleTypes = ['jump', 'ramp', 'barrier', 'double'];
+                const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
                 
-                this.obstacles.push({
-                    x: this.width,
-                    y: this.height - height - 20, // Ground level
-                    width: width,
-                    height: height
-                });
+                let obstacle;
+                
+                switch(type) {
+                    case 'jump':
+                        // Realistic jump with landing area
+                        obstacle = {
+                            x: this.width,
+                            y: this.height - 40 - 20, // Ground level
+                            width: 40,
+                            height: 40,
+                            type: 'jump',
+                            jumpHeight: 25
+                        };
+                        break;
+                        
+                    case 'ramp':
+                        // Ramp obstacle
+                        obstacle = {
+                            x: this.width,
+                            y: this.height - 30 - 20,
+                            width: 60,
+                            height: 30,
+                            type: 'ramp'
+                        };
+                        break;
+                        
+                    case 'barrier':
+                        // Low barrier to jump over
+                        obstacle = {
+                            x: this.width,
+                            y: this.height - 20 - 20,
+                            width: 25,
+                            height: 20,
+                            type: 'barrier'
+                        };
+                        break;
+                        
+                    case 'double':
+                        // Double jump challenge
+                        obstacle = {
+                            x: this.width,
+                            y: this.height - 35 - 20,
+                            width: 30,
+                            height: 35,
+                            type: 'double',
+                            gap: 40 // Gap between obstacles
+                        };
+                        break;
+                }
+                
+                this.obstacles.push(obstacle);
+                
+                // Add second obstacle for double jump
+                if (type === 'double') {
+                    this.obstacles.push({
+                        x: this.width + 30 + 40, // First obstacle + width + gap
+                        y: this.height - 35 - 20,
+                        width: 30,
+                        height: 35,
+                        type: 'double'
+                    });
+                }
             }
             
             checkCollision(rect1, rect2) {
-                // Reduce collision box for more forgiving gameplay
-                const margin = 7; // Allow getting closer before collision (half of previous)
-                return rect1.x + margin < rect2.x + rect2.width - margin &&
-                       rect1.x + rect1.width - margin > rect2.x + margin &&
-                       rect1.y + margin < rect2.y + rect2.height - margin &&
-                       rect1.y + rect1.height - margin > rect2.y + margin;
+                // Different collision detection based on obstacle type
+                const margin = 5; // Base margin
+                
+                switch(rect2.type) {
+                    case 'jump':
+                        // More forgiving for jumps - only check if hitting the main body
+                        return rect1.x + margin < rect2.x + rect2.width - margin &&
+                               rect1.x + rect1.width - margin > rect2.x + margin &&
+                               rect1.y + margin < rect2.y + rect2.height - 5 && // Less strict on height
+                               rect1.y + rect1.height - margin > rect2.y + 5;
+                               
+                    case 'ramp':
+                        // Ramp is easier to clear
+                        return rect1.x + margin < rect2.x + rect2.width - margin &&
+                               rect1.x + rect1.width - margin > rect2.x + margin &&
+                               rect1.y + margin < rect2.y + rect2.height - 8 &&
+                               rect1.y + rect1.height - margin > rect2.y + 8;
+                               
+                    case 'barrier':
+                        // Barrier requires precise timing
+                        return rect1.x + margin < rect2.x + rect2.width - margin &&
+                               rect1.x + rect1.width - margin > rect2.x + margin &&
+                               rect1.y + margin < rect2.y + rect2.height - margin &&
+                               rect1.y + rect1.height - margin > rect2.y + margin;
+                               
+                    case 'double':
+                        // Double jump is challenging
+                        return rect1.x + margin < rect2.x + rect2.width - margin &&
+                               rect1.x + rect1.width - margin > rect2.x + margin &&
+                               rect1.y + margin < rect2.y + rect2.height - margin &&
+                               rect1.y + rect1.height - margin > rect2.y + margin;
+                               
+                    default:
+                        // Default collision
+                        return rect1.x + margin < rect2.x + rect2.width - margin &&
+                               rect1.x + rect1.width - margin > rect2.x + margin &&
+                               rect1.y + margin < rect2.y + rect2.height - margin &&
+                               rect1.y + rect1.height - margin > rect2.y + margin;
+                }
             }
             
             updateScore() {
@@ -852,42 +942,73 @@
                 
                 this.ctx.restore();
                 
-                // Draw obstacles (sharp triangular jumps like pixel art)
+                // Draw obstacles with different realistic shapes
                 this.obstacles.forEach(obstacle => {
-                    // Create sharp triangular jump
-                    this.ctx.fillStyle = '#8B4513'; // Brown color
-                    this.ctx.beginPath();
+                    this.ctx.save();
                     
-                    // Start from bottom left
-                    this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
-                    
-                    // Go to sharp peak at top center
-                    this.ctx.lineTo(obstacle.x + obstacle.width/2, obstacle.y);
-                    
-                    // Go to bottom right
-                    this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
-                    
-                    // Close the triangle
-                    this.ctx.closePath();
-                    this.ctx.fill();
-                    
-                    // Add darker outline for pixel art effect
-                    this.ctx.strokeStyle = '#654321';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.stroke();
-                    
-                    // Add horizontal lines for texture (like pixel art)
-                    this.ctx.strokeStyle = '#654321';
-                    this.ctx.lineWidth = 1;
-                    for (let i = 1; i < 4; i++) {
-                        const y = obstacle.y + (obstacle.height * i / 4);
-                        const leftX = obstacle.x + (obstacle.width * (4-i) / 8);
-                        const rightX = obstacle.x + obstacle.width - (obstacle.width * (4-i) / 8);
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(leftX, y);
-                        this.ctx.lineTo(rightX, y);
-                        this.ctx.stroke();
+                    switch(obstacle.type) {
+                        case 'jump':
+                            // Realistic jump with takeoff and landing
+                            this.ctx.fillStyle = '#8B4513';
+                            this.ctx.beginPath();
+                            
+                            // Takeoff ramp (left side)
+                            this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+                            this.ctx.lineTo(obstacle.x + 15, obstacle.y + obstacle.height - 10);
+                            this.ctx.lineTo(obstacle.x + 15, obstacle.y + obstacle.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            
+                            // Landing ramp (right side)
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(obstacle.x + 25, obstacle.y + obstacle.height);
+                            this.ctx.lineTo(obstacle.x + 25, obstacle.y + obstacle.height - 10);
+                            this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            
+                            // Add shadow
+                            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                            this.ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + 2, obstacle.width, 3);
+                            break;
+                            
+                        case 'ramp':
+                            // Smooth ramp
+                            this.ctx.fillStyle = '#8B4513';
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(obstacle.x, obstacle.y + obstacle.height);
+                            this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height - 15);
+                            this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
+                            this.ctx.closePath();
+                            this.ctx.fill();
+                            
+                            // Add shadow
+                            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                            this.ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + 2, obstacle.width, 3);
+                            break;
+                            
+                        case 'barrier':
+                            // Simple rectangular barrier
+                            this.ctx.fillStyle = '#8B4513';
+                            this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                            
+                            // Add shadow
+                            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                            this.ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + 2, obstacle.width, 3);
+                            break;
+                            
+                        case 'double':
+                            // Double jump obstacle
+                            this.ctx.fillStyle = '#8B4513';
+                            this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                            
+                            // Add shadow
+                            this.ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                            this.ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + 2, obstacle.width, 3);
+                            break;
                     }
+                    
+                    this.ctx.restore();
                 });
                 
                 // Draw pause overlay
