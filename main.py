@@ -1788,30 +1788,30 @@ def delete_series(series_id):
 
 @app.route('/api/series/create_default_2025', methods=['POST'])
 def create_default_series_2025():
-    """Create default SMX series for 2025"""
+    """Create default SMX series for 2026"""
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
     # Check if series already exist and update them
-    existing = Series.query.filter_by(year=2025).first()
+    existing = Series.query.filter_by(year=2026).first()
     if existing:
         # Update existing series with correct dates
-        supercross = Series.query.filter_by(name='Supercross', year=2025).first()
+        supercross = Series.query.filter_by(name='Supercross', year=2026).first()
         if supercross:
-            supercross.start_date = date(2025, 1, 4)
-            supercross.end_date = date(2025, 5, 10)
+            supercross.start_date = date(2026, 1, 4)
+            supercross.end_date = date(2026, 5, 10)
             supercross.is_active = True
         
-        motocross = Series.query.filter_by(name='Motocross', year=2025).first()
+        motocross = Series.query.filter_by(name='Motocross', year=2026).first()
         if motocross:
-            motocross.start_date = date(2025, 5, 24)
-            motocross.end_date = date(2025, 8, 23)
+            motocross.start_date = date(2026, 5, 24)
+            motocross.end_date = date(2026, 8, 23)
             motocross.is_active = True
         
-        smx_finals = Series.query.filter_by(name='SMX Finals', year=2025).first()
+        smx_finals = Series.query.filter_by(name='SMX Finals', year=2026).first()
         if smx_finals:
-            smx_finals.start_date = date(2025, 9, 6)
-            smx_finals.end_date = date(2025, 9, 20)
+            smx_finals.start_date = date(2026, 9, 6)
+            smx_finals.end_date = date(2026, 9, 20)
             smx_finals.is_active = True
         
         db.session.commit()
@@ -1820,38 +1820,38 @@ def create_default_series_2025():
             'success': True,
             'message': 'Updated existing series with correct dates',
             'series_updated': [
-                {'name': 'Supercross', 'start': '2025-01-04', 'end': '2025-05-10'},
-                {'name': 'Motocross', 'start': '2025-05-24', 'end': '2025-08-23'},
-                {'name': 'SMX Finals', 'start': '2025-09-06', 'end': '2025-09-20'}
+                {'name': 'Supercross', 'start': '2026-01-04', 'end': '2026-05-10'},
+                {'name': 'Motocross', 'start': '2026-05-24', 'end': '2026-08-23'},
+                {'name': 'SMX Finals', 'start': '2026-09-06', 'end': '2026-09-20'}
             ]
         })
     
     # Create Supercross series (should be active now)
     supercross = Series(
         name='Supercross',
-        year=2025,
-        start_date=date(2025, 1, 4),  # Anaheim 1
-        end_date=date(2025, 5, 10),   # Salt Lake City
+        year=2026,
+        start_date=date(2026, 1, 4),  # Anaheim 1
+        end_date=date(2026, 5, 10),   # Salt Lake City
         is_active=True,
         points_system='standard'
     )
     
-    # Create Motocross series (starts in May 2025)
+    # Create Motocross series (starts in May 2026)
     motocross = Series(
         name='Motocross',
-        year=2025,
-        start_date=date(2025, 5, 24),  # Pala
-        end_date=date(2025, 8, 23),    # Ironman
+        year=2026,
+        start_date=date(2026, 5, 24),  # Pala
+        end_date=date(2026, 8, 23),    # Ironman
         is_active=True,
         points_system='standard'
     )
     
-    # Create SMX Finals series (starts in September 2025)
+    # Create SMX Finals series (starts in September 2026)
     smx_finals = Series(
         name='SMX Finals',
-        year=2025,
-        start_date=date(2025, 9, 6),   # Playoff 1
-        end_date=date(2025, 9, 20),    # Final
+        year=2026,
+        start_date=date(2026, 9, 6),   # Playoff 1
+        end_date=date(2026, 9, 20),    # Final
         is_active=True,
         points_system='playoff'
     )
@@ -1875,26 +1875,26 @@ def create_default_series_2025():
     })
 
 def create_supercross_competitions(supercross_series_id):
-    """Create all Supercross competitions for 2025"""
-    # Supercross races 2025 (existing ones)
+    """Create all Supercross competitions for 2026"""
+    # Supercross races 2026 (existing ones)
     supercross_races = [
-        {"name": "Anaheim 1", "date": "2025-01-04", "coast_250": "west"},
-        {"name": "San Francisco", "date": "2025-01-11", "coast_250": "west"},
-        {"name": "San Diego", "date": "2025-01-18", "coast_250": "west"},
-        {"name": "Anaheim 2", "date": "2025-01-25", "coast_250": "west"},
-        {"name": "Detroit", "date": "2025-02-01", "coast_250": "east"},
-        {"name": "Glendale", "date": "2025-02-08", "coast_250": "west"},
-        {"name": "Arlington", "date": "2025-02-15", "coast_250": "east"},
-        {"name": "Daytona", "date": "2025-03-01", "coast_250": "east"},
-        {"name": "Birmingham", "date": "2025-03-08", "coast_250": "east"},
-        {"name": "Indianapolis", "date": "2025-03-15", "coast_250": "east"},
-        {"name": "Seattle", "date": "2025-03-22", "coast_250": "west"},
-        {"name": "St. Louis", "date": "2025-03-29", "coast_250": "east"},
-        {"name": "Foxborough", "date": "2025-04-05", "coast_250": "east"},
-        {"name": "Nashville", "date": "2025-04-12", "coast_250": "east"},
-        {"name": "Philadelphia", "date": "2025-04-19", "coast_250": "east"},
-        {"name": "Denver", "date": "2025-04-26", "coast_250": "west"},
-        {"name": "Salt Lake City", "date": "2025-05-03", "coast_250": "west"}
+        {"name": "Anaheim 1", "date": "2026-01-04", "coast_250": "west"},
+        {"name": "San Francisco", "date": "2026-01-11", "coast_250": "west"},
+        {"name": "San Diego", "date": "2026-01-18", "coast_250": "west"},
+        {"name": "Anaheim 2", "date": "2026-01-25", "coast_250": "west"},
+        {"name": "Detroit", "date": "2026-02-01", "coast_250": "east"},
+        {"name": "Glendale", "date": "2026-02-08", "coast_250": "west"},
+        {"name": "Arlington", "date": "2026-02-15", "coast_250": "east"},
+        {"name": "Daytona", "date": "2026-03-01", "coast_250": "east"},
+        {"name": "Birmingham", "date": "2026-03-08", "coast_250": "east"},
+        {"name": "Indianapolis", "date": "2026-03-15", "coast_250": "east"},
+        {"name": "Seattle", "date": "2026-03-22", "coast_250": "west"},
+        {"name": "St. Louis", "date": "2026-03-29", "coast_250": "east"},
+        {"name": "Foxborough", "date": "2026-04-05", "coast_250": "east"},
+        {"name": "Nashville", "date": "2026-04-12", "coast_250": "east"},
+        {"name": "Philadelphia", "date": "2026-04-19", "coast_250": "east"},
+        {"name": "Denver", "date": "2026-04-26", "coast_250": "west"},
+        {"name": "Salt Lake City", "date": "2026-05-03", "coast_250": "west"}
     ]
     
     for race in supercross_races:
@@ -1923,19 +1923,19 @@ def create_supercross_competitions(supercross_series_id):
     db.session.commit()
 
 def create_motocross_competitions(motocross_series_id):
-    """Create all Motocross competitions for 2025"""
+    """Create all Motocross competitions for 2026"""
     motocross_races = [
-        {"name": "Fox Raceway National", "date": "2025-05-24", "location": "Pala, CA"},
-        {"name": "Hangtown Classic", "date": "2025-05-31", "location": "Rancho Cordova, CA"},
-        {"name": "Thunder Valley National", "date": "2025-06-07", "location": "Lakewood, CO"},
-        {"name": "High Point National", "date": "2025-06-14", "location": "Mt. Morris, PA"},
-        {"name": "Southwick National", "date": "2025-06-28", "location": "Southwick, MA"},
-        {"name": "RedBud National", "date": "2025-07-05", "location": "Buchanan, MI"},
-        {"name": "Spring Creek National", "date": "2025-07-12", "location": "Millville, MN"},
-        {"name": "Washougal National", "date": "2025-07-19", "location": "Washougal, WA"},
-        {"name": "Unadilla National", "date": "2025-08-16", "location": "New Berlin, NY"},
-        {"name": "Budds Creek National", "date": "2025-08-23", "location": "Mechanicsville, MD"},
-        {"name": "Ironman National", "date": "2025-08-09", "location": "Crawfordsville, IN"}
+        {"name": "Fox Raceway National", "date": "2026-05-24", "location": "Pala, CA"},
+        {"name": "Hangtown Classic", "date": "2026-05-31", "location": "Rancho Cordova, CA"},
+        {"name": "Thunder Valley National", "date": "2026-06-07", "location": "Lakewood, CO"},
+        {"name": "High Point National", "date": "2026-06-14", "location": "Mt. Morris, PA"},
+        {"name": "Southwick National", "date": "2026-06-28", "location": "Southwick, MA"},
+        {"name": "RedBud National", "date": "2026-07-05", "location": "Buchanan, MI"},
+        {"name": "Spring Creek National", "date": "2026-07-12", "location": "Millville, MN"},
+        {"name": "Washougal National", "date": "2026-07-19", "location": "Washougal, WA"},
+        {"name": "Unadilla National", "date": "2026-08-16", "location": "New Berlin, NY"},
+        {"name": "Budds Creek National", "date": "2026-08-23", "location": "Mechanicsville, MD"},
+        {"name": "Ironman National", "date": "2026-08-09", "location": "Crawfordsville, IN"}
     ]
     
     for race in motocross_races:
@@ -1961,11 +1961,11 @@ def create_motocross_competitions(motocross_series_id):
     db.session.commit()
 
 def create_smx_finals_competitions(smx_series_id):
-    """Create all SMX Finals competitions for 2025"""
+    """Create all SMX Finals competitions for 2026"""
     smx_races = [
-        {"name": "SMX Playoff 1", "date": "2025-09-06", "phase": "playoff1"},
-        {"name": "SMX Playoff 2", "date": "2025-09-13", "phase": "playoff2"},
-        {"name": "SMX Final", "date": "2025-09-20", "phase": "final"}
+        {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1"},
+        {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2"},
+        {"name": "SMX Final", "date": "2026-09-20", "phase": "final"}
     ]
     
     for race in smx_races:
@@ -1992,29 +1992,29 @@ def create_smx_finals_competitions(smx_series_id):
 
 @app.route('/api/competitions/create_motocross_2025', methods=['POST'])
 def create_motocross_competitions_2025():
-    """Create all Motocross competitions for 2025"""
+    """Create all Motocross competitions for 2026"""
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
         # Get Motocross series
-        motocross_series = Series.query.filter_by(name="Motocross", year=2025).first()
+        motocross_series = Series.query.filter_by(name="Motocross", year=2026).first()
         if not motocross_series:
             return jsonify({'error': 'Motocross series not found. Create series first.'}), 400
         
-        # Motocross races 2025
+        # Motocross races 2026
         motocross_races = [
-            {"name": "Fox Raceway National", "date": "2025-05-24", "location": "Pala, CA"},
-            {"name": "Hangtown Classic", "date": "2025-05-31", "location": "Rancho Cordova, CA"},
-            {"name": "Thunder Valley National", "date": "2025-06-07", "location": "Lakewood, CO"},
-            {"name": "High Point National", "date": "2025-06-14", "location": "Mt. Morris, PA"},
-            {"name": "Southwick National", "date": "2025-06-28", "location": "Southwick, MA"},
-            {"name": "RedBud National", "date": "2025-07-05", "location": "Buchanan, MI"},
-            {"name": "Spring Creek National", "date": "2025-07-12", "location": "Millville, MN"},
-            {"name": "Washougal National", "date": "2025-07-19", "location": "Washougal, WA"},
-            {"name": "Unadilla National", "date": "2025-08-16", "location": "New Berlin, NY"},
-            {"name": "Budds Creek National", "date": "2025-08-23", "location": "Mechanicsville, MD"},
-            {"name": "Ironman National", "date": "2025-08-09", "location": "Crawfordsville, IN"}
+            {"name": "Fox Raceway National", "date": "2026-05-24", "location": "Pala, CA"},
+            {"name": "Hangtown Classic", "date": "2026-05-31", "location": "Rancho Cordova, CA"},
+            {"name": "Thunder Valley National", "date": "2026-06-07", "location": "Lakewood, CO"},
+            {"name": "High Point National", "date": "2026-06-14", "location": "Mt. Morris, PA"},
+            {"name": "Southwick National", "date": "2026-06-28", "location": "Southwick, MA"},
+            {"name": "RedBud National", "date": "2026-07-05", "location": "Buchanan, MI"},
+            {"name": "Spring Creek National", "date": "2026-07-12", "location": "Millville, MN"},
+            {"name": "Washougal National", "date": "2026-07-19", "location": "Washougal, WA"},
+            {"name": "Unadilla National", "date": "2026-08-16", "location": "New Berlin, NY"},
+            {"name": "Budds Creek National", "date": "2026-08-23", "location": "Mechanicsville, MD"},
+            {"name": "Ironman National", "date": "2026-08-09", "location": "Crawfordsville, IN"}
         ]
         
         created_competitions = []
@@ -2055,21 +2055,21 @@ def create_motocross_competitions_2025():
 
 @app.route('/api/competitions/create_smx_finals_2025', methods=['POST'])
 def create_smx_finals_competitions_2025():
-    """Create SMX Finals competitions for 2025"""
+    """Create SMX Finals competitions for 2026"""
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
         # Get SMX Finals series
-        smx_series = Series.query.filter_by(name="SMX Finals", year=2025).first()
+        smx_series = Series.query.filter_by(name="SMX Finals", year=2026).first()
         if not smx_series:
             return jsonify({'error': 'SMX Finals series not found. Create series first.'}), 400
         
-        # SMX Finals races 2025
+        # SMX Finals races 2026
         smx_races = [
-            {"name": "SMX Playoff 1", "date": "2025-09-06", "phase": "playoff1"},
-            {"name": "SMX Playoff 2", "date": "2025-09-13", "phase": "playoff2"},
-            {"name": "SMX Final", "date": "2025-09-20", "phase": "final"}
+            {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1"},
+            {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2"},
+            {"name": "SMX Final", "date": "2026-09-20", "phase": "final"}
         ]
         
         created_competitions = []
@@ -4872,7 +4872,7 @@ def fix_database_route():
         
         # Create default sim_date
         SimDate.query.delete()
-        default_sim_date = SimDate(value='2025-10-06')
+        default_sim_date = SimDate(value='2026-10-06')
         db.session.add(default_sim_date)
         
         db.session.commit()
@@ -4882,7 +4882,7 @@ def fix_database_route():
         <p>Created all tables and data successfully!</p>
         <p><strong>Competitions:</strong> {len(competitions)}</p>
         <p><strong>Riders:</strong> {len(all_riders)}</p>
-        <p><strong>Sim Date:</strong> 2025-10-06</p>
+        <p><strong>Sim Date:</strong> 2026-10-06</p>
         <p><a href="/admin">Go to Admin</a></p>
         """
     except Exception as e:
