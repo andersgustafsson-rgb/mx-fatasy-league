@@ -1901,9 +1901,10 @@ def create_supercross_competitions(supercross_series_id):
         # Check if competition already exists
         existing = Competition.query.filter_by(name=race["name"]).first()
         if existing:
-            # Update existing competition with series_id
+            # Update existing competition with series_id and new date
             existing.series_id = supercross_series_id
             existing.phase = "regular"
+            existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
             continue
             
         competition = Competition(
@@ -1942,6 +1943,10 @@ def create_motocross_competitions(motocross_series_id):
         # Check if competition already exists
         existing = Competition.query.filter_by(name=race["name"]).first()
         if existing:
+            # Update existing competition with series_id and new date
+            existing.series_id = motocross_series_id
+            existing.phase = "regular"
+            existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
             continue
             
         competition = Competition(
@@ -1972,6 +1977,10 @@ def create_smx_finals_competitions(smx_series_id):
         # Check if competition already exists
         existing = Competition.query.filter_by(name=race["name"]).first()
         if existing:
+            # Update existing competition with series_id and new date
+            existing.series_id = smx_series_id
+            existing.phase = race["phase"]
+            existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
             continue
             
         competition = Competition(
@@ -2023,6 +2032,10 @@ def create_motocross_competitions_2025():
             # Check if competition already exists
             existing = Competition.query.filter_by(name=race["name"]).first()
             if existing:
+                # Update existing competition with series_id and new date
+                existing.series_id = motocross_series.id
+                existing.phase = "regular"
+                existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
                 continue
                 
             competition = Competition(
@@ -2078,6 +2091,10 @@ def create_smx_finals_competitions_2025():
             # Check if competition already exists
             existing = Competition.query.filter_by(name=race["name"]).first()
             if existing:
+                # Update existing competition with series_id and new date
+                existing.series_id = smx_series.id
+                existing.phase = race["phase"]
+                existing.event_date = datetime.strptime(race["date"], "%Y-%m-%d").date()
                 continue
                 
             competition = Competition(
