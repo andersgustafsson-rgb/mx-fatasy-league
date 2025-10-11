@@ -386,12 +386,25 @@
                             </button>
                         </div>
 
-                        <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Kvalificering</h3>
-                            <button onclick="loadSMXQualification()" class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md border border-cyan-500 text-center">
-                                🏆 Visa SMX Kvalificering
-                            </button>
-                        </div>
+            <div class="space-y-3">
+                <h3 class="text-lg font-medium text-cyan-400 neon-text">SMX Kvalificering</h3>
+                <button onclick="loadSMXQualification()" class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md border border-cyan-500 text-center">
+                    🏆 Visa SMX Kvalificering
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <h3 class="text-lg font-medium text-cyan-400 neon-text">Debug Användare</h3>
+                <div class="flex space-x-2">
+                    <input type="text" id="debug-username" placeholder="Användarnamn" class="flex-1 bg-gray-700 text-white px-3 py-2 rounded border border-gray-600">
+                    <button onclick="debugUserScores()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md border border-purple-500">
+                        🔍 Kolla Poäng
+                    </button>
+                </div>
+                <div id="debug-user-results" class="hidden mt-3 p-3 bg-gray-800 rounded border border-gray-600">
+                    <!-- Debug results will be shown here -->
+                </div>
+            </div>
                         
                         <div class="space-y-3">
                             <h3 class="text-lg font-medium text-cyan-400 neon-text">Cross Jump Game</h3>
@@ -1540,6 +1553,109 @@
                 console.error('Error loading SMX qualification:', error);
                 alert('❌ Fel vid laddning av SMX kvalificering: ' + error.message);
             }
+        }
+
+        async function debugUserScores() {
+            const username = document.getElementById('debug-username').value.trim();
+            if (!username) {
+                alert('Ange ett användarnamn');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/debug_user_scores/${username}`);
+                const result = await response.json();
+                
+                if (result.error) {
+                    alert(`Fel: ${result.error}`);
+                    return;
+                }
+                
+                displayDebugResults(result);
+            } catch (error) {
+                console.error('Error debugging user scores:', error);
+                alert('Fel vid debug av användare');
+            }
+        }
+
+        function displayDebugResults(data) {
+            const container = document.getElementById('debug-user-results');
+            
+            let html = `
+                <h4 class="text-lg font-bold text-cyan-400 mb-3">🔍 Debug: ${data.user.username}</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">User ID:</span>
+                        <span class="text-white">${data.user.id}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Team Name:</span>
+                        <span class="text-white">${data.season_team.team_name || 'Ingen'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-300">Season Team Points:</span>
+                        <span class="text-yellow-400 font-bold">${data.season_team.total_points}</span>
+                    </div>
+                </div>
+            `;
+            
+            if (data.competition_scores.length > 0) {
+                html += `
+                    <div class="mt-4">
+                        <h5 class="text-md font-bold text-green-400 mb-2">📊 Competition Scores:</h5>
+                        <div class="space-y-1">
+                `;
+                
+                data.competition_scores.forEach(score => {
+                    html += `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-300">${score.competition_name}:</span>
+                            <span class="text-green-400">${score.points} pts</span>
+                        </div>
+                    `;
+                });
+                
+                const totalFromScores = data.competition_scores.reduce((sum, score) => sum + score.points, 0);
+                html += `
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-gray-600">
+                            <div class="flex justify-between font-bold">
+                                <span class="text-gray-300">Total från CompetitionScore:</span>
+                                <span class="text-green-400">${totalFromScores} pts</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="mt-4">
+                        <p class="text-gray-400">Inga CompetitionScore poster hittades</p>
+                    </div>
+                `;
+            }
+            
+            html += `
+                <div class="mt-4">
+                    <h5 class="text-md font-bold text-blue-400 mb-2">🎯 Picks Summary:</h5>
+                    <div class="space-y-1 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Race Picks:</span>
+                            <span class="text-blue-400">${data.picks_summary.race_picks}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Holeshot Picks:</span>
+                            <span class="text-blue-400">${data.picks_summary.holeshot_picks}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Wildcard Picks:</span>
+                            <span class="text-blue-400">${data.picks_summary.wildcard_picks}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            container.classList.remove('hidden');
         }
 
         function displaySMXQualification(qualification) {

@@ -3636,6 +3636,61 @@ def update_season_team_points():
         "updated_teams": updated_teams
     })
 
+@app.get("/debug_user_scores/<string:username>")
+def debug_user_scores(username):
+    """Debug endpoint to check where a user's points come from"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    print(f"DEBUG: Checking scores for user {username} (ID: {user.id})")
+    
+    # Get all CompetitionScore entries for this user
+    competition_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
+    
+    # Get SeasonTeam info
+    season_team = SeasonTeam.query.filter_by(user_id=user.id).first()
+    
+    # Get all picks for this user
+    race_picks = RacePick.query.filter_by(user_id=user.id).all()
+    holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id).all()
+    wildcard_picks = WildcardPick.query.filter_by(user_id=user.id).all()
+    
+    result = {
+        "user": {
+            "id": user.id,
+            "username": user.username
+        },
+        "season_team": {
+            "team_name": season_team.team_name if season_team else None,
+            "total_points": season_team.total_points if season_team else 0
+        },
+        "competition_scores": [],
+        "picks_summary": {
+            "race_picks": len(race_picks),
+            "holeshot_picks": len(holeshot_picks),
+            "wildcard_picks": len(wildcard_picks)
+        }
+    }
+    
+    for score in competition_scores:
+        comp = Competition.query.get(score.competition_id)
+        result["competition_scores"].append({
+            "competition_id": score.competition_id,
+            "competition_name": comp.name if comp else "Unknown",
+            "points": score.total_points
+        })
+        print(f"DEBUG: {username} has {score.total_points} points from {comp.name if comp else 'Unknown'}")
+    
+    total_from_scores = sum(s["points"] for s in result["competition_scores"])
+    print(f"DEBUG: {username} total from CompetitionScore: {total_from_scores}")
+    print(f"DEBUG: {username} SeasonTeam total_points: {season_team.total_points if season_team else 0}")
+    
+    return jsonify(result)
+
 @app.get("/check_season_teams")
 def check_season_teams():
     """Check if users have season teams and create them if missing"""
