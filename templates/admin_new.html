@@ -869,7 +869,7 @@
             }
             
             try {
-                const res = await fetch(`/admin/clear_results/${comp}`, { method: "POST" });
+                const res = await fetch(`/clear_competition_results/${comp}`, { method: "POST" });
                 if (res.ok) {
                     await loadSavedResults();
                     showToast("Resultat rensade!", true);
