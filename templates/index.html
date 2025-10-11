@@ -12,6 +12,23 @@
     }
   </script>
   <style>
+    /* Series Background Images */
+    .bg-supercross {
+      background-image: url('/static/images/2024-jett-1.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+    .bg-motocross {
+      background-image: url('/static/images/deegan motoacross.avif');
+      background-size: cover;
+      background-position: center;
+    }
+    .bg-smx {
+      background-image: url('/static/images/smx playoffs.webp');
+      background-size: cover;
+      background-position: center;
+    }
+    
     /* Countdown Widget Animations */
     #countdown-widget {
       box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
@@ -1014,11 +1031,19 @@
             ? `border border-cyan-400 rounded-lg p-4 cursor-pointer hover:border-cyan-300 hover:shadow-lg transition-all duration-300 relative overflow-hidden` 
             : `border border-cyan-400 rounded-lg p-4 relative overflow-hidden`;
           
-          const cardStyle = backgroundImage 
-            ? `background-image: ${backgroundImage}; background-size: cover; background-position: center; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`
-            : `background-color: #1a202c; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`;
+          // Add background class based on series
+          let backgroundClass = '';
+          if (serie.name.toLowerCase().includes('supercross')) {
+            backgroundClass = 'bg-supercross';
+          } else if (serie.name.toLowerCase().includes('motocross')) {
+            backgroundClass = 'bg-motocross';
+          } else if (serie.name.toLowerCase().includes('smx')) {
+            backgroundClass = 'bg-smx';
+          }
           
-          console.log(`DEBUG: Card style for ${serie.name}:`, cardStyle);
+          const finalCardClass = `${cardClass} ${backgroundClass}`;
+          
+          console.log(`DEBUG: Final card class for ${serie.name}:`, finalCardClass);
           
           const cardContent = `
             <div class="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -1031,8 +1056,8 @@
           `;
           
           return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${cardClass}" style="${cardStyle}" onclick="console.log('DEBUG: Clicking series card for ${serie.name} with ID: ${serie.id}')">${cardContent}</a>`
-            : `<div class="${cardClass}" style="${cardStyle}">${cardContent}</div>`;
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" onclick="console.log('DEBUG: Clicking series card for ${serie.name} with ID: ${serie.id}')">${cardContent}</a>`
+            : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
       } catch (error) {
