@@ -997,20 +997,26 @@
             isClickable = true; // Always allow viewing schedule
           }
           
-          const buttonHtml = isClickable 
-            ? `<a href="/series/${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm" onclick="console.log('DEBUG: Clicking series button for ${serie.name} with ID: ${serie.id}')">${buttonText}</a>`
-            : `<span class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</span>`;
+          const cardClass = isClickable 
+            ? `bg-gray-800 border border-cyan-400 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition-all duration-300 hover:border-cyan-300 hover:shadow-lg` 
+            : `bg-gray-800 border border-cyan-400 rounded-lg p-4`;
           
-          return `
-            <div class="bg-gray-800 border border-cyan-400 rounded-lg p-4" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
-              <div class="text-center">
-                <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
-                <p class="text-sm ${statusColor} mb-2">${statusText}</p>
-                ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${new Date(nextRace.date).toLocaleDateString('sv-SE')}</p>` : ''}
-                ${buttonHtml}
-              </div>
+          const cardStyle = isClickable 
+            ? `box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);` 
+            : `box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);`;
+          
+          const cardContent = `
+            <div class="text-center">
+              <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
+              <p class="text-sm ${statusColor} mb-2">${statusText}</p>
+              ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${new Date(nextRace.date).toLocaleDateString('sv-SE')}</p>` : ''}
+              <div class="text-xs text-gray-400 mt-2">${buttonText}</div>
             </div>
           `;
+          
+          return isClickable 
+            ? `<a href="/series/${serie.id}" class="block ${cardClass}" style="${cardStyle}" onclick="console.log('DEBUG: Clicking series card for ${serie.name} with ID: ${serie.id}')">${cardContent}</a>`
+            : `<div class="${cardClass}" style="${cardStyle}">${cardContent}</div>`;
         }).join('');
         
       } catch (error) {
