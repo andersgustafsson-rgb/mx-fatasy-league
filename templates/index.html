@@ -991,6 +991,7 @@
         console.log('Rendering', series.length, 'series');
         
         seriesContainer.innerHTML = series.map(serie => {
+          console.log(`DEBUG: Processing series: ${serie.name} (ID: ${serie.id})`);
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
           const startDate = serie.start_date ? new Date(serie.start_date) : null;
@@ -1031,7 +1032,7 @@
           }
           
           const buttonHtml = isClickable 
-            ? `<a href="/series/${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</a>`
+            ? `<a href="/series/${serie.id}" class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm" onclick="console.log('DEBUG: Clicking series button for ${serie.name} with ID: ${serie.id}')">${buttonText}</a>`
             : `<span class="block w-full ${buttonClass} text-white font-bold py-2 px-4 rounded text-center text-sm">${buttonText}</span>`;
           
           return `
