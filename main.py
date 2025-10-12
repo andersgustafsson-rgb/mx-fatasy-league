@@ -1180,6 +1180,7 @@ def series_page(series_id):
     
     try:
         print(f"DEBUG: series_page called with series_id: {series_id}")
+        print(f"DEBUG: User logged in: {user_logged_in}")
         
         # Get series info
         series = Series.query.get_or_404(series_id)
@@ -1336,6 +1337,10 @@ def series_page(series_id):
                 user_picks_status[comp.id] = {'has_picks': False}
         
         print(f"DEBUG: Rendering series_page.html for {series.name}")
+        print(f"DEBUG: Found {len(competitions)} competitions")
+        print(f"DEBUG: Next race: {next_race.name if next_race else 'None'}")
+        print(f"DEBUG: Picks open: {picks_open}")
+        
         return render_template('series_page.html',
                              series=series,
                              competitions=competitions,
