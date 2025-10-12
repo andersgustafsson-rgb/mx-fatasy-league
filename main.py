@@ -7380,6 +7380,9 @@ def quick_simulation():
                 db.session.add(result)
                 results_created += 1
             
+            # Calculate scores for this competition
+            calculate_scores(competition.id)
+            
             results.append({
                 "competition": competition.name,
                 "picks_created": picks_created,
@@ -7455,8 +7458,11 @@ def generate_simulated_results():
         
         db.session.commit()
         
+        # Calculate scores after generating results
+        calculate_scores(competition_id)
+        
         return jsonify({
-            "message": f"Generated {results_created} simulated results",
+            "message": f"Generated {results_created} simulated results and calculated scores",
             "results_created": results_created
         })
         
