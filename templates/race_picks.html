@@ -552,10 +552,10 @@
         if (rider && rider.image_url) {
           img.src = `/static/riders/${rider.image_url}`;
           img.onerror = function() {
-            this.src = '/static/riders/default.png';
+            this.src = '/static/riders/18_jett_lawrence.png'; // Use Jett as default
           };
         } else {
-          img.src = '/static/riders/default.png';
+          img.src = '/static/riders/18_jett_lawrence.png'; // Use Jett as default
         }
       }
     });
@@ -811,7 +811,7 @@ function imgSrcFor(riderId) {
   
   // Try rider image first (check both PNG and JPG)
   if (r.image_url) {
-    const url = `/static/${r.image_url}`;
+    const url = `/static/riders/${r.image_url}`;
     console.log(`DEBUG: Using rider image: ${url}`);
     return url;
   }
