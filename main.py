@@ -7190,49 +7190,16 @@ def test_countdown_page():
     """Test countdown page with scenario buttons"""
     return render_template('test_countdown.html')
 
-@app.route("/set_simulated_time")
-def set_simulated_time():
-    """Set simulated time for testing - affects entire application"""
+@app.route("/set_active_race")
+def set_active_race():
+    """Set which race should be active for testing - simple approach"""
     try:
-        scenario = request.args.get('scenario', 'race_in_3h')
+        competition_id = request.args.get('competition_id')
         
-        # Store simulated time in session
-        if scenario == 'reset':
-            session.pop('simulated_time', None)
-            session.pop('simulation_active', None)
-            session.pop('simulation_start_time', None)
-            session.pop('simulation_scenario', None)
-            return jsonify({"message": "Simulated time reset to real time", "scenario": "reset"})
+        if not competition_id:
+            return jsonify({"error": "competition_id required"}), 400
         
-        # Create fake race date for testing
-        fake_race_date = datetime.utcnow() + timedelta(days=1)  # Tomorrow
-        fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
-        
-        # Calculate simulated time based on scenario
-        print(f"DEBUG: set_simulated_time called with scenario: {scenario}")
-        if scenario == 'race_in_3h':
-            simulated_time = fake_race_datetime_utc - timedelta(hours=3)
-            print(f"DEBUG: Setting race_in_3h: {simulated_time}")
-        elif scenario == 'race_in_1h':
-            simulated_time = fake_race_datetime_utc - timedelta(hours=1)
-            print(f"DEBUG: Setting race_in_1h: {simulated_time}")
-        elif scenario == 'race_in_30m':
-            simulated_time = fake_race_datetime_utc - timedelta(minutes=30)
-            print(f"DEBUG: Setting race_in_30m: {simulated_time}")
-        elif scenario == 'race_tomorrow':
-            simulated_time = fake_race_datetime_utc - timedelta(days=1)
-            print(f"DEBUG: Setting race_tomorrow: {simulated_time}")
-        else:
-            print(f"DEBUG: Invalid scenario: {scenario}")
-            return jsonify({"error": "Invalid scenario"}), 400
-        
-        # Store in session with start time for countdown
-        session['simulated_time'] = simulated_time.isoformat()
-        session['simulation_active'] = True
-        session['simulation_start_time'] = datetime.utcnow().isoformat()  # When simulation started
-        session['simulation_scenario'] = scenario
-        
-        # ALSO update global database for cross-device sync
+        # Store active race in database
         try:
             db.session.execute(text("""
                 INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario) 
@@ -7244,23 +7211,234 @@ def set_simulated_time():
                     scenario = :scenario
             """), {
                 'active': True,
-                'simulated_time': simulated_time.isoformat(),
+                'simulated_time': datetime.utcnow().isoformat(),
                 'start_time': datetime.utcnow().isoformat(),
-                'scenario': scenario
+                'scenario': f'active_race_{competition_id}'
             })
             db.session.commit()
+            print(f"DEBUG: Set active race to competition ID: {competition_id}")
         except Exception as db_error:
             print(f"Database update failed: {db_error}")
             db.session.rollback()
+            return jsonify({"error": "Database update failed"}), 500
         
         return jsonify({
-            "message": f"Simulated time set for scenario: {scenario}",
-            "simulated_time": simulated_time.isoformat(),
-            "scenario": scenario
+            "message": f"Active race set to competition ID: {competition_id}",
+            "competition_id": competition_id
         })
         
     except Exception as e:
-        print(f"Error setting simulated time: {e}")
+        print(f"Error setting active race: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/reset_simulation")
+def reset_simulation():
+    """Reset simulation to real time"""
+    try:
+        # Clear database simulation
+        try:
+            db.session.execute(text("UPDATE global_simulation SET active = FALSE WHERE id = 1"))
+            db.session.commit()
+            print("DEBUG: Reset simulation to real time")
+        except Exception as db_error:
+            print(f"Database reset failed: {db_error}")
+            db.session.rollback()
+        
+        return jsonify({"message": "Simulation reset to real time"})
+        
+    except Exception as e:
+        print(f"Error resetting simulation: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/generate_auto_picks")
+def generate_auto_picks():
+    """Generate automatic picks for all users for testing"""
+    try:
+        competition_id = request.args.get('competition_id')
+        
+        if not competition_id:
+            return jsonify({"error": "competition_id required"}), 400
+        
+        # Get all users
+        users = User.query.all()
+        # Get all riders for this competition
+        riders = Rider.query.filter_by(competition_id=competition_id).all()
+        
+        if not riders:
+            return jsonify({"error": "No riders found for this competition"}), 400
+        
+        picks_created = 0
+        
+        for user in users:
+            # Check if user already has picks for this competition
+            existing_picks = Pick.query.filter_by(
+                user_id=user.id, 
+                competition_id=competition_id
+            ).first()
+            
+            if existing_picks:
+                continue  # Skip if user already has picks
+            
+            # Generate random picks
+            import random
+            shuffled_riders = riders.copy()
+            random.shuffle(shuffled_riders)
+            
+            # Create picks for positions 1-10
+            for position in range(1, min(11, len(shuffled_riders) + 1)):
+                pick = Pick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=shuffled_riders[position-1].id,
+                    position=position
+                )
+                db.session.add(pick)
+                picks_created += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Generated {picks_created} auto-picks for {len(users)} users",
+            "picks_created": picks_created,
+            "users_count": len(users)
+        })
+        
+    except Exception as e:
+        print(f"Error generating auto picks: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/quick_simulation")
+def quick_simulation():
+    """Quick simulation - run through multiple races with auto-picks and results"""
+    try:
+        series_id = request.args.get('series_id')
+        num_races = int(request.args.get('num_races', 3))
+        
+        if not series_id:
+            return jsonify({"error": "series_id required"}), 400
+        
+        # Get competitions for this series
+        competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        
+        if not competitions:
+            return jsonify({"error": "No competitions found for this series"}), 400
+        
+        results = []
+        
+        for i, competition in enumerate(competitions[:num_races]):
+            # Generate auto-picks for this competition
+            users = User.query.all()
+            riders = Rider.query.filter_by(competition_id=competition.id).all()
+            
+            if not riders:
+                continue
+            
+            picks_created = 0
+            
+            for user in users:
+                # Check if user already has picks
+                existing_picks = Pick.query.filter_by(
+                    user_id=user.id, 
+                    competition_id=competition.id
+                ).first()
+                
+                if existing_picks:
+                    continue
+                
+                # Generate random picks
+                import random
+                shuffled_riders = riders.copy()
+                random.shuffle(shuffled_riders)
+                
+                for position in range(1, min(11, len(shuffled_riders) + 1)):
+                    pick = Pick(
+                        user_id=user.id,
+                        competition_id=competition.id,
+                        rider_id=shuffled_riders[position-1].id,
+                        position=position
+                    )
+                    db.session.add(pick)
+                    picks_created += 1
+            
+            # Generate random results
+            import random
+            shuffled_riders = riders.copy()
+            random.shuffle(shuffled_riders)
+            
+            results_created = 0
+            for position in range(1, min(11, len(shuffled_riders) + 1)):
+                result = Result(
+                    competition_id=competition.id,
+                    rider_id=shuffled_riders[position-1].id,
+                    position=position
+                )
+                db.session.add(result)
+                results_created += 1
+            
+            results.append({
+                "competition": competition.name,
+                "picks_created": picks_created,
+                "results_created": results_created
+            })
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Quick simulation completed for {len(results)} races",
+            "results": results
+        })
+        
+    except Exception as e:
+        print(f"Error in quick simulation: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/generate_simulated_results")
+def generate_simulated_results():
+    """Generate simulated results for a specific competition"""
+    try:
+        competition_id = request.args.get('competition_id')
+        
+        if not competition_id:
+            return jsonify({"error": "competition_id required"}), 400
+        
+        # Check if results already exist
+        existing_results = Result.query.filter_by(competition_id=competition_id).first()
+        if existing_results:
+            return jsonify({"error": "Results already exist for this competition"}), 400
+        
+        # Get all riders for this competition
+        riders = Rider.query.filter_by(competition_id=competition_id).all()
+        
+        if not riders:
+            return jsonify({"error": "No riders found for this competition"}), 400
+        
+        # Generate random results
+        import random
+        shuffled_riders = riders.copy()
+        random.shuffle(shuffled_riders)
+        
+        results_created = 0
+        for position in range(1, min(21, len(shuffled_riders) + 1)):  # Top 20 for 450cc, all for 250cc
+            result = Result(
+                competition_id=competition_id,
+                rider_id=shuffled_riders[position-1].id,
+                position=position
+            )
+            db.session.add(result)
+            results_created += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Generated {results_created} simulated results",
+            "results_created": results_created
+        })
+        
+    except Exception as e:
+        print(f"Error generating simulated results: {e}")
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 def get_current_time():
