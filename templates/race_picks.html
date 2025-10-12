@@ -27,6 +27,162 @@
     line-height: 1.25rem;
   }
   .section-narrow { max-width: 960px; }
+
+  /* Rider Selector Styles */
+  .rider-selector {
+    position: relative;
+    width: 100%;
+  }
+
+  .rider-selector-input {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    background: #1f2937;
+    color: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .rider-selector-input:hover {
+    border-color: #4b5563;
+  }
+
+  .dropdown-arrow {
+    transition: transform 0.2s;
+  }
+
+  .rider-selector.open .dropdown-arrow {
+    transform: rotate(180deg);
+  }
+
+  .rider-selector-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    max-height: 300px;
+    overflow: hidden;
+  }
+
+  .search-box {
+    padding: 8px;
+    border-bottom: 1px solid #374151;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    background: #111827;
+    color: white;
+    font-size: 14px;
+  }
+
+  .search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .rider-list {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .rider-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #374151;
+  }
+
+  .rider-option:hover {
+    background: #374151;
+  }
+
+  .rider-option[data-out="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .rider-option[data-out="true"]:hover {
+    background: #dc2626;
+  }
+
+  .rider-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+  }
+
+  .rider-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rider-number {
+    font-weight: bold;
+    color: #3b82f6;
+    font-size: 12px;
+  }
+
+  .rider-name {
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .rider-brand {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+
+  .out-badge {
+    background: #dc2626;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .rider-selector-dropdown {
+      max-height: 250px;
+    }
+    
+    .rider-list {
+      max-height: 200px;
+    }
+    
+    .rider-option {
+      padding: 6px 8px;
+    }
+    
+    .rider-avatar {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .rider-name {
+      font-size: 13px;
+    }
+  }
 </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
@@ -102,19 +258,30 @@
         <img id="prev-450-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
           <span class="w-8">{{ i }}.</span>
-          <select
-            class="pick-select pick-select-sm w-full border rounded bg-gray-800 text-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-            data-class="450cc"
-            data-position="{{ i }}"
-            onchange="onPickChange('450cc', {{ i }})"
-          >
-            <option value="">-- välj förare --</option>
-            {% for rider in riders_450 %}
-              <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-                #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
-              </option>
-            {% endfor %}
-          </select>
+          <div class="rider-selector" data-class="450cc" data-position="{{ i }}">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('450cc', {{ i }})">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('450cc', {{ i }}, this.value)">
+              </div>
+              <div class="rider-list">
+                {% for rider in riders_450 %}
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('450cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <span class="rider-info">
+                      <span class="rider-number">#{{ rider.rider_number }}</span>
+                      <span class="rider-name">{{ rider.name }}</span>
+                      <span class="rider-brand">{{ rider.bike_brand }}</span>
+                    </span>
+                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     {% endfor %}
@@ -128,25 +295,52 @@
         <img id="prev-250-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
           <span class="w-8">{{ i }}.</span>
-          <select
-            class="pick-select pick-select-sm w-full border rounded bg-gray-800 text-white dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-            data-class="250cc"
-            data-position="{{ i }}"
-            onchange="onPickChange('250cc', {{ i }})"
-          >
-            <option value="">-- välj förare --</option>
-            {% for rider in riders_250 %}
-              <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-                #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
-              </option>
-            {% endfor %}
-          </select>
+          <div class="rider-selector" data-class="250cc" data-position="{{ i }}">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('250cc', {{ i }})">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('250cc', {{ i }}, this.value)">
+              </div>
+              <div class="rider-list">
+                {% for rider in riders_250 %}
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('250cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <span class="rider-info">
+                      <span class="rider-number">#{{ rider.rider_number }}</span>
+                      <span class="rider-name">{{ rider.name }}</span>
+                      <span class="rider-brand">{{ rider.bike_brand }}</span>
+                    </span>
+                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     {% endfor %}
   </div>
 
 </div>
+
+<!-- Hidden select elements for form submission -->
+{% for i in range(1, 7) %}
+  <select name="pick_450_{{ i }}" style="display: none;">
+    <option value="">-- välj förare --</option>
+    {% for rider in riders_450 %}
+      <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+    {% endfor %}
+  </select>
+  <select name="pick_250_{{ i }}" style="display: none;">
+    <option value="">-- välj förare --</option>
+    {% for rider in riders_250 %}
+      <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+    {% endfor %}
+  </select>
+{% endfor %}
 <!-- SLUT: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
 
 
@@ -157,29 +351,73 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label class="block text-sm sm:text-base mb-1">450cc:</label>
-          <select id="holeshot-450" class="w-full pick-select-sm border rounded bg-gray-800 text-white text-sm sm:text-base">
-  <option value="">-- välj förare --</option>
-  {% for rider in riders_450 %}
-    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
-    </option>
-  {% endfor %}
-
-          </select>
+          <div class="rider-selector" data-class="holeshot-450">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-450', 0)">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('holeshot-450', 0, this.value)">
+              </div>
+              <div class="rider-list">
+                {% for rider in riders_450 %}
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('450', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <span class="rider-info">
+                      <span class="rider-number">#{{ rider.rider_number }}</span>
+                      <span class="rider-name">{{ rider.name }}</span>
+                      <span class="rider-brand">{{ rider.bike_brand }}</span>
+                    </span>
+                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-sm sm:text-base mb-1">250cc:</label>
-          <select id="holeshot-250" class="w-full pick-select-sm border rounded bg-gray-800 text-white text-sm sm:text-base">
-  <option value="">-- välj förare --</option>
-  {% for rider in riders_250 %}
-    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
-    </option>
-  {% endfor %}
-
-          </select>
+          <div class="rider-selector" data-class="holeshot-250">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-250', 0)">
+              <span class="selected-rider">-- välj förare --</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div class="rider-selector-dropdown" style="display: none;">
+              <div class="search-box">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('holeshot-250', 0, this.value)">
+              </div>
+              <div class="rider-list">
+                {% for rider in riders_250 %}
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('250', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <span class="rider-info">
+                      <span class="rider-number">#{{ rider.rider_number }}</span>
+                      <span class="rider-name">{{ rider.name }}</span>
+                      <span class="rider-brand">{{ rider.bike_brand }}</span>
+                    </span>
+                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+      
+      <!-- Hidden select elements for form submission -->
+      <select id="holeshot-450" name="holeshot_450" style="display: none;">
+        <option value="">-- välj förare --</option>
+        {% for rider in riders_450 %}
+          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+        {% endfor %}
+      </select>
+      <select id="holeshot-250" name="holeshot_250" style="display: none;">
+        <option value="">-- välj förare --</option>
+        {% for rider in riders_250 %}
+          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-100 dark:bg-purple-800 rounded">
@@ -188,14 +426,37 @@
         <button type="button" id="wildcard-roll-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm sm:text-base" onclick="rollWildcard()">Slumpa plats</button>
         <span id="wildcard-position-label" class="font-bold text-purple-900 dark:text-purple-100 text-sm sm:text-base"></span>
         <input type="hidden" id="wildcard-position" />
-        <select id="wildcard-pick" class="flex-1 pick-select-sm border rounded bg-white dark:bg-gray-700 text-sm sm:text-base">
-  <option value="">-- välj 450cc förare --</option>
-  {% for rider in riders_450 %}
-    <option value="{{ rider.id }}" {% if rider.id in out_ids %}disabled{% endif %}>
-      #{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }}){% if rider.id in out_ids %} (OUT){% endif %}
-    </option>
-  {% endfor %}
-
+        <div class="rider-selector flex-1" data-class="wildcard-pick">
+          <div class="rider-selector-input" onclick="toggleRiderSelector('wildcard-pick', 0)">
+            <span class="selected-rider">-- välj 450cc förare --</span>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          <div class="rider-selector-dropdown" style="display: none;">
+            <div class="search-box">
+              <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('wildcard-pick', 0, this.value)">
+            </div>
+            <div class="rider-list">
+              {% for rider in riders_450 %}
+                <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectWildcardRider({{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                  <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                  <span class="rider-info">
+                    <span class="rider-number">#{{ rider.rider_number }}</span>
+                    <span class="rider-name">{{ rider.name }}</span>
+                    <span class="rider-brand">{{ rider.bike_brand }}</span>
+                  </span>
+                  {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Hidden select element for form submission -->
+        <select id="wildcard-pick" name="wildcard_pick" style="display: none;">
+          <option value="">-- välj 450cc förare --</option>
+          {% for rider in riders_450 %}
+            <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
+          {% endfor %}
         </select>
       </div>
     </div>
@@ -243,6 +504,180 @@
   console.log(`DEBUG: Race picks page loaded for competition: ${competitionName} (ID: ${competitionId})`);
   console.log(`DEBUG: Competition coast: ${competitionCoast}`);
   console.log(`DEBUG: Total riders: ${allRiders.length}`);
+
+  // Rider Selector Functions
+  function toggleRiderSelector(riderClass, position) {
+    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    const dropdown = selector.querySelector('.rider-selector-dropdown');
+    const isOpen = dropdown.style.display !== 'none';
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.rider-selector-dropdown').forEach(dd => {
+      dd.style.display = 'none';
+    });
+    document.querySelectorAll('.rider-selector').forEach(sel => {
+      sel.classList.remove('open');
+    });
+    
+    // Toggle current dropdown
+    if (!isOpen) {
+      dropdown.style.display = 'block';
+      selector.classList.add('open');
+      // Focus search input
+      const searchInput = dropdown.querySelector('input');
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 100);
+      }
+    }
+  }
+
+  function selectRider(riderClass, position, riderId, riderName) {
+    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    
+    // Update display
+    selectedRiderSpan.textContent = riderName;
+    
+    // Close dropdown
+    const dropdown = selector.querySelector('.rider-selector-dropdown');
+    dropdown.style.display = 'none';
+    selector.classList.remove('open');
+    
+    // Clear search
+    const searchInput = dropdown.querySelector('input');
+    if (searchInput) {
+      searchInput.value = '';
+      filterRiders(riderClass, position, '');
+    }
+    
+    // Call existing onPickChange function
+    onPickChange(riderClass, position, riderId);
+    
+    // Update the hidden select element for form submission
+    const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+    if (hiddenSelect) {
+      hiddenSelect.value = riderId;
+    }
+    
+    // Update rider selectors to hide selected riders
+    updateRiderSelectors(riderClass);
+  }
+
+  function filterRiders(riderClass, position, searchTerm) {
+    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    const riderOptions = selector.querySelectorAll('.rider-option');
+    const searchLower = searchTerm.toLowerCase();
+    
+    riderOptions.forEach(option => {
+      const riderName = option.querySelector('.rider-name').textContent.toLowerCase();
+      const riderNumber = option.querySelector('.rider-number').textContent.toLowerCase();
+      const riderBrand = option.querySelector('.rider-brand').textContent.toLowerCase();
+      
+      const matches = riderName.includes(searchLower) || 
+                     riderNumber.includes(searchLower) || 
+                     riderBrand.includes(searchLower);
+      
+      option.style.display = matches ? 'flex' : 'none';
+    });
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.rider-selector')) {
+      document.querySelectorAll('.rider-selector-dropdown').forEach(dropdown => {
+        dropdown.style.display = 'none';
+      });
+      document.querySelectorAll('.rider-selector').forEach(selector => {
+        selector.classList.remove('open');
+      });
+    }
+  });
+
+  // Handle wildcard rider selection
+  function selectWildcardRider(riderId, riderName) {
+    const selector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    
+    // Update display
+    selectedRiderSpan.textContent = riderName;
+    
+    // Close dropdown
+    const dropdown = selector.querySelector('.rider-selector-dropdown');
+    dropdown.style.display = 'none';
+    selector.classList.remove('open');
+    
+    // Clear search
+    const searchInput = dropdown.querySelector('input');
+    if (searchInput) {
+      searchInput.value = '';
+      filterRiders('wildcard-pick', 0, '');
+    }
+    
+    // Update the hidden select element for form submission
+    const hiddenSelect = document.getElementById('wildcard-pick');
+    if (hiddenSelect) {
+      hiddenSelect.value = riderId;
+    }
+  }
+
+  // Handle holeshot rider selection
+  function selectHoleshotRider(classType, riderId, riderName) {
+    const selector = document.querySelector(`.rider-selector[data-class="holeshot-${classType}"]`);
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    
+    // Update display
+    selectedRiderSpan.textContent = riderName;
+    
+    // Close dropdown
+    const dropdown = selector.querySelector('.rider-selector-dropdown');
+    dropdown.style.display = 'none';
+    selector.classList.remove('open');
+    
+    // Clear search
+    const searchInput = dropdown.querySelector('input');
+    if (searchInput) {
+      searchInput.value = '';
+      filterRiders(`holeshot-${classType}`, 0, '');
+    }
+    
+    // Update the hidden select element for form submission
+    const hiddenSelect = document.getElementById(`holeshot-${classType}`);
+    if (hiddenSelect) {
+      hiddenSelect.value = riderId;
+    }
+  }
+
+  // Update rider selector options (replaces updateDropdowns for new system)
+  function updateRiderSelectors(riderClass) {
+    const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
+    
+    // Get currently selected riders in this class
+    const chosenRiderIds = Array.from(selectors).map(selector => {
+      const selectedRiderSpan = selector.querySelector('.selected-rider');
+      const riderOption = selector.querySelector(`.rider-option[data-rider-name="${selectedRiderSpan.textContent}"]`);
+      return riderOption ? riderOption.dataset.riderId : null;
+    }).filter(Boolean);
+    
+    // Update each selector
+    selectors.forEach(selector => {
+      const riderOptions = selector.querySelectorAll('.rider-option');
+      const currentSelected = selector.querySelector('.selected-rider').textContent;
+      
+      riderOptions.forEach(option => {
+        const riderId = option.dataset.riderId;
+        const isChosenElsewhere = chosenRiderIds.includes(riderId) && 
+                                 option.dataset.riderName !== currentSelected;
+        const isOut = option.dataset.out === 'true';
+        
+        // Hide if chosen elsewhere or out
+        if (isChosenElsewhere || isOut) {
+          option.style.display = 'none';
+        } else {
+          option.style.display = 'flex';
+        }
+      });
+    });
+  }
 
   function updateDropdowns(riderClass) {
     const selects = document.querySelectorAll(
@@ -457,18 +892,23 @@ async function clearAllPicks() {
     alert('Ett fel uppstod vid rensning av val.');
   }
 }
-function onPickChange(cls, pos) {
-  console.log(`DEBUG: onPickChange called for ${cls} position ${pos}`);
+function onPickChange(cls, pos, riderId = null) {
+  console.log(`DEBUG: onPickChange called for ${cls} position ${pos}, riderId: ${riderId}`);
   
-  const sel = document.querySelector(
-    `.pick-select[data-class="${cls}"][data-position="${pos}"]`
-  );
+  // Handle both old select elements and new rider-selector
+  let val = riderId;
+  if (!val) {
+    const sel = document.querySelector(
+      `.pick-select[data-class="${cls}"][data-position="${pos}"]`
+    );
+    val = sel?.value;
+  }
+  
   const imgId = cls.startsWith("450") ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
-  console.log(`DEBUG: Found select: ${sel ? 'yes' : 'no'}, img: ${img ? 'yes' : 'no'}, imgId: ${imgId}`);
+  console.log(`DEBUG: Found img: ${img ? 'yes' : 'no'}, imgId: ${imgId}`);
 
-  const val = sel?.value;
   const src = val ? imgSrcFor(val) : null;
   
   console.log(`DEBUG: Selected value: ${val}, src: ${src}`);
