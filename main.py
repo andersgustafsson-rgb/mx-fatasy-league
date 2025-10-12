@@ -7338,6 +7338,11 @@ def quick_simulation():
             if not riders:
                 continue
             
+            # Clear existing results for this competition first
+            CompetitionResult.query.filter_by(competition_id=competition.id).delete()
+            HoleshotResult.query.filter_by(competition_id=competition.id).delete()
+            CompetitionScore.query.filter_by(competition_id=competition.id).delete()
+            
             picks_created = 0
             
             for user in users:
@@ -7415,10 +7420,11 @@ def generate_simulated_results():
         if not competition:
             return jsonify({"error": "Competition not found"}), 400
         
-        # Check if results already exist
-        existing_results = CompetitionResult.query.filter_by(competition_id=competition_id).first()
-        if existing_results:
-            return jsonify({"error": "Results already exist for this competition"}), 400
+        # Clear existing results for this competition first
+        CompetitionResult.query.filter_by(competition_id=competition_id).delete()
+        HoleshotResult.query.filter_by(competition_id=competition_id).delete()
+        CompetitionScore.query.filter_by(competition_id=competition_id).delete()
+        print(f"DEBUG: Cleared existing results for competition {competition_id}")
         
         # Get all riders based on class and coast (same logic as race_picks_page)
         riders_450 = Rider.query.filter_by(class_name="450cc").all()
