@@ -7225,10 +7225,31 @@ def generate_auto_picks():
         if not competition_id:
             return jsonify({"error": "competition_id required"}), 400
         
+        # Get competition to check coast_250
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+        
         # Get all users
         users = User.query.all()
-        # Get all riders for this competition
-        riders = Rider.query.filter_by(competition_id=competition_id).all()
+        
+        # Get all riders based on class and coast (same logic as race_picks_page)
+        riders_450 = Rider.query.filter_by(class_name="450cc").all()
+        
+        # 250cc riders with coast logic
+        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        if competition.coast_250 == "both":
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == "east") | (Rider.coast_250 == "west") | (Rider.coast_250 == "both")
+            )
+        elif competition.coast_250 in ("east", "west"):
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == competition.coast_250) | (Rider.coast_250 == "both")
+            )
+        riders_250 = riders_250_query.all()
+        
+        # Combine all riders
+        riders = riders_450 + riders_250
         
         if not riders:
             return jsonify({"error": "No riders found for this competition"}), 400
@@ -7295,7 +7316,24 @@ def quick_simulation():
         for i, competition in enumerate(competitions[:num_races]):
             # Generate auto-picks for this competition
             users = User.query.all()
-            riders = Rider.query.filter_by(competition_id=competition.id).all()
+            
+            # Get all riders based on class and coast (same logic as race_picks_page)
+            riders_450 = Rider.query.filter_by(class_name="450cc").all()
+            
+            # 250cc riders with coast logic
+            riders_250_query = Rider.query.filter_by(class_name="250cc")
+            if competition.coast_250 == "both":
+                riders_250_query = riders_250_query.filter(
+                    (Rider.coast_250 == "east") | (Rider.coast_250 == "west") | (Rider.coast_250 == "both")
+                )
+            elif competition.coast_250 in ("east", "west"):
+                riders_250_query = riders_250_query.filter(
+                    (Rider.coast_250 == competition.coast_250) | (Rider.coast_250 == "both")
+                )
+            riders_250 = riders_250_query.all()
+            
+            # Combine all riders
+            riders = riders_450 + riders_250
             
             if not riders:
                 continue
@@ -7369,13 +7407,33 @@ def generate_simulated_results():
         if not competition_id:
             return jsonify({"error": "competition_id required"}), 400
         
+        # Get competition to check coast_250
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+        
         # Check if results already exist
         existing_results = CompetitionResult.query.filter_by(competition_id=competition_id).first()
         if existing_results:
             return jsonify({"error": "Results already exist for this competition"}), 400
         
-        # Get all riders for this competition
-        riders = Rider.query.filter_by(competition_id=competition_id).all()
+        # Get all riders based on class and coast (same logic as race_picks_page)
+        riders_450 = Rider.query.filter_by(class_name="450cc").all()
+        
+        # 250cc riders with coast logic
+        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        if competition.coast_250 == "both":
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == "east") | (Rider.coast_250 == "west") | (Rider.coast_250 == "both")
+            )
+        elif competition.coast_250 in ("east", "west"):
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == competition.coast_250) | (Rider.coast_250 == "both")
+            )
+        riders_250 = riders_250_query.all()
+        
+        # Combine all riders
+        riders = riders_450 + riders_250
         
         if not riders:
             return jsonify({"error": "No riders found for this competition"}), 400
