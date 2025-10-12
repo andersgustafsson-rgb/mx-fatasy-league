@@ -7228,6 +7228,29 @@ def set_simulated_time():
         session['simulation_start_time'] = datetime.utcnow().isoformat()  # When simulation started
         session['simulation_scenario'] = scenario
         
+        # ALSO update global database for cross-device sync
+        try:
+            db.session.execute(text("""
+                INSERT INTO global_simulation (id, active, simulated_time, start_time, initial_time, scenario) 
+                VALUES (1, :active, :simulated_time, :start_time, :initial_time, :scenario)
+                ON CONFLICT (id) DO UPDATE SET 
+                    active = :active,
+                    simulated_time = :simulated_time,
+                    start_time = :start_time,
+                    initial_time = :initial_time,
+                    scenario = :scenario
+            """), {
+                'active': True,
+                'simulated_time': simulated_time.isoformat(),
+                'start_time': datetime.utcnow().isoformat(),
+                'initial_time': simulated_time.isoformat(),
+                'scenario': scenario
+            })
+            db.session.commit()
+        except Exception as db_error:
+            print(f"Database update failed: {db_error}")
+            db.session.rollback()
+        
         return jsonify({
             "message": f"Simulated time set for scenario: {scenario}",
             "simulated_time": simulated_time.isoformat(),
