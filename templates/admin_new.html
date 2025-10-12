@@ -309,57 +309,24 @@
                     <!-- Set Active Race -->
                     <div class="mb-6 p-4 bg-gray-800 border-l-4 border-blue-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);">
                         <h3 class="text-lg font-medium text-blue-400 neon-text mb-3">🎯 Sätt Aktivt Race</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <button onclick="setActiveRace(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                San Francisco
-                            </button>
-                            <button onclick="setActiveRace(2)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                San Diego
-                            </button>
-                            <button onclick="setActiveRace(3)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                Anaheim 2
-                            </button>
-                            <button onclick="setActiveRace(4)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                Houston
-                            </button>
+                        <div id="set-active-race-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <!-- Buttons will be populated dynamically -->
                         </div>
                     </div>
                     
                     <!-- Auto Picks -->
                     <div class="mb-6 p-4 bg-gray-800 border-l-4 border-green-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);">
                         <h3 class="text-lg font-medium text-green-400 neon-text mb-3">🎲 Auto Picks</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <button onclick="generateAutoPicks(1)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                SF Auto Picks
-                            </button>
-                            <button onclick="generateAutoPicks(2)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                SD Auto Picks
-                            </button>
-                            <button onclick="generateAutoPicks(3)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                A2 Auto Picks
-                            </button>
-                            <button onclick="generateAutoPicks(4)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                Houston Auto Picks
-                            </button>
+                        <div id="auto-picks-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <!-- Buttons will be populated dynamically -->
                         </div>
                     </div>
                     
                     <!-- Simulated Results -->
                     <div class="mb-6 p-4 bg-gray-800 border-l-4 border-orange-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);">
                         <h3 class="text-lg font-medium text-orange-400 neon-text mb-3">🏆 Simulerade Resultat</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <button onclick="generateSimulatedResults(1)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                SF Resultat
-                            </button>
-                            <button onclick="generateSimulatedResults(2)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                SD Resultat
-                            </button>
-                            <button onclick="generateSimulatedResults(3)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                A2 Resultat
-                            </button>
-                            <button onclick="generateSimulatedResults(4)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
-                                Houston Resultat
-                            </button>
+                        <div id="simulated-results-buttons" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <!-- Buttons will be populated dynamically -->
                         </div>
                     </div>
                     
@@ -768,6 +735,45 @@
             }
         }
 
+        // Populate simulation buttons dynamically based on actual competitions
+        function populateSimulationButtons(competitions) {
+            // Get the first 4 competitions for simulation buttons
+            const firstFourCompetitions = competitions.slice(0, 4);
+            
+            // Set Active Race buttons
+            const setActiveButtons = document.getElementById('set-active-race-buttons');
+            setActiveButtons.innerHTML = '';
+            firstFourCompetitions.forEach(comp => {
+                const button = document.createElement('button');
+                button.className = 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors';
+                button.textContent = comp.name;
+                button.onclick = () => setActiveRace(comp.id);
+                setActiveButtons.appendChild(button);
+            });
+            
+            // Auto Picks buttons
+            const autoPicksButtons = document.getElementById('auto-picks-buttons');
+            autoPicksButtons.innerHTML = '';
+            firstFourCompetitions.forEach(comp => {
+                const button = document.createElement('button');
+                button.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors';
+                button.textContent = `${comp.name} Auto Picks`;
+                button.onclick = () => generateAutoPicks(comp.id);
+                autoPicksButtons.appendChild(button);
+            });
+            
+            // Simulated Results buttons
+            const simulatedResultsButtons = document.getElementById('simulated-results-buttons');
+            simulatedResultsButtons.innerHTML = '';
+            firstFourCompetitions.forEach(comp => {
+                const button = document.createElement('button');
+                button.className = 'bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors';
+                button.textContent = `${comp.name} Resultat`;
+                button.onclick = () => generateSimulatedResults(comp.id);
+                simulatedResultsButtons.appendChild(button);
+            });
+        }
+
         // Initialize sections when page loads
         document.addEventListener('DOMContentLoaded', () => {
             initSections();
@@ -799,6 +805,9 @@
                     option.textContent = text;
                     select.appendChild(option);
                 });
+                
+                // Populate simulation buttons dynamically
+                populateSimulationButtons(competitions);
                 
                 // Restore previously selected competition from localStorage, but prioritize upcoming race
                 const savedCompetition = localStorage.getItem('admin_selected_competition');
