@@ -381,6 +381,50 @@
                 </div>
             </div>
 
+            <!-- Rensa Data Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('clear-data')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">🧹 Rensa Data</span>
+                    <span id="clear-data-toggle">▼</span>
+                </button>
+                
+                <div id="clear-data-section" class="hidden p-6">
+                    
+                    <!-- Clear Results -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-red-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);">
+                        <h3 class="text-lg font-medium text-red-400 neon-text mb-3">🏆 Rensa Alla Resultat</h3>
+                        <p class="text-sm text-red-300 mb-3">
+                            Tar bort alla resultat från alla tävlingar. Användbart för att starta om simulering.
+                        </p>
+                        <button onclick="clearAllResults()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                            🗑️ Rensa Alla Resultat
+                        </button>
+                    </div>
+                    
+                    <!-- Clear Picks -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-yellow-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);">
+                        <h3 class="text-lg font-medium text-yellow-400 neon-text mb-3">🎯 Rensa Alla Picks</h3>
+                        <p class="text-sm text-yellow-300 mb-3">
+                            Tar bort alla picks från alla användare och tävlingar.
+                        </p>
+                        <button onclick="clearAllPicks()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                            🗑️ Rensa Alla Picks
+                        </button>
+                    </div>
+                    
+                    <!-- Full Reset -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-gray-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(107, 114, 128, 0.2);">
+                        <h3 class="text-lg font-medium text-gray-400 neon-text mb-3">⚠️ Full Reset</h3>
+                        <p class="text-sm text-gray-300 mb-3">
+                            <strong>VARNING:</strong> Tar bort ALLT - picks, resultat och poäng. Använd bara för fullständig återställning.
+                        </p>
+                        <button onclick="clearAllData()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition-colors">
+                            🗑️ Full Reset (Allt)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Användarhantering Section -->
             <div class="cyberpunk-card rounded-lg">
                 <button onclick="toggleSection('user-management')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
@@ -659,6 +703,68 @@
             } catch (error) {
                 console.error('Error resetting simulation:', error);
                 showToast('Kunde inte återställa simulering', false);
+            }
+        }
+
+        // Clear Data Functions
+        async function clearAllResults() {
+            if (!confirm('Är du säker på att du vill rensa ALLA resultat från ALLA tävlingar?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear_all_results');
+                const data = await response.json();
+                if (response.ok) {
+                    showToast('Alla resultat rensade framgångsrikt', true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error clearing all results:', error);
+                showToast('Kunde inte rensa alla resultat', false);
+            }
+        }
+
+        async function clearAllPicks() {
+            if (!confirm('Är du säker på att du vill rensa ALLA picks från ALLA användare?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear_all_picks');
+                const data = await response.json();
+                if (response.ok) {
+                    showToast('Alla picks rensade framgångsrikt', true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error clearing all picks:', error);
+                showToast('Kunde inte rensa alla picks', false);
+            }
+        }
+
+        async function clearAllData() {
+            if (!confirm('⚠️ VARNING: Detta tar bort ALLT - picks, resultat och poäng!\n\nÄr du ABSOLUT säker?')) {
+                return;
+            }
+            
+            if (!confirm('Sista chansen - detta kan inte ångras!\n\nKlicka OK för att rensa ALLT.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear_all_data');
+                const data = await response.json();
+                if (response.ok) {
+                    showToast('Full reset genomförd - allt rensat', true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error clearing all data:', error);
+                showToast('Kunde inte rensa all data', false);
             }
         }
 

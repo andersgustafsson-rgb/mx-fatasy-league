@@ -7370,7 +7370,7 @@ def generate_simulated_results():
             return jsonify({"error": "competition_id required"}), 400
         
         # Check if results already exist
-        existing_results = Result.query.filter_by(competition_id=competition_id).first()
+        existing_results = CompetitionResult.query.filter_by(competition_id=competition_id).first()
         if existing_results:
             return jsonify({"error": "Results already exist for this competition"}), 400
         
@@ -7387,7 +7387,7 @@ def generate_simulated_results():
         
         results_created = 0
         for position in range(1, min(21, len(shuffled_riders) + 1)):  # Top 20 for 450cc, all for 250cc
-            result = Result(
+            result = CompetitionResult(
                 competition_id=competition_id,
                 rider_id=shuffled_riders[position-1].id,
                 position=position
@@ -7404,6 +7404,80 @@ def generate_simulated_results():
         
     except Exception as e:
         print(f"Error generating simulated results: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/clear_all_results")
+def clear_all_results():
+    """Clear all results from all competitions"""
+    try:
+        if session.get("username") != "test":
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Clear all competition results
+        CompetitionResult.query.delete()
+        HoleshotResult.query.delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "All results cleared successfully",
+            "cleared": "competition_results, holeshot_results"
+        })
+        
+    except Exception as e:
+        print(f"Error clearing all results: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/clear_all_picks")
+def clear_all_picks():
+    """Clear all picks from all competitions"""
+    try:
+        if session.get("username") != "test":
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Clear all picks
+        RacePick.query.delete()
+        HoleshotPick.query.delete()
+        WildcardPick.query.delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "All picks cleared successfully",
+            "cleared": "race_picks, holeshot_picks, wildcard_picks"
+        })
+        
+    except Exception as e:
+        print(f"Error clearing all picks: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/clear_all_data")
+def clear_all_data():
+    """Clear all picks and results - full reset"""
+    try:
+        if session.get("username") != "test":
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Clear all picks and results
+        RacePick.query.delete()
+        HoleshotPick.query.delete()
+        WildcardPick.query.delete()
+        CompetitionResult.query.delete()
+        HoleshotResult.query.delete()
+        CompetitionScore.query.delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "All data cleared successfully - full reset complete",
+            "cleared": "picks, results, scores"
+        })
+        
+    except Exception as e:
+        print(f"Error clearing all data: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
