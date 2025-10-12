@@ -1460,7 +1460,7 @@
           `;
           
           return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" onclick="console.log('DEBUG: Clicking series card for ${serie.name} with ID: ${serie.id}')">${cardContent}</a>`
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" onclick="console.log('DEBUG: Clicking series card for ${serie.name} with ID: ${serie.id}'); event.preventDefault(); window.location.href='/series/${serie.id}'; return false;">${cardContent}</a>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
