@@ -602,6 +602,16 @@
         // Countdown test functions
         async function testScenario(scenario) {
             try {
+                // First set the simulated time in database
+                const setTimeResponse = await fetch(`/set_simulated_time?scenario=${scenario}`);
+                const setTimeData = await setTimeResponse.json();
+                
+                if (setTimeData.error) {
+                    alert(`Fel: ${setTimeData.error}`);
+                    return;
+                }
+                
+                // Then fetch test countdown data
                 const response = await fetch(`/test_countdown?scenario=${scenario}`, {
                     method: 'GET'
                 });
