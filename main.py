@@ -7038,7 +7038,9 @@ def test_countdown():
         
         # Get the scenario from query parameter
         scenario = request.args.get('scenario', 'race_in_3h')
+        print(f"DEBUG: test_countdown called with scenario: {scenario}")
         simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
+        print(f"DEBUG: test_countdown calculated simulated_time: {simulated_time}")
         
         # Set the simulated time in session for global use (for backward compatibility, but we'll use global database state)
         session['simulation_active'] = True
@@ -7203,15 +7205,21 @@ def set_simulated_time():
         fake_race_datetime_utc = fake_race_date.replace(hour=20, minute=0, second=0, microsecond=0)
         
         # Calculate simulated time based on scenario
+        print(f"DEBUG: set_simulated_time called with scenario: {scenario}")
         if scenario == 'race_in_3h':
             simulated_time = fake_race_datetime_utc - timedelta(hours=3)
+            print(f"DEBUG: Setting race_in_3h: {simulated_time}")
         elif scenario == 'race_in_1h':
             simulated_time = fake_race_datetime_utc - timedelta(hours=1)
+            print(f"DEBUG: Setting race_in_1h: {simulated_time}")
         elif scenario == 'race_in_30m':
             simulated_time = fake_race_datetime_utc - timedelta(minutes=30)
+            print(f"DEBUG: Setting race_in_30m: {simulated_time}")
         elif scenario == 'race_tomorrow':
             simulated_time = fake_race_datetime_utc - timedelta(days=1)
+            print(f"DEBUG: Setting race_tomorrow: {simulated_time}")
         else:
+            print(f"DEBUG: Invalid scenario: {scenario}")
             return jsonify({"error": "Invalid scenario"}), 400
         
         # Store in session with start time for countdown
