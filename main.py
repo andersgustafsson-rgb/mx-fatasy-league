@@ -7237,7 +7237,7 @@ def generate_auto_picks():
         
         for user in users:
             # Check if user already has picks for this competition
-            existing_picks = Pick.query.filter_by(
+            existing_picks = RacePick.query.filter_by(
                 user_id=user.id, 
                 competition_id=competition_id
             ).first()
@@ -7252,11 +7252,11 @@ def generate_auto_picks():
             
             # Create picks for positions 1-10
             for position in range(1, min(11, len(shuffled_riders) + 1)):
-                pick = Pick(
+                pick = RacePick(
                     user_id=user.id,
                     competition_id=competition_id,
                     rider_id=shuffled_riders[position-1].id,
-                    position=position
+                    predicted_position=position
                 )
                 db.session.add(pick)
                 picks_created += 1
@@ -7304,7 +7304,7 @@ def quick_simulation():
             
             for user in users:
                 # Check if user already has picks
-                existing_picks = Pick.query.filter_by(
+                existing_picks = RacePick.query.filter_by(
                     user_id=user.id, 
                     competition_id=competition.id
                 ).first()
@@ -7318,11 +7318,11 @@ def quick_simulation():
                 random.shuffle(shuffled_riders)
                 
                 for position in range(1, min(11, len(shuffled_riders) + 1)):
-                    pick = Pick(
+                    pick = RacePick(
                         user_id=user.id,
                         competition_id=competition.id,
                         rider_id=shuffled_riders[position-1].id,
-                        position=position
+                        predicted_position=position
                     )
                     db.session.add(pick)
                     picks_created += 1
@@ -7334,7 +7334,7 @@ def quick_simulation():
             
             results_created = 0
             for position in range(1, min(11, len(shuffled_riders) + 1)):
-                result = Result(
+                result = CompetitionResult(
                     competition_id=competition.id,
                     rider_id=shuffled_riders[position-1].id,
                     position=position
