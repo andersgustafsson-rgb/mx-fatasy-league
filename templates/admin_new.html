@@ -297,6 +297,90 @@
                 </div>
             </div>
 
+            <!-- Enkel Simulering Section -->
+            <div class="cyberpunk-card rounded-lg">
+                <button onclick="toggleSection('simple-simulation')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
+                    <span class="text-xl font-medium">🎮 Enkel Simulering</span>
+                    <span id="simple-simulation-toggle">▼</span>
+                </button>
+                
+                <div id="simple-simulation-section" class="hidden p-6">
+                    
+                    <!-- Set Active Race -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-blue-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);">
+                        <h3 class="text-lg font-medium text-blue-400 neon-text mb-3">🎯 Sätt Aktivt Race</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="setActiveRace(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                San Francisco
+                            </button>
+                            <button onclick="setActiveRace(2)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                San Diego
+                            </button>
+                            <button onclick="setActiveRace(3)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                Anaheim 2
+                            </button>
+                            <button onclick="setActiveRace(4)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                Houston
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Auto Picks -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-green-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);">
+                        <h3 class="text-lg font-medium text-green-400 neon-text mb-3">🎲 Auto Picks</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="generateAutoPicks(1)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                SF Auto Picks
+                            </button>
+                            <button onclick="generateAutoPicks(2)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                SD Auto Picks
+                            </button>
+                            <button onclick="generateAutoPicks(3)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                A2 Auto Picks
+                            </button>
+                            <button onclick="generateAutoPicks(4)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                Houston Auto Picks
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Simulated Results -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-orange-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);">
+                        <h3 class="text-lg font-medium text-orange-400 neon-text mb-3">🏆 Simulerade Resultat</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="generateSimulatedResults(1)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                SF Resultat
+                            </button>
+                            <button onclick="generateSimulatedResults(2)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                SD Resultat
+                            </button>
+                            <button onclick="generateSimulatedResults(3)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                A2 Resultat
+                            </button>
+                            <button onclick="generateSimulatedResults(4)" class="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                Houston Resultat
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Simulation -->
+                    <div class="mb-6 p-4 bg-gray-800 border-l-4 border-purple-500 rounded-r-lg" style="box-shadow: 0 0 15px rgba(147, 51, 234, 0.2);">
+                        <h3 class="text-lg font-medium text-purple-400 neon-text mb-3">⚡ Quick Simulation</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <button onclick="quickSimulation(1, 2)" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                2 Races SX
+                            </button>
+                            <button onclick="quickSimulation(1, 4)" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                4 Races SX
+                            </button>
+                            <button onclick="resetSimulation()" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm transition-colors">
+                                Reset Simulering
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Användarhantering Section -->
             <div class="cyberpunk-card rounded-lg">
                 <button onclick="toggleSection('user-management')" class="w-full bg-gray-800 hover:bg-gray-700 text-white px-6 py-4 rounded-t-lg border-b border-gray-600 flex justify-between items-center">
@@ -501,6 +585,83 @@
         let isSaving = false; // Prevent multiple simultaneous saves
         let originalOutStatus = {}; // Store original OUT status to detect changes
         
+        // Simple Simulation Functions
+        async function setActiveRace(competitionId) {
+            try {
+                const response = await fetch(`/set_active_race?competition_id=${competitionId}`);
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(`Aktivt race satt till ID: ${competitionId}`, true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error setting active race:', error);
+                showToast('Kunde inte sätta aktivt race', false);
+            }
+        }
+
+        async function generateAutoPicks(competitionId) {
+            try {
+                const response = await fetch(`/generate_auto_picks?competition_id=${competitionId}`);
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(`Genererade ${data.picks_created} auto-picks för ${data.users_count} användare`, true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error generating auto picks:', error);
+                showToast('Kunde inte generera auto-picks', false);
+            }
+        }
+
+        async function generateSimulatedResults(competitionId) {
+            try {
+                const response = await fetch(`/generate_simulated_results?competition_id=${competitionId}`);
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(`Genererade ${data.results_created} simulerade resultat`, true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error generating simulated results:', error);
+                showToast('Kunde inte generera simulerade resultat', false);
+            }
+        }
+
+        async function quickSimulation(seriesId, numRaces) {
+            try {
+                const response = await fetch(`/quick_simulation?series_id=${seriesId}&num_races=${numRaces}`);
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(`Quick simulation klar för ${data.results.length} races`, true);
+                    console.log('Quick simulation results:', data.results);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error in quick simulation:', error);
+                showToast('Kunde inte köra quick simulation', false);
+            }
+        }
+
+        async function resetSimulation() {
+            try {
+                const response = await fetch('/reset_simulation');
+                const data = await response.json();
+                if (response.ok) {
+                    showToast('Simulering återställd till riktig tid', true);
+                } else {
+                    showToast(`Fel: ${data.error}`, false);
+                }
+            } catch (error) {
+                console.error('Error resetting simulation:', error);
+                showToast('Kunde inte återställa simulering', false);
+            }
+        }
+
         // Initialize sections when page loads
         document.addEventListener('DOMContentLoaded', () => {
             initSections();
