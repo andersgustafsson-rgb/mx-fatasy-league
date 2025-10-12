@@ -126,6 +126,8 @@
     border-radius: 50%;
     margin-right: 8px;
     object-fit: cover;
+    background: #374151;
+    border: 1px solid #4b5563;
   }
 
   .rider-info {
@@ -270,7 +272,7 @@
               <div class="rider-list">
                 {% for rider in riders_450 %}
                   <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('450cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
                       <span class="rider-name">{{ rider.name }}</span>
@@ -307,7 +309,7 @@
               <div class="rider-list">
                 {% for rider in riders_250 %}
                   <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('250cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
                       <span class="rider-name">{{ rider.name }}</span>
@@ -363,7 +365,7 @@
               <div class="rider-list">
                 {% for rider in riders_450 %}
                   <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('450', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
                       <span class="rider-name">{{ rider.name }}</span>
@@ -390,7 +392,7 @@
               <div class="rider-list">
                 {% for rider in riders_250 %}
                   <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('250', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
                       <span class="rider-name">{{ rider.name }}</span>
@@ -438,7 +440,7 @@
             <div class="rider-list">
               {% for rider in riders_450 %}
                 <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectWildcardRider({{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                  <img src="{{ url_for('static', filename='riders/' + rider.image_url) if rider.image_url else '/static/riders/default.png' }}" alt="" class="rider-avatar">
+                  <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                   <span class="rider-info">
                     <span class="rider-number">#{{ rider.rider_number }}</span>
                     <span class="rider-name">{{ rider.name }}</span>
@@ -523,12 +525,40 @@
     if (!isOpen) {
       dropdown.style.display = 'block';
       selector.classList.add('open');
+      
+      // Load rider images when dropdown opens
+      loadRiderImages(riderClass, position);
+      
       // Focus search input
       const searchInput = dropdown.querySelector('input');
       if (searchInput) {
         setTimeout(() => searchInput.focus(), 100);
       }
     }
+  }
+
+  // Load rider images for dropdown
+  function loadRiderImages(riderClass, position) {
+    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    const riderOptions = selector.querySelectorAll('.rider-option');
+    
+    riderOptions.forEach(option => {
+      const img = option.querySelector('.rider-avatar');
+      const riderId = option.dataset.riderId;
+      
+      if (img && riderId && !img.src) {
+        // Set image source using the same logic as imgSrcFor
+        const rider = allRiders.find(r => r.id == riderId);
+        if (rider && rider.image_url) {
+          img.src = `/static/riders/${rider.image_url}`;
+          img.onerror = function() {
+            this.src = '/static/riders/default.png';
+          };
+        } else {
+          img.src = '/static/riders/default.png';
+        }
+      }
+    });
   }
 
   function selectRider(riderClass, position, riderId, riderName) {
