@@ -528,6 +528,175 @@
   console.log(`DEBUG: Competition coast: ${competitionCoast}`);
   console.log(`DEBUG: Total riders: ${allRiders.length}`);
 
+  // Load saved picks from localStorage on page load
+  loadSavedPicksFromStorage();
+
+  // Save picks to localStorage
+  function savePicksToStorage() {
+    const picks = {
+      competitionId: competitionId,
+      timestamp: Date.now(),
+      racePicks: {},
+      holeshotPicks: {},
+      wildcardPick: null,
+      wildcardPosition: null
+    };
+
+    // Save race picks (450cc and 250cc)
+    ['450cc', '250cc'].forEach(riderClass => {
+      picks.racePicks[riderClass] = {};
+      for (let i = 1; i <= 6; i++) {
+        const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${i}"]`);
+        if (selector) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          const currentText = selectedRiderSpan.textContent;
+          
+          if (currentText !== '-- välj förare --' && currentText !== '-- välj 450cc förare --') {
+            const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+            if (riderOption) {
+              picks.racePicks[riderClass][i] = {
+                riderId: riderOption.dataset.riderId,
+                riderName: riderOption.dataset.riderName
+              };
+            }
+          }
+        }
+      }
+    });
+
+    // Save holeshot picks
+    ['450', '250'].forEach(classType => {
+      const selector = document.querySelector(`.rider-selector[data-class="holeshot-${classType}"]`);
+      if (selector) {
+        const selectedRiderSpan = selector.querySelector('.selected-rider');
+        const currentText = selectedRiderSpan.textContent;
+        
+        if (currentText !== '-- välj förare --') {
+          const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+          if (riderOption) {
+            picks.holeshotPicks[classType] = {
+              riderId: riderOption.dataset.riderId,
+              riderName: riderOption.dataset.riderName
+            };
+          }
+        }
+      }
+    });
+
+    // Save wildcard pick
+    const wildcardSelector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
+    if (wildcardSelector) {
+      const selectedRiderSpan = wildcardSelector.querySelector('.selected-rider');
+      const currentText = selectedRiderSpan.textContent;
+      
+      if (currentText !== '-- välj 450cc förare --') {
+        const riderOption = wildcardSelector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+        if (riderOption) {
+          picks.wildcardPick = {
+            riderId: riderOption.dataset.riderId,
+            riderName: riderOption.dataset.riderName
+          };
+        }
+      }
+    }
+
+    // Save wildcard position
+    const wildcardPosition = document.getElementById('wildcard-position');
+    if (wildcardPosition && wildcardPosition.value) {
+      picks.wildcardPosition = wildcardPosition.value;
+    }
+
+    localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(picks));
+    console.log('DEBUG: Picks saved to localStorage:', picks);
+  }
+
+  // Load picks from localStorage
+  function loadSavedPicksFromStorage() {
+    const savedPicks = localStorage.getItem(`race_picks_${competitionId}`);
+    if (!savedPicks) return;
+
+    try {
+      const picks = JSON.parse(savedPicks);
+      console.log('DEBUG: Loading picks from localStorage:', picks);
+
+      // Load race picks
+      ['450cc', '250cc'].forEach(riderClass => {
+        if (picks.racePicks[riderClass]) {
+          Object.keys(picks.racePicks[riderClass]).forEach(position => {
+            const pick = picks.racePicks[riderClass][position];
+            const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+            if (selector && pick) {
+              const selectedRiderSpan = selector.querySelector('.selected-rider');
+              selectedRiderSpan.textContent = pick.riderName;
+              
+              // Show clear button
+              const clearBtn = selector.querySelector('.clear-selection');
+              if (clearBtn) {
+                clearBtn.style.display = 'block';
+              }
+              
+              // Update hidden select
+              const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+              if (hiddenSelect) {
+                hiddenSelect.value = pick.riderId;
+              }
+              
+              // Update preview image
+              onPickChange(riderClass, position, pick.riderId);
+            }
+          });
+        }
+      });
+
+      // Load holeshot picks
+      ['450', '250'].forEach(classType => {
+        if (picks.holeshotPicks[classType]) {
+          const pick = picks.holeshotPicks[classType];
+          const selector = document.querySelector(`.rider-selector[data-class="holeshot-${classType}"]`);
+          if (selector && pick) {
+            const selectedRiderSpan = selector.querySelector('.selected-rider');
+            selectedRiderSpan.textContent = pick.riderName;
+            
+            // Update hidden select
+            const hiddenSelect = document.getElementById(`holeshot-${classType}`);
+            if (hiddenSelect) {
+              hiddenSelect.value = pick.riderId;
+            }
+          }
+        }
+      });
+
+      // Load wildcard pick
+      if (picks.wildcardPick) {
+        const pick = picks.wildcardPick;
+        const selector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
+        if (selector && pick) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          selectedRiderSpan.textContent = pick.riderName;
+          
+          // Update hidden select
+          const hiddenSelect = document.getElementById('wildcard-pick');
+          if (hiddenSelect) {
+            hiddenSelect.value = pick.riderId;
+          }
+        }
+      }
+
+      // Load wildcard position
+      if (picks.wildcardPosition) {
+        document.getElementById('wildcard-position').value = picks.wildcardPosition;
+        document.getElementById('wildcard-position-label').textContent = `Plats ${picks.wildcardPosition}`;
+      }
+
+      // Update rider selectors to hide selected riders
+      updateRiderSelectors('450cc');
+      updateRiderSelectors('250cc');
+
+    } catch (error) {
+      console.error('Error loading picks from localStorage:', error);
+    }
+  }
+
   // Rider Selector Functions
   function toggleRiderSelector(riderClass, position) {
     const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
@@ -630,6 +799,9 @@
     
     // Update rider selectors to hide selected riders
     updateRiderSelectors(riderClass);
+    
+    // Save picks to localStorage
+    savePicksToStorage();
   }
 
   function filterRiders(riderClass, position, searchTerm) {
@@ -687,6 +859,9 @@
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
     }
+    
+    // Save picks to localStorage
+    savePicksToStorage();
   }
 
   // Handle holeshot rider selection
@@ -714,6 +889,9 @@
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
     }
+    
+    // Save picks to localStorage
+    savePicksToStorage();
   }
 
   // Clear rider selection
@@ -741,6 +919,9 @@
     
     // Update rider selectors to show all options again
     updateRiderSelectors(riderClass);
+    
+    // Save picks to localStorage
+    savePicksToStorage();
   }
 
   // Update rider selector options (replaces updateDropdowns for new system)
@@ -1253,6 +1434,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
           `Din plats: ${pos}`;
         btn.disabled = true;
         btn.classList.add("opacity-50", "cursor-not-allowed");
+        
+        // Save picks to localStorage
+        savePicksToStorage();
       } else {
         alert(data.error || "Kunde inte låsa wildcard");
       }
@@ -1324,6 +1508,10 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       });
       const data = await resp.json();
       alert(data.message || data.error || "Ok");
+      
+      // Clear localStorage since picks are now saved to server
+      localStorage.removeItem(`race_picks_${competitionId}`);
+      console.log('DEBUG: Cleared localStorage after successful save');
       
       // Update picks status after saving
       setTimeout(() => {
