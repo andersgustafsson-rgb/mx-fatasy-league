@@ -6799,40 +6799,6 @@ def simulate_race(race_id):
     # TODO: Implement actual race simulation
     return jsonify({"message": f"Race {race_id} simulation not yet implemented"})
 
-@app.route("/reset_simulation", methods=['POST'])
-def reset_simulation():
-    """Reset simulation to real time"""
-    if session.get("username") != "test":
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    # Clear session-based simulation (for backward compatibility, but we'll use global database state)
-    session.pop('simulation_active', None)
-    session.pop('simulation_start_time', None)
-    session.pop('initial_simulated_time', None)
-    session.pop('simulated_time', None)
-    session.pop('test_scenario', None)
-    
-    # Clear global simulation state from database
-    try:
-        # Rollback any existing transaction first
-        db.session.rollback()
-        
-        db.session.execute(text("UPDATE global_simulation SET active = FALSE WHERE id = 1"))
-        db.session.commit()
-    except Exception as e:
-        print(f"DEBUG: Error clearing global simulation: {e}")
-        # Rollback and fallback to app globals if database table doesn't exist
-        db.session.rollback()
-        if hasattr(app, 'global_simulation_active'):
-            app.global_simulation_active = False
-        if hasattr(app, 'global_simulation_start_time'):
-            delattr(app, 'global_simulation_start_time')
-        if hasattr(app, 'global_initial_simulated_time'):
-            delattr(app, 'global_initial_simulated_time')
-        if hasattr(app, 'global_simulated_time'):
-            delattr(app, 'global_simulated_time')
-    
-    return jsonify({"message": "Simulation reset to real time"})
 
 @app.route("/dino_game")
 def dino_game():
