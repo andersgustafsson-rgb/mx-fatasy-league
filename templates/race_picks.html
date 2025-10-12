@@ -571,7 +571,9 @@
         // Set image source using the same logic as imgSrcFor
         const rider = allRiders.find(r => r.id == riderId);
         if (rider && rider.image_url) {
-          img.src = `/static/riders/${rider.image_url}`;
+          // Remove 'riders/' prefix if it exists to avoid double path
+          const imagePath = rider.image_url.startsWith('riders/') ? rider.image_url : `riders/${rider.image_url}`;
+          img.src = `/static/${imagePath}`;
           img.onerror = function() {
             // Use bike brand logo as fallback
             if (rider.bike_brand) {
@@ -885,7 +887,9 @@ function imgSrcFor(riderId) {
   
   // Try rider image first (check both PNG and JPG)
   if (r.image_url) {
-    const url = `/static/riders/${r.image_url}`;
+    // Remove 'riders/' prefix if it exists to avoid double path
+    const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
+    const url = `/static/${imagePath}`;
     console.log(`DEBUG: Using rider image: ${url}`);
     return url;
   }
