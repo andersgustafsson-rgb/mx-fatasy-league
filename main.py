@@ -1175,8 +1175,8 @@ def my_scores():
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Dedicated page for a specific series (SX/MX/SMX)"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
+    # Allow viewing series without login, but require login for making picks
+    user_logged_in = "user_id" in session
     
     try:
         print(f"DEBUG: series_page called with series_id: {series_id}")
@@ -1343,7 +1343,8 @@ def series_page(series_id):
                              user_picks_status=user_picks_status,
                              next_race=next_race,
                              picks_open=picks_open,
-                             current_date=current_date)
+                             current_date=current_date,
+                             user_logged_in=user_logged_in)
         
     except Exception as e:
         print(f"ERROR in series_page: {e}")
