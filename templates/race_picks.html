@@ -55,6 +55,21 @@
     transition: transform 0.2s;
   }
 
+  .clear-selection {
+    color: #ef4444;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+  }
+
+  .clear-selection:hover {
+    background-color: #ef4444;
+    color: white;
+  }
+
   .rider-selector.open .dropdown-arrow {
     transform: rotate(180deg);
   }
@@ -263,7 +278,10 @@
           <div class="rider-selector" data-class="450cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('450cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
-              <span class="dropdown-arrow">▼</span>
+              <div class="flex items-center gap-2">
+                <span class="clear-selection" onclick="clearRiderSelection('450cc', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
               <div class="search-box">
@@ -300,7 +318,10 @@
           <div class="rider-selector" data-class="250cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('250cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
-              <span class="dropdown-arrow">▼</span>
+              <div class="flex items-center gap-2">
+                <span class="clear-selection" onclick="clearRiderSelection('250cc', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
               <div class="search-box">
@@ -578,6 +599,12 @@
     // Update display
     selectedRiderSpan.textContent = riderName;
     
+    // Show clear button
+    const clearBtn = selector.querySelector('.clear-selection');
+    if (clearBtn) {
+      clearBtn.style.display = 'block';
+    }
+    
     // Close dropdown
     const dropdown = selector.querySelector('.rider-selector-dropdown');
     dropdown.style.display = 'none';
@@ -590,14 +617,14 @@
       filterRiders(riderClass, position, '');
     }
     
-    // Call existing onPickChange function
-    onPickChange(riderClass, position, riderId);
-    
     // Update the hidden select element for form submission
     const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
     }
+    
+    // Call existing onPickChange function to update preview image
+    onPickChange(riderClass, position, riderId);
     
     // Update rider selectors to hide selected riders
     updateRiderSelectors(riderClass);
@@ -687,6 +714,33 @@
     }
   }
 
+  // Clear rider selection
+  function clearRiderSelection(riderClass, position) {
+    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    const clearBtn = selector.querySelector('.clear-selection');
+    
+    // Reset display
+    selectedRiderSpan.textContent = '-- välj förare --';
+    
+    // Hide clear button
+    if (clearBtn) {
+      clearBtn.style.display = 'none';
+    }
+    
+    // Clear hidden select
+    const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+    if (hiddenSelect) {
+      hiddenSelect.value = '';
+    }
+    
+    // Clear preview image
+    onPickChange(riderClass, position, null);
+    
+    // Update rider selectors to show all options again
+    updateRiderSelectors(riderClass);
+  }
+
   // Update rider selector options (replaces updateDropdowns for new system)
   function updateRiderSelectors(riderClass) {
     const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
@@ -694,9 +748,19 @@
     // Get currently selected riders in this class
     const chosenRiderIds = Array.from(selectors).map(selector => {
       const selectedRiderSpan = selector.querySelector('.selected-rider');
-      const riderOption = selector.querySelector(`.rider-option[data-rider-name="${selectedRiderSpan.textContent}"]`);
+      const currentText = selectedRiderSpan.textContent;
+      
+      // Skip if no selection made yet
+      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
+        return null;
+      }
+      
+      // Find the rider option that matches the selected text
+      const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
       return riderOption ? riderOption.dataset.riderId : null;
     }).filter(Boolean);
+    
+    console.log(`DEBUG: updateRiderSelectors for ${riderClass}, chosenRiderIds:`, chosenRiderIds);
     
     // Update each selector
     selectors.forEach(selector => {
