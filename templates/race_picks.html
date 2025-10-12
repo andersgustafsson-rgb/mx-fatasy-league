@@ -552,10 +552,20 @@
         if (rider && rider.image_url) {
           img.src = `/static/riders/${rider.image_url}`;
           img.onerror = function() {
-            this.src = '/static/riders/18_jett_lawrence.png'; // Use Jett as default
+            // Use bike brand logo as fallback
+            if (rider.bike_brand) {
+              this.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
+            } else {
+              this.src = '/static/brand_logos/honda.png'; // Default to Honda
+            }
           };
         } else {
-          img.src = '/static/riders/18_jett_lawrence.png'; // Use Jett as default
+          // Use bike brand logo if no rider image
+          if (rider && rider.bike_brand) {
+            img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
+          } else {
+            img.src = '/static/brand_logos/honda.png'; // Default to Honda
+          }
         }
       }
     });
@@ -823,8 +833,9 @@ function imgSrcFor(riderId) {
     return url;
   }
   
-  console.log(`DEBUG: No image or bike brand for ${r.name}`);
-  return null;
+  // Final fallback to Honda logo
+  console.log(`DEBUG: No image or bike brand for ${r.name}, using Honda fallback`);
+  return '/static/brand_logos/honda.png';
 }
 
   // Function to handle image loading errors
