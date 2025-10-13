@@ -268,7 +268,7 @@
         <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
           <h2 class="text-2xl font-bold text-blue-500 mb-4">🏁 Race Resultat</h2>
           
-          {% if race_results %}
+          {% if race_results and race_results is defined %}
             <div class="space-y-4">
               {% for result in race_results %}
                 <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border-l-4 
@@ -365,6 +365,12 @@
               <p class="text-sm text-gray-500 dark:text-gray-500">Denna användare har inte deltagit i några tävlingar än.</p>
             </div>
           {% endif %}
+          
+          <!-- Debug info -->
+          <div class="mt-4 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+            <p>Debug: race_results defined: {{ race_results is defined }}</p>
+            <p>Debug: race_results length: {{ race_results|length if race_results is defined else 'undefined' }}</p>
+          </div>
         </div>
       </div>
       {% endif %}
