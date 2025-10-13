@@ -117,6 +117,7 @@ class GlobalSimulation(db.Model):
     simulated_time = db.Column(db.String(50), nullable=True)
     start_time = db.Column(db.String(50), nullable=True)
     scenario = db.Column(db.String(50), nullable=True)
+    active_race_id = db.Column(db.Integer, nullable=True)  # Which race is currently active for picks
 
 class Series(db.Model):
     __tablename__ = "series"
@@ -7430,18 +7431,20 @@ def set_active_race():
         # Store active race in database
         try:
             db.session.execute(text("""
-                INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario) 
-                VALUES (1, :active, :simulated_time, :start_time, :scenario)
+                INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario, active_race_id) 
+                VALUES (1, :active, :simulated_time, :start_time, :scenario, :active_race_id)
                 ON CONFLICT (id) DO UPDATE SET 
                     active = :active,
                     simulated_time = :simulated_time,
                     start_time = :start_time,
-                    scenario = :scenario
+                    scenario = :scenario,
+                    active_race_id = :active_race_id
             """), {
                 'active': True,
                 'simulated_time': datetime.utcnow().isoformat(),
                 'start_time': datetime.utcnow().isoformat(),
-                'scenario': f'active_race_{competition_id}'
+                'scenario': f'active_race_{competition_id}',
+                'active_race_id': competition_id
             })
             db.session.commit()
             print(f"DEBUG: Set active race to competition ID: {competition_id}")
@@ -7459,13 +7462,36 @@ def set_active_race():
         print(f"Error setting active race: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/race_picks_active")
+def race_picks_active():
+    """Redirect to race picks for the currently active race"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Get active race from global simulation
+        result = db.session.execute(text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
+        
+        if result and result[0]:
+            active_race_id = result[0]
+            print(f"DEBUG: Redirecting to active race picks for competition ID: {active_race_id}")
+            return redirect(url_for("race_picks_page", competition_id=active_race_id))
+        else:
+            flash("Inget aktivt race satt för simulering", "error")
+            return redirect(url_for("index"))
+            
+    except Exception as e:
+        print(f"Error getting active race: {e}")
+        flash("Fel vid hämtning av aktivt race", "error")
+        return redirect(url_for("index"))
+
 @app.route("/reset_simulation")
 def reset_simulation():
     """Reset simulation to real time"""
     try:
         # Clear database simulation
         try:
-            db.session.execute(text("UPDATE global_simulation SET active = FALSE WHERE id = 1"))
+            db.session.execute(text("UPDATE global_simulation SET active = FALSE, active_race_id = NULL WHERE id = 1"))
             db.session.commit()
             print("DEBUG: Reset simulation to real time")
         except Exception as db_error:
