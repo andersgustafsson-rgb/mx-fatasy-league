@@ -7391,6 +7391,48 @@ def quick_simulation():
         for comp in competitions:
             print(f"DEBUG: - {comp.name} (ID: {comp.id})")
         
+        # If no competitions found, try to fix by updating existing competitions
+        if not competitions:
+            print(f"DEBUG: No competitions found for series_id {series_id}, trying to fix...")
+            
+            # Get the series name
+            series = Series.query.get(series_id)
+            if not series:
+                return jsonify({"error": f"Series with ID {series_id} not found"}), 400
+            
+            print(f"DEBUG: Found series: {series.name}")
+            
+            # Try to find competitions by series name or other criteria
+            if series.name == "Supercross":
+                # Update Supercross competitions
+                supercross_comps = Competition.query.filter(
+                    Competition.name.like('%Anaheim%') | 
+                    Competition.name.like('%San Francisco%') | 
+                    Competition.name.like('%San Diego%') |
+                    Competition.name.like('%Houston%') |
+                    Competition.name.like('%Tampa%') |
+                    Competition.name.like('%Arlington%') |
+                    Competition.name.like('%Detroit%') |
+                    Competition.name.like('%Glendale%') |
+                    Competition.name.like('%Seattle%') |
+                    Competition.name.like('%Denver%') |
+                    Competition.name.like('%Salt Lake%')
+                ).all()
+                
+                print(f"DEBUG: Found {len(supercross_comps)} potential Supercross competitions")
+                
+                # Update them with correct series_id
+                for comp in supercross_comps:
+                    comp.series_id = series_id
+                    comp.phase = "regular"
+                    print(f"DEBUG: Updated {comp.name} with series_id {series_id}")
+                
+                db.session.commit()
+                
+                # Try again
+                competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+                print(f"DEBUG: After fix, found {len(competitions)} competitions")
+        
         if not competitions:
             return jsonify({"error": "No competitions found for this series"}), 400
         
