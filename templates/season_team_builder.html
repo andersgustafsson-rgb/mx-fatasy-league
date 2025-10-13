@@ -136,12 +136,18 @@
       const imgHtml = r.image_url
         ? `<img src="${window.location.origin}${window.location.pathname.includes('/static') ? '' : ''}${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
                 alt="${r.name} headshot"
-                class="w-10 h-10 object-cover rounded-full" width="40" height="40" />`
+                class="w-10 h-10 object-cover rounded-full" width="40" height="40"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
+              <span class="text-white text-xs font-bold">${r.bike_brand || '#' + r.rider_number}</span>
+            </div>`
         : (r.bike_brand
               ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                    alt="${r.bike_brand} logo"
                    class="w-10 h-10 object-contain" width="40" height="40" />`
-            : `<div class="w-10 h-10 bg-gray-600 rounded-full"></div>`);
+            : `<div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                 <span class="text-white text-xs font-bold">#${r.rider_number}</span>
+               </div>`);
 
       return `
         <div class="rider-card bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow flex items-center gap-3 transition-transform">
@@ -218,12 +224,18 @@
             ${r.image_url
               ? `<img src="${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
                        alt="${r.name} headshot"
-                       class="w-8 h-8 object-cover rounded-full" width="32" height="32" />`
+                       class="w-8 h-8 object-cover rounded-full" width="32" height="32"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                   <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
+                     <span class="text-white text-xs font-bold">${r.bike_brand || '#' + r.rider_number}</span>
+                   </div>`
               : (r.bike_brand
                   ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                          alt="${r.bike_brand} logo"
                          class="w-8 h-8 object-contain" width="32" height="32" />`
-                  : `<div class="w-8 h-8 bg-gray-600 rounded-full"></div>`)}
+                  : `<div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                       <span class="text-white text-xs font-bold">#${r.rider_number}</span>
+                     </div>`)}
             <div>
               <div class="font-semibold">${r.name}</div>
               <div class="text-xs text-gray-500">${r.class} • #${r.rider_number || "-"}</div>
