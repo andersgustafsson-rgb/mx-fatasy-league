@@ -1171,16 +1171,17 @@ def my_scores():
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Simple series page that actually works"""
-    print(f"DEBUG: series_page called with series_id: {series_id}")
+    print(f"DEBUG: series_page ROUTE CALLED with series_id: {series_id}")
     
     try:
         # Always rollback first
         db.session.rollback()
+        print(f"DEBUG: Rollback completed")
         
         # Get series info
         series = Series.query.get(series_id)
         if not series:
-            print(f"DEBUG: Series {series_id} not found")
+            print(f"DEBUG: Series {series_id} not found - redirecting to index")
             return redirect(url_for("index"))
         
         print(f"DEBUG: Found series: {series.name}")
@@ -1190,6 +1191,7 @@ def series_page(series_id):
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         print(f"DEBUG: Found {len(competitions)} competitions")
         
+        print(f"DEBUG: About to render series_page.html")
         # Simple template render
         return render_template("series_page.html", 
                              series=series, 
@@ -1198,7 +1200,10 @@ def series_page(series_id):
         
     except Exception as e:
         print(f"ERROR in series_page: {e}")
+        import traceback
+        print(f"ERROR traceback: {traceback.format_exc()}")
         db.session.rollback()
+        print(f"DEBUG: Redirecting to index due to error")
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
