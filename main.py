@@ -2642,17 +2642,34 @@ def get_season_leaderboard():
         .all()
     )
     
-    # Lägg till rank och delta (enkel version)
+    # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
+    
+    # Hämta tidigare ranking från session eller global state
+    previous_ranking = session.get('previous_leaderboard_ranking', {})
+    
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+        current_rank = i
+        previous_rank = previous_ranking.get(str(user_id))
+        
+        # Beräkna delta (negativ = gått upp, positiv = gått ner)
+        if previous_rank is not None:
+            delta = previous_rank - current_rank
+        else:
+            delta = 0  # Ingen tidigare ranking
+        
         result.append({
-            "user_id": user_id,  # This was missing!
+            "user_id": user_id,
             "username": username,
             "team_name": team_name or None,
             "total_points": int(total_points),
-            "rank": i,
-            "delta": 0  # TODO: implementera delta senare
+            "rank": current_rank,
+            "delta": delta
         })
+    
+    # Spara nuvarande ranking för nästa gång
+    current_ranking = {str(row["user_id"]): row["rank"] for row in result}
+    session['previous_leaderboard_ranking'] = current_ranking
     
     return jsonify(result)
 
