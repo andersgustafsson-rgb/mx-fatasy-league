@@ -240,27 +240,99 @@
       </div>
     </div>
 
-    <!-- Trackmap Section -->
+    <!-- Trackmap Section with Side Info -->
     {% if trackmap_images and trackmap_images|length > 0 %}
     <div class="mb-6 bg-gray-800 rounded-lg p-4">
       <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
         🗺️ Track Map
       </h2>
-      <div class="bg-gray-700 rounded-lg p-4">
-        <img id="main-trackmap"
-             src="{{ url_for('static', filename=trackmap_images[0].image_url) }}"
-             alt="Track Map {{ competition.name }}"
-             class="w-full max-h-96 object-contain rounded mb-4 bg-gray-600">
-        
-        {% if trackmap_images|length > 1 %}
-        <div class="flex flex-wrap gap-2 justify-center">
-          {% for img in trackmap_images[:5] %}
-            <img src="{{ url_for('static', filename=img.image_url) }}"
-                 class="thumb w-20 h-16 object-cover rounded cursor-pointer {% if loop.first %}ring-2 ring-cyan-400{% endif %}"
-                 onclick="setMainTrackmap(this.src, this)">
-          {% endfor %}
+      
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <!-- Track Map - Smaller -->
+        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4">
+          <img id="main-trackmap"
+               src="{{ url_for('static', filename=trackmap_images[0].image_url) }}"
+               alt="Track Map {{ competition.name }}"
+               class="w-full max-h-80 object-contain rounded mb-4 bg-gray-600">
+          
+          {% if trackmap_images|length > 1 %}
+          <div class="flex flex-wrap gap-2 justify-center">
+            {% for img in trackmap_images[:5] %}
+              <img src="{{ url_for('static', filename=img.image_url) }}"
+                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 ring-cyan-400{% endif %}"
+                   onclick="setMainTrackmap(this.src, this)">
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
-        {% endif %}
+        
+        <!-- Race Info Sidebar -->
+        <div class="lg:col-span-2 space-y-4">
+          <!-- Race Details -->
+          <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+              🏁 Race Info
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-blue-200">Bana:</span>
+                <span class="text-white font-semibold">{{ competition.name }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-blue-200">Datum:</span>
+                <span class="text-white font-semibold">{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span>
+              </div>
+              {% if competition.coast_250 %}
+              <div class="flex justify-between">
+                <span class="text-blue-200">250SX:</span>
+                <span class="text-white font-semibold">{{ competition.coast_250|capitalize }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          
+          <!-- Quick Tips -->
+          <div class="bg-gradient-to-br from-green-600 to-green-800 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+              💡 Tips
+            </h3>
+            <div class="space-y-2 text-sm text-green-100">
+              <div class="flex items-start space-x-2">
+                <span class="text-green-300">•</span>
+                <span>Kolla förares form från senaste racen</span>
+              </div>
+              <div class="flex items-start space-x-2">
+                <span class="text-green-300">•</span>
+                <span>Holeshot är ofta avgörande för segern</span>
+              </div>
+              <div class="flex items-start space-x-2">
+                <span class="text-green-300">•</span>
+                <span>Wildcard kan ge stora poäng om du gissar rätt</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Stats -->
+          <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-4">
+            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
+              📊 Statistik
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-purple-200">Aktiva förare:</span>
+                <span class="text-white font-semibold">{{ riders_450|length + riders_250|length }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-purple-200">450cc:</span>
+                <span class="text-white font-semibold">{{ riders_450|length }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-purple-200">250cc:</span>
+                <span class="text-white font-semibold">{{ riders_250|length }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     {% endif %}
