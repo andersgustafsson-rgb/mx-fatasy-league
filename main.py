@@ -1205,6 +1205,16 @@ def series_page(series_id):
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         print(f"DEBUG: Found {len(competitions)} competitions")
         
+        # Check if there's an active race set in admin panel
+        active_race_id = None
+        try:
+            global_sim = GlobalSimulation.query.first()
+            if global_sim and global_sim.active and global_sim.active_race_id:
+                active_race_id = global_sim.active_race_id
+                print(f"DEBUG: Active race from admin panel: {active_race_id}")
+        except Exception as e:
+            print(f"DEBUG: Error checking active race: {e}")
+        
         print(f"DEBUG: About to render series_page.html")
         
         # Get competition results for template
@@ -1241,6 +1251,7 @@ def series_page(series_id):
                              next_race=None,
                              picks_open=False,
                              current_date=get_today(),
+                             active_race_id=active_race_id,
                              user_logged_in="user_id" in session)
         
     except Exception as e:
