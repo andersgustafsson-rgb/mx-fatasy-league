@@ -7442,22 +7442,17 @@ def quick_simulation():
                 for s in all_series:
                     print(f"DEBUG: - Series ID {s.id}: {s.name}")
                 
-                # Try to create missing series
+                # Try to find existing Supercross series (ID 10)
                 if series_id == 1:
-                    print(f"DEBUG: Creating Supercross series with ID 1")
-                    supercross_series = Series(
-                        id=1,
-                        name="Supercross",
-                        year=2026,
-                        start_date=datetime.strptime("2026-01-04", "%Y-%m-%d").date(),
-                        end_date=datetime.strptime("2026-05-10", "%Y-%m-%d").date(),
-                        is_active=True,
-                        points_system='standard'
-                    )
-                    db.session.add(supercross_series)
-                    db.session.commit()
-                    series = supercross_series
-                    print(f"DEBUG: Created Supercross series")
+                    print(f"DEBUG: Looking for existing Supercross series...")
+                    supercross_series = Series.query.filter_by(name="Supercross").first()
+                    if supercross_series:
+                        print(f"DEBUG: Found existing Supercross series with ID {supercross_series.id}")
+                        series = supercross_series
+                        # Update the series_id to use the correct one
+                        series_id = supercross_series.id
+                    else:
+                        return jsonify({"error": "Supercross series not found in database"}), 400
                 else:
                     return jsonify({"error": f"Series with ID {series_id} not found and cannot be auto-created"}), 400
             
