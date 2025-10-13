@@ -1626,8 +1626,37 @@ def run_migration():
             # This will use the updated calculate_scores function
             calculate_scores(comp_id)
         
+        # Create initial leaderboard history entry so we have something to compare with
+        print("Creating initial leaderboard history...")
+        from sqlalchemy import func
+        
+        # Get current leaderboard
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        # Save initial ranking
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            history_entry = LeaderboardHistory(
+                user_id=user_id,
+                ranking=i,
+                total_points=int(total_points)
+            )
+            db.session.add(history_entry)
+            print(f"Saved initial ranking: {username} at position {i} with {total_points} points")
+        
         db.session.commit()
-        return "Migration completed successfully! Added active_race_id, detailed points columns, leaderboard history table, and recalculated existing scores."
+        return "Migration completed successfully! Added active_race_id, detailed points columns, leaderboard history table, recalculated existing scores, and created initial leaderboard history."
     except Exception as e:
         db.session.rollback()
         return f"Migration failed: {str(e)}"
