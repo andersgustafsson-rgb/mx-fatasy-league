@@ -66,7 +66,7 @@
             {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
             {% if results450 %}
               <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results (Top 20)</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results (Top 20) - {{ results450|length }} results found</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                   {% for result in results450[:20] %}
                     <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow">
@@ -84,7 +84,11 @@
                                  class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600">
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                              <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% if result.bike_brand %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% endif %}
                             </div>
                           {% endif %}
                         </div>
@@ -114,7 +118,7 @@
             {% set results250 = results.results | selectattr('class_name', 'equalto', '250cc') | list %}
             {% if results250 %}
               <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results (Top 6)</h3>
+                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results (Top 6) - {{ results250|length }} results found</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
                   {% for result in results250[:6] %}
                     <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow">
@@ -132,7 +136,11 @@
                                  class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600">
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                              <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% if result.bike_brand %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% endif %}
                             </div>
                           {% endif %}
                         </div>
@@ -181,7 +189,11 @@
                                  class="w-10 h-10 rounded-full object-cover border-2 border-yellow-300">
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
-                              <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
+                              {% if holeshot.bike_brand %}
+                                <span class="text-yellow-800 font-bold text-xs">{{ holeshot.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
+                              {% endif %}
                             </div>
                           {% endif %}
                         </div>
