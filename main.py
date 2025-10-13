@@ -7593,6 +7593,10 @@ def quick_simulation():
                 results_created += 1
                 print(f"DEBUG: Created result: rider {shuffled_riders[position-1].name} at position {position}")
             
+            # Commit picks and results before calculating scores
+            db.session.commit()
+            print(f"DEBUG: Committed picks and results to database")
+            
             # Calculate scores for this competition
             print(f"DEBUG: About to calculate scores for {competition.name}")
             print(f"DEBUG: Created {picks_created} picks and {results_created} results")
@@ -7603,8 +7607,6 @@ def quick_simulation():
                 "picks_created": picks_created,
                 "results_created": results_created
             })
-        
-        db.session.commit()
         
         return jsonify({
             "message": f"Quick simulation completed for {len(results)} races",
