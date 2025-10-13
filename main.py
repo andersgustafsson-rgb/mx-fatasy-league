@@ -7789,6 +7789,13 @@ def quick_simulation():
             print(f"DEBUG: Created {picks_created} picks and {results_created} results")
             calculate_scores(competition.id)
             
+            # Debug: Check what scores were generated
+            scores_after = CompetitionScore.query.filter_by(competition_id=competition.id).all()
+            print(f"DEBUG: After calculate_scores for {competition.name}:")
+            for score in scores_after:
+                user = User.query.get(score.user_id)
+                print(f"DEBUG: - {user.username}: {score.total_points} total ({score.race_points} race + {score.holeshot_points} holeshot + {score.wildcard_points} wildcard)")
+            
             results.append({
                 "competition": competition.name,
                 "picks_created": picks_created,
