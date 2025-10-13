@@ -7165,6 +7165,37 @@ def test_countdown_page():
     """Test countdown page with scenario buttons"""
     return render_template('test_countdown.html')
 
+@app.route("/set_simulated_time")
+def set_simulated_time():
+    """Set simulated time for testing scenarios"""
+    try:
+        scenario = request.args.get('scenario', 'race_in_3h')
+        print(f"DEBUG: set_simulated_time called with scenario: {scenario}")
+        
+        # Update global simulation state in database
+        global_sim = GlobalSimulation.query.first()
+        if not global_sim:
+            global_sim = GlobalSimulation(active=True, scenario=scenario)
+            db.session.add(global_sim)
+        else:
+            global_sim.active = True
+            global_sim.scenario = scenario
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Simulated time set to scenario: {scenario}",
+            "scenario": scenario
+        })
+        
+    except Exception as e:
+        print(f"DEBUG: Error in set_simulated_time: {e}")
+        db.session.rollback()
+        return jsonify({
+            "error": f"Failed to set simulated time: {str(e)}"
+        }), 500
+
 @app.get("/set_active_race")
 def set_active_race():
     """Set which race should be active for testing - simple approach"""
@@ -7791,12 +7822,23 @@ def is_picks_locked(competition):
             print(f"DEBUG: is_picks_locked() called with invalid competition ID: {competition}")
             return False
         competition_name = f"ID {competition}"
+        competition_id = competition
     else:
         # If it's a Competition object
         competition_obj = competition
         competition_name = competition.name if hasattr(competition, 'name') else f"ID {competition.id}"
+        competition_id = competition.id
     
     print(f"DEBUG: is_picks_locked() called for competition: {competition_name}")
+    
+    # Check if this is the active race from admin panel - if so, always allow picks
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.active and global_sim.active_race_id == competition_id:
+            print(f"DEBUG: is_picks_locked - This is the active race, allowing picks")
+            return False
+    except Exception as e:
+        print(f"DEBUG: Error checking active race in is_picks_locked: {e}")
     
     # Check if we're in simulation mode (use only global database state for consistency)
     simulation_active = False
