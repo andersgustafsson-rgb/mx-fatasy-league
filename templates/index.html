@@ -1464,6 +1464,16 @@
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
+        // Add click event listeners to series cards
+        document.querySelectorAll('[data-series-id]').forEach(card => {
+          card.addEventListener('click', function() {
+            const seriesId = this.getAttribute('data-series-id');
+            const seriesName = this.getAttribute('data-series-name');
+            console.log(`Clicked on series: ${seriesName} (ID: ${seriesId})`);
+            window.location.href = `/series/${seriesId}`;
+          });
+        });
+        
       } catch (error) {
         console.error('Error loading series:', error);
         document.getElementById('series-selection').innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
