@@ -1506,6 +1506,19 @@ def save_season_team():
 # -------------------------------------------------
 # Admin
 # -------------------------------------------------
+@app.route("/run_migration")
+def run_migration():
+    """Run database migration - temporary route"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        from flask_migrate import upgrade
+        upgrade()
+        return "Migration completed successfully!"
+    except Exception as e:
+        return f"Migration failed: {str(e)}"
+
 @app.route("/admin")
 def admin_page():
     if session.get("username") != "test":
