@@ -1188,10 +1188,14 @@ def series_page(series_id):
         print(f"DEBUG: Found series: {series.name} (ID: {series.id})")
         
         # Get all competitions in this series
+        # Rollback again before querying competitions
+        db.session.rollback()
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         print(f"DEBUG: Found {len(competitions)} competitions for series {series.name}")
         
         # Get current date (use simulated date if available)
+        # Rollback before get_today() call
+        db.session.rollback()
         current_date = get_today()
         
         # Check if we're in test simulation mode
