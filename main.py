@@ -589,14 +589,13 @@ def index():
         if global_sim and global_sim.active and global_sim.active_race_id:
             # Use the active race from admin panel
             upcoming_race = Competition.query.get(global_sim.active_race_id)
-            print(f"DEBUG: Using active race from admin panel: {upcoming_race.name if upcoming_race else 'Not found'}")
+            pass
     except Exception as e:
-        print(f"DEBUG: Error checking active race: {e}")
+        pass
     
     # Fallback to next race by date if no active race is set
     if not upcoming_race:
         upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
-        print(f"DEBUG: Using next race by date: {upcoming_race.name if upcoming_race else 'None'}")
     
     # Get season team with error handling
     try:
@@ -654,8 +653,6 @@ def index():
             # Use the correct competition_id for picks lookup
             competition_id_for_picks = upcoming_race.id
             
-            print(f"DEBUG: Looking for picks for user {uid}, competition {competition_id_for_picks}")
-            print(f"DEBUG: Picks locked: {picks_locked}")
             
             # Get race picks for both classes
             race_picks = RacePick.query.filter_by(
@@ -675,7 +672,6 @@ def index():
                 competition_id=competition_id_for_picks
             ).first()
             
-            print(f"DEBUG: Found {len(race_picks)} race picks, {len(holeshot_picks)} holeshot picks, wildcard: {wildcard_pick is not None}")
             
             if race_picks or holeshot_picks or wildcard_pick:
                 picks_status = "has_picks"
@@ -697,7 +693,6 @@ def index():
                         elif rider.class_name == "250cc":
                             current_picks_250.append(pick_data)
                         
-                        print(f"DEBUG: Added pick - position {pick.predicted_position}, rider {rider.name} ({rider.class_name})")
                 
                 # Process holeshot picks
                 current_holeshot_450 = None
@@ -3107,20 +3102,17 @@ def get_season_leaderboard():
     # SIMPLE FIX: Use global variable to store previous ranking
     global previous_leaderboard_ranking
     previous_ranking = previous_leaderboard_ranking
-    print(f"DEBUG: Using global previous ranking: {previous_ranking}")
     
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         current_rank = i
         previous_rank = previous_ranking.get(str(user_id))
         
-        # ALWAYS show arrows - simple approach
+        # Calculate delta (negative = improved, positive = worsened)
         if previous_rank is not None:
-            delta = current_rank - previous_rank  # Fix: current - previous gives correct sign
-            print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
+            delta = current_rank - previous_rank
         else:
-            # Första gången ELLER efter reset - alla får grön pil upp (förbättrade från rank 0)
-            delta = -current_rank  # Negativ = förbättring
-            print(f"DEBUG: User {username} - First time or after reset, showing improvement from rank 0, Delta: {delta}")
+            # First time - show improvement from rank 0
+            delta = -current_rank
         
         # No more forced arrows - use real delta calculation
         
@@ -3133,10 +3125,9 @@ def get_season_leaderboard():
             "delta": delta
         })
     
-    # SIMPLE FIX: Save current ranking to global variable for next comparison
+    # Save current ranking to global variable for next comparison
     current_ranking = {str(row["user_id"]): row["rank"] for row in result}
     previous_leaderboard_ranking = current_ranking
-    print(f"DEBUG: Saved current ranking to global variable: {current_ranking}")
     
     return jsonify(result)
 
@@ -7880,10 +7871,6 @@ def quick_simulation():
         # Get competitions for this series
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         
-        print(f"DEBUG: quick_simulation - series_id: {series_id}, num_races: {num_races}")
-        print(f"DEBUG: quick_simulation - found {len(competitions)} competitions")
-        for comp in competitions:
-            print(f"DEBUG: - {comp.name} (ID: {comp.id})")
         
         # If no competitions found, try to fix by updating existing competitions
         if not competitions:
