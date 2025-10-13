@@ -344,19 +344,8 @@ class CrossDinoHighScore(db.Model):
 # Helpers
 # -------------------------------------------------
 def get_today():
-    # Försök läsa simulerat datum från DB om det finns
-    try:
-        row = db.session.execute(db.text("SELECT value FROM sim_date LIMIT 1")).first()
-        if row and row[0]:
-            sim_date = datetime.strptime(row[0], "%Y-%m-%d").date()
-            print(f"DEBUG: get_today() returning simulated date: {sim_date}")
-            return sim_date
-    except Exception as e:
-        print(f"DEBUG: get_today() error reading sim_date: {e}")
-        pass
-    
+    """Get today's date - simplified without old simulation"""
     today = date.today()
-    print(f"DEBUG: get_today() returning real date: {today}")
     return today
 
 
