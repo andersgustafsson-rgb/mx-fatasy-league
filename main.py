@@ -566,7 +566,21 @@ def index():
         print(f"Error getting competitions: {e}")
         competitions = []
     
-    upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+    # Check if there's an active race set in admin panel
+    upcoming_race = None
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.active and global_sim.active_race_id:
+            # Use the active race from admin panel
+            upcoming_race = Competition.query.get(global_sim.active_race_id)
+            print(f"DEBUG: Using active race from admin panel: {upcoming_race.name if upcoming_race else 'Not found'}")
+    except Exception as e:
+        print(f"DEBUG: Error checking active race: {e}")
+    
+    # Fallback to next race by date if no active race is set
+    if not upcoming_race:
+        upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+        print(f"DEBUG: Using next race by date: {upcoming_race.name if upcoming_race else 'None'}")
     
     # Get season team with error handling
     try:
