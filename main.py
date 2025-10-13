@@ -1513,10 +1513,12 @@ def run_migration():
         return redirect(url_for("index"))
     
     try:
-        from flask_migrate import upgrade
-        upgrade()
-        return "Migration completed successfully!"
+        # Add the missing column directly with SQL
+        db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN IF NOT EXISTS active_race_id INTEGER"))
+        db.session.commit()
+        return "Migration completed successfully! Column active_race_id added."
     except Exception as e:
+        db.session.rollback()
         return f"Migration failed: {str(e)}"
 
 @app.route("/admin")
