@@ -1585,6 +1585,48 @@ def save_season_team():
 # -------------------------------------------------
 # Admin
 # -------------------------------------------------
+@app.route("/debug_leaderboard")
+def debug_leaderboard():
+    """Debug route to check leaderboard history"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        # Check leaderboard history
+        history_entries = db.session.query(LeaderboardHistory).order_by(LeaderboardHistory.created_at.desc()).limit(20).all()
+        
+        result = "Leaderboard History Debug:\n\n"
+        result += f"Total history entries: {len(history_entries)}\n\n"
+        
+        for entry in history_entries:
+            user = User.query.get(entry.user_id)
+            result += f"User: {user.username if user else 'Unknown'}, Rank: {entry.ranking}, Points: {entry.total_points}, Time: {entry.created_at}\n"
+        
+        # Check current leaderboard
+        from sqlalchemy import func
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        result += "\n\nCurrent Leaderboard:\n"
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            result += f"{i}. {username}: {total_points} points\n"
+        
+        return f"<pre>{result}</pre>"
+        
+    except Exception as e:
+        return f"Debug error: {str(e)}"
+
 @app.route("/run_migration")
 def run_migration():
     """Run database migration - temporary route"""
@@ -2775,6 +2817,7 @@ def get_season_leaderboard():
         })
     
     # Spara nuvarande ranking i databasen
+    print(f"DEBUG: Saving current ranking to database...")
     for row in result:
         history_entry = LeaderboardHistory(
             user_id=row["user_id"],
@@ -2782,8 +2825,10 @@ def get_season_leaderboard():
             total_points=row["total_points"]
         )
         db.session.add(history_entry)
+        print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
     
     db.session.commit()
+    print(f"DEBUG: Leaderboard history saved successfully")
     
     return jsonify(result)
 
