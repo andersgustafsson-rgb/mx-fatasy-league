@@ -1123,6 +1123,10 @@ def create_season_team():
 def my_scores():
     if "user_id" not in session:
         return redirect(url_for("login"))
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
     uid = session["user_id"]
     print(f"DEBUG: my_scores called for user ID {uid}")
 
@@ -3321,6 +3325,10 @@ def lock_wildcard_pos():
 def get_my_race_results(competition_id):
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
     uid = session["user_id"]
 
     actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
@@ -3371,6 +3379,10 @@ def get_my_race_results(competition_id):
 # -------------------------------------------------
 def calculate_scores(comp_id: int):
     print(f"DEBUG: calculate_scores called for competition {comp_id}")
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
     users = User.query.all()
     actual_results = CompetitionResult.query.filter_by(competition_id=comp_id).all()
     actual_holeshots = HoleshotResult.query.filter_by(competition_id=comp_id).all()
