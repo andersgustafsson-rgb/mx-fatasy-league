@@ -1489,7 +1489,7 @@
             const seriesName = this.getAttribute('data-series-name');
             console.log('DEBUG: Series card clicked!', 'ID:', seriesId, 'Name:', seriesName);
             console.log('DEBUG: About to navigate to:', `/series/${seriesId}`);
-            window.location.href = `/series/${seriesId}`;
+            window.location.assign(`/series/${seriesId}`);
           });
           
           // Also try mousedown as backup
@@ -1500,7 +1500,7 @@
             const seriesId = this.getAttribute('data-series-id');
             const seriesName = this.getAttribute('data-series-name');
             console.log('DEBUG: Series card mousedown!', 'ID:', seriesId, 'Name:', seriesName);
-            window.location.href = `/series/${seriesId}`;
+            window.location.assign(`/series/${seriesId}`);
           });
         });
         console.log('DEBUG: All event listeners added successfully');
