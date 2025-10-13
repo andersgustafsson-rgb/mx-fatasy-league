@@ -826,10 +826,14 @@
     
     async function fetchRealCountdownData() {
       try {
+        console.log('DEBUG: Fetching real countdown data...');
         const response = await fetch('/race_countdown?mode=real');
         const data = await response.json();
         
+        console.log('DEBUG: Real countdown response:', data);
+        
         if (data.error) {
+          console.log('DEBUG: Real countdown error:', data.error);
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
           document.getElementById('real-race-countdown').textContent = '--:--:--';
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
@@ -854,10 +858,14 @@
     
     async function fetchTestCountdownData() {
       try {
+        console.log('DEBUG: Fetching test countdown data...');
         const response = await fetch('/race_countdown?mode=test');
         const data = await response.json();
         
+        console.log('DEBUG: Test countdown response:', data);
+        
         if (data.error) {
+          console.log('DEBUG: Test countdown error:', data.error);
           document.getElementById('test-countdown-race-name').textContent = 'Test Mode';
           document.getElementById('test-race-countdown').textContent = '--:--:--';
           document.getElementById('test-deadline-countdown').textContent = '--:--:--';
