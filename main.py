@@ -7575,6 +7575,7 @@ def quick_simulation():
                     )
                     db.session.add(pick)
                     picks_created += 1
+                    print(f"DEBUG: Created pick for user {user.username}: rider {shuffled_riders[position-1].name} at position {position}")
             
             # Generate random results
             import random
@@ -7590,8 +7591,11 @@ def quick_simulation():
                 )
                 db.session.add(result)
                 results_created += 1
+                print(f"DEBUG: Created result: rider {shuffled_riders[position-1].name} at position {position}")
             
             # Calculate scores for this competition
+            print(f"DEBUG: About to calculate scores for {competition.name}")
+            print(f"DEBUG: Created {picks_created} picks and {results_created} results")
             calculate_scores(competition.id)
             
             results.append({
