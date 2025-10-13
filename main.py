@@ -1898,6 +1898,45 @@ def clear_history():
         db.session.rollback()
         return f"Error clearing history: {str(e)}"
 
+@app.route("/set_baseline")
+def set_baseline():
+    """Set baseline ranking in session - SIMPLE VERSION"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        from sqlalchemy import func
+        
+        # Get current leaderboard
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        # Set baseline in session
+        baseline = {}
+        result = "Setting baseline ranking in session:\n\n"
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            baseline[str(user_id)] = i
+            result += f"{i}. {username}: {total_points} points\n"
+        
+        session['previous_leaderboard_ranking'] = baseline
+        result += f"\nBaseline set! Now run quick simulation and you should see arrows!"
+        
+        return f"<pre>{result}</pre>"
+        
+    except Exception as e:
+        return f"Error setting baseline: {str(e)}"
+
 @app.route("/run_migration")
 def run_migration():
     """Run database migration - temporary route"""
@@ -3049,22 +3088,9 @@ def get_season_leaderboard():
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
     
-    # Hämta senaste ranking från databasen
-    # Först hitta den senaste timestamp
-    latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
-    
-    previous_ranking = {}
-    if latest_timestamp:
-        # Hämta alla rankingar från den senaste tiden
-        latest_history = db.session.query(
-            LeaderboardHistory.user_id,
-            LeaderboardHistory.ranking
-        ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
-        
-        previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
-        print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
-    else:
-        print("DEBUG: No previous ranking history found")
+    # SIMPLE FIX: Use session to store previous ranking
+    previous_ranking = session.get('previous_leaderboard_ranking', {})
+    print(f"DEBUG: Using session previous ranking: {previous_ranking}")
     
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         current_rank = i
@@ -3087,26 +3113,10 @@ def get_season_leaderboard():
             "delta": delta
         })
     
-    # Only save current ranking if there are actual changes (non-zero deltas)
-    has_changes = any(row["delta"] != 0 for row in result)
-    
-    if has_changes:
-        print(f"DEBUG: Ranking changes detected, saving current ranking to database...")
-        for row in result:
-            history_entry = LeaderboardHistory(
-                user_id=row["user_id"],
-                ranking=row["rank"],
-                total_points=row["total_points"]
-            )
-            db.session.add(history_entry)
-            print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
-        
-        db.session.commit()
-        print(f"DEBUG: Leaderboard history saved successfully")
-    else:
-        print(f"DEBUG: No ranking changes detected, skipping save")
-        print(f"DEBUG: All deltas are 0, which means no previous ranking to compare against")
-        print(f"DEBUG: This is normal - deltas will show when points actually change")
+    # SIMPLE FIX: Save current ranking to session for next comparison
+    current_ranking = {str(row["user_id"]): row["rank"] for row in result}
+    session['previous_leaderboard_ranking'] = current_ranking
+    print(f"DEBUG: Saved current ranking to session: {current_ranking}")
     
     return jsonify(result)
 
