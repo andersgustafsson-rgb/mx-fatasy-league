@@ -3078,6 +3078,9 @@ def admin_set_date():
 # -------------------------------------------------
 # API helpers (för templates JS) - Updated for ranking arrows
 # -------------------------------------------------
+
+# Global variable to store previous ranking (simple approach)
+previous_leaderboard_ranking = {}
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
@@ -3101,9 +3104,10 @@ def get_season_leaderboard():
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
     
-    # SIMPLE FIX: Use session to store previous ranking
-    previous_ranking = session.get('previous_leaderboard_ranking', {})
-    print(f"DEBUG: Using session previous ranking: {previous_ranking}")
+    # SIMPLE FIX: Use global variable to store previous ranking
+    global previous_leaderboard_ranking
+    previous_ranking = previous_leaderboard_ranking
+    print(f"DEBUG: Using global previous ranking: {previous_ranking}")
     
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         current_rank = i
@@ -3118,10 +3122,7 @@ def get_season_leaderboard():
             delta = -current_rank  # Negativ = förbättring
             print(f"DEBUG: User {username} - First time or after reset, showing improvement from rank 0, Delta: {delta}")
         
-        # FORCE arrows for testing - remove this later
-        if delta == 0:
-            delta = -1  # Force green arrow
-            print(f"DEBUG: FORCED arrow for {username}: Delta changed from 0 to {delta}")
+        # No more forced arrows - use real delta calculation
         
         result.append({
             "user_id": user_id,
@@ -3132,10 +3133,10 @@ def get_season_leaderboard():
             "delta": delta
         })
     
-    # SIMPLE FIX: Save current ranking to session for next comparison
+    # SIMPLE FIX: Save current ranking to global variable for next comparison
     current_ranking = {str(row["user_id"]): row["rank"] for row in result}
-    session['previous_leaderboard_ranking'] = current_ranking
-    print(f"DEBUG: Saved current ranking to session: {current_ranking}")
+    previous_leaderboard_ranking = current_ranking
+    print(f"DEBUG: Saved current ranking to global variable: {current_ranking}")
     
     return jsonify(result)
 
