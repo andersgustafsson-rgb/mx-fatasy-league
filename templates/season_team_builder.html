@@ -139,7 +139,13 @@
                 class="w-10 h-10 object-cover rounded-full" width="40" height="40"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
-              <span class="text-white text-xs font-bold">${r.bike_brand || '#' + r.rider_number}</span>
+              ${r.bike_brand 
+                ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
+                       alt="${r.bike_brand} logo" 
+                       class="w-8 h-8 object-contain"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <span class="text-white text-xs font-bold" style="display: none;">#${r.rider_number}</span>`
+                : `<span class="text-white text-xs font-bold">#${r.rider_number}</span>`}
             </div>`
         : (r.bike_brand
               ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
@@ -227,7 +233,13 @@
                        class="w-8 h-8 object-cover rounded-full" width="32" height="32"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                    <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
-                     <span class="text-white text-xs font-bold">${r.bike_brand || '#' + r.rider_number}</span>
+                     ${r.bike_brand 
+                       ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
+                              alt="${r.bike_brand} logo" 
+                              class="w-6 h-6 object-contain"
+                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                         <span class="text-white text-xs font-bold" style="display: none;">#${r.rider_number}</span>`
+                       : `<span class="text-white text-xs font-bold">#${r.rider_number}</span>`}
                    </div>`
               : (r.bike_brand
                   ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"

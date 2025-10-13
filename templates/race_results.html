@@ -91,7 +91,11 @@
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center" style="display: none;">
                               {% if result.bike_brand %}
-                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                                <img src="/static/brand_logos/{{ result.bike_brand.lower() }}.png" 
+                                     alt="{{ result.bike_brand }} logo" 
+                                     class="w-8 h-8 object-contain"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs" style="display: none;">#{{ result.rider_number }}</span>
                               {% else %}
                                 <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
                               {% endif %}
@@ -151,7 +155,11 @@
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center" style="display: none;">
                               {% if result.bike_brand %}
-                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                                <img src="/static/brand_logos/{{ result.bike_brand.lower() }}.png" 
+                                     alt="{{ result.bike_brand }} logo" 
+                                     class="w-8 h-8 object-contain"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs" style="display: none;">#{{ result.rider_number }}</span>
                               {% else %}
                                 <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
                               {% endif %}
@@ -212,7 +220,11 @@
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center" style="display: none;">
                               {% if holeshot.bike_brand %}
-                                <span class="text-yellow-800 font-bold text-xs">{{ holeshot.bike_brand }}</span>
+                                <img src="/static/brand_logos/{{ holeshot.bike_brand.lower() }}.png" 
+                                     alt="{{ holeshot.bike_brand }} logo" 
+                                     class="w-8 h-8 object-contain"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="text-yellow-800 font-bold text-xs" style="display: none;">#{{ holeshot.rider_number }}</span>
                               {% else %}
                                 <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
                               {% endif %}
@@ -220,7 +232,11 @@
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
                               {% if holeshot.bike_brand %}
-                                <span class="text-yellow-800 font-bold text-xs">{{ holeshot.bike_brand }}</span>
+                                <img src="/static/brand_logos/{{ holeshot.bike_brand.lower() }}.png" 
+                                     alt="{{ holeshot.bike_brand }} logo" 
+                                     class="w-8 h-8 object-contain"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="text-yellow-800 font-bold text-xs" style="display: none;">#{{ holeshot.rider_number }}</span>
                               {% else %}
                                 <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
                               {% endif %}
