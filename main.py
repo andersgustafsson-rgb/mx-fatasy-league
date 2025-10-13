@@ -3114,8 +3114,9 @@ def get_season_leaderboard():
             delta = current_rank - previous_rank  # Fix: current - previous gives correct sign
             print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
         else:
-            delta = 0  # Ingen tidigare ranking
-            print(f"DEBUG: User {username} - No previous ranking, Delta: 0")
+            # Första gången - alla får grön pil upp (förbättrade från rank 0)
+            delta = -current_rank  # Negativ = förbättring
+            print(f"DEBUG: User {username} - First time, showing improvement from rank 0, Delta: {delta}")
         
         result.append({
             "user_id": user_id,
