@@ -4509,7 +4509,8 @@ def user_race_results(user_id):
         # Get the user to view
         target_user = User.query.get(user_id)
         if not target_user:
-            flash("Användaren hittades inte.", "error")
+            print(f"DEBUG: User with ID {user_id} not found")
+            flash(f"Användaren med ID {user_id} hittades inte.", "error")
             return redirect(url_for("index"))
         
         # Get user's season team info
@@ -6159,6 +6160,30 @@ def quick_anaheim2_simulation():
         print(f"Error in Anaheim 2 simulation: {e}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+@app.get("/debug_users")
+def debug_users():
+    """Debug route to check which users exist"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        users = User.query.all()
+        user_list = []
+        for user in users:
+            user_list.append({
+                "id": user.id,
+                "username": user.username,
+                "display_name": getattr(user, 'display_name', None)
+            })
+        
+        return jsonify({
+            "total_users": len(users),
+            "users": user_list
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 @app.get("/check_anaheim2")
 def check_anaheim2():
