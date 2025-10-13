@@ -7398,9 +7398,16 @@ def quick_simulation():
             # Get the series name
             series = Series.query.get(series_id)
             if not series:
+                print(f"DEBUG: Series with ID {series_id} not found")
                 return jsonify({"error": f"Series with ID {series_id} not found"}), 400
             
             print(f"DEBUG: Found series: {series.name}")
+            
+            # Check if there are any competitions at all
+            all_comps = Competition.query.all()
+            print(f"DEBUG: Total competitions in database: {len(all_comps)}")
+            for comp in all_comps:
+                print(f"DEBUG: - {comp.name} (series_id: {comp.series_id})")
             
             # Try to find competitions by series name or other criteria
             if series.name == "Supercross":
@@ -7421,6 +7428,10 @@ def quick_simulation():
                 
                 print(f"DEBUG: Found {len(supercross_comps)} potential Supercross competitions")
                 
+                if not supercross_comps:
+                    print(f"DEBUG: No Supercross competitions found at all!")
+                    return jsonify({"error": "No Supercross competitions found in database"}), 400
+                
                 # Update them with correct series_id
                 for comp in supercross_comps:
                     comp.series_id = series_id
@@ -7432,6 +7443,9 @@ def quick_simulation():
                 # Try again
                 competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
                 print(f"DEBUG: After fix, found {len(competitions)} competitions")
+            else:
+                print(f"DEBUG: Series {series.name} is not Supercross, cannot auto-fix")
+                return jsonify({"error": f"Cannot auto-fix series {series.name}"}), 400
         
         if not competitions:
             return jsonify({"error": "No competitions found for this series"}), 400
