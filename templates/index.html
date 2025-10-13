@@ -1462,7 +1462,7 @@
           console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}">${cardContent}</div>`
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass} cursor-pointer">${cardContent}</a>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
@@ -1470,40 +1470,7 @@
         console.log('DEBUG: Setting series HTML content, length:', seriesHTML.length);
         console.log('DEBUG: Series HTML preview:', seriesHTML.substring(0, 500) + '...');
         seriesContainer.innerHTML = seriesHTML;
-        console.log('DEBUG: Series HTML set successfully');
-        
-        // Add click event listeners to series cards
-        console.log('DEBUG: Adding click event listeners to series cards...');
-        const seriesCards = document.querySelectorAll('[data-series-id]');
-        console.log('DEBUG: Found', seriesCards.length, 'series cards');
-        
-        seriesCards.forEach((card, index) => {
-          console.log(`DEBUG: Adding listener to card ${index + 1}:`, card.getAttribute('data-series-name'));
-          
-          // Add multiple event listeners to test what works
-          card.addEventListener('click', function(e) {
-            console.log('DEBUG: CLICK EVENT TRIGGERED!');
-            e.preventDefault();
-            e.stopPropagation();
-            const seriesId = this.getAttribute('data-series-id');
-            const seriesName = this.getAttribute('data-series-name');
-            console.log('DEBUG: Series card clicked!', 'ID:', seriesId, 'Name:', seriesName);
-            console.log('DEBUG: About to navigate to:', `/series/${seriesId}`);
-            window.location.assign(`/series/${seriesId}`);
-          });
-          
-          // Also try mousedown as backup
-          card.addEventListener('mousedown', function(e) {
-            console.log('DEBUG: MOUSEDOWN EVENT TRIGGERED!');
-            e.preventDefault();
-            e.stopPropagation();
-            const seriesId = this.getAttribute('data-series-id');
-            const seriesName = this.getAttribute('data-series-name');
-            console.log('DEBUG: Series card mousedown!', 'ID:', seriesId, 'Name:', seriesName);
-            window.location.assign(`/series/${seriesId}`);
-          });
-        });
-        console.log('DEBUG: All event listeners added successfully');
+        console.log('DEBUG: Series HTML set successfully - using simple <a> tags for navigation');
         
       } catch (error) {
         console.error('Error loading series:', error);
