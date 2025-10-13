@@ -7365,11 +7365,13 @@ def race_countdown():
             simulation = GlobalSimulation.query.filter_by(active=True).first()
             if simulation and simulation.scenario:
                 # Use simulated time for test mode
+                current_simulated_time = get_current_time()
+                print(f"DEBUG: test_countdown - using simulated time: {current_simulated_time}")
+                
                 if simulation.scenario == 'active_race_1':
                     # Simulate race in 3 hours for testing
-                    now = datetime.utcnow()
-                    race_datetime = now + timedelta(hours=3)
-                    deadline_datetime = now + timedelta(hours=1)
+                    race_datetime = current_simulated_time + timedelta(hours=3)
+                    deadline_datetime = current_simulated_time + timedelta(hours=1)
                     
                     next_race = {
                         "name": "Test Race (Anaheim 1)",
@@ -7377,9 +7379,8 @@ def race_countdown():
                     }
                 elif simulation.scenario == 'race_in_3h':
                     # Simulate race in 3 hours for testing
-                    now = datetime.utcnow()
-                    race_datetime = now + timedelta(hours=3)
-                    deadline_datetime = now + timedelta(hours=1)
+                    race_datetime = current_simulated_time + timedelta(hours=3)
+                    deadline_datetime = current_simulated_time + timedelta(hours=1)
                     
                     next_race = {
                         "name": "Test Race (3h)",
@@ -7387,9 +7388,8 @@ def race_countdown():
                     }
                 elif simulation.scenario == 'race_in_1h':
                     # Simulate race in 1 hour for testing
-                    now = datetime.utcnow()
-                    race_datetime = now + timedelta(hours=1)
-                    deadline_datetime = now - timedelta(hours=1)  # Already passed
+                    race_datetime = current_simulated_time + timedelta(hours=1)
+                    deadline_datetime = current_simulated_time - timedelta(hours=1)  # Already passed
                     
                     next_race = {
                         "name": "Test Race (1h)",
@@ -7397,9 +7397,8 @@ def race_countdown():
                     }
                 elif simulation.scenario == 'race_in_30m':
                     # Simulate race in 30 minutes for testing
-                    now = datetime.utcnow()
-                    race_datetime = now + timedelta(minutes=30)
-                    deadline_datetime = now - timedelta(hours=1, minutes=30)  # Already passed
+                    race_datetime = current_simulated_time + timedelta(minutes=30)
+                    deadline_datetime = current_simulated_time - timedelta(hours=1, minutes=30)  # Already passed
                     
                     next_race = {
                         "name": "Test Race (30m)",
@@ -7407,9 +7406,8 @@ def race_countdown():
                     }
                 elif simulation.scenario == 'race_tomorrow':
                     # Simulate race tomorrow
-                    now = datetime.utcnow()
-                    race_datetime = now + timedelta(days=1)
-                    deadline_datetime = now + timedelta(hours=22)  # 2 hours before tomorrow
+                    race_datetime = current_simulated_time + timedelta(days=1)
+                    deadline_datetime = current_simulated_time + timedelta(hours=22)  # 2 hours before tomorrow
                     
                     next_race = {
                         "name": "Test Race (Tomorrow)",
@@ -7417,6 +7415,43 @@ def race_countdown():
                     }
                 else:
                     return jsonify({"error": f"Unknown test scenario: {simulation.scenario}"})
+                
+                # Calculate countdown using simulated time
+                race_diff = race_datetime - current_simulated_time
+                deadline_diff = deadline_datetime - current_simulated_time
+                
+                def format_countdown(td):
+                    total_seconds = int(td.total_seconds())
+                    if total_seconds <= 0:
+                        return {
+                            "total_seconds": 0,
+                            "days": 0,
+                            "hours": 0,
+                            "minutes": 0,
+                            "seconds": 0
+                        }
+                    
+                    days = total_seconds // 86400
+                    hours = (total_seconds % 86400) // 3600
+                    minutes = (total_seconds % 3600) // 60
+                    seconds = total_seconds % 60
+                    
+                    return {
+                        "total_seconds": total_seconds,
+                        "days": days,
+                        "hours": hours,
+                        "minutes": minutes,
+                        "seconds": seconds
+                    }
+                
+                return jsonify({
+                    "next_race": next_race,
+                    "countdown": {
+                        "race_start": format_countdown(race_diff),
+                        "pick_deadline": format_countdown(deadline_diff)
+                    },
+                    "picks_locked": deadline_diff.total_seconds() <= 0
+                })
             else:
                 return jsonify({"error": "No active test simulation"})
         else:
