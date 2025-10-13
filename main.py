@@ -1585,6 +1585,49 @@ def save_season_team():
 # -------------------------------------------------
 # Admin
 # -------------------------------------------------
+@app.route("/save_leaderboard_snapshot")
+def save_leaderboard_snapshot():
+    """Manually save current leaderboard as a snapshot"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        from sqlalchemy import func
+        
+        # Get current leaderboard
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        # Save current ranking
+        result = "Saved leaderboard snapshot:\n\n"
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            history_entry = LeaderboardHistory(
+                user_id=user_id,
+                ranking=i,
+                total_points=int(total_points)
+            )
+            db.session.add(history_entry)
+            result += f"{i}. {username}: {total_points} points\n"
+        
+        db.session.commit()
+        result += f"\nSnapshot saved successfully! Timestamp: {datetime.utcnow()}"
+        return f"<pre>{result}</pre>"
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"Error saving snapshot: {str(e)}"
+
 @app.route("/debug_leaderboard")
 def debug_leaderboard():
     """Debug route to check leaderboard history"""
