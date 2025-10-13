@@ -250,6 +250,19 @@ class CompetitionScore(db.Model):
     race_points = db.Column(db.Integer, default=0)
     holeshot_points = db.Column(db.Integer, default=0)
     wildcard_points = db.Column(db.Integer, default=0)
+class LeaderboardHistory(db.Model):
+    __tablename__ = "leaderboard_history"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    ranking = db.Column(db.Integer, nullable=False)
+    total_points = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Index för snabbare queries
+    __table_args__ = (
+        db.Index('idx_leaderboard_history_user_created', 'user_id', 'created_at'),
+    )
+
 class CompetitionRiderStatus(db.Model):
     __tablename__ = "competition_rider_status"
     id = db.Column(db.Integer, primary_key=True)
@@ -1587,8 +1600,25 @@ def run_migration():
         db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS holeshot_points INTEGER DEFAULT 0"))
         db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS wildcard_points INTEGER DEFAULT 0"))
         
+        # Create leaderboard_history table
+        db.session.execute(db.text("""
+            CREATE TABLE IF NOT EXISTS leaderboard_history (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id),
+                ranking INTEGER NOT NULL,
+                total_points INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        
+        # Create index for better performance
+        db.session.execute(db.text("""
+            CREATE INDEX IF NOT EXISTS idx_leaderboard_history_user_created 
+            ON leaderboard_history (user_id, created_at)
+        """))
+        
         db.session.commit()
-        return "Migration completed successfully! Added active_race_id and detailed points columns."
+        return "Migration completed successfully! Added active_race_id, detailed points columns, and leaderboard history table."
     except Exception as e:
         db.session.rollback()
         return f"Migration failed: {str(e)}"
@@ -2668,8 +2698,17 @@ def get_season_leaderboard():
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
     
-    # Hämta tidigare ranking från session eller global state
-    previous_ranking = session.get('previous_leaderboard_ranking', {})
+    # Hämta senaste ranking från databasen
+    latest_history = db.session.query(
+        LeaderboardHistory.user_id,
+        LeaderboardHistory.ranking
+    ).filter(
+        LeaderboardHistory.created_at == db.session.query(
+            db.func.max(LeaderboardHistory.created_at)
+        ).scalar_subquery()
+    ).all()
+    
+    previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
     
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         current_rank = i
@@ -2690,9 +2729,16 @@ def get_season_leaderboard():
             "delta": delta
         })
     
-    # Spara nuvarande ranking för nästa gång
-    current_ranking = {str(row["user_id"]): row["rank"] for row in result}
-    session['previous_leaderboard_ranking'] = current_ranking
+    # Spara nuvarande ranking i databasen
+    for row in result:
+        history_entry = LeaderboardHistory(
+            user_id=row["user_id"],
+            ranking=row["rank"],
+            total_points=row["total_points"]
+        )
+        db.session.add(history_entry)
+    
+    db.session.commit()
     
     return jsonify(result)
 
