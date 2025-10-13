@@ -1171,6 +1171,8 @@ def my_scores():
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Dedicated page for a specific series (SX/MX/SMX)"""
+    print(f"DEBUG: series_page ROUTE CALLED with series_id: {series_id}")
+    
     # Allow viewing series without login, but require login for making picks
     user_logged_in = "user_id" in session
     
@@ -1354,6 +1356,7 @@ def series_page(series_id):
         print(f"ERROR in series_page: {e}")
         import traceback
         print(f"ERROR traceback: {traceback.format_exc()}")
+        print(f"DEBUG: Redirecting to index due to error in series_page")
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
