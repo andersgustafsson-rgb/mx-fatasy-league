@@ -385,16 +385,14 @@
                     <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </a>
                   
-                  <div id="race-results-button">
-                    <a href="{{ url_for('race_results_page') }}" 
-                       class="group relative bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center backdrop-blur-sm border border-red-400/30">
-                      <div class="flex flex-col items-center space-y-2">
-                        <div class="text-2xl group-hover:scale-110 transition-transform duration-300">📊</div>
-                        <span class="text-sm font-semibold">Race Resultat</span>
-                      </div>
-                      <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    </a>
-                  </div>
+                  <a href="{{ url_for('race_results_page') }}" 
+                     class="group relative bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center backdrop-blur-sm border border-red-400/30">
+                    <div class="flex flex-col items-center space-y-2">
+                      <div class="text-2xl group-hover:scale-110 transition-transform duration-300">📊</div>
+                      <span class="text-sm font-semibold">Race Resultat</span>
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </a>
                   
                   <a href="{{ url_for('my_scores') }}" 
                      class="group relative bg-gradient-to-br from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-center backdrop-blur-sm border border-purple-400/30">
