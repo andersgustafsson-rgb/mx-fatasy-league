@@ -6038,6 +6038,92 @@ def debug_riders():
     except Exception as e:
         return f"Error: {str(e)}", 500
 
+@app.get("/quick_anaheim2_simulation")
+def quick_anaheim2_simulation():
+    """Quick simulation for Anaheim 2 - both picks and results"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find Anaheim 2 competition
+        anaheim2 = Competition.query.filter_by(name="Anaheim 2").first()
+        if not anaheim2:
+            return jsonify({"error": "Anaheim 2 competition not found"})
+        
+        competition_id = anaheim2.id
+        
+        # Step 1: Generate auto picks
+        users = User.query.all()
+        riders_450 = Rider.query.filter_by(class_name="450cc").all()
+        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        if anaheim2.coast_250 == "both":
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == "east") | (Rider.coast_250 == "west") | (Rider.coast_250 == "both")
+            )
+        elif anaheim2.coast_250 in ("east", "west"):
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == anaheim2.coast_250) | (Rider.coast_250 == "both")
+            )
+        riders_250 = riders_250_query.all()
+        riders = riders_450 + riders_250
+        
+        if not riders:
+            return jsonify({"error": "No riders found for this competition"}), 400
+        
+        picks_created = 0
+        for user in users:
+            existing_picks = RacePick.query.filter_by(
+                user_id=user.id,
+                competition_id=competition_id
+            ).first()
+            if existing_picks:
+                continue
+            import random
+            shuffled_riders = riders.copy()
+            random.shuffle(shuffled_riders)
+            for position in range(1, min(11, len(shuffled_riders) + 1)):
+                pick = RacePick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=shuffled_riders[position-1].id,
+                    predicted_position=position
+                )
+                db.session.add(pick)
+                picks_created += 1
+        
+        # Step 2: Generate simulated results
+        CompetitionResult.query.filter_by(competition_id=competition_id).delete()
+        HoleshotResult.query.filter_by(competition_id=competition_id).delete()
+        CompetitionScore.query.filter_by(competition_id=competition_id).delete()
+        
+        import random
+        shuffled_riders = riders.copy()
+        random.shuffle(shuffled_riders)
+        results_created = 0
+        for position in range(1, min(21, len(shuffled_riders) + 1)):
+            result = CompetitionResult(
+                competition_id=competition_id,
+                rider_id=shuffled_riders[position-1].id,
+                position=position
+            )
+            db.session.add(result)
+            results_created += 1
+        
+        db.session.commit()
+        calculate_scores(competition_id)
+        
+        return jsonify({
+            "message": f"Anaheim 2 simulation completed!",
+            "picks_created": picks_created,
+            "results_created": results_created,
+            "users_count": len(users)
+        })
+        
+    except Exception as e:
+        print(f"Error in Anaheim 2 simulation: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/check_anaheim2")
 def check_anaheim2():
     """Check if Anaheim 2 simulation worked"""
