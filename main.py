@@ -1883,6 +1883,21 @@ def debug_leaderboard():
     except Exception as e:
         return f"Debug error: {str(e)}"
 
+@app.route("/clear_history")
+def clear_history():
+    """Clear all leaderboard history"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        count = LeaderboardHistory.query.count()
+        LeaderboardHistory.query.delete()
+        db.session.commit()
+        return f"<pre>Cleared {count} leaderboard history entries.</pre>"
+    except Exception as e:
+        db.session.rollback()
+        return f"Error clearing history: {str(e)}"
+
 @app.route("/run_migration")
 def run_migration():
     """Run database migration - temporary route"""
