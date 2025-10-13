@@ -4670,6 +4670,26 @@ def view_user_profile(user_id):
         except Exception as e:
             print(f"Error getting user picks: {e}")
         
+        # Get user's race results for profile
+        race_results = []
+        total_points = 0
+        competitions = Competition.query.order_by(Competition.event_date).all()
+        for competition in competitions:
+            score = CompetitionScore.query.filter_by(user_id=user_id, competition_id=competition.id).first()
+            has_results = CompetitionResult.query.filter_by(competition_id=competition.id).first() is not None
+            if score or has_results:
+                race_results.append({
+                    'competition': competition,
+                    'points': score.total_points if score else 0,
+                    'race_points': 0,  # CompetitionScore only has total_points
+                    'holeshot_points': 0,  # CompetitionScore only has total_points
+                    'wildcard_points': 0,  # CompetitionScore only has total_points
+                    'has_results': has_results
+                })
+                if score:
+                    total_points += score.total_points
+        race_results.sort(key=lambda x: x['competition'].event_date, reverse=True)
+        
         return render_template(
             "user_profile.html",
             target_user=target_user,
@@ -4679,7 +4699,9 @@ def view_user_profile(user_id):
             current_picks_250=current_picks_250,
             upcoming_race=upcoming_race,
             picks_locked=picks_locked,
-            current_user_id=session["user_id"]
+            current_user_id=session["user_id"],
+            race_results=race_results,
+            total_points=total_points
         )
         
     except Exception as e:

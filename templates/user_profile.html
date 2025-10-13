@@ -266,6 +266,98 @@
 
       </div>
       {% endif %}
+
+      <!-- Race Resultat -->
+      {% if race_results is defined and race_results %}
+      <div class="mt-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
+            🏁 Race Resultat
+            <span class="ml-2 text-lg text-gray-600 dark:text-gray-400">({{ total_points }} poäng totalt)</span>
+          </h2>
+          
+          <div class="space-y-4">
+            {% for result in race_results %}
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 
+                        {% if result.has_results and result.points > 0 %} border-green-500
+                        {% elif result.has_results and result.points == 0 %} border-red-500
+                        {% else %} border-gray-400 {% endif %}">
+              
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
+                    {{ result.competition.name }}
+                  </h3>
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    {{ result.competition.event_date.strftime('%d %B %Y') if result.competition.event_date }}
+                  </p>
+                </div>
+                
+                <div class="text-right">
+                  {% if result.has_results %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      ✅ Kört
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                      ⏳ Väntar
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                <div class="text-center">
+                  <p class="text-gray-600 dark:text-gray-400">Race</p>
+                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.race_points }}</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-gray-600 dark:text-gray-400">Holeshot</p>
+                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.holeshot_points }}</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-gray-600 dark:text-gray-400">Wildcard</p>
+                  <p class="font-semibold text-gray-800 dark:text-white">{{ result.wildcard_points }}</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-gray-600 dark:text-gray-400">Total</p>
+                  <p class="font-bold text-lg 
+                             {% if result.has_results and result.points > 0 %} text-green-500
+                             {% elif result.has_results and result.points == 0 %} text-red-500
+                             {% else %} text-gray-400 {% endif %}">
+                    {{ result.points }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          
+          <!-- Sammanfattning -->
+          <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
+            <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">📊 Sammanfattning</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+              <div class="text-center">
+                <p class="text-blue-600 dark:text-blue-400">Tävlingar</p>
+                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|length }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-blue-600 dark:text-blue-400">Totala poäng</p>
+                <p class="font-bold text-blue-800 dark:text-blue-200">{{ total_points }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-blue-600 dark:text-blue-400">Holeshot poäng</p>
+                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|sum(attribute='holeshot_points') }}</p>
+              </div>
+              <div class="text-center">
+                <p class="text-blue-600 dark:text-blue-400">Wildcard poäng</p>
+                <p class="font-bold text-blue-800 dark:text-blue-200">{{ race_results|sum(attribute='wildcard_points') }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 
