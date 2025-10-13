@@ -7434,10 +7434,16 @@ def race_countdown():
             
             # Calculate countdown to race start (8 PM on race date)
             # Ensure event_date is a datetime object
+            print(f"DEBUG: next_race_obj.event_date type: {type(next_race_obj.event_date)}")
+            print(f"DEBUG: next_race_obj.event_date value: {next_race_obj.event_date}")
+            
             if isinstance(next_race_obj.event_date, str):
                 event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
             else:
                 event_date = next_race_obj.event_date
+            
+            print(f"DEBUG: event_date type: {type(event_date)}")
+            print(f"DEBUG: event_date value: {event_date}")
             
             race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
