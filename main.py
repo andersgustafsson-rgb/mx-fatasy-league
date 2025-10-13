@@ -1628,6 +1628,54 @@ def save_leaderboard_snapshot():
         db.session.rollback()
         return f"Error saving snapshot: {str(e)}"
 
+@app.route("/create_initial_snapshot")
+def create_initial_snapshot():
+    """Create initial leaderboard snapshot for comparison"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        # Clear existing history first
+        LeaderboardHistory.query.delete()
+        db.session.commit()
+        
+        from sqlalchemy import func
+        
+        # Get current leaderboard
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        # Save current ranking as initial snapshot
+        result = "Created initial leaderboard snapshot:\n\n"
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            history_entry = LeaderboardHistory(
+                user_id=user_id,
+                ranking=i,
+                total_points=int(total_points)
+            )
+            db.session.add(history_entry)
+            result += f"{i}. {username}: {total_points} points\n"
+        
+        db.session.commit()
+        result += f"\nInitial snapshot created! Timestamp: {datetime.utcnow()}"
+        result += f"\n\nNow when you run quick simulation, you should see ranking changes!"
+        return f"<pre>{result}</pre>"
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"Error creating initial snapshot: {str(e)}"
+
 @app.route("/debug_leaderboard")
 def debug_leaderboard():
     """Debug route to check leaderboard history"""
@@ -2859,19 +2907,24 @@ def get_season_leaderboard():
             "delta": delta
         })
     
-    # Spara nuvarande ranking i databasen
-    print(f"DEBUG: Saving current ranking to database...")
-    for row in result:
-        history_entry = LeaderboardHistory(
-            user_id=row["user_id"],
-            ranking=row["rank"],
-            total_points=row["total_points"]
-        )
-        db.session.add(history_entry)
-        print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+    # Only save current ranking if there are actual changes (non-zero deltas)
+    has_changes = any(row["delta"] != 0 for row in result)
     
-    db.session.commit()
-    print(f"DEBUG: Leaderboard history saved successfully")
+    if has_changes:
+        print(f"DEBUG: Ranking changes detected, saving current ranking to database...")
+        for row in result:
+            history_entry = LeaderboardHistory(
+                user_id=row["user_id"],
+                ranking=row["rank"],
+                total_points=row["total_points"]
+            )
+            db.session.add(history_entry)
+            print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+        
+        db.session.commit()
+        print(f"DEBUG: Leaderboard history saved successfully")
+    else:
+        print(f"DEBUG: No ranking changes detected, skipping save")
     
     return jsonify(result)
 
