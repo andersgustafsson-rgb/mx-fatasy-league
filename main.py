@@ -7739,14 +7739,8 @@ def quick_simulation():
             picks_created = 0
             
             for user in users:
-                # Check if user already has picks
-                existing_picks = RacePick.query.filter_by(
-                    user_id=user.id, 
-                    competition_id=competition.id
-                ).first()
-                
-                if existing_picks:
-                    continue
+                # Always generate new picks (don't skip existing ones)
+                # This allows running quick simulation multiple times
                 
                 # Generate random picks
                 import random
