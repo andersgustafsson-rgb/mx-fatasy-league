@@ -7375,8 +7375,48 @@ def race_countdown():
                         "name": "Test Race (Anaheim 1)",
                         "event_date": race_datetime.isoformat()
                     }
+                elif simulation.scenario == 'race_in_3h':
+                    # Simulate race in 3 hours for testing
+                    now = datetime.utcnow()
+                    race_datetime = now + timedelta(hours=3)
+                    deadline_datetime = now + timedelta(hours=1)
+                    
+                    next_race = {
+                        "name": "Test Race (3h)",
+                        "event_date": race_datetime.isoformat()
+                    }
+                elif simulation.scenario == 'race_in_1h':
+                    # Simulate race in 1 hour for testing
+                    now = datetime.utcnow()
+                    race_datetime = now + timedelta(hours=1)
+                    deadline_datetime = now - timedelta(hours=1)  # Already passed
+                    
+                    next_race = {
+                        "name": "Test Race (1h)",
+                        "event_date": race_datetime.isoformat()
+                    }
+                elif simulation.scenario == 'race_in_30m':
+                    # Simulate race in 30 minutes for testing
+                    now = datetime.utcnow()
+                    race_datetime = now + timedelta(minutes=30)
+                    deadline_datetime = now - timedelta(hours=1, minutes=30)  # Already passed
+                    
+                    next_race = {
+                        "name": "Test Race (30m)",
+                        "event_date": race_datetime.isoformat()
+                    }
+                elif simulation.scenario == 'race_tomorrow':
+                    # Simulate race tomorrow
+                    now = datetime.utcnow()
+                    race_datetime = now + timedelta(days=1)
+                    deadline_datetime = now + timedelta(hours=22)  # 2 hours before tomorrow
+                    
+                    next_race = {
+                        "name": "Test Race (Tomorrow)",
+                        "event_date": race_datetime.isoformat()
+                    }
                 else:
-                    return jsonify({"error": "Unknown test scenario"})
+                    return jsonify({"error": f"Unknown test scenario: {simulation.scenario}"})
             else:
                 return jsonify({"error": "No active test simulation"})
         else:
@@ -7393,7 +7433,13 @@ def race_countdown():
                 return jsonify({"error": "No upcoming races"})
             
             # Calculate countdown to race start (8 PM on race date)
-            race_datetime = next_race_obj.event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            # Ensure event_date is a datetime object
+            if isinstance(next_race_obj.event_date, str):
+                event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
+            else:
+                event_date = next_race_obj.event_date
+            
+            race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
             
             next_race = {
