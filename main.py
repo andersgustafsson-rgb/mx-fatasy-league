@@ -7416,7 +7416,31 @@ def quick_simulation():
             series = Series.query.get(series_id)
             if not series:
                 print(f"DEBUG: Series with ID {series_id} not found")
-                return jsonify({"error": f"Series with ID {series_id} not found"}), 400
+                
+                # Check what series exist
+                all_series = Series.query.all()
+                print(f"DEBUG: Available series in database: {len(all_series)}")
+                for s in all_series:
+                    print(f"DEBUG: - Series ID {s.id}: {s.name}")
+                
+                # Try to create missing series
+                if series_id == 1:
+                    print(f"DEBUG: Creating Supercross series with ID 1")
+                    supercross_series = Series(
+                        id=1,
+                        name="Supercross",
+                        year=2026,
+                        start_date=datetime.strptime("2026-01-04", "%Y-%m-%d").date(),
+                        end_date=datetime.strptime("2026-05-10", "%Y-%m-%d").date(),
+                        is_active=True,
+                        points_system='standard'
+                    )
+                    db.session.add(supercross_series)
+                    db.session.commit()
+                    series = supercross_series
+                    print(f"DEBUG: Created Supercross series")
+                else:
+                    return jsonify({"error": f"Series with ID {series_id} not found and cannot be auto-created"}), 400
             
             print(f"DEBUG: Found series: {series.name}")
             
