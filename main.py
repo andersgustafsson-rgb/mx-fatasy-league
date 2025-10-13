@@ -4537,9 +4537,9 @@ def user_race_results(user_id):
                 race_results.append({
                     'competition': competition,
                     'points': score.total_points if score else 0,
-                    'race_points': score.race_points if score else 0,
-                    'holeshot_points': score.holeshot_points if score else 0,
-                    'wildcard_points': score.wildcard_points if score else 0,
+                    'race_points': 0,  # CompetitionScore only has total_points
+                    'holeshot_points': 0,  # CompetitionScore only has total_points
+                    'wildcard_points': 0,  # CompetitionScore only has total_points
                     'has_results': has_results
                 })
                 if score:
