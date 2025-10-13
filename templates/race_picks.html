@@ -795,8 +795,25 @@
 
   // Rider Selector Functions
   function toggleRiderSelector(riderClass, position) {
-    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    // Handle both regular race picks (with position) and holeshot/wildcard (without position)
+    let selector;
+    if (position !== undefined && position !== 0) {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    } else {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"]`);
+    }
+    
+    if (!selector) {
+      console.error(`DEBUG: Could not find selector for class: ${riderClass}, position: ${position}`);
+      return;
+    }
+    
     const dropdown = selector.querySelector('.rider-selector-dropdown');
+    if (!dropdown) {
+      console.error(`DEBUG: Could not find dropdown for selector: ${riderClass}`);
+      return;
+    }
+    
     const isOpen = dropdown.style.display !== 'none';
     
     // Close all other dropdowns
@@ -825,7 +842,19 @@
 
   // Load rider images for dropdown
   function loadRiderImages(riderClass, position) {
-    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    // Handle both regular race picks (with position) and holeshot/wildcard (without position)
+    let selector;
+    if (position !== undefined && position !== 0) {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    } else {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"]`);
+    }
+    
+    if (!selector) {
+      console.error(`DEBUG: Could not find selector for loadRiderImages: ${riderClass}, position: ${position}`);
+      return;
+    }
+    
     const riderOptions = selector.querySelectorAll('.rider-option');
     
     riderOptions.forEach(option => {
