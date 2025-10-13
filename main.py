@@ -7284,6 +7284,76 @@ def api_riders():
         "bike_brand": rider.bike_brand
     } for rider in riders])
 
+@app.route("/debug_missing_bike_brands")
+def debug_missing_bike_brands():
+    """Debug route to check which riders are missing bike_brand"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    # Find riders with NULL or empty bike_brand
+    riders_without_brand = Rider.query.filter(
+        (Rider.bike_brand.is_(None)) | (Rider.bike_brand == '') | (Rider.bike_brand == 'Unknown')
+    ).all()
+    
+    # Find riders with bike_brand
+    riders_with_brand = Rider.query.filter(
+        Rider.bike_brand.isnot(None),
+        Rider.bike_brand != '',
+        Rider.bike_brand != 'Unknown'
+    ).all()
+    
+    return jsonify({
+        "riders_without_brand": [{
+            "id": r.id,
+            "name": r.name,
+            "class": r.class_name,
+            "number": r.rider_number,
+            "bike_brand": r.bike_brand
+        } for r in riders_without_brand],
+        "riders_with_brand": [{
+            "id": r.id,
+            "name": r.name,
+            "class": r.class_name,
+            "number": r.rider_number,
+            "bike_brand": r.bike_brand
+        } for r in riders_with_brand],
+        "count_without_brand": len(riders_without_brand),
+        "count_with_brand": len(riders_with_brand)
+    })
+
+@app.route("/fix_missing_bike_brands")
+def fix_missing_bike_brands():
+    """Fix all riders that are missing bike_brand"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        # Find riders with NULL or empty bike_brand
+        riders_without_brand = Rider.query.filter(
+            (Rider.bike_brand.is_(None)) | (Rider.bike_brand == '') | (Rider.bike_brand == 'Unknown')
+        ).all()
+        
+        bike_brands = ['Yamaha', 'Honda', 'Kawasaki', 'KTM', 'Husqvarna', 'GasGas', 'Suzuki']
+        fixed_count = 0
+        
+        for rider in riders_without_brand:
+            # Assign bike brand based on rider number hash for consistency
+            import hashlib
+            hash_val = int(hashlib.md5(f"{rider.name}_{rider.rider_number}".encode()).hexdigest()[:8], 16)
+            rider.bike_brand = bike_brands[hash_val % len(bike_brands)]
+            fixed_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed {fixed_count} riders with missing bike brands",
+            "fixed_count": fixed_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/simulate_race/<int:race_id>", methods=['POST'])
 def simulate_race(race_id):
     """Simulate a race - placeholder for now"""
