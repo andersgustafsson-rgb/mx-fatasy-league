@@ -925,11 +925,15 @@ def profile_page():
     # Beräkna statistik
     competitions_played = CompetitionScore.query.filter_by(user_id=user.id).count()
     
+    # Beräkna separata poängsummor
+    user_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
+    total_race_points = sum(score.race_points or 0 for score in user_scores)
+    total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
+    total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
+    
     # Hitta bästa placering (lägsta position i leaderboard)
     best_position = None
     if competitions_played > 0:
-        # Hämta alla tävlingar där användaren har poäng
-        user_scores = CompetitionScore.query.filter_by(user_id=user.id).all()
         best_positions = []
         
         for score in user_scores:
@@ -946,12 +950,16 @@ def profile_page():
             best_position = min(best_positions)
     
     print(f"DEBUG: Rendering profile template with user: {user.username}")
+    print(f"DEBUG: Total points breakdown - Race: {total_race_points}, Holeshot: {total_holeshot_points}, Wildcard: {total_wildcard_points}")
     return render_template(
         "profile.html",
         user=user,
         season_team=season_team,
         competitions_played=competitions_played,
-        best_position=best_position
+        best_position=best_position,
+        total_race_points=total_race_points,
+        total_holeshot_points=total_holeshot_points,
+        total_wildcard_points=total_wildcard_points
     )
 
 @app.post("/update_profile")

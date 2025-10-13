@@ -174,12 +174,28 @@
         <h2 class="text-2xl font-semibold mb-4">Min Statistik</h2>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Säsongsteam -->
-          <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
-              {{ season_team.total_points if season_team else 0 }}
+          <!-- Detaljerad poänguppdelning -->
+          <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <div class="text-center mb-3">
+              <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                {{ season_team.total_points if season_team else 0 }}
+              </div>
+              <div class="text-sm text-gray-600 dark:text-gray-400">Säsongspoäng</div>
             </div>
-            <div class="text-sm text-gray-600 dark:text-gray-400">Säsongspoäng</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600 dark:text-gray-400">Race:</span>
+                <span class="font-semibold text-cyan-600 dark:text-cyan-400">{{ total_race_points }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600 dark:text-gray-400">Holeshot:</span>
+                <span class="font-semibold text-yellow-600 dark:text-yellow-400">{{ total_holeshot_points }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600 dark:text-gray-400">Wildcard:</span>
+                <span class="font-semibold text-purple-600 dark:text-purple-400">{{ total_wildcard_points }}</span>
+              </div>
+            </div>
           </div>
 
           <!-- Antal tävlingar -->
