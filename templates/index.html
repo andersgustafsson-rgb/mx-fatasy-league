@@ -1479,13 +1479,27 @@
         
         seriesCards.forEach((card, index) => {
           console.log(`DEBUG: Adding listener to card ${index + 1}:`, card.getAttribute('data-series-name'));
+          
+          // Add multiple event listeners to test what works
           card.addEventListener('click', function(e) {
+            console.log('DEBUG: CLICK EVENT TRIGGERED!');
             e.preventDefault();
             e.stopPropagation();
             const seriesId = this.getAttribute('data-series-id');
             const seriesName = this.getAttribute('data-series-name');
             console.log('DEBUG: Series card clicked!', 'ID:', seriesId, 'Name:', seriesName);
             console.log('DEBUG: About to navigate to:', `/series/${seriesId}`);
+            window.location.href = `/series/${seriesId}`;
+          });
+          
+          // Also try mousedown as backup
+          card.addEventListener('mousedown', function(e) {
+            console.log('DEBUG: MOUSEDOWN EVENT TRIGGERED!');
+            e.preventDefault();
+            e.stopPropagation();
+            const seriesId = this.getAttribute('data-series-id');
+            const seriesName = this.getAttribute('data-series-name');
+            console.log('DEBUG: Series card mousedown!', 'ID:', seriesId, 'Name:', seriesName);
             window.location.href = `/series/${seriesId}`;
           });
         });
