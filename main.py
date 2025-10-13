@@ -7431,7 +7431,7 @@ def test_countdown_page():
     """Test countdown page with scenario buttons"""
     return render_template('test_countdown.html')
 
-@app.route("/set_active_race")
+@app.get("/set_active_race")
 def set_active_race():
     """Set which race should be active for testing - simple approach"""
     try:

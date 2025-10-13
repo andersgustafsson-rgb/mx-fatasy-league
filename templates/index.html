@@ -1464,15 +1464,17 @@
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
-        // Add click event listeners to series cards
-        document.querySelectorAll('[data-series-id]').forEach(card => {
-          card.addEventListener('click', function() {
-            const seriesId = this.getAttribute('data-series-id');
-            const seriesName = this.getAttribute('data-series-name');
-            console.log(`Clicked on series: ${seriesName} (ID: ${seriesId})`);
-            window.location.href = `/series/${seriesId}`;
+        // Add click event listeners to series cards after HTML is generated
+        setTimeout(() => {
+          document.querySelectorAll('[data-series-id]').forEach(card => {
+            card.addEventListener('click', function() {
+              const seriesId = this.getAttribute('data-series-id');
+              const seriesName = this.getAttribute('data-series-name');
+              console.log(`Clicked on series: ${seriesName} (ID: ${seriesId})`);
+              window.location.href = `/series/${seriesId}`;
+            });
           });
-        });
+        }, 100);
         
       } catch (error) {
         console.error('Error loading series:', error);
