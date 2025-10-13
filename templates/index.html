@@ -390,8 +390,8 @@
                   </a>
                 </div>
                 </div>
-              </div>
-              </div>
+        </div>
+      </div>
 
               <!-- MotoAction.se Banner -->
               <div class="mb-6">
@@ -423,8 +423,8 @@
                     <div class="flex items-center gap-2 mb-3">
                       <span class="text-green-500 text-lg">✅</span>
                       <span class="text-green-600 font-semibold">Dina val är gjorda!</span>
-                    </div>
-                    
+        </div>
+
                     <!-- Show picks for both classes (user can always see their own picks) -->
                     <div class="space-y-3 mb-3">
                       <!-- 450cc picks -->
@@ -440,7 +440,7 @@
                               <span class="text-2xl">🥈</span>
                             {% elif pick.position == 3 %}
                               <span class="text-2xl">🥉</span>
-          {% else %}
+    {% else %}
                               <span class="text-gray-600 dark:text-gray-400 font-bold w-6">{{ pick.position }}.</span>
           {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
@@ -665,8 +665,8 @@
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
+        </div>
+      </div>
 
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🔧 Admin & System</h2>
@@ -1462,7 +1462,7 @@
           console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="window.location.href='/series/${serie.id}'">${cardContent}</div>`
+            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="location.replace('/series/${serie.id}')">${cardContent}</div>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
