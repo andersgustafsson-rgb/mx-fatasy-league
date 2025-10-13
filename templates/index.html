@@ -1459,8 +1459,10 @@
             </div>
           `;
           
+          console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
+          
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="window.location.href='/series/${serie.id}'">${cardContent}</div>`
+            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="console.log('DEBUG: Clicking series ${serie.id}'); window.location.href='/series/${serie.id}'">${cardContent}</div>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         

@@ -7410,30 +7410,43 @@ def set_active_race():
         if not competition_id:
             return jsonify({"error": "competition_id required"}), 400
         
-        # Store active race in database
+        # Convert to integer
         try:
-            db.session.execute(text("""
-                INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario, active_race_id) 
-                VALUES (1, :active, :simulated_time, :start_time, :scenario, :active_race_id)
-                ON CONFLICT (id) DO UPDATE SET 
-                    active = :active,
-                    simulated_time = :simulated_time,
-                    start_time = :start_time,
-                    scenario = :scenario,
-                    active_race_id = :active_race_id
-            """), {
-                'active': True,
-                'simulated_time': datetime.utcnow().isoformat(),
-                'start_time': datetime.utcnow().isoformat(),
-                'scenario': f'active_race_{competition_id}',
-                'active_race_id': competition_id
-            })
+            competition_id = int(competition_id)
+        except ValueError:
+            return jsonify({"error": "competition_id must be a number"}), 400
+        
+        # Store active race in database using ORM
+        try:
+            # Check if record exists
+            existing = GlobalSimulation.query.filter_by(id=1).first()
+            
+            if existing:
+                # Update existing record
+                existing.active = True
+                existing.simulated_time = datetime.utcnow().isoformat()
+                existing.start_time = datetime.utcnow().isoformat()
+                existing.scenario = f'active_race_{competition_id}'
+                existing.active_race_id = competition_id
+            else:
+                # Create new record
+                new_sim = GlobalSimulation(
+                    id=1,
+                    active=True,
+                    simulated_time=datetime.utcnow().isoformat(),
+                    start_time=datetime.utcnow().isoformat(),
+                    scenario=f'active_race_{competition_id}',
+                    active_race_id=competition_id
+                )
+                db.session.add(new_sim)
+            
             db.session.commit()
             print(f"DEBUG: Set active race to competition ID: {competition_id}")
+            
         except Exception as db_error:
             print(f"Database update failed: {db_error}")
             db.session.rollback()
-            return jsonify({"error": "Database update failed"}), 500
+            return jsonify({"error": f"Database update failed: {str(db_error)}"}), 500
         
         return jsonify({
             "message": f"Active race set to competition ID: {competition_id}",
