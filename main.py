@@ -1244,8 +1244,23 @@ def race_picks_page(competition_id):
 
     comp = Competition.query.get_or_404(competition_id)
     
+    # Check if this is the active race from admin panel
+    is_active_race = False
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.active and global_sim.active_race_id == competition_id:
+            is_active_race = True
+            print(f"DEBUG: This is the active race from admin panel (ID: {competition_id})")
+    except Exception as e:
+        print(f"DEBUG: Error checking active race: {e}")
+    
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
+    
+    # If this is the active race from admin, always allow picks (unlock them)
+    if is_active_race:
+        picks_locked = False
+        print(f"DEBUG: Active race detected - unlocking picks for competition {competition_id}")
     
     # If picks are locked, show locked page instead of redirect
     if picks_locked:
