@@ -1462,7 +1462,7 @@
           console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="console.log('DEBUG: Series card clicked!', 'ID:', ${serie.id}, 'Name:', '${serie.name}'); console.log('DEBUG: About to navigate to:', '/series/${serie.id}'); location.replace('/series/${serie.id}');">${cardContent}</div>`
+            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}">${cardContent}</div>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
@@ -1471,6 +1471,25 @@
         console.log('DEBUG: Series HTML preview:', seriesHTML.substring(0, 500) + '...');
         seriesContainer.innerHTML = seriesHTML;
         console.log('DEBUG: Series HTML set successfully');
+        
+        // Add click event listeners to series cards
+        console.log('DEBUG: Adding click event listeners to series cards...');
+        const seriesCards = document.querySelectorAll('[data-series-id]');
+        console.log('DEBUG: Found', seriesCards.length, 'series cards');
+        
+        seriesCards.forEach((card, index) => {
+          console.log(`DEBUG: Adding listener to card ${index + 1}:`, card.getAttribute('data-series-name'));
+          card.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const seriesId = this.getAttribute('data-series-id');
+            const seriesName = this.getAttribute('data-series-name');
+            console.log('DEBUG: Series card clicked!', 'ID:', seriesId, 'Name:', seriesName);
+            console.log('DEBUG: About to navigate to:', `/series/${seriesId}`);
+            window.location.href = `/series/${seriesId}`;
+          });
+        });
+        console.log('DEBUG: All event listeners added successfully');
         
       } catch (error) {
         console.error('Error loading series:', error);
