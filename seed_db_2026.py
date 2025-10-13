@@ -1,4 +1,4 @@
-from app import app, db, User, Rider, Competition, RacePick, CompetitionScore, CompetitionResult, SeasonTeam, SeasonTeamRider, League, LeagueMembership, HoleshotPick, HoleshotResult, WildcardPick, SimDate
+from app import app, db, User, Rider, Competition, RacePick, CompetitionScore, CompetitionResult, SeasonTeam, SeasonTeamRider, League, LeagueMembership, HoleshotPick, HoleshotResult, WildcardPick
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 
@@ -20,7 +20,6 @@ def seed_data():
         db.session.query(User).delete()
         db.session.query(Rider).delete()
         db.session.query(Competition).delete()
-        db.session.query(SimDate).delete()
         db.session.commit()
 
         # --- Lägg in ny data ---

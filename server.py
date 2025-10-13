@@ -77,10 +77,6 @@ class SeasonTeamRider(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey('season_teams.id'), nullable=False)
     rider_id = db.Column(db.Integer, db.ForeignKey('riders.id'), nullable=False)
 
-class SimDate(db.Model):
-    __tablename__ = "sim_date"
-    id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format
 
 # Helper functions
 def get_today():
@@ -164,10 +160,6 @@ def create_test_data():
             print("Created riders")
         
         # Create default sim_date
-        if SimDate.query.count() == 0:
-            default_sim_date = SimDate(value='2025-10-06')
-            db.session.add(default_sim_date)
-            print("Created sim_date")
         
         db.session.commit()
         print("Database initialization complete!")

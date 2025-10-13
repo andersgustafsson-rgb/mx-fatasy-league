@@ -204,10 +204,6 @@ class CompetitionImage(db.Model):
         backref=db.backref("images", cascade="all, delete-orphan", lazy="dynamic")
     )    
 
-class SimDate(db.Model):
-    __tablename__ = "sim_date"
-    id = db.Column(db.Integer, primary_key=True)
-    value = db.Column(db.String(10), nullable=False)  # YYYY-MM-DD format    
 
 # -------------------------------------------------
 # Helpers
@@ -840,24 +836,6 @@ def admin_set_date():
     flash("Simulerat datum är inte implementerat i denna version.", "error")
     return redirect(url_for("admin_page"))
 
-@app.post("/admin/set_sim_date")
-def admin_set_sim_date():
-    if session.get("username") != "test":
-        return redirect(url_for("index"))
-    sim = (request.form.get("sim_date") or "").strip()
-    if not sim:
-        flash("Du måste ange ett datum (YYYY-MM-DD).", "error")
-        return redirect(url_for("admin_page"))
-    try:
-        # rensa och sätt nytt
-        db.session.execute(db.text("DELETE FROM sim_date"))
-        db.session.execute(db.text("INSERT INTO sim_date (value) VALUES (:v)"), {"v": sim})
-        db.session.commit()
-        flash(f"Simulerat datum satt till {sim}.", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Kunde inte sätta sim datum: {e}", "error")
-    return redirect(url_for("admin_page"))
 
 
 # -------------------------------------------------
@@ -1683,10 +1661,6 @@ def fix_database_route():
             )
             db.session.add(rider)
         
-        # Create default sim_date
-        SimDate.query.delete()
-        default_sim_date = SimDate(value='2025-10-06')
-        db.session.add(default_sim_date)
         
         db.session.commit()
         

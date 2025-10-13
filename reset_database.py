@@ -8,7 +8,7 @@ import sys
 # Add the current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import app, db, User, Competition, Rider, SimDate
+from app import app, db, User, Competition, Rider
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 
@@ -86,8 +86,6 @@ def reset_database():
             db.session.add(rider)
         
         print("📅 Creating sim date...")
-        sim_date = SimDate(value='2025-10-06')
-        db.session.add(sim_date)
         
         print("💾 Saving to database...")
         db.session.commit()
@@ -96,7 +94,6 @@ def reset_database():
         print(f"   - Users: {User.query.count()}")
         print(f"   - Competitions: {Competition.query.count()}")
         print(f"   - Riders: {Rider.query.count()}")
-        print(f"   - Sim Date: {SimDate.query.first().value if SimDate.query.first() else 'None'}")
         print("\n🚀 You can now start the app with: python app.py")
 
 if __name__ == "__main__":
