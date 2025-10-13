@@ -1158,16 +1158,21 @@ def my_scores():
 
     total_points = sum((r.total_points or 0) for r in rows)
     print(f"DEBUG: Total points for user {uid}: {total_points}")
-    scores = [
-        {
+    
+    # Check which competitions have results (are completed)
+    scores = []
+    for r in rows:
+        # Check if this competition has any results
+        has_results = db.session.query(CompetitionResult).filter_by(competition_id=r.competition_id).first() is not None
+        
+        scores.append({
             "competition_id": r.competition_id,
             "name": r.name,
             "series": r.series,
             "event_date": r.event_date.strftime("%Y-%m-%d") if r.event_date else "",
             "total_points": r.total_points or 0,
-        }
-        for r in rows
-    ]
+            "has_results": has_results,  # New field to indicate if race is completed
+        })
 
     return render_template("my_scores.html", scores=scores, total_points=total_points)
 
@@ -4524,15 +4529,20 @@ def user_race_results(user_id):
                 competition_id=competition.id
             ).first()
             
-            if score:
+            # Check if this competition has results (is completed)
+            has_results = CompetitionResult.query.filter_by(competition_id=competition.id).first() is not None
+            
+            if score or has_results:
                 race_results.append({
                     'competition': competition,
-                    'points': score.total_points,
-                    'race_points': score.race_points,
-                    'holeshot_points': score.holeshot_points,
-                    'wildcard_points': score.wildcard_points
+                    'points': score.total_points if score else 0,
+                    'race_points': score.race_points if score else 0,
+                    'holeshot_points': score.holeshot_points if score else 0,
+                    'wildcard_points': score.wildcard_points if score else 0,
+                    'has_results': has_results
                 })
-                total_points += score.total_points
+                if score:
+                    total_points += score.total_points
         
         # Sort by competition date (most recent first)
         race_results.sort(key=lambda x: x['competition'].event_date, reverse=True)

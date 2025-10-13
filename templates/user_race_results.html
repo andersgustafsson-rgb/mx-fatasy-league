@@ -128,9 +128,20 @@
             <div class="race-result-card p-5 rounded-lg">
               <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div class="flex-1">
-                  <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
-                    {{ result.competition.name }}
-                  </h3>
+                  <div class="flex items-center gap-3 mb-2">
+                    <h3 class="text-xl sm:text-2xl font-bold text-white">
+                      {{ result.competition.name }}
+                    </h3>
+                    {% if result.has_results %}
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        ✅ Kört
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                        ⏳ Väntar
+                      </span>
+                    {% endif %}
+                  </div>
                   <p class="text-cyan-300 text-sm">
                     {{ result.competition.event_date.strftime('%Y-%m-%d') if result.competition.event_date else 'Datum ej satt' }}
                   </p>
@@ -157,8 +168,14 @@
                   
                   <!-- Total Points -->
                   <div class="text-center border-l-2 border-cyan-400 pl-4">
-                    <div class="text-3xl sm:text-4xl font-bold text-green-400 neon-text">{{ result.points }}</div>
-                    <div class="text-sm text-green-300 font-semibold">Totalt</div>
+                    <div class="text-3xl sm:text-4xl font-bold 
+                               {% if result.has_results and result.points > 0 %} text-green-400 neon-text
+                               {% elif result.has_results and result.points == 0 %} text-red-400
+                               {% else %} text-gray-400 {% endif %}">{{ result.points }}</div>
+                    <div class="text-sm 
+                               {% if result.has_results and result.points > 0 %} text-green-300
+                               {% elif result.has_results and result.points == 0 %} text-red-300
+                               {% else %} text-gray-300 {% endif %} font-semibold">Totalt</div>
                   </div>
                 </div>
               </div>
