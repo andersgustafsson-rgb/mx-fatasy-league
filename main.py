@@ -1791,6 +1791,56 @@ def test_delta():
         db.session.rollback()
         return f"Error creating test snapshots: {str(e)}"
 
+@app.route("/create_baseline")
+def create_baseline():
+    """Create a baseline snapshot and disable auto-saving"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    try:
+        from sqlalchemy import func
+        
+        # Clear existing history
+        LeaderboardHistory.query.delete()
+        db.session.commit()
+        
+        # Get current leaderboard
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                SeasonTeam.team_name,
+                func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .group_by(User.id, User.username, SeasonTeam.team_name)
+            .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+            .all()
+        )
+        
+        # Create baseline snapshot
+        result = "Creating baseline snapshot:\n\n"
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            history_entry = LeaderboardHistory(
+                user_id=user_id,
+                ranking=i,
+                total_points=int(total_points)
+            )
+            db.session.add(history_entry)
+            result += f"{i}. {username}: {total_points} points\n"
+        
+        db.session.commit()
+        result += f"\nBaseline snapshot created at: {datetime.utcnow()}\n\n"
+        result += "Now run quick simulation and you should see ranking arrows!\n"
+        result += "The system will compare new rankings against this baseline."
+        
+        return f"<pre>{result}</pre>"
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"Error creating baseline snapshot: {str(e)}"
+
 @app.route("/debug_leaderboard")
 def debug_leaderboard():
     """Debug route to check leaderboard history"""
@@ -3041,6 +3091,7 @@ def get_season_leaderboard():
     else:
         print(f"DEBUG: No ranking changes detected, skipping save")
         print(f"DEBUG: All deltas are 0, which means no previous ranking to compare against")
+        print(f"DEBUG: This is normal - deltas will show when points actually change")
     
     return jsonify(result)
 
