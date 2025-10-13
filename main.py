@@ -1175,6 +1175,9 @@ def series_page(series_id):
     user_logged_in = "user_id" in session
     
     try:
+        # Rollback any existing transaction to avoid "aborted transaction" errors
+        db.session.rollback()
+        
         print(f"DEBUG: series_page called with series_id: {series_id}")
         print(f"DEBUG: User logged in: {user_logged_in}")
         
@@ -8033,6 +8036,9 @@ def get_smx_qualification_points(position):
 
 def is_picks_locked(competition):
     """Check if picks are locked for a specific competition"""
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
     # Handle both Competition objects and competition IDs
     if isinstance(competition, int):
         # If it's an ID, fetch the competition object
