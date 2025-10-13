@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Race Results – AMA Supercross 2026</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Suppress Tailwind CDN warning in production
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      console.log('Using Tailwind CSS CDN in production - consider installing locally for better performance');
+    }
+  </script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
   <div class="container mx-auto p-4 sm:p-6">
@@ -81,7 +87,15 @@
                           {% if result.image_url %}
                             <img src="/static/{{ result.image_url }}" 
                                  alt="{{ result.name }}" 
-                                 class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600">
+                                 class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center" style="display: none;">
+                              {% if result.bike_brand %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% endif %}
+                            </div>
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                               {% if result.bike_brand %}
@@ -133,7 +147,15 @@
                           {% if result.image_url %}
                             <img src="/static/{{ result.image_url }}" 
                                  alt="{{ result.name }}" 
-                                 class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600">
+                                 class="w-10 h-10 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center" style="display: none;">
+                              {% if result.bike_brand %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">{{ result.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-gray-600 dark:text-gray-400 font-bold text-xs">#{{ result.rider_number }}</span>
+                              {% endif %}
+                            </div>
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                               {% if result.bike_brand %}
@@ -186,7 +208,15 @@
                           {% if holeshot.image_url %}
                             <img src="/static/{{ holeshot.image_url }}" 
                                  alt="{{ holeshot.name }}" 
-                                 class="w-10 h-10 rounded-full object-cover border-2 border-yellow-300">
+                                 class="w-10 h-10 rounded-full object-cover border-2 border-yellow-300"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center" style="display: none;">
+                              {% if holeshot.bike_brand %}
+                                <span class="text-yellow-800 font-bold text-xs">{{ holeshot.bike_brand }}</span>
+                              {% else %}
+                                <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
+                              {% endif %}
+                            </div>
                           {% else %}
                             <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
                               {% if holeshot.bike_brand %}
