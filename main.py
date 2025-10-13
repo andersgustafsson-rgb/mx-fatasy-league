@@ -7386,8 +7386,19 @@ def quick_simulation():
         # Get competitions for this series
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         
+        print(f"DEBUG: quick_simulation - series_id: {series_id}, num_races: {num_races}")
+        print(f"DEBUG: quick_simulation - found {len(competitions)} competitions")
+        for comp in competitions:
+            print(f"DEBUG: - {comp.name} (ID: {comp.id})")
+        
         if not competitions:
             return jsonify({"error": "No competitions found for this series"}), 400
+        
+        # Check if we have enough competitions
+        if len(competitions) < num_races:
+            return jsonify({
+                "error": f"Not enough competitions. Series has {len(competitions)} competitions but {num_races} requested"
+            }), 400
         
         results = []
         
