@@ -1937,6 +1937,19 @@ def set_baseline():
     except Exception as e:
         return f"Error setting baseline: {str(e)}"
 
+@app.route("/test_session")
+def test_session():
+    """Test what's in session"""
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    result = "Session contents:\n\n"
+    result += f"Username: {session.get('username')}\n"
+    result += f"Previous ranking: {session.get('previous_leaderboard_ranking')}\n"
+    result += f"All session keys: {list(session.keys())}\n"
+    
+    return f"<pre>{result}</pre>"
+
 @app.route("/run_migration")
 def run_migration():
     """Run database migration - temporary route"""
