@@ -1469,15 +1469,52 @@ if (img && src) {
   img.style.background = "transparent";
 }
         });
-        if (myPicks.holeshot_picks?.["450cc"])
-          document.getElementById("holeshot-450").value =
-            myPicks.holeshot_picks["450cc"];
-        if (myPicks.holeshot_picks?.["250cc"])
-          document.getElementById("holeshot-250").value =
-            myPicks.holeshot_picks["250cc"];
-        if (myPicks.wildcard_pick)
-          document.getElementById("wildcard-pick").value =
-            myPicks.wildcard_pick;
+        // Update holeshot picks - both hidden selects and visual elements
+        if (myPicks.holeshot_picks?.["450cc"]) {
+          const riderId = myPicks.holeshot_picks["450cc"];
+          document.getElementById("holeshot-450").value = riderId;
+          
+          // Update visual selector
+          const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+          if (selector) {
+            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
+            if (riderOption) {
+              const selectedRiderSpan = selector.querySelector('.selected-rider');
+              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+            }
+          }
+        }
+        
+        if (myPicks.holeshot_picks?.["250cc"]) {
+          const riderId = myPicks.holeshot_picks["250cc"];
+          document.getElementById("holeshot-250").value = riderId;
+          
+          // Update visual selector
+          const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+          if (selector) {
+            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
+            if (riderOption) {
+              const selectedRiderSpan = selector.querySelector('.selected-rider');
+              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+            }
+          }
+        }
+        
+        // Update wildcard pick - both hidden select and visual element
+        if (myPicks.wildcard_pick) {
+          const riderId = myPicks.wildcard_pick;
+          document.getElementById("wildcard-pick").value = riderId;
+          
+          // Update visual selector
+          const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+          if (selector) {
+            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
+            if (riderOption) {
+              const selectedRiderSpan = selector.querySelector('.selected-rider');
+              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+            }
+          }
+        }
 
         // Wildcard-knapp: lås endast om position faktiskt finns
         const btn = document.getElementById("wildcard-roll-btn");
