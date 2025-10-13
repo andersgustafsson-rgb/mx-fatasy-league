@@ -1573,8 +1573,14 @@ def run_migration():
     try:
         # Add the missing column directly with SQL
         db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN IF NOT EXISTS active_race_id INTEGER"))
+        
+        # Add detailed points columns to competition_scores table
+        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS race_points INTEGER DEFAULT 0"))
+        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS holeshot_points INTEGER DEFAULT 0"))
+        db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS wildcard_points INTEGER DEFAULT 0"))
+        
         db.session.commit()
-        return "Migration completed successfully! Column active_race_id added."
+        return "Migration completed successfully! Added active_race_id and detailed points columns."
     except Exception as e:
         db.session.rollback()
         return f"Migration failed: {str(e)}"
