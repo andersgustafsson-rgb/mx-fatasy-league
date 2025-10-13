@@ -6038,6 +6038,39 @@ def debug_riders():
     except Exception as e:
         return f"Error: {str(e)}", 500
 
+@app.get("/check_anaheim2")
+def check_anaheim2():
+    """Check if Anaheim 2 simulation worked"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Find Anaheim 2 competition
+        anaheim2 = Competition.query.filter_by(name="Anaheim 2").first()
+        if not anaheim2:
+            return jsonify({"error": "Anaheim 2 competition not found"})
+        
+        # Check if it has results
+        results = CompetitionResult.query.filter_by(competition_id=anaheim2.id).all()
+        holeshots = HoleshotResult.query.filter_by(competition_id=anaheim2.id).all()
+        scores = CompetitionScore.query.filter_by(competition_id=anaheim2.id).all()
+        
+        return jsonify({
+            "competition": {
+                "id": anaheim2.id,
+                "name": anaheim2.name,
+                "date": anaheim2.event_date.isoformat() if anaheim2.event_date else None
+            },
+            "results_count": len(results),
+            "holeshots_count": len(holeshots),
+            "scores_count": len(scores),
+            "has_results": len(results) > 0,
+            "sample_results": [{"rider_id": r.rider_id, "position": r.position} for r in results[:5]]
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.get("/debug_database")
 def debug_database():
     """Debug database configuration and status"""
