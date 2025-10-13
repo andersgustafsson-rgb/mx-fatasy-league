@@ -247,6 +247,9 @@ class CompetitionScore(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
     total_points = db.Column(db.Integer)
+    race_points = db.Column(db.Integer, default=0)
+    holeshot_points = db.Column(db.Integer, default=0)
+    wildcard_points = db.Column(db.Integer, default=0)
 class CompetitionRiderStatus(db.Model):
     __tablename__ = "competition_rider_status"
     id = db.Column(db.Integer, primary_key=True)
@@ -1151,6 +1154,9 @@ def my_scores():
             Competition.series,
             Competition.event_date,
             CompetitionScore.total_points,
+            CompetitionScore.race_points,
+            CompetitionScore.holeshot_points,
+            CompetitionScore.wildcard_points,
         )
         .outerjoin(CompetitionScore, (Competition.id == CompetitionScore.competition_id) & (CompetitionScore.user_id == uid))
         .order_by(Competition.event_date.asc().nulls_last())
@@ -1176,6 +1182,9 @@ def my_scores():
             "series": r.series,
             "event_date": r.event_date.strftime("%Y-%m-%d") if r.event_date else "",
             "total_points": r.total_points or 0,
+            "race_points": r.race_points or 0,
+            "holeshot_points": r.holeshot_points or 0,
+            "wildcard_points": r.wildcard_points or 0,
             "has_results": has_results,  # New field to indicate if race is completed
         })
 
@@ -3355,7 +3364,9 @@ def calculate_scores(comp_id: int):
     actual_holeshots_dict = {hs.class_name: hs for hs in actual_holeshots}
 
     for user in users:
-        total_points = 0
+        race_points = 0
+        holeshot_points = 0
+        wildcard_points = 0
         print(f"DEBUG: Calculating points for user {user.username} (ID: {user.id})")
 
         picks = RacePick.query.filter_by(user_id=user.id, competition_id=comp_id).all()
@@ -3368,11 +3379,11 @@ def calculate_scores(comp_id: int):
                 else None
             )
             if actual_pos_for_pick == pick.predicted_position:
-                total_points += 25
-                print(f"DEBUG: Perfect match! +25 points for {user.username}")
+                race_points += 25
+                print(f"DEBUG: Perfect match! +25 race points for {user.username}")
             elif actual_pos_for_pick is not None and actual_pos_for_pick <= 6:
-                total_points += 5
-                print(f"DEBUG: Top 6 finish! +5 points for {user.username}")
+                race_points += 5
+                print(f"DEBUG: Top 6 finish! +5 race points for {user.username}")
 
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -3380,7 +3391,8 @@ def calculate_scores(comp_id: int):
         for hp in holeshot_picks:
             actual_hs = actual_holeshots_dict.get(hp.class_name)
             if actual_hs and actual_hs.rider_id == hp.rider_id:
-                total_points += 3
+                holeshot_points += 3
+                print(f"DEBUG: Holeshot correct! +3 holeshot points for {user.username}")
 
         wc_pick = WildcardPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -3390,7 +3402,10 @@ def calculate_scores(comp_id: int):
                 (res for res in actual_results if res.position == wc_pick.position), None
             )
             if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
-                total_points += 15
+                wildcard_points += 15
+                print(f"DEBUG: Wildcard correct! +15 wildcard points for {user.username}")
+
+        total_points = race_points + holeshot_points + wildcard_points
 
         score_entry = CompetitionScore.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -3401,8 +3416,12 @@ def calculate_scores(comp_id: int):
             print(f"DEBUG: Created new score entry for {user.username}")
         else:
             print(f"DEBUG: Updated existing score entry for {user.username}")
+        
         score_entry.total_points = total_points
-        print(f"DEBUG: {user.username} total points: {total_points}")
+        score_entry.race_points = race_points
+        score_entry.holeshot_points = holeshot_points
+        score_entry.wildcard_points = wildcard_points
+        print(f"DEBUG: {user.username} - Race: {race_points}, Holeshot: {holeshot_points}, Wildcard: {wildcard_points}, Total: {total_points}")
         
         # Debug: Check if user has any picks at all
         all_user_picks = RacePick.query.filter_by(user_id=user.id).all()
@@ -4476,9 +4495,9 @@ def user_race_results(user_id):
                 race_results.append({
                     'competition': competition,
                     'points': score.total_points if score else 0,
-                    'race_points': 0,  # CompetitionScore only has total_points
-                    'holeshot_points': 0,  # CompetitionScore only has total_points
-                    'wildcard_points': 0,  # CompetitionScore only has total_points
+                    'race_points': score.race_points if score else 0,
+                    'holeshot_points': score.holeshot_points if score else 0,
+                    'wildcard_points': score.wildcard_points if score else 0,
                     'has_results': has_results
                 })
                 if score:
