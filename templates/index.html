@@ -1462,12 +1462,15 @@
           console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="location.replace('/series/${serie.id}')">${cardContent}</div>`
+            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="console.log('DEBUG: Series card clicked!', 'ID:', ${serie.id}, 'Name:', '${serie.name}'); console.log('DEBUG: About to navigate to:', '/series/${serie.id}'); location.replace('/series/${serie.id}');">${cardContent}</div>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
+        console.log('DEBUG: Setting series HTML content, length:', seriesHTML.length);
+        console.log('DEBUG: Series HTML preview:', seriesHTML.substring(0, 500) + '...');
         seriesContainer.innerHTML = seriesHTML;
+        console.log('DEBUG: Series HTML set successfully');
         
       } catch (error) {
         console.error('Error loading series:', error);
