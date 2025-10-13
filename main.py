@@ -6198,6 +6198,7 @@ def quick_anaheim2_simulation():
 @app.get("/debug_users")
 def debug_users():
     """Debug route to check which users exist - no login required for testing"""
+    # Skip login check for debugging
     try:
         users = User.query.all()
         user_list = []
@@ -6216,6 +6217,18 @@ def debug_users():
         </ul>
         """
         
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@app.get("/simple_debug")
+def simple_debug():
+    """Simple debug route - no login required"""
+    try:
+        users = User.query.all()
+        result = f"Total users: {len(users)}\n"
+        for user in users:
+            result += f"ID {user.id}: {user.username}\n"
+        return result
     except Exception as e:
         return f"Error: {str(e)}"
 
