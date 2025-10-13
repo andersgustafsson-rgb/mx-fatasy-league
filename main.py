@@ -2844,7 +2844,7 @@ def get_season_leaderboard():
         
         # Beräkna delta (negativ = gått upp, positiv = gått ner)
         if previous_rank is not None:
-            delta = previous_rank - current_rank
+            delta = current_rank - previous_rank  # Fix: current - previous gives correct sign
             print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
         else:
             delta = 0  # Ingen tidigare ranking
