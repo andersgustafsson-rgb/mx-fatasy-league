@@ -1359,7 +1359,15 @@ def race_picks_page(competition_id):
     actual_results = []
     holeshot_results = []
 
-    # 5) Skicka out_ids till templaten för (OUT)/disabled
+    # 5) Get trackmap images for this competition
+    trackmap_images = []
+    try:
+        trackmap_images = CompetitionImage.query.filter_by(competition_id=comp.id).order_by(CompetitionImage.sort_order).all()
+        print(f"DEBUG: Found {len(trackmap_images)} trackmap images for {comp.name}")
+    except Exception as e:
+        print(f"DEBUG: Error getting trackmap images: {e}")
+    
+    # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
         "race_picks.html",
         competition=comp,
@@ -1370,6 +1378,7 @@ def race_picks_page(competition_id):
         actual_results=actual_results,
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
+        trackmap_images=trackmap_images,
     )
 
 

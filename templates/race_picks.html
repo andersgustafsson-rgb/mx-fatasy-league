@@ -240,6 +240,30 @@
       </div>
     </div>
 
+    <!-- Trackmap Section -->
+    {% if trackmap_images and trackmap_images|length > 0 %}
+    <div class="mb-6 bg-gray-800 rounded-lg p-4">
+      <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+        🗺️ Track Map
+      </h2>
+      <div class="bg-gray-700 rounded-lg p-4">
+        <img id="main-trackmap"
+             src="{{ url_for('static', filename=trackmap_images[0].image_url) }}"
+             alt="Track Map {{ competition.name }}"
+             class="w-full max-h-96 object-contain rounded mb-4 bg-gray-600">
+        
+        {% if trackmap_images|length > 1 %}
+        <div class="flex flex-wrap gap-2 justify-center">
+          {% for img in trackmap_images[:5] %}
+            <img src="{{ url_for('static', filename=img.image_url) }}"
+                 class="thumb w-20 h-16 object-cover rounded cursor-pointer {% if loop.first %}ring-2 ring-cyan-400{% endif %}"
+                 onclick="setMainTrackmap(this.src, this)">
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
@@ -1556,6 +1580,15 @@ window.addEventListener("focus", () => {
     location.reload();
   }
 });
+
+// Trackmap functionality
+function setMainTrackmap(src, thumbEl) {
+  const main = document.getElementById('main-trackmap');
+  if (main) main.src = src;
+  const container = thumbEl.parentElement;
+  container.querySelectorAll('.thumb').forEach(t => t.classList.remove('ring-2', 'ring-cyan-400'));
+  thumbEl.classList.add('ring-2', 'ring-cyan-400');
+}
 
 </script>
 
