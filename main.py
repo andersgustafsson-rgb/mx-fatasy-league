@@ -7439,6 +7439,9 @@ def race_countdown():
             
             if isinstance(next_race_obj.event_date, str):
                 event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
+            elif isinstance(next_race_obj.event_date, date) and not isinstance(next_race_obj.event_date, datetime):
+                # Convert date to datetime at midnight, then set to 8 PM
+                event_date = datetime.combine(next_race_obj.event_date, datetime.min.time())
             else:
                 event_date = next_race_obj.event_date
             
