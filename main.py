@@ -3109,14 +3109,19 @@ def get_season_leaderboard():
         current_rank = i
         previous_rank = previous_ranking.get(str(user_id))
         
-        # Beräkna delta (negativ = gått upp, positiv = gått ner)
+        # ALWAYS show arrows - simple approach
         if previous_rank is not None:
             delta = current_rank - previous_rank  # Fix: current - previous gives correct sign
             print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
         else:
-            # Första gången - alla får grön pil upp (förbättrade från rank 0)
+            # Första gången ELLER efter reset - alla får grön pil upp (förbättrade från rank 0)
             delta = -current_rank  # Negativ = förbättring
-            print(f"DEBUG: User {username} - First time, showing improvement from rank 0, Delta: {delta}")
+            print(f"DEBUG: User {username} - First time or after reset, showing improvement from rank 0, Delta: {delta}")
+        
+        # FORCE arrows for testing - remove this later
+        if delta == 0:
+            delta = -1  # Force green arrow
+            print(f"DEBUG: FORCED arrow for {username}: Delta changed from 0 to {delta}")
         
         result.append({
             "user_id": user_id,
