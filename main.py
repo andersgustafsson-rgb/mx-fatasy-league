@@ -4494,6 +4494,63 @@ def debug_rider_coasts():
     except Exception as e:
         return f"Error: {str(e)}", 500
 
+@app.route("/user_race_results/<int:user_id>")
+def user_race_results(user_id):
+    """View another user's race results and points breakdown"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    try:
+        # Get the user to view
+        target_user = User.query.get(user_id)
+        if not target_user:
+            flash("Användaren hittades inte.", "error")
+            return redirect(url_for("index"))
+        
+        # Get user's season team info
+        season_team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        
+        # Get all competitions with results
+        competitions = Competition.query.order_by(Competition.event_date).all()
+        
+        # Get user's race results for each competition
+        race_results = []
+        total_points = 0
+        
+        for competition in competitions:
+            # Get user's score for this competition
+            score = CompetitionScore.query.filter_by(
+                user_id=user_id,
+                competition_id=competition.id
+            ).first()
+            
+            if score:
+                race_results.append({
+                    'competition': competition,
+                    'points': score.total_points,
+                    'race_points': score.race_points,
+                    'holeshot_points': score.holeshot_points,
+                    'wildcard_points': score.wildcard_points
+                })
+                total_points += score.total_points
+        
+        # Sort by competition date (most recent first)
+        race_results.sort(key=lambda x: x['competition'].event_date, reverse=True)
+        
+        return render_template(
+            "user_race_results.html",
+            target_user=target_user,
+            season_team=season_team,
+            race_results=race_results,
+            total_points=total_points,
+            current_user_id=session["user_id"]
+        )
+        
+    except Exception as e:
+        print(f"Error viewing user race results: {e}")
+        flash("Ett fel uppstod vid visning av race-resultaten.", "error")
+        return redirect(url_for("index"))
+
 @app.route("/profile/<int:user_id>")
 def view_user_profile(user_id):
     """View another user's profile"""
