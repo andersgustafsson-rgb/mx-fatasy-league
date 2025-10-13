@@ -520,7 +520,8 @@ def logout():
 def series_status():
     """Get status of all series for user interface"""
     try:
-        series = Series.query.filter_by(year=2026, is_active=True).all()
+        # Always show all series for 2026, not just active ones
+        series = Series.query.filter_by(year=2026).all()
         
         # Use simulated date if available, otherwise use real date
         current_date = get_today()
@@ -7862,62 +7863,27 @@ def clear_all_data():
         return jsonify({"error": str(e)}), 500
 
 def get_current_time():
-    """Get current time - either real or simulated"""
-    print(f"DEBUG: get_current_time() called - session simulation_active: {session.get('simulation_active')}")
-    
-    # Skip session-based simulation - use only global database simulation for consistency
-    print(f"DEBUG: Skipping session simulation, using only global database simulation")
-    
-    # Check global simulation state for cross-device sync using database
-    print(f"DEBUG: Checking database global simulation state...")
+    """Get current time - either real or simulated (simplified)"""
+    # Check if we're in test_countdown simulation mode
     try:
-        # Rollback any existing transaction first
         db.session.rollback()
-        
         result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
-        print(f"DEBUG: Database query result: {result}")
+        
         if result and result[0]:  # active is True
-            initial_simulated_time = datetime.fromisoformat(result[1])  # simulated_time
-            simulation_start_time = datetime.fromisoformat(result[2])   # start_time
-            
-            # Calculate how much real time has passed since simulation started
-            real_time_elapsed = datetime.utcnow() - simulation_start_time
-            
-            # Add the elapsed time to the initial simulated time
-            current_simulated_time = initial_simulated_time + real_time_elapsed
-            
-            print(f"DEBUG: Using database global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
-            print(f"DEBUG: Database data - active: {result[0]}, time: {result[1]}, start: {result[2]}")
-            return current_simulated_time
-        else:
-            print(f"DEBUG: Database simulation not active or no result")
-    except Exception as e:
-        print(f"DEBUG: Error parsing database global simulated time: {e}")
-        # Rollback and fallback to app globals if database table doesn't exist
-        db.session.rollback()
-        print(f"DEBUG: Checking app global simulation state...")
-        if hasattr(app, 'global_simulation_active') and app.global_simulation_active and hasattr(app, 'global_simulated_time') and hasattr(app, 'global_simulation_start_time'):
-            try:
-                # Get the initial simulated time
-                initial_simulated_time = datetime.fromisoformat(app.global_simulated_time)
-                simulation_start_time = datetime.fromisoformat(app.global_simulation_start_time)
-                
-                # Calculate how much real time has passed since simulation started
+            # Only use simulation if it's from test_countdown (has scenario)
+            scenario_result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
+            if scenario_result and scenario_result[0] and scenario_result[0].startswith('race_'):
+                # This is test_countdown simulation - use it
+                initial_simulated_time = datetime.fromisoformat(result[1])
+                simulation_start_time = datetime.fromisoformat(result[2])
                 real_time_elapsed = datetime.utcnow() - simulation_start_time
-                
-                # Add the elapsed time to the initial simulated time
                 current_simulated_time = initial_simulated_time + real_time_elapsed
-                
-                print(f"DEBUG: Using app global simulated time: {current_simulated_time} (elapsed: {real_time_elapsed})")
-                print(f"DEBUG: App global data - active: {app.global_simulation_active}, time: {app.global_simulated_time}, start: {app.global_simulation_start_time}")
                 return current_simulated_time
-            except Exception as e2:
-                print(f"DEBUG: Error parsing app global simulated time: {e2}")
-                pass
-        else:
-            print(f"DEBUG: App global simulation not active or missing data")
+    except Exception as e:
+        print(f"DEBUG: Error in get_current_time: {e}")
+        db.session.rollback()
     
-    print(f"DEBUG: Using real time: {datetime.utcnow()}")
+    # Default to real time
     return datetime.utcnow()
 
 def calculate_smx_qualification_points():
