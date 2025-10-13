@@ -7354,6 +7354,72 @@ def fix_missing_bike_brands():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/race_countdown")
+def race_countdown():
+    """Simple countdown for main page - shows next race countdown"""
+    try:
+        # Get the next upcoming race
+        today = get_today()
+        next_race = (
+            Competition.query
+            .filter(Competition.event_date >= today)
+            .order_by(Competition.event_date.asc())
+            .first()
+        )
+        
+        if not next_race:
+            return jsonify({"error": "No upcoming races"})
+        
+        # Calculate countdown to race start (2 hours before event_date)
+        race_datetime = next_race.event_date.replace(hour=20, minute=0, second=0, microsecond=0)  # 8 PM race start
+        deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
+        
+        now = datetime.utcnow()
+        
+        # Calculate time differences
+        race_diff = race_datetime - now
+        deadline_diff = deadline_datetime - now
+        
+        def format_countdown(timedelta_obj):
+            total_seconds = int(timedelta_obj.total_seconds())
+            if total_seconds <= 0:
+                return {
+                    "total_seconds": 0,
+                    "days": 0,
+                    "hours": 0,
+                    "minutes": 0,
+                    "seconds": 0
+                }
+            
+            days = total_seconds // 86400
+            hours = (total_seconds % 86400) // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            
+            return {
+                "total_seconds": total_seconds,
+                "days": days,
+                "hours": hours,
+                "minutes": minutes,
+                "seconds": seconds
+            }
+        
+        return jsonify({
+            "next_race": {
+                "name": next_race.name,
+                "event_date": next_race.event_date.isoformat()
+            },
+            "countdown": {
+                "race_start": format_countdown(race_diff),
+                "pick_deadline": format_countdown(deadline_diff)
+            },
+            "picks_locked": deadline_diff.total_seconds() <= 0
+        })
+        
+    except Exception as e:
+        print(f"Error in race_countdown: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/simulate_race/<int:race_id>", methods=['POST'])
 def simulate_race(race_id):
     """Simulate a race - placeholder for now"""
