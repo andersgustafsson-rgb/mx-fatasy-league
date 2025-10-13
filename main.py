@@ -2887,7 +2887,7 @@ def admin_set_date():
 
 
 # -------------------------------------------------
-# API helpers (för templates JS)
+# API helpers (för templates JS) - Updated for ranking arrows
 # -------------------------------------------------
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
