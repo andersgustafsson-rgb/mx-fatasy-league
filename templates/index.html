@@ -342,9 +342,9 @@
             >
               ⚙️ Settings
             </button>
-          </div>
         </div>
-        
+      </div>
+
         <!-- Tab Content -->
         <div class="tab-content">
           <!-- Race Info Tab -->
@@ -440,11 +440,11 @@
                               <span class="text-2xl">🥈</span>
                             {% elif pick.position == 3 %}
                               <span class="text-2xl">🥉</span>
-                            {% else %}
+          {% else %}
                               <span class="text-gray-600 dark:text-gray-400 font-bold w-6">{{ pick.position }}.</span>
-                            {% endif %}
+          {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-                          </div>
+        </div>
                           {% endfor %}
                         </div>
                       </div>
@@ -463,11 +463,11 @@
                               <span class="text-2xl">🥈</span>
                             {% elif pick.position == 3 %}
                               <span class="text-2xl">🥉</span>
-                            {% else %}
+    {% else %}
                               <span class="text-blue-600 dark:text-blue-400 font-bold w-6">{{ pick.position }}.</span>
-                            {% endif %}
+    {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-                          </div>
+  </div>
   {% endfor %}
 </div>
                       </div>
@@ -539,15 +539,15 @@
                 <p class="text-gray-600 dark:text-gray-400">Inga races planerade just nu.</p>
           {% endif %}
               </div>
-            </div>
-          </div>
-          
+        </div>
+      </div>
+
           <!-- Leaderboard Tab -->
           <div id="leaderboard" class="tab-panel hidden">
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
               <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
                 <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 Säsong Leaderboard</h2>
-              </div>
+        </div>
               <div class="p-4 sm:p-6 bg-gray-900">
                 <div id="season-leaderboard-list">
                   <p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Laddar...</p>
@@ -557,9 +557,9 @@
                     Visa alla poäng
                   </a>
                 </div>
-              </div>
-            </div>
-          </div>
+      </div>
+    </div>
+  </div>
           
           <!-- Stats Tab -->
           <div id="stats" class="tab-panel hidden">
@@ -1460,21 +1460,9 @@
           `;
           
           return isClickable 
-            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}">${cardContent}</div>`
+            ? `<div class="block ${finalCardClass} cursor-pointer" data-series-id="${serie.id}" data-series-name="${serie.name}" onclick="window.location.href='/series/${serie.id}'">${cardContent}</div>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
-        
-        // Add click event listeners to series cards after HTML is generated
-        setTimeout(() => {
-          document.querySelectorAll('[data-series-id]').forEach(card => {
-            card.addEventListener('click', function() {
-              const seriesId = this.getAttribute('data-series-id');
-              const seriesName = this.getAttribute('data-series-name');
-              console.log(`Clicked on series: ${seriesName} (ID: ${seriesId})`);
-              window.location.href = `/series/${seriesId}`;
-            });
-          });
-        }, 100);
         
       } catch (error) {
         console.error('Error loading series:', error);
