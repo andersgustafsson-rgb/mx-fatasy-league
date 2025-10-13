@@ -7356,23 +7356,50 @@ def fix_missing_bike_brands():
 
 @app.route("/race_countdown")
 def race_countdown():
-    """Simple countdown for main page - shows next race countdown"""
+    """Countdown for main page - supports both real and test modes"""
     try:
-        # Get the next upcoming race
-        today = get_today()
-        next_race = (
-            Competition.query
-            .filter(Competition.event_date >= today)
-            .order_by(Competition.event_date.asc())
-            .first()
-        )
+        mode = request.args.get('mode', 'real')
         
-        if not next_race:
-            return jsonify({"error": "No upcoming races"})
-        
-        # Calculate countdown to race start (2 hours before event_date)
-        race_datetime = next_race.event_date.replace(hour=20, minute=0, second=0, microsecond=0)  # 8 PM race start
-        deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
+        if mode == 'test':
+            # Test mode - use simulated time from GlobalSimulation
+            simulation = GlobalSimulation.query.filter_by(active=True).first()
+            if simulation and simulation.scenario:
+                # Use simulated time for test mode
+                if simulation.scenario == 'active_race_1':
+                    # Simulate race in 3 hours for testing
+                    now = datetime.utcnow()
+                    race_datetime = now + timedelta(hours=3)
+                    deadline_datetime = now + timedelta(hours=1)
+                    
+                    next_race = {
+                        "name": "Test Race (Anaheim 1)",
+                        "event_date": race_datetime.isoformat()
+                    }
+                else:
+                    return jsonify({"error": "Unknown test scenario"})
+            else:
+                return jsonify({"error": "No active test simulation"})
+        else:
+            # Real mode - use actual race dates
+            today = get_today()
+            next_race_obj = (
+                Competition.query
+                .filter(Competition.event_date >= today)
+                .order_by(Competition.event_date.asc())
+                .first()
+            )
+            
+            if not next_race_obj:
+                return jsonify({"error": "No upcoming races"})
+            
+            # Calculate countdown to race start (8 PM on race date)
+            race_datetime = next_race_obj.event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
+            
+            next_race = {
+                "name": next_race_obj.name,
+                "event_date": next_race_obj.event_date.isoformat()
+            }
         
         now = datetime.utcnow()
         
@@ -7405,10 +7432,7 @@ def race_countdown():
             }
         
         return jsonify({
-            "next_race": {
-                "name": next_race.name,
-                "event_date": next_race.event_date.isoformat()
-            },
+            "next_race": next_race,
             "countdown": {
                 "race_start": format_countdown(race_diff),
                 "pick_deadline": format_countdown(deadline_diff)
