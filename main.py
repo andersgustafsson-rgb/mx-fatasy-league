@@ -6038,6 +6038,42 @@ def debug_riders():
     except Exception as e:
         return f"Error: {str(e)}", 500
 
+@app.get("/set_anaheim2_active")
+def set_anaheim2_active():
+    """Just set Anaheim 2 as active race without creating picks/results"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find Anaheim 2 competition
+        anaheim2 = Competition.query.filter_by(name="Anaheim 2").first()
+        if not anaheim2:
+            return jsonify({"error": "Anaheim 2 competition not found"})
+        
+        # Set as active race in global simulation
+        global_sim = GlobalSimulation.query.first()
+        if not global_sim:
+            global_sim = GlobalSimulation()
+            db.session.add(global_sim)
+        
+        global_sim.active_race_id = anaheim2.id
+        global_sim.is_active = True
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Anaheim 2 set as active race (ID: {anaheim2.id})",
+            "competition": {
+                "id": anaheim2.id,
+                "name": anaheim2.name,
+                "date": anaheim2.event_date.isoformat() if anaheim2.event_date else None
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error setting Anaheim 2 as active: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/quick_anaheim2_simulation")
 def quick_anaheim2_simulation():
     """Quick simulation for Anaheim 2 - both picks and results"""
