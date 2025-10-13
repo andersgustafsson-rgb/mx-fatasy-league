@@ -1170,197 +1170,35 @@ def my_scores():
 
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
-    """Dedicated page for a specific series (SX/MX/SMX)"""
-    print(f"DEBUG: series_page ROUTE CALLED with series_id: {series_id}")
-    
-    # Allow viewing series without login, but require login for making picks
-    user_logged_in = "user_id" in session
+    """Simple series page that actually works"""
+    print(f"DEBUG: series_page called with series_id: {series_id}")
     
     try:
-        # Rollback any existing transaction to avoid "aborted transaction" errors
+        # Always rollback first
         db.session.rollback()
-        
-        print(f"DEBUG: series_page called with series_id: {series_id}")
-        print(f"DEBUG: User logged in: {user_logged_in}")
         
         # Get series info
-        series = Series.query.get_or_404(series_id)
-        print(f"DEBUG: Found series: {series.name} (ID: {series.id})")
+        series = Series.query.get(series_id)
+        if not series:
+            print(f"DEBUG: Series {series_id} not found")
+            return redirect(url_for("index"))
         
-        # Get all competitions in this series
-        # Rollback again before querying competitions
+        print(f"DEBUG: Found series: {series.name}")
+        
+        # Get competitions for this series
         db.session.rollback()
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
-        print(f"DEBUG: Found {len(competitions)} competitions for series {series.name}")
-        
-        # Get current date (use simulated date if available)
-        # Rollback before get_today() call
-        db.session.rollback()
-        current_date = get_today()
-        
-        # Check if we're in test simulation mode
-        simulation_active = False
-        test_race = None
-        try:
-            global_sim = GlobalSimulation.query.first()
-            if global_sim and global_sim.active:
-                simulation_active = True
-                
-                # Check if there's a selected competition in admin
-                selected_comp_id = global_sim.simulated_time  # This stores the selected competition ID
-                if selected_comp_id and selected_comp_id.isdigit():
-                    # Use the selected competition from admin
-                    selected_comp = Competition.query.get(int(selected_comp_id))
-                    if selected_comp and selected_comp.series_id == series_id:
-                        test_race = selected_comp
-                    else:
-                        # Fallback to scenario-based test race
-                        scenario = global_sim.scenario or 'race_in_3h'
-                        from datetime import datetime, timedelta
-                        fake_race_base_time = datetime.now()
-                        
-                        if scenario == "race_in_3h":
-                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                        elif scenario == "race_in_1h":
-                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
-                        elif scenario == "race_in_30m":
-                            fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
-                        elif scenario == "race_tomorrow":
-                            fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
-                        else:
-                            fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                        
-                        # Create a fake test race object
-                        class FakeRace:
-                            def __init__(self):
-                                self.id = 9999
-                                self.name = f"Test Race ({scenario})"
-                                self.event_date = fake_race_datetime_utc.date()
-                                self.series_id = series_id
-                                self.timezone = "UTC"
-                        
-                        test_race = FakeRace()
-                else:
-                    # No selected competition, use scenario-based test race
-                    scenario = global_sim.scenario or 'race_in_3h'
-                    from datetime import datetime, timedelta
-                    fake_race_base_time = datetime.now()
-                    
-                    if scenario == "race_in_3h":
-                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                    elif scenario == "race_in_1h":
-                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=1)
-                    elif scenario == "race_in_30m":
-                        fake_race_datetime_utc = fake_race_base_time + timedelta(minutes=30)
-                    elif scenario == "race_tomorrow":
-                        fake_race_datetime_utc = fake_race_base_time + timedelta(days=1)
-                    else:
-                        fake_race_datetime_utc = fake_race_base_time + timedelta(hours=3)
-                    
-                    # Create a fake test race object
-                    class FakeRace:
-                        def __init__(self):
-                            self.id = 9999
-                            self.name = f"Test Race ({scenario})"
-                            self.event_date = fake_race_datetime_utc.date()
-                            self.series_id = series_id
-                            self.timezone = "UTC"
-                    
-                    test_race = FakeRace()
-        except:
-            pass
-        
-        # Find next race (use test race if in simulation mode)
-        next_race = test_race if simulation_active else None
-        if not next_race:
-            # Find the first competition that doesn't have results yet (hasn't been run)
-            for comp in competitions:
-                # Check if this competition has results
-                has_results = (
-                    CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
-                )
-                
-                # If no results, this is the next race to run
-                if not has_results:
-                    next_race = comp
-                    break
-        
-        # Check if picks should be open
-        picks_open = False
-        if simulation_active:
-            # In test mode, picks are always open
-            picks_open = True
-        elif series.start_date:
-            # Check if we're within 1 week of season start
-            days_until_start = (series.start_date - current_date).days
-            picks_open = days_until_start <= 7  # Open 1 week before season start
-            
-            # If picks are open and we have a next race, check if it's locked
-            if picks_open and next_race:
-                picks_locked = is_picks_locked(next_race.id)
-                picks_open = not picks_locked
-        elif next_race:
-            # For races after season has started, picks are open if:
-            # 1. The next race doesn't have results yet (hasn't been run)
-            # 2. The race is not locked (not within 2 hours of start)
-            
-            # Check if next race has results
-            has_results = (
-                CompetitionResult.query.filter_by(competition_id=next_race.id).first() is not None
-            )
-            
-            if not has_results:
-                # Race hasn't been run yet, check if picks are locked
-                picks_locked = is_picks_locked(next_race.id)
-                picks_open = not picks_locked
-            else:
-                # Race has been run, picks should be closed
-                picks_open = False
-        
-        # Get results for each competition to show status
-        competition_results = {}
-        user_picks_status = {}
-        for comp in competitions:
-            results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
-            competition_results[comp.id] = results
-            
-            # Check if current user has made picks for this competition
-            if "user_id" in session:
-                user_id = session["user_id"]
-                race_picks = RacePick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
-                holeshot_picks = HoleshotPick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
-                wildcard_pick = WildcardPick.query.filter_by(user_id=user_id, competition_id=comp.id).first()
-                
-                has_picks = race_picks > 0 or holeshot_picks > 0 or wildcard_pick is not None
-                user_picks_status[comp.id] = {
-                    'has_picks': has_picks,
-                    'race_picks_count': race_picks,
-                    'holeshot_picks_count': holeshot_picks,
-                    'has_wildcard': wildcard_pick is not None
-                }
-            else:
-                user_picks_status[comp.id] = {'has_picks': False}
-        
-        print(f"DEBUG: Rendering series_page.html for {series.name}")
         print(f"DEBUG: Found {len(competitions)} competitions")
-        print(f"DEBUG: Next race: {next_race.name if next_race else 'None'}")
-        print(f"DEBUG: Picks open: {picks_open}")
         
-        return render_template('series_page.html',
-                             series=series,
+        # Simple template render
+        return render_template("series_page.html", 
+                             series=series, 
                              competitions=competitions,
-                             competition_results=competition_results,
-                             user_picks_status=user_picks_status,
-                             next_race=next_race,
-                             picks_open=picks_open,
-                             current_date=current_date,
-                             user_logged_in=user_logged_in)
+                             user_logged_in="user_id" in session)
         
     except Exception as e:
         print(f"ERROR in series_page: {e}")
-        import traceback
-        print(f"ERROR traceback: {traceback.format_exc()}")
-        print(f"DEBUG: Redirecting to index due to error in series_page")
+        db.session.rollback()
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
