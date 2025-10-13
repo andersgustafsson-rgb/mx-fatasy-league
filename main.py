@@ -1617,8 +1617,17 @@ def run_migration():
             ON leaderboard_history (user_id, created_at)
         """))
         
+        # Update existing CompetitionScore records to have proper detailed points
+        # This will recalculate all existing scores with the new detailed breakdown
+        print("Updating existing competition scores with detailed points...")
+        competitions_with_scores = db.session.query(CompetitionScore.competition_id).distinct().all()
+        for (comp_id,) in competitions_with_scores:
+            print(f"Recalculating scores for competition {comp_id}")
+            # This will use the updated calculate_scores function
+            calculate_scores(comp_id)
+        
         db.session.commit()
-        return "Migration completed successfully! Added active_race_id, detailed points columns, and leaderboard history table."
+        return "Migration completed successfully! Added active_race_id, detailed points columns, leaderboard history table, and recalculated existing scores."
     except Exception as e:
         db.session.rollback()
         return f"Migration failed: {str(e)}"
@@ -2699,16 +2708,21 @@ def get_season_leaderboard():
     result = []
     
     # Hämta senaste ranking från databasen
-    latest_history = db.session.query(
-        LeaderboardHistory.user_id,
-        LeaderboardHistory.ranking
-    ).filter(
-        LeaderboardHistory.created_at == db.session.query(
-            db.func.max(LeaderboardHistory.created_at)
-        ).scalar_subquery()
-    ).all()
+    # Först hitta den senaste timestamp
+    latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
     
-    previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+    previous_ranking = {}
+    if latest_timestamp:
+        # Hämta alla rankingar från den senaste tiden
+        latest_history = db.session.query(
+            LeaderboardHistory.user_id,
+            LeaderboardHistory.ranking
+        ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+        
+        previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+        print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
+    else:
+        print("DEBUG: No previous ranking history found")
     
     for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
         current_rank = i
@@ -2717,8 +2731,10 @@ def get_season_leaderboard():
         # Beräkna delta (negativ = gått upp, positiv = gått ner)
         if previous_rank is not None:
             delta = previous_rank - current_rank
+            print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
         else:
             delta = 0  # Ingen tidigare ranking
+            print(f"DEBUG: User {username} - No previous ranking, Delta: 0")
         
         result.append({
             "user_id": user_id,
