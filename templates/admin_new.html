@@ -628,30 +628,56 @@
         }
 
         async function quickSimulation(seriesId, numRaces) {
-            // Show loading state
-            const button = event.target;
-            const originalText = button.textContent;
-            button.disabled = true;
-            button.innerHTML = '⏳ Simulerar...';
-            button.classList.add('opacity-50', 'cursor-not-allowed');
+            // Show loading state - find button by seriesId and numRaces
+            const buttons = document.querySelectorAll('button[onclick*="quickSimulation"]');
+            let targetButton = null;
             
-            try {
-                const response = await fetch(`/quick_simulation?series_id=${seriesId}&num_races=${numRaces}`);
-                const data = await response.json();
-                if (response.ok) {
-                    showToast(`Quick simulation klar för ${data.results.length} races`, true);
-                    console.log('Quick simulation results:', data.results);
-                } else {
-                    showToast(`Fel: ${data.error}`, false);
+            for (let button of buttons) {
+                if (button.onclick.toString().includes(`quickSimulation(${seriesId}, ${numRaces})`)) {
+                    targetButton = button;
+                    break;
                 }
-            } catch (error) {
-                console.error('Error in quick simulation:', error);
-                showToast('Kunde inte köra quick simulation', false);
-            } finally {
-                // Reset button state
-                button.disabled = false;
-                button.textContent = originalText;
-                button.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            
+            if (targetButton) {
+                const originalText = targetButton.textContent;
+                targetButton.disabled = true;
+                targetButton.innerHTML = '⏳ Simulerar...';
+                targetButton.classList.add('opacity-50', 'cursor-not-allowed');
+                
+                try {
+                    const response = await fetch(`/quick_simulation?series_id=${seriesId}&num_races=${numRaces}`);
+                    const data = await response.json();
+                    if (response.ok) {
+                        showToast(`Quick simulation klar för ${data.results.length} races`, true);
+                        console.log('Quick simulation results:', data.results);
+                    } else {
+                        showToast(`Fel: ${data.error}`, false);
+                    }
+                } catch (error) {
+                    console.error('Error in quick simulation:', error);
+                    showToast('Kunde inte köra quick simulation', false);
+                } finally {
+                    // Reset button state
+                    targetButton.disabled = false;
+                    targetButton.textContent = originalText;
+                    targetButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } else {
+                // Fallback if button not found
+                try {
+                    const response = await fetch(`/quick_simulation?series_id=${seriesId}&num_races=${numRaces}`);
+                    const data = await response.json();
+                    if (response.ok) {
+                        showToast(`Quick simulation klar för ${data.results.length} races`, true);
+                        console.log('Quick simulation results:', data.results);
+                    } else {
+                        showToast(`Fel: ${data.error}`, false);
+                    }
+                } catch (error) {
+                    console.error('Error in quick simulation:', error);
+                    showToast('Kunde inte köra quick simulation', false);
+                }
             }
         }
 
