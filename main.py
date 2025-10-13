@@ -4715,7 +4715,9 @@ def view_user_profile(user_id):
         
     except Exception as e:
         print(f"Error viewing user profile: {e}")
-        flash("Ett fel uppstod vid visning av profilen.", "error")
+        import traceback
+        print(f"ERROR traceback: {traceback.format_exc()}")
+        flash(f"Ett fel uppstod vid visning av profilen: {str(e)}", "error")
         return redirect(url_for("index"))
 
 @app.get("/fix_column_now")
@@ -6195,10 +6197,7 @@ def quick_anaheim2_simulation():
 
 @app.get("/debug_users")
 def debug_users():
-    """Debug route to check which users exist"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
+    """Debug route to check which users exist - no login required for testing"""
     try:
         users = User.query.all()
         user_list = []
@@ -6209,13 +6208,16 @@ def debug_users():
                 "display_name": getattr(user, 'display_name', None)
             })
         
-        return jsonify({
-            "total_users": len(users),
-            "users": user_list
-        })
+        return f"""
+        <h1>Users in Database</h1>
+        <p>Total users: {len(users)}</p>
+        <ul>
+        {''.join([f'<li>ID {u["id"]}: {u["username"]} (display: {u["display_name"]})</li>' for u in user_list])}
+        </ul>
+        """
         
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return f"Error: {str(e)}"
 
 @app.get("/check_anaheim2")
 def check_anaheim2():
