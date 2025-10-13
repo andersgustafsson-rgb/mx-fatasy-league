@@ -1477,7 +1477,7 @@
             const seriesId = this.getAttribute('data-series-id');
             const seriesName = this.getAttribute('data-series-name');
             console.log(`DEBUG: Clicking series ${seriesId} (${seriesName})`);
-            window.location.assign(`/series/${seriesId}`);
+            window.location.href = `/series/${seriesId}`;
           });
         });
         
