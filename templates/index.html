@@ -876,7 +876,9 @@
         document.getElementById('test-countdown-race-name').textContent = data.next_race.name;
         
         // Update countdowns
+        console.log('DEBUG: About to call updateTestCountdowns');
         updateTestCountdowns(data);
+        console.log('DEBUG: updateTestCountdowns called');
         
         // Update picks status (test countdown controls picks during testing)
         updateTestPicksStatus(data);
