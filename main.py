@@ -8776,10 +8776,6 @@ def is_picks_locked(competition):
         
         # Check if picks are locked (2 hours before race)
         picks_locked = time_to_deadline.total_seconds() <= 0
-        print(f"DEBUG: is_picks_locked - SIMULATION MODE - scenario: {scenario}")
-        print(f"DEBUG: is_picks_locked - SIMULATION MODE - time_to_deadline: {time_to_deadline}")
-        print(f"DEBUG: is_picks_locked - SIMULATION MODE - time_to_deadline.total_seconds(): {time_to_deadline.total_seconds()}")
-        print(f"DEBUG: is_picks_locked - SIMULATION MODE - picks_locked: {picks_locked}")
     else:
         # Check if picks are locked (2 hours before race)
         race_time_str = "20:00"  # 8pm local time
@@ -8804,10 +8800,7 @@ def is_picks_locked(competition):
         current_time = get_current_time()
         time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
         picks_locked = time_to_deadline.total_seconds() <= 0
-        print(f"DEBUG: is_picks_locked - REAL MODE - time_to_deadline: {time_to_deadline}")
-        print(f"DEBUG: is_picks_locked - REAL MODE - picks_locked: {picks_locked}")
     
-    print(f"DEBUG: is_picks_locked - FINAL RESULT: {picks_locked}")
     return picks_locked
 
 if __name__ == "__main__":
