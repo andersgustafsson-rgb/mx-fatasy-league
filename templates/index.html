@@ -976,6 +976,13 @@
       console.log('DEBUG: document.readyState:', document.readyState);
       console.log('DEBUG: DOM loaded?', document.readyState === 'complete');
       
+      // Check if elements still exist in DOM
+      const allTestElements = document.querySelectorAll('[id*="test-"]');
+      console.log('DEBUG: All test elements found:', allTestElements.length);
+      allTestElements.forEach((el, i) => {
+        console.log(`DEBUG: Test element ${i}:`, el.id, el);
+      });
+      
       if (raceElement) {
         raceElement.textContent = raceTimeFormatted;
         console.log('DEBUG: Updated race element to:', raceTimeFormatted);
