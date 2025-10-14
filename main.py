@@ -7360,10 +7360,11 @@ def reset_test_simulation():
         # Update global simulation with fresh start time
         simulation = GlobalSimulation.query.first()
         if simulation:
-            simulation.start_time = datetime.utcnow()
-            simulation.simulated_time = datetime.utcnow()
+            now = datetime.utcnow()
+            simulation.start_time = now.isoformat()
+            simulation.simulated_time = now.isoformat()
             db.session.commit()
-            return jsonify({"message": "Test simulation reset successfully", "new_start_time": simulation.start_time.isoformat()})
+            return jsonify({"message": "Test simulation reset successfully", "new_start_time": simulation.start_time})
         else:
             return jsonify({"error": "No simulation found"}), 404
     except Exception as e:
