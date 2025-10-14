@@ -973,6 +973,8 @@
       const deadlineElement = document.getElementById('test-deadline-countdown');
       console.log('DEBUG: raceElement found:', raceElement);
       console.log('DEBUG: deadlineElement found:', deadlineElement);
+      console.log('DEBUG: document.readyState:', document.readyState);
+      console.log('DEBUG: DOM loaded?', document.readyState === 'complete');
       
       if (raceElement) {
         raceElement.textContent = raceTimeFormatted;
