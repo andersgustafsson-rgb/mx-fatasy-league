@@ -3074,8 +3074,6 @@ def admin_set_date():
 # API helpers (för templates JS) - Updated for ranking arrows
 # -------------------------------------------------
 
-# Global variable to store previous ranking (simple approach)
-previous_leaderboard_ranking = {}
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
@@ -3099,35 +3097,74 @@ def get_season_leaderboard():
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
     
-    # SIMPLE FIX: Use global variable to store previous ranking
-    global previous_leaderboard_ranking
-    previous_ranking = previous_leaderboard_ranking
-    
-    for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
-        current_rank = i
-        previous_rank = previous_ranking.get(str(user_id))
+    # Use database-backed LeaderboardHistory for persistent ranking
+    try:
+        # Get the most recent ranking from database
+        latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
         
-        # Calculate delta (negative = improved, positive = worsened)
-        if previous_rank is not None:
-            delta = current_rank - previous_rank
+        previous_ranking = {}
+        if latest_timestamp:
+            latest_history = db.session.query(
+                LeaderboardHistory.user_id,
+                LeaderboardHistory.ranking
+            ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+            
+            previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+            print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
         else:
-            # First time - show improvement from rank 0
-            delta = -current_rank
+            print("DEBUG: No previous ranking history found")
         
-        # No more forced arrows - use real delta calculation
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            current_rank = i
+            previous_rank = previous_ranking.get(str(user_id))
+            
+            if previous_rank is not None:
+                delta = current_rank - previous_rank
+                print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
+            else:
+                delta = 0  # No previous ranking
+                print(f"DEBUG: User {username} - No previous ranking, Delta: 0")
+            
+            result.append({
+                "user_id": user_id,
+                "username": username,
+                "team_name": team_name or None,
+                "total_points": int(total_points),
+                "rank": current_rank,
+                "delta": delta
+            })
         
-        result.append({
-            "user_id": user_id,
-            "username": username,
-            "team_name": team_name or None,
-            "total_points": int(total_points),
-            "rank": current_rank,
-            "delta": delta
-        })
-    
-    # Save current ranking to global variable for next comparison
-    current_ranking = {str(row["user_id"]): row["rank"] for row in result}
-    previous_leaderboard_ranking = current_ranking
+        # Only save new ranking if there are actual changes
+        has_changes = any(row["delta"] != 0 for row in result)
+        if has_changes:
+            print(f"DEBUG: Saving new ranking to database...")
+            for row in result:
+                history_entry = LeaderboardHistory(
+                    user_id=row["user_id"],
+                    ranking=row["rank"],
+                    total_points=row["total_points"]
+                )
+                db.session.add(history_entry)
+                print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+            
+            db.session.commit()
+            print(f"DEBUG: Leaderboard history saved successfully")
+        else:
+            print("DEBUG: No ranking changes detected, not saving to database")
+            
+    except Exception as e:
+        print(f"DEBUG: Error in leaderboard ranking: {e}")
+        db.session.rollback()
+        # Fallback to no deltas if database fails
+        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            result.append({
+                "user_id": user_id,
+                "username": username,
+                "team_name": team_name or None,
+                "total_points": int(total_points),
+                "rank": i,
+                "delta": 0
+            })
     
     return jsonify(result)
 
