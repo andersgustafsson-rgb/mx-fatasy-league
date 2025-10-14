@@ -7325,6 +7325,31 @@ def api_riders():
         "bike_brand": rider.bike_brand
     } for rider in riders])
 
+@app.route("/debug_simulation_status")
+def debug_simulation_status():
+    """Debug route to check simulation status"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        # Check global simulation
+        simulation = GlobalSimulation.query.first()
+        current_time = get_current_time()
+        
+        return jsonify({
+            "global_simulation": {
+                "id": simulation.id if simulation else None,
+                "active": simulation.active if simulation else False,
+                "scenario": simulation.scenario if simulation else None,
+                "simulated_time": simulation.simulated_time if simulation else None,
+                "start_time": simulation.start_time if simulation else None
+            },
+            "current_time": current_time.isoformat(),
+            "current_time_type": str(type(current_time))
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/debug_missing_bike_brands")
 def debug_missing_bike_brands():
     """Debug route to check which riders are missing bike_brand"""
