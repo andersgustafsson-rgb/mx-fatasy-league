@@ -858,7 +858,7 @@
     
     async function fetchTestCountdownData() {
       try {
-        console.log('DEBUG: Fetching test countdown data...');
+        console.log('DEBUG: fetchTestCountdownData called');
         const response = await fetch('/race_countdown?mode=test');
         const data = await response.json();
         
@@ -927,6 +927,9 @@
       console.log('DEBUG: raceCountdown minutes:', raceCountdown.minutes);
       console.log('DEBUG: raceCountdown seconds:', raceCountdown.seconds);
       console.log('DEBUG: deadlineCountdown total_seconds:', deadlineCountdown.total_seconds);
+      console.log('DEBUG: deadlineCountdown hours:', deadlineCountdown.hours);
+      console.log('DEBUG: deadlineCountdown minutes:', deadlineCountdown.minutes);
+      console.log('DEBUG: deadlineCountdown seconds:', deadlineCountdown.seconds);
       
       // Check if countdown has finished
       if (raceCountdown.total_seconds <= 0 && deadlineCountdown.total_seconds <= 0) {
@@ -966,10 +969,26 @@
       console.log('DEBUG: raceTimeFormatted:', raceTimeFormatted);
       console.log('DEBUG: deadlineTimeFormatted:', deadlineTimeFormatted);
       
-      document.getElementById('test-race-countdown').textContent = raceTimeFormatted;
-      document.getElementById('test-deadline-countdown').textContent = deadlineTimeFormatted;
+      const raceElement = document.getElementById('test-race-countdown');
+      const deadlineElement = document.getElementById('test-deadline-countdown');
+      console.log('DEBUG: raceElement found:', raceElement);
+      console.log('DEBUG: deadlineElement found:', deadlineElement);
       
-      console.log('DEBUG: Updated DOM elements');
+      if (raceElement) {
+        raceElement.textContent = raceTimeFormatted;
+        console.log('DEBUG: Updated race element to:', raceTimeFormatted);
+      } else {
+        console.log('DEBUG: ERROR - race element not found!');
+      }
+      
+      if (deadlineElement) {
+        deadlineElement.textContent = deadlineTimeFormatted;
+        console.log('DEBUG: Updated deadline element to:', deadlineTimeFormatted);
+      } else {
+        console.log('DEBUG: ERROR - deadline element not found!');
+      }
+      
+      console.log('DEBUG: updateTestCountdowns completed');
     }
     
     function updateRealPicksStatus(data) {
@@ -1051,6 +1070,7 @@
     }
     
     function startCountdown() {
+      console.log('DEBUG: startCountdown called');
       // Fetch initial data for both countdowns
       fetchRealCountdownData();
       fetchTestCountdownData();
@@ -1058,9 +1078,11 @@
       // Check if mobile device
       const isMobile = window.innerWidth <= 768;
       const updateInterval = isMobile ? 2000 : 1000; // Slower updates on mobile
+      console.log('DEBUG: updateInterval set to:', updateInterval);
       
       // Update real countdown
       realCountdownInterval = setInterval(() => {
+        console.log('DEBUG: realCountdownInterval tick');
         fetchRealCountdownData();
       }, updateInterval);
       
