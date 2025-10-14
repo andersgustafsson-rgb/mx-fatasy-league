@@ -1232,87 +1232,36 @@ def series_page(series_id):
         except Exception as e:
             pass
         
-        # Get competition results for template - OPTIMIZED with bulk queries
+        # Get competition results for template - SIMPLIFIED
         competition_results = {}
         user_picks_status = {}
         picks_locked_status = {}
         
-        # Get all competition IDs
-        comp_ids = [comp.id for comp in competitions]
-        
-        # Bulk query for all competition results
-        all_results = CompetitionResult.query.filter(CompetitionResult.competition_id.in_(comp_ids)).all()
-        for result in all_results:
-            if result.competition_id not in competition_results:
-                competition_results[result.competition_id] = []
-            competition_results[result.competition_id].append(result)
-        
-        # Initialize empty results for competitions with no results
         for comp in competitions:
-            if comp.id not in competition_results:
-                competition_results[comp.id] = []
-        
-        # Bulk query for user picks status
-        if "user_id" in session:
-            user_id = session["user_id"]
+            # Get results for this competition
+            results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
+            competition_results[comp.id] = results
             
-            # Get all race picks for this user and these competitions
-            race_picks = RacePick.query.filter(
-                RacePick.user_id == user_id,
-                RacePick.competition_id.in_(comp_ids)
-            ).all()
-            
-            # Get all holeshot picks for this user and these competitions
-            holeshot_picks = HoleshotPick.query.filter(
-                HoleshotPick.user_id == user_id,
-                HoleshotPick.competition_id.in_(comp_ids)
-            ).all()
-            
-            # Get all wildcard picks for this user and these competitions
-            wildcard_picks = WildcardPick.query.filter(
-                WildcardPick.user_id == user_id,
-                WildcardPick.competition_id.in_(comp_ids)
-            ).all()
-            
-            # Group picks by competition_id
-            race_picks_by_comp = {}
-            for pick in race_picks:
-                if pick.competition_id not in race_picks_by_comp:
-                    race_picks_by_comp[pick.competition_id] = 0
-                race_picks_by_comp[pick.competition_id] += 1
-            
-            holeshot_picks_by_comp = {}
-            for pick in holeshot_picks:
-                if pick.competition_id not in holeshot_picks_by_comp:
-                    holeshot_picks_by_comp[pick.competition_id] = 0
-                holeshot_picks_by_comp[pick.competition_id] += 1
-            
-            wildcard_picks_by_comp = {}
-            for pick in wildcard_picks:
-                wildcard_picks_by_comp[pick.competition_id] = True
-            
-            # Build user_picks_status for each competition
-            for comp in competitions:
-                race_count = race_picks_by_comp.get(comp.id, 0)
-                holeshot_count = holeshot_picks_by_comp.get(comp.id, 0)
-                has_wildcard = wildcard_picks_by_comp.get(comp.id, False)
-                
-                has_picks = race_count > 0 or holeshot_count > 0 or has_wildcard
-                user_picks_status[comp.id] = {
-                    'has_picks': has_picks,
-                    'race_picks_count': race_count,
-                    'holeshot_picks_count': holeshot_count,
-                    'has_wildcard': has_wildcard
-                }
-        else:
-            # No user logged in
-            for comp in competitions:
-                user_picks_status[comp.id] = {'has_picks': False}
-        
-        # Check picks locked status for each competition
-        for comp in competitions:
+            # Check if picks are locked for this competition
             picks_locked = is_picks_locked(comp)
             picks_locked_status[comp.id] = picks_locked
+            
+            # Check if current user has made picks for this competition
+            if "user_id" in session:
+                user_id = session["user_id"]
+                race_picks = RacePick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
+                holeshot_picks = HoleshotPick.query.filter_by(user_id=user_id, competition_id=comp.id).count()
+                wildcard_pick = WildcardPick.query.filter_by(user_id=user_id, competition_id=comp.id).first()
+                
+                has_picks = race_picks > 0 or holeshot_picks > 0 or wildcard_pick is not None
+                user_picks_status[comp.id] = {
+                    'has_picks': has_picks,
+                    'race_picks_count': race_picks,
+                    'holeshot_picks_count': holeshot_picks,
+                    'has_wildcard': wildcard_pick is not None
+                }
+            else:
+                user_picks_status[comp.id] = {'has_picks': False}
         
         # Simple template render with all required variables
         return render_template("series_page.html", 
@@ -8750,25 +8699,18 @@ def is_picks_locked(competition):
         competition_id = competition.id
     
     # Check if we're in simulation mode (use only global database state for consistency)
-    # Cache simulation status to avoid repeated database queries
-    if not hasattr(app, '_simulation_cache') or not hasattr(app, '_simulation_cache_time') or (datetime.utcnow() - app._simulation_cache_time).seconds > 5:
-        simulation_active = False
-        try:
-            # Rollback any existing transaction first
-            db.session.rollback()
-            
-            result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
-            simulation_active = result and result[0] if result else False
-        except Exception as e:
-            # Rollback and fallback to app globals if database table doesn't exist
-            db.session.rollback()
-            simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
+    simulation_active = False
+    
+    try:
+        # Rollback any existing transaction first
+        db.session.rollback()
         
-        # Cache the result for 5 seconds
-        app._simulation_cache = simulation_active
-        app._simulation_cache_time = datetime.utcnow()
-    else:
-        simulation_active = app._simulation_cache
+        result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
+        simulation_active = result and result[0] if result else False
+    except Exception as e:
+        # Rollback and fallback to app globals if database table doesn't exist
+        db.session.rollback()
+        simulation_active = hasattr(app, 'global_simulation_active') and app.global_simulation_active
     
     if simulation_active:
         # Use the same logic as test_countdown for consistency
