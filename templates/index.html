@@ -1063,6 +1063,7 @@
       
       // Update test countdown
       testCountdownInterval = setInterval(() => {
+        console.log('DEBUG: testCountdownInterval tick');
         fetchTestCountdownData();
       }, updateInterval);
     }
