@@ -4958,12 +4958,19 @@ def user_race_results(user_id):
             has_results = CompetitionResult.query.filter_by(competition_id=competition.id).first() is not None
             
             if score or has_results:
+                race_points = score.race_points if score else 0
+                holeshot_points = score.holeshot_points if score else 0
+                wildcard_points = score.wildcard_points if score else 0
+                total_points_for_comp = score.total_points if score else 0
+                
+                print(f"DEBUG: user_race_results - {competition.name}: race_points={race_points}, holeshot_points={holeshot_points}, wildcard_points={wildcard_points}, total={total_points_for_comp}")
+                
                 race_results.append({
                     'competition': competition,
-                    'points': score.total_points if score else 0,
-                    'race_points': score.race_points if score else 0,
-                    'holeshot_points': score.holeshot_points if score else 0,
-                    'wildcard_points': score.wildcard_points if score else 0,
+                    'points': total_points_for_comp,
+                    'race_points': race_points,
+                    'holeshot_points': holeshot_points,
+                    'wildcard_points': wildcard_points,
                     'has_results': has_results
                 })
                 if score:
