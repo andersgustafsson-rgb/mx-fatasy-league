@@ -803,7 +803,7 @@
             el.className = `flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-gray-700 gap-1 sm:gap-0 shadow-lg`;
             el.style.boxShadow = `0 0 10px ${glowColor}`;
             el.innerHTML = `
-              <a class="flex-1 flex items-center gap-2" href="/profile/${row.user_id}">
+              <a class="flex-1 flex items-center gap-2" href="/user_race_results/${row.user_id}">
                 <span class="font-bold w-6 text-right text-sm sm:text-base ${textColor}" style="text-shadow: 0 0 5px ${glowColor};">${i + 1}.</span>
                 <span class="text-sm sm:text-base truncate text-white" style="text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);">${row.team_name || "—"} <span class="text-xs sm:text-sm text-gray-400">/ ${row.username}</span></span>
               </a>
