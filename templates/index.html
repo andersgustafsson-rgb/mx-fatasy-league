@@ -919,8 +919,11 @@
       console.log('DEBUG: updateTestCountdowns called with data:', data);
       const raceCountdown = data.countdown.race_start;
       const deadlineCountdown = data.countdown.pick_deadline;
-      console.log('DEBUG: raceCountdown:', raceCountdown);
-      console.log('DEBUG: deadlineCountdown:', deadlineCountdown);
+      console.log('DEBUG: raceCountdown total_seconds:', raceCountdown.total_seconds);
+      console.log('DEBUG: raceCountdown hours:', raceCountdown.hours);
+      console.log('DEBUG: raceCountdown minutes:', raceCountdown.minutes);
+      console.log('DEBUG: raceCountdown seconds:', raceCountdown.seconds);
+      console.log('DEBUG: deadlineCountdown total_seconds:', deadlineCountdown.total_seconds);
       
       // Check if countdown has finished
       if (raceCountdown.total_seconds <= 0 && deadlineCountdown.total_seconds <= 0) {
