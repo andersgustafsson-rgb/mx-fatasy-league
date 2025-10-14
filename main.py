@@ -7461,31 +7461,34 @@ def race_countdown():
                 print(f"DEBUG: test_countdown - simulation start_time: {simulation.start_time}")
                 print(f"DEBUG: test_countdown - simulation simulated_time: {simulation.simulated_time}")
                 
-                # Calculate race time based on scenario - always relative to current simulated time
+                # Calculate race time based on scenario - use fixed race time, not relative to simulated time
+                # Get the initial simulated time when simulation started
+                initial_simulated_time = datetime.fromisoformat(simulation.simulated_time)
+                
                 if simulation.scenario == 'active_race_1':
                     # Simulate race in 3 hours for testing
-                    race_datetime = current_simulated_time + timedelta(hours=3)
-                    deadline_datetime = current_simulated_time + timedelta(hours=1)
+                    race_datetime = initial_simulated_time + timedelta(hours=3)
+                    deadline_datetime = initial_simulated_time + timedelta(hours=1)
                     race_name = "Test Race (Anaheim 1)"
                 elif simulation.scenario == 'race_in_3h':
                     # Simulate race in 3 hours for testing
-                    race_datetime = current_simulated_time + timedelta(hours=3)
-                    deadline_datetime = current_simulated_time + timedelta(hours=1)
+                    race_datetime = initial_simulated_time + timedelta(hours=3)
+                    deadline_datetime = initial_simulated_time + timedelta(hours=1)
                     race_name = "Test Race (3h)"
                 elif simulation.scenario == 'race_in_1h':
                     # Simulate race in 1 hour for testing
-                    race_datetime = current_simulated_time + timedelta(hours=1)
-                    deadline_datetime = current_simulated_time - timedelta(hours=1)  # Already passed
+                    race_datetime = initial_simulated_time + timedelta(hours=1)
+                    deadline_datetime = initial_simulated_time - timedelta(hours=1)  # Already passed
                     race_name = "Test Race (1h)"
                 elif simulation.scenario == 'race_in_30m':
                     # Simulate race in 30 minutes for testing
-                    race_datetime = current_simulated_time + timedelta(minutes=30)
-                    deadline_datetime = current_simulated_time - timedelta(hours=1, minutes=30)  # Already passed
+                    race_datetime = initial_simulated_time + timedelta(minutes=30)
+                    deadline_datetime = initial_simulated_time - timedelta(hours=1, minutes=30)  # Already passed
                     race_name = "Test Race (30m)"
                 elif simulation.scenario == 'race_tomorrow':
                     # Simulate race tomorrow
-                    race_datetime = current_simulated_time + timedelta(days=1)
-                    deadline_datetime = current_simulated_time + timedelta(hours=22)  # 2 hours before tomorrow
+                    race_datetime = initial_simulated_time + timedelta(days=1)
+                    deadline_datetime = initial_simulated_time + timedelta(hours=22)  # 2 hours before tomorrow
                     race_name = "Test Race (Tomorrow)"
                 else:
                     return jsonify({"error": f"Unknown test scenario: {simulation.scenario}"})
