@@ -1210,25 +1210,18 @@ def my_scores():
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Simple series page that actually works"""
-    print(f"DEBUG: series_page ROUTE CALLED with series_id: {series_id}")
-    
     try:
         # Always rollback first
         db.session.rollback()
-        print(f"DEBUG: Rollback completed")
         
         # Get series info
         series = Series.query.get(series_id)
         if not series:
-            print(f"DEBUG: Series {series_id} not found - redirecting to index")
             return redirect(url_for("index"))
-        
-        print(f"DEBUG: Found series: {series.name}")
         
         # Get competitions for this series
         db.session.rollback()
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
-        print(f"DEBUG: Found {len(competitions)} competitions")
         
         # Check if there's an active race set in admin panel
         active_race_id = None
@@ -1236,19 +1229,20 @@ def series_page(series_id):
             global_sim = GlobalSimulation.query.first()
             if global_sim and global_sim.active and global_sim.active_race_id:
                 active_race_id = global_sim.active_race_id
-                print(f"DEBUG: Active race from admin panel: {active_race_id}")
         except Exception as e:
-            print(f"DEBUG: Error checking active race: {e}")
-        
-        print(f"DEBUG: About to render series_page.html")
+            pass
         
         # Get competition results for template
         competition_results = {}
         user_picks_status = {}
+        picks_locked_status = {}
         for comp in competitions:
             db.session.rollback()
             results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
             competition_results[comp.id] = results
+            
+            # Check if picks are locked for this competition
+            picks_locked_status[comp.id] = is_picks_locked(comp)
             
             # Check if current user has made picks for this competition
             if "user_id" in session:
@@ -1273,6 +1267,7 @@ def series_page(series_id):
                              competitions=competitions,
                              competition_results=competition_results,
                              user_picks_status=user_picks_status,
+                             picks_locked_status=picks_locked_status,
                              next_race=None,
                              picks_open=False,
                              current_date=get_today(),
@@ -1280,11 +1275,7 @@ def series_page(series_id):
                              user_logged_in="user_id" in session)
         
     except Exception as e:
-        print(f"ERROR in series_page: {e}")
-        import traceback
-        print(f"ERROR traceback: {traceback.format_exc()}")
         db.session.rollback()
-        print(f"DEBUG: Redirecting to index due to error")
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
