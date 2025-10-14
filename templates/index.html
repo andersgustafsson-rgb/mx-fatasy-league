@@ -917,6 +917,7 @@
     
     function updateTestCountdowns(data) {
       console.log('DEBUG: updateTestCountdowns called with data:', data);
+      console.log('DEBUG: updateTestCountdowns - data.countdown:', data.countdown);
       const raceCountdown = data.countdown.race_start;
       const deadlineCountdown = data.countdown.pick_deadline;
       console.log('DEBUG: raceCountdown total_seconds:', raceCountdown.total_seconds);
