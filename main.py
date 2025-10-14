@@ -3112,18 +3112,22 @@ def get_season_leaderboard():
             previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
             print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
         else:
-            print("DEBUG: No previous ranking history found")
+            print("DEBUG: No previous ranking history found - will create baseline")
+            # Create initial baseline ranking (all users start at rank 0)
+            for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+                previous_ranking[str(user_id)] = 0  # All start at rank 0
         
         for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
             
-            if previous_rank is not None:
+            if previous_rank is not None and previous_rank > 0:
                 delta = current_rank - previous_rank
                 print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
             else:
-                delta = 0  # No previous ranking
-                print(f"DEBUG: User {username} - No previous ranking, Delta: 0")
+                # First time or baseline (rank 0) - show improvement
+                delta = -current_rank
+                print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: {delta}")
             
             result.append({
                 "user_id": user_id,
