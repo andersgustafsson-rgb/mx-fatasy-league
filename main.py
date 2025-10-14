@@ -7408,6 +7408,7 @@ def race_countdown():
                 # Use simulated time for test mode - calculate fresh each time
                 current_simulated_time = get_current_time()
                 print(f"DEBUG: test_countdown - using simulated time: {current_simulated_time}")
+                print(f"DEBUG: test_countdown - scenario: {simulation.scenario}")
                 
                 # Calculate race time based on scenario - always relative to current simulated time
                 if simulation.scenario == 'active_race_1':
@@ -7446,6 +7447,10 @@ def race_countdown():
                 # Calculate countdown using simulated time - this will change each call
                 race_diff = race_datetime - current_simulated_time
                 deadline_diff = deadline_datetime - current_simulated_time
+                
+                print(f"DEBUG: test_countdown - race_datetime: {race_datetime}")
+                print(f"DEBUG: test_countdown - race_diff: {race_diff}")
+                print(f"DEBUG: test_countdown - deadline_diff: {deadline_diff}")
                 
                 def format_countdown(td):
                     total_seconds = int(td.total_seconds())
