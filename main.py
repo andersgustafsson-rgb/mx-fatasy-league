@@ -7448,8 +7448,10 @@ def race_countdown():
         mode = request.args.get('mode', 'real')
         
         if mode == 'test':
+            print(f"DEBUG: race_countdown called with mode=test")
             # Test mode - use simulated time from GlobalSimulation
             simulation = GlobalSimulation.query.filter_by(active=True).first()
+            print(f"DEBUG: Found simulation: {simulation}")
             if simulation and simulation.scenario:
                 # Use simulated time for test mode - calculate fresh each time
                 current_simulated_time = get_current_time()
