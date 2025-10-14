@@ -4926,7 +4926,6 @@ def debug_rider_coasts():
 @app.route("/user_race_results/<int:user_id>")
 def user_race_results(user_id):
     """View another user's race results and points breakdown"""
-    print(f"DEBUG: user_race_results called for user_id: {user_id}")
     if "user_id" not in session:
         return redirect(url_for("login"))
     
@@ -4964,7 +4963,6 @@ def user_race_results(user_id):
                 wildcard_points = score.wildcard_points if score else 0
                 total_points_for_comp = score.total_points if score else 0
                 
-                print(f"DEBUG: user_race_results - {competition.name}: race_points={race_points}, holeshot_points={holeshot_points}, wildcard_points={wildcard_points}, total={total_points_for_comp}")
                 
                 race_results.append({
                     'competition': competition,
