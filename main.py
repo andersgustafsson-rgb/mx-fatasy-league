@@ -7350,6 +7350,26 @@ def debug_simulation_status():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/reset_test_simulation")
+def reset_test_simulation():
+    """Reset test simulation to start fresh"""
+    if session.get("username") != "test":
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    try:
+        # Update global simulation with fresh start time
+        simulation = GlobalSimulation.query.first()
+        if simulation:
+            simulation.start_time = datetime.utcnow()
+            simulation.simulated_time = datetime.utcnow()
+            db.session.commit()
+            return jsonify({"message": "Test simulation reset successfully", "new_start_time": simulation.start_time.isoformat()})
+        else:
+            return jsonify({"error": "No simulation found"}), 404
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/debug_missing_bike_brands")
 def debug_missing_bike_brands():
     """Debug route to check which riders are missing bike_brand"""
