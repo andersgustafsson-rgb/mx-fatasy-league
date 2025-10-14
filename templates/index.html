@@ -958,8 +958,15 @@
         }
       }
       
-      document.getElementById('test-race-countdown').textContent = formatTime(raceCountdown);
-      document.getElementById('test-deadline-countdown').textContent = formatTime(deadlineCountdown);
+      const raceTimeFormatted = formatTime(raceCountdown);
+      const deadlineTimeFormatted = formatTime(deadlineCountdown);
+      console.log('DEBUG: raceTimeFormatted:', raceTimeFormatted);
+      console.log('DEBUG: deadlineTimeFormatted:', deadlineTimeFormatted);
+      
+      document.getElementById('test-race-countdown').textContent = raceTimeFormatted;
+      document.getElementById('test-deadline-countdown').textContent = deadlineTimeFormatted;
+      
+      console.log('DEBUG: Updated DOM elements');
     }
     
     function updateRealPicksStatus(data) {
