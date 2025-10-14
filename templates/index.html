@@ -858,14 +858,10 @@
     
     async function fetchTestCountdownData() {
       try {
-        console.log('DEBUG: fetchTestCountdownData called');
         const response = await fetch('/race_countdown?mode=test');
         const data = await response.json();
         
-        console.log('DEBUG: Test countdown response:', data);
-        
         if (data.error) {
-          console.log('DEBUG: Test countdown error:', data.error);
           document.getElementById('test-countdown-race-name').textContent = 'Test Mode';
           document.getElementById('test-race-countdown').textContent = '--:--:--';
           document.getElementById('test-deadline-countdown').textContent = '--:--:--';
@@ -876,9 +872,7 @@
         document.getElementById('test-countdown-race-name').textContent = data.next_race.name;
         
         // Update countdowns
-        console.log('DEBUG: About to call updateTestCountdowns');
         updateTestCountdowns(data);
-        console.log('DEBUG: updateTestCountdowns called');
         
         // Update picks status (test countdown controls picks during testing)
         updateTestPicksStatus(data);
@@ -918,18 +912,8 @@
     }
     
     function updateTestCountdowns(data) {
-      console.log('DEBUG: updateTestCountdowns called with data:', data);
-      console.log('DEBUG: updateTestCountdowns - data.countdown:', data.countdown);
       const raceCountdown = data.countdown.race_start;
       const deadlineCountdown = data.countdown.pick_deadline;
-      console.log('DEBUG: raceCountdown total_seconds:', raceCountdown.total_seconds);
-      console.log('DEBUG: raceCountdown hours:', raceCountdown.hours);
-      console.log('DEBUG: raceCountdown minutes:', raceCountdown.minutes);
-      console.log('DEBUG: raceCountdown seconds:', raceCountdown.seconds);
-      console.log('DEBUG: deadlineCountdown total_seconds:', deadlineCountdown.total_seconds);
-      console.log('DEBUG: deadlineCountdown hours:', deadlineCountdown.hours);
-      console.log('DEBUG: deadlineCountdown minutes:', deadlineCountdown.minutes);
-      console.log('DEBUG: deadlineCountdown seconds:', deadlineCountdown.seconds);
       
       // Check if countdown has finished
       if (raceCountdown.total_seconds <= 0 && deadlineCountdown.total_seconds <= 0) {
@@ -966,38 +950,9 @@
       
       const raceTimeFormatted = formatTime(raceCountdown);
       const deadlineTimeFormatted = formatTime(deadlineCountdown);
-      console.log('DEBUG: raceTimeFormatted:', raceTimeFormatted);
-      console.log('DEBUG: deadlineTimeFormatted:', deadlineTimeFormatted);
       
-      const raceElement = document.getElementById('test-race-countdown');
-      const deadlineElement = document.getElementById('test-deadline-countdown');
-      console.log('DEBUG: raceElement found:', raceElement);
-      console.log('DEBUG: deadlineElement found:', deadlineElement);
-      console.log('DEBUG: document.readyState:', document.readyState);
-      console.log('DEBUG: DOM loaded?', document.readyState === 'complete');
-      
-      // Check if elements still exist in DOM
-      const allTestElements = document.querySelectorAll('[id*="test-"]');
-      console.log('DEBUG: All test elements found:', allTestElements.length);
-      allTestElements.forEach((el, i) => {
-        console.log(`DEBUG: Test element ${i}:`, el.id, el);
-      });
-      
-      if (raceElement) {
-        raceElement.textContent = raceTimeFormatted;
-        console.log('DEBUG: Updated race element to:', raceTimeFormatted);
-      } else {
-        console.log('DEBUG: ERROR - race element not found!');
-      }
-      
-      if (deadlineElement) {
-        deadlineElement.textContent = deadlineTimeFormatted;
-        console.log('DEBUG: Updated deadline element to:', deadlineTimeFormatted);
-      } else {
-        console.log('DEBUG: ERROR - deadline element not found!');
-      }
-      
-      console.log('DEBUG: updateTestCountdowns completed');
+      document.getElementById('test-race-countdown').textContent = raceTimeFormatted;
+      document.getElementById('test-deadline-countdown').textContent = deadlineTimeFormatted;
     }
     
     function updateRealPicksStatus(data) {
@@ -1079,7 +1034,6 @@
     }
     
     function startCountdown() {
-      console.log('DEBUG: startCountdown called');
       // Fetch initial data for both countdowns
       fetchRealCountdownData();
       fetchTestCountdownData();
@@ -1087,20 +1041,16 @@
       // Check if mobile device
       const isMobile = window.innerWidth <= 768;
       const updateInterval = isMobile ? 2000 : 1000; // Slower updates on mobile
-      console.log('DEBUG: updateInterval set to:', updateInterval);
       
       // Update real countdown
       realCountdownInterval = setInterval(() => {
-        console.log('DEBUG: realCountdownInterval tick');
         fetchRealCountdownData();
       }, updateInterval);
       
       // Update test countdown
       testCountdownInterval = setInterval(() => {
-        console.log('DEBUG: testCountdownInterval tick');
         fetchTestCountdownData();
       }, updateInterval);
-      console.log('DEBUG: testCountdownInterval started with interval:', updateInterval);
     }
     
     function stopCountdown() {

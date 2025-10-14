@@ -7448,18 +7448,11 @@ def race_countdown():
         mode = request.args.get('mode', 'real')
         
         if mode == 'test':
-            print(f"DEBUG: race_countdown called with mode=test")
             # Test mode - use simulated time from GlobalSimulation
             simulation = GlobalSimulation.query.filter_by(active=True).first()
-            print(f"DEBUG: Found simulation: {simulation}")
             if simulation and simulation.scenario:
                 # Use simulated time for test mode - calculate fresh each time
                 current_simulated_time = get_current_time()
-                print(f"DEBUG: test_countdown - using simulated time: {current_simulated_time}")
-                print(f"DEBUG: test_countdown - scenario: {simulation.scenario}")
-                print(f"DEBUG: test_countdown - real time now: {datetime.utcnow()}")
-                print(f"DEBUG: test_countdown - simulation start_time: {simulation.start_time}")
-                print(f"DEBUG: test_countdown - simulation simulated_time: {simulation.simulated_time}")
                 
                 # Calculate race time based on scenario - use fixed race time, not relative to simulated time
                 # Get the initial simulated time when simulation started
@@ -7502,10 +7495,6 @@ def race_countdown():
                 race_diff = race_datetime - current_simulated_time
                 deadline_diff = deadline_datetime - current_simulated_time
                 
-                print(f"DEBUG: test_countdown - race_datetime: {race_datetime}")
-                print(f"DEBUG: test_countdown - race_diff: {race_diff}")
-                print(f"DEBUG: test_countdown - deadline_diff: {deadline_diff}")
-                
                 def format_countdown(td):
                     total_seconds = int(td.total_seconds())
                     if total_seconds <= 0:
@@ -7530,16 +7519,14 @@ def race_countdown():
                         "seconds": seconds
                     }
                 
-                result = {
+                return jsonify({
                     "next_race": next_race,
                     "countdown": {
                         "race_start": format_countdown(race_diff),
                         "pick_deadline": format_countdown(deadline_diff)
                     },
                     "picks_locked": deadline_diff.total_seconds() <= 0
-                }
-                print(f"DEBUG: test_countdown returning: {result}")
-                return jsonify(result)
+                })
             else:
                 return jsonify({"error": "No active test simulation"})
         else:
@@ -7557,9 +7544,6 @@ def race_countdown():
             
             # Calculate countdown to race start (8 PM on race date)
             # Ensure event_date is a datetime object
-            print(f"DEBUG: next_race_obj.event_date type: {type(next_race_obj.event_date)}")
-            print(f"DEBUG: next_race_obj.event_date value: {next_race_obj.event_date}")
-            
             if isinstance(next_race_obj.event_date, str):
                 event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
             elif isinstance(next_race_obj.event_date, date) and not isinstance(next_race_obj.event_date, datetime):
@@ -7567,9 +7551,6 @@ def race_countdown():
                 event_date = datetime.combine(next_race_obj.event_date, datetime.min.time())
             else:
                 event_date = next_race_obj.event_date
-            
-            print(f"DEBUG: event_date type: {type(event_date)}")
-            print(f"DEBUG: event_date value: {event_date}")
             
             race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
