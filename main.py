@@ -7524,14 +7524,16 @@ def race_countdown():
                         "seconds": seconds
                     }
                 
-                return jsonify({
+                result = {
                     "next_race": next_race,
                     "countdown": {
                         "race_start": format_countdown(race_diff),
                         "pick_deadline": format_countdown(deadline_diff)
                     },
                     "picks_locked": deadline_diff.total_seconds() <= 0
-                })
+                }
+                print(f"DEBUG: test_countdown returning: {result}")
+                return jsonify(result)
             else:
                 return jsonify({"error": "No active test simulation"})
         else:
