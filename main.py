@@ -7457,6 +7457,9 @@ def race_countdown():
                 current_simulated_time = get_current_time()
                 print(f"DEBUG: test_countdown - using simulated time: {current_simulated_time}")
                 print(f"DEBUG: test_countdown - scenario: {simulation.scenario}")
+                print(f"DEBUG: test_countdown - real time now: {datetime.utcnow()}")
+                print(f"DEBUG: test_countdown - simulation start_time: {simulation.start_time}")
+                print(f"DEBUG: test_countdown - simulation simulated_time: {simulation.simulated_time}")
                 
                 # Calculate race time based on scenario - always relative to current simulated time
                 if simulation.scenario == 'active_race_1':
@@ -8170,6 +8173,7 @@ def generate_auto_picks():
             for position in range(1, min(11, len(shuffled_riders) + 1)):
                 pick = RacePick(
                     user_id=user.id,
+                    
                     competition_id=competition_id,
                     rider_id=shuffled_riders[position-1].id,
                     predicted_position=position
