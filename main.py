@@ -3946,12 +3946,26 @@ def calculate_scores(comp_id: int):
 
     db.session.commit()
 
+    # Update season team points based on rider results (new system)
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
-        all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
-        total_season_points = sum(s.total_points for s in all_user_scores)
+        # Get all riders in this season team
+        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+        rider_ids = [tr.rider_id for tr in team_riders]
+        
+        total_season_points = 0
+        
+        # Calculate points for each rider based on their race results
+        for rider_id in rider_ids:
+            # Get all race results for this rider
+            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
+            
+            for result in rider_results:
+                points = calculate_rider_points_for_position(result.position)
+                total_season_points += points
+        
         team.total_points = total_season_points
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points")
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points based on {len(rider_ids)} riders")
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")
@@ -4068,13 +4082,26 @@ def clear_competition_results(competition_id):
     
     db.session.commit()
     
-    # Update season team points after clearing competition scores
+    # Update season team points after clearing competition scores (new system)
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
-        all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
-        total_season_points = sum(s.total_points for s in all_user_scores)
+        # Get all riders in this season team
+        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+        rider_ids = [tr.rider_id for tr in team_riders]
+        
+        total_season_points = 0
+        
+        # Calculate points for each rider based on their race results
+        for rider_id in rider_ids:
+            # Get all race results for this rider
+            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
+            
+            for result in rider_results:
+                points = calculate_rider_points_for_position(result.position)
+                total_season_points += points
+        
         team.total_points = total_season_points
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points")
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points based on {len(rider_ids)} riders")
     
     db.session.commit()
     
@@ -4091,34 +4118,82 @@ def clear_competition_results(competition_id):
         "deleted_wildcard_picks": deleted_wildcard_picks
     })
 
+def calculate_rider_points_for_position(position):
+    """Calculate points for a rider based on their finishing position"""
+    if position is None or position == 0:
+        return 0
+    
+    # Points system for season team riders
+    if position == 1:
+        return 25
+    elif position == 2:
+        return 22
+    elif position == 3:
+        return 20
+    elif position == 4:
+        return 18
+    elif position == 5:
+        return 16
+    elif position == 6:
+        return 15
+    elif position == 7:
+        return 14
+    elif position == 8:
+        return 13
+    elif position == 9:
+        return 12
+    elif position == 10:
+        return 11
+    elif position <= 15:
+        return 8
+    elif position <= 20:
+        return 5
+    else:
+        return 2
+
 @app.get("/update_season_team_points")
 def update_season_team_points():
-    """Update all season team points based on current competition scores"""
+    """Update all season team points based on rider's actual race results"""
     if session.get("username") != "test":
         return jsonify({"error": "admin_only"}), 403
     
-    print("DEBUG: update_season_team_points called")
+    print("DEBUG: update_season_team_points called - calculating based on rider results")
     
     all_season_teams = SeasonTeam.query.all()
     updated_teams = []
     
     for team in all_season_teams:
-        all_user_scores = CompetitionScore.query.filter_by(user_id=team.user_id).all()
-        total_season_points = sum(s.total_points for s in all_user_scores)
+        # Get all riders in this season team
+        team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+        rider_ids = [tr.rider_id for tr in team_riders]
+        
+        total_season_points = 0
+        
+        # Calculate points for each rider based on their race results
+        for rider_id in rider_ids:
+            # Get all race results for this rider
+            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
+            
+            for result in rider_results:
+                points = calculate_rider_points_for_position(result.position)
+                total_season_points += points
+                print(f"DEBUG: Rider {rider_id} finished {result.position} in competition {result.competition_id}, got {points} points")
+        
         old_points = team.total_points
         team.total_points = total_season_points
         updated_teams.append({
             "team_name": team.team_name,
             "user_id": team.user_id,
             "old_points": old_points,
-            "new_points": total_season_points
+            "new_points": total_season_points,
+            "rider_count": len(rider_ids)
         })
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) from {old_points} to {total_season_points} points")
+        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) from {old_points} to {total_season_points} points based on {len(rider_ids)} riders")
     
     db.session.commit()
     
     return jsonify({
-        "message": f"Updated {len(updated_teams)} season teams",
+        "message": f"Updated {len(updated_teams)} season teams based on rider results",
         "updated_teams": updated_teams
     })
 
