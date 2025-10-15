@@ -7696,13 +7696,24 @@ def race_countdown():
                         "seconds": seconds
                     }
                 
+                # Use is_picks_locked for consistency
+                # Create a dummy competition object for the test race
+                class TestCompetition:
+                    def __init__(self, name, event_date):
+                        self.name = name
+                        self.event_date = event_date
+                        self.id = 999  # Dummy ID for test race
+                
+                test_comp = TestCompetition(race_name, race_datetime.date())
+                picks_locked = is_picks_locked(test_comp)
+                
                 return jsonify({
                     "next_race": next_race,
                     "countdown": {
                         "race_start": format_countdown(race_diff),
                         "pick_deadline": format_countdown(deadline_diff)
                     },
-                    "picks_locked": deadline_diff.total_seconds() <= 0
+                    "picks_locked": picks_locked
                 })
             else:
                 return jsonify({"error": "No active test simulation"})
@@ -7767,13 +7778,24 @@ def race_countdown():
                 "seconds": seconds
             }
         
+        # Use is_picks_locked for consistency
+        # Find the actual competition for this race
+        upcoming_race = Competition.query.filter(
+            Competition.event_date >= today,
+            Competition.event_date <= today + timedelta(days=7)
+        ).order_by(Competition.event_date).first()
+        
+        picks_locked = False
+        if upcoming_race:
+            picks_locked = is_picks_locked(upcoming_race)
+        
         return jsonify({
             "next_race": next_race,
             "countdown": {
                 "race_start": format_countdown(race_diff),
                 "pick_deadline": format_countdown(deadline_diff)
             },
-            "picks_locked": deadline_diff.total_seconds() <= 0
+            "picks_locked": picks_locked
         })
         
     except Exception as e:
