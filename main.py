@@ -3794,8 +3794,12 @@ def save_picks():
                 if p.get("rider_id") and p.get("class") == "450cc":
                     riders_450_ids.append(int(p.get("rider_id")))
             
+            print(f"DEBUG: Wildcard validation - wc_pick_i: {wc_pick_i}, riders_450_ids: {riders_450_ids}")
             if wc_pick_i in riders_450_ids:
+                print(f"DEBUG: Wildcard validation FAILED - rider {wc_pick_i} already in top 6")
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
+            else:
+                print(f"DEBUG: Wildcard validation PASSED - rider {wc_pick_i} not in top 6")
         except Exception:
             pass
 
