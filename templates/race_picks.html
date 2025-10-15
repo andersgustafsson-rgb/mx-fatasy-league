@@ -1637,6 +1637,10 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       if (actualResults && actualResults.length > 0) {
         displayResults(myPicks);
       }
+      
+      // Remove wrong coast selections after loading picks from server
+      removeWrongCoastSelections();
+      
     } catch (e) {
       console.error(e);
     }
