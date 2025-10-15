@@ -1490,6 +1490,57 @@ def leave_league(league_id):
     return redirect(url_for("leagues_page"))
 
 
+@app.post("/leagues/<int:league_id>/edit")
+def edit_league(league_id):
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    league = League.query.get_or_404(league_id)
+    if league.creator_id != session["user_id"]:
+        flash("Endast skaparen kan redigera ligan.", "error")
+        return redirect(url_for("league_detail_page", league_id=league_id))
+    
+    try:
+        # Update league name if provided
+        new_name = (request.form.get("league_name") or "").strip()
+        if new_name and new_name != league.name:
+            league.name = new_name
+        
+        # Handle new image upload
+        file = request.files.get("league_image")
+        if file and file.filename and allowed_file(file.filename):
+            try:
+                # Delete old image if it exists
+                if league.image_url:
+                    try:
+                        old_filename = league.image_url.split('/')[-1]
+                        old_image_path = os.path.join(app.config["UPLOAD_FOLDER"], old_filename)
+                        if os.path.exists(old_image_path):
+                            os.remove(old_image_path)
+                            print(f"Deleted old league image: {old_image_path}")
+                    except Exception as e:
+                        print(f"Error deleting old league image: {e}")
+                
+                # Save new image
+                fname = secure_filename(f"{league.invite_code}_{file.filename}")
+                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                file.save(path)
+                league.image_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                print(f"New league image saved: {path}")
+            except Exception as e:
+                print(f"Error saving new league image: {e}")
+                flash("Fel vid uppladdning av bild. Ligan uppdaterades utan bild.", "warning")
+        
+        db.session.commit()
+        flash("Ligan uppdaterades!", "success")
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error editing league: {e}")
+        flash(f"Fel vid redigering av liga: {str(e)}", "error")
+    
+    return redirect(url_for("league_detail_page", league_id=league_id))
+
 @app.post("/leagues/<int:league_id>/delete")
 def delete_league(league_id):
     if "user_id" not in session:
