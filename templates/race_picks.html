@@ -723,6 +723,14 @@
 
     try {
       const picks = JSON.parse(savedPicks);
+      
+      // Check if the stored competition ID matches the current competition
+      // If not, clear the localStorage for this competition
+      if (picks.competitionId && picks.competitionId !== competitionId) {
+        console.log(`DEBUG: Competition ID mismatch. Stored: ${picks.competitionId}, Current: ${competitionId}. Clearing localStorage.`);
+        localStorage.removeItem(`race_picks_${competitionId}`);
+        return;
+      }
 
       // Load race picks
       ['450cc', '250cc'].forEach(riderClass => {
