@@ -4186,6 +4186,40 @@ def calculate_rider_points_for_position(position):
     else:
         return 0
 
+@app.get("/update_rider_numbers")
+def update_rider_numbers():
+    """Update rider numbers and coast assignments in database"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Update Ty Masterpool
+        ty_masterpool = Rider.query.filter_by(name='Ty Masterpool').first()
+        if ty_masterpool:
+            ty_masterpool.rider_number = 81
+            ty_masterpool.coast_250 = 'east'
+            print(f"Updated Ty Masterpool: rider_number=81, coast_250=east")
+        
+        # Update Jordon Smith
+        jordon_smith = Rider.query.filter_by(name='Jordon Smith').first()
+        if jordon_smith:
+            jordon_smith.rider_number = 58
+            jordon_smith.coast_250 = 'east'
+            print(f"Updated Jordon Smith: rider_number=58, coast_250=east")
+        
+        # Update Chance Hymas
+        chance_hymas = Rider.query.filter_by(name='Chance Hymas').first()
+        if chance_hymas:
+            chance_hymas.rider_number = 49
+            chance_hymas.coast_250 = 'west'
+            print(f"Updated Chance Hymas: rider_number=49, coast_250=west")
+        
+        db.session.commit()
+        return jsonify({"message": "Rider numbers and coast assignments updated successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/update_season_team_points")
 def update_season_team_points():
     """Update all season team points based on rider's actual race results"""
