@@ -5805,8 +5805,10 @@ def create_test_user_route():
             db.session.add(comp)
         db.session.commit()
     
-    # Create riders if they don't exist
-    if Rider.query.count() == 0:
+    # Don't create riders here - use rider management as master list
+    # Riders should only be created/updated through rider management interface
+    print("DEBUG: Skipping rider creation in create_test_data - use rider management interface instead")
+    if False:  # Never create riders here
         riders_450 = [
             {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 3},
             {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2},
@@ -6129,18 +6131,8 @@ def force_create_data_route():
         {'name': 'Julien Beaumer', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 929, 'coast_250': 'west'}
     ]
     
-    all_riders = riders_450 + riders_250
-    for rider_data in all_riders:
-        rider = Rider(
-            name=rider_data['name'],
-            class_name=rider_data['class_name'],
-            rider_number=rider_data.get('rider_number'),
-            bike_brand=rider_data['bike_brand'],
-            price=rider_data.get('price', 50),  # Default price if not specified
-            image_url=rider_data.get('image_url', f"riders/{rider_data['rider_number']}_{rider_data['name'].lower().replace(' ', '_')}.png"),
-            coast_250=rider_data.get('coast_250')
-        )
-        db.session.add(rider)
+    # Don't create riders here - use rider management as master list
+    print("DEBUG: No riders created in force_create_data - use rider management interface instead")
     
     db.session.commit()
     
@@ -6321,17 +6313,8 @@ def create_test_data():
                 {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 62, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/62_max_anstie.jpg'}
             ]
         
-        for i, rider_data in enumerate(all_riders):
-            rider = Rider(
-                name=rider_data['name'],
-                class_name=rider_data['class_name'],
-                rider_number=rider_data.get('rider_number'),
-                bike_brand=rider_data['bike_brand'],
-                price=rider_data.get('price', 50),  # Default price if not specified
-                image_url=rider_data.get('image_url', f"riders/{rider_data.get('rider_number', 'unknown')}_{rider_data['name'].lower().replace(' ', '_')}.jpg"),
-                coast_250=rider_data.get('coast_250')
-            )
-            db.session.add(rider)
+        # Don't create riders here - use rider management as master list
+        print("DEBUG: No riders created in force_create_data - use rider management interface instead")
             
         
         # Count riders by class
