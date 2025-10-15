@@ -4329,6 +4329,21 @@ def clear_all_user_picks():
         print(f"DEBUG: Error clearing picks: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/clear_all_riders")
+def clear_all_riders():
+    """Clear all riders from database - use rider management to recreate"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Clear all riders
+        Rider.query.delete()
+        db.session.commit()
+        return jsonify({"message": "All riders cleared. Use rider management to recreate them."})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/update_season_team_points")
 def update_season_team_points():
     """Update all season team points based on rider's actual race results"""
