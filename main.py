@@ -3797,6 +3797,7 @@ def save_picks():
         if rider.class_name == "250cc" and comp.coast_250 in ("east","west"):
             # Tillåt endast exakt match eller 'both'
             if rider.coast_250 not in (comp.coast_250, "both"):
+                print(f"DEBUG: Coast validation failed - Rider: {rider.name} (ID: {rider.id}), rider coast: {rider.coast_250}, competition coast: {comp.coast_250}")
                 return jsonify({"error":"250-förare matchar inte denna coast"}), 400
         # (för 'both' -> tillåt alla 250)
 
