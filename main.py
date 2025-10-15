@@ -6210,103 +6210,7 @@ def force_create_data_route():
 # -------------------------------------------------
 # Main
 # -------------------------------------------------
-def load_smx_2026_riders():
-    """Load rider data from SMX 2026 CSV file"""
-    try:
-        import csv
-        riders = []
-        
-        with open('data/smx_2026_riders_numbers_best_effort.csv', 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file, delimiter=',')
-            
-            for row in reader:
-                # Skip empty rows or rows with missing essential data
-                if not row.get('Förare') or not row.get('Klass (best-effort)') or row.get('Förare').strip() == '' or row.get('Klass (best-effort)').strip() == '':
-                    continue
-                    
-                # Convert class format (450 -> 450cc, 250 -> 250cc)
-                class_name = row['Klass (best-effort)'] + 'cc'
-                
-                # Get rider number
-                rider_number = None
-                if row.get('Nummer (career)'):
-                    try:
-                        rider_number = int(row['Nummer (career)'])
-                    except ValueError:
-                        pass
-                
-                # Get coast for 250cc riders
-                coast_250 = None
-                if class_name == '250cc':
-                    if row.get('Coast (250 East/West)'):
-                        coast = row['Coast (250 East/West)'].lower()
-                        if coast in ['east', 'west']:
-                            coast_250 = coast
-                    else:
-                        # Default coast assignment for 250cc riders without explicit coast
-                        # This is a temporary solution - in reality, you'd need proper coast data
-                        # For now, assign alternating east/west based on rider number
-                        if rider_number:
-                            coast_250 = 'east' if rider_number % 2 == 0 else 'west'
-                        else:
-                            coast_250 = 'east'  # Default fallback
-                
-                # Extract bike brand from team/bike info
-                bike_brand = 'Unknown'
-                if row.get('Team/Bike (if known)'):
-                    team_bike = row['Team/Bike (if known)']
-                    # Try to extract brand from team/bike string
-                    if 'Honda' in team_bike:
-                        bike_brand = 'Honda'
-                    elif 'Yamaha' in team_bike:
-                        bike_brand = 'Yamaha'
-                    elif 'KTM' in team_bike:
-                        bike_brand = 'KTM'
-                    elif 'Kawasaki' in team_bike:
-                        bike_brand = 'Kawasaki'
-                    elif 'Suzuki' in team_bike:
-                        bike_brand = 'Suzuki'
-                    elif 'Husqvarna' in team_bike:
-                        bike_brand = 'Husqvarna'
-                    elif 'GasGas' in team_bike:
-                        bike_brand = 'GasGas'
-                    elif 'Beta' in team_bike:
-                        bike_brand = 'Beta'
-                
-                # Set default price based on class
-                price = 450000 if class_name == '450cc' else 50000
-                
-                # Build image URL: riders/{number}_{name}.png (or .jpg fallback)
-                image_url = None
-                if rider_number:
-                    name_slug = row['Förare'].lower().replace(" ", "_")
-                    # Try PNG first, then JPG
-                    potential_urls = [
-                        f'riders/{rider_number}_{name_slug}.png',
-                        f'riders/{rider_number}_{name_slug}.jpg'
-                    ]
-                    # We'll use the first format (PNG) as default, backend will serve what exists
-                    image_url = potential_urls[0]
-                
-                # Create rider data
-                rider_data = {
-                    'name': row['Förare'],
-                    'class_name': class_name,
-                    'rider_number': rider_number,
-                    'bike_brand': bike_brand,
-                    'price': price,
-                    'coast_250': coast_250,
-                    'image_url': image_url
-                }
-                
-                riders.append(rider_data)
-        
-        return riders
-    except Exception as e:
-        print(f"Error loading SMX 2026 riders: {e}")
-        import traceback
-        traceback.print_exc()
-        return []
+# CSV import function removed - use rider management as master list only
 
 def create_test_data():
     """Create test data if it doesn't exist"""
@@ -6358,33 +6262,11 @@ def create_test_data():
             db.session.add(comp)
         print("Created 17 Supercross 2026 competitions")
     
-    # Create all Supercross 2026 riders from SMX data
-    if Rider.query.count() == 0:
-        # Load riders from SMX 2026 CSV file
-        all_riders = load_smx_2026_riders()
-        
-        if not all_riders:
-            print("Warning: Could not load SMX 2026 riders, using fallback data")
-            # Fallback to some basic riders if CSV loading fails
-            all_riders = [
-                {'name': 'Eli Tomac', 'class_name': '450cc', 'bike_brand': 'Yamaha', 'rider_number': 3, 'price': 450000, 'coast_250': None, 'image_url': 'riders/3_eli_tomac.jpg'},
-                {'name': 'Cooper Webb', 'class_name': '450cc', 'bike_brand': 'KTM', 'rider_number': 2, 'price': 450000, 'coast_250': None, 'image_url': 'riders/2_cooper_webb.jpg'},
-                {'name': 'Chase Sexton', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 4, 'price': 450000, 'coast_250': None, 'image_url': 'riders/4_chase_sexton.jpg'},
-                {'name': 'Jett Lawrence', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 18, 'price': 450000, 'coast_250': None, 'image_url': 'riders/18_jett_lawrence.jpg'},
-                {'name': 'Haiden Deegan', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 38, 'price': 50000, 'coast_250': 'west', 'image_url': 'riders/38_haiden_deegan.jpg'},
-                {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'price': 50000, 'coast_250': 'west', 'image_url': 'riders/47_levi_kitchen.jpg'},
-                {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/58_jordon_smith.jpg'},
-                {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 62, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/62_max_anstie.jpg'}
-            ]
-        
-        # Don't create riders here - use rider management as master list
-        print("DEBUG: No riders created in force_create_data - use rider management interface instead")
-            
-        
-        # Count riders by class
-        riders_450_count = len([r for r in all_riders if r['class_name'] == '450cc'])
-        riders_250_count = len([r for r in all_riders if r['class_name'] == '250cc'])
-        print(f"Created {len(all_riders)} Supercross 2026 riders ({riders_450_count}x 450cc, {riders_250_count}x 250cc)")
+    # Don't create riders here - use rider management as master list
+    # Riders should only be created/updated through rider management interface
+    print("DEBUG: Skipping rider creation in create_test_data - use rider management interface instead")
+    # Don't create riders here - use rider management as master list
+    print("DEBUG: No riders created in create_test_data - use rider management interface instead")
     
     db.session.commit()
 
