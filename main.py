@@ -8975,7 +8975,9 @@ def is_picks_locked(competition):
         time_to_deadline = deadline_datetime - current_time
         
         # Check if picks are locked (2 hours before race)
+        # If time_to_deadline is negative, deadline has passed and picks are locked
         picks_locked = time_to_deadline.total_seconds() <= 0
+        print(f"DEBUG: is_picks_locked - scenario: {scenario}, current_time: {current_time}, deadline_datetime: {deadline_datetime}, time_to_deadline: {time_to_deadline}, picks_locked: {picks_locked}")
     else:
         # Check if picks are locked (2 hours before race)
         race_time_str = "20:00"  # 8pm local time

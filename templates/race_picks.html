@@ -703,7 +703,6 @@
     }
 
     localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(picks));
-    console.log('DEBUG: Picks saved to localStorage:', picks);
   }
 
   // Load picks from localStorage
@@ -713,7 +712,6 @@
 
     try {
       const picks = JSON.parse(savedPicks);
-      console.log('DEBUG: Loading picks from localStorage:', picks);
 
       // Load race picks
       ['450cc', '250cc'].forEach(riderClass => {
@@ -1249,36 +1247,30 @@
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
-    console.log(`DEBUG: Rider not found for ID ${riderId}`);
   return null;
 }
   
-  console.log(`DEBUG: imgSrcFor(${riderId}): ${r.name}, image_url: ${r.image_url}, bike_brand: ${r.bike_brand}`);
   
   // Try rider image first (check both PNG and JPG)
   if (r.image_url) {
     // Remove 'riders/' prefix if it exists to avoid double path
     const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
     const url = `/static/${imagePath}`;
-    console.log(`DEBUG: Using rider image: ${url}`);
     return url;
   }
   
   // Fall back to bike brand logo if no rider image
   if (r.bike_brand) {
     const url = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
-    console.log(`DEBUG: Using bike brand logo: ${url}`);
     return url;
   }
   
   // Final fallback to Honda logo
-  console.log(`DEBUG: No image or bike brand for ${r.name}, using Honda fallback`);
   return '/static/brand_logos/honda.png';
 }
 
   // Function to handle image loading errors
 function handleImageError(img) {
-  console.log(`DEBUG: Image failed to load: ${img.src}`);
   
   // Replace the image with a simple placeholder that doesn't break layout
   img.style.display = 'none';
@@ -1349,7 +1341,6 @@ async function clearAllPicks() {
     
     if (response.ok) {
       // Don't clear form fields - keep picks visible
-      console.log('DEBUG: Picks saved successfully, keeping UI state');
       
       // Update status
       updatePicksStatus({ top6_picks: [], holeshot_picks: {}, wildcard_pick: null });
@@ -1364,7 +1355,6 @@ async function clearAllPicks() {
   }
 }
 function onPickChange(cls, pos, riderId = null) {
-  console.log(`DEBUG: onPickChange called for ${cls} position ${pos}, riderId: ${riderId}`);
   
   // Handle both old select elements and new rider-selector
   let val = riderId;
@@ -1378,11 +1368,9 @@ function onPickChange(cls, pos, riderId = null) {
   const imgId = cls.startsWith("450") ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
-  console.log(`DEBUG: Found img: ${img ? 'yes' : 'no'}, imgId: ${imgId}`);
 
   const src = val ? imgSrcFor(val) : null;
   
-  console.log(`DEBUG: Selected value: ${val}, src: ${src}`);
   
   if (img) {
     if (src) {
@@ -1390,12 +1378,10 @@ function onPickChange(cls, pos, riderId = null) {
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
       img.onerror = function() { handleImageError(this); };
-      console.log(`DEBUG: Set image src to: ${src}`);
     } else {
       img.removeAttribute("src");
       img.classList.remove("has-src");
       img.style.background = "#4b5563";
-      console.log(`DEBUG: Removed image src`);
     }
   }
 
@@ -1408,8 +1394,6 @@ function onPickChange(cls, pos, riderId = null) {
 }
 
   function initializePreviewImages() {
-    console.log(`DEBUG: initializePreviewImages called`);
-    console.log(`DEBUG: allRiders length: ${allRiders.length}`);
     
     // Initialize rider selectors to filter out wrong coast riders
     updateRiderSelectors('450cc');
@@ -1722,7 +1706,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
   }
 
   async function savePicks() {
-    console.log("DEBUG: savePicks called");
     
     // Get race picks from rider-selector elements
     const picks = [];
@@ -1767,9 +1750,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       }
     }
 
-    console.log("DEBUG: Found picks:", picks);
-    console.log("DEBUG: picks450:", picks.filter(p => p.class === '450cc'));
-    console.log("DEBUG: picks250:", picks.filter(p => p.class === '250cc'));
 
     // Kontrollera dubletter
     const riderIds = picks.map(p => p.rider_id);
@@ -1810,7 +1790,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       wildcard_pos: document.getElementById("wildcard-position")?.value,
     };
 
-    console.log("DEBUG: Sending payload:", payload);
 
     try {
       const resp = await fetch("/save_picks", {
@@ -1823,7 +1802,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
       // Clear localStorage since picks are now saved to server
       localStorage.removeItem(`race_picks_${competitionId}`);
-      console.log('DEBUG: Cleared localStorage after successful save');
       
       // Update picks status after saving
       setTimeout(() => {
