@@ -625,6 +625,7 @@
   
   console.log(`DEBUG: Race picks page loaded for competition: ${competitionName} (ID: ${competitionId})`);
   console.log(`DEBUG: Competition coast: ${competitionCoast}`);
+  console.log(`DEBUG: Will filter out riders that don't match coast: ${competitionCoast}`);
   console.log(`DEBUG: Total riders: ${allRiders.length}`);
 
   // Load saved picks from localStorage on page load
@@ -1090,6 +1091,9 @@
           const riderCoast = option.dataset.coast;
           if (riderCoast) {
             isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
+            if (isWrongCoast) {
+              console.log(`DEBUG: Hiding rider ${option.dataset.riderName} - rider coast: ${riderCoast}, competition coast: ${competitionCoast}`);
+            }
           }
         }
         
@@ -1799,9 +1803,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
 
     document.addEventListener("DOMContentLoaded", async () => {
-      // Initialize dropdowns with OUT filtering
-      updateDropdowns("450cc");
-      updateDropdowns("250cc");
+      // Initialize rider selectors with coast filtering
+      updateRiderSelectors("450cc");
+      updateRiderSelectors("250cc");
       updateHoleshotDropdowns();
       
       // Initialize all preview images
@@ -1809,6 +1813,12 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
       // Load user picks (don't clear them automatically)
       fetchAndDisplayMyPicks();
+      
+      // Re-apply coast filtering after picks are loaded
+      setTimeout(() => {
+        updateRiderSelectors("450cc");
+        updateRiderSelectors("250cc");
+      }, 100);
     });
 
 window.addEventListener("focus", () => {
