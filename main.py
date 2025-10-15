@@ -4351,6 +4351,36 @@ def clear_all_riders():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/remove_duplicate_riders")
+def remove_duplicate_riders():
+    """Remove duplicate riders - keep the one with highest ID"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find duplicate riders by name
+        from sqlalchemy import func
+        duplicates = db.session.query(
+            Rider.name, 
+            func.count(Rider.id).label('count'),
+            func.array_agg(Rider.id).label('ids')
+        ).group_by(Rider.name).having(func.count(Rider.id) > 1).all()
+        
+        removed_count = 0
+        for name, count, ids in duplicates:
+            # Keep the rider with highest ID, remove others
+            ids_to_remove = sorted(ids)[:-1]  # All except the last (highest ID)
+            for rider_id in ids_to_remove:
+                Rider.query.filter_by(id=rider_id).delete()
+                removed_count += 1
+            print(f"Removed {len(ids_to_remove)} duplicate(s) of {name}")
+        
+        db.session.commit()
+        return jsonify({"message": f"Removed {removed_count} duplicate riders. Kept the ones with highest ID."})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/fix_rider_duplicates")
 def fix_rider_duplicates():
     """Fix rider duplicates and coast issues"""
