@@ -625,6 +625,7 @@
   
 
   // Load saved picks from localStorage on page load
+  console.log(`DEBUG: Page loaded with competitionId: ${competitionId}`);
   loadSavedPicksFromStorage();
   
   // Function to clear localStorage picks (for debugging)
@@ -719,10 +720,18 @@
   // Load picks from localStorage
   function loadSavedPicksFromStorage() {
     const savedPicks = localStorage.getItem(`race_picks_${competitionId}`);
-    if (!savedPicks) return;
+    console.log(`DEBUG: loadSavedPicksFromStorage called for competitionId: ${competitionId}`);
+    console.log(`DEBUG: Found savedPicks:`, savedPicks ? 'YES' : 'NO');
+    
+    if (!savedPicks) {
+      console.log(`DEBUG: No saved picks found for competition ${competitionId}`);
+      return;
+    }
 
     try {
       const picks = JSON.parse(savedPicks);
+      console.log(`DEBUG: Parsed picks:`, picks);
+      console.log(`DEBUG: Stored competitionId: ${picks.competitionId}, Current competitionId: ${competitionId}`);
       
       // Check if the stored competition ID matches the current competition
       // If not, clear the localStorage for this competition
@@ -731,6 +740,8 @@
         localStorage.removeItem(`race_picks_${competitionId}`);
         return;
       }
+      
+      console.log(`DEBUG: Competition IDs match, loading picks...`);
 
       // Load race picks
       ['450cc', '250cc'].forEach(riderClass => {
