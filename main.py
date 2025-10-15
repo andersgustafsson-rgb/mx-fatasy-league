@@ -8851,6 +8851,8 @@ def is_picks_locked(competition):
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
     
+    print(f"DEBUG: is_picks_locked called with competition: {competition}")
+    
     # Handle both Competition objects and competition IDs
     if isinstance(competition, int):
         # If it's an ID, fetch the competition object
@@ -8942,6 +8944,7 @@ def is_picks_locked(competition):
         
         # Check if picks are locked (2 hours before race)
         picks_locked = time_to_deadline.total_seconds() <= 0
+        print(f"DEBUG: Simulation mode - time_to_deadline: {time_to_deadline.total_seconds()}, picks_locked: {picks_locked}")
     else:
         # Check if picks are locked (2 hours before race)
         race_time_str = "20:00"  # 8pm local time
@@ -8966,7 +8969,9 @@ def is_picks_locked(competition):
         current_time = get_current_time()
         time_to_deadline = race_datetime_utc - timedelta(hours=2) - current_time
         picks_locked = time_to_deadline.total_seconds() <= 0
+        print(f"DEBUG: Real mode - time_to_deadline: {time_to_deadline.total_seconds()}, picks_locked: {picks_locked}")
     
+    print(f"DEBUG: is_picks_locked returning: {picks_locked}")
     return picks_locked
 
 if __name__ == "__main__":
