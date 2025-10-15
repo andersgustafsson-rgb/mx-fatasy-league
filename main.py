@@ -836,7 +836,6 @@ def season_team_page():
 
 @app.route("/profile")
 def profile_page():
-    print(f"DEBUG: profile_page called, session: {dict(session)}")
     if "user_id" not in session:
         print("DEBUG: No user_id in session, redirecting to login")
         return redirect(url_for("login"))
@@ -3762,19 +3761,18 @@ def save_picks():
     picks = data.get("picks", [])
     print(f"DEBUG: Received {len(picks)} picks: {picks}")
     
-    rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
-    if len(rider_ids) != len(set(rider_ids)):
+    new_rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
+    if len(new_rider_ids) != len(set(new_rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
     
-    # Get 450cc rider IDs for wildcard validation
-    riders_450_ids = []
-    for p in picks:
-        if p.get("rider_id"):
-            rider = Rider.query.get(int(p.get("rider_id")))
-            if rider and rider.class_name == "450cc":
-                riders_450_ids.append(int(p.get("rider_id")))
+    # 4) Rensa tidigare picks/holeshot för användaren i denna tävling FÖRST
+    # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
+    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
 
-    # 4) Validera wildcard INNAN vi sparar picks
+    # 5) Validera wildcard EFTER att gamla picks rensats
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
     if wc_pick and wc_pos:
@@ -3782,24 +3780,25 @@ def save_picks():
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
 
-            # Blockera OUT även för wildcard om du vill
+            # Blockera OUT även för wildcard
             if wc_pick_i in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
             
             # Blockera om samma förare redan är vald i top 6 (endast 450cc)
+            # Hämta 450cc rider IDs från de nya picksen
+            riders_450_ids = []
+            for p in picks:
+                if p.get("rider_id"):
+                    rider = Rider.query.get(int(p.get("rider_id")))
+                    if rider and rider.class_name == "450cc":
+                        riders_450_ids.append(int(p.get("rider_id")))
+            
             if wc_pick_i in riders_450_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
         except Exception:
             pass
 
-    # 5) Rensa tidigare picks/holeshot för användaren i denna tävling
-    # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
-    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
-
-    # 5) Spara Top-6 picks
+    # 6) Spara Top-6 picks
     saved_picks = 0
     for p in picks:
         try:
@@ -3850,7 +3849,7 @@ def save_picks():
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
             
             # Blockera om samma förare redan är vald i top 6
-            if rid in rider_ids:
+            if rid in new_rider_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
             db.session.add(
                 HoleshotPick(
@@ -3880,7 +3879,7 @@ def save_picks():
                     return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
             
             # Blockera om samma förare redan är vald i top 6
-            if rid in rider_ids:
+            if rid in new_rider_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
 
             db.session.add(
