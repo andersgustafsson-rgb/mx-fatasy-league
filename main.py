@@ -3622,6 +3622,36 @@ def get_my_picks(competition_id):
     print(f"DEBUG: Returning picks data: {result}")
     return jsonify(result)
 
+@app.route("/get_other_users_picks/<int:competition_id>")
+def get_other_users_picks(competition_id):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    # Get all users except current user
+    current_user_id = session["user_id"]
+    other_users = User.query.filter(User.id != current_user_id).all()
+    
+    users_picks = []
+    for user in other_users:
+        # Get race picks for this user
+        race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        picks = []
+        for pick in race_picks:
+            rider = Rider.query.get(pick.rider_id)
+            if rider:
+                picks.append({
+                    "position": pick.predicted_position,
+                    "class": rider.class_name,
+                    "rider_name": f"#{rider.rider_number} {rider.name} ({rider.bike_brand})"
+                })
+        
+        if picks:  # Only include users who have made picks
+            users_picks.append({
+                "username": user.username,
+                "picks": picks
+            })
+    
+    return jsonify(users_picks)
 
 @app.post("/save_picks")
 def save_picks():
