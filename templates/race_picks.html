@@ -626,6 +626,17 @@
 
   // Load saved picks from localStorage on page load
   loadSavedPicksFromStorage();
+  
+  // Function to clear localStorage picks (for debugging)
+  function clearLocalStoragePicks() {
+    localStorage.removeItem(`race_picks_${competitionId}`);
+    console.log(`DEBUG: Cleared localStorage picks for competition ${competitionId}`);
+    // Reload the page to see empty picks
+    location.reload();
+  }
+  
+  // Make it available globally for debugging
+  window.clearLocalStoragePicks = clearLocalStoragePicks;
 
   // Save picks to localStorage
   function savePicksToStorage() {
