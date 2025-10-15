@@ -1386,11 +1386,6 @@ function onPickChange(cls, pos, riderId = null) {
   }
 
   updateDropdowns(cls);
-  
-  // Update picks status after changes
-  setTimeout(() => {
-    fetchAndDisplayMyPicks();
-  }, 100);
 }
 
   function initializePreviewImages() {
