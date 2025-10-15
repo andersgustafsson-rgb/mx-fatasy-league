@@ -8280,7 +8280,8 @@ def set_active_race():
         
         return jsonify({
             "message": f"Active race set to competition ID: {competition_id}",
-            "competition_id": competition_id
+            "competition_id": competition_id,
+            "clear_localStorage": True  # Signal to frontend to clear localStorage
         })
         
     except Exception as e:

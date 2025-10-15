@@ -19,10 +19,10 @@
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 md:mb-8 gap-4">
         <h1 class="text-2xl sm:text-3xl font-bold text-blue-500 text-center sm:text-left">Admin Panel</h1>
         <div class="flex gap-2">
-          <a href="{{ url_for('index') }}"
+        <a href="{{ url_for('index') }}"
              class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded text-center text-sm sm:text-base">
-            Tillbaka till Huvudsidan
-          </a>
+          Tillbaka till Huvudsidan
+        </a>
         </div>
       </div>
 
@@ -117,21 +117,21 @@
         <div class="flex flex-col lg:flex-row lg:items-end gap-3">
           <div class="flex-1 min-w-0">
             <label for="competition-select" class="block text-lg sm:text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">1. Välj Tävling</label>
-            <select id="competition-select" name="competition_id" onchange="loadSavedResults()"
+          <select id="competition-select" name="competition_id" onchange="loadSavedResults()"
                     class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base text-gray-900 dark:text-gray-100">
-              <option value="">-- Välj tävling --</option>
-              {% for comp in competitions %}
-                <option value="{{ comp.id }}">
-                  {{ comp.name }} ({{ comp.event_date }})
-                  {% if comp.coast_250 == 'both' %} [Showdown]{% elif comp.coast_250 %} [250SX {{ comp.coast_250|capitalize }}]{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+            <option value="">-- Välj tävling --</option>
+            {% for comp in competitions %}
+              <option value="{{ comp.id }}">
+                {{ comp.name }} ({{ comp.event_date }})
+                {% if comp.coast_250 == 'both' %} [Showdown]{% elif comp.coast_250 %} [250SX {{ comp.coast_250|capitalize }}]{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
           <div class="flex flex-col sm:flex-row gap-2 lg:ml-4">
-            <button type="button"
-                    onclick="simulateForSelected()"
+        <button type="button"
+                onclick="simulateForSelected()"
                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
               ⚙️ Simulera
             </button>
@@ -139,9 +139,9 @@
                     onclick="clearCurrentCompetitionResults()"
                     class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
               🗑️ Rensa Resultat
-            </button>
-            <button type="button"
-                    onclick="loadSavedResults()"
+        </button>
+        <button type="button"
+                onclick="loadSavedResults()"
                     class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base">
               ↻ Ladda
             </button>
@@ -222,7 +222,7 @@
             </button>
             <button onclick="resetSimulation()" class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm transition-colors">
               Reset Simulering
-            </button>
+        </button>
           </div>
         </div>
       </div>
@@ -295,7 +295,7 @@
 
       <div id="race-results-section" class="hidden">
         <form method="POST" action="{{ url_for('submit_results') }}" onsubmit="console.log('Form submitted'); return validateResults()">
-          <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
+        <input type="hidden" id="competition_id_hidden" name="competition_id" value="">
 
           <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
             <h2 class="text-lg sm:text-xl font-semibold mb-3 text-yellow-800 dark:text-yellow-300">Holeshot Vinnare</h2>
@@ -334,10 +334,10 @@
 
           <div class="mt-6 sm:mt-8 border-t pt-4">
             <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 sm:py-3 px-4 rounded text-base sm:text-lg">
-              ✅ Spara Resultat & Räkna Poäng
-            </button>
-          </div>
-        </form>
+            ✅ Spara Resultat & Räkna Poäng
+          </button>
+        </div>
+      </form>
       </div>
 
         <!-- OUT-status hantering -->
@@ -540,11 +540,11 @@
       // Use setTimeout to prevent blocking the UI
       setTimeout(async () => {
         while (document.getElementById("results-container-450").children.length < 20) {
-          addResultRow("450");
+            addResultRow("450");
         }
         while (document.getElementById("results-container-250").children.length < 6) {
-          addResultRow("250");
-        }
+            addResultRow("250");
+          }
         
         // Add event listeners after all rows are created
         addEventListeners();
@@ -775,70 +775,70 @@
     }
 
     async function loadOutList() {
-      const comp = document.getElementById("competition-select").value;
-      if (!comp) { alert("Välj en tävling först."); return; }
-      try {
-        const res = await fetch(`/admin/get_out_status/${comp}`);
-        if (!res.ok) throw new Error("fetch failed");
-        const riders = await res.json();
+  const comp = document.getElementById("competition-select").value;
+  if (!comp) { alert("Välj en tävling först."); return; }
+  try {
+    const res = await fetch(`/admin/get_out_status/${comp}`);
+    if (!res.ok) throw new Error("fetch failed");
+    const riders = await res.json();
 
-        const c450 = document.getElementById("out-list-450");
-        const c250 = document.getElementById("out-list-250");
-        c450.innerHTML = "";
-        c250.innerHTML = "";
+    const c450 = document.getElementById("out-list-450");
+    const c250 = document.getElementById("out-list-250");
+    c450.innerHTML = "";
+    c250.innerHTML = "";
 
-        const render = (container, list) => {
-          list.forEach(r => {
-            const id = `out-${r.id}`;
-            const row = document.createElement("label");
-            row.className = "flex items-center gap-2 bg-white/70 dark:bg-gray-800 p-2 rounded";
-            row.innerHTML = `
-              <input type="checkbox" id="${id}" ${r.is_out ? "checked" : ""}>
-              <span class="flex-1">#${r.rider_number || "-"} ${r.name} <span class="text-gray-400 text-xs">(${r.bike_brand || "—"})</span></span>
-            `;
-            container.appendChild(row);
-          });
-        };
+    const render = (container, list) => {
+      list.forEach(r => {
+        const id = `out-${r.id}`;
+        const row = document.createElement("label");
+        row.className = "flex items-center gap-2 bg-white/70 dark:bg-gray-800 p-2 rounded";
+        row.innerHTML = `
+          <input type="checkbox" id="${id}" ${r.is_out ? "checked" : ""}>
+          <span class="flex-1">#${r.rider_number || "-"} ${r.name} <span class="text-gray-400 text-xs">(${r.bike_brand || "—"})</span></span>
+        `;
+        container.appendChild(row);
+      });
+    };
 
-        render(c450, riders.filter(r => r.class === "450cc"));
-        render(c250, riders.filter(r => r.class === "250cc"));
+    render(c450, riders.filter(r => r.class === "450cc"));
+    render(c250, riders.filter(r => r.class === "250cc"));
         
         // Store original OUT status for change detection
         originalOutStatus = {};
         riders.forEach(r => {
           originalOutStatus[r.id] = r.is_out;
         });
-      } catch (e) {
-        console.error(e);
-        alert("Kunde inte ladda OUT-lista.");
-      }
-    }
+  } catch (e) {
+    console.error(e);
+    alert("Kunde inte ladda OUT-lista.");
+  }
+}
 
-    async function setOut(riderId, isOut) {
-      const comp = document.getElementById("competition-select").value;
-      if (!comp) { alert("Välj en tävling först."); return; }
-      try {
-        const res = await fetch("/admin/set_out_status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            competition_id: parseInt(comp, 10),
-            rider_id: parseInt(riderId, 10),
-            status: isOut ? "OUT" : "CLEAR",
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "save failed");
+async function setOut(riderId, isOut) {
+  const comp = document.getElementById("competition-select").value;
+  if (!comp) { alert("Välj en tävling först."); return; }
+  try {
+    const res = await fetch("/admin/set_out_status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        competition_id: parseInt(comp, 10),
+        rider_id: parseInt(riderId, 10),
+        status: isOut ? "OUT" : "CLEAR",
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "save failed");
 
-        showToast(isOut ? "Föraren markerad OUT" : "OUT borttagen", true);
-        localStorage.setItem("out-updated", String(Date.now()));
+    showToast(isOut ? "Föraren markerad OUT" : "OUT borttagen", true);
+    localStorage.setItem("out-updated", String(Date.now()));
         // Don't reload the entire list, just update the UI
         // await loadOutList();
-      } catch (e) {
-        console.error(e);
-        showToast("Kunde inte spara OUT-status", false);
-      }
-    }
+  } catch (e) {
+    console.error(e);
+    showToast("Kunde inte spara OUT-status", false);
+  }
+}
 
     let isSaving = false; // Prevent multiple simultaneous saves
     let originalOutStatus = {}; // Store original OUT status to detect changes
@@ -1071,6 +1071,25 @@
         const data = await response.json();
         if (response.ok) {
           showToast(`Aktivt race satt till ID: ${competitionId}`, true);
+          
+          // Clear localStorage for all users when a new race is activated
+          if (data.clear_localStorage) {
+            // Clear all localStorage items that start with 'race_picks_'
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('race_picks_')) {
+                keysToRemove.push(key);
+              }
+            }
+            
+            keysToRemove.forEach(key => {
+              localStorage.removeItem(key);
+            });
+            
+            console.log(`DEBUG: Cleared ${keysToRemove.length} localStorage race picks when activating race ${competitionId}`);
+            showToast(`Rensade ${keysToRemove.length} sparade picks från localStorage`, true);
+          }
         } else {
           showToast(`Fel: ${data.error}`, false);
         }
