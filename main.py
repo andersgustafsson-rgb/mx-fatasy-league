@@ -3822,6 +3822,10 @@ def save_picks():
             # (om du vill låsa 450-OUT, lägg samma OUT-koll här)
             if rid in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
+            
+            # Blockera om samma förare redan är vald i top 6
+            if rid in rider_ids:
+                return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
             db.session.add(
                 HoleshotPick(
                     user_id=uid,
@@ -3848,6 +3852,10 @@ def save_picks():
             if rider and comp.coast_250 in ("east","west"):
                 if rider.coast_250 not in (comp.coast_250, "both"):
                     return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
+            
+            # Blockera om samma förare redan är vald i top 6
+            if rid in rider_ids:
+                return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
 
             db.session.add(
                 HoleshotPick(
@@ -3873,6 +3881,10 @@ def save_picks():
             # (Wildcard enligt din UI är 450, men vi skyddar ändå)
             if wc_pick_i in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
+            
+            # Blockera om samma förare redan är vald i top 6
+            if wc_pick_i in rider_ids:
+                return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
 
             if not existing_wc:
                 existing_wc = WildcardPick(user_id=uid, competition_id=comp_id)
