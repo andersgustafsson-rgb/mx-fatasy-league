@@ -425,7 +425,7 @@
               </div>
               <div class="rider-list">
                 {% for rider in riders_250 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('250cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('250cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
                     <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
@@ -508,7 +508,7 @@
               </div>
               <div class="rider-list">
                 {% for rider in riders_250 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('250', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('250', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
                     <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
@@ -1081,8 +1081,17 @@
                                  option.dataset.riderName !== currentSelected;
         const isOut = option.dataset.out === 'true';
         
-        // Hide if chosen elsewhere or out
-        if (isChosenElsewhere || isOut) {
+        // Check coast for 250cc riders
+        let isWrongCoast = false;
+        if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+          const riderCoast = option.dataset.coast;
+          if (riderCoast) {
+            isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
+          }
+        }
+        
+        // Hide if chosen elsewhere, out, or wrong coast
+        if (isChosenElsewhere || isOut || isWrongCoast) {
           option.style.display = 'none';
         } else {
           option.style.display = 'flex';
@@ -1355,22 +1364,9 @@ function onPickChange(cls, pos, riderId = null) {
     console.log(`DEBUG: initializePreviewImages called`);
     console.log(`DEBUG: allRiders length: ${allRiders.length}`);
     
-    // Initialize all preview images for both 450cc and 250cc
-    for (let i = 1; i <= 6; i++) {
-      // 450cc
-      const sel450 = document.querySelector(`.pick-select[data-class="450cc"][data-position="${i}"]`);
-      if (sel450 && sel450.value) {
-        console.log(`DEBUG: Found 450cc selection for position ${i}: ${sel450.value}`);
-        onPickChange('450cc', i);
-      }
-      
-      // 250cc
-      const sel250 = document.querySelector(`.pick-select[data-class="250cc"][data-position="${i}"]`);
-      if (sel250 && sel250.value) {
-        console.log(`DEBUG: Found 250cc selection for position ${i}: ${sel250.value}`);
-        onPickChange('250cc', i);
-      }
-    }
+    // Initialize rider selectors to filter out wrong coast riders
+    updateRiderSelectors('450cc');
+    updateRiderSelectors('250cc');
   }
 
   async function displayResults(myPicks) {
