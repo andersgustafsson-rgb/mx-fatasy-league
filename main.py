@@ -4371,12 +4371,37 @@ def remove_duplicate_riders():
             # Keep the rider with highest ID, remove others
             ids_to_remove = sorted(ids)[:-1]  # All except the last (highest ID)
             for rider_id in ids_to_remove:
+                # Check if rider is used in season_team_riders
+                season_team_usage = SeasonTeamRider.query.filter_by(rider_id=rider_id).count()
+                if season_team_usage > 0:
+                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {season_team_usage} season teams")
+                    continue
+                
+                # Check if rider is used in race picks
+                race_pick_usage = RacePick.query.filter_by(rider_id=rider_id).count()
+                if race_pick_usage > 0:
+                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {race_pick_usage} race picks")
+                    continue
+                
+                # Check if rider is used in holeshot picks
+                holeshot_usage = HoleshotPick.query.filter_by(rider_id=rider_id).count()
+                if holeshot_usage > 0:
+                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {holeshot_usage} holeshot picks")
+                    continue
+                
+                # Check if rider is used in wildcard picks
+                wildcard_usage = WildcardPick.query.filter_by(rider_id=rider_id).count()
+                if wildcard_usage > 0:
+                    print(f"Skipping rider {name} (ID: {rider_id}) - used in {wildcard_usage} wildcard picks")
+                    continue
+                
+                # Safe to remove
                 Rider.query.filter_by(id=rider_id).delete()
                 removed_count += 1
-            print(f"Removed {len(ids_to_remove)} duplicate(s) of {name}")
+                print(f"Removed duplicate rider {name} (ID: {rider_id})")
         
         db.session.commit()
-        return jsonify({"message": f"Removed {removed_count} duplicate riders. Kept the ones with highest ID."})
+        return jsonify({"message": f"Removed {removed_count} duplicate riders. Kept the ones with highest ID. Skipped riders that are still in use."})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
