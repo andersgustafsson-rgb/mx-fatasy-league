@@ -5667,13 +5667,13 @@ def fix_database_route():
             {'name': 'Dilan Schwartz', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 40, 'coast_250': 'west'},
             {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43, 'coast_250': 'west'},
             {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'coast_250': 'west'},
-            {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 48, 'coast_250': 'west'},
+            {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 49, 'coast_250': 'west'},
             {'name': 'Enzo Lopes', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 50, 'coast_250': 'west'},
             {'name': 'Cullin Park', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 53, 'coast_250': 'west'},
             
             # East Coast 250cc riders
-            {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 29, 'coast_250': 'east'},
-            {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 31, 'coast_250': 'east'},
+            {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 81, 'coast_250': 'east'},
+            {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'coast_250': 'east'},
             {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 37, 'coast_250': 'east'},
             {'name': 'Derek Kelley', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 41, 'coast_250': 'east'},
             {'name': 'Justin Hill', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 44, 'coast_250': 'east'},
@@ -5840,13 +5840,13 @@ def create_test_user_route():
             {'name': 'Dilan Schwartz', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 40, 'coast_250': 'west'},
             {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43, 'coast_250': 'west'},
             {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'coast_250': 'west'},
-            {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 48, 'coast_250': 'west'},
+            {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 49, 'coast_250': 'west'},
             {'name': 'Enzo Lopes', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 50, 'coast_250': 'west'},
             {'name': 'Cullin Park', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 53, 'coast_250': 'west'},
             
             # East Coast 250cc riders
-            {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 29, 'coast_250': 'east'},
-            {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 31, 'coast_250': 'east'},
+            {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 81, 'coast_250': 'east'},
+            {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'coast_250': 'east'},
             {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 37, 'coast_250': 'east'},
             {'name': 'Derek Kelley', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 41, 'coast_250': 'east'},
             {'name': 'Justin Hill', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 44, 'coast_250': 'east'},
@@ -6092,13 +6092,13 @@ def force_create_data_route():
         {'name': 'Dilan Schwartz', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 40, 'coast_250': 'west'},
         {'name': 'Seth Hammaker', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 43, 'coast_250': 'west'},
         {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'coast_250': 'west'},
-        {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 48, 'coast_250': 'west'},
+        {'name': 'Chance Hymas', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 49, 'coast_250': 'west'},
         {'name': 'Enzo Lopes', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 50, 'coast_250': 'west'},
         {'name': 'Cullin Park', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 53, 'coast_250': 'west'},
         
         # East Coast 250cc riders
-        {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 29, 'coast_250': 'east'},
-        {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 31, 'coast_250': 'east'},
+        {'name': 'Ty Masterpool', 'class_name': '250cc', 'bike_brand': 'GasGas', 'rider_number': 81, 'coast_250': 'east'},
+        {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'coast_250': 'east'},
         {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 37, 'coast_250': 'east'},
         {'name': 'Derek Kelley', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 41, 'coast_250': 'east'},
         {'name': 'Justin Hill', 'class_name': '250cc', 'bike_brand': 'KTM', 'rider_number': 44, 'coast_250': 'east'},
@@ -6318,7 +6318,7 @@ def create_test_data():
                 {'name': 'Jett Lawrence', 'class_name': '450cc', 'bike_brand': 'Honda', 'rider_number': 18, 'price': 450000, 'coast_250': None, 'image_url': 'riders/18_jett_lawrence.jpg'},
                 {'name': 'Haiden Deegan', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 38, 'price': 50000, 'coast_250': 'west', 'image_url': 'riders/38_haiden_deegan.jpg'},
                 {'name': 'Levi Kitchen', 'class_name': '250cc', 'bike_brand': 'Kawasaki', 'rider_number': 47, 'price': 50000, 'coast_250': 'west', 'image_url': 'riders/47_levi_kitchen.jpg'},
-                {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 22, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/22_jordon_smith.jpg'},
+                {'name': 'Jordon Smith', 'class_name': '250cc', 'bike_brand': 'Yamaha', 'rider_number': 58, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/58_jordon_smith.jpg'},
                 {'name': 'Max Anstie', 'class_name': '250cc', 'bike_brand': 'Honda', 'rider_number': 62, 'price': 50000, 'coast_250': 'east', 'image_url': 'riders/62_max_anstie.jpg'}
             ]
         
