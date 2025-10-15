@@ -4220,6 +4220,28 @@ def update_rider_numbers():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/clear_all_user_picks")
+def clear_all_user_picks():
+    """Clear all picks for all users - admin only"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Clear all race picks
+        RacePick.query.delete()
+        
+        # Clear all holeshot picks
+        HoleshotPick.query.delete()
+        
+        # Clear all wildcard picks
+        WildcardPick.query.delete()
+        
+        db.session.commit()
+        return jsonify({"message": "All user picks cleared successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/update_season_team_points")
 def update_season_team_points():
     """Update all season team points based on rider's actual race results"""
