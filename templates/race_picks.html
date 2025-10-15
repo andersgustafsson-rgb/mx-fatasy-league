@@ -799,6 +799,7 @@
 
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
+    console.log(`DEBUG: removeWrongCoastSelections called - competitionCoast: "${competitionCoast}"`);
     if (competitionCoast && competitionCoast !== 'both') {
       console.log(`DEBUG: Checking for wrong coast selections - competition coast: ${competitionCoast}`);
       
@@ -1114,6 +1115,7 @@
 
   // Update rider selector options (replaces updateDropdowns for new system)
   function updateRiderSelectors(riderClass) {
+    console.log(`DEBUG: updateRiderSelectors called for ${riderClass}, competitionCoast: "${competitionCoast}"`);
     const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
     
     // Get currently selected riders in this class
@@ -1148,6 +1150,7 @@
         let isWrongCoast = false;
         if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
           const riderCoast = option.dataset.coast;
+          console.log(`DEBUG: Checking rider ${option.dataset.riderName} - rider coast: "${riderCoast}", competition coast: "${competitionCoast}"`);
           if (riderCoast) {
             isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
             if (isWrongCoast) {
