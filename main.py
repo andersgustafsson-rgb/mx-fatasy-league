@@ -3633,10 +3633,12 @@ def get_other_users_picks(competition_id):
     
     users_picks = []
     for user in other_users:
-        # Get race picks for this user
-        race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        # Get race picks for this user (only top 6 per class)
+        race_picks_450 = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).join(Rider).filter(Rider.class_name == '450cc').order_by(RacePick.predicted_position).limit(6).all()
+        race_picks_250 = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).join(Rider).filter(Rider.class_name == '250cc').order_by(RacePick.predicted_position).limit(6).all()
+        
         picks = []
-        for pick in race_picks:
+        for pick in race_picks_450 + race_picks_250:
             rider = Rider.query.get(pick.rider_id)
             if rider:
                 picks.append({
