@@ -4119,37 +4119,25 @@ def clear_competition_results(competition_id):
     })
 
 def calculate_rider_points_for_position(position):
-    """Calculate points for a rider based on their finishing position"""
+    """Calculate points for a rider based on their finishing position (side activity)"""
     if position is None or position == 0:
         return 0
     
-    # Points system for season team riders
+    # Small points system for season team riders (side activity)
     if position == 1:
-        return 25
-    elif position == 2:
-        return 22
-    elif position == 3:
-        return 20
-    elif position == 4:
-        return 18
-    elif position == 5:
-        return 16
-    elif position == 6:
-        return 15
-    elif position == 7:
-        return 14
-    elif position == 8:
-        return 13
-    elif position == 9:
-        return 12
-    elif position == 10:
-        return 11
-    elif position <= 15:
-        return 8
-    elif position <= 20:
         return 5
-    else:
+    elif position == 2:
+        return 4
+    elif position == 3:
+        return 3
+    elif position == 4:
         return 2
+    elif position == 5:
+        return 1
+    elif position <= 10:
+        return 1
+    else:
+        return 0
 
 @app.get("/update_season_team_points")
 def update_season_team_points():
