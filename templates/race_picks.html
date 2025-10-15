@@ -1466,9 +1466,11 @@ function onPickChange(cls, pos, riderId = null) {
 
   async function fetchAndDisplayMyPicks() {
     try {
+      console.log(`DEBUG: fetchAndDisplayMyPicks called for competitionId: ${competitionId}`);
       const res = await fetch(`/get_my_picks/${competitionId}`);
       if (!res.ok) throw new Error("Kunde inte hämta dina val");
       const myPicks = await res.json();
+      console.log(`DEBUG: fetchAndDisplayMyPicks received:`, myPicks);
       
       // Update picks status
       updatePicksStatus(myPicks);

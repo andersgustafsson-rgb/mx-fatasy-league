@@ -4227,6 +4227,13 @@ def clear_all_user_picks():
         return jsonify({"error": "admin_only"}), 403
     
     try:
+        # Count picks before deletion
+        race_picks_count = RacePick.query.count()
+        holeshot_picks_count = HoleshotPick.query.count()
+        wildcard_picks_count = WildcardPick.query.count()
+        
+        print(f"DEBUG: Before clearing - Race picks: {race_picks_count}, Holeshot picks: {holeshot_picks_count}, Wildcard picks: {wildcard_picks_count}")
+        
         # Clear all race picks
         RacePick.query.delete()
         
@@ -4237,9 +4244,12 @@ def clear_all_user_picks():
         WildcardPick.query.delete()
         
         db.session.commit()
-        return jsonify({"message": "All user picks cleared successfully"})
+        
+        print(f"DEBUG: After clearing - All picks deleted successfully")
+        return jsonify({"message": f"All user picks cleared successfully. Deleted {race_picks_count} race picks, {holeshot_picks_count} holeshot picks, {wildcard_picks_count} wildcard picks."})
     except Exception as e:
         db.session.rollback()
+        print(f"DEBUG: Error clearing picks: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.get("/update_season_team_points")
