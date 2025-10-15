@@ -1067,13 +1067,18 @@ async function setOut(riderId, isOut) {
     // Simple Simulation Functions
     async function setActiveRace(competitionId) {
       try {
+        console.log(`DEBUG: setActiveRace called with competitionId: ${competitionId}`);
         const response = await fetch(`/set_active_race?competition_id=${competitionId}`);
         const data = await response.json();
+        console.log(`DEBUG: setActiveRace response:`, data);
+        
         if (response.ok) {
           showToast(`Aktivt race satt till ID: ${competitionId}`, true);
           
           // Clear localStorage for all users when a new race is activated
           if (data.clear_localStorage) {
+            console.log(`DEBUG: clear_localStorage is true, clearing localStorage...`);
+            
             // Clear all localStorage items that start with 'race_picks_'
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
@@ -1083,12 +1088,16 @@ async function setOut(riderId, isOut) {
               }
             }
             
+            console.log(`DEBUG: Found ${keysToRemove.length} localStorage keys to remove:`, keysToRemove);
+            
             keysToRemove.forEach(key => {
               localStorage.removeItem(key);
             });
             
             console.log(`DEBUG: Cleared ${keysToRemove.length} localStorage race picks when activating race ${competitionId}`);
             showToast(`Rensade ${keysToRemove.length} sparade picks från localStorage`, true);
+          } else {
+            console.log(`DEBUG: clear_localStorage is false or missing`);
           }
         } else {
           showToast(`Fel: ${data.error}`, false);
