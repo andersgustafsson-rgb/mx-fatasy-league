@@ -1620,6 +1620,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       .filter((p) => p.rider_id);
 
     console.log("DEBUG: Found picks:", picks);
+    console.log("DEBUG: picks450:", picks.filter(p => p.class === '450cc'));
+    console.log("DEBUG: picks250:", picks.filter(p => p.class === '250cc'));
 
     // Kontrollera dubletter
     const riderIds = picks.map(p => p.rider_id);
