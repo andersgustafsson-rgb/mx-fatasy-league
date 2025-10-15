@@ -716,7 +716,7 @@ def index():
                 
                 # Process wildcard pick
                 current_wildcard = None
-                if wildcard_pick:
+                if wildcard_pick and wildcard_pick.rider_id:
                     rider = Rider.query.get(wildcard_pick.rider_id)
                     if rider:
                         current_wildcard = {
