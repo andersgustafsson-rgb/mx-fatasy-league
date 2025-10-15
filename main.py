@@ -2972,7 +2972,7 @@ def admin_page_old():
         )
 
     return render_template(
-        "admin.html",
+        "admin_new.html",
         competitions=competitions,
         riders_450=riders_450,
         riders_250=riders_250,
