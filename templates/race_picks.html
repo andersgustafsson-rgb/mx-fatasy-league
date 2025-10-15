@@ -1491,16 +1491,12 @@ function onPickChange(cls, pos, riderId = null) {
       if (!res.ok) throw new Error("Kunde inte hämta dina val");
       const myPicks = await res.json();
       
-      console.log('DEBUG: fetchAndDisplayMyPicks - myPicks:', myPicks);
-
       // Update picks status
       updatePicksStatus(myPicks);
 
       if (!actualResults || actualResults.length === 0) {
         // Återställ tidigare val i UI
-        console.log('DEBUG: Restoring picks in UI, top6_picks:', myPicks.top6_picks);
         (myPicks.top6_picks || []).forEach((p) => {
-          console.log('DEBUG: Processing pick:', p);
           const selector = document.querySelector(
             `.rider-selector[data-class="${p.class}"][data-position="${p.predicted_position}"]`
           );
@@ -1508,11 +1504,9 @@ function onPickChange(cls, pos, riderId = null) {
             const selectedRiderSpan = selector.querySelector('.selected-rider');
             // Find the rider name from the rider ID
             const rider = allRiders.find(r => r.id === p.rider_id);
-            console.log('DEBUG: Found rider for ID', p.rider_id, ':', rider);
             if (rider && selectedRiderSpan) {
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
               selectedRiderSpan.textContent = riderText;
-              console.log('DEBUG: Set rider text to:', riderText);
               
               // Update preview image
 const imgId = p.class.startsWith("450")

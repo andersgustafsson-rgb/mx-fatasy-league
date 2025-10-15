@@ -3634,18 +3634,31 @@ def get_other_users_picks(competition_id):
     users_picks = []
     for user in other_users:
         # Get race picks for this user (only top 6 per class)
-        race_picks_450 = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).join(Rider).filter(Rider.class_name == '450cc').order_by(RacePick.predicted_position).limit(6).all()
-        race_picks_250 = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).join(Rider).filter(Rider.class_name == '250cc').order_by(RacePick.predicted_position).limit(6).all()
+        race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
         
         picks = []
-        for pick in race_picks_450 + race_picks_250:
+        picks_450 = []
+        picks_250 = []
+        
+        for pick in race_picks:
             rider = Rider.query.get(pick.rider_id)
             if rider:
-                picks.append({
+                pick_data = {
                     "position": pick.predicted_position,
                     "class": rider.class_name,
                     "rider_name": f"#{rider.rider_number} {rider.name} ({rider.bike_brand})"
-                })
+                }
+                
+                if rider.class_name == '450cc' and len(picks_450) < 6:
+                    picks_450.append(pick_data)
+                elif rider.class_name == '250cc' and len(picks_250) < 6:
+                    picks_250.append(pick_data)
+        
+        # Sort by position and take only top 6
+        picks_450.sort(key=lambda x: x['position'])
+        picks_250.sort(key=lambda x: x['position'])
+        
+        picks = picks_450 + picks_250
         
         if picks:  # Only include users who have made picks
             users_picks.append({
