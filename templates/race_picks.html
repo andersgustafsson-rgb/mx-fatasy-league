@@ -1738,15 +1738,23 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     const selectedRiderSpan = selector.querySelector('.selected-rider');
     const riderText = selectedRiderSpan.textContent;
     
+    console.log(`DEBUG: getRiderIdFromSelector - riderText: "${riderText}"`);
+    
     if (riderText && riderText !== '-- välj förare --') {
       // Find the rider option that matches the selected text
       const riderOptions = selector.querySelectorAll('.rider-option');
+      console.log(`DEBUG: Found ${riderOptions.length} rider options`);
+      
       for (const option of riderOptions) {
         const optionText = option.textContent.trim();
+        console.log(`DEBUG: Comparing "${optionText}" with "${riderText}"`);
         if (optionText === riderText) {
-          return parseInt(option.dataset.riderId);
+          const riderId = parseInt(option.dataset.riderId);
+          console.log(`DEBUG: Found match! riderId: ${riderId}`);
+          return riderId;
         }
       }
+      console.log(`DEBUG: No match found for "${riderText}"`);
     }
     return null;
   }
@@ -1761,6 +1769,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       const selector = document.querySelector(`.rider-selector[data-class="450cc"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
+        console.log(`DEBUG: 450cc position ${i} - riderId: ${riderId}`);
         if (riderId) {
           picks.push({
             position: i,
@@ -1776,6 +1785,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       const selector = document.querySelector(`.rider-selector[data-class="250cc"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
+        console.log(`DEBUG: 250cc position ${i} - riderId: ${riderId}`);
         if (riderId) {
           picks.push({
             position: i,
@@ -1798,6 +1808,10 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     // Kontrollera att exakt 6 förare är valda för varje klass
     const picks450 = picks.filter(p => p.class === '450cc');
     const picks250 = picks.filter(p => p.class === '250cc');
+    
+    console.log(`DEBUG: Total picks: ${picks.length}, 450cc picks: ${picks450.length}, 250cc picks: ${picks250.length}`);
+    console.log(`DEBUG: 450cc picks:`, picks450);
+    console.log(`DEBUG: 250cc picks:`, picks250);
     
     if (picks450.length !== 6) {
       alert("Du måste välja exakt 6 förare för 450cc (Top 6).");
