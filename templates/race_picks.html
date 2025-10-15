@@ -797,6 +797,53 @@
     }
   }
 
+  // Remove wrong coast selections
+  function removeWrongCoastSelections() {
+    if (competitionCoast && competitionCoast !== 'both') {
+      console.log(`DEBUG: Checking for wrong coast selections - competition coast: ${competitionCoast}`);
+      
+      // Check all 250cc selectors
+      const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
+      selectors250.forEach(selector => {
+        const selectedRiderSpan = selector.querySelector('.selected-rider');
+        const currentText = selectedRiderSpan.textContent;
+        
+        // Skip if no selection made yet
+        if (currentText === '-- välj förare --' || currentText === '-- välj 250cc förare --') {
+          return;
+        }
+        
+        // Find the rider option that matches the selected text
+        const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+        if (riderOption) {
+          const riderCoast = riderOption.dataset.coast;
+          if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
+            console.log(`DEBUG: Removing wrong coast selection: ${currentText} (coast: ${riderCoast}, competition: ${competitionCoast})`);
+            
+            // Clear the selection
+            selectedRiderSpan.textContent = '-- välj förare --';
+            
+            // Clear the preview image
+            const position = selector.dataset.position;
+            const imgId = `prev-250-${position}`;
+            const img = document.getElementById(imgId);
+            if (img) {
+              img.src = '';
+              img.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
+            }
+            
+            // Clear localStorage for this pick
+            const savedPicks = JSON.parse(localStorage.getItem(`race_picks_${competitionId}`) || '{}');
+            if (savedPicks.racePicks && savedPicks.racePicks['250cc']) {
+              delete savedPicks.racePicks['250cc'][position];
+              localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(savedPicks));
+            }
+          }
+        }
+      });
+    }
+  }
+
   // Rider Selector Functions
   function toggleRiderSelector(riderClass, position) {
     // Handle both regular race picks (with position) and holeshot/wildcard (without position)
@@ -893,6 +940,18 @@
   }
 
   function selectRider(riderClass, position, riderId, riderName) {
+    // Check coast validation for 250cc riders
+    if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+      const riderOption = document.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
+      if (riderOption) {
+        const riderCoast = riderOption.dataset.coast;
+        if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
+          alert(`Du kan inte välja ${riderName} - denna förare kör ${riderCoast} coast, men denna tävling är ${competitionCoast} coast.`);
+          return;
+        }
+      }
+    }
+    
     const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
     const selectedRiderSpan = selector.querySelector('.selected-rider');
     
@@ -1814,11 +1873,12 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       // Load user picks (don't clear them automatically)
       fetchAndDisplayMyPicks();
       
-      // Re-apply coast filtering after picks are loaded
-      setTimeout(() => {
-        updateRiderSelectors("450cc");
-        updateRiderSelectors("250cc");
-      }, 100);
+  // Re-apply coast filtering after picks are loaded
+  setTimeout(() => {
+    updateRiderSelectors("450cc");
+    updateRiderSelectors("250cc");
+    removeWrongCoastSelections();
+  }, 100);
     });
 
 window.addEventListener("focus", () => {
