@@ -1022,6 +1022,10 @@
 
   function filterRiders(riderClass, position, searchTerm) {
     const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    if (!selector) {
+      console.log(`DEBUG: filterRiders - selector not found for riderClass: ${riderClass}, position: ${position}`);
+      return;
+    }
     const riderOptions = selector.querySelectorAll('.rider-option');
     const searchLower = searchTerm.toLowerCase();
     
@@ -1746,9 +1750,10 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       console.log(`DEBUG: Found ${riderOptions.length} rider options`);
       
       for (const option of riderOptions) {
-        const optionText = option.textContent.trim();
-        console.log(`DEBUG: Comparing "${optionText}" with "${riderText}"`);
-        if (optionText === riderText) {
+        const optionText = option.textContent.trim().replace(/\s+/g, ' ');
+        const normalizedRiderText = riderText.replace(/\s+/g, ' ');
+        console.log(`DEBUG: Comparing "${optionText}" with "${normalizedRiderText}"`);
+        if (optionText === normalizedRiderText) {
           const riderId = parseInt(option.dataset.riderId);
           console.log(`DEBUG: Found match! riderId: ${riderId}`);
           return riderId;
