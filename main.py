@@ -3765,6 +3765,14 @@ def save_picks():
     rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
     if len(rider_ids) != len(set(rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
+    
+    # Get 450cc rider IDs for wildcard validation
+    riders_450_ids = []
+    for p in picks:
+        if p.get("rider_id"):
+            rider = Rider.query.get(int(p.get("rider_id")))
+            if rider and rider.class_name == "450cc":
+                riders_450_ids.append(int(p.get("rider_id")))
 
     # 4) Rensa tidigare picks/holeshot för användaren i denna tävling
     # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
@@ -3882,8 +3890,8 @@ def save_picks():
             if wc_pick_i in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
             
-            # Blockera om samma förare redan är vald i top 6
-            if wc_pick_i in rider_ids:
+            # Blockera om samma förare redan är vald i top 6 (endast 450cc)
+            if wc_pick_i in riders_450_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
 
             if not existing_wc:
@@ -4276,6 +4284,12 @@ def update_rider_numbers():
             chance_hymas.rider_number = 49
             chance_hymas.coast_250 = 'west'
             print(f"Updated Chance Hymas: rider_number=49, coast_250=west")
+        
+        # Update Seth Hammaker
+        seth_hammaker = Rider.query.filter_by(name='Seth Hammaker').first()
+        if seth_hammaker:
+            seth_hammaker.coast_250 = 'west'
+            print(f"Updated Seth Hammaker: coast_250=west")
         
         db.session.commit()
         return jsonify({"message": "Rider numbers and coast assignments updated successfully"})
