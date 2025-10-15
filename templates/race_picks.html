@@ -1733,12 +1733,20 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     }
   }
 
-  // Helper function to extract rider ID from text like "#2 Cooper Webb (Yamaha)"
-  function extractRiderIdFromText(riderText) {
-    // Look for rider ID in the format "#2 Cooper Webb (Yamaha)"
-    const match = riderText.match(/#(\d+)/);
-    if (match) {
-      return parseInt(match[1]);
+  // Helper function to get rider ID from selected rider
+  function getRiderIdFromSelector(selector) {
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    const riderText = selectedRiderSpan.textContent;
+    
+    if (riderText && riderText !== '-- välj förare --') {
+      // Find the rider option that matches the selected text
+      const riderOptions = selector.querySelectorAll('.rider-option');
+      for (const option of riderOptions) {
+        const optionText = option.textContent.trim();
+        if (optionText === riderText) {
+          return parseInt(option.dataset.riderId);
+        }
+      }
     }
     return null;
   }
@@ -1752,18 +1760,13 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     for (let i = 1; i <= 6; i++) {
       const selector = document.querySelector(`.rider-selector[data-class="450cc"][data-position="${i}"]`);
       if (selector) {
-        const selectedRiderSpan = selector.querySelector('.selected-rider');
-        const riderText = selectedRiderSpan.textContent;
-        if (riderText && riderText !== '-- välj förare --') {
-          // Extract rider ID from the text (assuming format like "#2 Cooper Webb (Yamaha)")
-          const riderId = extractRiderIdFromText(riderText);
-          if (riderId) {
-            picks.push({
-              position: i,
-              rider_id: riderId,
-              class: '450cc'
-            });
-          }
+        const riderId = getRiderIdFromSelector(selector);
+        if (riderId) {
+          picks.push({
+            position: i,
+            rider_id: riderId,
+            class: '450cc'
+          });
         }
       }
     }
@@ -1772,18 +1775,13 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     for (let i = 1; i <= 6; i++) {
       const selector = document.querySelector(`.rider-selector[data-class="250cc"][data-position="${i}"]`);
       if (selector) {
-        const selectedRiderSpan = selector.querySelector('.selected-rider');
-        const riderText = selectedRiderSpan.textContent;
-        if (riderText && riderText !== '-- välj förare --') {
-          // Extract rider ID from the text
-          const riderId = extractRiderIdFromText(riderText);
-          if (riderId) {
-            picks.push({
-              position: i,
-              rider_id: riderId,
-              class: '250cc'
-            });
-          }
+        const riderId = getRiderIdFromSelector(selector);
+        if (riderId) {
+          picks.push({
+            position: i,
+            rider_id: riderId,
+            class: '250cc'
+          });
         }
       }
     }
