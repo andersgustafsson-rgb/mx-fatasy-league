@@ -3774,7 +3774,25 @@ def save_picks():
             if rider and rider.class_name == "450cc":
                 riders_450_ids.append(int(p.get("rider_id")))
 
-    # 4) Rensa tidigare picks/holeshot för användaren i denna tävling
+    # 4) Validera wildcard INNAN vi sparar picks
+    wc_pick = data.get("wildcard_pick")
+    wc_pos = data.get("wildcard_pos")
+    if wc_pick and wc_pos:
+        try:
+            wc_pick_i = int(wc_pick)
+            wc_pos_i = int(wc_pos)
+
+            # Blockera OUT även för wildcard om du vill
+            if wc_pick_i in out_ids:
+                return jsonify({"error": "Förare är OUT för detta race"}), 400
+            
+            # Blockera om samma förare redan är vald i top 6 (endast 450cc)
+            if wc_pick_i in riders_450_ids:
+                return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
+        except Exception:
+            pass
+
+    # 5) Rensa tidigare picks/holeshot för användaren i denna tävling
     # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
     deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
@@ -3876,24 +3894,13 @@ def save_picks():
         except Exception:
             pass
 
-    # 7) Wildcard – oförändrat (450 i ditt UI)
-    wc_pick = data.get("wildcard_pick")
-    wc_pos = data.get("wildcard_pos")
-    existing_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
+    # 7) Wildcard – spara efter validering
     if wc_pick and wc_pos:
         try:
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
 
-            # Blockera OUT även för wildcard om du vill
-            # (Wildcard enligt din UI är 450, men vi skyddar ändå)
-            if wc_pick_i in out_ids:
-                return jsonify({"error": "Förare är OUT för detta race"}), 400
-            
-            # Blockera om samma förare redan är vald i top 6 (endast 450cc)
-            if wc_pick_i in riders_450_ids:
-                return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
-
+            existing_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
             if not existing_wc:
                 existing_wc = WildcardPick(user_id=uid, competition_id=comp_id)
                 db.session.add(existing_wc)
@@ -4340,6 +4347,48 @@ def clear_all_riders():
         Rider.query.delete()
         db.session.commit()
         return jsonify({"message": "All riders cleared. Use rider management to recreate them."})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/fix_rider_duplicates")
+def fix_rider_duplicates():
+    """Fix rider duplicates and coast issues"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find all riders with same name
+        from sqlalchemy import func
+        duplicates = db.session.query(Rider.name, func.count(Rider.id)).group_by(Rider.name).having(func.count(Rider.id) > 1).all()
+        
+        fixed_count = 0
+        for name, count in duplicates:
+            print(f"Found {count} riders named {name}")
+            # Keep the first one, delete the rest
+            riders = Rider.query.filter_by(name=name).all()
+            for rider in riders[1:]:  # Keep first, delete rest
+                print(f"Deleting duplicate rider: {rider.name} (ID: {rider.id}, class: {rider.class_name})")
+                db.session.delete(rider)
+                fixed_count += 1
+        
+        # Fix Seth Hammaker specifically
+        seth_riders = Rider.query.filter_by(name='Seth Hammaker').all()
+        if len(seth_riders) > 1:
+            print(f"Found {len(seth_riders)} Seth Hammaker riders")
+            # Keep the 450cc one, delete the 250cc one
+            for rider in seth_riders:
+                if rider.class_name == '250cc':
+                    print(f"Deleting 250cc Seth Hammaker (ID: {rider.id})")
+                    db.session.delete(rider)
+                    fixed_count += 1
+                elif rider.class_name == '450cc':
+                    # Make sure he has no coast_250
+                    rider.coast_250 = None
+                    print(f"Fixed 450cc Seth Hammaker (ID: {rider.id}) - removed coast_250")
+        
+        db.session.commit()
+        return jsonify({"message": f"Fixed {fixed_count} duplicate riders. Seth Hammaker should now be 450cc only."})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
