@@ -1141,7 +1141,28 @@
       }
     }
 
+    // Tab switching functionality
     document.addEventListener("DOMContentLoaded", () => {
+      // Tab switching
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const tabPanels = document.querySelectorAll('.tab-panel');
+      
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const targetTab = button.getAttribute('data-tab');
+          
+          // Remove active class from all buttons and panels
+          tabButtons.forEach(btn => btn.classList.remove('active', 'bg-blue-500', 'text-white'));
+          tabButtons.forEach(btn => btn.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-700'));
+          tabPanels.forEach(panel => panel.classList.remove('active'));
+          
+          // Add active class to clicked button and corresponding panel
+          button.classList.add('active', 'bg-blue-500', 'text-white');
+          button.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-gray-700');
+          document.getElementById(targetTab).classList.add('active');
+        });
+      });
+
       const sel = document.getElementById("competition-select");
       
       // Restore selected competition from localStorage, but prioritize upcoming race
@@ -1182,5 +1203,29 @@
       });
     });
   </script>
+
+  <!-- System Tools Tab -->
+  <div id="system-tools" class="tab-panel">
+    <h2 class="text-xl font-bold text-blue-600 mb-4">🔧 System Tools</h2>
+    
+    <!-- Rider Data Section -->
+    <div class="mb-6">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Rider Data</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button onclick="window.location.href='/fix_rider_data'" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition-colors">
+          Fixa rider data
+        </button>
+        <button onclick="window.location.href='/fix_rider_coasts'" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition-colors">
+          Fixa rider coasts
+        </button>
+        <button onclick="window.location.href='/debug_rider_coasts'" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded transition-colors">
+          Debug rider coasts
+        </button>
+        <button onclick="window.location.href='/update_rider_numbers'" class="bg-lime-600 hover:bg-lime-700 text-white font-bold py-3 px-4 rounded transition-colors">
+          🔢 Update Rider Numbers
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
