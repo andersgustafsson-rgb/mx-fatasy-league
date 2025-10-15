@@ -625,13 +625,11 @@
   
 
   // Load saved picks from localStorage on page load
-  console.log(`DEBUG: Page loaded with competitionId: ${competitionId}`);
   loadSavedPicksFromStorage();
   
   // Function to clear localStorage picks (for debugging)
   function clearLocalStoragePicks() {
     localStorage.removeItem(`race_picks_${competitionId}`);
-    console.log(`DEBUG: Cleared localStorage picks for competition ${competitionId}`);
     // Reload the page to see empty picks
     location.reload();
   }
@@ -720,28 +718,19 @@
   // Load picks from localStorage
   function loadSavedPicksFromStorage() {
     const savedPicks = localStorage.getItem(`race_picks_${competitionId}`);
-    console.log(`DEBUG: loadSavedPicksFromStorage called for competitionId: ${competitionId}`);
-    console.log(`DEBUG: Found savedPicks:`, savedPicks ? 'YES' : 'NO');
     
     if (!savedPicks) {
-      console.log(`DEBUG: No saved picks found for competition ${competitionId}`);
       return;
     }
 
     try {
       const picks = JSON.parse(savedPicks);
-      console.log(`DEBUG: Parsed picks:`, picks);
-      console.log(`DEBUG: Stored competitionId: ${picks.competitionId}, Current competitionId: ${competitionId}`);
-      
       // Check if the stored competition ID matches the current competition
       // If not, clear the localStorage for this competition
       if (picks.competitionId && picks.competitionId !== competitionId) {
-        console.log(`DEBUG: Competition ID mismatch. Stored: ${picks.competitionId}, Current: ${competitionId}. Clearing localStorage.`);
         localStorage.removeItem(`race_picks_${competitionId}`);
         return;
       }
-      
-      console.log(`DEBUG: Competition IDs match, loading picks...`);
 
       // Load race picks
       ['450cc', '250cc'].forEach(riderClass => {
@@ -826,12 +815,10 @@
 
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
-    console.log(`DEBUG: removeWrongCoastSelections called. competitionCoast: ${competitionCoast}`);
     if (competitionCoast && competitionCoast !== 'both') {
       
       // Check all 250cc selectors
       const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
-      console.log(`DEBUG: Found ${selectors250.length} 250cc selectors`);
       selectors250.forEach(selector => {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
         const currentText = selectedRiderSpan.textContent;
@@ -845,9 +832,7 @@
         const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
         if (riderOption) {
           const riderCoast = riderOption.dataset.coast;
-          console.log(`DEBUG: Checking rider "${currentText}" - rider coast: ${riderCoast}, competition coast: ${competitionCoast}`);
           if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
-            console.log(`DEBUG: Removing wrong coast rider: ${currentText} (${riderCoast} coast for ${competitionCoast} competition)`);
             // Clear the selection
             selectedRiderSpan.textContent = '-- välj förare --';
             
@@ -883,13 +868,11 @@
     }
     
     if (!selector) {
-      console.error(`DEBUG: Could not find selector for class: ${riderClass}, position: ${position}`);
       return;
     }
     
     const dropdown = selector.querySelector('.rider-selector-dropdown');
     if (!dropdown) {
-      console.error(`DEBUG: Could not find dropdown for selector: ${riderClass}`);
       return;
     }
     
@@ -930,7 +913,6 @@
     }
     
     if (!selector) {
-      console.error(`DEBUG: Could not find selector for loadRiderImages: ${riderClass}, position: ${position}`);
       return;
     }
     
@@ -1023,7 +1005,6 @@
   function filterRiders(riderClass, position, searchTerm) {
     const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
     if (!selector) {
-      console.log(`DEBUG: filterRiders - selector not found for riderClass: ${riderClass}, position: ${position}`);
       return;
     }
     const riderOptions = selector.querySelectorAll('.rider-option');
@@ -1507,11 +1488,9 @@ function onPickChange(cls, pos, riderId = null) {
 
   async function fetchAndDisplayMyPicks() {
     try {
-      console.log(`DEBUG: fetchAndDisplayMyPicks called for competitionId: ${competitionId}`);
       const res = await fetch(`/get_my_picks/${competitionId}`);
       if (!res.ok) throw new Error("Kunde inte hämta dina val");
       const myPicks = await res.json();
-      console.log(`DEBUG: fetchAndDisplayMyPicks received:`, myPicks);
       
       // Update picks status
       updatePicksStatus(myPicks);
@@ -1742,22 +1721,17 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     const selectedRiderSpan = selector.querySelector('.selected-rider');
     const riderText = selectedRiderSpan.textContent;
     
-    console.log(`DEBUG: getRiderIdFromSelector - riderText: "${riderText}"`);
-    
     if (riderText && riderText !== '-- välj förare --') {
       // Find the rider option that matches the selected text
       const riderOptions = selector.querySelectorAll('.rider-option');
-      console.log(`DEBUG: Found ${riderOptions.length} rider options`);
       
       for (const option of riderOptions) {
         const optionText = option.textContent.trim().replace(/\s+/g, ' ');
         const normalizedRiderText = riderText.replace(/\s+/g, ' ');
         
         // Try exact match first
-        console.log(`DEBUG: Comparing "${optionText}" with "${normalizedRiderText}"`);
         if (optionText === normalizedRiderText) {
           const riderId = parseInt(option.dataset.riderId);
-          console.log(`DEBUG: Found exact match! riderId: ${riderId}`);
           return riderId;
         }
         
@@ -1766,11 +1740,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         const normalizedRiderTextNoParens = normalizedRiderText.replace(/[()]/g, '');
         if (optionTextNoParens === normalizedRiderTextNoParens) {
           const riderId = parseInt(option.dataset.riderId);
-          console.log(`DEBUG: Found match without parentheses! riderId: ${riderId}`);
           return riderId;
         }
       }
-      console.log(`DEBUG: No match found for "${riderText}"`);
     }
     return null;
   }
@@ -1785,7 +1757,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       const selector = document.querySelector(`.rider-selector[data-class="450cc"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
-        console.log(`DEBUG: 450cc position ${i} - riderId: ${riderId}`);
         if (riderId) {
           picks.push({
             position: i,
@@ -1801,7 +1772,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       const selector = document.querySelector(`.rider-selector[data-class="250cc"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
-        console.log(`DEBUG: 250cc position ${i} - riderId: ${riderId}`);
         if (riderId) {
           picks.push({
             position: i,
@@ -1825,9 +1795,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     const picks450 = picks.filter(p => p.class === '450cc');
     const picks250 = picks.filter(p => p.class === '250cc');
     
-    console.log(`DEBUG: Total picks: ${picks.length}, 450cc picks: ${picks450.length}, 250cc picks: ${picks250.length}`);
-    console.log(`DEBUG: 450cc picks:`, picks450);
-    console.log(`DEBUG: 250cc picks:`, picks250);
     
     if (picks450.length !== 6) {
       alert("Du måste välja exakt 6 förare för 450cc (Top 6).");

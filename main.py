@@ -3638,6 +3638,9 @@ def get_my_picks(competition_id):
     uid = session["user_id"]
     print(f"DEBUG: get_my_picks called for user {uid}, competition {competition_id}")
     
+    # Force session refresh to ensure we see latest data
+    db.session.expire_all()
+    
     picks = (
         RacePick.query.filter_by(user_id=uid, competition_id=competition_id)
         .order_by(RacePick.predicted_position)
