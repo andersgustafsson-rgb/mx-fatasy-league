@@ -1485,7 +1485,7 @@
           console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
-            ? `<div class="block ${finalCardClass}" onclick="window.location.href='/series/${serie.id}'" style="cursor: pointer;">${cardContent}</div>`
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="cursor: pointer; text-decoration: none;">${cardContent}</a>`
             : `<div class="${finalCardClass}">${cardContent}</div>`;
         }).join('');
         
