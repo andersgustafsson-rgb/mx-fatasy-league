@@ -623,10 +623,6 @@
   // Coast-filtrering för 250cc
   const competitionCoast = {{ competition.coast_250|tojson }};
   
-  console.log(`DEBUG: Race picks page loaded for competition: ${competitionName} (ID: ${competitionId})`);
-  console.log(`DEBUG: Competition coast: ${competitionCoast}`);
-  console.log(`DEBUG: Will filter out riders that don't match coast: ${competitionCoast}`);
-  console.log(`DEBUG: Total riders: ${allRiders.length}`);
 
   // Load saved picks from localStorage on page load
   loadSavedPicksFromStorage();
@@ -799,9 +795,7 @@
 
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
-    console.log(`DEBUG: removeWrongCoastSelections called - competitionCoast: "${competitionCoast}"`);
     if (competitionCoast && competitionCoast !== 'both') {
-      console.log(`DEBUG: Checking for wrong coast selections - competition coast: ${competitionCoast}`);
       
       // Check all 250cc selectors
       const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
@@ -819,8 +813,6 @@
         if (riderOption) {
           const riderCoast = riderOption.dataset.coast;
           if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
-            console.log(`DEBUG: Removing wrong coast selection: ${currentText} (coast: ${riderCoast}, competition: ${competitionCoast})`);
-            
             // Clear the selection
             selectedRiderSpan.textContent = '-- välj förare --';
             
@@ -1115,7 +1107,6 @@
 
   // Update rider selector options (replaces updateDropdowns for new system)
   function updateRiderSelectors(riderClass) {
-    console.log(`DEBUG: updateRiderSelectors called for ${riderClass}, competitionCoast: "${competitionCoast}"`);
     const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
     
     // Get currently selected riders in this class
@@ -1133,7 +1124,6 @@
       return riderOption ? riderOption.dataset.riderId : null;
     }).filter(Boolean);
     
-    console.log(`DEBUG: updateRiderSelectors for ${riderClass}, chosenRiderIds:`, chosenRiderIds);
     
     // Update each selector
     selectors.forEach(selector => {
@@ -1150,12 +1140,8 @@
         let isWrongCoast = false;
         if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
           const riderCoast = option.dataset.coast;
-          console.log(`DEBUG: Checking rider ${option.dataset.riderName} - rider coast: "${riderCoast}", competition coast: "${competitionCoast}"`);
           if (riderCoast) {
             isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
-            if (isWrongCoast) {
-              console.log(`DEBUG: Hiding rider ${option.dataset.riderName} - rider coast: ${riderCoast}, competition coast: ${competitionCoast}`);
-            }
           }
         }
         
