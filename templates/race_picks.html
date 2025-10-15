@@ -815,6 +815,9 @@
       // Update rider selectors to hide selected riders
       updateRiderSelectors('450cc');
       updateRiderSelectors('250cc');
+      
+      // Remove wrong coast selections after loading picks
+      removeWrongCoastSelections();
 
     } catch (error) {
       console.error('Error loading picks from localStorage:', error);
@@ -823,10 +826,12 @@
 
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
+    console.log(`DEBUG: removeWrongCoastSelections called. competitionCoast: ${competitionCoast}`);
     if (competitionCoast && competitionCoast !== 'both') {
       
       // Check all 250cc selectors
       const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
+      console.log(`DEBUG: Found ${selectors250.length} 250cc selectors`);
       selectors250.forEach(selector => {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
         const currentText = selectedRiderSpan.textContent;
@@ -840,7 +845,9 @@
         const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
         if (riderOption) {
           const riderCoast = riderOption.dataset.coast;
+          console.log(`DEBUG: Checking rider "${currentText}" - rider coast: ${riderCoast}, competition coast: ${competitionCoast}`);
           if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
+            console.log(`DEBUG: Removing wrong coast rider: ${currentText} (${riderCoast} coast for ${competitionCoast} competition)`);
             // Clear the selection
             selectedRiderSpan.textContent = '-- välj förare --';
             
