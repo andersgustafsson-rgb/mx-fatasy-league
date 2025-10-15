@@ -1752,10 +1752,21 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       for (const option of riderOptions) {
         const optionText = option.textContent.trim().replace(/\s+/g, ' ');
         const normalizedRiderText = riderText.replace(/\s+/g, ' ');
+        
+        // Try exact match first
         console.log(`DEBUG: Comparing "${optionText}" with "${normalizedRiderText}"`);
         if (optionText === normalizedRiderText) {
           const riderId = parseInt(option.dataset.riderId);
-          console.log(`DEBUG: Found match! riderId: ${riderId}`);
+          console.log(`DEBUG: Found exact match! riderId: ${riderId}`);
+          return riderId;
+        }
+        
+        // Try match without parentheses (e.g., "Husqvarna" vs "(Husqvarna)")
+        const optionTextNoParens = optionText.replace(/[()]/g, '');
+        const normalizedRiderTextNoParens = normalizedRiderText.replace(/[()]/g, '');
+        if (optionTextNoParens === normalizedRiderTextNoParens) {
+          const riderId = parseInt(option.dataset.riderId);
+          console.log(`DEBUG: Found match without parentheses! riderId: ${riderId}`);
           return riderId;
         }
       }
