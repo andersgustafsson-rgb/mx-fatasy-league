@@ -568,7 +568,8 @@ def index():
     # Ensure database is initialized
     try:
         # Check if tables exist, if not initialize
-        if not db.engine.dialect.has_table(db.engine, 'competitions'):
+        from sqlalchemy import inspect
+        if not inspect(db.engine).has_table('competitions'):
             print("Tables missing, reinitializing database...")
             init_database()
     except Exception as e:
@@ -759,7 +760,8 @@ def leagues_page():
     # Ensure database is initialized
     try:
         # Check if tables exist, if not initialize
-        if not db.engine.dialect.has_table(db.engine, 'leagues'):
+        from sqlalchemy import inspect
+        if not inspect(db.engine).has_table('leagues'):
             print("Tables missing, reinitializing database...")
             init_database()
     except Exception as e:
@@ -8847,7 +8849,13 @@ def is_picks_locked(competition):
         # Use the same scenario-based logic as race_countdown
         if scenario == 'active_race_1':
             # Get the initial simulated time when simulation started
-            initial_simulated_time = datetime.fromisoformat(simulation.simulated_time)
+            try:
+                result = db.session.execute(text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+                simulated_time_str = result[0] if result and result[0] else current_time.isoformat()
+                initial_simulated_time = datetime.fromisoformat(simulated_time_str)
+            except Exception as e:
+                initial_simulated_time = current_time
+            
             fake_race_base_time = initial_simulated_time.replace(hour=11, minute=0, second=0, microsecond=0)
             race_datetime = fake_race_base_time
             deadline_datetime = race_datetime - timedelta(hours=2)
