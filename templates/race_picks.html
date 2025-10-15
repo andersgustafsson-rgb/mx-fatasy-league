@@ -1836,10 +1836,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       // Clear localStorage since picks are now saved to server
       localStorage.removeItem(`race_picks_${competitionId}`);
       
-      // Update picks status after saving
-      setTimeout(() => {
-        fetchAndDisplayMyPicks();
-      }, 500);
+      // Picks are already displayed correctly in UI, no need to reload from server
     } catch (e) {
       alert("Ett fel uppstod vid sparning.");
     }

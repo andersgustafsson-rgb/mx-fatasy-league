@@ -3791,10 +3791,8 @@ def save_picks():
             # Hämta 450cc rider IDs från de nya picksen
             riders_450_ids = []
             for p in picks:
-                if p.get("rider_id"):
-                    rider = Rider.query.get(int(p.get("rider_id")))
-                    if rider and rider.class_name == "450cc":
-                        riders_450_ids.append(int(p.get("rider_id")))
+                if p.get("rider_id") and p.get("class") == "450cc":
+                    riders_450_ids.append(int(p.get("rider_id")))
             
             if wc_pick_i in riders_450_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
