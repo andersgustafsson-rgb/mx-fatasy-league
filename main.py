@@ -776,6 +776,7 @@ def index():
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
         picks_status=picks_status,
+        picks_locked=picks_locked,
     )
 
 

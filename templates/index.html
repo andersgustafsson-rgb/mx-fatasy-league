@@ -425,7 +425,7 @@
                 <h2 class="text-xl sm:text-2xl font-bold text-white mb-6 text-center" style="text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);">🚀 Snabba Åtgärder</h2>
                 
                 <!-- Quick Actions - Improved Design -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
                   <a href="{{ url_for('season_team_page') }}" 
                      class="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 hover:from-blue-400 hover:via-blue-500 hover:to-blue-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-blue-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-blue-400/50 overflow-hidden">
                     <!-- Animated background elements -->
@@ -473,10 +473,42 @@
                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </a>
+                  
+                  <!-- Se Andras Picks Button -->
+          {% if upcoming_race %}
+                    {% if picks_locked %}
+                      <button onclick="showOtherUsersPicksFromMain()" 
+                              class="group relative bg-gradient-to-br from-green-500 via-green-600 to-green-800 hover:from-green-400 hover:via-green-500 hover:to-green-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-green-400/50 overflow-hidden">
+                        <!-- Animated background elements -->
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-700"></div>
+                        <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8 group-hover:scale-125 transition-transform duration-700"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center space-y-3">
+                          <div class="text-4xl group-hover:scale-125 group-hover:rotate-12 transition-all duration-500 filter drop-shadow-lg">👥</div>
+                          <span class="text-base font-bold tracking-wide">Se Andras Picks</span>
+                        </div>
+                        
+                        <!-- Shimmer effect -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </button>
+          {% else %}
+                      <div class="group relative bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl text-center backdrop-blur-sm border-2 border-gray-400/50 overflow-hidden cursor-not-allowed opacity-75">
+                        <!-- Animated background elements -->
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
+                        <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center space-y-3">
+                          <div class="text-4xl filter drop-shadow-lg">🔒</div>
+                          <span class="text-base font-bold tracking-wide">Picks Låsta</span>
+                        </div>
+                      </div>
+                    {% endif %}
+          {% endif %}
                 </div>
                 </div>
         </div>
-      </div>
+        </div>
 
               <!-- MotoAction.se Banner -->
               <div class="mb-6">
@@ -525,13 +557,13 @@
                               <span class="text-2xl">🥈</span>
                             {% elif pick.position == 3 %}
                               <span class="text-2xl">🥉</span>
-          {% else %}
+    {% else %}
                               <span class="text-gray-600 dark:text-gray-400 font-bold w-6">{{ pick.position }}.</span>
-          {% endif %}
+    {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-        </div>
-                          {% endfor %}
-                        </div>
+  </div>
+  {% endfor %}
+</div>
                       </div>
     {% endif %}
 
@@ -548,7 +580,7 @@
                               <span class="text-2xl">🥈</span>
                             {% elif pick.position == 3 %}
                               <span class="text-2xl">🥉</span>
-    {% else %}
+          {% else %}
                               <span class="text-blue-600 dark:text-blue-400 font-bold w-6">{{ pick.position }}.</span>
     {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
@@ -556,8 +588,8 @@
   {% endfor %}
 </div>
                       </div>
-                      {% endif %}
-                      
+          {% endif %}
+
                       <!-- Holeshot picks -->
                       {% if current_holeshot_450 or current_holeshot_250 %}
                       <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
@@ -1606,6 +1638,80 @@
     
     // Clean up on page unload
     window.addEventListener('beforeunload', stopCountdown);
+    
+    // Show other users' picks from main page
+    async function showOtherUsersPicksFromMain() {
+      {% if upcoming_race %}
+      try {
+        const response = await fetch(`/get_other_users_picks/{{ upcoming_race.id }}`);
+        if (!response.ok) throw new Error('Kunde inte hämta andra användares picks');
+        
+        const usersPicks = await response.json();
+        
+        // Create modal to display picks
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+          <div class="bg-gray-800 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-xl font-bold text-white">Andra Användares Picks</h3>
+              <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+              ${usersPicks.map(user => `
+                <div class="bg-gray-700 rounded-lg p-4">
+                  <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <h5 class="text-sm font-medium text-yellow-400 mb-2">450cc Picks</h5>
+                      <div class="space-y-1">
+                        ${user.picks_450.map((pick, index) => `
+                          <div class="flex items-center gap-2 text-sm">
+                            <span class="text-gray-400 w-6">${index + 1}.</span>
+                            <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="text-sm font-medium text-blue-400 mb-2">250cc Picks</h5>
+                      <div class="space-y-1">
+                        ${user.picks_250.map((pick, index) => `
+                          <div class="flex items-center gap-2 text-sm">
+                            <span class="text-gray-400 w-6">${index + 1}.</span>
+                            <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  </div>
+                  ${user.holeshot_450 || user.holeshot_250 ? `
+                    <div class="mt-3 pt-3 border-t border-gray-600">
+                      <h5 class="text-sm font-medium text-green-400 mb-2">Holeshot Picks</h5>
+                      <div class="flex gap-4 text-sm">
+                        ${user.holeshot_450 ? `<span class="text-white">450cc: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
+                        ${user.holeshot_250 ? `<span class="text-white">250cc: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
+                      </div>
+                    </div>
+                  ` : ''}
+                  ${user.wildcard ? `
+                    <div class="mt-3 pt-3 border-t border-gray-600">
+                      <h5 class="text-sm font-medium text-purple-400 mb-2">Wildcard</h5>
+                      <span class="text-white text-sm">Position ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modal);
+      } catch (error) {
+        alert('Ett fel uppstod vid hämtning av andra användares picks: ' + error.message);
+      }
+      {% endif %}
+    }
   </script>
 </body>
 </html>
