@@ -893,6 +893,11 @@
       dropdown.style.display = 'block';
       selector.classList.add('open');
       
+      // Update rider selectors to hide already selected riders
+      if (riderClass === '450cc' || riderClass === '250cc') {
+        updateRiderSelectors(riderClass);
+      }
+      
       // Load rider images when dropdown opens
       loadRiderImages(riderClass, position);
       
@@ -1012,16 +1017,47 @@
     const riderOptions = selector.querySelectorAll('.rider-option');
     const searchLower = searchTerm.toLowerCase();
     
+    // Get currently selected riders in this class (excluding current position)
+    const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
+    const chosenRiderIds = Array.from(selectors).map(sel => {
+      if (sel === selector) return null; // Skip current selector
+      const selectedRiderSpan = sel.querySelector('.selected-rider');
+      const currentText = selectedRiderSpan.textContent;
+      
+      // Skip if no selection made yet
+      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
+        return null;
+      }
+      
+      // Find the rider option that matches the selected text
+      const riderOption = sel.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+      return riderOption ? riderOption.dataset.riderId : null;
+    }).filter(Boolean);
+    
     riderOptions.forEach(option => {
       const riderName = option.querySelector('.rider-name').textContent.toLowerCase();
       const riderNumber = option.querySelector('.rider-number').textContent.toLowerCase();
       const riderBrand = option.querySelector('.rider-brand').textContent.toLowerCase();
+      const riderId = option.dataset.riderId;
       
-      const matches = riderName.includes(searchLower) || 
-                     riderNumber.includes(searchLower) || 
-                     riderBrand.includes(searchLower);
+      const matchesSearch = riderName.includes(searchLower) || 
+                           riderNumber.includes(searchLower) || 
+                           riderBrand.includes(searchLower);
       
-      option.style.display = matches ? 'flex' : 'none';
+      const isAlreadySelected = chosenRiderIds.includes(riderId);
+      const isOut = option.dataset.out === 'true';
+      
+      // Check coast for 250cc riders
+      let isWrongCoast = false;
+      if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+        const riderCoast = option.dataset.coast;
+        if (riderCoast) {
+          isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
+        }
+      }
+      
+      // Show only if matches search AND not already selected AND not out AND not wrong coast
+      option.style.display = (matchesSearch && !isAlreadySelected && !isOut && !isWrongCoast) ? 'flex' : 'none';
     });
   }
 
