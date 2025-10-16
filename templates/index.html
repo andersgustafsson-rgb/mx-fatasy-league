@@ -265,31 +265,31 @@
           
           <!-- Bulletin Board Notification -->
           {% if new_bulletin_posts > 0 %}
-          <div class="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 border border-indigo-400 rounded-xl p-4 mb-6 shadow-lg overflow-hidden">
+          <div class="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 border border-indigo-400 rounded-xl p-5 mb-6 shadow-lg overflow-hidden">
             <!-- Animated background pattern -->
             <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-blue-600/20 animate-pulse"></div>
             <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
             <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
             
-            <div class="relative z-10 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <!-- Modern icon with glow effect -->
-                <div class="relative">
-                  <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <span class="text-white text-lg">💬</span>
+            <div class="relative z-10 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-4 flex-1">
+                <!-- Megaphone icon with glow effect -->
+                <div class="relative flex-shrink-0">
+                  <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <span class="text-white text-xl">📢</span>
                   </div>
-                  <div class="absolute inset-0 w-10 h-10 bg-white/30 rounded-full animate-ping"></div>
+                  <div class="absolute inset-0 w-12 h-12 bg-white/30 rounded-full animate-ping"></div>
                 </div>
                 
-                <div>
-                  <p class="text-white font-bold text-base">
+                <div class="flex-1 min-w-0">
+                  <p class="text-white font-bold text-lg leading-tight">
                     {% if new_bulletin_posts == 1 %}
                       Nytt inlägg på anslagstavlan!
                     {% else %}
                       {{ new_bulletin_posts }} nya inlägg på anslagstavlan!
                     {% endif %}
                   </p>
-                  <p class="text-indigo-100 text-sm font-medium">
+                  <p class="text-indigo-100 text-sm font-medium mt-1">
                     {% if latest_post_author %}
                       Senaste från <span class="text-yellow-300 font-semibold">{{ latest_post_author }}</span>
                     {% else %}
@@ -300,8 +300,8 @@
               </div>
               
               <a href="{{ url_for('bulletin_board') }}" 
-                 class="group relative bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105 border border-white/30">
-                <span class="relative z-10">Visa inlägg</span>
+                 class="group relative bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-5 py-3 rounded-lg text-sm font-semibold transition-all duration-300 hover:scale-105 border border-white/30 flex-shrink-0">
+                <span class="relative z-10">Visa</span>
                 <div class="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </a>
             </div>
