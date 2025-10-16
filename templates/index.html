@@ -756,14 +756,11 @@
       function attachNavSound(){
         document.querySelectorAll('a.nav-sound').forEach(a => {
           a.addEventListener('click', (e) => {
-            console.log('DEBUG: Nav sound click handler triggered for:', a.href);
             // Spela ton och fördröj navigationen lite så ljudet hinner höras
             e.preventDefault();
             const d = playNavSound(300);
             const href = a.getAttribute('href');
-            console.log('DEBUG: Navigating to:', href, 'after', d, 'ms');
-            setTimeout(() => { 
-              console.log('DEBUG: Actually navigating now to:', href);
+            setTimeout(() => {
               window.location.href = href; 
             }, d);
           });
@@ -826,14 +823,11 @@
     
     async function fetchRealCountdownData() {
       try {
-        console.log('DEBUG: Fetching real countdown data...');
         const response = await fetch('/race_countdown?mode=real');
         const data = await response.json();
         
-        console.log('DEBUG: Real countdown response:', data);
         
         if (data.error) {
-          console.log('DEBUG: Real countdown error:', data.error);
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
           document.getElementById('real-race-countdown').textContent = '--:--:--';
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
@@ -925,7 +919,6 @@
         if (testCountdownInterval) {
           clearInterval(testCountdownInterval);
           testCountdownInterval = null;
-          console.log('Test countdown finished - stopped interval');
         }
         return;
       }
@@ -1104,18 +1097,14 @@
     
     // Cross Jump Highscores
     async function fetchCrossDinoHighscores() {
-      console.log('DEBUG: Fetching Cross Jump highscores...');
       try {
         const response = await fetch('/api/cross_dino/highscores');
-        console.log('DEBUG: Response status:', response.status);
         const highscores = await response.json();
-        console.log('DEBUG: Highscores data:', highscores);
         
         const container = document.getElementById('cross-dino-highscores');
-        console.log('DEBUG: Container found:', container);
         
         if (!container) {
-          console.error('DEBUG: Cross Jump highscores container not found!');
+          console.error('Cross Jump highscores container not found!');
           return;
         }
         
@@ -1166,16 +1155,11 @@
 
     async function loadSeriesLeaders() {
       try {
-        console.log('DEBUG: Fetching series leaders...');
         const response = await fetch('/api/series_leaders');
-        console.log('DEBUG: Series leaders response status:', response.status);
-        
         if (response.ok) {
           const data = await response.json();
-          console.log('DEBUG: Series leaders data:', data);
           
           const container = document.getElementById('series-leaders-container');
-          console.log('DEBUG: Series leaders container found:', container);
           
           if (container) {
             let html = '';
@@ -1401,7 +1385,6 @@
         console.log('Rendering', series.length, 'series');
         
         const seriesHTML = series.map(serie => {
-          console.log(`DEBUG: Processing series: ${serie.name} (ID: ${serie.id})`);
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
           const startDate = serie.start_date ? new Date(serie.start_date) : null;
@@ -1445,13 +1428,10 @@
           let backgroundImage = '';
           if (serie.name.toLowerCase().includes('supercross')) {
             backgroundImage = 'url("/static/images/2024-jett-1.jpg")';
-            console.log('DEBUG: Setting Supercross background to:', backgroundImage);
           } else if (serie.name.toLowerCase().includes('motocross')) {
             backgroundImage = 'url("/static/images/deegan motoacross.avif")';
-            console.log('DEBUG: Setting Motocross background to:', backgroundImage);
           } else if (serie.name.toLowerCase().includes('smx')) {
             backgroundImage = 'url("/static/images/smx playoffs.webp")';
-            console.log('DEBUG: Setting SMX background to:', backgroundImage);
           }
           
           const cardClass = isClickable 
@@ -1470,7 +1450,6 @@
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
           
-          console.log(`DEBUG: Final card class for ${serie.name}:`, finalCardClass);
           
           const cardContent = `
             <div class="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -1482,7 +1461,6 @@
             </div>
           `;
           
-          console.log(`DEBUG: Series ${serie.name} - isClickable: ${isClickable}, finalCardClass: ${finalCardClass}`);
           
           return isClickable 
             ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="cursor: pointer; text-decoration: none;">${cardContent}</a>`
@@ -1490,10 +1468,7 @@
         }).join('');
         
         // Set the HTML content
-        console.log('DEBUG: Setting series HTML content, length:', seriesHTML.length);
-        console.log('DEBUG: Series HTML preview:', seriesHTML.substring(0, 500) + '...');
         seriesContainer.innerHTML = seriesHTML;
-        console.log('DEBUG: Series HTML set successfully - using simple <a> tags for navigation');
         
       } catch (error) {
         console.error('Error loading series:', error);
@@ -1504,11 +1479,9 @@
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
-      console.log("DEBUG: About to fetch Cross Jump highscores...");
       fetchCrossDinoHighscores();
       
       // Load series leaders & SMX
-      console.log("DEBUG: About to fetch series leaders...");
       loadSeriesLeaders();
       
       // Load series selection

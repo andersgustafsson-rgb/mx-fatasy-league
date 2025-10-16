@@ -174,7 +174,6 @@
         // Update debug info
         document.getElementById('debug-info').textContent = JSON.stringify(data, null, 2);
         
-        console.log('Scenario loaded:', scenario, data);
         
         // Start countdown updates
         startCountdown(scenario);
@@ -219,25 +218,18 @@
         deadlineElement.textContent = formatTime(deadlineCountdown);
       }
       
-      console.log('Updated countdowns:', {
-        race: formatTime(raceCountdown),
-        deadline: formatTime(deadlineCountdown)
-      });
     }
     
     function startCountdown(scenario) {
-      console.log('startCountdown called with scenario:', scenario);
       
       // Update every second
       countdownInterval = setInterval(async () => {
         try {
-          console.log('Fetching countdown data for scenario:', scenario);
           const response = await fetch(`/test_countdown?scenario=${scenario}`);
           const data = await response.json();
           
           if (!data.error) {
             updateCountdowns(data);
-            console.log('Countdown updated:', data.countdown);
           } else {
             console.error('Countdown data error:', data.error);
           }
@@ -246,7 +238,6 @@
         }
       }, 1000);
       
-      console.log('Countdown interval started:', countdownInterval);
     }
     
     // Test function to manually update countdown
@@ -270,7 +261,6 @@
         }
       };
       
-      console.log('Testing countdown update with:', testData);
       updateCountdowns(testData);
     }
     
@@ -324,7 +314,6 @@
         // Update debug info
         document.getElementById('debug-info').textContent = JSON.stringify(data, null, 2);
         
-        console.log('Reset to real time:', data);
         
       } catch (error) {
         console.error('Error resetting to real time:', error);
@@ -348,15 +337,12 @@
     }
     
     function startTimer() {
-      console.log('Start Timer clicked!');
-      console.log('Current scenario:', window.currentScenario);
       
       // Hide start button
       hideStartTimerButton();
       
       // Start countdown
       if (window.currentScenario) {
-        console.log('Starting countdown for scenario:', window.currentScenario);
         startCountdown(window.currentScenario);
       } else {
         console.error('No current scenario found!');

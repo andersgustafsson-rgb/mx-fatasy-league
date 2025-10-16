@@ -7952,9 +7952,7 @@ def test_countdown():
         
         # Get the scenario from query parameter
         scenario = request.args.get('scenario', 'race_in_3h')
-        print(f"DEBUG: test_countdown called with scenario: {scenario}")
         simulated_time = test_scenarios.get(scenario, datetime.utcnow() + timedelta(hours=3))
-        print(f"DEBUG: test_countdown calculated simulated_time: {simulated_time}")
         
         # Set the simulated time in session for global use (for backward compatibility, but we'll use global database state)
         session['simulation_active'] = True
