@@ -3319,7 +3319,6 @@ def race_results_page():
             db.session.query(
                 CompetitionResult.rider_id,
                 CompetitionResult.position,
-                CompetitionResult.points,
                 Rider.name.label('rider_name'),
                 Rider.class_name,
                 Rider.rider_number,
@@ -3346,8 +3345,23 @@ def race_results_page():
             .all()
         )
         
+        # Add calculated points to each result
+        results_with_points = []
+        for result in results:
+            result_dict = {
+                'rider_id': result.rider_id,
+                'position': result.position,
+                'rider_name': result.rider_name,
+                'class_name': result.class_name,
+                'rider_number': result.rider_number,
+                'image_url': result.image_url,
+                'bike_brand': result.bike_brand,
+                'points': calculate_rider_points_for_position(result.position)
+            }
+            results_with_points.append(result_dict)
+        
         competition_results[comp.id] = {
-            'results': results,
+            'results': results_with_points,
             'holeshots': holeshots
         }
     
