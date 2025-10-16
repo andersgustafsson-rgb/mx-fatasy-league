@@ -8735,6 +8735,10 @@ def calculate_smx_qualification_points():
     
     # Get all riders
     riders = Rider.query.all()
+    riders_450 = [r for r in riders if r.class_name == '450cc']
+    riders_250 = [r for r in riders if r.class_name == '250cc']
+    print(f"DEBUG: Found {len(riders_450)} 450cc riders and {len(riders_250)} 250cc riders")
+    
     smx_points = {}
     
     for rider in riders:
@@ -8788,6 +8792,10 @@ def calculate_smx_qualification_points():
             'sx_points': sum(sx_points[:17]),
             'mx_points': sum(mx_points[:11])
         }
+        
+        # Debug for 250cc riders
+        if rider.class_name == '250cc' and total_points > 0:
+            print(f"DEBUG: 250cc rider {rider.name} has {total_points} SMX points (SX: {sum(sx_points[:17])}, MX: {sum(mx_points[:11])})")
     
     # Sort by total points and get top 20
     sorted_riders = sorted(smx_points.items(), key=lambda x: x[1]['total_points'], reverse=True)
@@ -8795,7 +8803,15 @@ def calculate_smx_qualification_points():
     
     print(f"DEBUG: SMX qualification calculated. Top 20 riders:")
     for i, (rider_id, data) in enumerate(top_20, 1):
-        print(f"  {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
+        print(f"  {i}. {data['rider'].name} ({data['rider'].class_name}) - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
+    
+    # Count by class
+    class_counts = {}
+    for rider_id, data in top_20:
+        class_name = data['rider'].class_name
+        class_counts[class_name] = class_counts.get(class_name, 0) + 1
+    
+    print(f"DEBUG: SMX Top 20 by class: {class_counts}")
     
     return top_20
 
