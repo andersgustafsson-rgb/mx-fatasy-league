@@ -2548,8 +2548,8 @@ def create_default_series_2025():
     })
 
 def create_supercross_competitions(supercross_series_id):
-    """Create all Supercross competitions for 2026"""
-    # Supercross races 2026 (existing ones)
+    """Create all Supercross competitions for 2026 - includes San Francisco"""
+    # Supercross races 2026 (existing ones) - San Francisco is included here
     supercross_races = [
         {"name": "Anaheim 1", "date": "2026-01-04", "coast_250": "west"},
         {"name": "San Francisco", "date": "2026-01-11", "coast_250": "west"},
@@ -2583,7 +2583,7 @@ def create_supercross_competitions(supercross_series_id):
         competition = Competition(
             name=race["name"],
             event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-            series="450cc",
+            series="SX",
             point_multiplier=1.0,
             is_triple_crown=0,
             coast_250=race["coast_250"],
@@ -2625,7 +2625,7 @@ def create_motocross_competitions(motocross_series_id):
         competition = Competition(
             name=race["name"],
             event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-            series="450cc",  # Motocross is 450cc only
+            series="MX",  # Motocross series
             point_multiplier=1.0,
             is_triple_crown=0,
             coast_250=None,
@@ -2659,7 +2659,7 @@ def create_smx_finals_competitions(smx_series_id):
         competition = Competition(
             name=race["name"],
             event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-            series="450cc",  # SMX Finals is 450cc only
+            series="SMX",  # SMX Finals series
             point_multiplier=race["multiplier"],  # 1.0x, 2.0x, 3.0x for SMX Finals
             is_triple_crown=0,
             coast_250=None,
