@@ -2397,7 +2397,16 @@ def create_competition():
         
         # Only add start_time if it exists in the model
         if hasattr(Competition, 'start_time') and data.get('start_time'):
-            competition_data['start_time'] = datetime.strptime(data['start_time'], '%H:%M').time()
+            try:
+                # Handle both HH:MM and HH:MM:SS formats
+                time_str = data['start_time']
+                if len(time_str.split(':')) == 2:
+                    competition_data['start_time'] = datetime.strptime(time_str, '%H:%M').time()
+                else:
+                    competition_data['start_time'] = datetime.strptime(time_str, '%H:%M:%S').time()
+            except ValueError as e:
+                print(f"Error parsing start_time '{data['start_time']}': {e}")
+                competition_data['start_time'] = None
         
         competition = Competition(**competition_data)
         db.session.add(competition)
@@ -2427,7 +2436,16 @@ def update_competition(competition_id):
         
         # Only update start_time if it exists in the model
         if hasattr(competition, 'start_time') and data.get('start_time'):
-            competition.start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+            try:
+                # Handle both HH:MM and HH:MM:SS formats
+                time_str = data['start_time']
+                if len(time_str.split(':')) == 2:
+                    competition.start_time = datetime.strptime(time_str, '%H:%M').time()
+                else:
+                    competition.start_time = datetime.strptime(time_str, '%H:%M:%S').time()
+            except ValueError as e:
+                print(f"Error parsing start_time '{data['start_time']}': {e}")
+                competition.start_time = None
         elif hasattr(competition, 'start_time'):
             competition.start_time = None
         
