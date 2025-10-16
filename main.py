@@ -9364,28 +9364,60 @@ def is_picks_locked(competition):
             race_datetime = fake_race_base_time
             deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_3h':
-            # Race in 3 hours
-            race_datetime = current_time + timedelta(hours=3)
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Race in 3 hours - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                # Use the competition's actual start time
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                # Fallback to 3 hours from now
+                race_datetime = current_time + timedelta(hours=3)
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_1h':
-            # Race in 1 hour
-            race_datetime = current_time + timedelta(hours=1)
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Race in 1 hour - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                race_datetime = current_time + timedelta(hours=1)
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_30m':
-            # Race in 30 minutes
-            race_datetime = current_time + timedelta(minutes=30)
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Race in 30 minutes - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                race_datetime = current_time + timedelta(minutes=30)
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_10m':
-            # Race in 10 minutes
-            race_datetime = current_time + timedelta(minutes=10)
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Race in 10 minutes - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                race_datetime = current_time + timedelta(minutes=10)
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_5m':
-            # Race in 5 minutes
-            race_datetime = current_time + timedelta(minutes=5)
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Race in 5 minutes - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                race_datetime = current_time + timedelta(minutes=5)
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_1m':
-            # Race in 1 minute
-            race_datetime = current_time + timedelta(minutes=1)
+            # Race in 1 minute - use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or current_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                race_datetime = current_time + timedelta(minutes=1)
             deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_started':
             # Race has started
