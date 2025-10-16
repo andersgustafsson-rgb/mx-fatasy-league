@@ -2510,9 +2510,9 @@ def create_motocross_competitions(motocross_series_id):
 def create_smx_finals_competitions(smx_series_id):
     """Create all SMX Finals competitions for 2026"""
     smx_races = [
-        {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1"},
-        {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2"},
-        {"name": "SMX Final", "date": "2026-09-20", "phase": "final"}
+        {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1", "multiplier": 1.0},
+        {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2", "multiplier": 2.0},
+        {"name": "SMX Final", "date": "2026-09-20", "phase": "final", "multiplier": 3.0}
     ]
     
     for race in smx_races:
@@ -2529,7 +2529,7 @@ def create_smx_finals_competitions(smx_series_id):
             name=race["name"],
             event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
             series="450cc",  # SMX Finals is 450cc only
-            point_multiplier=3.0,  # Triple points for SMX Finals
+            point_multiplier=race["multiplier"],  # 1.0x, 2.0x, 3.0x for SMX Finals
             is_triple_crown=0,
             coast_250=None,
             timezone="America/Los_Angeles",
@@ -2622,9 +2622,9 @@ def create_smx_finals_competitions_2025():
         
         # SMX Finals races 2026
         smx_races = [
-            {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1"},
-            {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2"},
-            {"name": "SMX Final", "date": "2026-09-20", "phase": "final"}
+            {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1", "multiplier": 1.0},
+            {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2", "multiplier": 2.0},
+            {"name": "SMX Final", "date": "2026-09-20", "phase": "final", "multiplier": 3.0}
         ]
         
         created_competitions = []
@@ -2643,7 +2643,7 @@ def create_smx_finals_competitions_2025():
                 name=race["name"],
                 event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
                 series="450cc",  # SMX Finals is 450cc only
-                point_multiplier=3.0,  # Triple points for SMX Finals
+                point_multiplier=race["multiplier"],  # 1.0x, 2.0x, 3.0x for SMX Finals
                 is_triple_crown=0,
                 coast_250=None,
                 timezone="America/Los_Angeles",
