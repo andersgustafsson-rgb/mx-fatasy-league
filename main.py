@@ -297,6 +297,10 @@ class CompetitionResult(db.Model):
     competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
     position = db.Column(db.Integer, nullable=False)
+    
+    # Relationships
+    competition = db.relationship('Competition', backref='results', lazy=True)
+    rider = db.relationship('Rider', backref='results', lazy=True)
 
 
 class HoleshotPick(db.Model):
@@ -8811,7 +8815,7 @@ def calculate_smx_qualification_points():
         # Filter 250cc results by coast if applicable
         if rider.class_name == '250cc':
             original_sx_count = len(sx_results)
-            sx_results = [r for r in sx_results if hasattr(r, 'competition') and r.competition.coast_250 == rider.coast_250]
+            sx_results = [r for r in sx_results if r.competition.coast_250 == rider.coast_250]
             if original_sx_count > 0 and len(sx_results) == 0:
                 print(f"DEBUG: 250cc rider {rider.name} ({rider.coast_250}) had {original_sx_count} SX results but 0 after coast filtering")
         
@@ -8824,7 +8828,7 @@ def calculate_smx_qualification_points():
         # Filter 250cc results by coast if applicable
         if rider.class_name == '250cc':
             original_mx_count = len(mx_results)
-            mx_results = [r for r in mx_results if hasattr(r, 'competition') and r.competition.coast_250 == rider.coast_250]
+            mx_results = [r for r in mx_results if r.competition.coast_250 == rider.coast_250]
             if original_mx_count > 0 and len(mx_results) == 0:
                 print(f"DEBUG: 250cc rider {rider.name} ({rider.coast_250}) had {original_mx_count} MX results but 0 after coast filtering")
         
