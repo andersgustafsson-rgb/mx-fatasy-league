@@ -3775,13 +3775,13 @@ def get_other_users_picks(competition_id):
             rider = Rider.query.get(holeshot.rider_id)
             if rider and holeshot.class_name == '450cc':
                 holeshot_450 = {
-                    "rider_number": rider.rider_number,
-                    "rider_name": rider.name
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                 }
             elif rider and holeshot.class_name == '250cc':
                 holeshot_250 = {
-                    "rider_number": rider.rider_number,
-                    "rider_name": rider.name
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                 }
         
         # Get wildcard pick
@@ -3792,8 +3792,8 @@ def get_other_users_picks(competition_id):
             if rider:
                 wildcard = {
                     "position": wildcard_pick.position,
-                    "rider_number": rider.rider_number,
-                    "rider_name": rider.name
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                 }
         
         if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
