@@ -3356,7 +3356,7 @@ def race_results_page():
                 'rider_number': result.rider_number,
                 'image_url': result.image_url,
                 'bike_brand': result.bike_brand,
-                'points': calculate_rider_points_for_position(result.position)
+                'points': get_smx_qualification_points(result.position)
             }
             results_with_points.append(result_dict)
         
