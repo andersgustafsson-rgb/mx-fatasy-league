@@ -139,7 +139,6 @@ class Competition(db.Model):
     is_triple_crown = db.Column(db.Integer, default=0)
     coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
     timezone = db.Column(db.String(50), nullable=True)  # <-- tidszon för banan
-    start_time = db.Column(db.Time, nullable=True)  # <-- race start tid
     
     # New SMX fields
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
@@ -148,6 +147,50 @@ class Competition(db.Model):
     
     # Relationship
     series_ref = db.relationship('Series', backref='competitions', lazy=True)
+    
+    # Check if start_time column exists in database (cached)
+    _start_time_column_exists = None
+    
+    @classmethod
+    def has_start_time_column(cls):
+        if cls._start_time_column_exists is None:
+            try:
+                db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
+                cls._start_time_column_exists = True
+            except Exception:
+                cls._start_time_column_exists = False
+        return cls._start_time_column_exists
+    
+    # Dynamic property for start_time to handle missing column gracefully
+    @property
+    def start_time(self):
+        if not self.has_start_time_column():
+            return None
+        try:
+            # Use raw SQL to get start_time if column exists
+            result = db.session.execute(
+                db.text("SELECT start_time FROM competitions WHERE id = :id"), 
+                {'id': self.id}
+            ).fetchone()
+            if result and result[0]:
+                from datetime import time
+                return result[0] if isinstance(result[0], time) else None
+            return None
+        except Exception:
+            return None
+    
+    @start_time.setter
+    def start_time(self, value):
+        if not self.has_start_time_column():
+            return
+        try:
+            # Use raw SQL to set start_time if column exists
+            db.session.execute(
+                db.text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
+                {'start_time': value, 'id': self.id}
+            )
+        except Exception:
+            pass
 
 class Rider(db.Model):
     __tablename__ = "riders"
@@ -2425,31 +2468,53 @@ def migrate_start_time():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
+        # Start fresh transaction
+        db.session.rollback()  # Clear any existing transaction
+        
         # Check if start_time column exists
         try:
             db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
+            db.session.commit()
             return jsonify({'success': True, 'message': 'start_time column already exists'})
         except Exception:
+            db.session.rollback()  # Clear failed transaction
             pass
         
-        # Add start_time column
-        db.session.execute(db.text('ALTER TABLE competitions ADD COLUMN start_time TIME'))
-        db.session.commit()
+        # Add start_time column in a separate transaction
+        try:
+            db.session.execute(db.text('ALTER TABLE competitions ADD COLUMN start_time TIME'))
+            db.session.commit()
+            print("✅ Added start_time column successfully")
+        except Exception as e:
+            db.session.rollback()
+            if "already exists" in str(e).lower() or "duplicate column" in str(e).lower():
+                print("ℹ️ start_time column already exists")
+            else:
+                raise e
         
-        # Set default start time for all existing competitions
-        from datetime import time
-        default_time = time(20, 0)  # 8:00 PM
-        
-        result = db.session.execute(db.text('UPDATE competitions SET start_time = :default_time WHERE start_time IS NULL'), 
-                                  {'default_time': default_time})
-        db.session.commit()
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Added start_time column and updated {result.rowcount} competitions with default 8:00 PM'
-        })
+        # Set default start time for all existing competitions in another transaction
+        try:
+            from datetime import time
+            default_time = time(20, 0)  # 8:00 PM
+            
+            result = db.session.execute(db.text('UPDATE competitions SET start_time = :default_time WHERE start_time IS NULL'), 
+                                      {'default_time': default_time})
+            db.session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'message': f'Added start_time column and updated {result.rowcount} competitions with default 8:00 PM'
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': True, 
+                'message': f'Added start_time column but failed to set defaults: {str(e)}'
+            })
+            
     except Exception as e:
         db.session.rollback()
+        print(f"Migration error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # API endpoints for series management
