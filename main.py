@@ -7874,6 +7874,8 @@ def get_smx_qualification_250cc():
                 })
                 position += 1
         
+        print(f"DEBUG: 250cc SMX qualification - Found {len(qualification_data)} 250cc riders")
+        
         return jsonify({
             'success': True,
             'qualification': qualification_data,
@@ -7918,6 +7920,8 @@ def get_series_leaders():
         # Format SMX qualification overview - separate 450cc and 250cc
         smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '450cc']
         smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '250cc']
+        
+        print(f"DEBUG: SMX qualification - Total: {len(smx_qualification)}, 450cc: {len(smx_450cc)}, 250cc: {len(smx_250cc)}")
         
         smx_overview = {
             'total_qualified': len(smx_qualification),
