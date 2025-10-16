@@ -8812,12 +8812,8 @@ def calculate_smx_qualification_points():
             Series.name.ilike('%supercross%')
         ).all()
         
-        # Filter 250cc results by coast if applicable
-        if rider.class_name == '250cc':
-            original_sx_count = len(sx_results)
-            sx_results = [r for r in sx_results if r.competition.coast_250 == rider.coast_250]
-            if original_sx_count > 0 and len(sx_results) == 0:
-                print(f"DEBUG: 250cc rider {rider.name} ({rider.coast_250}) had {original_sx_count} SX results but 0 after coast filtering")
+        # For SMX, 250cc riders get points from both East and West coasts
+        # No coast filtering needed for SMX calculation
         
         # Get Motocross results for this rider (considering coast for 250cc)
         mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
@@ -8825,12 +8821,8 @@ def calculate_smx_qualification_points():
             Series.name.ilike('%motocross%')
         ).all()
         
-        # Filter 250cc results by coast if applicable
-        if rider.class_name == '250cc':
-            original_mx_count = len(mx_results)
-            mx_results = [r for r in mx_results if r.competition.coast_250 == rider.coast_250]
-            if original_mx_count > 0 and len(mx_results) == 0:
-                print(f"DEBUG: 250cc rider {rider.name} ({rider.coast_250}) had {original_mx_count} MX results but 0 after coast filtering")
+        # For SMX, 250cc riders get points from both East and West coasts
+        # No coast filtering needed for SMX calculation
         
         # Calculate points from Supercross (top 17 rounds)
         sx_points = []
