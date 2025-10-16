@@ -9351,7 +9351,7 @@ def is_picks_locked(competition):
         current_time = get_current_time()
         
         # Use the same scenario-based logic as race_countdown
-        if scenario == 'active_race_1':
+        if scenario and scenario.startswith('active_race_'):
             # Get the initial simulated time when simulation started
             try:
                 result = db.session.execute(text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
@@ -9360,9 +9360,16 @@ def is_picks_locked(competition):
             except Exception as e:
                 initial_simulated_time = current_time
             
-            fake_race_base_time = initial_simulated_time.replace(hour=11, minute=0, second=0, microsecond=0)
-            race_datetime = fake_race_base_time
-            deadline_datetime = race_datetime - timedelta(hours=2)
+            # Use actual competition start time if available
+            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                race_date = competition_obj.event_date or initial_simulated_time.date()
+                race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                deadline_datetime = race_datetime - timedelta(hours=2)
+            else:
+                # Fallback to 11 AM
+                fake_race_base_time = initial_simulated_time.replace(hour=11, minute=0, second=0, microsecond=0)
+                race_datetime = fake_race_base_time
+                deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_3h':
             # Race in 3 hours - use actual competition start time if available
             if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
