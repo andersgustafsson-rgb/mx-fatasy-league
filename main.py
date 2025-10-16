@@ -577,12 +577,15 @@ def series_status():
         
         series_data = []
         for s in series:
-            # Check if series is active based on dates
-            is_currently_active = False
-            if s.start_date and s.end_date:
-                is_currently_active = s.start_date <= current_date <= s.end_date
-            elif s.start_date:
-                is_currently_active = current_date >= s.start_date
+            # Use is_active from database (set by simulation) or fallback to date-based logic
+            is_currently_active = s.is_active
+            
+            # If not set by simulation, use date-based logic as fallback
+            if not is_currently_active:
+                if s.start_date and s.end_date:
+                    is_currently_active = s.start_date <= current_date <= s.end_date
+                elif s.start_date:
+                    is_currently_active = current_date >= s.start_date
             
             # Get next race in this series
             next_race = Competition.query.filter_by(series_id=s.id).filter(
@@ -8622,6 +8625,11 @@ def set_active_race():
         
         # Store active race in database using ORM
         try:
+            # Get the competition to find its series
+            competition = Competition.query.get(competition_id)
+            if not competition:
+                return jsonify({"error": "Competition not found"}), 404
+            
             # Check if record exists
             existing = GlobalSimulation.query.filter_by(id=1).first()
             
@@ -8643,6 +8651,17 @@ def set_active_race():
                     active_race_id=competition_id
                 )
                 db.session.add(new_sim)
+            
+            # Set the competition's series as active for simulation
+            if competition.series_id:
+                # Deactivate all series first
+                Series.query.update({'is_active': False})
+                
+                # Activate the series for this competition
+                competition_series = Series.query.get(competition.series_id)
+                if competition_series:
+                    competition_series.is_active = True
+                    print(f"DEBUG: Activated series '{competition_series.name}' for competition '{competition.name}'")
             
             db.session.commit()
             print(f"DEBUG: Set active race to competition ID: {competition_id}")
