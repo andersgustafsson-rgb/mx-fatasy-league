@@ -470,13 +470,8 @@
                         </div>
                         
                         <div class="space-y-3">
-                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Competitions</h3>
-                            <button onclick="createMotocrossCompetitions()" class="block w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-center">
-                                🏍️ Skapa Motocross 2026
-                            </button>
-                            <button onclick="createSMXFinalsCompetitions()" class="block w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-center">
-                                🏆 Skapa SMX Finals 2026
-                            </button>
+                            <h3 class="text-lg font-medium text-cyan-400 neon-text">Race Simulation</h3>
+                            <p class="text-sm text-gray-300">Använd dropdown ovan för att välja vilken tävling du vill simulera. Alla serier (SX, MX, SMX) stöds.</p>
                         </div>
                         
                         <!-- Debug & Tools Section -->
@@ -806,16 +801,28 @@
 
         // Populate simulation buttons dynamically based on actual competitions
         function populateSimulationButtons(competitions) {
-            // Get the first 4 competitions for simulation buttons
-            const firstFourCompetitions = competitions.slice(0, 4);
+            // Group competitions by series
+            const sxCompetitions = competitions.filter(comp => comp.series === 'SX');
+            const mxCompetitions = competitions.filter(comp => comp.series === 'MX');
+            const smxCompetitions = competitions.filter(comp => comp.series === 'SMX');
+            
+            // Get first 2 from each series for simulation buttons
+            const selectedCompetitions = [
+                ...sxCompetitions.slice(0, 2),
+                ...mxCompetitions.slice(0, 2),
+                ...smxCompetitions.slice(0, 2)
+            ];
             
             // Set Active Race buttons
             const setActiveButtons = document.getElementById('set-active-race-buttons');
             setActiveButtons.innerHTML = '';
-            firstFourCompetitions.forEach(comp => {
+            selectedCompetitions.forEach(comp => {
                 const button = document.createElement('button');
-                button.className = 'bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors';
-                button.textContent = comp.name;
+                const seriesColor = comp.series === 'SX' ? 'bg-red-600 hover:bg-red-700' : 
+                                  comp.series === 'MX' ? 'bg-green-600 hover:bg-green-700' : 
+                                  'bg-purple-600 hover:bg-purple-700';
+                button.className = `${seriesColor} text-white px-3 py-2 rounded text-sm transition-colors`;
+                button.textContent = `${comp.name} (${comp.series})`;
                 button.onclick = () => setActiveRace(comp.id);
                 setActiveButtons.appendChild(button);
             });
@@ -823,9 +830,12 @@
             // Auto Picks buttons
             const autoPicksButtons = document.getElementById('auto-picks-buttons');
             autoPicksButtons.innerHTML = '';
-            firstFourCompetitions.forEach(comp => {
+            selectedCompetitions.forEach(comp => {
                 const button = document.createElement('button');
-                button.className = 'bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm transition-colors';
+                const seriesColor = comp.series === 'SX' ? 'bg-red-600 hover:bg-red-700' : 
+                                  comp.series === 'MX' ? 'bg-green-600 hover:bg-green-700' : 
+                                  'bg-purple-600 hover:bg-purple-700';
+                button.className = `${seriesColor} text-white px-3 py-2 rounded text-sm transition-colors`;
                 button.textContent = `${comp.name} Auto Picks`;
                 button.onclick = () => generateAutoPicks(comp.id);
                 autoPicksButtons.appendChild(button);
@@ -834,9 +844,12 @@
             // Simulated Results buttons
             const simulatedResultsButtons = document.getElementById('simulated-results-buttons');
             simulatedResultsButtons.innerHTML = '';
-            firstFourCompetitions.forEach(comp => {
+            selectedCompetitions.forEach(comp => {
                 const button = document.createElement('button');
-                button.className = 'bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-sm transition-colors';
+                const seriesColor = comp.series === 'SX' ? 'bg-red-600 hover:bg-red-700' : 
+                                  comp.series === 'MX' ? 'bg-green-600 hover:bg-green-700' : 
+                                  'bg-purple-600 hover:bg-purple-700';
+                button.className = `${seriesColor} text-white px-3 py-2 rounded text-sm transition-colors`;
                 button.textContent = `${comp.name} Resultat`;
                 button.onclick = () => generateSimulatedResults(comp.id);
                 simulatedResultsButtons.appendChild(button);
