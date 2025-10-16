@@ -3356,7 +3356,7 @@ def race_results_page():
                 'rider_number': result.rider_number,
                 'image_url': result.image_url,
                 'bike_brand': result.bike_brand,
-                'points': get_smx_qualification_points(result.position)  # Race points using SMX system
+                'points': get_smx_qualification_points(result.position)  # Supercross series points (same as SMX system)
             }
             results_with_points.append(result_dict)
         
