@@ -3744,10 +3744,15 @@ def get_other_users_picks(competition_id):
         for pick in race_picks:
             rider = Rider.query.get(pick.rider_id)
             if rider:
+                # Ensure we have valid rider data
+                rider_number = getattr(rider, 'rider_number', '?') or '?'
+                rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
+                bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
+                
                 pick_data = {
                     "position": pick.predicted_position,
                     "class": rider.class_name,
-                    "rider_name": f"#{rider.rider_number} {rider.name} ({rider.bike_brand})"
+                    "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
                 }
                 
                 if rider.class_name == '450cc' and len(picks_450) < 6:
@@ -3792,6 +3797,8 @@ def get_other_users_picks(competition_id):
                 }
         
         if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
+            print(f"DEBUG: User {user.username} picks_450: {picks_450}")
+            print(f"DEBUG: User {user.username} picks_250: {picks_250}")
             users_picks.append({
                 "username": user.username,
                 "display_name": getattr(user, 'display_name', None) or user.username,
