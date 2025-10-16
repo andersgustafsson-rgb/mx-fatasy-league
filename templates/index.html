@@ -282,18 +282,18 @@
                 </div>
                 
                 <div class="flex-1 min-w-0">
-                  <p class="text-white font-bold text-sm leading-tight">
+                  <p class="text-white font-bold text-xs leading-tight">
                     {% if new_bulletin_posts == 1 %}
                       Nytt inlägg på anslagstavlan!
                     {% else %}
                       {{ new_bulletin_posts }} nya inlägg på anslagstavlan!
                     {% endif %}
                   </p>
-                  <p class="text-indigo-100 text-xs font-medium mt-1">
+                  <p class="text-indigo-100 text-xs font-medium">
                     {% if latest_post_author %}
-                      Senaste från <span class="text-yellow-300 font-semibold">{{ latest_post_author }}</span>
+                      Från <span class="text-yellow-300 font-semibold">{{ latest_post_author }}</span>
                     {% else %}
-                      Senaste 24 timmarna
+                      Senaste 24h
                     {% endif %}
                   </p>
                 </div>
