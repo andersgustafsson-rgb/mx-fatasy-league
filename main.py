@@ -7891,6 +7891,58 @@ def get_smx_qualification_250cc():
         print(f"ERROR in get_smx_qualification_250cc: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/generate_250cc_results")
+def generate_250cc_results():
+    """Generate simulated results for 250cc riders to test SMX qualification"""
+    try:
+        # Get all 250cc competitions
+        competitions_250 = db.session.query(Competition).join(Series).filter(
+            Series.name.ilike('%250%')
+        ).all()
+        
+        if not competitions_250:
+            return jsonify({"error": "No 250cc competitions found"}), 400
+        
+        # Get all 250cc riders
+        riders_250 = Rider.query.filter_by(class_name='250cc').all()
+        
+        if not riders_250:
+            return jsonify({"error": "No 250cc riders found"}), 400
+        
+        import random
+        
+        results_created = 0
+        for competition in competitions_250:
+            # Clear existing results for this competition
+            CompetitionResult.query.filter_by(competition_id=competition.id).delete()
+            
+            # Generate random results for 250cc riders
+            shuffled_riders = riders_250.copy()
+            random.shuffle(shuffled_riders)
+            
+            for position, rider in enumerate(shuffled_riders[:20], 1):  # Top 20
+                result = CompetitionResult(
+                    competition_id=competition.id,
+                    rider_id=rider.id,
+                    position=position,
+                    points=get_smx_qualification_points(position)
+                )
+                db.session.add(result)
+                results_created += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Generated {results_created} results for {len(competitions_250)} 250cc competitions",
+            "competitions": len(competitions_250),
+            "riders": len(riders_250)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/debug_250cc")
 def debug_250cc():
     """Debug endpoint to check 250cc riders and their results"""
