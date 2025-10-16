@@ -9093,8 +9093,16 @@ def is_picks_locked(competition):
             race_datetime = current_time + timedelta(hours=3)
             deadline_datetime = race_datetime - timedelta(hours=2)
         
-        # Calculate time differences using simulated time
-        time_to_deadline = deadline_datetime - current_time
+        # Calculate time differences using simulated time (same as countdown)
+        # Get the current simulated time from the same source as countdown
+        try:
+            result = db.session.execute(text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+            current_simulated_time_str = result[0] if result and result[0] else current_time.isoformat()
+            current_simulated_time = datetime.fromisoformat(current_simulated_time_str)
+        except Exception as e:
+            current_simulated_time = current_time
+        
+        time_to_deadline = deadline_datetime - current_simulated_time
         
         # Check if picks are locked (2 hours before race)
         # If time_to_deadline is negative, deadline has passed and picks are locked
