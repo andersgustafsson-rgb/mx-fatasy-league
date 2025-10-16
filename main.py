@@ -3728,6 +3728,10 @@ def get_other_users_picks(competition_id):
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
+    # Get all riders once as master list
+    all_riders = Rider.query.all()
+    riders_dict = {rider.id: rider for rider in all_riders}
+    
     # Get all users except current user
     current_user_id = session["user_id"]
     other_users = User.query.filter(User.id != current_user_id).all()
@@ -3742,7 +3746,7 @@ def get_other_users_picks(competition_id):
         picks_250 = []
         
         for pick in race_picks:
-            rider = Rider.query.get(pick.rider_id)
+            rider = riders_dict.get(pick.rider_id)
             if rider:
                 # Ensure we have valid rider data
                 rider_number = getattr(rider, 'rider_number', '?') or '?'
@@ -3773,7 +3777,7 @@ def get_other_users_picks(competition_id):
         holeshot_250 = None
         
         for holeshot in holeshot_picks:
-            rider = Rider.query.get(holeshot.rider_id)
+            rider = riders_dict.get(holeshot.rider_id)
             if rider and holeshot.class_name == '450cc':
                 holeshot_450 = {
                     "rider_number": getattr(rider, 'rider_number', '?') or '?',
@@ -3789,7 +3793,7 @@ def get_other_users_picks(competition_id):
         wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
         wildcard = None
         if wildcard_pick:
-            rider = Rider.query.get(wildcard_pick.rider_id)
+            rider = riders_dict.get(wildcard_pick.rider_id)
             if rider:
                 wildcard = {
                     "position": wildcard_pick.position,
