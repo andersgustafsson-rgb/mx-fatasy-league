@@ -3849,9 +3849,7 @@ def save_picks():
             if rid in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
             
-            # Blockera om samma förare redan är vald i top 6
-            if rid in new_rider_ids:
-                return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
+            # Holeshot och top 6 kan vara samma förare - det är naturligt!
             db.session.add(
                 HoleshotPick(
                     user_id=uid,
@@ -3879,9 +3877,7 @@ def save_picks():
                 if rider.coast_250 not in (comp.coast_250, "both"):
                     return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
             
-            # Blockera om samma förare redan är vald i top 6
-            if rid in new_rider_ids:
-                return jsonify({"error": "Du kan inte välja samma förare för holeshot som i top 6"}), 400
+            # Holeshot och top 6 kan vara samma förare - det är naturligt!
 
             db.session.add(
                 HoleshotPick(
