@@ -750,7 +750,11 @@ def index():
         if new_posts:
             # Get the latest post author
             latest_post = new_posts[0]
-            latest_post_author = latest_post.user.username if latest_post.user else "Okänd"
+            if latest_post.user:
+                # Use display_name if available, otherwise fallback to username
+                latest_post_author = getattr(latest_post.user, 'display_name', None) or latest_post.user.username
+            else:
+                latest_post_author = "Okänd"
     except Exception as e:
         print(f"Error checking bulletin posts: {e}")
         new_bulletin_posts = 0
