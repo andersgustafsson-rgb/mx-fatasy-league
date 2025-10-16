@@ -7891,6 +7891,44 @@ def get_smx_qualification_250cc():
         print(f"ERROR in get_smx_qualification_250cc: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/debug_250cc")
+def debug_250cc():
+    """Debug endpoint to check 250cc riders and their results"""
+    try:
+        # Get all 250cc riders
+        riders_250 = Rider.query.filter_by(class_name='250cc').all()
+        
+        debug_info = {
+            'total_250cc_riders': len(riders_250),
+            'riders': []
+        }
+        
+        for rider in riders_250:
+            # Get all results for this rider
+            sx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+                CompetitionResult.rider_id == rider.id,
+                Series.name.ilike('%supercross%')
+            ).all()
+            
+            mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
+                CompetitionResult.rider_id == rider.id,
+                Series.name.ilike('%motocross%')
+            ).all()
+            
+            debug_info['riders'].append({
+                'name': rider.name,
+                'coast_250': rider.coast_250,
+                'sx_results_count': len(sx_results),
+                'mx_results_count': len(mx_results),
+                'sx_positions': [r.position for r in sx_results if r.position],
+                'mx_positions': [r.position for r in mx_results if r.position]
+            })
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/api/series_leaders")
 def get_series_leaders():
     """Get current leaders for each series and SMX overview"""
