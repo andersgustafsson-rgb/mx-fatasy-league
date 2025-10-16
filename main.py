@@ -8794,8 +8794,11 @@ def calculate_smx_qualification_points():
         }
         
         # Debug for 250cc riders
-        if rider.class_name == '250cc' and total_points > 0:
-            print(f"DEBUG: 250cc rider {rider.name} has {total_points} SMX points (SX: {sum(sx_points[:17])}, MX: {sum(mx_points[:11])})")
+        if rider.class_name == '250cc':
+            if total_points > 0:
+                print(f"DEBUG: 250cc rider {rider.name} has {total_points} SMX points (SX: {sum(sx_points[:17])}, MX: {sum(mx_points[:11])})")
+            else:
+                print(f"DEBUG: 250cc rider {rider.name} has 0 SMX points (SX results: {len(sx_results)}, MX results: {len(mx_results)})")
     
     # Sort by total points and get top 20
     sorted_riders = sorted(smx_points.items(), key=lambda x: x[1]['total_points'], reverse=True)
