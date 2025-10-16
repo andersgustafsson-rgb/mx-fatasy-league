@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Management - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .neon-text {
+            text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 15px #00ffff;
+        }
+        .cyberpunk-button {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            color: black;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .cyberpunk-button:hover {
+            background: linear-gradient(45deg, #00cccc, #0066cc);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-cyan-400 neon-text mb-4">🏁 Competition Management</h1>
+            <p class="text-gray-300">Centraliserad hantering av alla tävlingar (SX, MX, SMX)</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <button onclick="showAddCompetitionModal()" class="cyberpunk-button px-6 py-3 rounded-lg text-center">
+                ➕ Lägg till tävling
+            </button>
+            <button onclick="loadCompetitions()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-center">
+                🔄 Uppdatera lista
+            </button>
+            <button onclick="exportCompetitions()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg text-center">
+                📤 Exportera data
+            </button>
+        </div>
+
+        <!-- Series Filter -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-300 mb-2">Filtrera efter serie:</label>
+            <select id="series-filter" onchange="filterBySeries()" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-600">
+                <option value="">Alla serier</option>
+                <option value="SX">Supercross (SX)</option>
+                <option value="MX">Motocross (MX)</option>
+                <option value="SMX">SuperMotocross (SMX)</option>
+            </select>
+        </div>
+
+        <!-- Competitions Table -->
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">ID</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Namn</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Datum</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Serie</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">250cc Coast</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Point Multiplier</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Triple Crown</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Tidszon</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Åtgärder</th>
+                        </tr>
+                    </thead>
+                    <tbody id="competitions-table-body" class="divide-y divide-gray-700">
+                        <!-- Competitions will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div id="status-message" class="mt-4 p-4 rounded-lg hidden"></div>
+    </div>
+
+    <!-- Add/Edit Competition Modal -->
+    <div id="competition-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-bold text-cyan-400">Lägg till tävling</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <form id="competition-form" onsubmit="saveCompetition(event)">
+                <input type="hidden" id="competition-id" value="">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Namn *</label>
+                        <input type="text" id="competition-name" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Datum *</label>
+                        <input type="date" id="competition-date" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Serie *</label>
+                        <select id="competition-series" required class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                            <option value="">Välj serie</option>
+                            <option value="SX">Supercross (SX)</option>
+                            <option value="MX">Motocross (MX)</option>
+                            <option value="SMX">SuperMotocross (SMX)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">250cc Coast</label>
+                        <select id="competition-coast" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                            <option value="">Välj coast</option>
+                            <option value="west">West</option>
+                            <option value="east">East</option>
+                            <option value="both">Both (Showdown)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Point Multiplier</label>
+                        <input type="number" id="competition-multiplier" step="0.1" min="0.1" max="3.0" value="1.0" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Tidszon</label>
+                        <select id="competition-timezone" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/Chicago">Central Time</option>
+                            <option value="America/Denver">Mountain Time</option>
+                            <option value="America/Los_Angeles">Pacific Time</option>
+                            <option value="Europe/Stockholm">Stockholm</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="competition-triple-crown" class="mr-2">
+                        <span class="text-sm text-gray-300">Triple Crown</span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeModal()" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg">
+                        Avbryt
+                    </button>
+                    <button type="submit" class="cyberpunk-button px-6 py-2 rounded-lg">
+                        Spara
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let competitions = [];
+        let filteredCompetitions = [];
+
+        // Load competitions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCompetitions();
+        });
+
+        async function loadCompetitions() {
+            try {
+                const response = await fetch('/api/competitions/list');
+                if (!response.ok) throw new Error('Kunde inte hämta tävlingar');
+                
+                competitions = await response.json();
+                filteredCompetitions = [...competitions];
+                renderCompetitions();
+                showStatus('Tävlingar laddade!', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid laddning av tävlingar: ' + error.message, 'error');
+            }
+        }
+
+        function filterBySeries() {
+            const series = document.getElementById('series-filter').value;
+            if (series === '') {
+                filteredCompetitions = [...competitions];
+            } else {
+                filteredCompetitions = competitions.filter(comp => comp.series === series);
+            }
+            renderCompetitions();
+        }
+
+        function renderCompetitions() {
+            const tbody = document.getElementById('competitions-table-body');
+            tbody.innerHTML = '';
+
+            filteredCompetitions.forEach(comp => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-700';
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm">${comp.id}</td>
+                    <td class="px-4 py-3 text-sm font-medium">${comp.name}</td>
+                    <td class="px-4 py-3 text-sm">${comp.event_date}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 rounded text-xs font-medium ${
+                            comp.series === 'SX' ? 'bg-red-600' : 
+                            comp.series === 'MX' ? 'bg-green-600' : 
+                            'bg-purple-600'
+                        }">${comp.series}</span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">${comp.coast_250 || '-'}</td>
+                    <td class="px-4 py-3 text-sm">${comp.point_multiplier}x</td>
+                    <td class="px-4 py-3 text-sm">${comp.is_triple_crown ? '🏆' : '-'}</td>
+                    <td class="px-4 py-3 text-sm">${comp.timezone || '-'}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <button onclick="editCompetition(${comp.id})" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button>
+                        <button onclick="deleteCompetition(${comp.id})" class="text-red-400 hover:text-red-300">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showAddCompetitionModal() {
+            document.getElementById('modal-title').textContent = 'Lägg till tävling';
+            document.getElementById('competition-form').reset();
+            document.getElementById('competition-id').value = '';
+            document.getElementById('competition-modal').classList.remove('hidden');
+        }
+
+        function editCompetition(id) {
+            const comp = competitions.find(c => c.id === id);
+            if (!comp) return;
+
+            document.getElementById('modal-title').textContent = 'Redigera tävling';
+            document.getElementById('competition-id').value = comp.id;
+            document.getElementById('competition-name').value = comp.name;
+            document.getElementById('competition-date').value = comp.event_date;
+            document.getElementById('competition-series').value = comp.series;
+            document.getElementById('competition-coast').value = comp.coast_250 || '';
+            document.getElementById('competition-multiplier').value = comp.point_multiplier;
+            document.getElementById('competition-timezone').value = comp.timezone || 'America/New_York';
+            document.getElementById('competition-triple-crown').checked = comp.is_triple_crown;
+            
+            document.getElementById('competition-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('competition-modal').classList.add('hidden');
+        }
+
+        async function saveCompetition(event) {
+            event.preventDefault();
+            
+            const formData = {
+                id: document.getElementById('competition-id').value || null,
+                name: document.getElementById('competition-name').value,
+                event_date: document.getElementById('competition-date').value,
+                series: document.getElementById('competition-series').value,
+                coast_250: document.getElementById('competition-coast').value || null,
+                point_multiplier: parseFloat(document.getElementById('competition-multiplier').value),
+                is_triple_crown: document.getElementById('competition-triple-crown').checked,
+                timezone: document.getElementById('competition-timezone').value
+            };
+
+            try {
+                const url = formData.id ? `/api/competitions/update/${formData.id}` : '/api/competitions/create';
+                const method = formData.id ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Fel vid sparande');
+                }
+
+                const result = await response.json();
+                showStatus(result.message || 'Tävling sparad!', 'success');
+                closeModal();
+                loadCompetitions();
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid sparande: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteCompetition(id) {
+            if (!confirm('Är du säker på att du vill ta bort denna tävling?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/competitions/delete/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Fel vid borttagning');
+                }
+
+                const result = await response.json();
+                showStatus(result.message || 'Tävling borttagen!', 'success');
+                loadCompetitions();
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid borttagning: ' + error.message, 'error');
+            }
+        }
+
+        function exportCompetitions() {
+            const dataStr = JSON.stringify(competitions, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'competitions.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = `mt-4 p-4 rounded-lg ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            } text-white`;
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

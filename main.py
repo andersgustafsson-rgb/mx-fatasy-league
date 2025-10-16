@@ -2197,6 +2197,13 @@ def admin_page():
                          comp_coast_map=comp_coast_map,
                          today=today)
 
+@app.route('/competition_management')
+def competition_management():
+    if session.get("username") != "test":
+        return redirect(url_for("index"))
+    
+    return render_template("competition_management.html")
+
 @app.route('/rider_management')
 def rider_management():
     if session.get("username") != "test":
@@ -2283,6 +2290,96 @@ def delete_rider(rider_id):
     db.session.commit()
     
     return jsonify({'success': True})
+
+# API endpoints for competition management
+@app.route('/api/competitions/list', methods=['GET'])
+def list_competitions():
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    competitions = Competition.query.order_by(Competition.event_date).all()
+    return jsonify([{
+        'id': comp.id,
+        'name': comp.name,
+        'event_date': comp.event_date.isoformat() if comp.event_date else None,
+        'series': comp.series,
+        'coast_250': comp.coast_250,
+        'point_multiplier': comp.point_multiplier,
+        'is_triple_crown': comp.is_triple_crown,
+        'timezone': comp.timezone
+    } for comp in competitions])
+
+@app.route('/api/competitions/create', methods=['POST'])
+def create_competition():
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    
+    try:
+        competition = Competition(
+            name=data['name'],
+            event_date=datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None,
+            series=data['series'],
+            coast_250=data.get('coast_250'),
+            point_multiplier=data.get('point_multiplier', 1.0),
+            is_triple_crown=data.get('is_triple_crown', False),
+            timezone=data.get('timezone')
+        )
+        db.session.add(competition)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': competition.id, 'message': 'Tävling skapad!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/competitions/update/<int:competition_id>', methods=['PUT'])
+def update_competition(competition_id):
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    competition = Competition.query.get_or_404(competition_id)
+    data = request.get_json()
+    
+    try:
+        competition.name = data['name']
+        competition.event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None
+        competition.series = data['series']
+        competition.coast_250 = data.get('coast_250')
+        competition.point_multiplier = data.get('point_multiplier', 1.0)
+        competition.is_triple_crown = data.get('is_triple_crown', False)
+        competition.timezone = data.get('timezone')
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Tävling uppdaterad!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/competitions/delete/<int:competition_id>', methods=['DELETE'])
+def delete_competition(competition_id):
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    competition = Competition.query.get_or_404(competition_id)
+    
+    try:
+        # Check if competition has any picks or results
+        race_picks = RacePick.query.filter_by(competition_id=competition_id).count()
+        holeshot_picks = HoleshotPick.query.filter_by(competition_id=competition_id).count()
+        wildcard_picks = WildcardPick.query.filter_by(competition_id=competition_id).count()
+        results = CompetitionResult.query.filter_by(competition_id=competition_id).count()
+        
+        if race_picks > 0 or holeshot_picks > 0 or wildcard_picks > 0 or results > 0:
+            return jsonify({'error': 'Kan inte ta bort tävling som har picks eller resultat'}), 400
+        
+        db.session.delete(competition)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Tävling borttagen!'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 # API endpoints for series management
 @app.route('/api/series', methods=['GET'])
