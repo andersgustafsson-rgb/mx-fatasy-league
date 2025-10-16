@@ -1671,7 +1671,7 @@
                         ${user.picks_450.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
                             <span class="text-gray-400 w-6">${index + 1}.</span>
-                            <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                            <span class="text-white">${pick.rider_name}</span>
                           </div>
                         `).join('')}
                       </div>
@@ -1682,7 +1682,7 @@
                         ${user.picks_250.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
                             <span class="text-gray-400 w-6">${index + 1}.</span>
-                            <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                            <span class="text-white">${pick.rider_name}</span>
                           </div>
                         `).join('')}
                       </div>
