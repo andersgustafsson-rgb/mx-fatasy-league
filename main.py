@@ -2298,18 +2298,22 @@ def list_competitions():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    competitions = Competition.query.order_by(Competition.event_date).all()
-    return jsonify([{
-        'id': comp.id,
-        'name': comp.name,
-        'event_date': comp.event_date.isoformat() if comp.event_date else None,
-        'series': comp.series,
-        'coast_250': comp.coast_250,
-        'point_multiplier': comp.point_multiplier,
-        'is_triple_crown': comp.is_triple_crown,
-        'timezone': comp.timezone,
-        'start_time': comp.start_time.isoformat() if comp.start_time else None
-    } for comp in competitions])
+    try:
+        competitions = Competition.query.order_by(Competition.event_date).all()
+        return jsonify([{
+            'id': comp.id,
+            'name': comp.name,
+            'event_date': comp.event_date.isoformat() if comp.event_date else None,
+            'series': comp.series,
+            'coast_250': comp.coast_250,
+            'point_multiplier': comp.point_multiplier,
+            'is_triple_crown': comp.is_triple_crown,
+            'timezone': comp.timezone,
+            'start_time': comp.start_time.isoformat() if hasattr(comp, 'start_time') and comp.start_time else None
+        } for comp in competitions])
+    except Exception as e:
+        print(f"Error in list_competitions: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/competitions/create', methods=['POST'])
 def create_competition():
@@ -2319,16 +2323,21 @@ def create_competition():
     data = request.get_json()
     
     try:
-        competition = Competition(
-            name=data['name'],
-            event_date=datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None,
-            series=data['series'],
-            coast_250=data.get('coast_250'),
-            point_multiplier=data.get('point_multiplier', 1.0),
-            is_triple_crown=data.get('is_triple_crown', False),
-            timezone=data.get('timezone'),
-            start_time=datetime.strptime(data['start_time'], '%H:%M').time() if data.get('start_time') else None
-        )
+        competition_data = {
+            'name': data['name'],
+            'event_date': datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None,
+            'series': data['series'],
+            'coast_250': data.get('coast_250'),
+            'point_multiplier': data.get('point_multiplier', 1.0),
+            'is_triple_crown': data.get('is_triple_crown', False),
+            'timezone': data.get('timezone')
+        }
+        
+        # Only add start_time if it exists in the model
+        if hasattr(Competition, 'start_time') and data.get('start_time'):
+            competition_data['start_time'] = datetime.strptime(data['start_time'], '%H:%M').time()
+        
+        competition = Competition(**competition_data)
         db.session.add(competition)
         db.session.commit()
         
@@ -2353,7 +2362,12 @@ def update_competition(competition_id):
         competition.point_multiplier = data.get('point_multiplier', 1.0)
         competition.is_triple_crown = data.get('is_triple_crown', False)
         competition.timezone = data.get('timezone')
-        competition.start_time = datetime.strptime(data['start_time'], '%H:%M').time() if data.get('start_time') else None
+        
+        # Only update start_time if it exists in the model
+        if hasattr(competition, 'start_time') and data.get('start_time'):
+            competition.start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+        elif hasattr(competition, 'start_time'):
+            competition.start_time = None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Tävling uppdaterad!'})
