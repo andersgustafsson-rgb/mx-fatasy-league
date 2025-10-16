@@ -1242,8 +1242,28 @@
             html += '<div>';
             html += '<h4 class="text-xs font-bold text-cyan-400 mb-2">🏆 SMX Top 5</h4>';
             
-            if (data.smx_overview.top_5.length > 0) {
-              data.smx_overview.top_5.forEach((rider, index) => {
+            // 450cc SMX Top 5
+            if (data.smx_overview['450cc_top_5'] && data.smx_overview['450cc_top_5'].length > 0) {
+              html += '<div class="mb-2">';
+              html += '<div class="text-xs text-yellow-400 font-semibold mb-1">450cc:</div>';
+              data.smx_overview['450cc_top_5'].forEach((rider, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+                html += `
+                  <div class="flex justify-between items-center text-xs mb-1">
+                    <span class="text-cyan-400">${medal} #${rider.rider_number}</span>
+                    <span class="text-white">${rider.rider_name}</span>
+                    <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                  </div>
+                `;
+              });
+              html += '</div>';
+            }
+            
+            // 250cc SMX Top 5
+            if (data.smx_overview['250cc_top_5'] && data.smx_overview['250cc_top_5'].length > 0) {
+              html += '<div class="mb-2">';
+              html += '<div class="text-xs text-green-400 font-semibold mb-1">250cc:</div>';
+              data.smx_overview['250cc_top_5'].forEach((rider, index) => {
                 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
                 const coast = rider.coast_250 ? ` (${rider.coast_250.toUpperCase()})` : '';
                 html += `
@@ -1254,17 +1274,30 @@
                   </div>
                 `;
               });
-              
-              // Add expand button for SMX
-              html += `
-                <button onclick="toggleSMXExpansion()" class="w-full mt-2 text-xs text-cyan-400 hover:text-cyan-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
-                  📋 Visa alla SMX (Top 20)
+              html += '</div>';
+            }
+            
+            // Add expand buttons for both SMX classes
+            html += `
+              <div class="mt-2 space-y-1">
+                <button onclick="toggleSMXExpansion('450cc')" class="w-full text-xs text-yellow-400 hover:text-yellow-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa alla 450cc SMX (Top 20)
                 </button>
-                <div id="smx-full-list" class="hidden mt-2 space-y-1">
-                  <!-- Full SMX list will be loaded here -->
+                <div id="smx-450cc-full-list" class="hidden mt-1 space-y-1">
+                  <!-- 450cc SMX full list will be loaded here -->
                 </div>
-              `;
-            } else {
+                
+                <button onclick="toggleSMXExpansion('250cc')" class="w-full text-xs text-green-400 hover:text-green-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
+                  📋 Visa alla 250cc SMX (Top 20)
+                </button>
+                <div id="smx-250cc-full-list" class="hidden mt-1 space-y-1">
+                  <!-- 250cc SMX full list will be loaded here -->
+                </div>
+              </div>
+            `;
+            
+            if ((!data.smx_overview['450cc_top_5'] || data.smx_overview['450cc_top_5'].length === 0) && 
+                (!data.smx_overview['250cc_top_5'] || data.smx_overview['250cc_top_5'].length === 0)) {
               html += '<div class="text-xs text-gray-400">Inga SMX resultat ännu</div>';
             }
             
@@ -1280,14 +1313,15 @@
       }
     }
 
-    async function toggleSMXExpansion() {
-      const fullListDiv = document.getElementById('smx-full-list');
+    async function toggleSMXExpansion(classType) {
+      const fullListDiv = document.getElementById(`smx-${classType}-full-list`);
       const button = event.target;
       
       if (fullListDiv.classList.contains('hidden')) {
         // Show full list
         try {
-          const response = await fetch('/api/smx_qualification');
+          const endpoint = classType === '250cc' ? '/api/smx_qualification_250cc' : '/api/smx_qualification';
+          const response = await fetch(endpoint);
           const result = await response.json();
           
           if (result.success) {
@@ -1309,15 +1343,15 @@
             
             fullListDiv.innerHTML = html;
             fullListDiv.classList.remove('hidden');
-            button.textContent = '📋 Dölj SMX lista';
+            button.textContent = `📋 Dölj ${classType} SMX lista`;
           }
         } catch (error) {
-          console.error('Error loading full SMX list:', error);
+          console.error(`Error loading full ${classType} SMX list:`, error);
         }
       } else {
         // Hide full list
         fullListDiv.classList.add('hidden');
-        button.textContent = '📋 Visa alla SMX (Top 20)';
+        button.textContent = `📋 Visa alla ${classType} SMX (Top 20)`;
       }
     }
 

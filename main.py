@@ -7848,6 +7848,42 @@ def get_smx_qualification():
         print(f"ERROR in get_smx_qualification: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/smx_qualification_250cc")
+def get_smx_qualification_250cc():
+    """Get 250cc SMX qualification standings (Top 20)"""
+    try:
+        top_20 = calculate_smx_qualification_points()
+        
+        # Filter only 250cc riders
+        qualification_data = []
+        position = 1
+        for rider_id, data in top_20:
+            rider = data['rider']
+            if rider.class_name == '250cc':
+                qualification_data.append({
+                    'position': position,
+                    'rider_id': rider.id,
+                    'rider_name': rider.name,
+                    'rider_number': rider.rider_number,
+                    'bike_brand': rider.bike_brand,
+                    'coast_250': rider.coast_250,
+                    'total_points': data['total_points'],
+                    'sx_points': data['sx_points'],
+                    'mx_points': data['mx_points'],
+                    'qualified': position <= 20
+                })
+                position += 1
+        
+        return jsonify({
+            'success': True,
+            'qualification': qualification_data,
+            'total_qualified': len(qualification_data)
+        })
+        
+    except Exception as e:
+        print(f"ERROR in get_smx_qualification_250cc: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/api/series_leaders")
 def get_series_leaders():
     """Get current leaders for each series and SMX overview"""
@@ -7879,20 +7915,34 @@ def get_series_leaders():
             else:
                 leaders_data[series] = None
         
-        # Format SMX qualification overview
+        # Format SMX qualification overview - separate 450cc and 250cc
+        smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '450cc']
+        smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '250cc']
+        
         smx_overview = {
             'total_qualified': len(smx_qualification),
-            'top_5': []
+            '450cc_top_5': [],
+            '250cc_top_5': []
         }
         
-        for i, (rider_id, data) in enumerate(smx_qualification[:5], 1):
+        # 450cc Top 5
+        for i, (rider_id, data) in enumerate(smx_450cc[:5], 1):
             rider = data['rider']
-            smx_overview['top_5'].append({
+            smx_overview['450cc_top_5'].append({
                 'position': i,
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
-                'rider_class': rider.class_name,
-                'coast_250': rider.coast_250 if rider.class_name == '250cc' else None,
+                'total_points': data['total_points']
+            })
+        
+        # 250cc Top 5
+        for i, (rider_id, data) in enumerate(smx_250cc[:5], 1):
+            rider = data['rider']
+            smx_overview['250cc_top_5'].append({
+                'position': i,
+                'rider_name': rider.name,
+                'rider_number': rider.rider_number,
+                'coast_250': rider.coast_250,
                 'total_points': data['total_points']
             })
         
