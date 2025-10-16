@@ -145,8 +145,8 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Race Start Tid (lokaltid)</label>
-                        <input type="time" id="competition-start-time" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                        <p class="text-xs text-gray-400 mt-1">Tid när racet startar i vald tidszon</p>
+                        <input type="time" id="competition-start-time" value="20:00" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                        <p class="text-xs text-gray-400 mt-1">Tid när racet startar i vald tidszon (default: 8:00 PM)</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Aktuell tid (vald tidszon)</label>
@@ -276,6 +276,7 @@
             document.getElementById('modal-title').textContent = 'Lägg till tävling';
             document.getElementById('competition-form').reset();
             document.getElementById('competition-id').value = '';
+            document.getElementById('competition-start-time').value = '20:00'; // Set default start time
             document.getElementById('competition-modal').classList.remove('hidden');
             updateCurrentTime();
         }
