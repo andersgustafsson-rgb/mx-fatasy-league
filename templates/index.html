@@ -1648,6 +1648,8 @@
         
         const usersPicks = await response.json();
         console.log('DEBUG: usersPicks received:', usersPicks);
+        console.log('DEBUG: First user picks_450:', usersPicks[0]?.picks_450);
+        console.log('DEBUG: First user picks_250:', usersPicks[0]?.picks_250);
         
         // Create modal to display picks
         const modal = document.createElement('div');
