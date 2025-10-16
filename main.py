@@ -7817,26 +7817,31 @@ def reset_cross_dino_highscores():
 
 @app.route("/api/smx_qualification")
 def get_smx_qualification():
-    """Get current SMX qualification standings"""
+    """Get 450cc SMX qualification standings (Top 20)"""
     try:
-        top_20 = calculate_smx_qualification_points()
+        all_riders = calculate_smx_qualification_points()
         
+        # Filter only 450cc riders (they should be at the beginning of the list)
         qualification_data = []
-        for i, (rider_id, data) in enumerate(top_20, 1):
+        position = 1
+        for rider_id, data in all_riders:
             rider = data['rider']
-            qualification_data.append({
-                'position': i,
-                'rider_id': rider.id,
-                'rider_name': rider.name,
-                'rider_number': rider.rider_number,
-                'bike_brand': rider.bike_brand,
-                'rider_class': rider.class_name,
-                'coast_250': rider.coast_250 if rider.class_name == '250cc' else None,
-                'total_points': data['total_points'],
-                'sx_points': data['sx_points'],
-                'mx_points': data['mx_points'],
-                'qualified': i <= 20
-            })
+            if rider.class_name == '450cc':
+                qualification_data.append({
+                    'position': position,
+                    'rider_id': rider.id,
+                    'rider_name': rider.name,
+                    'rider_number': rider.rider_number,
+                    'bike_brand': rider.bike_brand,
+                    'rider_class': rider.class_name,
+                    'total_points': data['total_points'],
+                    'sx_points': data['sx_points'],
+                    'mx_points': data['mx_points'],
+                    'qualified': position <= 20
+                })
+                position += 1
+        
+        print(f"DEBUG: 450cc SMX qualification - Found {len(qualification_data)} 450cc riders")
         
         return jsonify({
             'success': True,
@@ -7852,12 +7857,12 @@ def get_smx_qualification():
 def get_smx_qualification_250cc():
     """Get 250cc SMX qualification standings (Top 20)"""
     try:
-        top_20 = calculate_smx_qualification_points()
+        all_riders = calculate_smx_qualification_points()
         
-        # Filter only 250cc riders
+        # Filter only 250cc riders (they should now be at the end of the list)
         qualification_data = []
         position = 1
-        for rider_id, data in top_20:
+        for rider_id, data in all_riders:
             rider = data['rider']
             if rider.class_name == '250cc':
                 qualification_data.append({
@@ -8800,21 +8805,29 @@ def calculate_smx_qualification_points():
             else:
                 print(f"DEBUG: 250cc rider {rider.name} has 0 SMX points (SX results: {len(sx_results)}, MX results: {len(mx_results)})")
     
-    # Sort by total points and get top 20
-    sorted_riders = sorted(smx_points.items(), key=lambda x: x[1]['total_points'], reverse=True)
-    top_20 = sorted_riders[:20]
+    # Sort by class and get top 20 for each class separately
+    riders_450 = [(rider_id, data) for rider_id, data in smx_points.items() if data['rider'].class_name == '450cc']
+    riders_250 = [(rider_id, data) for rider_id, data in smx_points.items() if data['rider'].class_name == '250cc']
     
-    print(f"DEBUG: SMX qualification calculated. Top 20 riders:")
-    for i, (rider_id, data) in enumerate(top_20, 1):
-        print(f"  {i}. {data['rider'].name} ({data['rider'].class_name}) - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
+    # Sort each class by total points
+    riders_450_sorted = sorted(riders_450, key=lambda x: x[1]['total_points'], reverse=True)
+    riders_250_sorted = sorted(riders_250, key=lambda x: x[1]['total_points'], reverse=True)
     
-    # Count by class
-    class_counts = {}
-    for rider_id, data in top_20:
-        class_name = data['rider'].class_name
-        class_counts[class_name] = class_counts.get(class_name, 0) + 1
+    # Get top 20 for each class
+    top_20_450 = riders_450_sorted[:20]
+    top_20_250 = riders_250_sorted[:20]
     
-    print(f"DEBUG: SMX Top 20 by class: {class_counts}")
+    # Combine for backward compatibility (but now properly separated)
+    top_20 = top_20_450 + top_20_250
+    
+    print(f"DEBUG: SMX qualification calculated separately:")
+    print(f"  450cc Top 20: {len(top_20_450)} riders")
+    for i, (rider_id, data) in enumerate(top_20_450, 1):
+        print(f"    {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
+    
+    print(f"  250cc Top 20: {len(top_20_250)} riders")
+    for i, (rider_id, data) in enumerate(top_20_250, 1):
+        print(f"    {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
     
     return top_20
 
