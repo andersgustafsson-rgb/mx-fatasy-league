@@ -1722,26 +1722,47 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
           </div>
           <div class="space-y-4">
             ${usersPicks.map(user => `
-              <div class="bg-gray-700 rounded p-4">
-                <h4 class="font-semibold text-blue-400 mb-2">${user.username}</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gray-700 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <h5 class="text-sm font-medium text-gray-300 mb-1">450cc:</h5>
+                    <h5 class="text-sm font-medium text-yellow-400 mb-2">450cc Picks</h5>
                     <div class="space-y-1">
-                      ${user.picks.filter(p => p.class === '450cc').map(p => `
-                        <div class="text-sm text-white">${p.position}. ${p.rider_name}</div>
+                      ${user.picks_450.map((pick, index) => `
+                        <div class="flex items-center gap-2 text-sm">
+                          <span class="text-gray-400 w-6">${index + 1}.</span>
+                          <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                        </div>
                       `).join('')}
                     </div>
                   </div>
                   <div>
-                    <h5 class="text-sm font-medium text-gray-300 mb-1">250cc:</h5>
+                    <h5 class="text-sm font-medium text-blue-400 mb-2">250cc Picks</h5>
                     <div class="space-y-1">
-                      ${user.picks.filter(p => p.class === '250cc').map(p => `
-                        <div class="text-sm text-white">${p.position}. ${p.rider_name}</div>
+                      ${user.picks_250.map((pick, index) => `
+                        <div class="flex items-center gap-2 text-sm">
+                          <span class="text-gray-400 w-6">${index + 1}.</span>
+                          <span class="text-white">#${pick.rider_number} ${pick.rider_name}</span>
+                        </div>
                       `).join('')}
                     </div>
                   </div>
                 </div>
+                ${user.holeshot_450 || user.holeshot_250 ? `
+                  <div class="mt-3 pt-3 border-t border-gray-600">
+                    <h5 class="text-sm font-medium text-green-400 mb-2">Holeshot Picks</h5>
+                    <div class="flex gap-4 text-sm">
+                      ${user.holeshot_450 ? `<span class="text-white">450cc: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
+                      ${user.holeshot_250 ? `<span class="text-white">250cc: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
+                    </div>
+                  </div>
+                ` : ''}
+                ${user.wildcard ? `
+                  <div class="mt-3 pt-3 border-t border-gray-600">
+                    <h5 class="text-sm font-medium text-purple-400 mb-2">Wildcard</h5>
+                    <span class="text-white text-sm">Position ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
+                  </div>
+                ` : ''}
               </div>
             `).join('')}
           </div>

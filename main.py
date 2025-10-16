@@ -3761,10 +3761,45 @@ def get_other_users_picks(competition_id):
         
         picks = picks_450 + picks_250
         
-        if picks:  # Only include users who have made picks
+        # Get holeshot picks
+        holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        holeshot_450 = None
+        holeshot_250 = None
+        
+        for holeshot in holeshot_picks:
+            rider = Rider.query.get(holeshot.rider_id)
+            if rider and holeshot.class_name == '450cc':
+                holeshot_450 = {
+                    "rider_number": rider.rider_number,
+                    "rider_name": rider.name
+                }
+            elif rider and holeshot.class_name == '250cc':
+                holeshot_250 = {
+                    "rider_number": rider.rider_number,
+                    "rider_name": rider.name
+                }
+        
+        # Get wildcard pick
+        wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
+        wildcard = None
+        if wildcard_pick:
+            rider = Rider.query.get(wildcard_pick.rider_id)
+            if rider:
+                wildcard = {
+                    "position": wildcard_pick.position,
+                    "rider_number": rider.rider_number,
+                    "rider_name": rider.name
+                }
+        
+        if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
             users_picks.append({
                 "username": user.username,
-                "picks": picks
+                "display_name": getattr(user, 'display_name', None) or user.username,
+                "picks_450": picks_450,
+                "picks_250": picks_250,
+                "holeshot_450": holeshot_450,
+                "holeshot_250": holeshot_250,
+                "wildcard": wildcard
             })
     
     return jsonify(users_picks)
