@@ -31,12 +31,15 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <button onclick="showAddCompetitionModal()" class="cyberpunk-button px-6 py-3 rounded-lg text-center">
                 ➕ Lägg till tävling
             </button>
             <button onclick="loadCompetitions()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-center">
                 🔄 Uppdatera lista
+            </button>
+            <button onclick="migrateStartTime()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg text-center">
+                🔧 Migrera start_time
             </button>
             <button onclick="exportCompetitions()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg text-center">
                 📤 Exportera data
@@ -371,6 +374,31 @@
             } catch (error) {
                 console.error('Error:', error);
                 showStatus('Fel vid borttagning: ' + error.message, 'error');
+            }
+        }
+
+        async function migrateStartTime() {
+            if (!confirm('Lägg till start_time kolumn i databasen och sätt default 8:00 PM för alla tävlingar?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/competitions/migrate_start_time', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showStatus(result.message, 'success');
+                    // Reload competitions after migration
+                    setTimeout(() => loadCompetitions(), 1000);
+                } else {
+                    showStatus('Fel: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid migration: ' + error.message, 'error');
             }
         }
 

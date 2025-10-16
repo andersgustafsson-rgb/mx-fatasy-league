@@ -2299,18 +2299,37 @@ def list_competitions():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
+        # First check if start_time column exists
+        try:
+            db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
+            has_start_time = True
+        except Exception:
+            has_start_time = False
+        
         competitions = Competition.query.order_by(Competition.event_date).all()
-        return jsonify([{
-            'id': comp.id,
-            'name': comp.name,
-            'event_date': comp.event_date.isoformat() if comp.event_date else None,
-            'series': comp.series,
-            'coast_250': comp.coast_250,
-            'point_multiplier': comp.point_multiplier,
-            'is_triple_crown': comp.is_triple_crown,
-            'timezone': comp.timezone,
-            'start_time': comp.start_time.isoformat() if hasattr(comp, 'start_time') and comp.start_time else None
-        } for comp in competitions])
+        result = []
+        
+        for comp in competitions:
+            comp_data = {
+                'id': comp.id,
+                'name': comp.name,
+                'event_date': comp.event_date.isoformat() if comp.event_date else None,
+                'series': comp.series,
+                'coast_250': comp.coast_250,
+                'point_multiplier': comp.point_multiplier,
+                'is_triple_crown': comp.is_triple_crown,
+                'timezone': comp.timezone
+            }
+            
+            # Only add start_time if column exists
+            if has_start_time and hasattr(comp, 'start_time'):
+                comp_data['start_time'] = comp.start_time.isoformat() if comp.start_time else None
+            else:
+                comp_data['start_time'] = None
+                
+            result.append(comp_data)
+        
+        return jsonify(result)
     except Exception as e:
         print(f"Error in list_competitions: {e}")
         return jsonify({'error': str(e)}), 500
@@ -2398,6 +2417,40 @@ def delete_competition(competition_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
+@app.route('/api/competitions/migrate_start_time', methods=['POST'])
+def migrate_start_time():
+    """Add start_time column to competitions table if it doesn't exist"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Check if start_time column exists
+        try:
+            db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
+            return jsonify({'success': True, 'message': 'start_time column already exists'})
+        except Exception:
+            pass
+        
+        # Add start_time column
+        db.session.execute(db.text('ALTER TABLE competitions ADD COLUMN start_time TIME'))
+        db.session.commit()
+        
+        # Set default start time for all existing competitions
+        from datetime import time
+        default_time = time(20, 0)  # 8:00 PM
+        
+        result = db.session.execute(db.text('UPDATE competitions SET start_time = :default_time WHERE start_time IS NULL'), 
+                                  {'default_time': default_time})
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Added start_time column and updated {result.rowcount} competitions with default 8:00 PM'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 # API endpoints for series management
 @app.route('/api/series', methods=['GET'])
