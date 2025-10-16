@@ -3345,7 +3345,7 @@ def race_results_page():
             .all()
         )
         
-        # Add calculated points to each result
+        # Add race points to each result (SMX points system for individual races)
         results_with_points = []
         for result in results:
             result_dict = {
@@ -3356,7 +3356,7 @@ def race_results_page():
                 'rider_number': result.rider_number,
                 'image_url': result.image_url,
                 'bike_brand': result.bike_brand,
-                'points': get_smx_qualification_points(result.position)
+                'points': get_smx_qualification_points(result.position)  # Race points using SMX system
             }
             results_with_points.append(result_dict)
         
