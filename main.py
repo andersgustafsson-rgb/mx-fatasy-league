@@ -8407,9 +8407,13 @@ def test_countdown():
         if not next_race_date:
             return jsonify({"error": "No upcoming races found for testing"})
         
-        # Create race datetime for testing (8pm local time)
+        # Create race datetime for testing using actual start_time if available
         race_date = next_race_date.event_date
-        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=20, minute=0))
+        if hasattr(next_race_date, 'start_time') and next_race_date.start_time:
+            race_datetime_local = datetime.combine(race_date, next_race_date.start_time)
+        else:
+            # Default to 8pm if no start_time set
+            race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=20, minute=0))
         
         # Convert to UTC for testing
         timezone_offsets = {
@@ -8494,25 +8498,13 @@ def test_countdown():
             })
         
         # Race time mapping (8pm local time for each race)
-        race_times = {
-            'Anaheim 1': '20:00',
-            'San Diego': '20:00', 
-            'Anaheim 2': '20:00',
-            'Houston': '20:00',
-            'Tampa': '20:00',
-            'Glendale': '20:00',
-            'Arlington': '20:00',
-            'Daytona': '20:00',
-            'Indianapolis': '20:00',
-            'Detroit': '20:00',
-            'Nashville': '20:00',
-            'Denver': '20:00',
-            'Salt Lake City': '20:00'
-        }
-        
-        # Get race time (8pm local)
-        race_time_str = race_times.get(next_race.name, '20:00')
-        race_hour, race_minute = map(int, race_time_str.split(':'))
+        # Use actual start_time from competition if available, otherwise default to 8pm
+        if hasattr(next_race, 'start_time') and next_race.start_time:
+            race_hour = next_race.start_time.hour
+            race_minute = next_race.start_time.minute
+        else:
+            # Default to 8pm if no start_time set
+            race_hour, race_minute = 20, 0
         
         # Create race datetime in local timezone
         race_date = next_race.event_date
