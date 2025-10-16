@@ -3319,7 +3319,8 @@ def race_results_page():
             db.session.query(
                 CompetitionResult.rider_id,
                 CompetitionResult.position,
-                Rider.name,
+                CompetitionResult.points,
+                Rider.name.label('rider_name'),
                 Rider.class_name,
                 Rider.rider_number,
                 Rider.image_url,
@@ -3334,7 +3335,7 @@ def race_results_page():
         holeshots = (
             db.session.query(
                 HoleshotResult.rider_id,
-                Rider.name,
+                Rider.name.label('rider_name'),
                 HoleshotResult.class_name,
                 Rider.rider_number,
                 Rider.image_url,
