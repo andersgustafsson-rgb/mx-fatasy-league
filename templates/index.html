@@ -263,6 +263,31 @@
             </div>
         </header>
           
+          <!-- Bulletin Board Notification -->
+          {% if new_bulletin_posts > 0 %}
+          <div class="bg-blue-600 border border-blue-400 rounded-lg p-3 mb-4 animate-pulse">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">📢</span>
+                <div>
+                  <p class="text-white font-semibold text-sm">
+                    {% if new_bulletin_posts == 1 %}
+                      Nytt inlägg på anslagstavlan!
+                    {% else %}
+                      {{ new_bulletin_posts }} nya inlägg på anslagstavlan!
+                    {% endif %}
+                  </p>
+                  <p class="text-blue-100 text-xs">Senaste 24 timmarna</p>
+                </div>
+              </div>
+              <a href="{{ url_for('bulletin_board') }}" 
+                 class="bg-blue-500 hover:bg-blue-400 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
+                Visa
+              </a>
+            </div>
+          </div>
+          {% endif %}
+          
           <!-- Countdown Widgets Container -->
           <div class="flex flex-col lg:flex-row gap-4 min-w-[280px] sm:min-w-[400px] lg:min-w-[1000px]">
             

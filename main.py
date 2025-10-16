@@ -734,6 +734,20 @@ def index():
             current_picks_450 = []
             current_picks_250 = []
 
+    # Check for new bulletin posts (last 24 hours)
+    new_bulletin_posts = 0
+    try:
+        from datetime import timedelta
+        yesterday = today - timedelta(days=1)
+        new_bulletin_posts = BulletinPost.query.filter(
+            BulletinPost.created_at >= yesterday,
+            BulletinPost.is_deleted == False,
+            BulletinPost.parent_id == None  # Only count main posts, not replies
+        ).count()
+    except Exception as e:
+        print(f"Error checking bulletin posts: {e}")
+        new_bulletin_posts = 0
+
     return render_template(
         "index.html",
         username=session["username"],
@@ -747,6 +761,7 @@ def index():
         current_holeshot_450=current_holeshot_450 if 'current_holeshot_450' in locals() else None,
         current_holeshot_250=current_holeshot_250 if 'current_holeshot_250' in locals() else None,
         current_wildcard=current_wildcard if 'current_wildcard' in locals() else None,
+        new_bulletin_posts=new_bulletin_posts,
         picks_status=picks_status,
     )
 
