@@ -132,13 +132,28 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Tidszon</label>
-                        <select id="competition-timezone" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                        <select id="competition-timezone" onchange="updateCurrentTime()" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
                             <option value="America/New_York">Eastern Time</option>
                             <option value="America/Chicago">Central Time</option>
                             <option value="America/Denver">Mountain Time</option>
                             <option value="America/Los_Angeles">Pacific Time</option>
                             <option value="Europe/Stockholm">Stockholm</option>
                         </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Race Start Tid (lokaltid)</label>
+                        <input type="time" id="competition-start-time" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
+                        <p class="text-xs text-gray-400 mt-1">Tid när racet startar i vald tidszon</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Aktuell tid (vald tidszon)</label>
+                        <div id="current-time-display" class="w-full bg-gray-600 text-white px-3 py-2 rounded-lg border border-gray-600 text-sm">
+                            Laddar...
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">Uppdateras automatiskt</p>
                     </div>
                 </div>
                 
@@ -168,6 +183,9 @@
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadCompetitions();
+            updateCurrentTime();
+            // Update time every minute
+            setInterval(updateCurrentTime, 60000);
         });
 
         async function loadCompetitions() {
@@ -226,11 +244,40 @@
             });
         }
 
+        function updateCurrentTime() {
+            const timezoneSelect = document.getElementById('competition-timezone');
+            const currentTimeDisplay = document.getElementById('current-time-display');
+            
+            if (!timezoneSelect || !currentTimeDisplay) return;
+            
+            const timezone = timezoneSelect.value || 'America/Los_Angeles';
+            
+            try {
+                const now = new Date();
+                const timeString = now.toLocaleString('sv-SE', {
+                    timeZone: timezone,
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                const timezoneName = timezone.split('/').pop().replace('_', ' ');
+                currentTimeDisplay.textContent = `${timeString} (${timezoneName})`;
+            } catch (error) {
+                currentTimeDisplay.textContent = 'Kunde inte ladda tid';
+            }
+        }
+
         function showAddCompetitionModal() {
             document.getElementById('modal-title').textContent = 'Lägg till tävling';
             document.getElementById('competition-form').reset();
             document.getElementById('competition-id').value = '';
             document.getElementById('competition-modal').classList.remove('hidden');
+            updateCurrentTime();
         }
 
         function editCompetition(id) {
@@ -247,7 +294,13 @@
             document.getElementById('competition-timezone').value = comp.timezone || 'America/New_York';
             document.getElementById('competition-triple-crown').checked = comp.is_triple_crown;
             
+            // Handle start time if it exists
+            if (comp.start_time) {
+                document.getElementById('competition-start-time').value = comp.start_time;
+            }
+            
             document.getElementById('competition-modal').classList.remove('hidden');
+            updateCurrentTime();
         }
 
         function closeModal() {
@@ -265,7 +318,8 @@
                 coast_250: document.getElementById('competition-coast').value || null,
                 point_multiplier: parseFloat(document.getElementById('competition-multiplier').value),
                 is_triple_crown: document.getElementById('competition-triple-crown').checked,
-                timezone: document.getElementById('competition-timezone').value
+                timezone: document.getElementById('competition-timezone').value,
+                start_time: document.getElementById('competition-start-time').value || null
             };
 
             try {

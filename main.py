@@ -139,6 +139,7 @@ class Competition(db.Model):
     is_triple_crown = db.Column(db.Integer, default=0)
     coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
     timezone = db.Column(db.String(50), nullable=True)  # <-- tidszon för banan
+    start_time = db.Column(db.Time, nullable=True)  # <-- race start tid
     
     # New SMX fields
     series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
@@ -2306,7 +2307,8 @@ def list_competitions():
         'coast_250': comp.coast_250,
         'point_multiplier': comp.point_multiplier,
         'is_triple_crown': comp.is_triple_crown,
-        'timezone': comp.timezone
+        'timezone': comp.timezone,
+        'start_time': comp.start_time.isoformat() if comp.start_time else None
     } for comp in competitions])
 
 @app.route('/api/competitions/create', methods=['POST'])
@@ -2324,7 +2326,8 @@ def create_competition():
             coast_250=data.get('coast_250'),
             point_multiplier=data.get('point_multiplier', 1.0),
             is_triple_crown=data.get('is_triple_crown', False),
-            timezone=data.get('timezone')
+            timezone=data.get('timezone'),
+            start_time=datetime.strptime(data['start_time'], '%H:%M').time() if data.get('start_time') else None
         )
         db.session.add(competition)
         db.session.commit()
@@ -2350,6 +2353,7 @@ def update_competition(competition_id):
         competition.point_multiplier = data.get('point_multiplier', 1.0)
         competition.is_triple_crown = data.get('is_triple_crown', False)
         competition.timezone = data.get('timezone')
+        competition.start_time = datetime.strptime(data['start_time'], '%H:%M').time() if data.get('start_time') else None
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Tävling uppdaterad!'})
@@ -7853,17 +7857,22 @@ def race_countdown():
             if not next_race_obj:
                 return jsonify({"error": "No upcoming races"})
             
-            # Calculate countdown to race start (8 PM on race date)
+            # Calculate countdown to race start using start_time from database
             # Ensure event_date is a datetime object
             if isinstance(next_race_obj.event_date, str):
                 event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
             elif isinstance(next_race_obj.event_date, date) and not isinstance(next_race_obj.event_date, datetime):
-                # Convert date to datetime at midnight, then set to 8 PM
+                # Convert date to datetime at midnight
                 event_date = datetime.combine(next_race_obj.event_date, datetime.min.time())
             else:
                 event_date = next_race_obj.event_date
             
-            race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            # Use start_time from database if available, otherwise default to 8 PM
+            if next_race_obj.start_time:
+                race_datetime = datetime.combine(event_date.date(), next_race_obj.start_time)
+            else:
+                race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
             
             next_race = {
@@ -9254,10 +9263,15 @@ def is_picks_locked(competition):
         print(f"DEBUG: is_picks_locked - scenario: {scenario}, current_time: {current_time}, deadline_datetime: {deadline_datetime}, time_to_deadline: {time_to_deadline}, picks_locked: {picks_locked}")
     else:
         # Check if picks are locked (2 hours before race)
-        race_time_str = "20:00"  # 8pm local time
-        race_hour, race_minute = map(int, race_time_str.split(':'))
         race_date = competition_obj.event_date
-        race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
+        
+        # Use start_time from database if available, otherwise default to 8 PM
+        if competition_obj.start_time:
+            race_datetime_local = datetime.combine(race_date, competition_obj.start_time)
+        else:
+            race_time_str = "20:00"  # 8pm local time default
+            race_hour, race_minute = map(int, race_time_str.split(':'))
+            race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
         
         # Convert to UTC for countdown calculation
         timezone_offsets = {
