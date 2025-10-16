@@ -3754,6 +3754,7 @@ def get_other_users_picks(competition_id):
                     "class": rider.class_name,
                     "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
                 }
+                print(f"DEBUG: Created pick_data: {pick_data}")
                 
                 if rider.class_name == '450cc' and len(picks_450) < 6:
                     picks_450.append(pick_data)

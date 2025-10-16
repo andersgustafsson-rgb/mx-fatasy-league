@@ -1647,6 +1647,7 @@
         if (!response.ok) throw new Error('Kunde inte hämta andra användares picks');
         
         const usersPicks = await response.json();
+        console.log('DEBUG: usersPicks received:', usersPicks);
         
         // Create modal to display picks
         const modal = document.createElement('div');
