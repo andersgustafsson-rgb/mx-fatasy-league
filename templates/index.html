@@ -289,7 +289,13 @@
                       {{ new_bulletin_posts }} nya inlägg på anslagstavlan!
                     {% endif %}
                   </p>
-                  <p class="text-indigo-100 text-sm font-medium">Senaste 24 timmarna</p>
+                  <p class="text-indigo-100 text-sm font-medium">
+                    {% if latest_post_author %}
+                      Senaste från <span class="text-yellow-300 font-semibold">{{ latest_post_author }}</span>
+                    {% else %}
+                      Senaste 24 timmarna
+                    {% endif %}
+                  </p>
                 </div>
               </div>
               

@@ -736,17 +736,25 @@ def index():
 
     # Check for new bulletin posts (last 24 hours)
     new_bulletin_posts = 0
+    latest_post_author = None
     try:
         from datetime import timedelta
         yesterday = today - timedelta(days=1)
-        new_bulletin_posts = BulletinPost.query.filter(
+        new_posts = BulletinPost.query.filter(
             BulletinPost.created_at >= yesterday,
             BulletinPost.is_deleted == False,
             BulletinPost.parent_id == None  # Only count main posts, not replies
-        ).count()
+        ).order_by(BulletinPost.created_at.desc()).all()
+        
+        new_bulletin_posts = len(new_posts)
+        if new_posts:
+            # Get the latest post author
+            latest_post = new_posts[0]
+            latest_post_author = latest_post.user.username if latest_post.user else "Okänd"
     except Exception as e:
         print(f"Error checking bulletin posts: {e}")
         new_bulletin_posts = 0
+        latest_post_author = None
 
     return render_template(
         "index.html",
@@ -762,6 +770,7 @@ def index():
         current_holeshot_250=current_holeshot_250 if 'current_holeshot_250' in locals() else None,
         current_wildcard=current_wildcard if 'current_wildcard' in locals() else None,
         new_bulletin_posts=new_bulletin_posts,
+        latest_post_author=latest_post_author,
         picks_status=picks_status,
     )
 
