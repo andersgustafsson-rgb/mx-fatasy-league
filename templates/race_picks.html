@@ -582,7 +582,9 @@
 
     <div class="mt-4 sm:mt-6 flex gap-3">
       <button onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
+      {% if picks_locked %}
       <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
+      {% endif %}
     </div>
 
     {% else %}

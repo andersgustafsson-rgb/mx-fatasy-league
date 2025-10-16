@@ -1463,6 +1463,7 @@ def race_picks_page(competition_id):
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
         trackmap_images=trackmap_images,
+        picks_locked=picks_locked,
     )
 
 
