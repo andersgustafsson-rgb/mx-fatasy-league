@@ -31,7 +31,7 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
             <button onclick="showAddCompetitionModal()" class="cyberpunk-button px-6 py-3 rounded-lg text-center">
                 ➕ Lägg till tävling
             </button>
@@ -40,6 +40,9 @@
             </button>
             <button onclick="migrateStartTime()" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg text-center">
                 🔧 Migrera start_time
+            </button>
+            <button onclick="updateSeasonsTo2026()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-center">
+                📅 Uppdatera till 2026
             </button>
             <button onclick="exportCompetitions()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg text-center">
                 📤 Exportera data
@@ -399,6 +402,31 @@
             } catch (error) {
                 console.error('Error:', error);
                 showStatus('Fel vid migration: ' + error.message, 'error');
+            }
+        }
+
+        async function updateSeasonsTo2026() {
+            if (!confirm('Uppdatera alla 2025 säsonger och tävlingar till 2026? Detta kan inte ångras!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/competitions/update_seasons_to_2026', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showStatus(result.message, 'success');
+                    // Reload competitions after update
+                    setTimeout(() => loadCompetitions(), 1000);
+                } else {
+                    showStatus('Fel: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid uppdatering: ' + error.message, 'error');
             }
         }
 

@@ -2535,6 +2535,43 @@ def migrate_start_time():
         print(f"Migration error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
+def update_seasons_to_2026():
+    """Update all 2025 series and competitions to 2026"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        db.session.rollback()
+        
+        # Update series from 2025 to 2026
+        series_2025 = Series.query.filter_by(year=2025).all()
+        series_updated = 0
+        for series in series_2025:
+            series.year = 2026
+            series_updated += 1
+        
+        # Update competitions from 2025 to 2026
+        competitions_2025 = Competition.query.filter(Competition.event_date.like('2025-%')).all()
+        competitions_updated = 0
+        for comp in competitions_2025:
+            if comp.event_date:
+                new_date = comp.event_date.replace(year=2026)
+                comp.event_date = new_date
+                competitions_updated += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated {series_updated} series and {competitions_updated} competitions from 2025 to 2026'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Season update error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # API endpoints for series management
 @app.route('/api/series', methods=['GET'])
 def get_series():
