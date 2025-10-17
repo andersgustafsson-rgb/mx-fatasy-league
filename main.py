@@ -659,9 +659,26 @@ def index():
             except Exception:
                 # Column doesn't exist, add it
                 print("Adding is_admin column to users table...")
-                db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
-                db.session.commit()
-                print("is_admin column added successfully")
+                try:
+                    # Rollback any failed transaction first
+                    db.session.rollback()
+                    # Add the column
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                    db.session.commit()
+                    print("is_admin column added successfully")
+                except Exception as e:
+                    print(f"Error adding is_admin column: {e}")
+                    db.session.rollback()
+                    # Try alternative approach - create a new connection
+                    try:
+                        from sqlalchemy import create_engine
+                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                            conn.commit()
+                        print("is_admin column added successfully via direct connection")
+                    except Exception as e2:
+                        print(f"Failed to add is_admin column via direct connection: {e2}")
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
@@ -7891,6 +7908,9 @@ def create_admin():
 def migrate_admin_column():
     """Add is_admin column to users table"""
     try:
+        # First, rollback any failed transactions
+        db.session.rollback()
+        
         # Check if column already exists
         result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='is_admin'")).fetchone()
         
@@ -7912,6 +7932,39 @@ def migrate_admin_column():
     except Exception as e:
         db.session.rollback()
         print(f"Error adding is_admin column: {e}")
+        
+        # Try with direct connection
+        try:
+            from sqlalchemy import create_engine
+            engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+            return jsonify({
+                "message": "is_admin column added successfully via direct connection",
+                "status": "added"
+            })
+        except Exception as e2:
+            return jsonify({"error": f"Failed to add column: {str(e2)}"}), 500
+
+@app.route("/fix_database_transaction")
+def fix_database_transaction():
+    """Fix failed database transactions"""
+    try:
+        # Rollback any failed transactions
+        db.session.rollback()
+        
+        # Test the connection
+        db.session.execute(text("SELECT 1"))
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Database transaction fixed successfully",
+            "status": "fixed"
+        })
+        
+    except Exception as e:
+        print(f"Error fixing database transaction: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/create_hampus_admin")
