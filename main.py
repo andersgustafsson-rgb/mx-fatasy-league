@@ -2496,6 +2496,7 @@ def delete_competition(competition_id):
         return jsonify({'error': 'Unauthorized'}), 401
     
     competition = Competition.query.get_or_404(competition_id)
+    force = request.args.get('force', 'false').lower() == 'true'
     
     try:
         # Check if competition has any picks or results
@@ -2503,9 +2504,21 @@ def delete_competition(competition_id):
         holeshot_picks = HoleshotPick.query.filter_by(competition_id=competition_id).count()
         wildcard_picks = WildcardPick.query.filter_by(competition_id=competition_id).count()
         results = CompetitionResult.query.filter_by(competition_id=competition_id).count()
+        holeshot_results = HoleshotResult.query.filter_by(competition_id=competition_id).count()
         
-        if race_picks > 0 or holeshot_picks > 0 or wildcard_picks > 0 or results > 0:
+        if not force and (race_picks > 0 or holeshot_picks > 0 or wildcard_picks > 0 or results > 0 or holeshot_results > 0):
             return jsonify({'error': 'Kan inte ta bort tävling som har picks eller resultat'}), 400
+        
+        if force:
+            # Force delete - remove all related data first
+            RacePick.query.filter_by(competition_id=competition_id).delete()
+            HoleshotPick.query.filter_by(competition_id=competition_id).delete()
+            WildcardPick.query.filter_by(competition_id=competition_id).delete()
+            CompetitionResult.query.filter_by(competition_id=competition_id).delete()
+            HoleshotResult.query.filter_by(competition_id=competition_id).delete()
+            CompetitionRiderStatus.query.filter_by(competition_id=competition_id).delete()
+            CompetitionScore.query.filter_by(competition_id=competition_id).delete()
+            CompetitionImage.query.filter_by(competition_id=competition_id).delete()
         
         db.session.delete(competition)
         db.session.commit()

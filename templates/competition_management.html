@@ -371,6 +371,28 @@
 
                 if (!response.ok) {
                     const error = await response.json();
+                    
+                    // If error is about picks/results, offer force delete
+                    if (error.error && error.error.includes('picks eller resultat')) {
+                        if (confirm('Tävlingen har picks eller resultat. Vill du ta bort allt (picks, resultat och tävling)?')) {
+                            const forceResponse = await fetch(`/api/competitions/delete/${id}?force=true`, {
+                                method: 'DELETE'
+                            });
+                            
+                            if (!forceResponse.ok) {
+                                const forceError = await forceResponse.json();
+                                throw new Error(forceError.error || 'Fel vid force borttagning');
+                            }
+                            
+                            const forceResult = await forceResponse.json();
+                            showStatus(forceResult.message || 'Tävling och all data borttagen!', 'success');
+                            loadCompetitions();
+                            return;
+                        } else {
+                            return; // User cancelled
+                        }
+                    }
+                    
                     throw new Error(error.error || 'Fel vid borttagning');
                 }
 
