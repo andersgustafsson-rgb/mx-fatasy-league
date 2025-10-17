@@ -1397,6 +1397,23 @@ def series_page(series_id):
             else:
                 user_picks_status[comp.id] = {'has_picks': False}
         
+        # Find next race (either active race or next upcoming race)
+        next_race = None
+        if active_race_id:
+            # If there's an active race, use that
+            next_race = Competition.query.get(active_race_id)
+        else:
+            # Otherwise find the next upcoming race
+            current_date = get_today()
+            next_race = Competition.query.filter_by(series_id=series_id).filter(
+                Competition.event_date >= current_date
+            ).order_by(Competition.event_date).first()
+        
+        # Determine if picks are open
+        picks_open = False
+        if next_race:
+            picks_open = not is_picks_locked(next_race)
+        
         # Simple template render with all required variables
         return render_template("series_page.html", 
                              series=series, 
@@ -1404,8 +1421,8 @@ def series_page(series_id):
                              competition_results=competition_results,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
-                             next_race=None,
-                             picks_open=False,
+                             next_race=next_race,
+                             picks_open=picks_open,
                              current_date=get_today(),
                              active_race_id=active_race_id,
                              user_logged_in="user_id" in session)
