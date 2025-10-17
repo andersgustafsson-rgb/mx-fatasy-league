@@ -9609,17 +9609,19 @@ def is_picks_locked(competition):
                 
                 if active_race_id == competition_id:
                     # This is the active race - use simulated time
+                    print(f"DEBUG: is_picks_locked - {competition_name} is the ACTIVE race (ID: {competition_id})")
                     if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
                         # Use the competition's actual start time with simulated date
-                        race_date = current_simulated_time.date()
+                        race_date = current_time.date()
                         race_datetime = datetime.combine(race_date, competition_obj.start_time)
                         deadline_datetime = race_datetime - timedelta(hours=2)
                     else:
                         # Fallback to 3 hours from simulated time
-                        race_datetime = current_simulated_time + timedelta(hours=3)
+                        race_datetime = current_time + timedelta(hours=3)
                         deadline_datetime = race_datetime - timedelta(hours=2)
                 else:
                     # This is not the active race - use real event date
+                    print(f"DEBUG: is_picks_locked - {competition_name} is NOT the active race (ID: {competition_id}, active: {active_race_id})")
                     if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
                         race_date = competition_obj.event_date or current_time.date()
                         race_datetime = datetime.combine(race_date, competition_obj.start_time)
