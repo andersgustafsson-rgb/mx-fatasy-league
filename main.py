@@ -7851,6 +7851,49 @@ def create_admin():
         print(f"Error creating admin: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/create_hampus_admin")
+def create_hampus_admin():
+    """Create Hampus as admin user"""
+    try:
+        # Check if Hampus user exists
+        existing_user = User.query.filter_by(username='Hampus').first()
+        
+        if existing_user:
+            # Update existing user to be admin (by changing username to 'test' for admin access)
+            existing_user.username = 'test'
+            existing_user.display_name = 'Hampus'
+            db.session.commit()
+            
+            return jsonify({
+                "message": "Hampus user updated to admin successfully!",
+                "username": "test",
+                "password": "Use your existing password",
+                "user_id": existing_user.id,
+                "display_name": "Hampus"
+            })
+        
+        # Create new Hampus admin user
+        hampus_user = User(
+            username='test',  # Use 'test' for admin access
+            password_hash=generate_password_hash('hampus123'),
+            display_name='Hampus'
+        )
+        
+        db.session.add(hampus_user)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Hampus admin user created successfully!",
+            "username": "test",
+            "password": "hampus123",
+            "user_id": hampus_user.id,
+            "display_name": "Hampus"
+        })
+        
+    except Exception as e:
+        print(f"Error creating Hampus admin: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/admin/users")
 def admin_users():
     """Admin page to manage users"""
