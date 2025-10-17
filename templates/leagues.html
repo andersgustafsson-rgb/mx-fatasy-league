@@ -188,15 +188,36 @@
             {% for league in my_leagues %}
               <div class="league-card p-5 rounded-lg">
                 <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block">
-                  <div class="league-image h-24 sm:h-32 w-full rounded-lg mb-4 p-3 flex items-center justify-center">
+                  <div class="league-image h-24 sm:h-32 w-full rounded-lg mb-4 p-3 flex items-center justify-center relative group">
                     {% if league.image_url %}
-                      <img src="{{ league.image_url }}" alt="Ligabild"
-                          class="h-full w-full object-contain rounded"
-                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <!-- Cool image container -->
+                      <div class="relative w-full h-full">
+                        <!-- Glow effect -->
+                        <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-lg blur-sm opacity-30 group-hover:opacity-50 transition duration-500"></div>
+                        
+                        <!-- Image with effects -->
+                        <img src="{{ league.image_url }}" alt="Ligabild"
+                            class="relative h-full w-full object-contain rounded-lg border border-cyan-400/30 group-hover:border-cyan-400/60 transition-all duration-300 group-hover:scale-105"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        
+                        <!-- Floating particle -->
+                        <div class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-ping opacity-60"></div>
+                      </div>
                     {% endif %}
-                    <div class="text-center text-cyan-400 {% if league.image_url %}hidden{% endif %}">
-                      <div class="text-3xl sm:text-4xl mb-2 floating-animation">🏆</div>
-                      <div class="text-sm font-semibold neon-text">Ligabild</div>
+                    
+                    <!-- Fallback design -->
+                    <div class="text-center text-cyan-400 {% if league.image_url %}hidden{% endif %} relative w-full h-full">
+                      <!-- Glow effect for fallback -->
+                      <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-lg blur-sm opacity-20"></div>
+                      
+                      <!-- Content -->
+                      <div class="relative flex flex-col items-center justify-center h-full">
+                        <div class="text-3xl sm:text-4xl mb-2 floating-animation group-hover:scale-110 transition-transform duration-300">🏆</div>
+                        <div class="text-sm font-semibold neon-text">Ligabild</div>
+                      </div>
+                      
+                      <!-- Floating particle -->
+                      <div class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse opacity-40"></div>
                     </div>
                   </div>
                   <h3 class="font-bold text-xl sm:text-2xl text-white mb-2">{{ league.name }}</h3>
