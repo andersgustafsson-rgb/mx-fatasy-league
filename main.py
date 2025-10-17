@@ -3846,7 +3846,6 @@ def race_results_page():
     
     competitions = (
         Competition.query
-        .filter(Competition.series == "SX")
         .order_by(Competition.event_date.asc())
         .all()
     )
@@ -3884,9 +3883,19 @@ def race_results_page():
             .all()
         )
         
-        # Add race points to each result (SMX points system for individual races)
+        # Add race points to each result (different point systems for different series)
         results_with_points = []
         for result in results:
+            # Use appropriate point system based on series
+            if comp.series == "SX":
+                points = get_smx_qualification_points(result.position)  # Supercross uses SMX points
+            elif comp.series == "MX":
+                points = get_smx_qualification_points(result.position)  # Motocross uses SMX points
+            elif comp.series == "SMX":
+                points = get_smx_qualification_points(result.position) * comp.point_multiplier  # SMX Finals with multiplier
+            else:
+                points = get_smx_qualification_points(result.position)  # Default to SMX points
+            
             result_dict = {
                 'rider_id': result.rider_id,
                 'position': result.position,
@@ -3895,7 +3904,7 @@ def race_results_page():
                 'rider_number': result.rider_number,
                 'image_url': result.image_url,
                 'bike_brand': result.bike_brand,
-                'points': get_smx_qualification_points(result.position)  # Supercross series points (same as SMX system)
+                'points': points
             }
             results_with_points.append(result_dict)
         
@@ -8034,6 +8043,30 @@ def fix_mx_coast_250():
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/recalculate_scores/<int:competition_id>")
+def recalculate_scores(competition_id):
+    """Manually recalculate scores for a specific competition"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Check if competition exists
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 404
+        
+        # Run score calculation
+        calculate_scores(competition_id)
+        
+        return jsonify({
+            "message": f"Scores recalculated for {competition.name}",
+            "competition_id": competition_id,
+            "competition_name": competition.name
+        })
+        
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/create_hampus_admin")
