@@ -420,7 +420,9 @@ def is_admin_user():
         user = User.query.filter_by(username=username).first()
         if user and hasattr(user, 'is_admin') and user.is_admin:
             return True
-    except Exception:
+    except Exception as e:
+        # If is_admin column doesn't exist, fall back to old method
+        print(f"Error checking is_admin flag: {e}")
         pass
     
     # Fallback to old method for backward compatibility
@@ -648,6 +650,18 @@ def index():
         if not inspect(db.engine).has_table('competitions'):
             print("Tables missing, reinitializing database...")
             init_database()
+        
+        # Check if is_admin column exists in users table
+        if inspect(db.engine).has_table('users'):
+            try:
+                # Try to query is_admin column
+                db.session.execute(text("SELECT is_admin FROM users LIMIT 1"))
+            except Exception:
+                # Column doesn't exist, add it
+                print("Adding is_admin column to users table...")
+                db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                db.session.commit()
+                print("is_admin column added successfully")
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
@@ -824,7 +838,11 @@ def index():
             latest_post = new_posts[0]
             if latest_post.user:
                 # Use display_name if available, otherwise fallback to username
-                latest_post_author = getattr(latest_post.user, 'display_name', None) or latest_post.user.username
+                # Handle case where is_admin column might not exist yet
+                try:
+                    latest_post_author = getattr(latest_post.user, 'display_name', None) or latest_post.user.username
+                except Exception:
+                    latest_post_author = latest_post.user.username
             else:
                 latest_post_author = "Okänd"
     except Exception as e:
