@@ -36,7 +36,7 @@
                 <div class="flex items-center space-x-4">
                     <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors neon-text">🏁 MX Fantasy</a>
                     <span class="text-cyan-400">|</span>
-                    <h1 class="text-2xl font-bold text-cyan-400 neon-text">{{ series.name }} 2025</h1>
+                    <h1 class="text-2xl font-bold text-cyan-400 neon-text">{{ series.name }} {{ series.year }}</h1>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-cyan-300">Välkommen, {{ session.username }}!</span>
@@ -187,7 +187,7 @@
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                 <div class="p-6 text-center">
                     <h2 class="text-xl font-bold text-cyan-400 mb-2">🏁 Säsong Avslutad</h2>
-                    <p class="text-gray-300">Alla races i {{ series.name }} 2025 är avslutade.</p>
+                    <p class="text-gray-300">Alla races i {{ series.name }} {{ series.year }} är avslutade.</p>
                 </div>
             </div>
         </div>
