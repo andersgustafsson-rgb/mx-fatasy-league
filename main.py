@@ -1401,11 +1401,16 @@ def series_page(series_id):
         next_race = None
         print(f"DEBUG: series_page - series_id: {series_id}, active_race_id: {active_race_id}")
         if active_race_id:
-            # If there's an active race, use that
-            next_race = Competition.query.get(active_race_id)
-            print(f"DEBUG: Found active race: {next_race.name if next_race else 'None'} (ID: {active_race_id})")
-        else:
-            # Otherwise find the next upcoming race
+            # If there's an active race, check if it belongs to this series
+            potential_race = Competition.query.get(active_race_id)
+            if potential_race and potential_race.series_id == series_id:
+                next_race = potential_race
+                print(f"DEBUG: Found active race in this series: {next_race.name} (ID: {active_race_id})")
+            else:
+                print(f"DEBUG: Active race {potential_race.name if potential_race else 'None'} is not in this series (series_id: {potential_race.series_id if potential_race else 'None'} vs {series_id})")
+        
+        if not next_race:
+            # Otherwise find the next upcoming race in this series
             current_date = get_today()
             next_race = Competition.query.filter_by(series_id=series_id).filter(
                 Competition.event_date >= current_date
