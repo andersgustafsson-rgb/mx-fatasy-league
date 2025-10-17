@@ -2555,7 +2555,11 @@ def update_seasons_to_2026():
             series_updated += 1
         
         # Update competitions from 2025 to 2026
-        competitions_2025 = Competition.query.filter(Competition.event_date.like('2025-%')).all()
+        from datetime import date
+        competitions_2025 = Competition.query.filter(
+            Competition.event_date >= date(2025, 1, 1),
+            Competition.event_date <= date(2025, 12, 31)
+        ).all()
         competitions_updated = 0
         for comp in competitions_2025:
             if comp.event_date:
@@ -2569,10 +2573,10 @@ def update_seasons_to_2026():
             'success': True,
             'message': f'Updated {series_updated} series and {competitions_updated} competitions from 2025 to 2026'
         })
-        
+    
     except Exception as e:
         db.session.rollback()
-        print(f"Season update error: {e}")
+        print(f"Update seasons error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # API endpoints for series management
