@@ -788,7 +788,7 @@
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🔧 Admin & System</h2>
                 <div class="space-y-3">
-                  {% if username == 'test' %}
+                  {% if is_admin %}
                   <a href="{{ url_for('admin_page') }}" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
                     Admin Panel
                   </a>

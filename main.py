@@ -884,6 +884,7 @@ def index():
         latest_post_author=latest_post_author,
         picks_status=picks_status,
         picks_locked=picks_locked,
+        is_admin=is_admin_user(),
     )
 
 
