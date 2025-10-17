@@ -3841,14 +3841,15 @@ def user_stats_page(username: str):
 @app.get("/race_results")
 def race_results_page():
     """Show actual race results for all competitions"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    competitions = (
-        Competition.query
-        .order_by(Competition.event_date.asc())
-        .all()
-    )
+    try:
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+        
+        competitions = (
+            Competition.query
+            .order_by(Competition.event_date.asc())
+            .all()
+        )
     
     # Get results for each competition
     competition_results = {}
@@ -3916,6 +3917,7 @@ def race_results_page():
     # Determine status for each competition and find the latest one
     today = get_today()
     latest_competition_id = None
+    latest_competition_date = None
     
     for comp in competitions:
         # Check if competition has results
@@ -3941,18 +3943,26 @@ def race_results_page():
             comp.status_bg = "bg-blue-100"
         
         # Find the latest competition (most recent with results, or most recent upcoming)
-        if has_results and (latest_competition_id is None or comp.event_date > competitions[latest_competition_id].event_date):
+        if has_results and (latest_competition_id is None or comp.event_date > latest_competition_date):
             latest_competition_id = comp.id
+            latest_competition_date = comp.event_date
         elif not latest_competition_id and comp.event_date and comp.event_date >= today:
             latest_competition_id = comp.id
+            latest_competition_date = comp.event_date
     
-    return render_template(
-        "race_results.html", 
-        competitions=competitions, 
-        competition_results=competition_results,
-        latest_competition_id=latest_competition_id,
-        username=session.get("username")
-    )
+        return render_template(
+            "race_results.html", 
+            competitions=competitions, 
+            competition_results=competition_results,
+            latest_competition_id=latest_competition_id,
+            username=session.get("username")
+        )
+    
+    except Exception as e:
+        print(f"ERROR in race_results_page: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error loading race results: {str(e)}", 500
 
 @app.get("/trackmaps")
 def trackmaps_page():
