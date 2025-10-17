@@ -2733,8 +2733,8 @@ def create_default_series_2025():
     supercross = Series(
         name='Supercross',
         year=2026,
-        start_date=date(2026, 1, 4),  # Anaheim 1
-        end_date=date(2026, 5, 10),   # Salt Lake City
+        start_date=date(2026, 1, 10),  # Anaheim 1
+        end_date=date(2026, 5, 9),     # Salt Lake City
         is_active=True,
         points_system='standard'
     )
@@ -2743,8 +2743,8 @@ def create_default_series_2025():
     motocross = Series(
         name='Motocross',
         year=2026,
-        start_date=date(2026, 5, 24),  # Pala
-        end_date=date(2026, 8, 23),    # Ironman
+        start_date=date(2026, 5, 30),  # Fox Raceway
+        end_date=date(2026, 8, 29),    # Ironman
         is_active=True,
         points_system='standard'
     )
@@ -2753,8 +2753,8 @@ def create_default_series_2025():
     smx_finals = Series(
         name='SMX Finals',
         year=2026,
-        start_date=date(2026, 9, 6),   # Playoff 1
-        end_date=date(2026, 9, 20),    # Final
+        start_date=date(2026, 9, 12),  # Playoff 1
+        end_date=date(2026, 9, 26),    # Final
         is_active=True,
         points_system='playoff'
     )
@@ -2779,25 +2779,25 @@ def create_default_series_2025():
 
 def create_supercross_competitions(supercross_series_id):
     """Create all Supercross competitions for 2026 - includes San Francisco"""
-    # Supercross races 2026 (existing ones) - San Francisco is included here
+    # Supercross races 2026 - Official SMX Schedule
     supercross_races = [
-        {"name": "Anaheim 1", "date": "2026-01-04", "coast_250": "west"},
-        {"name": "San Francisco", "date": "2026-01-11", "coast_250": "west"},
-        {"name": "San Diego", "date": "2026-01-18", "coast_250": "west"},
-        {"name": "Anaheim 2", "date": "2026-01-25", "coast_250": "west"},
-        {"name": "Detroit", "date": "2026-02-01", "coast_250": "east"},
-        {"name": "Glendale", "date": "2026-02-08", "coast_250": "west"},
-        {"name": "Arlington", "date": "2026-02-15", "coast_250": "east"},
-        {"name": "Daytona", "date": "2026-03-01", "coast_250": "east"},
-        {"name": "Birmingham", "date": "2026-03-08", "coast_250": "east"},
-        {"name": "Indianapolis", "date": "2026-03-15", "coast_250": "east"},
-        {"name": "Seattle", "date": "2026-03-22", "coast_250": "west"},
-        {"name": "St. Louis", "date": "2026-03-29", "coast_250": "east"},
-        {"name": "Foxborough", "date": "2026-04-05", "coast_250": "east"},
-        {"name": "Nashville", "date": "2026-04-12", "coast_250": "east"},
-        {"name": "Philadelphia", "date": "2026-04-19", "coast_250": "east"},
-        {"name": "Denver", "date": "2026-04-26", "coast_250": "west"},
-        {"name": "Salt Lake City", "date": "2026-05-03", "coast_250": "west"}
+        {"name": "Anaheim 1", "date": "2026-01-10", "coast_250": "west", "is_triple_crown": False},
+        {"name": "San Diego", "date": "2026-01-17", "coast_250": "west", "is_triple_crown": False},
+        {"name": "Anaheim 2", "date": "2026-01-24", "coast_250": "west", "is_triple_crown": True},
+        {"name": "Houston", "date": "2026-01-31", "coast_250": "west", "is_triple_crown": False},
+        {"name": "Glendale", "date": "2026-02-07", "coast_250": "west", "is_triple_crown": False},
+        {"name": "Seattle", "date": "2026-02-14", "coast_250": "east", "is_triple_crown": False},
+        {"name": "Arlington", "date": "2026-02-21", "coast_250": "east", "is_triple_crown": False},
+        {"name": "Daytona", "date": "2026-02-28", "coast_250": "east", "is_triple_crown": True},
+        {"name": "Indianapolis", "date": "2026-03-07", "coast_250": "showdown", "is_triple_crown": False},
+        {"name": "Birmingham", "date": "2026-03-21", "coast_250": "east", "is_triple_crown": False},
+        {"name": "Detroit", "date": "2026-03-28", "coast_250": "showdown", "is_triple_crown": False},
+        {"name": "St. Louis", "date": "2026-04-04", "coast_250": "east", "is_triple_crown": False},
+        {"name": "Nashville", "date": "2026-04-11", "coast_250": "east", "is_triple_crown": True},
+        {"name": "Cleveland", "date": "2026-04-18", "coast_250": "east", "is_triple_crown": False},
+        {"name": "Philadelphia", "date": "2026-04-25", "coast_250": "west", "is_triple_crown": False},
+        {"name": "Denver", "date": "2026-05-02", "coast_250": "showdown", "is_triple_crown": False},
+        {"name": "Salt Lake City", "date": "2026-05-09", "coast_250": "west", "is_triple_crown": False}
     ]
     
     for race in supercross_races:
@@ -2815,7 +2815,7 @@ def create_supercross_competitions(supercross_series_id):
             event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
             series="SX",
             point_multiplier=1.0,
-            is_triple_crown=0,
+            is_triple_crown=1 if race.get("is_triple_crown", False) else 0,
             coast_250=race["coast_250"],
             timezone="America/Los_Angeles",
             series_id=supercross_series_id,
@@ -2829,17 +2829,17 @@ def create_supercross_competitions(supercross_series_id):
 def create_motocross_competitions(motocross_series_id):
     """Create all Motocross competitions for 2026"""
     motocross_races = [
-        {"name": "Fox Raceway National", "date": "2026-05-24", "location": "Pala, CA"},
-        {"name": "Hangtown Classic", "date": "2026-05-31", "location": "Rancho Cordova, CA"},
-        {"name": "Thunder Valley National", "date": "2026-06-07", "location": "Lakewood, CO"},
-        {"name": "High Point National", "date": "2026-06-14", "location": "Mt. Morris, PA"},
-        {"name": "Southwick National", "date": "2026-06-28", "location": "Southwick, MA"},
-        {"name": "RedBud National", "date": "2026-07-05", "location": "Buchanan, MI"},
-        {"name": "Spring Creek National", "date": "2026-07-12", "location": "Millville, MN"},
-        {"name": "Washougal National", "date": "2026-07-19", "location": "Washougal, WA"},
-        {"name": "Unadilla National", "date": "2026-08-16", "location": "New Berlin, NY"},
-        {"name": "Budds Creek National", "date": "2026-08-23", "location": "Mechanicsville, MD"},
-        {"name": "Ironman National", "date": "2026-08-09", "location": "Crawfordsville, IN"}
+        {"name": "Fox Raceway National", "date": "2026-05-30", "location": "Pala, CA"},
+        {"name": "Hangtown Classic", "date": "2026-06-06", "location": "Sacramento, CA"},
+        {"name": "Thunder Valley National", "date": "2026-06-13", "location": "Lakewood, CO"},
+        {"name": "High Point National", "date": "2026-06-20", "location": "Mount Morris, PA"},
+        {"name": "RedBud National", "date": "2026-07-04", "location": "Buchanan, MI"},
+        {"name": "Southwick National", "date": "2026-07-11", "location": "Southwick, MA"},
+        {"name": "Spring Creek National", "date": "2026-07-18", "location": "Millville, MN"},
+        {"name": "Washougal National", "date": "2026-07-25", "location": "Washougal, WA"},
+        {"name": "Unadilla National", "date": "2026-08-15", "location": "New Berlin, NY"},
+        {"name": "Budds Creek National", "date": "2026-08-22", "location": "Mechanicsville, MD"},
+        {"name": "Ironman National", "date": "2026-08-29", "location": "Crawfordsville, IN"}
     ]
     
     for race in motocross_races:
@@ -2871,9 +2871,9 @@ def create_motocross_competitions(motocross_series_id):
 def create_smx_finals_competitions(smx_series_id):
     """Create all SMX Finals competitions for 2026"""
     smx_races = [
-        {"name": "SMX Playoff 1", "date": "2026-09-06", "phase": "playoff1", "multiplier": 1.0},
-        {"name": "SMX Playoff 2", "date": "2026-09-13", "phase": "playoff2", "multiplier": 2.0},
-        {"name": "SMX Final", "date": "2026-09-20", "phase": "final", "multiplier": 3.0}
+        {"name": "SMX Playoff 1", "date": "2026-09-12", "phase": "playoff1", "multiplier": 1.0},
+        {"name": "SMX Playoff 2", "date": "2026-09-19", "phase": "playoff2", "multiplier": 2.0},
+        {"name": "SMX Final", "date": "2026-09-26", "phase": "final", "multiplier": 3.0}
     ]
     
     for race in smx_races:
