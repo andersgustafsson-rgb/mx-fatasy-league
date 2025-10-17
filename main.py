@@ -9512,16 +9512,41 @@ def is_picks_locked(competition):
                 race_datetime = fake_race_base_time
                 deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_3h':
-            # Race in 3 hours - use actual competition start time if available
-            if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
-                # Use the competition's actual start time
-                race_date = competition_obj.event_date or current_time.date()
-                race_datetime = datetime.combine(race_date, competition_obj.start_time)
-                deadline_datetime = race_datetime - timedelta(hours=2)
-            else:
-                # Fallback to 3 hours from now
-                race_datetime = current_time + timedelta(hours=3)
-                deadline_datetime = race_datetime - timedelta(hours=2)
+            # Check if this is the active race
+            try:
+                result = db.session.execute(text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
+                active_race_id = result[0] if result and result[0] else None
+                
+                if active_race_id == competition_id:
+                    # This is the active race - use simulated time
+                    if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                        # Use the competition's actual start time with simulated date
+                        race_date = current_simulated_time.date()
+                        race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                        deadline_datetime = race_datetime - timedelta(hours=2)
+                    else:
+                        # Fallback to 3 hours from simulated time
+                        race_datetime = current_simulated_time + timedelta(hours=3)
+                        deadline_datetime = race_datetime - timedelta(hours=2)
+                else:
+                    # This is not the active race - use real event date
+                    if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                        race_date = competition_obj.event_date or current_time.date()
+                        race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                        deadline_datetime = race_datetime - timedelta(hours=2)
+                    else:
+                        # Fallback to 3 hours from now
+                        race_datetime = current_time + timedelta(hours=3)
+                        deadline_datetime = race_datetime - timedelta(hours=2)
+            except Exception as e:
+                # Fallback to original logic
+                if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
+                    race_date = competition_obj.event_date or current_time.date()
+                    race_datetime = datetime.combine(race_date, competition_obj.start_time)
+                    deadline_datetime = race_datetime - timedelta(hours=2)
+                else:
+                    race_datetime = current_time + timedelta(hours=3)
+                    deadline_datetime = race_datetime - timedelta(hours=2)
         elif scenario == 'race_in_1h':
             # Race in 1 hour - use actual competition start time if available
             if hasattr(competition_obj, 'start_time') and competition_obj.start_time:
