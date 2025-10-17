@@ -686,6 +686,37 @@ def index():
                         print("is_admin column added successfully via direct connection")
                     except Exception as e2:
                         print(f"Failed to add is_admin column via direct connection: {e2}")
+        
+        # Check if league image columns exist
+        if inspect(db.engine).has_table('leagues'):
+            try:
+                # Try to query image columns
+                db.session.execute(text("SELECT image_data, image_mime_type FROM leagues LIMIT 1"))
+            except Exception:
+                # Columns don't exist, add them
+                print("Adding image_data and image_mime_type columns to leagues table...")
+                try:
+                    # Rollback any failed transaction first
+                    db.session.rollback()
+                    # Add the columns
+                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+                    db.session.commit()
+                    print("League image columns added successfully")
+                except Exception as e:
+                    print(f"Error adding league image columns: {e}")
+                    db.session.rollback()
+                    # Try alternative approach - create a new connection
+                    try:
+                        from sqlalchemy import create_engine
+                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+                            conn.commit()
+                        print("League image columns added successfully via direct connection")
+                    except Exception as e2:
+                        print(f"Failed to add league image columns via direct connection: {e2}")
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
