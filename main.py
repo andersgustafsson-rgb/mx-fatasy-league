@@ -8079,6 +8079,37 @@ def recalculate_scores(competition_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/recalculate_all_scores")
+def recalculate_all_scores():
+    """Manually recalculate scores for all competitions that have results"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Find all competitions that have results
+        competitions_with_results = (
+            db.session.query(Competition.id, Competition.name)
+            .join(CompetitionResult, Competition.id == CompetitionResult.competition_id)
+            .distinct()
+            .all()
+        )
+        
+        recalculated = []
+        for comp_id, comp_name in competitions_with_results:
+            try:
+                calculate_scores(comp_id)
+                recalculated.append(comp_name)
+            except Exception as e:
+                print(f"Error recalculating scores for {comp_name}: {e}")
+        
+        return jsonify({
+            "message": f"Recalculated scores for {len(recalculated)} competitions",
+            "competitions": recalculated
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
     """Make Hampus an admin user"""
