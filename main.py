@@ -2631,7 +2631,18 @@ def update_to_official_2026():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        # Delete all existing competitions
+        # Delete all existing competitions and related data
+        # First delete all related data to avoid foreign key constraints
+        RacePick.query.delete()
+        HoleshotPick.query.delete()
+        WildcardPick.query.delete()
+        CompetitionResult.query.delete()
+        HoleshotResult.query.delete()
+        CompetitionRiderStatus.query.delete()
+        CompetitionScore.query.delete()
+        CompetitionImage.query.delete()
+        
+        # Then delete competitions
         Competition.query.delete()
         
         # Get or create series
@@ -2685,6 +2696,9 @@ def update_to_official_2026():
         
     except Exception as e:
         db.session.rollback()
+        print(f"Update to official 2026 error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # API endpoints for series management
