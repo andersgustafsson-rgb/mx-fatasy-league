@@ -3481,14 +3481,19 @@ def admin_simulate(competition_id):
     db.session.add(HoleshotResult(competition_id=competition_id, rider_id=jett.id, class_name="450cc"))
     db.session.add(HoleshotResult(competition_id=competition_id, rider_id=deegan.id, class_name="250cc"))
 
-    db.session.add(RacePick(user_id=user.id, competition_id=competition_id, rider_id=jett.id, predicted_position=1))
-    db.session.add(RacePick(user_id=user.id, competition_id=competition_id, rider_id=deegan.id, predicted_position=1))
-    db.session.add(HoleshotPick(user_id=user.id, competition_id=competition_id, rider_id=jett.id, class_name="450cc"))
-    db.session.add(HoleshotPick(user_id=user.id, competition_id=competition_id, rider_id=deegan.id, class_name="250cc"))
+    # Don't create picks for test user - let users make their own picks
+    # db.session.add(RacePick(user_id=user.id, competition_id=competition_id, rider_id=jett.id, predicted_position=1))
+    # db.session.add(RacePick(user_id=user.id, competition_id=competition_id, rider_id=deegan.id, predicted_position=1))
+    # db.session.add(HoleshotPick(user_id=user.id, competition_id=competition_id, rider_id=jett.id, class_name="450cc"))
+    # db.session.add(HoleshotPick(user_id=user.id, competition_id=competition_id, rider_id=deegan.id, class_name="250cc"))
 
+    # any450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.price.desc()).first()
+    # if any450:
+    #     db.session.add(WildcardPick(user_id=user.id, competition_id=competition_id, rider_id=any450.id, position=12))
+    
+    # Still need to create position 12 result for wildcard
     any450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.price.desc()).first()
     if any450:
-        db.session.add(WildcardPick(user_id=user.id, competition_id=competition_id, rider_id=any450.id, position=12))
         existing_pos12 = CompetitionResult.query.filter_by(competition_id=competition_id, position=12).first()
         if not existing_pos12:
             db.session.add(CompetitionResult(competition_id=competition_id, rider_id=any450.id, position=12))
