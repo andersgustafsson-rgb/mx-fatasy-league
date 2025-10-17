@@ -237,7 +237,9 @@ class League(db.Model):
     name = db.Column(db.String(100), nullable=False)
     creator_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     invite_code = db.Column(db.String(10), unique=True, nullable=False)
-    image_url = db.Column(db.String(200))
+    image_url = db.Column(db.String(200))  # Legacy: file path (deprecated)
+    image_data = db.Column(db.Text)  # NEW: base64 encoded image data
+    image_mime_type = db.Column(db.String(50))  # NEW: image MIME type (e.g., 'image/png')
     description = db.Column(db.String(255))  # NY: kort beskrivning (nullable)
 
 
@@ -1632,18 +1634,43 @@ def create_league():
         image_url = None
 
         file = request.files.get("league_image")
+        image_data = None
+        image_mime_type = None
+        image_url = None  # Legacy support
+        
         if file and file.filename and allowed_file(file.filename):
             try:
-                fname = secure_filename(f"{code}_{file.filename}")
-                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                file.save(path)
-                image_url = url_for("static", filename=f"uploads/leagues/{fname}")
-                print(f"League image saved: {path}")
+                # Read file data and convert to base64
+                file_data = file.read()
+                import base64
+                image_data = base64.b64encode(file_data).decode('utf-8')
+                image_mime_type = file.content_type or 'image/jpeg'
+                
+                # Also save to file system for legacy support (optional)
+                try:
+                    fname = secure_filename(f"{code}_{file.filename}")
+                    path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                    file.seek(0)  # Reset file pointer
+                    file.save(path)
+                    image_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                    print(f"League image saved to file: {path}")
+                except Exception as e:
+                    print(f"Error saving league image to file: {e}")
+                    # Continue without file, we have base64 data
+                
+                print(f"League image saved to database as base64: {len(image_data)} chars")
             except Exception as e:
-                print(f"Error saving league image: {e}")
-                # Continue without image if upload fails
+                print(f"Error processing league image: {e}")
+                # Continue without image if processing fails
 
-        league = League(name=name, creator_id=session["user_id"], invite_code=code, image_url=image_url)
+        league = League(
+            name=name, 
+            creator_id=session["user_id"], 
+            invite_code=code, 
+            image_url=image_url,
+            image_data=image_data,
+            image_mime_type=image_mime_type
+        )
         db.session.add(league)
         db.session.flush()
         db.session.add(LeagueMembership(league_id=league.id, user_id=session["user_id"]))
@@ -1733,25 +1760,38 @@ def edit_league(league_id):
         file = request.files.get("league_image")
         if file and file.filename and allowed_file(file.filename):
             try:
-                # Delete old image if it exists
+                # Delete old image file if it exists (legacy)
                 if league.image_url:
                     try:
                         old_filename = league.image_url.split('/')[-1]
                         old_image_path = os.path.join(app.config["UPLOAD_FOLDER"], old_filename)
                         if os.path.exists(old_image_path):
                             os.remove(old_image_path)
-                            print(f"Deleted old league image: {old_image_path}")
+                            print(f"Deleted old league image file: {old_image_path}")
                     except Exception as e:
-                        print(f"Error deleting old league image: {e}")
+                        print(f"Error deleting old league image file: {e}")
                 
-                # Save new image
-                fname = secure_filename(f"{league.invite_code}_{file.filename}")
-                path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
-                file.save(path)
-                league.image_url = url_for("static", filename=f"uploads/leagues/{fname}")
-                print(f"New league image saved: {path}")
+                # Read file data and convert to base64
+                file_data = file.read()
+                import base64
+                league.image_data = base64.b64encode(file_data).decode('utf-8')
+                league.image_mime_type = file.content_type or 'image/jpeg'
+                
+                # Also save to file system for legacy support (optional)
+                try:
+                    fname = secure_filename(f"{league.invite_code}_{file.filename}")
+                    path = os.path.join(app.config["UPLOAD_FOLDER"], fname)
+                    file.seek(0)  # Reset file pointer
+                    file.save(path)
+                    league.image_url = url_for("static", filename=f"uploads/leagues/{fname}")
+                    print(f"New league image saved to file: {path}")
+                except Exception as e:
+                    print(f"Error saving new league image to file: {e}")
+                    # Continue without file, we have base64 data
+                
+                print(f"New league image saved to database as base64: {len(league.image_data)} chars")
             except Exception as e:
-                print(f"Error saving new league image: {e}")
+                print(f"Error processing new league image: {e}")
                 flash("Fel vid uppladdning av bild. Ligan uppdaterades utan bild.", "warning")
         
         db.session.commit()
@@ -5233,6 +5273,108 @@ def fix_league_images():
         "message": f"Fixed {fixed_count} leagues with missing images",
         "fixed_count": fixed_count
     })
+
+@app.get("/fix_my_league_images")
+def fix_my_league_images():
+    """Fix league images for current user's leagues only"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    print("DEBUG: fix_my_league_images called for user", session["user_id"])
+    
+    # Get user's leagues
+    user_leagues = db.session.query(League).join(LeagueMembership).filter(
+        LeagueMembership.user_id == session["user_id"]
+    ).all()
+    
+    fixed_count = 0
+    
+    for league in user_leagues:
+        if league.image_url:
+            # Extract filename from URL
+            filename = league.image_url.split('/')[-1]
+            image_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            
+            # If image file doesn't exist, clear the image_url
+            if not os.path.exists(image_path):
+                print(f"DEBUG: Image file missing for user's league {league.name}, clearing image_url")
+                league.image_url = None
+                fixed_count += 1
+    
+    db.session.commit()
+    
+    return jsonify({
+        "message": f"Fixed {fixed_count} of your leagues with missing images",
+        "fixed_count": fixed_count
+    })
+
+@app.get("/migrate_league_image_columns")
+def migrate_league_image_columns():
+    """Add image_data and image_mime_type columns to leagues table"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Check if columns already exist
+        try:
+            db.session.execute(db.text("SELECT image_data FROM leagues LIMIT 1"))
+            db.session.execute(db.text("SELECT image_mime_type FROM leagues LIMIT 1"))
+            return jsonify({"message": "Columns already exist", "status": "already_exists"})
+        except Exception:
+            pass  # Columns don't exist, continue with migration
+        
+        # Add the new columns
+        db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+        db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Successfully added image_data and image_mime_type columns to leagues table",
+            "status": "success"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "error": f"Failed to add columns: {str(e)}",
+            "status": "error"
+        }), 500
+
+@app.get("/league_image/<int:league_id>")
+def league_image(league_id):
+    """Serve league image from database as base64 data URL"""
+    try:
+        league = League.query.get_or_404(league_id)
+        
+        # Check if we have base64 data
+        if league.image_data and league.image_mime_type:
+            from flask import Response
+            import base64
+            
+            # Decode base64 data
+            image_data = base64.b64decode(league.image_data)
+            
+            # Return as data URL
+            data_url = f"data:{league.image_mime_type};base64,{league.image_data}"
+            return Response(data_url, mimetype='text/plain')
+        
+        # Fallback to file system (legacy)
+        elif league.image_url:
+            from flask import send_from_directory
+            import os
+            
+            filename = league.image_url.split('/')[-1]
+            directory = app.config["UPLOAD_FOLDER"]
+            
+            if os.path.exists(os.path.join(directory, filename)):
+                return send_from_directory(directory, filename)
+        
+        # No image found
+        return "No image found", 404
+        
+    except Exception as e:
+        print(f"Error serving league image: {e}")
+        return "Error loading image", 500
 
 @app.get("/add_profile_columns")
 def add_profile_columns():

@@ -196,7 +196,7 @@
                         <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-lg blur-sm opacity-30 group-hover:opacity-50 transition duration-500"></div>
                         
                         <!-- Image with effects -->
-                        <img src="{{ league.image_url }}" alt="Ligabild"
+                        <img src="{{ url_for('league_image', league_id=league.id) }}" alt="Ligabild"
                             class="relative h-full w-full object-contain rounded-lg border border-cyan-400/30 group-hover:border-cyan-400/60 transition-all duration-300 group-hover:scale-105"
                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         
