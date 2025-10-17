@@ -9242,20 +9242,16 @@ def clear_all_data():
 
 def get_current_time():
     """Get current time - either real or simulated (simplified)"""
-    # Check if we're in test_countdown simulation mode
+    # Check if we're in simulation mode
     try:
         db.session.rollback()
-        result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
+        result = db.session.execute(text("SELECT active, simulated_time FROM global_simulation WHERE id = 1")).fetchone()
         
         if result and result[0]:  # active is True
-            # Only use simulation if it's from test_countdown (has scenario)
-            scenario_result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
-            if scenario_result and scenario_result[0] and scenario_result[0].startswith('race_'):
-                # This is test_countdown simulation - use it
-                initial_simulated_time = datetime.fromisoformat(result[1])
-                simulation_start_time = datetime.fromisoformat(result[2])
-                real_time_elapsed = datetime.utcnow() - simulation_start_time
-                current_simulated_time = initial_simulated_time + real_time_elapsed
+            # Use the same logic as is_picks_locked for consistency
+            current_simulated_time_str = result[1] if result[1] else None
+            if current_simulated_time_str:
+                current_simulated_time = datetime.fromisoformat(current_simulated_time_str)
                 return current_simulated_time
     except Exception as e:
         print(f"DEBUG: Error in get_current_time: {e}")
