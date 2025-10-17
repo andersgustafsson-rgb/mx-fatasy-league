@@ -3002,7 +3002,7 @@ def create_motocross_competitions(motocross_series_id):
             series="MX",  # Motocross series
             point_multiplier=1.0,
             is_triple_crown=0,
-            coast_250=None,
+            coast_250="both",  # In MX, all 250cc riders race together
             timezone="America/Los_Angeles",
             series_id=motocross_series_id,
             phase="regular",
@@ -3088,10 +3088,10 @@ def create_motocross_competitions_2025():
             competition = Competition(
                 name=race["name"],
                 event_date=datetime.strptime(race["date"], "%Y-%m-%d").date(),
-                series="450cc",  # Motocross is 450cc only
+                series="MX",  # Motocross series
                 point_multiplier=1.0,
                 is_triple_crown=0,
-                coast_250=None,
+                coast_250="both",  # In MX, all 250cc riders race together
                 timezone="America/Los_Angeles",
                 series_id=motocross_series.id,
                 phase="regular",
@@ -8006,6 +8006,34 @@ def check_user_admin_status():
         })
         
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/fix_mx_coast_250")
+def fix_mx_coast_250():
+    """Fix coast_250 for existing Motocross competitions to 'both'"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Update all MX competitions to have coast_250 = "both"
+        mx_competitions = Competition.query.filter_by(series="MX").all()
+        updated_count = 0
+        
+        for comp in mx_competitions:
+            if comp.coast_250 != "both":
+                comp.coast_250 = "both"
+                updated_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Updated {updated_count} Motocross competitions to coast_250='both'",
+            "updated_count": updated_count,
+            "total_mx_competitions": len(mx_competitions)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/create_hampus_admin")
