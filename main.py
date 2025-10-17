@@ -3491,8 +3491,37 @@ def admin_simulate(competition_id):
 
     db.session.commit()
     calculate_scores(competition_id)
+    
+    # Set this competition as active race and activate its series
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if not global_sim:
+            global_sim = GlobalSimulation(active=True, scenario='race_in_3h')
+            db.session.add(global_sim)
+        else:
+            global_sim.active = True
+            global_sim.scenario = 'race_in_3h'
+        
+        global_sim.active_race_id = competition_id
+        print(f"DEBUG: Set active race to {comp.name} (ID: {competition_id})")
+        
+        # Also activate the series for this competition
+        if comp.series_id:
+            # Deactivate all series first
+            Series.query.update({'is_active': False})
+            
+            # Activate the series for this competition
+            competition_series = Series.query.get(comp.series_id)
+            if competition_series:
+                competition_series.is_active = True
+                print(f"DEBUG: Activated series '{competition_series.name}' for competition '{comp.name}'")
+        
+        db.session.commit()
+    except Exception as e:
+        print(f"DEBUG: Error setting active race: {e}")
+        db.session.rollback()
 
-    flash(f"Simulerade resultat och picks har lagts in för {comp.name}. Poäng uträknade!", "success")
+    flash(f"Simulerade resultat och picks har lagts in för {comp.name}. Poäng uträknade! Race satt som aktivt.", "success")
     return redirect(url_for("admin_page"))
 
 
