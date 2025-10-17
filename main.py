@@ -3586,7 +3586,7 @@ def submit_results():
 
 @app.post("/admin/simulate/<int:competition_id>")
 def admin_simulate(competition_id):
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
 
     comp = Competition.query.get_or_404(competition_id)
@@ -4747,7 +4747,7 @@ def clear_my_picks_for_competition(competition_id):
 @app.get("/clear_admin_results")
 def clear_admin_results():
     """Clear all admin results and scores - for debugging"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     print(f"DEBUG: clear_admin_results called")
@@ -4773,7 +4773,7 @@ def clear_admin_results():
 @app.post("/clear_competition_results/<int:competition_id>")
 def clear_competition_results(competition_id):
     """Clear results for a specific competition - called automatically when switching competitions"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     print(f"DEBUG: clear_competition_results called for competition {competition_id}")
@@ -9511,7 +9511,7 @@ def generate_simulated_results():
 def clear_all_results():
     """Clear all results from all competitions"""
     try:
-        if session.get("username") != "test":
+        if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
         # Clear all competition results
@@ -9534,7 +9534,7 @@ def clear_all_results():
 def clear_all_picks():
     """Clear all picks from all competitions"""
     try:
-        if session.get("username") != "test":
+        if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
         # Clear all picks
@@ -9558,7 +9558,7 @@ def clear_all_picks():
 def clear_all_data():
     """Clear all picks and results - full reset"""
     try:
-        if session.get("username") != "test":
+        if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
         # Clear all picks and results
