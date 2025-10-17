@@ -7967,6 +7967,46 @@ def fix_database_transaction():
         print(f"Error fixing database transaction: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/check_user_admin_status")
+def check_user_admin_status():
+    """Check admin status for all users - debug route"""
+    try:
+        users = User.query.all()
+        user_status = []
+        
+        for user in users:
+            # Check if user has is_admin attribute
+            is_admin = False
+            has_is_admin_column = False
+            
+            try:
+                if hasattr(user, 'is_admin'):
+                    has_is_admin_column = True
+                    is_admin = user.is_admin
+                else:
+                    # Fallback to old method
+                    is_admin = user.username == 'test'
+            except Exception as e:
+                is_admin = user.username == 'test'
+            
+            user_status.append({
+                'id': user.id,
+                'username': user.username,
+                'display_name': getattr(user, 'display_name', None),
+                'has_is_admin_column': has_is_admin_column,
+                'is_admin': is_admin,
+                'is_admin_user_result': is_admin_user() if session.get('username') == user.username else 'not_current_user'
+            })
+        
+        return jsonify({
+            'users': user_status,
+            'current_user': session.get('username'),
+            'is_current_user_admin': is_admin_user()
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
     """Make Hampus an admin user"""
@@ -8031,12 +8071,23 @@ def admin_users():
         user_list = []
         
         for user in users:
+            # Check if user has is_admin attribute, fallback to old method
+            is_admin = False
+            try:
+                if hasattr(user, 'is_admin'):
+                    is_admin = user.is_admin
+                else:
+                    # Fallback to old method for backward compatibility
+                    is_admin = user.username == 'test'
+            except Exception:
+                is_admin = user.username == 'test'
+            
             user_list.append({
                 'id': user.id,
                 'username': user.username,
                 'display_name': getattr(user, 'display_name', None),
                 'created_at': user.created_at.isoformat() if hasattr(user, 'created_at') else None,
-                'is_admin': user.username == 'test'
+                'is_admin': is_admin
             })
         
         return render_template("admin_users.html", users=user_list)
