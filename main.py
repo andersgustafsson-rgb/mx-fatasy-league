@@ -3850,106 +3850,106 @@ def race_results_page():
             .order_by(Competition.event_date.asc())
             .all()
         )
-    
-    # Get results for each competition
-    competition_results = {}
-    for comp in competitions:
-        results = (
-            db.session.query(
-                CompetitionResult.rider_id,
-                CompetitionResult.position,
-                Rider.name.label('rider_name'),
-                Rider.class_name,
-                Rider.rider_number,
-                Rider.image_url,
-                Rider.bike_brand
-            )
-            .join(Rider, Rider.id == CompetitionResult.rider_id)
-            .filter(CompetitionResult.competition_id == comp.id)
-            .order_by(CompetitionResult.position.asc())
-            .all()
-        )
         
-        holeshots = (
-            db.session.query(
-                HoleshotResult.rider_id,
-                Rider.name.label('rider_name'),
-                HoleshotResult.class_name,
-                Rider.rider_number,
-                Rider.image_url,
-                Rider.bike_brand
+        # Get results for each competition
+        competition_results = {}
+        for comp in competitions:
+            results = (
+                db.session.query(
+                    CompetitionResult.rider_id,
+                    CompetitionResult.position,
+                    Rider.name.label('rider_name'),
+                    Rider.class_name,
+                    Rider.rider_number,
+                    Rider.image_url,
+                    Rider.bike_brand
+                )
+                .join(Rider, Rider.id == CompetitionResult.rider_id)
+                .filter(CompetitionResult.competition_id == comp.id)
+                .order_by(CompetitionResult.position.asc())
+                .all()
             )
-            .join(Rider, Rider.id == HoleshotResult.rider_id)
-            .filter(HoleshotResult.competition_id == comp.id)
-            .all()
-        )
-        
-        # Add race points to each result (different point systems for different series)
-        results_with_points = []
-        for result in results:
-            # Use appropriate point system based on series
-            if comp.series == "SX":
-                points = get_smx_qualification_points(result.position)  # Supercross uses SMX points
-            elif comp.series == "MX":
-                points = get_smx_qualification_points(result.position)  # Motocross uses SMX points
-            elif comp.series == "SMX":
-                points = get_smx_qualification_points(result.position) * comp.point_multiplier  # SMX Finals with multiplier
-            else:
-                points = get_smx_qualification_points(result.position)  # Default to SMX points
             
-            result_dict = {
-                'rider_id': result.rider_id,
-                'position': result.position,
-                'rider_name': result.rider_name,
-                'class_name': result.class_name,
-                'rider_number': result.rider_number,
-                'image_url': result.image_url,
-                'bike_brand': result.bike_brand,
-                'points': points
+            holeshots = (
+                db.session.query(
+                    HoleshotResult.rider_id,
+                    Rider.name.label('rider_name'),
+                    HoleshotResult.class_name,
+                    Rider.rider_number,
+                    Rider.image_url,
+                    Rider.bike_brand
+                )
+                .join(Rider, Rider.id == HoleshotResult.rider_id)
+                .filter(HoleshotResult.competition_id == comp.id)
+                .all()
+            )
+            
+            # Add race points to each result (different point systems for different series)
+            results_with_points = []
+            for result in results:
+                # Use appropriate point system based on series
+                if comp.series == "SX":
+                    points = get_smx_qualification_points(result.position)  # Supercross uses SMX points
+                elif comp.series == "MX":
+                    points = get_smx_qualification_points(result.position)  # Motocross uses SMX points
+                elif comp.series == "SMX":
+                    points = get_smx_qualification_points(result.position) * comp.point_multiplier  # SMX Finals with multiplier
+                else:
+                    points = get_smx_qualification_points(result.position)  # Default to SMX points
+                
+                result_dict = {
+                    'rider_id': result.rider_id,
+                    'position': result.position,
+                    'rider_name': result.rider_name,
+                    'class_name': result.class_name,
+                    'rider_number': result.rider_number,
+                    'image_url': result.image_url,
+                    'bike_brand': result.bike_brand,
+                    'points': points
+                }
+                results_with_points.append(result_dict)
+            
+            competition_results[comp.id] = {
+                'results': results_with_points,
+                'holeshots': holeshots
             }
-            results_with_points.append(result_dict)
-        
-        competition_results[comp.id] = {
-            'results': results_with_points,
-            'holeshots': holeshots
-        }
     
-    # Determine status for each competition and find the latest one
-    today = get_today()
-    latest_competition_id = None
-    latest_competition_date = None
-    
-    for comp in competitions:
-        # Check if competition has results
-        has_results = len(competition_results[comp.id]['results']) > 0 or len(competition_results[comp.id]['holeshots']) > 0
+        # Determine status for each competition and find the latest one
+        today = get_today()
+        latest_competition_id = None
+        latest_competition_date = None
         
-        print(f"DEBUG: Competition {comp.name} (ID: {comp.id}) - Results: {len(competition_results[comp.id]['results'])}, Holeshots: {len(competition_results[comp.id]['holeshots'])}, Has Results: {has_results}")
+        for comp in competitions:
+            # Check if competition has results
+            has_results = len(competition_results[comp.id]['results']) > 0 or len(competition_results[comp.id]['holeshots']) > 0
+            
+            print(f"DEBUG: Competition {comp.name} (ID: {comp.id}) - Results: {len(competition_results[comp.id]['results'])}, Holeshots: {len(competition_results[comp.id]['holeshots'])}, Has Results: {has_results}")
+            
+            # Determine status
+            if has_results:
+                comp.status = "completed"
+                comp.status_text = "Körda race"
+                comp.status_color = "text-green-600"
+                comp.status_bg = "bg-green-100"
+            elif comp.event_date and comp.event_date < today:
+                comp.status = "missed"
+                comp.status_text = "Missade race"
+                comp.status_color = "text-red-600"
+                comp.status_bg = "bg-red-100"
+            else:
+                comp.status = "upcoming"
+                comp.status_text = "Uppkommande"
+                comp.status_color = "text-blue-600"
+                comp.status_bg = "bg-blue-100"
+            
+            # Find the latest competition (most recent with results, or most recent upcoming)
+            if has_results and (latest_competition_id is None or comp.event_date > latest_competition_date):
+                latest_competition_id = comp.id
+                latest_competition_date = comp.event_date
+            elif not latest_competition_id and comp.event_date and comp.event_date >= today:
+                latest_competition_id = comp.id
+                latest_competition_date = comp.event_date
         
-        # Determine status
-        if has_results:
-            comp.status = "completed"
-            comp.status_text = "Körda race"
-            comp.status_color = "text-green-600"
-            comp.status_bg = "bg-green-100"
-        elif comp.event_date and comp.event_date < today:
-            comp.status = "missed"
-            comp.status_text = "Missade race"
-            comp.status_color = "text-red-600"
-            comp.status_bg = "bg-red-100"
-        else:
-            comp.status = "upcoming"
-            comp.status_text = "Uppkommande"
-            comp.status_color = "text-blue-600"
-            comp.status_bg = "bg-blue-100"
-        
-        # Find the latest competition (most recent with results, or most recent upcoming)
-        if has_results and (latest_competition_id is None or comp.event_date > latest_competition_date):
-            latest_competition_id = comp.id
-            latest_competition_date = comp.event_date
-        elif not latest_competition_id and comp.event_date and comp.event_date >= today:
-            latest_competition_id = comp.id
-            latest_competition_date = comp.event_date
-    
         return render_template(
             "race_results.html", 
             competitions=competitions, 
