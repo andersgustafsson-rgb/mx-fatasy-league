@@ -88,17 +88,37 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                {% if not user.is_admin %}
-                                <button 
-                                    class="delete-user-btn text-red-600 hover:text-red-900"
-                                    data-user-id="{{ user.id }}"
-                                    data-username="{{ user.username }}"
-                                >
-                                    🗑️ Ta bort
-                                </button>
-                                {% else %}
-                                <span class="text-gray-400">-</span>
-                                {% endif %}
+                                <div class="flex space-x-2">
+                                    <!-- Toggle Admin Button -->
+                                    <button 
+                                        class="toggle-admin-btn px-3 py-1 text-xs rounded-full transition-colors"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        data-is-admin="{{ user.is_admin|lower }}"
+                                        {% if user.is_admin %}
+                                            class="toggle-admin-btn bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 text-xs rounded-full transition-colors"
+                                        {% else %}
+                                            class="toggle-admin-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 text-xs rounded-full transition-colors"
+                                        {% endif %}
+                                    >
+                                        {% if user.is_admin %}
+                                            👑 Ta bort Admin
+                                        {% else %}
+                                            👑 Gör Admin
+                                        {% endif %}
+                                    </button>
+                                    
+                                    <!-- Delete Button (only for non-admin users) -->
+                                    {% if not user.is_admin %}
+                                    <button 
+                                        class="delete-user-btn text-red-600 hover:text-red-900 text-xs"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                    >
+                                        🗑️ Ta bort
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -117,6 +137,38 @@
     </div>
 
     <script>
+        // Toggle admin functionality
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('toggle-admin-btn')) {
+                const userId = e.target.getAttribute('data-user-id');
+                const username = e.target.getAttribute('data-username');
+                const isAdmin = e.target.getAttribute('data-is-admin') === 'true';
+                
+                const action = isAdmin ? 'ta bort admin-behörighet från' : 'ge admin-behörighet till';
+                const confirmMessage = `Är du säker på att du vill ${action} "${username}"?`;
+                
+                if (confirm(confirmMessage)) {
+                    try {
+                        const response = await fetch(`/admin/toggle_admin/${userId}`, {
+                            method: 'POST'
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            // Reload the page to show updated status
+                            location.reload();
+                        } else {
+                            showToast(result.error || 'Ett fel uppstod', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('Ett fel uppstod', 'error');
+                    }
+                }
+            }
+        });
+
         // Delete user functionality
         document.addEventListener('click', async function(e) {
             if (e.target.classList.contains('delete-user-btn')) {
