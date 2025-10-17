@@ -8662,6 +8662,8 @@ def set_active_race():
             if not competition:
                 return jsonify({"error": "Competition not found"}), 404
             
+            print(f"DEBUG: Setting active race - Competition: {competition.name}, Series ID: {competition.series_id}, Date: {competition.event_date}")
+            
             # Check if record exists
             existing = GlobalSimulation.query.filter_by(id=1).first()
             
