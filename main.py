@@ -1399,15 +1399,18 @@ def series_page(series_id):
         
         # Find next race (either active race or next upcoming race)
         next_race = None
+        print(f"DEBUG: series_page - series_id: {series_id}, active_race_id: {active_race_id}")
         if active_race_id:
             # If there's an active race, use that
             next_race = Competition.query.get(active_race_id)
+            print(f"DEBUG: Found active race: {next_race.name if next_race else 'None'} (ID: {active_race_id})")
         else:
             # Otherwise find the next upcoming race
             current_date = get_today()
             next_race = Competition.query.filter_by(series_id=series_id).filter(
                 Competition.event_date >= current_date
             ).order_by(Competition.event_date).first()
+            print(f"DEBUG: Found next upcoming race: {next_race.name if next_race else 'None'}")
         
         # Determine if picks are open
         picks_open = False
