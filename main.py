@@ -346,6 +346,11 @@ class CompetitionResult(db.Model):
     # Relationships
     competition = db.relationship('Competition', backref='results', lazy=True)
     rider = db.relationship('Rider', backref='results', lazy=True)
+    
+    # Unique constraint to prevent duplicate results for same rider in same competition
+    __table_args__ = (
+        db.UniqueConstraint('competition_id', 'rider_id', name='uq_comp_rider_result'),
+    )
 
 
 class HoleshotPick(db.Model):
@@ -8108,6 +8113,49 @@ def recalculate_all_scores():
         })
         
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/fix_duplicate_results")
+def fix_duplicate_results():
+    """Fix duplicate CompetitionResult entries for the same rider in the same competition"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Find duplicate results (same competition_id and rider_id)
+        duplicates = (
+            db.session.query(
+                CompetitionResult.competition_id,
+                CompetitionResult.rider_id,
+                func.count(CompetitionResult.result_id).label('count')
+            )
+            .group_by(CompetitionResult.competition_id, CompetitionResult.rider_id)
+            .having(func.count(CompetitionResult.result_id) > 1)
+            .all()
+        )
+        
+        fixed_count = 0
+        for comp_id, rider_id, count in duplicates:
+            # Get all results for this competition/rider combination
+            results = CompetitionResult.query.filter_by(
+                competition_id=comp_id, 
+                rider_id=rider_id
+            ).order_by(CompetitionResult.result_id).all()
+            
+            # Keep the first one, delete the rest
+            for result in results[1:]:
+                db.session.delete(result)
+                fixed_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed {fixed_count} duplicate results",
+            "duplicates_found": len(duplicates)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/create_hampus_admin")
