@@ -8614,7 +8614,8 @@ def set_simulated_time():
     """Set simulated time for testing scenarios"""
     try:
         scenario = request.args.get('scenario', 'race_in_3h')
-        print(f"DEBUG: set_simulated_time called with scenario: {scenario}")
+        competition_id = request.args.get('competition_id')
+        print(f"DEBUG: set_simulated_time called with scenario: {scenario}, competition_id: {competition_id}")
         
         # Update global simulation state in database
         global_sim = GlobalSimulation.query.first()
@@ -8624,6 +8625,30 @@ def set_simulated_time():
         else:
             global_sim.active = True
             global_sim.scenario = scenario
+        
+        # If competition_id is provided, set it as active race
+        if competition_id:
+            try:
+                competition_id = int(competition_id)
+                competition = Competition.query.get(competition_id)
+                if competition:
+                    global_sim.active_race_id = competition_id
+                    print(f"DEBUG: Set active race to {competition.name} (ID: {competition_id})")
+                    
+                    # Also activate the series for this competition
+                    if competition.series_id:
+                        # Deactivate all series first
+                        Series.query.update({'is_active': False})
+                        
+                        # Activate the series for this competition
+                        competition_series = Series.query.get(competition.series_id)
+                        if competition_series:
+                            competition_series.is_active = True
+                            print(f"DEBUG: Activated series '{competition_series.name}' for competition '{competition.name}'")
+                else:
+                    print(f"DEBUG: Competition with ID {competition_id} not found")
+            except ValueError:
+                print(f"DEBUG: Invalid competition_id: {competition_id}")
         
         db.session.commit()
         
