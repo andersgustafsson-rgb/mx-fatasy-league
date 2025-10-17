@@ -570,7 +570,11 @@ def series_status():
     """Get status of all series for user interface"""
     try:
         # Always show all series for 2026, not just active ones
+        # Sort by custom order: Supercross, Motocross, SMX Finals
         series = Series.query.filter_by(year=2026).all()
+        # Custom sort order
+        series_order = {'Supercross': 1, 'Motocross': 2, 'SMX Finals': 3}
+        series.sort(key=lambda s: series_order.get(s.name, 999))
         
         # Use simulated date if available, otherwise use real date
         current_date = get_today()
