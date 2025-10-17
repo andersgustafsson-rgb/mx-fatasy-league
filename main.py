@@ -105,6 +105,7 @@ class User(db.Model):
     favorite_rider = db.Column(db.String(100), nullable=True)  # Favoritförare
     favorite_team = db.Column(db.String(100), nullable=True)  # Favoritlag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # När kontot skapades
+    is_admin = db.Column(db.Boolean, default=False)  # Admin-flagga
     season_team = db.relationship(
         "SeasonTeam", backref="user", uselist=False, cascade="all, delete-orphan"
     )
@@ -407,6 +408,23 @@ def get_today():
     """Get today's date - simplified without old simulation"""
     today = date.today()
     return today
+
+def is_admin_user():
+    """Check if current user is admin"""
+    username = session.get("username")
+    if not username:
+        return False
+    
+    # Check if user has is_admin flag
+    try:
+        user = User.query.filter_by(username=username).first()
+        if user and hasattr(user, 'is_admin') and user.is_admin:
+            return True
+    except Exception:
+        pass
+    
+    # Fallback to old method for backward compatibility
+    return username == "test"
 
 
 def get_track_timezone(track_name):
@@ -2214,7 +2232,7 @@ def run_migration():
 
 @app.route("/admin")
 def admin_page():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2278,14 +2296,14 @@ def admin_page():
 
 @app.route('/competition_management')
 def competition_management():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     return render_template("competition_management.html")
 
 @app.route('/rider_management')
 def rider_management():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -7851,32 +7869,68 @@ def create_admin():
         print(f"Error creating admin: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/migrate_admin_column")
+def migrate_admin_column():
+    """Add is_admin column to users table"""
+    try:
+        # Check if column already exists
+        result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='is_admin'")).fetchone()
+        
+        if result:
+            return jsonify({
+                "message": "is_admin column already exists",
+                "status": "already_exists"
+            })
+        
+        # Add the column
+        db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+        db.session.commit()
+        
+        return jsonify({
+            "message": "is_admin column added successfully",
+            "status": "added"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error adding is_admin column: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
-    """Create Hampus as admin user"""
+    """Make Hampus an admin user"""
     try:
+        # First ensure is_admin column exists
+        try:
+            db.session.execute(text("SELECT is_admin FROM users LIMIT 1"))
+        except Exception:
+            # Column doesn't exist, add it
+            db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+            db.session.commit()
+        
         # Check if Hampus user exists
         existing_user = User.query.filter_by(username='Hampus').first()
         
         if existing_user:
-            # Update existing user to be admin (by changing username to 'test' for admin access)
-            existing_user.username = 'test'
-            existing_user.display_name = 'Hampus'
+            # Update existing user to be admin
+            existing_user.is_admin = True
             db.session.commit()
             
             return jsonify({
                 "message": "Hampus user updated to admin successfully!",
-                "username": "test",
+                "username": "Hampus",
                 "password": "Use your existing password",
                 "user_id": existing_user.id,
-                "display_name": "Hampus"
+                "display_name": existing_user.display_name or "Hampus",
+                "is_admin": True
             })
         
         # Create new Hampus admin user
         hampus_user = User(
-            username='test',  # Use 'test' for admin access
+            username='Hampus',
             password_hash=generate_password_hash('hampus123'),
-            display_name='Hampus'
+            display_name='Hampus',
+            is_admin=True
         )
         
         db.session.add(hampus_user)
@@ -7884,10 +7938,11 @@ def create_hampus_admin():
         
         return jsonify({
             "message": "Hampus admin user created successfully!",
-            "username": "test",
+            "username": "Hampus",
             "password": "hampus123",
             "user_id": hampus_user.id,
-            "display_name": "Hampus"
+            "display_name": "Hampus",
+            "is_admin": True
         })
         
     except Exception as e:
@@ -7897,7 +7952,7 @@ def create_hampus_admin():
 @app.route("/admin/users")
 def admin_users():
     """Admin page to manage users"""
-    if session.get('username') != 'test':
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -7919,10 +7974,36 @@ def admin_users():
         print(f"Error loading users: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/admin/toggle_admin/<int:user_id>", methods=['POST'])
+def toggle_admin(user_id):
+    """Toggle admin status for a user"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Toggle admin status
+        user.is_admin = not user.is_admin
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "is_admin": user.is_admin,
+            "message": f"User {user.username} admin status updated to {user.is_admin}"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error toggling admin status: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/admin/delete_user/<int:user_id>", methods=['DELETE'])
 def delete_user(user_id):
     """Delete a user - admin only"""
-    if session.get('username') != 'test':
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
