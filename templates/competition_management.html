@@ -44,6 +44,9 @@
             <button onclick="updateSeasonsTo2026()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-center">
                 📅 Uppdatera till 2026
             </button>
+            <button onclick="updateToOfficial2026()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg text-center">
+                🏁 Officiell 2026 Schema
+            </button>
             <button onclick="exportCompetitions()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg text-center">
                 📤 Exportera data
             </button>
@@ -412,6 +415,31 @@
             
             try {
                 const response = await fetch('/api/competitions/update_seasons_to_2026', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showStatus(result.message, 'success');
+                    // Reload competitions after update
+                    setTimeout(() => loadCompetitions(), 1000);
+                } else {
+                    showStatus('Fel: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Fel vid uppdatering: ' + error.message, 'error');
+            }
+        }
+
+        async function updateToOfficial2026() {
+            if (!confirm('Uppdatera alla tävlingar till officiell 2026 SMX schema? Detta tar bort alla befintliga tävlingar och skapar nya!')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/competitions/update_to_official_2026', {
                     method: 'POST'
                 });
                 

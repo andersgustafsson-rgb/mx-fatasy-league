@@ -2611,6 +2611,69 @@ def update_seasons_to_2026():
         print(f"Update seasons error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/update_to_official_2026', methods=['POST'])
+def update_to_official_2026():
+    """Update all competitions to match official 2026 SMX schedule"""
+    if session.get("username") != "test":
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Delete all existing competitions
+        Competition.query.delete()
+        
+        # Get or create series
+        supercross = Series.query.filter_by(name='Supercross', year=2026).first()
+        if not supercross:
+            supercross = Series(
+                name='Supercross',
+                year=2026,
+                start_date=date(2026, 1, 10),
+                end_date=date(2026, 5, 9),
+                is_active=True,
+                points_system='standard'
+            )
+            db.session.add(supercross)
+        
+        motocross = Series.query.filter_by(name='Motocross', year=2026).first()
+        if not motocross:
+            motocross = Series(
+                name='Motocross',
+                year=2026,
+                start_date=date(2026, 5, 30),
+                end_date=date(2026, 8, 29),
+                is_active=True,
+                points_system='standard'
+            )
+            db.session.add(motocross)
+        
+        smx_finals = Series.query.filter_by(name='SMX Finals', year=2026).first()
+        if not smx_finals:
+            smx_finals = Series(
+                name='SMX Finals',
+                year=2026,
+                start_date=date(2026, 9, 12),
+                end_date=date(2026, 9, 26),
+                is_active=True,
+                points_system='playoff'
+            )
+            db.session.add(smx_finals)
+        
+        db.session.commit()
+        
+        # Create all competitions with official 2026 schedule
+        create_supercross_competitions(supercross.id)
+        create_motocross_competitions(motocross.id)
+        create_smx_finals_competitions(smx_finals.id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Updated all competitions to official 2026 SMX schedule'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # API endpoints for series management
 @app.route('/api/series', methods=['GET'])
 def get_series():
