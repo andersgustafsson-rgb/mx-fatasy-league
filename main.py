@@ -580,8 +580,11 @@ def series_status():
             # Use is_active from database (set by simulation) or fallback to date-based logic
             is_currently_active = s.is_active
             
-            # If not set by simulation, use date-based logic as fallback
-            if not is_currently_active:
+            # If not explicitly set by simulation, use date-based logic as fallback
+            # Check if any series is currently being simulated
+            simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
+            if not simulation:
+                # No active simulation, use date-based logic
                 if s.start_date and s.end_date:
                     is_currently_active = s.start_date <= current_date <= s.end_date
                 elif s.start_date:
