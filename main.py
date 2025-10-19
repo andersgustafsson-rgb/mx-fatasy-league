@@ -9983,7 +9983,13 @@ def set_simulated_time():
         
         # Set simulated time and real start time for countdown calculation
         current_real_time = datetime.utcnow()
-        global_sim.real_start_time = current_real_time.isoformat()
+        
+        # Try to set real_start_time, but handle if column doesn't exist yet
+        try:
+            global_sim.real_start_time = current_real_time.isoformat()
+        except Exception as e:
+            print(f"DEBUG: Could not set real_start_time (column may not exist): {e}")
+            # Continue without real_start_time for now
         
         # Set simulated time based on scenario
         if scenario == 'race_in_3h':
@@ -10588,11 +10594,18 @@ def get_current_time():
     # Check if we're in simulation mode
     try:
         db.session.rollback()
-        result = db.session.execute(text("SELECT active, simulated_time, real_start_time FROM global_simulation WHERE id = 1")).fetchone()
+        # Try to get real_start_time, but fallback if column doesn't exist
+        try:
+            result = db.session.execute(text("SELECT active, simulated_time, real_start_time FROM global_simulation WHERE id = 1")).fetchone()
+        except Exception:
+            # real_start_time column doesn't exist, use fallback query
+            result = db.session.execute(text("SELECT active, simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+            if result:
+                result = (result[0], result[1], None)  # Add None for real_start_time
         
         if result and result[0]:  # active is True
             simulated_time_str = result[1] if result[1] else None
-            real_start_time_str = result[2] if result[2] else None
+            real_start_time_str = result[2] if len(result) > 2 and result[2] else None
             
             if simulated_time_str and real_start_time_str:
                 # Calculate how much real time has passed since simulation started
