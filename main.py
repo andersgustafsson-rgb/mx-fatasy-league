@@ -933,9 +933,9 @@ def index():
             try:
                 # Use the unified picks lock check function
                 picks_locked = is_picks_locked(upcoming_race)
-            
-            # Use the correct competition_id for picks lookup
-            competition_id_for_picks = upcoming_race.id
+                
+                # Use the correct competition_id for picks lookup
+                competition_id_for_picks = upcoming_race.id
             
             
             # Get race picks for both classes
@@ -1008,10 +1008,10 @@ def index():
                             "class": rider.class_name,
                             "position": wildcard_pick.position
                         }
-        except Exception as e:
-            print(f"Error getting current picks: {e}")
-            current_picks_450 = []
-            current_picks_250 = []
+            except Exception as e:
+                print(f"Error getting current picks: {e}")
+                current_picks_450 = []
+                current_picks_250 = []
 
     # Check for new bulletin posts (last 24 hours)
     new_bulletin_posts = 0
