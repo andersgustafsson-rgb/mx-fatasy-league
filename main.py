@@ -1087,9 +1087,14 @@ def index():
 
 
 @app.route("/leagues")
-@login_required
 def leagues_page():
-    uid = session["user_id"]
+    # Check if user is logged in
+    if "user_id" in session:
+        uid = session["user_id"]
+        is_logged_in = True
+    else:
+        uid = None
+        is_logged_in = False
     
     # Ensure database is initialized
     try:
@@ -1109,7 +1114,10 @@ def leagues_page():
         print(f"Error getting leagues: {e}")
         my_leagues = []
     
-    return render_template("leagues.html", my_leagues=my_leagues, username=session["username"])
+    return render_template("leagues.html", 
+                         my_leagues=my_leagues if is_logged_in else [], 
+                         username=session.get("username", "Gäst"),
+                         is_logged_in=is_logged_in)
 
 
 @app.get("/leagues/browse")
@@ -4123,7 +4131,6 @@ def user_stats_page(username: str):
     )
 
 @app.get("/race_results")
-@login_required
 def race_results_page():
     """Show actual race results for all competitions"""
     try:
@@ -4238,7 +4245,8 @@ def race_results_page():
             competitions=competitions, 
             competition_results=competition_results,
             latest_competition_id=latest_competition_id,
-            username=session.get("username")
+            username=session.get("username", "Gäst"),
+            is_logged_in="user_id" in session
         )
     
     except Exception as e:
