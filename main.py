@@ -787,6 +787,22 @@ def index():
             except Exception as e:
                 print(f"Error creating league_requests table: {e}")
                 db.session.rollback()
+        
+        # Check if joined_at column exists in league_memberships table
+        if inspect(db.engine).has_table('league_memberships'):
+            try:
+                # Try to query joined_at column
+                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
+            except Exception:
+                # Column doesn't exist, add it
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.commit()
+                    print("joined_at column added to league_memberships table successfully")
+                except Exception as e:
+                    print(f"Error adding joined_at column: {e}")
+                    db.session.rollback()
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
@@ -5824,6 +5840,35 @@ def calculate_league_points_single(league_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+@app.get("/fix_league_memberships_column")
+def fix_league_memberships_column():
+    """Fix missing joined_at column in league_memberships table"""
+    try:
+        from sqlalchemy import inspect
+        
+        if inspect(db.engine).has_table('league_memberships'):
+            try:
+                # Try to query joined_at column
+                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
+                return "joined_at column already exists in league_memberships table"
+            except Exception:
+                # Column doesn't exist, add it
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.commit()
+                    return "✅ joined_at column added to league_memberships table successfully"
+                except Exception as e:
+                    db.session.rollback()
+                    return f"❌ Error adding joined_at column: {e}"
+        else:
+            return "league_memberships table doesn't exist"
+            
+    except Exception as e:
+        return f"❌ Error: {e}"
+
 
 @app.get("/migrate_league_image_columns")
 def migrate_league_image_columns():
