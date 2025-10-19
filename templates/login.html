@@ -54,8 +54,12 @@
             }
         }
         
-        // Apply immediately
-        applyDarkMode();
+        // Apply when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyDarkMode);
+        } else {
+            applyDarkMode();
+        }
         
         // Apply again after a short delay to ensure it sticks
         setTimeout(applyDarkMode, 100);
