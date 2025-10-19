@@ -9943,13 +9943,13 @@ def set_simulated_time():
         # Set simulated time based on scenario
         if scenario == 'race_in_3h':
             # Simulate current time as 3 hours before race
-            simulated_time = current_real_time.replace(hour=current_real_time.hour - 3, minute=0, second=0, microsecond=0)
+            simulated_time = current_real_time - timedelta(hours=3)
         elif scenario == 'race_in_1h':
             # Simulate current time as 1 hour before race
-            simulated_time = current_real_time.replace(hour=current_real_time.hour - 1, minute=0, second=0, microsecond=0)
+            simulated_time = current_real_time - timedelta(hours=1)
         elif scenario == 'race_in_30m':
             # Simulate current time as 30 minutes before race
-            simulated_time = current_real_time.replace(minute=current_real_time.minute - 30, second=0, microsecond=0)
+            simulated_time = current_real_time - timedelta(minutes=30)
         else:
             # Default to current time
             simulated_time = current_real_time
