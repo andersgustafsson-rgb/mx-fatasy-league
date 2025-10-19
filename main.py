@@ -8961,7 +8961,9 @@ def admin_leagues():
             League,
             db.func.count(LeagueMembership.user_id).label('member_count'),
             User.username.label('creator_username')
-        ).outerjoin(LeagueMembership).join(
+        ).select_from(League).outerjoin(
+            LeagueMembership, League.id == LeagueMembership.league_id
+        ).join(
             User, League.creator_id == User.id
         ).group_by(League.id, User.username).order_by(
             League.created_at.desc()
