@@ -613,11 +613,20 @@ def login():
                 session["username"] = user.username
                 session["login_time"] = datetime.utcnow().isoformat()
                 print("Login successful, redirecting...")
-                return redirect(url_for("index"))
+                
+                # Check if this is an AJAX request (from popup)
+                if request.headers.get('Content-Type') == 'application/x-www-form-urlencoded' and 'modal' in request.form:
+                    return jsonify({"success": True, "redirect": url_for("index")})
+                else:
+                    return redirect(url_for("index"))
         
         print("Login failed")
-        flash("Felaktigt användarnamn eller lösenord", "error")
-    return render_template("login.html")
+        # Check if this is an AJAX request (from popup)
+        if request.headers.get('Content-Type') == 'application/x-www-form-urlencoded' and 'modal' in request.form:
+            return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
+        else:
+            flash("Felaktigt användarnamn eller lösenord", "error")
+            return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
