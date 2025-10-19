@@ -704,6 +704,22 @@ def index():
                     except Exception as e2:
                         print(f"Failed to add is_admin column via direct connection: {e2}")
         
+        # Check if joined_at column exists in league_memberships table
+        if inspect(db.engine).has_table('league_memberships'):
+            try:
+                # Try to query joined_at column
+                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
+            except Exception:
+                # Column doesn't exist, add it
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.commit()
+                    print("joined_at column added to league_memberships table successfully")
+                except Exception as e:
+                    print(f"Error adding joined_at column: {e}")
+                    db.session.rollback()
+        
         # Check if league image columns exist
         if inspect(db.engine).has_table('leagues'):
             try:
@@ -788,21 +804,6 @@ def index():
                 print(f"Error creating league_requests table: {e}")
                 db.session.rollback()
         
-        # Check if joined_at column exists in league_memberships table
-        if inspect(db.engine).has_table('league_memberships'):
-            try:
-                # Try to query joined_at column
-                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
-            except Exception:
-                # Column doesn't exist, add it
-                try:
-                    db.session.rollback()
-                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                    db.session.commit()
-                    print("joined_at column added to league_memberships table successfully")
-                except Exception as e:
-                    print(f"Error adding joined_at column: {e}")
-                    db.session.rollback()
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
