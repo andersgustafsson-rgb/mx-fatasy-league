@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" {% if not is_logged_in %}class="readonly-mode"{% endif %}>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,6 +17,25 @@
       -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
       overflow-x: hidden; /* Prevent horizontal scroll */
+    }
+    
+    /* Readonly mode for non-logged users */
+    .readonly-mode a:not([href*="login"]):not([href*="register"]) {
+      opacity: 0.5;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    
+    .readonly-mode button:not([onclick*="login"]) {
+      opacity: 0.5;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    
+    .readonly-mode .interactive {
+      opacity: 0.5;
+      pointer-events: none;
+      cursor: not-allowed;
     }
     
     /* Prevent scroll jumping on mobile */
@@ -283,6 +302,29 @@
               {% endif %}
             </div>
         </header>
+        
+        <!-- Login Required Notice for Non-logged Users -->
+        {% if not is_logged_in %}
+        <div class="flex justify-center mb-4">
+          <div class="bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 border border-yellow-400 rounded-xl p-4 shadow-lg max-w-md w-full">
+            <div class="flex items-center space-x-3">
+              <div class="flex-shrink-0">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-white font-bold text-sm">
+                  Logga in för att interagera med sidan
+                </p>
+                <p class="text-yellow-100 text-xs">
+                  Du kan se innehållet men inte göra ändringar
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
           
           <!-- Bulletin Board Notification -->
           {% if new_bulletin_posts > 0 %}
