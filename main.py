@@ -117,6 +117,7 @@ class GlobalSimulation(db.Model):
     active = db.Column(db.Boolean, default=False)
     simulated_time = db.Column(db.String(50), nullable=True)
     start_time = db.Column(db.String(50), nullable=True)
+    real_start_time = db.Column(db.String(50), nullable=True)  # Real time when simulation started
     scenario = db.Column(db.String(50), nullable=True)
     active_race_id = db.Column(db.Integer, nullable=True)  # Which race is currently active for picks
 
@@ -718,6 +719,22 @@ def index():
                     print("joined_at column added to league_memberships table successfully")
                 except Exception as e:
                     print(f"Error adding joined_at column: {e}")
+                    db.session.rollback()
+        
+        # Check if real_start_time column exists in global_simulation table
+        if inspect(db.engine).has_table('global_simulation'):
+            try:
+                # Try to query real_start_time column
+                db.session.execute(text("SELECT real_start_time FROM global_simulation LIMIT 1"))
+            except Exception:
+                # Column doesn't exist, add it
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE global_simulation ADD COLUMN real_start_time VARCHAR(50)"))
+                    db.session.commit()
+                    print("real_start_time column added to global_simulation table successfully")
+                except Exception as e:
+                    print(f"Error adding real_start_time column: {e}")
                     db.session.rollback()
         
         # Check if league image columns exist
@@ -5901,6 +5918,34 @@ def fix_league_memberships_column():
                     return f"❌ Error adding joined_at column: {e}"
         else:
             return "league_memberships table doesn't exist"
+            
+    except Exception as e:
+        return f"❌ Error: {e}"
+
+
+@app.get("/fix_global_simulation_column")
+def fix_global_simulation_column():
+    """Fix missing real_start_time column in global_simulation table"""
+    try:
+        from sqlalchemy import inspect
+        
+        if inspect(db.engine).has_table('global_simulation'):
+            try:
+                # Try to query real_start_time column
+                db.session.execute(text("SELECT real_start_time FROM global_simulation LIMIT 1"))
+                return "real_start_time column already exists in global_simulation table"
+            except Exception:
+                # Column doesn't exist, add it
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE global_simulation ADD COLUMN real_start_time VARCHAR(50)"))
+                    db.session.commit()
+                    return "✅ real_start_time column added to global_simulation table successfully"
+                except Exception as e:
+                    db.session.rollback()
+                    return f"❌ Error adding real_start_time column: {e}"
+        else:
+            return "global_simulation table doesn't exist"
             
     except Exception as e:
         return f"❌ Error: {e}"
