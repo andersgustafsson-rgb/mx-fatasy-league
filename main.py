@@ -9290,7 +9290,7 @@ def race_countdown():
                 # Use simulated time for test mode - calculate fresh each time
                 current_simulated_time = get_current_time()
                 
-                # Calculate race time based on scenario - use current simulated time for countdown
+                # Calculate race time based on scenario - use initial simulated time for fixed race times
                 # Get the initial simulated time when simulation started
                 initial_simulated_time = datetime.fromisoformat(simulation.simulated_time)
                 
@@ -9936,6 +9936,27 @@ def set_simulated_time():
             global_sim.active = True
             global_sim.scenario = scenario
         
+        # Set simulated time and real start time for countdown calculation
+        current_real_time = datetime.utcnow()
+        global_sim.real_start_time = current_real_time.isoformat()
+        
+        # Set simulated time based on scenario
+        if scenario == 'race_in_3h':
+            # Simulate current time as 3 hours before race
+            simulated_time = current_real_time.replace(hour=current_real_time.hour - 3, minute=0, second=0, microsecond=0)
+        elif scenario == 'race_in_1h':
+            # Simulate current time as 1 hour before race
+            simulated_time = current_real_time.replace(hour=current_real_time.hour - 1, minute=0, second=0, microsecond=0)
+        elif scenario == 'race_in_30m':
+            # Simulate current time as 30 minutes before race
+            simulated_time = current_real_time.replace(minute=current_real_time.minute - 30, second=0, microsecond=0)
+        else:
+            # Default to current time
+            simulated_time = current_real_time
+        
+        global_sim.simulated_time = simulated_time.isoformat()
+        print(f"DEBUG: Set simulated_time to {simulated_time}, real_start_time to {current_real_time}")
+        
         # If competition_id is provided, set it as active race
         if competition_id:
             try:
@@ -10518,17 +10539,28 @@ def clear_all_data():
         return jsonify({"error": str(e)}), 500
 
 def get_current_time():
-    """Get current time - either real or simulated (simplified)"""
+    """Get current time - either real or simulated (with time progression)"""
     # Check if we're in simulation mode
     try:
         db.session.rollback()
-        result = db.session.execute(text("SELECT active, simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+        result = db.session.execute(text("SELECT active, simulated_time, real_start_time FROM global_simulation WHERE id = 1")).fetchone()
         
         if result and result[0]:  # active is True
-            # Use the same logic as is_picks_locked for consistency
-            current_simulated_time_str = result[1] if result[1] else None
-            if current_simulated_time_str:
-                current_simulated_time = datetime.fromisoformat(current_simulated_time_str)
+            simulated_time_str = result[1] if result[1] else None
+            real_start_time_str = result[2] if result[2] else None
+            
+            if simulated_time_str and real_start_time_str:
+                # Calculate how much real time has passed since simulation started
+                initial_simulated_time = datetime.fromisoformat(simulated_time_str)
+                real_start_time = datetime.fromisoformat(real_start_time_str)
+                real_time_elapsed = datetime.utcnow() - real_start_time
+                
+                # Add the elapsed real time to the initial simulated time
+                current_simulated_time = initial_simulated_time + real_time_elapsed
+                return current_simulated_time
+            elif simulated_time_str:
+                # Fallback to original simulated time if no real_start_time
+                current_simulated_time = datetime.fromisoformat(simulated_time_str)
                 return current_simulated_time
     except Exception as e:
         print(f"DEBUG: Error in get_current_time: {e}")
