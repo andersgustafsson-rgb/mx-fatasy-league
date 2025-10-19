@@ -54,6 +54,12 @@ else:
     print("Using local SQLite database file")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Security settings
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour session timeout
+app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent XSS attacks
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+
 # Database engine options - different for different database types
 if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
     # PostgreSQL options
@@ -452,6 +458,34 @@ def is_admin_user():
     # Fallback to old method for backward compatibility
     return username == "test"
 
+def check_session_timeout():
+    """Check if session has expired and logout if needed"""
+    if "login_time" in session:
+        login_time = datetime.fromisoformat(session["login_time"])
+        if datetime.utcnow() - login_time > timedelta(hours=24):
+            session.clear()
+            return False
+    return True
+
+def login_required(f):
+    """Decorator to require login for routes"""
+    from functools import wraps
+    
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Check if user is logged in
+        if "user_id" not in session:
+            flash("Du måste logga in för att komma åt denna sida", "error")
+            return redirect(url_for("login"))
+        
+        # Check session timeout
+        if not check_session_timeout():
+            flash("Din session har gått ut. Logga in igen.", "error")
+            return redirect(url_for("login"))
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 def get_track_timezone(track_name):
     """Get timezone for a track based on its name"""
@@ -573,8 +607,10 @@ def login():
             print(f"Password check: {password_check}")
             
             if password_check:
+                session.permanent = True  # Enable session timeout
                 session["user_id"] = user.id
                 session["username"] = user.username
+                session["login_time"] = datetime.utcnow().isoformat()
                 print("Login successful, redirecting...")
                 return redirect(url_for("index"))
         
@@ -660,10 +696,8 @@ def series_status():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/")
+@login_required
 def index():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
     uid = session["user_id"]
     today = get_today()
 
@@ -1037,9 +1071,8 @@ def index():
 
 
 @app.route("/leagues")
+@login_required
 def leagues_page():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
     uid = session["user_id"]
     
     # Ensure database is initialized
@@ -1696,10 +1729,8 @@ def series_page(series_id):
         return redirect(url_for("index"))
 
 @app.route("/race_picks/<int:competition_id>")
+@login_required
 def race_picks_page(competition_id):
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
     comp = Competition.query.get_or_404(competition_id)
     
     
@@ -2503,6 +2534,7 @@ def run_migration():
         return f"Migration failed: {str(e)}"
 
 @app.route("/admin")
+@login_required
 def admin_page():
     if not is_admin_user():
         return redirect(url_for("index"))
@@ -4075,11 +4107,10 @@ def user_stats_page(username: str):
     )
 
 @app.get("/race_results")
+@login_required
 def race_results_page():
     """Show actual race results for all competitions"""
     try:
-        if "user_id" not in session:
-            return redirect(url_for("login"))
         
         competitions = (
             Competition.query
