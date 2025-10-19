@@ -117,7 +117,6 @@ class GlobalSimulation(db.Model):
     active = db.Column(db.Boolean, default=False)
     simulated_time = db.Column(db.String(50), nullable=True)
     start_time = db.Column(db.String(50), nullable=True)
-    real_start_time = db.Column(db.String(50), nullable=True)  # Real time when simulation started
     scenario = db.Column(db.String(50), nullable=True)
     active_race_id = db.Column(db.Integer, nullable=True)  # Which race is currently active for picks
 
@@ -721,21 +720,6 @@ def index():
                     print(f"Error adding joined_at column: {e}")
                     db.session.rollback()
         
-        # Check if real_start_time column exists in global_simulation table
-        if inspect(db.engine).has_table('global_simulation'):
-            try:
-                # Try to query real_start_time column
-                db.session.execute(text("SELECT real_start_time FROM global_simulation LIMIT 1"))
-            except Exception:
-                # Column doesn't exist, add it
-                try:
-                    db.session.rollback()
-                    db.session.execute(text("ALTER TABLE global_simulation ADD COLUMN real_start_time VARCHAR(50)"))
-                    db.session.commit()
-                    print("real_start_time column added to global_simulation table successfully")
-                except Exception as e:
-                    print(f"Error adding real_start_time column: {e}")
-                    db.session.rollback()
         
         # Check if league image columns exist
         if inspect(db.engine).has_table('leagues'):
@@ -5923,32 +5907,6 @@ def fix_league_memberships_column():
         return f"❌ Error: {e}"
 
 
-@app.get("/fix_global_simulation_column")
-def fix_global_simulation_column():
-    """Fix missing real_start_time column in global_simulation table"""
-    try:
-        from sqlalchemy import inspect
-        
-        if inspect(db.engine).has_table('global_simulation'):
-            try:
-                # Try to query real_start_time column
-                db.session.execute(text("SELECT real_start_time FROM global_simulation LIMIT 1"))
-                return "real_start_time column already exists in global_simulation table"
-            except Exception:
-                # Column doesn't exist, add it
-                try:
-                    db.session.rollback()
-                    db.session.execute(text("ALTER TABLE global_simulation ADD COLUMN real_start_time VARCHAR(50)"))
-                    db.session.commit()
-                    return "✅ real_start_time column added to global_simulation table successfully"
-                except Exception as e:
-                    db.session.rollback()
-                    return f"❌ Error adding real_start_time column: {e}"
-        else:
-            return "global_simulation table doesn't exist"
-            
-    except Exception as e:
-        return f"❌ Error: {e}"
 
 
 @app.get("/migrate_league_image_columns")
@@ -9981,15 +9939,9 @@ def set_simulated_time():
             global_sim.active = True
             global_sim.scenario = scenario
         
-        # Set simulated time and real start time for countdown calculation
+        # Set simulated time and start time for countdown calculation
         current_real_time = datetime.utcnow()
-        
-        # Try to set real_start_time, but handle if column doesn't exist yet
-        try:
-            global_sim.real_start_time = current_real_time.isoformat()
-        except Exception as e:
-            print(f"DEBUG: Could not set real_start_time (column may not exist): {e}")
-            # Continue without real_start_time for now
+        global_sim.start_time = current_real_time.isoformat()
         
         # Set simulated time based on scenario
         if scenario == 'race_in_3h':
@@ -10594,30 +10546,23 @@ def get_current_time():
     # Check if we're in simulation mode
     try:
         db.session.rollback()
-        # Try to get real_start_time, but fallback if column doesn't exist
-        try:
-            result = db.session.execute(text("SELECT active, simulated_time, real_start_time FROM global_simulation WHERE id = 1")).fetchone()
-        except Exception:
-            # real_start_time column doesn't exist, use fallback query
-            result = db.session.execute(text("SELECT active, simulated_time FROM global_simulation WHERE id = 1")).fetchone()
-            if result:
-                result = (result[0], result[1], None)  # Add None for real_start_time
+        result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
         
         if result and result[0]:  # active is True
             simulated_time_str = result[1] if result[1] else None
-            real_start_time_str = result[2] if len(result) > 2 and result[2] else None
+            start_time_str = result[2] if result[2] else None
             
-            if simulated_time_str and real_start_time_str:
+            if simulated_time_str and start_time_str:
                 # Calculate how much real time has passed since simulation started
                 initial_simulated_time = datetime.fromisoformat(simulated_time_str)
-                real_start_time = datetime.fromisoformat(real_start_time_str)
-                real_time_elapsed = datetime.utcnow() - real_start_time
+                start_time = datetime.fromisoformat(start_time_str)
+                real_time_elapsed = datetime.utcnow() - start_time
                 
                 # Add the elapsed real time to the initial simulated time
                 current_simulated_time = initial_simulated_time + real_time_elapsed
                 return current_simulated_time
             elif simulated_time_str:
-                # Fallback to original simulated time if no real_start_time
+                # Fallback to original simulated time if no start_time
                 current_simulated_time = datetime.fromisoformat(simulated_time_str)
                 return current_simulated_time
     except Exception as e:
