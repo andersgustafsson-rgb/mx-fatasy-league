@@ -696,9 +696,14 @@ def series_status():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/")
-@login_required
 def index():
-    uid = session["user_id"]
+    # Check if user is logged in
+    if "user_id" in session:
+        uid = session["user_id"]
+        is_logged_in = True
+    else:
+        uid = None
+        is_logged_in = False
     today = get_today()
 
     # Ensure database is initialized
@@ -865,58 +870,69 @@ def index():
     if not upcoming_race:
         upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
     
-    # Get season team with error handling
-    try:
-        my_team = SeasonTeam.query.filter_by(user_id=uid).first()
-    except Exception as e:
-        print(f"Error getting season team: {e}")
-        my_team = None
-
+    # Get user-specific data only if logged in
+    my_team = None
     team_riders = []
-    if my_team:
-        try:
-            rs = (
-                db.session.query(Rider)
-                .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
-                .filter(SeasonTeamRider.season_team_id == my_team.id)
-                .order_by(Rider.class_name.desc(), Rider.price.desc())
-                .all()
-            )
-            team_riders = [
-                {
-                    "id": r.id,
-                    "name": r.name,
-                    "number": r.rider_number,
-                    "brand": (r.bike_brand or "").lower(),
-                    "class": r.class_name,
-                    "image_url": r.image_url or None,   # <-- added
-                }
-                for r in rs
-            ]
-        except Exception as e:
-            print(f"Error getting team riders: {e}")
-            team_riders = []
-
-    # Get user profile picture
     user_profile_picture = None
-    try:
-        user = User.query.get(uid)
-        if user and hasattr(user, 'profile_picture_url') and user.profile_picture_url:
-            user_profile_picture = user.profile_picture_url
-    except Exception as e:
-        print(f"Error getting user profile picture: {e}")
-        user_profile_picture = None
-
-    # Get user's picks for upcoming race
     current_picks_450 = []
     current_picks_250 = []
+    current_holeshot_450 = None
+    current_holeshot_250 = None
+    current_wildcard = None
     picks_status = "no_picks"
-    picks_locked = False
+    picks_locked = True
+    league_requests_count = 0
     
-    if upcoming_race:
+    if is_logged_in:
+        # Get season team with error handling
         try:
-            # Use the unified picks lock check function
-            picks_locked = is_picks_locked(upcoming_race)
+            my_team = SeasonTeam.query.filter_by(user_id=uid).first()
+        except Exception as e:
+            print(f"Error getting season team: {e}")
+            my_team = None
+
+        # Get team riders
+        if my_team:
+            try:
+                rs = (
+                    db.session.query(Rider)
+                    .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+                    .filter(SeasonTeamRider.season_team_id == my_team.id)
+                    .order_by(Rider.class_name.desc(), Rider.price.desc())
+                    .all()
+                )
+                team_riders = [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "number": r.rider_number,
+                        "brand": (r.bike_brand or "").lower(),
+                        "class": r.class_name,
+                        "image_url": r.image_url or None,   # <-- added
+                    }
+                    for r in rs
+                ]
+            except Exception as e:
+                print(f"Error getting team riders: {e}")
+                team_riders = []
+
+        # Get user profile picture
+        try:
+            user = User.query.get(uid)
+            if user and hasattr(user, 'profile_picture_url') and user.profile_picture_url:
+                user_profile_picture = user.profile_picture_url
+        except Exception as e:
+            print(f"Error getting user profile picture: {e}")
+            user_profile_picture = None
+
+        # Get user's picks for upcoming race
+        picks_status = "no_picks"
+        picks_locked = False
+        
+        if upcoming_race:
+            try:
+                # Use the unified picks lock check function
+                picks_locked = is_picks_locked(upcoming_race)
             
             # Use the correct competition_id for picks lookup
             competition_id_for_picks = upcoming_race.id
@@ -1027,42 +1043,42 @@ def index():
         new_bulletin_posts = 0
         latest_post_author = None
 
-    # Check for league join requests (for league creators)
-    league_requests_count = 0
-    try:
-        # Get all leagues where current user is creator
-        user_leagues = League.query.filter_by(creator_id=uid).all()
-        league_ids = [league.id for league in user_leagues]
-        
-        if league_ids:
-            # Count pending requests for user's leagues
-            league_requests_count = LeagueRequest.query.filter(
-                LeagueRequest.league_id.in_(league_ids),
-                LeagueRequest.status == 'pending'
-            ).count()
-    except Exception as e:
-        print(f"Error checking league requests: {e}")
-        league_requests_count = 0
+        # Check for league join requests (for league creators)
+        try:
+            # Get all leagues where current user is creator
+            user_leagues = League.query.filter_by(creator_id=uid).all()
+            league_ids = [league.id for league in user_leagues]
+            
+            if league_ids:
+                # Count pending requests for user's leagues
+                league_requests_count = LeagueRequest.query.filter(
+                    LeagueRequest.league_id.in_(league_ids),
+                    LeagueRequest.status == 'pending'
+                ).count()
+        except Exception as e:
+            print(f"Error checking league requests: {e}")
+            league_requests_count = 0
 
     return render_template(
         "index.html",
-        username=session["username"],
-        user_profile_picture=user_profile_picture,
+        username=session.get("username", "Gäst"),
+        user_profile_picture=user_profile_picture if is_logged_in else None,
         upcoming_race=upcoming_race,
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
-        my_team=my_team,
-        team_riders=team_riders,
-        current_picks_450=current_picks_450,
-        current_picks_250=current_picks_250,
-        current_holeshot_450=current_holeshot_450 if 'current_holeshot_450' in locals() else None,
-        current_holeshot_250=current_holeshot_250 if 'current_holeshot_250' in locals() else None,
-        current_wildcard=current_wildcard if 'current_wildcard' in locals() else None,
+        my_team=my_team if is_logged_in else None,
+        team_riders=team_riders if is_logged_in else [],
+        current_picks_450=current_picks_450 if is_logged_in else None,
+        current_picks_250=current_picks_250 if is_logged_in else None,
+        current_holeshot_450=current_holeshot_450 if is_logged_in and 'current_holeshot_450' in locals() else None,
+        current_holeshot_250=current_holeshot_250 if is_logged_in and 'current_holeshot_250' in locals() else None,
+        current_wildcard=current_wildcard if is_logged_in and 'current_wildcard' in locals() else None,
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
-        league_requests_count=league_requests_count,
+        league_requests_count=league_requests_count if is_logged_in else 0,
         picks_status=picks_status,
         picks_locked=picks_locked,
-        is_admin=is_admin_user(),
+        is_admin=is_admin_user() if is_logged_in else False,
+        is_logged_in=is_logged_in,
     )
 
 
