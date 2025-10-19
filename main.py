@@ -4893,6 +4893,15 @@ def calculate_scores(comp_id: int):
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")
+    
+    # Automatically calculate league points after race scores are calculated
+    try:
+        print(f"🏆 Automatically calculating league points for competition {comp_id}...")
+        update_league_points_for_competition(comp_id)
+        print(f"✅ League points updated for competition {comp_id}")
+    except Exception as e:
+        print(f"❌ Error calculating league points: {e}")
+        # Don't fail the entire score calculation if league points fail
 
 # -------------------------------------------------
 # Felsökning: lista routes
@@ -5706,6 +5715,33 @@ def calculate_league_points(league_id, competition_id):
     except Exception as e:
         print(f"Error calculating league points: {e}")
         return 0
+
+
+def update_league_points_for_competition(competition_id):
+    """Update total points for all leagues based on a specific competition"""
+    try:
+        # Get all leagues
+        leagues = League.query.all()
+        
+        for league in leagues:
+            # Calculate points for this competition
+            competition_points = calculate_league_points(league.id, competition_id)
+            
+            # Add to total points
+            if league.total_points is None:
+                league.total_points = 0
+            
+            league.total_points += competition_points
+            
+            print(f"🏆 League '{league.name}': +{competition_points} points (Total: {league.total_points})")
+        
+        db.session.commit()
+        print(f"✅ Updated league points for {len(leagues)} leagues based on competition {competition_id}")
+        
+    except Exception as e:
+        print(f"❌ Error updating league points: {e}")
+        db.session.rollback()
+        raise e
 
 
 @app.post("/admin/leagues/calculate_all_points")
