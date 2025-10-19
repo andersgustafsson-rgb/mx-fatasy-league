@@ -936,78 +936,75 @@ def index():
                 
                 # Use the correct competition_id for picks lookup
                 competition_id_for_picks = upcoming_race.id
-            
-            
-            # Get race picks for both classes
-            race_picks = RacePick.query.filter_by(
-                user_id=uid, 
-                competition_id=competition_id_for_picks
-            ).order_by(RacePick.predicted_position).all()
-            
-            # Get holeshot picks
-            holeshot_picks = HoleshotPick.query.filter_by(
-                user_id=uid,
-                competition_id=competition_id_for_picks
-            ).all()
-            
-            # Get wildcard pick
-            wildcard_pick = WildcardPick.query.filter_by(
-                user_id=uid,
-                competition_id=competition_id_for_picks
-            ).first()
-            
-            
-            if race_picks or holeshot_picks or wildcard_pick:
-                picks_status = "has_picks"
                 
-                # Always show user's own picks (they can see their own choices)
-                for pick in race_picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        pick_data = {
-                            "position": pick.predicted_position,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name
-                        }
-                        
-                        # Separate by class
-                        if rider.class_name == "450cc":
-                            current_picks_450.append(pick_data)
-                        elif rider.class_name == "250cc":
-                            current_picks_250.append(pick_data)
-                        
+                # Get race picks for both classes
+                race_picks = RacePick.query.filter_by(
+                    user_id=uid, 
+                    competition_id=competition_id_for_picks
+                ).order_by(RacePick.predicted_position).all()
                 
-                # Process holeshot picks
-                current_holeshot_450 = None
-                current_holeshot_250 = None
-                for holeshot in holeshot_picks:
-                    rider = Rider.query.get(holeshot.rider_id)
-                    if rider:
-                        if rider.class_name == "450cc":
-                            current_holeshot_450 = {
+                # Get holeshot picks
+                holeshot_picks = HoleshotPick.query.filter_by(
+                    user_id=uid,
+                    competition_id=competition_id_for_picks
+                ).all()
+                
+                # Get wildcard pick
+                wildcard_pick = WildcardPick.query.filter_by(
+                    user_id=uid,
+                    competition_id=competition_id_for_picks
+                ).first()
+                
+                if race_picks or holeshot_picks or wildcard_pick:
+                    picks_status = "has_picks"
+                
+                    # Always show user's own picks (they can see their own choices)
+                    for pick in race_picks:
+                        rider = Rider.query.get(pick.rider_id)
+                        if rider:
+                            pick_data = {
+                                "position": pick.predicted_position,
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
-                        elif rider.class_name == "250cc":
-                            current_holeshot_250 = {
-                                "rider_name": rider.name,
-                                "rider_number": rider.rider_number,
+                            
+                            # Separate by class
+                            if rider.class_name == "450cc":
+                                current_picks_450.append(pick_data)
+                            elif rider.class_name == "250cc":
+                                current_picks_250.append(pick_data)
+                        
+                    # Process holeshot picks
+                    current_holeshot_450 = None
+                    current_holeshot_250 = None
+                    for holeshot in holeshot_picks:
+                        rider = Rider.query.get(holeshot.rider_id)
+                        if rider:
+                            if rider.class_name == "450cc":
+                                current_holeshot_450 = {
+                                    "rider_name": rider.name,
+                                    "rider_number": rider.rider_number,
+                                    "class": rider.class_name
+                                }
+                            elif rider.class_name == "250cc":
+                                current_holeshot_250 = {
+                                    "rider_name": rider.name,
+                                    "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
-                
-                # Process wildcard pick
-                current_wildcard = None
-                if wildcard_pick and wildcard_pick.rider_id:
-                    rider = Rider.query.get(wildcard_pick.rider_id)
-                    if rider:
-                        current_wildcard = {
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name,
-                            "position": wildcard_pick.position
-                        }
+                    
+                    # Process wildcard pick
+                    current_wildcard = None
+                    if wildcard_pick and wildcard_pick.rider_id:
+                        rider = Rider.query.get(wildcard_pick.rider_id)
+                        if rider:
+                            current_wildcard = {
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name,
+                                "position": wildcard_pick.position
+                            }
             except Exception as e:
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
