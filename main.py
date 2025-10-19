@@ -627,6 +627,9 @@ def login():
         else:
             flash("Felaktigt användarnamn eller lösenord", "error")
             return render_template("login.html")
+    
+    # Handle GET request (show login page)
+    return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
