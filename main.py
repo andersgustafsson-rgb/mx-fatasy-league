@@ -241,6 +241,9 @@ class League(db.Model):
     image_data = db.Column(db.Text)  # NEW: base64 encoded image data
     image_mime_type = db.Column(db.String(50))  # NEW: image MIME type (e.g., 'image/png')
     description = db.Column(db.String(255))  # NY: kort beskrivning (nullable)
+    is_public = db.Column(db.Boolean, default=True)  # NEW: public/private league
+    total_points = db.Column(db.Integer, default=0)  # NEW: league competition points
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # NEW: creation date
 
 
 class LeagueMembership(db.Model):
@@ -248,6 +251,20 @@ class LeagueMembership(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    __table_args__ = (db.UniqueConstraint('league_id', 'user_id', name='uq_league_user'),)
+
+
+class LeagueRequest(db.Model):
+    __tablename__ = "league_requests"
+    id = db.Column(db.Integer, primary_key=True)
+    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    message = db.Column(db.String(500))  # Optional message from requester
+    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    processed_at = db.Column(db.DateTime)
+    __table_args__ = (db.UniqueConstraint('league_id', 'user_id', name='uq_league_request'),)
 
 class BulletinPost(db.Model):
     __tablename__ = "bulletin_posts"
@@ -717,6 +734,59 @@ def index():
                         print("League image columns added successfully via direct connection")
                     except Exception as e2:
                         print(f"Failed to add league image columns via direct connection: {e2}")
+        
+        # Check if league additional columns exist
+        if inspect(db.engine).has_table('leagues'):
+            try:
+                # Try to query new columns
+                db.session.execute(text("SELECT is_public, total_points, created_at FROM leagues LIMIT 1"))
+            except Exception:
+                # Columns don't exist, add them
+                print("Adding is_public, total_points, created_at columns to leagues table...")
+                try:
+                    db.session.rollback()
+                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
+                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
+                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.commit()
+                    print("League additional columns added successfully")
+                except Exception as e:
+                    print(f"Error adding league additional columns: {e}")
+                    db.session.rollback()
+                    try:
+                        from sqlalchemy import create_engine
+                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                            conn.commit()
+                        print("League additional columns added successfully via direct connection")
+                    except Exception as e2:
+                        print(f"Failed to add league additional columns via direct connection: {e2}")
+        
+        # Check if league_requests table exists
+        if not inspect(db.engine).has_table('league_requests'):
+            print("Creating league_requests table...")
+            try:
+                db.session.rollback()
+                db.session.execute(text("""
+                    CREATE TABLE league_requests (
+                        id SERIAL PRIMARY KEY,
+                        league_id INTEGER NOT NULL REFERENCES leagues(id),
+                        user_id INTEGER NOT NULL REFERENCES users(id),
+                        message VARCHAR(500),
+                        status VARCHAR(20) DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        processed_at TIMESTAMP,
+                        UNIQUE(league_id, user_id)
+                    )
+                """))
+                db.session.commit()
+                print("league_requests table created successfully")
+            except Exception as e:
+                print(f"Error creating league_requests table: {e}")
+                db.session.rollback()
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
@@ -955,6 +1025,43 @@ def leagues_page():
         my_leagues = []
     
     return render_template("leagues.html", my_leagues=my_leagues, username=session["username"])
+
+
+@app.get("/leagues/browse")
+def browse_leagues():
+    """Browse all public leagues"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    # Get all public leagues with member count and points
+    public_leagues = db.session.query(
+        League,
+        db.func.count(LeagueMembership.user_id).label('member_count')
+    ).outerjoin(LeagueMembership).filter(
+        League.is_public == True
+    ).group_by(League.id).order_by(
+        League.total_points.desc(),
+        League.created_at.desc()
+    ).all()
+    
+    # Get user's current leagues to show which ones they're already in
+    user_league_ids = db.session.query(LeagueMembership.league_id).filter(
+        LeagueMembership.user_id == session["user_id"]
+    ).all()
+    user_league_ids = [lid[0] for lid in user_league_ids]
+    
+    # Get pending requests
+    pending_requests = db.session.query(LeagueRequest.league_id).filter(
+        LeagueRequest.user_id == session["user_id"],
+        LeagueRequest.status == 'pending'
+    ).all()
+    pending_league_ids = [rid[0] for rid in pending_requests]
+    
+    return render_template("browse_leagues.html", 
+                         public_leagues=public_leagues,
+                         user_league_ids=user_league_ids,
+                         pending_league_ids=pending_league_ids,
+                         username=session.get("username"))
 
 
 @app.route("/leagues/<int:league_id>")
@@ -5339,6 +5446,175 @@ def fix_my_league_images():
         "fixed_count": fixed_count
     })
 
+
+@app.post("/leagues/<int:league_id>/request")
+def request_join_league(league_id):
+    """Request to join a league"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    league = League.query.get_or_404(league_id)
+    
+    # Check if user is already a member
+    existing_membership = LeagueMembership.query.filter_by(
+        league_id=league_id, 
+        user_id=session["user_id"]
+    ).first()
+    
+    if existing_membership:
+        return jsonify({"error": "already_member"}), 400
+    
+    # Check if user already has a pending request
+    existing_request = LeagueRequest.query.filter_by(
+        league_id=league_id,
+        user_id=session["user_id"],
+        status='pending'
+    ).first()
+    
+    if existing_request:
+        return jsonify({"error": "request_already_sent"}), 400
+    
+    # Create new request
+    message = request.form.get("message", "").strip()
+    request_obj = LeagueRequest(
+        league_id=league_id,
+        user_id=session["user_id"],
+        message=message if message else None
+    )
+    
+    db.session.add(request_obj)
+    db.session.commit()
+    
+    return jsonify({"message": "Request sent successfully"})
+
+
+@app.post("/leagues/<int:league_id>/approve_request/<int:request_id>")
+def approve_league_request(league_id, request_id):
+    """Approve a league join request (league creator only)"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    league = League.query.get_or_404(league_id)
+    
+    # Check if user is the league creator
+    if league.creator_id != session["user_id"]:
+        return jsonify({"error": "not_authorized"}), 403
+    
+    request_obj = LeagueRequest.query.get_or_404(request_id)
+    
+    if request_obj.league_id != league_id:
+        return jsonify({"error": "invalid_request"}), 400
+    
+    if request_obj.status != 'pending':
+        return jsonify({"error": "request_already_processed"}), 400
+    
+    # Approve the request
+    request_obj.status = 'approved'
+    request_obj.processed_at = datetime.utcnow()
+    
+    # Add user to league
+    membership = LeagueMembership(
+        league_id=league_id,
+        user_id=request_obj.user_id
+    )
+    db.session.add(membership)
+    db.session.commit()
+    
+    return jsonify({"message": "Request approved successfully"})
+
+
+@app.post("/leagues/<int:league_id>/reject_request/<int:request_id>")
+def reject_league_request(league_id, request_id):
+    """Reject a league join request (league creator only)"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    league = League.query.get_or_404(league_id)
+    
+    # Check if user is the league creator
+    if league.creator_id != session["user_id"]:
+        return jsonify({"error": "not_authorized"}), 403
+    
+    request_obj = LeagueRequest.query.get_or_404(request_id)
+    
+    if request_obj.league_id != league_id:
+        return jsonify({"error": "invalid_request"}), 400
+    
+    if request_obj.status != 'pending':
+        return jsonify({"error": "request_already_processed"}), 400
+    
+    # Reject the request
+    request_obj.status = 'rejected'
+    request_obj.processed_at = datetime.utcnow()
+    db.session.commit()
+    
+    return jsonify({"message": "Request rejected"})
+
+
+@app.post("/admin/leagues/<int:league_id>/delete")
+def admin_delete_league(league_id):
+    """Delete a league (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        league = League.query.get_or_404(league_id)
+        
+        # Delete all related data
+        LeagueRequest.query.filter_by(league_id=league_id).delete()
+        LeagueMembership.query.filter_by(league_id=league_id).delete()
+        
+        # Delete the league
+        db.session.delete(league)
+        db.session.commit()
+        
+        return jsonify({"message": f"League '{league.name}' deleted successfully"})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/leagues/<int:league_id>/toggle_public")
+def admin_toggle_league_public(league_id):
+    """Toggle league public/private status (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        league = League.query.get_or_404(league_id)
+        
+        # Toggle public status
+        league.is_public = not league.is_public
+        db.session.commit()
+        
+        status = "public" if league.is_public else "private"
+        return jsonify({"message": f"League '{league.name}' is now {status}"})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/leagues/<int:league_id>/reset_points")
+def admin_reset_league_points(league_id):
+    """Reset league points to 0 (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        league = League.query.get_or_404(league_id)
+        
+        # Reset points
+        league.total_points = 0
+        db.session.commit()
+        
+        return jsonify({"message": f"League '{league.name}' points reset to 0"})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/migrate_league_image_columns")
 def migrate_league_image_columns():
     """Add image_data and image_mime_type columns to leagues table"""
@@ -5378,12 +5654,8 @@ def league_image(league_id):
         league = League.query.get_or_404(league_id)
         
         # Check if we have base64 data
-        if league.image_data and league.image_mime_type:
+        if hasattr(league, 'image_data') and league.image_data and hasattr(league, 'image_mime_type') and league.image_mime_type:
             from flask import Response
-            import base64
-            
-            # Decode base64 data
-            image_data = base64.b64decode(league.image_data)
             
             # Return as data URL
             data_url = f"data:{league.image_mime_type};base64,{league.image_data}"
@@ -8418,6 +8690,48 @@ def admin_users():
         
     except Exception as e:
         print(f"Error loading users: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/leagues")
+def admin_leagues():
+    """Admin page to manage leagues"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all leagues with member count and creator info
+        leagues_data = db.session.query(
+            League,
+            db.func.count(LeagueMembership.user_id).label('member_count'),
+            User.username.label('creator_username')
+        ).outerjoin(LeagueMembership).join(
+            User, League.creator_id == User.id
+        ).group_by(League.id, User.username).order_by(
+            League.created_at.desc()
+        ).all()
+        
+        leagues_list = []
+        for league_data in leagues_data:
+            league = league_data[0]
+            member_count = league_data[1]
+            creator_username = league_data[2]
+            
+            leagues_list.append({
+                'id': league.id,
+                'name': league.name,
+                'creator_username': creator_username,
+                'member_count': member_count,
+                'total_points': league.total_points or 0,
+                'is_public': getattr(league, 'is_public', True),
+                'created_at': league.created_at.isoformat() if hasattr(league, 'created_at') and league.created_at else None,
+                'description': league.description
+            })
+        
+        return render_template("admin_leagues.html", leagues=leagues_list)
+        
+    except Exception as e:
+        print(f"Error loading leagues: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/admin/toggle_admin/<int:user_id>", methods=['POST'])

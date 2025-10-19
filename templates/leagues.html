@@ -110,10 +110,16 @@
           </p>
         </div>
       </header>
-      <a href="{{ url_for('index') }}"
-         class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
-         ⚡ Tillbaka till Huvudsidan
-      </a>
+      <div class="flex gap-3">
+        <a href="{{ url_for('browse_leagues') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           🌟 Utforska Ligor
+        </a>
+        <a href="{{ url_for('index') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           ⚡ Tillbaka till Huvudsidan
+        </a>
+      </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Utforska Ligor - MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      background-attachment: fixed;
+    }
+    
+    .cyberpunk-header {
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    }
+    
+    .cyberpunk-card {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 2px solid #22d3ee;
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .cyberpunk-card:hover {
+      box-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    .neon-text {
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    }
+    
+    .cyberpunk-button {
+      background: linear-gradient(45deg, #22d3ee, #06b6d4);
+      border: 1px solid #22d3ee;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .cyberpunk-button:hover {
+      box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
+      transform: translateY(-1px);
+    }
+    
+    .league-card {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid #475569;
+      transition: all 0.3s ease;
+    }
+    
+    .league-card:hover {
+      border-color: #22d3ee;
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+      transform: translateY(-3px);
+    }
+    
+    .league-image {
+      background: linear-gradient(45deg, #1e293b, #334155);
+      border: 2px solid #475569;
+      transition: all 0.3s ease;
+    }
+    
+    .league-card:hover .league-image {
+      border-color: #22d3ee;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+    }
+    
+    .floating-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .pulse-glow {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.6); }
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen">
+  <div class="container mx-auto p-3 sm:p-4 md:p-8">
+    <!-- Header - Cyberpunk Style -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 sm:mb-12 gap-6">
+      <header class="text-center sm:text-left">
+        <h1 class="cyberpunk-header text-4xl sm:text-5xl md:text-6xl font-bold text-cyan-400 mb-2">
+          🌟 UPPTÄCK LIGOR
+        </h1>
+        <div class="flex items-center justify-center sm:justify-start gap-2">
+          <div class="w-3 h-3 bg-cyan-400 rounded-full pulse-glow"></div>
+          <p class="text-lg sm:text-xl text-cyan-300 font-medium">
+            Inloggad som: <span class="text-cyan-400 font-bold">{{ username }}</span>
+          </p>
+        </div>
+      </header>
+      <div class="flex gap-3">
+        <a href="{{ url_for('leagues_page') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           🏠 Mina Ligor
+        </a>
+        <a href="{{ url_for('index') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           ⚡ Huvudsidan
+        </a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="cyberpunk-card p-4 sm:p-6 rounded-lg mb-6 text-center {{ 'border-green-400 bg-green-900/20' if category == 'success' else 'border-red-400 bg-red-900/20' }} text-white text-lg font-medium">
+            <div class="flex items-center justify-center gap-3">
+              <div class="text-2xl">{{ '✅' if category == 'success' else '❌' }}</div>
+              <span class="neon-text">{{ message }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- League Stats -->
+    <div class="cyberpunk-card p-6 sm:p-8 rounded-xl mb-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="text-3xl">📊</div>
+        <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Liga Statistik</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-cyan-400 mb-2">{{ public_leagues|length }}</div>
+          <div class="text-cyan-300 font-medium">Aktiva Ligor</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-purple-400 mb-2">
+            {{ public_leagues|sum(attribute='1') if public_leagues else 0 }}
+          </div>
+          <div class="text-cyan-300 font-medium">Totala Medlemmar</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-yellow-400 mb-2">
+            {{ public_leagues|sum(attribute='0.total_points') if public_leagues else 0 }}
+          </div>
+          <div class="text-cyan-300 font-medium">Totala Poäng</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Public Leagues Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      {% for league_data in public_leagues %}
+        {% set league = league_data[0] %}
+        {% set member_count = league_data[1] %}
+        <div class="league-card p-6 rounded-xl">
+          <!-- League Image -->
+          <div class="league-image h-32 w-full rounded-lg mb-4 p-3 flex items-center justify-center relative group">
+            {% if league.image_data and league.image_mime_type %}
+              <!-- Cool image container -->
+              <div class="relative w-full h-full">
+                <!-- Glow effect -->
+                <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-lg blur-sm opacity-30 group-hover:opacity-50 transition duration-500"></div>
+                
+                <!-- Image with effects -->
+                <img src="{{ url_for('league_image', league_id=league.id) }}" alt="Ligabild"
+                    class="relative h-full w-full object-contain rounded-lg border border-cyan-400/30 group-hover:border-cyan-400/60 transition-all duration-300 group-hover:scale-105"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                
+                <!-- Floating particle -->
+                <div class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-ping opacity-60"></div>
+              </div>
+            {% endif %}
+            
+            <!-- Fallback design -->
+            <div class="text-center text-cyan-400 {% if league.image_data and league.image_mime_type %}hidden{% endif %} relative w-full h-full">
+              <!-- Glow effect for fallback -->
+              <div class="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-purple-600 rounded-lg blur-sm opacity-20"></div>
+              
+              <!-- Content -->
+              <div class="relative flex flex-col items-center justify-center h-full">
+                <div class="text-4xl mb-2 floating-animation group-hover:scale-110 transition-transform duration-300">🏆</div>
+                <div class="text-sm font-semibold neon-text">Ligabild</div>
+              </div>
+              
+              <!-- Floating particle -->
+              <div class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse opacity-40"></div>
+            </div>
+          </div>
+
+          <!-- League Info -->
+          <h3 class="font-bold text-xl sm:text-2xl text-white mb-3">{{ league.name }}</h3>
+          
+          {% if league.description %}
+            <p class="text-cyan-300 text-sm mb-4 line-clamp-2">{{ league.description }}</p>
+          {% endif %}
+
+          <!-- League Stats -->
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div class="text-center">
+              <div class="text-lg font-bold text-cyan-400">{{ member_count }}</div>
+              <div class="text-xs text-cyan-300">Medlemmar</div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg font-bold text-yellow-400">{{ league.total_points or 0 }}</div>
+              <div class="text-xs text-cyan-300">Poäng</div>
+            </div>
+          </div>
+
+          <!-- Created Date -->
+          <div class="text-xs text-gray-400 mb-4">
+            Skapad: {{ league.created_at.strftime('%Y-%m-%d') if league.created_at else 'Okänt' }}
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2">
+            {% if league.id in user_league_ids %}
+              <button class="flex-1 bg-green-600 text-white font-bold py-2 px-3 rounded text-sm cursor-not-allowed opacity-50">
+                ✅ Medlem
+              </button>
+            {% elif league.id in pending_league_ids %}
+              <button class="flex-1 bg-yellow-600 text-white font-bold py-2 px-3 rounded text-sm cursor-not-allowed opacity-50">
+                ⏳ Väntar
+              </button>
+            {% else %}
+              <button onclick="requestJoinLeague({{ league.id }}, '{{ league.name }}')"
+                      class="flex-1 cyberpunk-button text-white font-bold py-2 px-3 rounded text-sm">
+                🚀 Ansök
+              </button>
+            {% endif %}
+            
+            <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
+               class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded text-sm text-center transition-all">
+              👁️ Visa
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if not public_leagues %}
+      <div class="cyberpunk-card p-12 rounded-xl text-center">
+        <div class="text-6xl mb-4 floating-animation">🏆</div>
+        <h3 class="text-2xl font-bold text-cyan-400 mb-2">Inga publika ligor än</h3>
+        <p class="text-cyan-300 mb-6">Var den första att skapa en publik liga!</p>
+        <a href="{{ url_for('leagues_page') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg">
+          🚀 Skapa Liga
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Request Join Modal -->
+  <div id="requestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="cyberpunk-card p-6 rounded-xl max-w-md w-full">
+      <h3 class="text-xl font-bold text-cyan-400 mb-4">Ansök om medlemskap</h3>
+      <p class="text-gray-300 mb-4">Skicka en ansökan till: <span id="leagueName" class="font-bold text-cyan-400"></span></p>
+      
+      <form id="requestForm">
+        <div class="mb-4">
+          <label for="requestMessage" class="block text-sm font-medium text-cyan-300 mb-2">Meddelande (valfritt):</label>
+          <textarea id="requestMessage" name="message" rows="3"
+                    class="w-full p-3 border-2 border-cyan-400 rounded-lg bg-slate-800 text-white text-sm placeholder-gray-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20 transition-all"
+                    placeholder="Berätta varför du vill gå med i ligan..."></textarea>
+        </div>
+        
+        <div class="flex gap-3">
+          <button type="submit"
+                  class="flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm">
+            🚀 Skicka Ansökan
+          </button>
+          <button type="button" onclick="closeRequestModal()"
+                  class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
+            ❌ Avbryt
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentLeagueId = null;
+
+    function requestJoinLeague(leagueId, leagueName) {
+      currentLeagueId = leagueId;
+      document.getElementById('leagueName').textContent = leagueName;
+      document.getElementById('requestModal').classList.remove('hidden');
+    }
+
+    function closeRequestModal() {
+      document.getElementById('requestModal').classList.add('hidden');
+      document.getElementById('requestForm').reset();
+      currentLeagueId = null;
+    }
+
+    document.getElementById('requestForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      if (!currentLeagueId) return;
+      
+      const formData = new FormData(this);
+      
+      try {
+        const response = await fetch(`/leagues/${currentLeagueId}/request`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert('Ansökan skickad!');
+          closeRequestModal();
+          location.reload(); // Refresh to show updated status
+        } else {
+          alert('Fel: ' + (result.error || 'Okänt fel'));
+        }
+      } catch (error) {
+        alert('Fel vid skickande av ansökan: ' + error.message);
+      }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('requestModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeRequestModal();
+      }
+    });
+  </script>
+</body>
+</html>

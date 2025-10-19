@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Liga Hantering - Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      background-attachment: fixed;
+    }
+    
+    .cyberpunk-header {
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    }
+    
+    .cyberpunk-card {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 2px solid #22d3ee;
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+      transition: all 0.3s ease;
+    }
+    
+    .cyberpunk-card:hover {
+      box-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    .neon-text {
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    }
+    
+    .cyberpunk-button {
+      background: linear-gradient(45deg, #22d3ee, #06b6d4);
+      border: 1px solid #22d3ee;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+      transition: all 0.3s ease;
+    }
+    
+    .cyberpunk-button:hover {
+      box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
+      transform: translateY(-1px);
+    }
+    
+    .danger-button {
+      background: linear-gradient(45deg, #ef4444, #dc2626);
+      border: 1px solid #ef4444;
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+    
+    .danger-button:hover {
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+    }
+    
+    .warning-button {
+      background: linear-gradient(45deg, #f59e0b, #d97706);
+      border: 1px solid #f59e0b;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+    
+    .warning-button:hover {
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
+    }
+    
+    .floating-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .pulse-glow {
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.6); }
+    }
+  </style>
+</head>
+<body class="text-gray-100 min-h-screen">
+  <div class="container mx-auto p-3 sm:p-4 md:p-8">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 sm:mb-12 gap-6">
+      <header class="text-center sm:text-left">
+        <h1 class="cyberpunk-header text-4xl sm:text-5xl md:text-6xl font-bold text-cyan-400 mb-2">
+          🏆 LIGA HANTERING
+        </h1>
+        <div class="flex items-center justify-center sm:justify-start gap-2">
+          <div class="w-3 h-3 bg-cyan-400 rounded-full pulse-glow"></div>
+          <p class="text-lg sm:text-xl text-cyan-300 font-medium">Admin Panel</p>
+        </div>
+      </header>
+      <div class="flex gap-3">
+        <a href="{{ url_for('admin_page') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           ⚡ Admin Panel
+        </a>
+        <a href="{{ url_for('index') }}"
+           class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg text-lg self-center floating-animation">
+           🏠 Huvudsidan
+        </a>
+      </div>
+    </div>
+
+    <!-- League Stats -->
+    <div class="cyberpunk-card p-6 sm:p-8 rounded-xl mb-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="text-3xl">📊</div>
+        <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Liga Statistik</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-cyan-400 mb-2">{{ leagues|length }}</div>
+          <div class="text-cyan-300 font-medium">Totala Ligor</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-green-400 mb-2">
+            {{ leagues|selectattr('is_public')|list|length }}
+          </div>
+          <div class="text-cyan-300 font-medium">Publika Ligor</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-purple-400 mb-2">
+            {{ leagues|sum(attribute='member_count') }}
+          </div>
+          <div class="text-cyan-300 font-medium">Totala Medlemmar</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl sm:text-4xl font-bold text-yellow-400 mb-2">
+            {{ leagues|sum(attribute='total_points') }}
+          </div>
+          <div class="text-cyan-300 font-medium">Totala Poäng</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leagues Table -->
+    <div class="cyberpunk-card p-6 sm:p-8 rounded-xl">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="text-3xl">🏆</div>
+        <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Alla Ligor</h2>
+      </div>
+      
+      {% if leagues %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-800/50">
+              <tr>
+                <th class="p-3 text-left text-cyan-300 font-semibold">Liga</th>
+                <th class="p-3 text-left text-cyan-300 font-semibold">Skapare</th>
+                <th class="p-3 text-center text-cyan-300 font-semibold">Medlemmar</th>
+                <th class="p-3 text-center text-cyan-300 font-semibold">Poäng</th>
+                <th class="p-3 text-center text-cyan-300 font-semibold">Status</th>
+                <th class="p-3 text-center text-cyan-300 font-semibold">Skapad</th>
+                <th class="p-3 text-center text-cyan-300 font-semibold">Åtgärder</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-200">
+              {% for league in leagues %}
+                <tr class="border-t border-gray-700 hover:bg-gray-800/30 transition-colors">
+                  <!-- League Name -->
+                  <td class="p-3">
+                    <div class="font-bold text-white">{{ league.name }}</div>
+                    {% if league.description %}
+                      <div class="text-xs text-gray-400 mt-1 line-clamp-1">{{ league.description }}</div>
+                    {% endif %}
+                  </td>
+                  
+                  <!-- Creator -->
+                  <td class="p-3">
+                    <span class="text-cyan-300 font-medium">{{ league.creator_username }}</span>
+                  </td>
+                  
+                  <!-- Members -->
+                  <td class="p-3 text-center">
+                    <span class="text-purple-400 font-bold">{{ league.member_count }}</span>
+                  </td>
+                  
+                  <!-- Points -->
+                  <td class="p-3 text-center">
+                    <span class="text-yellow-400 font-bold">{{ league.total_points }}</span>
+                  </td>
+                  
+                  <!-- Status -->
+                  <td class="p-3 text-center">
+                    {% if league.is_public %}
+                      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-200">
+                        🌐 Publik
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-700/30 dark:text-red-200">
+                        🔒 Privat
+                      </span>
+                    {% endif %}
+                  </td>
+                  
+                  <!-- Created -->
+                  <td class="p-3 text-center text-gray-400 text-xs">
+                    {% if league.created_at %}
+                      {{ league.created_at[:10] }}
+                    {% else %}
+                      Okänt
+                    {% endif %}
+                  </td>
+                  
+                  <!-- Actions -->
+                  <td class="p-3 text-center">
+                    <div class="flex gap-1 justify-center">
+                      <!-- Toggle Public/Private -->
+                      <button onclick="togglePublic({{ league.id }}, '{{ league.name }}', {{ league.is_public|lower }})"
+                              class="px-2 py-1 rounded text-xs font-bold transition-all
+                                     {% if league.is_public %}
+                                       warning-button text-white
+                                     {% else %}
+                                       cyberpunk-button text-white
+                                     {% endif %}">
+                        {% if league.is_public %}
+                          🔒
+                        {% else %}
+                          🌐
+                        {% endif %}
+                      </button>
+                      
+                      <!-- Reset Points -->
+                      <button onclick="resetPoints({{ league.id }}, '{{ league.name }}')"
+                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all">
+                        🔄
+                      </button>
+                      
+                      <!-- Delete -->
+                      <button onclick="deleteLeague({{ league.id }}, '{{ league.name }}')"
+                              class="px-2 py-1 rounded text-xs font-bold danger-button text-white transition-all">
+                        ❌
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4 floating-animation">🏆</div>
+          <h3 class="text-2xl font-bold text-cyan-400 mb-2">Inga ligor än</h3>
+          <p class="text-cyan-300">Inga ligor har skapats än.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="cyberpunk-card p-6 rounded-xl max-w-md w-full">
+      <h3 class="text-xl font-bold text-cyan-400 mb-4" id="modalTitle">Bekräfta åtgärd</h3>
+      <p class="text-gray-300 mb-6" id="modalMessage">Är du säker på att du vill utföra denna åtgärd?</p>
+      
+      <div class="flex gap-3">
+        <button id="confirmButton"
+                class="flex-1 danger-button text-white font-bold py-2 px-4 rounded text-sm">
+          Bekräfta
+        </button>
+        <button onclick="closeModal()"
+                class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
+          Avbryt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentAction = null;
+    let currentLeagueId = null;
+
+    function togglePublic(leagueId, leagueName, isPublic) {
+      currentLeagueId = leagueId;
+      currentAction = 'toggle_public';
+      
+      const action = isPublic ? 'göra privat' : 'göra publik';
+      document.getElementById('modalTitle').textContent = 'Ändra Liga Status';
+      document.getElementById('modalMessage').textContent = `Är du säker på att du vill ${action} ligan "${leagueName}"?`;
+      document.getElementById('confirmButton').textContent = 'Bekräfta';
+      document.getElementById('confirmButton').className = 'flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm';
+      
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function resetPoints(leagueId, leagueName) {
+      currentLeagueId = leagueId;
+      currentAction = 'reset_points';
+      
+      document.getElementById('modalTitle').textContent = 'Återställ Poäng';
+      document.getElementById('modalMessage').textContent = `Är du säker på att du vill återställa poängen för ligan "${leagueName}" till 0?`;
+      document.getElementById('confirmButton').textContent = 'Återställ';
+      document.getElementById('confirmButton').className = 'flex-1 warning-button text-white font-bold py-2 px-4 rounded text-sm';
+      
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function deleteLeague(leagueId, leagueName) {
+      currentLeagueId = leagueId;
+      currentAction = 'delete';
+      
+      document.getElementById('modalTitle').textContent = 'Ta bort Liga';
+      document.getElementById('modalMessage').textContent = `Är du säker på att du vill ta bort ligan "${leagueName}" permanent? Detta kan inte ångras!`;
+      document.getElementById('confirmButton').textContent = 'Ta bort';
+      document.getElementById('confirmButton').className = 'flex-1 danger-button text-white font-bold py-2 px-4 rounded text-sm';
+      
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('confirmModal').classList.add('hidden');
+      currentAction = null;
+      currentLeagueId = null;
+    }
+
+    document.getElementById('confirmButton').addEventListener('click', async function() {
+      if (!currentAction || !currentLeagueId) return;
+      
+      let url = '';
+      switch(currentAction) {
+        case 'toggle_public':
+          url = `/admin/leagues/${currentLeagueId}/toggle_public`;
+          break;
+        case 'reset_points':
+          url = `/admin/leagues/${currentLeagueId}/reset_points`;
+          break;
+        case 'delete':
+          url = `/admin/leagues/${currentLeagueId}/delete`;
+          break;
+      }
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert(result.message);
+          location.reload(); // Refresh the page
+        } else {
+          alert('Fel: ' + (result.error || 'Okänt fel'));
+        }
+      } catch (error) {
+        alert('Fel vid utförande av åtgärd: ' + error.message);
+      }
+      
+      closeModal();
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('confirmModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+  </script>
+</body>
+</html>
