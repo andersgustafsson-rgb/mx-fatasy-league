@@ -1128,6 +1128,21 @@ def league_detail_page(league_id):
         )
 
     competitions = Competition.query.order_by(Competition.event_date).all()
+    
+    # Get pending requests if user is league creator
+    pending_requests = []
+    is_creator = league.creator_id == session["user_id"]
+    if is_creator:
+        pending_requests = db.session.query(
+            LeagueRequest.id,
+            LeagueRequest.message,
+            LeagueRequest.created_at,
+            User.username,
+            User.display_name
+        ).join(User, LeagueRequest.user_id == User.id).filter(
+            LeagueRequest.league_id == league_id,
+            LeagueRequest.status == 'pending'
+        ).order_by(LeagueRequest.created_at.desc()).all()
 
     return render_template(
         "league_detail.html",
@@ -1138,6 +1153,8 @@ def league_detail_page(league_id):
             {"user_id": row.id, "username": row.username, "team_name": row.team_name, "total_points": row.total_points or 0}
             for row in season_leaderboard
         ],
+        pending_requests=pending_requests,
+        is_creator=is_creator,
     )
 
 
@@ -5930,10 +5947,15 @@ def league_image(league_id):
         # Check if we have base64 data
         if hasattr(league, 'image_data') and league.image_data and hasattr(league, 'image_mime_type') and league.image_mime_type:
             from flask import Response
+            import base64
             
-            # Return as data URL
-            data_url = f"data:{league.image_mime_type};base64,{league.image_data}"
-            return Response(data_url, mimetype='text/plain')
+            # Decode base64 and return as proper image
+            try:
+                image_data = base64.b64decode(league.image_data)
+                return Response(image_data, mimetype=league.image_mime_type)
+            except Exception as e:
+                print(f"Error decoding base64 image: {e}")
+                return "Error decoding image", 500
         
         # Fallback to file system (legacy)
         elif league.image_url:
