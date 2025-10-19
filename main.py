@@ -992,6 +992,23 @@ def index():
         new_bulletin_posts = 0
         latest_post_author = None
 
+    # Check for league join requests (for league creators)
+    league_requests_count = 0
+    try:
+        # Get all leagues where current user is creator
+        user_leagues = League.query.filter_by(creator_id=uid).all()
+        league_ids = [league.id for league in user_leagues]
+        
+        if league_ids:
+            # Count pending requests for user's leagues
+            league_requests_count = LeagueRequest.query.filter(
+                LeagueRequest.league_id.in_(league_ids),
+                LeagueRequest.status == 'pending'
+            ).count()
+    except Exception as e:
+        print(f"Error checking league requests: {e}")
+        league_requests_count = 0
+
     return render_template(
         "index.html",
         username=session["username"],
@@ -1007,6 +1024,7 @@ def index():
         current_wildcard=current_wildcard if 'current_wildcard' in locals() else None,
         new_bulletin_posts=new_bulletin_posts,
         latest_post_author=latest_post_author,
+        league_requests_count=league_requests_count,
         picks_status=picks_status,
         picks_locked=picks_locked,
         is_admin=is_admin_user(),
@@ -9250,7 +9268,7 @@ def race_countdown():
                 # Use simulated time for test mode - calculate fresh each time
                 current_simulated_time = get_current_time()
                 
-                # Calculate race time based on scenario - use fixed race time, not relative to simulated time
+                # Calculate race time based on scenario - use current simulated time for countdown
                 # Get the initial simulated time when simulation started
                 initial_simulated_time = datetime.fromisoformat(simulation.simulated_time)
                 
