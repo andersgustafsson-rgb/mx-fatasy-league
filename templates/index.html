@@ -26,7 +26,11 @@
       cursor: not-allowed;
     }
     
-    .readonly-mode button:not([onclick*="openLoginModal"]) {
+    /* Disable interactive buttons in readonly mode, but allow login buttons */
+    .readonly-mode .tab-btn,
+    .readonly-mode button[onclick*="showOtherUsersPicksFromMain"],
+    .readonly-mode button[onclick*="toggleSeriesExpansion"],
+    .readonly-mode button[onclick*="toggleSMXExpansion"] {
       opacity: 0.5;
       pointer-events: none;
       cursor: not-allowed;
