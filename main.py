@@ -105,6 +105,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)  # E-post för lösenordsåterställning
     display_name = db.Column(db.String(100), nullable=True)  # Användarens riktiga namn
     profile_picture_url = db.Column(db.Text, nullable=True)  # Profilbild (base64 data)
     bio = db.Column(db.Text, nullable=True)  # Kort beskrivning om sig själv
@@ -624,12 +625,19 @@ def register():
         return redirect(url_for("index"))
     if request.method == "POST":
         username = request.form["username"]
+        email = request.form.get("email", "").strip()
+        
+        # Check if username is already taken
         if User.query.filter_by(username=username).first():
             flash("Användarnamnet är redan upptaget", "error")
+        # Check if email is already taken (if provided)
+        elif email and User.query.filter_by(email=email).first():
+            flash("E-postadressen är redan registrerad", "error")
         else:
             new_user = User(
                 username=username,
                 password_hash=generate_password_hash(request.form["password"]),
+                email=email if email else None,
             )
             db.session.add(new_user)
             db.session.commit()
@@ -714,7 +722,7 @@ def index():
             print("Tables missing, reinitializing database...")
             init_database()
         
-        # Check if is_admin column exists in users table
+        # Check if is_admin and email columns exist in users table
         if inspect(db.engine).has_table('users'):
             try:
                 # Try to query is_admin column
@@ -742,6 +750,34 @@ def index():
                         print("is_admin column added successfully via direct connection")
                     except Exception as e2:
                         print(f"Failed to add is_admin column via direct connection: {e2}")
+            
+            # Check if email column exists
+            try:
+                # Try to query email column
+                db.session.execute(text("SELECT email FROM users LIMIT 1"))
+            except Exception:
+                # Column doesn't exist, add it
+                print("Adding email column to users table...")
+                try:
+                    # Rollback any failed transaction first
+                    db.session.rollback()
+                    # Add the column
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
+                    db.session.commit()
+                    print("email column added successfully")
+                except Exception as e:
+                    print(f"Error adding email column: {e}")
+                    db.session.rollback()
+                    # Try alternative approach - create a new connection
+                    try:
+                        from sqlalchemy import create_engine
+                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+                        with engine.connect() as conn:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
+                            conn.commit()
+                        print("email column added successfully via direct connection")
+                    except Exception as e2:
+                        print(f"Failed to add email column via direct connection: {e2}")
         
         # Check if joined_at column exists in league_memberships table
         if inspect(db.engine).has_table('league_memberships'):
