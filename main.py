@@ -5615,6 +5615,180 @@ def admin_reset_league_points(league_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
+def calculate_league_points(league_id, competition_id):
+    """Calculate fair league points based on member performance"""
+    try:
+        # Get all members in the league
+        members = db.session.query(User).join(LeagueMembership).filter(
+            LeagueMembership.league_id == league_id
+        ).all()
+        
+        if not members:
+            return 0
+        
+        # Get their scores for this competition
+        member_scores = []
+        for member in members:
+            score = CompetitionScore.query.filter_by(
+                user_id=member.id,
+                competition_id=competition_id
+            ).first()
+            if score and score.total_points:
+                member_scores.append(score.total_points)
+        
+        if not member_scores:
+            return 0
+        
+        # Sort scores (highest first)
+        member_scores.sort(reverse=True)
+        member_count = len(member_scores)
+        
+        # Calculate different scoring methods
+        methods = {}
+        
+        # 1. Top Performers (40% weight) - Adaptive based on league size
+        if member_count >= 5:
+            # 5+ members: Use top 5
+            top_scores = member_scores[:5]
+        elif member_count >= 3:
+            # 3-4 members: Use top 3
+            top_scores = member_scores[:3]
+        else:
+            # 1-2 members: Use all members
+            top_scores = member_scores
+        
+        methods['top_performers'] = sum(top_scores) / len(top_scores)
+        
+        # 2. Average Quality (30% weight)
+        methods['average_quality'] = sum(member_scores) / len(member_scores)
+        
+        # 3. Percentile Ranking (20% weight) - Get global percentiles
+        global_scores = db.session.query(CompetitionScore.total_points).filter(
+            CompetitionScore.competition_id == competition_id,
+            CompetitionScore.total_points.isnot(None)
+        ).order_by(CompetitionScore.total_points.desc()).all()
+        
+        if global_scores:
+            total_players = len(global_scores)
+            percentile_scores = []
+            
+            for score in member_scores:
+                # Find percentile for this score
+                better_players = sum(1 for gs in global_scores if gs[0] > score)
+                percentile = ((total_players - better_players) / total_players) * 100
+                percentile_scores.append(percentile)
+            
+            methods['percentile_ranking'] = sum(percentile_scores) / len(percentile_scores)
+        else:
+            methods['percentile_ranking'] = 50  # Default if no global data
+        
+        # 4. Participation Bonus (10% weight) - Adaptive for small leagues
+        if member_count >= 5:
+            participation_bonus = min(member_count * 2, 20)  # Max 20 points
+        elif member_count >= 3:
+            participation_bonus = member_count * 3  # 3-4 members get more per person
+        else:
+            participation_bonus = member_count * 5  # 1-2 members get even more per person
+        
+        methods['participation_bonus'] = participation_bonus
+        
+        # Calculate weighted final score
+        final_score = (
+            methods['top_performers'] * 0.4 +
+            methods['average_quality'] * 0.3 +
+            methods['percentile_ranking'] * 0.2 +
+            methods['participation_bonus'] * 0.1
+        )
+        
+        return round(final_score, 1)
+        
+    except Exception as e:
+        print(f"Error calculating league points: {e}")
+        return 0
+
+
+@app.post("/admin/leagues/calculate_all_points")
+def calculate_all_league_points():
+    """Calculate and update points for all leagues (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all competitions that have results
+        competitions_with_results = db.session.query(Competition.id).join(
+            CompetitionScore, Competition.id == CompetitionScore.competition_id
+        ).distinct().all()
+        
+        # Get all leagues
+        leagues = League.query.all()
+        
+        updated_leagues = 0
+        total_points_calculated = 0
+        
+        for league in leagues:
+            league_total = 0
+            
+            # Calculate points for each competition
+            for comp_id_tuple in competitions_with_results:
+                comp_id = comp_id_tuple[0]
+                points = calculate_league_points(league.id, comp_id)
+                league_total += points
+            
+            # Update league total points
+            league.total_points = round(league_total, 1)
+            updated_leagues += 1
+            total_points_calculated += league_total
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Updated points for {updated_leagues} leagues",
+            "updated_leagues": updated_leagues,
+            "total_points_calculated": round(total_points_calculated, 1)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/leagues/<int:league_id>/calculate_points")
+def calculate_league_points_single(league_id):
+    """Calculate points for a specific league (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        league = League.query.get_or_404(league_id)
+        
+        # Get all competitions that have results
+        competitions_with_results = db.session.query(Competition.id).join(
+            CompetitionScore, Competition.id == CompetitionScore.competition_id
+        ).distinct().all()
+        
+        league_total = 0
+        
+        # Calculate points for each competition
+        for comp_id_tuple in competitions_with_results:
+            comp_id = comp_id_tuple[0]
+            points = calculate_league_points(league.id, comp_id)
+            league_total += points
+        
+        # Update league total points
+        league.total_points = round(league_total, 1)
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"League '{league.name}' points calculated: {league.total_points}",
+            "league_name": league.name,
+            "total_points": league.total_points
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/migrate_league_image_columns")
 def migrate_league_image_columns():
     """Add image_data and image_mime_type columns to leagues table"""

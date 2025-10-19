@@ -115,6 +115,18 @@
         <div class="text-3xl">📊</div>
         <h2 class="text-2xl sm:text-3xl font-bold text-cyan-400 neon-text">Liga Statistik</h2>
       </div>
+      
+      <!-- Calculate Points Buttons -->
+      <div class="mb-6 flex flex-wrap gap-3">
+        <button onclick="calculateAllLeaguePoints()"
+                class="cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm">
+          🧮 Beräkna Alla Liga-Poäng
+        </button>
+        <button onclick="showScoringInfo()"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
+          ℹ️ Poäng-System Info
+        </button>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
         <div class="text-center">
           <div class="text-3xl sm:text-4xl font-bold text-cyan-400 mb-2">{{ leagues|length }}</div>
@@ -228,6 +240,12 @@
                         {% endif %}
                       </button>
                       
+                      <!-- Calculate Points -->
+                      <button onclick="calculateLeaguePoints({{ league.id }}, '{{ league.name }}')"
+                              class="px-2 py-1 rounded text-xs font-bold cyberpunk-button text-white transition-all">
+                        🧮
+                      </button>
+                      
                       <!-- Reset Points -->
                       <button onclick="resetPoints({{ league.id }}, '{{ league.name }}')"
                               class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all">
@@ -316,6 +334,64 @@
       document.getElementById('confirmModal').classList.remove('hidden');
     }
 
+    function calculateLeaguePoints(leagueId, leagueName) {
+      currentLeagueId = leagueId;
+      currentAction = 'calculate_points';
+      
+      document.getElementById('modalTitle').textContent = 'Beräkna Liga-Poäng';
+      document.getElementById('modalMessage').textContent = `Beräkna poäng för ligan "${leagueName}" baserat på medlemmarnas prestationer?`;
+      document.getElementById('confirmButton').textContent = 'Beräkna';
+      document.getElementById('confirmButton').className = 'flex-1 cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm';
+      
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    async function calculateAllLeaguePoints() {
+      if (!confirm('Beräkna poäng för alla ligor? Detta kan ta en stund...')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/admin/leagues/calculate_all_points', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert(`✅ ${result.message}\nTotala poäng beräknade: ${result.total_points_calculated}`);
+          location.reload(); // Refresh the page
+        } else {
+          alert('Fel: ' + (result.error || 'Okänt fel'));
+        }
+      } catch (error) {
+        alert('Fel vid beräkning av poäng: ' + error.message);
+      }
+    }
+
+    function showScoringInfo() {
+      const info = `
+🏆 LIGA-POÄNGSYSTEM
+
+📊 Beräkningsmetoder:
+• Top Performers (40%): Bästa medlemmarna
+• Average Quality (30%): Genomsnittlig kvalitet
+• Percentile Ranking (20%): Relativ ranking
+• Participation Bonus (10%): Deltagande-bonus
+
+👥 Anpassning för liga-storlek:
+• 5+ medlemmar: Använder top 5, 2 poäng per medlem
+• 3-4 medlemmar: Använder top 3, 3 poäng per medlem  
+• 1-2 medlemmar: Använder alla, 5 poäng per medlem
+
+🎯 Resultat: Rättvist system där små ligor kan vinna!
+      `;
+      alert(info);
+    }
+
     function closeModal() {
       document.getElementById('confirmModal').classList.add('hidden');
       currentAction = null;
@@ -332,6 +408,9 @@
           break;
         case 'reset_points':
           url = `/admin/leagues/${currentLeagueId}/reset_points`;
+          break;
+        case 'calculate_points':
+          url = `/admin/leagues/${currentLeagueId}/calculate_points`;
           break;
         case 'delete':
           url = `/admin/leagues/${currentLeagueId}/delete`;
