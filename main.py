@@ -1954,6 +1954,7 @@ def race_picks_page(competition_id):
         # Found trackmap images
     except Exception as e:
         # Error getting trackmap images
+        pass
     
     # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
