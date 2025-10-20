@@ -242,6 +242,82 @@
                             <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
                             <input type="number" id="edit-rider-number" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
                         </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Smeknamn</label>
+                                <input type="text" id="edit-rider-nickname" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Född (YYYY-MM-DD)</label>
+                                <input type="text" id="edit-rider-birthdate" placeholder="1992-03-25" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Hometown</label>
+                                <input type="text" id="edit-rider-hometown" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Boende</label>
+                                <input type="text" id="edit-rider-residence" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Längd (cm)</label>
+                                <input type="number" id="edit-rider-height" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Vikt (kg)</label>
+                                <input type="number" id="edit-rider-weight" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Team</label>
+                                <input type="text" id="edit-rider-team" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Manufacturer</label>
+                                <input type="text" id="edit-rider-manufacturer" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Team Manager</label>
+                                <input type="text" id="edit-rider-teammanager" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Mechanic</label>
+                                <input type="text" id="edit-rider-mechanic" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Turned Pro (år)</label>
+                                <input type="number" id="edit-rider-turnedpro" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Bild URL</label>
+                                <input type="text" id="edit-rider-imageurl" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Instagram (@namn)</label>
+                                <input type="text" id="edit-rider-instagram" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Twitter (@namn)</label>
+                                <input type="text" id="edit-rider-twitter" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Facebook (@namn)</label>
+                                <input type="text" id="edit-rider-facebook" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Webb</label>
+                                <input type="text" id="edit-rider-website" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Biografi</label>
+                            <textarea id="edit-rider-bio" rows="4" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Meriter</label>
+                            <textarea id="edit-rider-achievements" rows="4" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white"></textarea>
+                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
                             <input type="text" id="edit-rider-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
@@ -359,7 +435,25 @@
             const data = {
                 name: document.getElementById('edit-rider-name').value,
                 rider_number: parseInt(document.getElementById('edit-rider-number').value),
-                bike_brand: document.getElementById('edit-rider-brand').value
+                bike_brand: document.getElementById('edit-rider-brand').value,
+                nickname: document.getElementById('edit-rider-nickname').value,
+                birthdate: document.getElementById('edit-rider-birthdate').value,
+                hometown: document.getElementById('edit-rider-hometown').value,
+                residence: document.getElementById('edit-rider-residence').value,
+                height_cm: document.getElementById('edit-rider-height').value,
+                weight_kg: document.getElementById('edit-rider-weight').value,
+                team: document.getElementById('edit-rider-team').value,
+                manufacturer: document.getElementById('edit-rider-manufacturer').value,
+                team_manager: document.getElementById('edit-rider-teammanager').value,
+                mechanic: document.getElementById('edit-rider-mechanic').value,
+                turned_pro: document.getElementById('edit-rider-turnedpro').value,
+                image_url: document.getElementById('edit-rider-imageurl').value,
+                instagram: document.getElementById('edit-rider-instagram').value,
+                twitter: document.getElementById('edit-rider-twitter').value,
+                facebook: document.getElementById('edit-rider-facebook').value,
+                website: document.getElementById('edit-rider-website').value,
+                bio: document.getElementById('edit-rider-bio').value,
+                achievements: document.getElementById('edit-rider-achievements').value
             };
             
             // Add coast if it's a 250cc rider

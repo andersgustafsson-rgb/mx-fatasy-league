@@ -212,6 +212,25 @@ class Rider(db.Model):
     smx_qualified = db.Column(db.Boolean, default=False)  # Qualified for SMX Finals
     smx_seed_points = db.Column(db.Integer, default=0)  # Starting points for SMX Finals
     
+    # Bio fields (nullable)
+    nickname = db.Column(db.String(100))
+    hometown = db.Column(db.String(100))
+    residence = db.Column(db.String(100))
+    birthdate = db.Column(db.Date)
+    height_cm = db.Column(db.Integer)
+    weight_kg = db.Column(db.Integer)
+    team = db.Column(db.String(150))
+    manufacturer = db.Column(db.String(100))
+    team_manager = db.Column(db.String(100))
+    mechanic = db.Column(db.String(100))
+    turned_pro = db.Column(db.Integer)
+    instagram = db.Column(db.String(100))
+    twitter = db.Column(db.String(100))
+    facebook = db.Column(db.String(100))
+    website = db.Column(db.String(200))
+    bio = db.Column(db.Text)
+    achievements = db.Column(db.Text)
+    
 
 
 class SeasonTeam(db.Model):
@@ -2753,6 +2772,30 @@ def rider_management():
         return redirect(url_for("index"))
     
     try:
+        # Ensure new bio columns exist (auto-migration)
+        try:
+            from sqlalchemy import text
+            db.session.rollback()
+            columns = [
+                ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
+                ('birthdate', 'DATE'), ('height_cm', 'INTEGER'), ('weight_kg', 'INTEGER'),
+                ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
+                ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
+                ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
+                ('bio', 'TEXT'), ('achievements', 'TEXT')
+            ]
+            for col, typ in columns:
+                exists = db.session.execute(text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='riders' AND column_name=:col
+                """), {'col': col}).fetchone()
+                if not exists:
+                    db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            # soft-fail, UI will still work without new columns
+            pass
         # Get riders by class and coast
         riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number).all()
         riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number).all()
@@ -2819,6 +2862,36 @@ def update_rider(rider_id):
     if 'coast_250' in data:
         rider.coast_250 = data['coast_250']
     
+    # Optional bio fields
+    for field in [
+        'nickname','hometown','residence','team','manufacturer','team_manager','mechanic',
+        'instagram','twitter','facebook','website','bio','achievements'
+    ]:
+        if field in data:
+            setattr(rider, field, data[field])
+    
+    if 'birthdate' in data:
+        try:
+            from datetime import datetime
+            rider.birthdate = datetime.strptime(data['birthdate'], '%Y-%m-%d').date() if data['birthdate'] else None
+        except Exception:
+            pass
+    if 'height_cm' in data:
+        try:
+            rider.height_cm = int(data['height_cm']) if data['height_cm'] else None
+        except Exception:
+            pass
+    if 'weight_kg' in data:
+        try:
+            rider.weight_kg = int(data['weight_kg']) if data['weight_kg'] else None
+        except Exception:
+            pass
+    if 'turned_pro' in data:
+        try:
+            rider.turned_pro = int(data['turned_pro']) if data['turned_pro'] else None
+        except Exception:
+            pass
+    
     db.session.commit()
     
     return jsonify({'success': True})
@@ -2833,6 +2906,12 @@ def delete_rider(rider_id):
     db.session.commit()
     
     return jsonify({'success': True})
+
+# Public rider profile
+@app.get('/rider/<int:rider_id>')
+def rider_profile(rider_id: int):
+    rider = Rider.query.get_or_404(rider_id)
+    return render_template('rider_detail.html', rider=rider, username=session.get('username'))
 
 # API endpoints for competition management
 @app.route('/api/competitions/list', methods=['GET'])
