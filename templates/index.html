@@ -1885,34 +1885,46 @@
       }
     });
 
-    // Handle login form submission
-    document.getElementById('loginForm').addEventListener('submit', async function(event) {
-      event.preventDefault();
-      
-      const formData = new FormData(this);
-      const errorDiv = document.getElementById('loginError');
-      
-      try {
-        const response = await fetch('{{ url_for("login") }}', {
-          method: 'POST',
-          body: formData
+    // Handle login form submission when DOM is ready
+    function setupLoginForm() {
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', async function(event) {
+          event.preventDefault();
+          
+          const formData = new FormData(this);
+          const errorDiv = document.getElementById('loginError');
+          
+          try {
+            const response = await fetch('{{ url_for("login") }}', {
+              method: 'POST',
+              body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              // Login successful, redirect to homepage
+              window.location.href = '/';
+            } else {
+              // Show error message
+              errorDiv.textContent = result.error;
+              errorDiv.classList.remove('hidden');
+            }
+          } catch (error) {
+            errorDiv.textContent = 'Ett fel uppstod vid inloggning';
+            errorDiv.classList.remove('hidden');
+          }
         });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          // Login successful, redirect to homepage
-          window.location.href = '/';
-        } else {
-          // Show error message
-          errorDiv.textContent = result.error;
-          errorDiv.classList.remove('hidden');
-        }
-      } catch (error) {
-        errorDiv.textContent = 'Ett fel uppstod vid inloggning';
-        errorDiv.classList.remove('hidden');
       }
-    });
+    }
+    
+    // Setup login form when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupLoginForm);
+    } else {
+      setupLoginForm();
+    }
   </script>
 
   <!-- Login Modal -->
