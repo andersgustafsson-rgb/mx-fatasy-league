@@ -1838,6 +1838,7 @@ def series_page(series_id):
                 # Found active race in this series
             else:
                 # Active race is not in this series
+                pass
         
         if not next_race:
             # Otherwise find the next upcoming race in this series
