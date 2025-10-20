@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MX Fantasy League</title>
+  <title>MX Fantasy League - Motocross Fantasy Sports</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // Suppress Tailwind CDN warning in production
@@ -268,7 +268,7 @@
       <div class="mb-6 md:mb-8">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <header class="text-center sm:text-left">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold font-rajdhani racing-logo">MX Fantasy League</h1>
+            <img src="{{ url_for('static', filename='images/ChatGPT Image 20 okt. 2025 21_12_02.png') }}" alt="MX Fantasy League" class="h-12 sm:h-16 md:h-20 w-auto">
             <div class="flex items-center gap-3 mt-2">
               {% if user_profile_picture %}
                 {% if user_profile_picture.startswith('data:') %}
