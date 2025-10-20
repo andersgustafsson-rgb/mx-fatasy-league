@@ -1278,6 +1278,29 @@ def api_leagues_leaderboard():
     return jsonify(leaderboard)
 
 
+@app.post("/clear_seattle_results")
+def clear_seattle_results():
+    """Clear old results for Seattle race"""
+    try:
+        seattle = Competition.query.filter_by(name='Seattle').first()
+        if not seattle:
+            return jsonify({"error": "Seattle competition not found"}), 404
+        
+        # Clear all results for Seattle
+        deleted_results = CompetitionResult.query.filter_by(competition_id=seattle.id).delete()
+        deleted_holeshots = HoleshotResult.query.filter_by(competition_id=seattle.id).delete()
+        deleted_scores = CompetitionScore.query.filter_by(competition_id=seattle.id).delete()
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Cleared {deleted_results} results, {deleted_holeshots} holeshots, {deleted_scores} scores for Seattle"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
     if "user_id" not in session:
