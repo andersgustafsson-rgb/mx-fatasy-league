@@ -1093,21 +1093,23 @@ def index():
         new_bulletin_posts = 0
         latest_post_author = None
 
-        # Check for league join requests (for league creators)
-        try:
-            # Get all leagues where current user is creator
-            user_leagues = League.query.filter_by(creator_id=uid).all()
-            league_ids = [league.id for league in user_leagues]
-            
-            if league_ids:
-                # Count pending requests for user's leagues
-                league_requests_count = LeagueRequest.query.filter(
-                    LeagueRequest.league_id.in_(league_ids),
-                    LeagueRequest.status == 'pending'
-                ).count()
-        except Exception as e:
-            print(f"Error checking league requests: {e}")
+    # Check for league join requests (for league creators)
+    try:
+        # Get all leagues where current user is creator
+        user_leagues = League.query.filter_by(creator_id=uid).all()
+        league_ids = [league.id for league in user_leagues]
+        
+        if league_ids:
+            # Count pending requests for user's leagues
+            league_requests_count = LeagueRequest.query.filter(
+                LeagueRequest.league_id.in_(league_ids),
+                LeagueRequest.status == 'pending'
+            ).count()
+        else:
             league_requests_count = 0
+    except Exception as e:
+        print(f"Error checking league requests: {e}")
+        league_requests_count = 0
 
     return render_template(
         "index.html",
