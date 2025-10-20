@@ -1278,27 +1278,6 @@ def api_leagues_leaderboard():
     return jsonify(leaderboard)
 
 
-@app.post("/clear_seattle_results")
-def clear_seattle_results():
-    """Clear old results for Seattle race"""
-    try:
-        seattle = Competition.query.filter_by(name='Seattle').first()
-        if not seattle:
-            return jsonify({"error": "Seattle competition not found"}), 404
-        
-        # Clear all results for Seattle
-        deleted_results = CompetitionResult.query.filter_by(competition_id=seattle.id).delete()
-        deleted_holeshots = HoleshotResult.query.filter_by(competition_id=seattle.id).delete()
-        deleted_scores = CompetitionScore.query.filter_by(competition_id=seattle.id).delete()
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": f"Cleared {deleted_results} results, {deleted_holeshots} holeshots, {deleted_scores} scores for Seattle"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/leagues/<int:league_id>")
@@ -10720,19 +10699,45 @@ def clear_all_data():
         if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
+        print("🧹 Starting full reset - clearing all data...")
+        
         # Clear all picks and results
-        RacePick.query.delete()
-        HoleshotPick.query.delete()
-        WildcardPick.query.delete()
-        CompetitionResult.query.delete()
-        HoleshotResult.query.delete()
-        CompetitionScore.query.delete()
+        deleted_race_picks = RacePick.query.delete()
+        deleted_holeshot_picks = HoleshotPick.query.delete()
+        deleted_wildcard_picks = WildcardPick.query.delete()
+        deleted_results = CompetitionResult.query.delete()
+        deleted_holeshot_results = HoleshotResult.query.delete()
+        deleted_scores = CompetitionScore.query.delete()
+        deleted_out_status = CompetitionRiderStatus.query.delete()
+        
+        # Also clear season team data
+        deleted_season_team_riders = SeasonTeamRider.query.delete()
+        deleted_season_teams = SeasonTeam.query.delete()
+        
+        # Clear league points and scores
+        try:
+            # Reset league total_points to 0
+            db.session.execute(text("UPDATE leagues SET total_points = 0"))
+        except Exception as e:
+            print(f"Warning: Could not reset league points: {e}")
         
         db.session.commit()
         
+        print(f"✅ Full reset complete - deleted: {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks, {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out status, {deleted_season_team_riders} season team riders, {deleted_season_teams} season teams")
+        
         return jsonify({
             "message": "All data cleared successfully - full reset complete",
-            "cleared": "picks, results, scores"
+            "cleared": {
+                "race_picks": deleted_race_picks,
+                "holeshot_picks": deleted_holeshot_picks,
+                "wildcard_picks": deleted_wildcard_picks,
+                "results": deleted_results,
+                "holeshot_results": deleted_holeshot_results,
+                "scores": deleted_scores,
+                "out_status": deleted_out_status,
+                "season_team_riders": deleted_season_team_riders,
+                "season_teams": deleted_season_teams
+            }
         })
         
     except Exception as e:
