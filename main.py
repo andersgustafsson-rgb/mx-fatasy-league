@@ -4806,8 +4806,6 @@ def save_picks():
 
     data = request.get_json(force=True)
     uid = session["user_id"]
-    print(f"DEBUG: save_picks called for user {uid}")
-    print(f"DEBUG: Received data: {data}")
 
     # 1) Hämta tävlingen
     try:
@@ -4819,7 +4817,6 @@ def save_picks():
     if not comp:
         return jsonify({"error": "competition_not_found"}), 404
     
-    print(f"DEBUG: Competition: {comp.name} (ID: {comp_id})")
     
     # Use the unified picks lock check function
     picks_locked = is_picks_locked(comp)
@@ -4841,7 +4838,6 @@ def save_picks():
 
     # 3) Validera att inga dubletter finns i picks
     picks = data.get("picks", [])
-    print(f"DEBUG: Received {len(picks)} picks: {picks}")
     
     new_rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
     if len(new_rider_ids) != len(set(new_rider_ids)):
@@ -5066,7 +5062,6 @@ def get_my_race_results(competition_id):
 # Poängberäkning
 # -------------------------------------------------
 def calculate_scores(comp_id: int):
-    print(f"DEBUG: calculate_scores called for competition {comp_id}")
     
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
@@ -5084,10 +5079,7 @@ def calculate_scores(comp_id: int):
         race_points = 0
         holeshot_points = 0
         wildcard_points = 0
-        print(f"DEBUG: Calculating points for user {user.username} (ID: {user.id})")
-
         picks = RacePick.query.filter_by(user_id=user.id, competition_id=comp_id).all()
-        print(f"DEBUG: User {user.username} has {len(picks)} race picks")
         
         for pick in picks:
             actual_pos_for_pick = (
@@ -5097,10 +5089,8 @@ def calculate_scores(comp_id: int):
             )
             if actual_pos_for_pick == pick.predicted_position:
                 race_points += 25
-                print(f"DEBUG: Perfect match! +25 race points for {user.username}")
             elif actual_pos_for_pick is not None and actual_pos_for_pick <= 6:
                 race_points += 5
-                print(f"DEBUG: Top 6 finish! +5 race points for {user.username}")
 
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -5109,7 +5099,6 @@ def calculate_scores(comp_id: int):
             actual_hs = actual_holeshots_dict.get(hp.class_name)
             if actual_hs and actual_hs.rider_id == hp.rider_id:
                 holeshot_points += 3
-                print(f"DEBUG: Holeshot correct! +3 holeshot points for {user.username}")
 
         wc_pick = WildcardPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
@@ -5120,7 +5109,6 @@ def calculate_scores(comp_id: int):
             )
             if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
                 wildcard_points += 15
-                print(f"DEBUG: Wildcard correct! +15 wildcard points for {user.username}")
 
         total_points = race_points + holeshot_points + wildcard_points
 
@@ -10829,13 +10817,10 @@ def get_current_time():
 
 def calculate_smx_qualification_points():
     """Calculate SMX qualification points for all riders based on Supercross and Motocross results"""
-    print("DEBUG: Calculating SMX qualification points...")
-    
     # Get all riders
     riders = Rider.query.all()
     riders_450 = [r for r in riders if r.class_name == '450cc']
     riders_250 = [r for r in riders if r.class_name == '250cc']
-    print(f"DEBUG: Found {len(riders_450)} 450cc riders and {len(riders_250)} 250cc riders")
     
     smx_points = {}
     
@@ -10889,12 +10874,6 @@ def calculate_smx_qualification_points():
             'mx_points': sum(mx_points[:11])
         }
         
-        # Debug for 250cc riders
-        if rider.class_name == '250cc':
-            if total_points > 0:
-                print(f"DEBUG: 250cc rider {rider.name} has {total_points} SMX points (SX: {sum(sx_points[:17])}, MX: {sum(mx_points[:11])})")
-            else:
-                print(f"DEBUG: 250cc rider {rider.name} has 0 SMX points (SX results: {len(sx_results)}, MX results: {len(mx_results)})")
     
     # Sort by class and get top 20 for each class separately
     riders_450 = [(rider_id, data) for rider_id, data in smx_points.items() if data['rider'].class_name == '450cc']
@@ -10911,20 +10890,11 @@ def calculate_smx_qualification_points():
     # Combine for backward compatibility (but now properly separated)
     top_20 = top_20_450 + top_20_250
     
-    print(f"DEBUG: SMX qualification calculated separately:")
-    print(f"  450cc Top 20: {len(top_20_450)} riders")
-    for i, (rider_id, data) in enumerate(top_20_450, 1):
-        print(f"    {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
-    
-    print(f"  250cc Top 20: {len(top_20_250)} riders")
-    for i, (rider_id, data) in enumerate(top_20_250, 1):
-        print(f"    {i}. {data['rider'].name} - {data['total_points']} points (SX: {data['sx_points']}, MX: {data['mx_points']})")
     
     return top_20
 
 def get_series_leaders():
     """Get current leaders for each series (450cc, 250cc East, 250cc West)"""
-    print("DEBUG: Getting series leaders...")
     
     leaders = {
         '450cc': {'leader': None, 'points': 0, 'top_5': []},
@@ -11179,7 +11149,6 @@ def is_picks_locked(competition):
         # Check if picks are locked (2 hours before race)
         # If time_to_deadline is negative, deadline has passed and picks are locked
         picks_locked = time_to_deadline.total_seconds() <= 0
-        print(f"DEBUG: is_picks_locked - scenario: {scenario}, current_time: {current_time}, current_simulated_time: {current_simulated_time}, deadline_datetime: {deadline_datetime}, time_to_deadline: {time_to_deadline}, picks_locked: {picks_locked}")
     else:
         # Check if picks are locked (2 hours before race)
         race_date = competition_obj.event_date
