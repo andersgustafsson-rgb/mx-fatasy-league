@@ -615,14 +615,14 @@ def login():
                 print("Login successful, redirecting...")
                 
                 # Check if this is an AJAX request (from popup)
-                if request.headers.get('Content-Type') == 'application/x-www-form-urlencoded' and request.form.get('modal'):
+                if request.form.get('modal'):
                     return jsonify({"success": True, "redirect": url_for("index")})
                 else:
                     return redirect(url_for("index"))
         
         print("Login failed")
         # Check if this is an AJAX request (from popup)
-        if request.headers.get('Content-Type') == 'application/x-www-form-urlencoded' and request.form.get('modal'):
+        if request.form.get('modal'):
             return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
         else:
             flash("Felaktigt användarnamn eller lösenord", "error")
