@@ -180,11 +180,11 @@
     
     @keyframes racing-glow {
       0% {
-        text-shadow: 0 0 20px rgba(255, 107, 53, 0.8), 0 0 40px rgba(255, 107, 53, 0.4);
+        text-shadow: 0 0 20px rgba(34, 211, 238, 0.8), 0 0 40px rgba(34, 211, 238, 0.4);
         background-position: 0% 50%;
       }
       100% {
-        text-shadow: 0 0 30px rgba(255, 107, 53, 1), 0 0 60px rgba(255, 107, 53, 0.6);
+        text-shadow: 0 0 30px rgba(34, 211, 238, 1), 0 0 60px rgba(34, 211, 238, 0.6);
         background-position: 100% 50%;
       }
     }
@@ -644,10 +644,11 @@
         </div>
         </div>
 
-              <!-- Logo in background area -->
-              <div class="flex justify-center items-center py-8">
-                <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-24 sm:h-32 md:h-40 lg:h-48 w-auto opacity-80 hover:opacity-100 transition-opacity duration-300">
+              <!-- Logo Container -->
+              <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg shadow-lg border-2 border-cyan-400 flex items-center justify-center">
+                <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-32 sm:h-40 md:h-48 lg:h-56 w-auto opacity-90 hover:opacity-100 transition-opacity duration-300">
               </div>
+        </div>
 
               <!-- MotoAction.se Banner -->
               <div class="mb-6">
