@@ -2700,6 +2700,30 @@ def admin_page():
     if not is_admin_user():
         return redirect(url_for("index"))
     
+    # Ensure rider bio columns exist before querying
+    try:
+        from sqlalchemy import text
+        db.session.rollback()
+        columns = [
+            ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
+            ('birthdate', 'DATE'), ('height_cm', 'INTEGER'), ('weight_kg', 'INTEGER'),
+            ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
+            ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
+            ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
+            ('bio', 'TEXT'), ('achievements', 'TEXT')
+        ]
+        for col, typ in columns:
+            exists = db.session.execute(text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name='riders' AND column_name=:col
+            """), {'col': col}).fetchone()
+            if not exists:
+                db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        pass
+
     try:
         # Get the same data as the old admin page
         competitions = Competition.query.order_by(Competition.event_date).all()
