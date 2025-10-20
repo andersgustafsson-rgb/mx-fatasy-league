@@ -811,6 +811,30 @@ def index():
                     except Exception as e2:
                         print(f"Failed to add email column via direct connection: {e2}")
         
+        # Ensure rider bio columns exist globally (needed on homepage queries)
+        from sqlalchemy import text
+        try:
+            db.session.rollback()
+            rider_columns = [
+                ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
+                ('birthdate', 'DATE'), ('height_cm', 'INTEGER'), ('weight_kg', 'INTEGER'),
+                ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
+                ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
+                ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
+                ('bio', 'TEXT'), ('achievements', 'TEXT')
+            ]
+            for col, typ in rider_columns:
+                exists = db.session.execute(text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='riders' AND column_name=:col
+                """), {'col': col}).fetchone()
+                if not exists:
+                    db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+            db.session.commit()
+        except Exception as e:
+            print(f"Error ensuring rider bio columns: {e}")
+            db.session.rollback()
+
         # Check if joined_at column exists in league_memberships table
         if inspect(db.engine).has_table('league_memberships'):
             try:
