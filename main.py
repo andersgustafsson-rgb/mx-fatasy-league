@@ -2961,6 +2961,19 @@ def rider_profile(rider_id: int):
     rider = Rider.query.get_or_404(rider_id)
     return render_template('rider_detail.html', rider=rider, username=session.get('username'))
 
+# Public rider list
+@app.get('/riders')
+def riders_directory():
+    # Simple searchable list grouped by class
+    riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number.asc()).all()
+    riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number.asc()).all()
+    riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number.asc()).all()
+    return render_template('riders.html',
+                           riders_450=riders_450,
+                           riders_250_east=riders_250_east,
+                           riders_250_west=riders_250_west,
+                           username=session.get('username'))
+
 # API endpoints for competition management
 @app.route('/api/competitions/list', methods=['GET'])
 def list_competitions():
