@@ -1207,6 +1207,77 @@ def browse_leagues():
                          username=session.get("username"))
 
 
+@app.get("/leagues/leaderboard")
+def leagues_leaderboard():
+    """Public league leaderboard sorted by league points."""
+    # Allow viewing without login (readonly UX handled in template/header if needed)
+    is_logged_in = "user_id" in session
+    try:
+        leagues_with_members = db.session.query(
+            League,
+            db.func.count(LeagueMembership.user_id).label('member_count')
+        ).select_from(League).outerjoin(
+            LeagueMembership, League.id == LeagueMembership.league_id
+        ).group_by(League.id).order_by(
+            League.total_points.desc(),
+            League.created_at.desc()
+        ).all()
+
+        leaderboard = []
+        for row in leagues_with_members:
+            league = row[0]
+            member_count = row[1]
+            leaderboard.append({
+                'id': league.id,
+                'name': league.name,
+                'member_count': member_count,
+                'total_points': league.total_points or 0,
+                'is_public': getattr(league, 'is_public', True)
+            })
+    except Exception as e:
+        print(f"Error loading league leaderboard: {e}")
+        leaderboard = []
+
+    return render_template(
+        "league_leaderboard.html",
+        leaderboard=leaderboard,
+        username=session.get("username", "Gäst"),
+        is_logged_in=is_logged_in,
+    )
+
+
+@app.get("/api/leagues/leaderboard")
+def api_leagues_leaderboard():
+    """API endpoint for league leaderboard data (JSON)."""
+    try:
+        leagues_with_members = db.session.query(
+            League,
+            db.func.count(LeagueMembership.user_id).label('member_count')
+        ).select_from(League).outerjoin(
+            LeagueMembership, League.id == LeagueMembership.league_id
+        ).group_by(League.id).order_by(
+            League.total_points.desc(),
+            League.created_at.desc()
+        ).all()
+
+        leaderboard = []
+        for row in leagues_with_members:
+            league = row[0]
+            member_count = row[1]
+            leaderboard.append({
+                'id': league.id,
+                'name': league.name,
+                'member_count': member_count,
+                'total_points': league.total_points or 0,
+                'is_public': getattr(league, 'is_public', True)
+            })
+    except Exception as e:
+        print(f"Error loading league leaderboard: {e}")
+        leaderboard = []
+
+    return jsonify(leaderboard)
+
+
 @app.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
     if "user_id" not in session:

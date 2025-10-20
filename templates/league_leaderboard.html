@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="sv" {% if not is_logged_in %}class="readonly-mode"{% endif %}>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liga Leaderboard - MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%); }
+    .cyberpunk-header { font-family: 'Orbitron', monospace; text-shadow: 0 0 10px rgba(34,211,238,0.8); }
+    .cyberpunk-card { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border: 2px solid #22d3ee; box-shadow: 0 0 20px rgba(34,211,238,0.3); }
+    .cyberpunk-button { background: linear-gradient(45deg, #22d3ee, #06b6d4); border: 1px solid #22d3ee; }
+    .table-header { background: rgba(34,211,238,0.1); }
+    .rank { font-family: 'Orbitron', monospace; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="text-gray-100 min-h-screen">
+  <div class="container mx-auto p-4 md:p-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
+      <header class="text-center sm:text-left">
+        <h1 class="cyberpunk-header text-4xl md:text-5xl font-bold text-cyan-400">🏁 Liga Leaderboard</h1>
+        <p class="text-cyan-300">Liga-poäng beräknas automatiskt efter varje race</p>
+      </header>
+      <div class="flex gap-3">
+        <a href="{{ url_for('leagues_page') }}" class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg">⬅ Tillbaka</a>
+        <a href="{{ url_for('index') }}" class="cyberpunk-button text-white font-bold py-3 px-6 rounded-lg">🏠 Startsidan</a>
+      </div>
+    </div>
+
+    <div class="cyberpunk-card rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="table-header text-cyan-300">
+            <tr>
+              <th class="px-4 py-3 text-left">Plac</th>
+              <th class="px-4 py-3 text-left">Liga</th>
+              <th class="px-4 py-3 text-left">Medlemmar</th>
+              <th class="px-4 py-3 text-left">Poäng</th>
+              <th class="px-4 py-3 text-left">Publik</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if leaderboard %}
+              {% for row in leaderboard %}
+                <tr class="border-t border-slate-600/50 hover:bg-slate-800/40">
+                  <td class="px-4 py-3 rank text-cyan-300 font-bold">#{{ loop.index }}</td>
+                  <td class="px-4 py-3">
+                    <a href="{{ url_for('league_detail_page', league_id=row.id) }}" class="text-white hover:text-cyan-300 font-semibold">{{ row.name }}</a>
+                  </td>
+                  <td class="px-4 py-3">{{ row.member_count }}</td>
+                  <td class="px-4 py-3 font-bold text-white">{{ row.total_points }}</td>
+                  <td class="px-4 py-3">{{ 'Ja' if row.is_public else 'Nej' }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-cyan-300">Inga ligor ännu.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

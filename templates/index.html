@@ -803,6 +803,23 @@
                 </div>
       </div>
     </div>
+    
+    <!-- Liga Leaderboard Section -->
+    <div class="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg shadow-2xl border-2 border-purple-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);">
+      <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);">
+        <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 Liga Leaderboard</h2>
+      </div>
+      <div class="p-4 sm:p-6 bg-purple-900">
+        <div id="league-leaderboard-list">
+          <p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Laddar...</p>
+        </div>
+        <div class="mt-4 text-center">
+          <a href="{{ url_for('leagues_leaderboard') }}" class="inline-block bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">
+            Visa fullständig liga leaderboard
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
           
           <!-- Stats Tab -->
@@ -842,6 +859,9 @@
                   </a>
                   <a href="{{ url_for('leagues_page') }}" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
                     Mina Ligor
+                  </a>
+                  <a href="{{ url_for('leagues_leaderboard') }}" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
+                    🏁 Liga Leaderboard
                   </a>
                 </div>
               </div>
@@ -1049,6 +1069,41 @@
       } catch (e) {
         console.error("Leaderboard error:", e);
         c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta leaderboard: ' + e.message + '</p>';
+      }
+    }
+
+    async function fetchLeagueLeaderboard() {
+      const c = document.getElementById("league-leaderboard-list");
+      c.innerHTML = '<p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Laddar...</p>';
+      try {
+        const res = await fetch(`/api/leagues/leaderboard`);
+        const leaderboard = await res.json();
+        
+        c.innerHTML = "";
+        if (leaderboard.length === 0) {
+          c.innerHTML = '<p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Inga ligor ännu.</p>';
+        } else {
+          leaderboard.forEach((row, i) => {
+            const el = document.createElement("div");
+            const neonColor = i === 0 ? 'border-yellow-400' : i === 1 ? 'border-purple-400' : i === 2 ? 'border-orange-400' : 'border-gray-600';
+            const glowColor = i === 0 ? 'rgba(250, 204, 21, 0.2)' : i === 1 ? 'rgba(168, 85, 247, 0.2)' : i === 2 ? 'rgba(251, 146, 60, 0.2)' : 'rgba(75, 85, 99, 0.2)';
+            const textColor = i === 0 ? 'text-yellow-300' : i === 1 ? 'text-purple-300' : i === 2 ? 'text-orange-300' : 'text-gray-300';
+            
+            el.className = `flex flex-col sm:flex-row sm:justify-between sm:items-center bg-purple-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-purple-700 gap-1 sm:gap-0 shadow-lg`;
+            el.style.boxShadow = `0 0 10px ${glowColor}`;
+            el.innerHTML = `
+              <div class="flex-1 flex items-center gap-2">
+                <span class="font-bold w-6 text-right text-sm sm:text-base ${textColor}" style="text-shadow: 0 0 5px ${glowColor};">#${i + 1}</span>
+                <span class="text-sm sm:text-base truncate text-white" style="text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);">${row.name}</span>
+                <span class="text-xs text-purple-300">(${row.member_count} medlemmar)</span>
+              </div>
+              <span class="font-bold text-green-400" style="text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);">${row.total_points} poäng</span>`;
+            c.appendChild(el);
+          });
+        }
+      } catch (e) {
+        console.error("League leaderboard error:", e);
+        c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta liga leaderboard: ' + e.message + '</p>';
       }
     }
     
@@ -1325,6 +1380,7 @@
           // Load leaderboard data when leaderboard tab is clicked
           if (targetTab === 'leaderboard') {
             fetchSeasonLeaderboard();
+            fetchLeagueLeaderboard();
           }
         });
       });
@@ -1748,6 +1804,7 @@
     document.addEventListener("DOMContentLoaded", function() {
       console.log("DOM loaded, fetching leaderboard...");
       fetchSeasonLeaderboard();
+      fetchLeagueLeaderboard();
       fetchCrossDinoHighscores();
       
       // Load series leaders & SMX
