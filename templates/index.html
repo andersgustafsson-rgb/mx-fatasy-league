@@ -475,8 +475,9 @@
         
         <!-- Tab Navigation -->
         <div class="mb-6">
-          <div class="flex flex-wrap justify-center gap-1 bg-black bg-opacity-40 rounded-lg p-1">
-            <!-- Login/Logout Button - Leftmost position -->
+          <div class="flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
+            <!-- Left: Login/Logout Button -->
+            <div class="flex items-center gap-1">
             {% if is_logged_in %}
               <a href="{{ url_for('logout') }}" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" title="Logga ut">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -492,31 +493,39 @@
                 <span>Logga in</span>
               </button>
             {% endif %}
-            
-            <button 
-              class="tab-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-yellow-500 text-white"
-              data-tab="race-info"
-            >
-              🏁 Race Info
-            </button>
-            <button 
-              class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
-              data-tab="leaderboard"
-            >
-              👥 Leaderboard
-            </button>
-            <button 
-              class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
-              data-tab="stats"
-            >
-              📊 Stats
-            </button>
-            <button 
-              class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
-              data-tab="settings"
-            >
-              ⚙️ Settings
-            </button>
+            </div>
+
+            <!-- Center: Tab Buttons -->
+            <div class="flex flex-wrap justify-center gap-1">
+              <button 
+                class="tab-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 bg-yellow-500 text-white"
+                data-tab="race-info"
+              >
+                🏁 Race Info
+              </button>
+              <button 
+                class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+                data-tab="leaderboard"
+              >
+                👥 Leaderboard
+              </button>
+              <button 
+                class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+                data-tab="stats"
+              >
+                📊 Stats
+              </button>
+              <button 
+                class="tab-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700"
+                data-tab="settings"
+              >
+                ⚙️ Settings
+              </button>
+            </div>
+
+            <!-- Right: Spacer to keep center alignment -->
+            <div class="w-[110px] sm:w-[120px]"></div>
+          </div>
         </div>
       </div>
 
