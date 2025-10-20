@@ -5762,7 +5762,8 @@ def approve_league_request(league_id, request_id):
     db.session.add(membership)
     db.session.commit()
     
-    return jsonify({"message": "Request approved successfully"})
+    flash("Ansökan godkändes!", "success")
+    return redirect(url_for("league_detail_page", league_id=league_id))
 
 
 @app.post("/leagues/<int:league_id>/reject_request/<int:request_id>")
@@ -5790,7 +5791,8 @@ def reject_league_request(league_id, request_id):
     request_obj.processed_at = datetime.utcnow()
     db.session.commit()
     
-    return jsonify({"message": "Request rejected"})
+    flash("Ansökan avslås!", "info")
+    return redirect(url_for("league_detail_page", league_id=league_id))
 
 
 @app.post("/admin/leagues/<int:league_id>/delete")
