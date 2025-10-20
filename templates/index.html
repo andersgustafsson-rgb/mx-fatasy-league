@@ -1896,12 +1896,17 @@
           const errorDiv = document.getElementById('loginError');
           
           try {
+            console.log('Sending login request...');
             const response = await fetch('{{ url_for("login") }}', {
               method: 'POST',
               body: formData
             });
             
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers.get('content-type'));
+            
             const result = await response.json();
+            console.log('Login result:', result);
             
             if (result.success) {
               // Login successful, redirect to homepage
