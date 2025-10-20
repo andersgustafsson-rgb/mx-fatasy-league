@@ -295,7 +295,7 @@
               {% endif %}
               <p class="text-base md:text-lg text-gray-200">
             {% if is_logged_in %}
-              Välkommen, <strong>{{ username }}</strong>!
+            Välkommen, <strong>{{ username }}</strong>!
             {% else %}
               Välkommen, <strong>Gäst</strong>!
             {% endif %}
@@ -798,9 +798,9 @@
                   <a href="{{ url_for('my_scores') }}" class="inline-block bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);">
                     Visa alla poäng
                   </a>
-                </div>
       </div>
     </div>
+  </div>
     
     <!-- Liga Leaderboard Section -->
     <div class="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg shadow-2xl border-2 border-purple-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);">
@@ -1546,7 +1546,11 @@
                   <div class="flex justify-between items-center text-xs mb-1">
                     <span class="text-cyan-400">${medal} #${rider.rider_number}</span>
                     <span class="text-white">${rider.rider_name}</span>
-                    <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                    <div class="flex gap-2 text-xs">
+                      <span class="text-orange-400">SX:${rider.sx_points || 0}</span>
+                      <span class="text-blue-400">MX:${rider.mx_points || 0}</span>
+                      <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                    </div>
                   </div>
                 `;
               });
@@ -1564,7 +1568,11 @@
                   <div class="flex justify-between items-center text-xs mb-1">
                     <span class="text-cyan-400">${medal} #${rider.rider_number}</span>
                     <span class="text-white">${rider.rider_name}${coast}</span>
-                    <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                    <div class="flex gap-2 text-xs">
+                      <span class="text-orange-400">SX:${rider.sx_points || 0}</span>
+                      <span class="text-blue-400">MX:${rider.mx_points || 0}</span>
+                      <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                    </div>
                   </div>
                 `;
               });
@@ -1630,7 +1638,11 @@
                 <div class="flex justify-between items-center text-xs mb-1 p-1 rounded ${bgColor}">
                   <span class="text-cyan-400">${medal} #${rider.rider_number}</span>
                   <span class="${textColor}">${rider.rider_name}${coast}</span>
-                  <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                  <div class="flex gap-2 text-xs">
+                    <span class="text-orange-400">SX:${rider.sx_points || 0}</span>
+                    <span class="text-blue-400">MX:${rider.mx_points || 0}</span>
+                    <span class="text-yellow-400 font-bold">${rider.total_points}</span>
+                  </div>
                 </div>
               `;
             });

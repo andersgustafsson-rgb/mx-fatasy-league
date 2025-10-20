@@ -9792,7 +9792,9 @@ def get_series_leaders():
                 'position': i,
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
-                'total_points': data['total_points']
+                'total_points': data['total_points'],
+                'sx_points': data['sx_points'],
+                'mx_points': data['mx_points']
             })
         
         # 250cc Top 5
@@ -9803,7 +9805,9 @@ def get_series_leaders():
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
                 'coast_250': rider.coast_250,
-                'total_points': data['total_points']
+                'total_points': data['total_points'],
+                'sx_points': data['sx_points'],
+                'mx_points': data['mx_points']
             })
         
         return jsonify({
