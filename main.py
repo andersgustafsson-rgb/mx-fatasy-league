@@ -1878,7 +1878,6 @@ def series_page(series_id):
         
         # Find next race (either active race or next upcoming race)
         next_race = None
-        # Loading series page
         if active_race_id:
             # If there's an active race, check if it belongs to this series
             potential_race = Competition.query.get(active_race_id)
