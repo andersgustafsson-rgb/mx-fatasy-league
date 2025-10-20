@@ -91,11 +91,7 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 db = SQLAlchemy(app)
 
 # Debug: Print database configuration
-print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
-print(f"Environment: {os.getenv('FLASK_ENV', 'development')}")
-print(f"Render: {os.getenv('RENDER', 'false')}")
-print(f"Current working directory: {os.getcwd()}")
-print(f"App instance path: {app.instance_path}")
+# Database configuration loaded
 
 # -------------------------------------------------
 # Modeller
@@ -520,7 +516,7 @@ def get_track_timezone(track_name):
 
 def create_trackmap_images():
     """Create CompetitionImage records for compressed track maps"""
-    print("Creating CompetitionImage records for compressed track maps...")
+    # Creating CompetitionImage records for compressed track maps
     
     # Map competition names to image files
     COMP_TO_IMAGE = {
@@ -545,7 +541,7 @@ def create_trackmap_images():
     
     # Get all competitions
     competitions = Competition.query.all()
-    print(f"Found {len(competitions)} competitions")
+    # Found competitions
     
     total_created = 0
     
@@ -563,7 +559,7 @@ def create_trackmap_images():
             )
             db.session.add(ci)
             total_created += 1
-            print(f"Created image for {comp.name}: {image_url}")
+            # Created image for competition
             
             # Check if image file exists
             from pathlib import Path
@@ -1683,7 +1679,7 @@ def my_scores():
     db.session.rollback()
     
     uid = session["user_id"]
-    print(f"DEBUG: my_scores called for user ID {uid}")
+    # Getting user scores
 
     rows = (
         db.session.query(
@@ -1701,12 +1697,8 @@ def my_scores():
         .all()
     )
 
-    print(f"DEBUG: Found {len(rows)} score entries for user {uid}")
-    for r in rows:
-        print(f"DEBUG: Competition {r.name}: {r.total_points} points")
-
+    # Calculate total points
     total_points = sum((r.total_points or 0) for r in rows)
-    print(f"DEBUG: Total points for user {uid}: {total_points}")
     
     # Check which competitions have results (are completed)
     scores = []
@@ -1837,15 +1829,15 @@ def series_page(series_id):
         
         # Find next race (either active race or next upcoming race)
         next_race = None
-        print(f"DEBUG: series_page - series_id: {series_id}, active_race_id: {active_race_id}")
+        # Loading series page
         if active_race_id:
             # If there's an active race, check if it belongs to this series
             potential_race = Competition.query.get(active_race_id)
             if potential_race and potential_race.series_id == series_id:
                 next_race = potential_race
-                print(f"DEBUG: Found active race in this series: {next_race.name} (ID: {active_race_id})")
+                # Found active race in this series
             else:
-                print(f"DEBUG: Active race {potential_race.name if potential_race else 'None'} is not in this series (series_id: {potential_race.series_id if potential_race else 'None'} vs {series_id})")
+                # Active race is not in this series
         
         if not next_race:
             # Otherwise find the next upcoming race in this series
@@ -1853,7 +1845,7 @@ def series_page(series_id):
             next_race = Competition.query.filter_by(series_id=series_id).filter(
                 Competition.event_date >= current_date
             ).order_by(Competition.event_date).first()
-            print(f"DEBUG: Found next upcoming race: {next_race.name if next_race else 'None'}")
+            # Found next upcoming race
         
         # Determine if picks are open
         picks_open = False
@@ -1948,8 +1940,7 @@ def race_picks_page(competition_id):
     # Debug: Show which riders are marked as OUT
     out_450 = [r for r in riders_450_json if r['is_out']]
     out_250 = [r for r in riders_250_json if r['is_out']]
-    print(f"DEBUG: 450cc OUT riders: {[r['name'] for r in out_450]}")
-    print(f"DEBUG: 250cc OUT riders: {[r['name'] for r in out_250]}")
+    # Filtered out riders
 
     # 4) Placeholder för resultat/holeshot (om ej klart)
     actual_results = []
@@ -1959,9 +1950,9 @@ def race_picks_page(competition_id):
     trackmap_images = []
     try:
         trackmap_images = CompetitionImage.query.filter_by(competition_id=comp.id).order_by(CompetitionImage.sort_order).all()
-        print(f"DEBUG: Found {len(trackmap_images)} trackmap images for {comp.name}")
+        # Found trackmap images
     except Exception as e:
-        print(f"DEBUG: Error getting trackmap images: {e}")
+        # Error getting trackmap images
     
     # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
@@ -3592,132 +3583,58 @@ def create_smx_finals_competitions_2025():
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
     """Fix missing database tables and columns"""
-    print("DEBUG: fix_database_tables() called")
-    
     if session.get("username") != "test":
-        print("DEBUG: Unauthorized access attempt")
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
-        print("DEBUG: Starting database fix process")
-        
         # Create all tables
-        print("DEBUG: Creating all tables with db.create_all()")
         db.create_all()
-        print("DEBUG: db.create_all() completed")
         
         # Manually add missing columns to competitions table
-        print("DEBUG: Starting manual column addition")
         try:
-            # Check if series_id column exists
-            print("DEBUG: Checking if series_id column exists")
+            # Check and add series_id column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='series_id'"))
-            series_id_exists = result.fetchone()
-            print(f"DEBUG: series_id column exists: {series_id_exists is not None}")
-            
-            if not series_id_exists:
-                print("DEBUG: Adding series_id column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE competitions ADD COLUMN series_id INTEGER"))
-                print("DEBUG: Added series_id column to competitions")
-            else:
-                print("DEBUG: series_id column already exists")
             
-            # Check if phase column exists
-            print("DEBUG: Checking if phase column exists")
+            # Check and add phase column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='phase'"))
-            phase_exists = result.fetchone()
-            print(f"DEBUG: phase column exists: {phase_exists is not None}")
-            
-            if not phase_exists:
-                print("DEBUG: Adding phase column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE competitions ADD COLUMN phase VARCHAR(20)"))
-                print("DEBUG: Added phase column to competitions")
-            else:
-                print("DEBUG: phase column already exists")
             
-            # Check if is_qualifying column exists
-            print("DEBUG: Checking if is_qualifying column exists")
+            # Check and add is_qualifying column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='is_qualifying'"))
-            is_qualifying_exists = result.fetchone()
-            print(f"DEBUG: is_qualifying column exists: {is_qualifying_exists is not None}")
-            
-            if not is_qualifying_exists:
-                print("DEBUG: Adding is_qualifying column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
-                print("DEBUG: Added is_qualifying column to competitions")
-            else:
-                print("DEBUG: is_qualifying column already exists")
             
-            print("DEBUG: Committing column changes")
             db.session.commit()
-            print("DEBUG: Column changes committed successfully")
-            
         except Exception as col_error:
-            print(f"DEBUG: Column addition error: {col_error}")
-            print(f"DEBUG: Error type: {type(col_error)}")
             db.session.rollback()
-            print("DEBUG: Rolled back column changes")
         
         # Check and add missing columns to riders table
-        print("DEBUG: Checking for missing columns in riders table")
         try:
-            # Check if series_participation column exists
-            print("DEBUG: Checking if series_participation column exists")
+            # Check and add series_participation column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='series_participation'"))
-            series_participation_exists = result.fetchone()
-            print(f"DEBUG: series_participation column exists: {series_participation_exists is not None}")
-            
-            if not series_participation_exists:
-                print("DEBUG: Adding series_participation column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE riders ADD COLUMN series_participation VARCHAR(50) DEFAULT 'all'"))
-                print("DEBUG: Added series_participation column to riders")
-            else:
-                print("DEBUG: series_participation column already exists")
             
-            # Check if smx_qualified column exists
-            print("DEBUG: Checking if smx_qualified column exists")
+            # Check and add smx_qualified column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_qualified'"))
-            smx_qualified_exists = result.fetchone()
-            print(f"DEBUG: smx_qualified column exists: {smx_qualified_exists is not None}")
-            
-            if not smx_qualified_exists:
-                print("DEBUG: Adding smx_qualified column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_qualified BOOLEAN DEFAULT FALSE"))
-                print("DEBUG: Added smx_qualified column to riders")
-            else:
-                print("DEBUG: smx_qualified column already exists")
             
-            # Check if smx_seed_points column exists
-            print("DEBUG: Checking if smx_seed_points column exists")
+            # Check and add smx_seed_points column
             result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_seed_points'"))
-            smx_seed_points_exists = result.fetchone()
-            print(f"DEBUG: smx_seed_points column exists: {smx_seed_points_exists is not None}")
-            
-            if not smx_seed_points_exists:
-                print("DEBUG: Adding smx_seed_points column")
+            if not result.fetchone():
                 db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_seed_points INTEGER DEFAULT 0"))
-                print("DEBUG: Added smx_seed_points column to riders")
-            else:
-                print("DEBUG: smx_seed_points column already exists")
             
-            print("DEBUG: Committing riders column changes")
             db.session.commit()
-            print("DEBUG: Riders column changes committed successfully")
-            
         except Exception as riders_error:
-            print(f"DEBUG: Riders column addition error: {riders_error}")
-            print(f"DEBUG: Error type: {type(riders_error)}")
             db.session.rollback()
-            print("DEBUG: Rolled back riders column changes")
         
         # Check if global_simulation exists and create default entry
-        print("DEBUG: Checking global_simulation table")
         try:
-            global_sim_exists = GlobalSimulation.query.first()
-            print(f"DEBUG: global_simulation entry exists: {global_sim_exists is not None}")
-            
-            if not global_sim_exists:
-                print("DEBUG: Creating default global_simulation entry")
+            if not GlobalSimulation.query.first():
                 global_sim = GlobalSimulation(
                     active=False,
                     simulated_time=None,
@@ -3726,41 +3643,21 @@ def fix_database_tables():
                 )
                 db.session.add(global_sim)
                 db.session.commit()
-                print("DEBUG: Created default global_simulation entry")
-            else:
-                print("DEBUG: global_simulation entry already exists")
-                
         except Exception as global_error:
-            print(f"DEBUG: Global simulation error: {global_error}")
-            print(f"DEBUG: Error type: {type(global_error)}")
+            pass
         
         # Fix all 2025 competitions to 2026
-        print("DEBUG: Fixing 2025 competitions to 2026...")
         try:
             competitions_2025 = Competition.query.filter(Competition.event_date.like('2025-%')).all()
-            print(f"DEBUG: Found {len(competitions_2025)} competitions with 2025 dates")
-            
             for comp in competitions_2025:
-                old_date = comp.event_date
-                # Convert 2025 to 2026
-                new_date = comp.event_date.replace(year=2026)
-                comp.event_date = new_date
-                print(f"DEBUG: Updated {comp.name}: {old_date} -> {new_date}")
-            
+                comp.event_date = comp.event_date.replace(year=2026)
             db.session.commit()
-            print(f"DEBUG: Updated {len(competitions_2025)} competitions from 2025 to 2026")
         except Exception as date_error:
-            print(f"DEBUG: Date fix error: {date_error}")
             db.session.rollback()
         
-        print("DEBUG: Database fix completed successfully")
         return jsonify({'success': True, 'message': f'Database tables and columns fixed. Updated {len(competitions_2025) if "competitions_2025" in locals() else 0} competitions from 2025 to 2026'})
         
     except Exception as e:
-        print(f"DEBUG: Main error in fix_database_tables: {e}")
-        print(f"DEBUG: Error type: {type(e)}")
-        import traceback
-        print(f"DEBUG: Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/fix_database')
@@ -3910,7 +3807,7 @@ def admin_get_results(competition_id):
         return jsonify({"error": "unauthorized"}), 403
 
     try:
-        print(f"DEBUG: admin_get_results called for competition {competition_id}")
+        # Getting admin results
 
         results = (
             db.session.query(
@@ -3926,7 +3823,7 @@ def admin_get_results(competition_id):
 
         holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
 
-        print(f"DEBUG: Found {len(results)} results and {len(holos)} holeshot results")
+        # Found results and holeshot results
 
         return jsonify(
             {
@@ -3940,7 +3837,7 @@ def admin_get_results(competition_id):
             }
         )
     except Exception as e:
-        print(f"DEBUG: Error in admin_get_results: {e}")
+        # Error in admin_get_results
         import traceback
         traceback.print_exc()
         return jsonify({"error": "internal_error"}), 500
@@ -3991,10 +3888,7 @@ def submit_results():
             db.session.add(CompetitionResult(competition_id=comp_id, rider_id=rid, position=pos))
 
     db.session.commit()
-    print(f"DEBUG: Results saved for competition {comp_id}")
-    print(f"DEBUG: 450cc results: {len(riders_450_filtered)} riders")
-    print(f"DEBUG: 250cc results: {len(riders_250_filtered)} riders")
-    print(f"DEBUG: Holeshot 450: {hs_450}, Holeshot 250: {hs_250}")
+    # Results saved for competition
     
     calculate_scores(comp_id)
 

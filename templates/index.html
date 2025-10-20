@@ -1695,22 +1695,16 @@
     
     async function loadSeriesSelection() {
       try {
-        console.log('Loading series selection...');
+        // Loading series selection
         const response = await fetch('/api/series_status');
-        console.log('Response status:', response.status);
         const series = await response.json();
-        console.log('Series data:', series);
         
         const seriesContainer = document.getElementById('series-selection');
-        console.log('Series container found:', seriesContainer);
         
         if (series.length === 0) {
-          console.log('No series found, showing message');
           seriesContainer.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
           return;
         }
-        
-        console.log('Rendering', series.length, 'series');
         
         const seriesHTML = series.map(serie => {
           const isActive = serie.is_active;
@@ -1805,7 +1799,7 @@
     }
     
     document.addEventListener("DOMContentLoaded", function() {
-      console.log("DOM loaded, fetching leaderboard...");
+      // DOM loaded, fetching leaderboard
       fetchSeasonLeaderboard();
       fetchLeagueLeaderboard();
       fetchCrossDinoHighscores();
@@ -1814,7 +1808,6 @@
       loadSeriesLeaders();
       
       // Load series selection
-      console.log('About to load series selection...');
       loadSeriesSelection();
       
       // Start countdown system
@@ -1840,9 +1833,7 @@
         if (!response.ok) throw new Error('Kunde inte hämta andra användares picks');
         
         const usersPicks = await response.json();
-        console.log('DEBUG: usersPicks received:', usersPicks);
-        console.log('DEBUG: First user picks_450:', usersPicks[0]?.picks_450);
-        console.log('DEBUG: First user picks_250:', usersPicks[0]?.picks_250);
+        // Received users picks data
         
         // Create modal to display picks
         const modal = document.createElement('div');
@@ -1914,13 +1905,10 @@
 
     // Login Modal Functions
     function openLoginModal() {
-      console.log('openLoginModal called'); // Debug log
       const modal = document.getElementById('loginModal');
       if (modal) {
-        console.log('Modal found, removing hidden class');
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden'; // Prevent background scrolling
-        console.log('Modal classes after:', modal.className);
       } else {
         console.error('loginModal element not found');
       }
@@ -1956,17 +1944,13 @@
           const errorDiv = document.getElementById('loginError');
           
           try {
-            console.log('Sending login request...');
+            // Sending login request
             const response = await fetch('{{ url_for("login") }}', {
               method: 'POST',
               body: formData
             });
             
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers.get('content-type'));
-            
             const result = await response.json();
-            console.log('Login result:', result);
             
             if (result.success) {
               // Login successful, redirect to homepage
