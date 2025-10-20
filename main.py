@@ -659,7 +659,12 @@ def register():
 
 @app.route("/logout")
 def logout():
+    print(f"Logout called - user_id before: {session.get('user_id')}")
+    # Clear all session data
     session.clear()
+    # Also clear any potential session cookies
+    session.permanent = False
+    print(f"Logout completed - user_id after: {session.get('user_id')}")
     return redirect(url_for("index"))
 
 # -------------------------------------------------
