@@ -1844,14 +1844,20 @@ def series_page(series_id):
             for pick in wildcard_picks:
                 wildcard_picks_by_comp[pick.competition_id] = pick
         
-        # Process each competition
+        # Process each competition - OPTIMIZED
+        current_time = get_current_time()  # Get once, use many times
+        
         for comp in competitions:
             # Initialize empty results if none found
             if comp.id not in competition_results:
                 competition_results[comp.id] = []
             
-            # Check if picks are locked for this competition
-            picks_locked = is_picks_locked(comp)
+            # Check if picks are locked for this competition - OPTIMIZED
+            # Use simple date comparison instead of complex is_picks_locked function
+            if comp.event_date and comp.event_date <= current_time:
+                picks_locked = True
+            else:
+                picks_locked = False
             picks_locked_status[comp.id] = picks_locked
             
             # Check if current user has made picks for this competition
@@ -1891,10 +1897,11 @@ def series_page(series_id):
             ).order_by(Competition.event_date).first()
             # Found next upcoming race
         
-        # Determine if picks are open
+        # Determine if picks are open - OPTIMIZED
         picks_open = False
         if next_race:
-            picks_open = not is_picks_locked(next_race)
+            # Use simple date comparison instead of complex is_picks_locked function
+            picks_open = next_race.event_date and next_race.event_date > current_time
         
         # Simple template render with all required variables
         return render_template("series_page.html", 
