@@ -1368,20 +1368,10 @@
       const tabButtons = document.querySelectorAll('.tab-btn');
       const tabPanels = document.querySelectorAll('.tab-panel');
       
-      console.log('DEBUG: Found tab panels:', tabPanels.length);
-      tabPanels.forEach(panel => {
-        console.log('DEBUG: Panel ID:', panel.id, 'Classes:', panel.className);
-        const raceInfo = panel.querySelector('h2');
-        if (raceInfo && raceInfo.textContent.includes('Aktuellt Race')) {
-          console.log('DEBUG: "Aktuellt Race" found in panel:', panel.id);
-        }
-      });
       
       tabButtons.forEach(button => {
         button.addEventListener('click', () => {
           const targetTab = button.getAttribute('data-tab');
-          console.log('DEBUG: Tab clicked:', targetTab);
-          
           // Remove active class from all buttons and panels
           tabButtons.forEach(btn => {
             btn.classList.remove('active', 'bg-yellow-500', 'text-white');
@@ -1391,7 +1381,6 @@
           tabPanels.forEach(panel => {
             panel.classList.add('hidden');
             panel.classList.remove('active');
-            console.log('DEBUG: Hiding panel:', panel.id);
           });
           
           // Add active class to clicked button and corresponding panel
@@ -1402,13 +1391,6 @@
           if (targetPanel) {
             targetPanel.classList.remove('hidden');
             targetPanel.classList.add('active');
-            console.log('DEBUG: Showing panel:', targetTab);
-            
-            // Debug: Check if "Aktuellt Race" is in this panel
-            const raceInfo = targetPanel.querySelector('h2');
-            if (raceInfo && raceInfo.textContent.includes('Aktuellt Race')) {
-              console.log('DEBUG: Found "Aktuellt Race" in panel:', targetTab);
-            }
           }
           
           // Load leaderboard data when leaderboard tab is clicked
