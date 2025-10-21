@@ -324,7 +324,7 @@
             </div>
           </div>
         </div>
-        {% endif %}
+          {% endif %}
           
           <!-- Bulletin Board Notification -->
           {% if new_bulletin_posts > 0 %}
@@ -343,10 +343,10 @@
               <div class="relative flex-shrink-0">
                 <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                   <span class="text-white text-lg">📢</span>
-                </div>
+        </div>
                 <div class="absolute inset-0 w-10 h-10 bg-white/30 rounded-full animate-ping"></div>
-              </div>
-              
+      </div>
+
               <div class="flex-1 min-w-0">
                 <p class="text-white font-bold text-xs leading-tight">
                   {% if new_bulletin_posts == 1 %}
@@ -358,12 +358,12 @@
                 <p class="text-indigo-100 text-xs font-medium">
                   {% if latest_post_author %}
                     Från <span class="text-yellow-300 font-semibold">{{ latest_post_author }}</span>
-                  {% else %}
+          {% else %}
                     Senaste 24h
-                  {% endif %}
+          {% endif %}
                 </p>
-              </div>
-              
+        </div>
+
               <!-- Arrow indicator -->
               <div class="flex-shrink-0 text-white/60 group-hover:text-white transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -400,9 +400,9 @@
                 <p class="text-white font-bold text-xs leading-tight">
                   {% if league_requests_count == 1 %}
                     Ny ansökan till din liga!
-                  {% else %}
+    {% else %}
                     {{ league_requests_count }} nya ansökningar till dina ligor!
-                  {% endif %}
+    {% endif %}
                 </p>
                 <p class="text-green-100 text-xs font-medium">
                   Klicka för att hantera ansökningar
@@ -414,8 +414,8 @@
                 <svg class="w-4 h-4 text-white group-hover:translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                 </svg>
-              </div>
-            </div>
+  </div>
+</div>
             </a>
           </div>
           {% endif %}
@@ -485,14 +485,14 @@
                 </svg>
                 <span>Logga ut</span>
               </a>
-            {% else %}
+          {% else %}
               <button onclick="openLoginModal();" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" title="Logga in">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                 </svg>
                 <span>Logga in</span>
               </button>
-            {% endif %}
+          {% endif %}
             </div>
 
             <!-- Center: Tab Buttons -->
@@ -644,7 +644,7 @@
         </div>
         </div>
 
-            </div>
+        </div>
 
               <!-- MotoAction.se Banner -->
               <div class="mb-6">
@@ -655,8 +655,8 @@
                       <div class="text-center">
                         <p class="text-cyan-300 text-sm font-medium">Powered by</p>
                         <p class="text-white text-lg font-bold group-hover:text-cyan-200 transition-colors duration-300">MotoAction.se</p>
-                      </div>
-                    </div>
+      </div>
+    </div>
                   </div>
                 </a>
               </div>
@@ -701,7 +701,7 @@
   {% endfor %}
 </div>
                       </div>
-    {% endif %}
+                      {% endif %}
 
                       <!-- 250cc picks -->
                       {% if current_picks_250 %}
@@ -720,9 +720,9 @@
                               <span class="text-blue-600 dark:text-blue-400 font-bold w-6">{{ pick.position }}.</span>
     {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-  </div>
-  {% endfor %}
-</div>
+                          </div>
+                          {% endfor %}
+                        </div>
                       </div>
           {% endif %}
 
@@ -791,8 +791,8 @@
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Inget kommande race</h2>
                 <p class="text-gray-600 dark:text-gray-400">Inga races planerade just nu.</p>
           {% endif %}
-            </div>
-          </div>
+        </div>
+      </div>
 
           <!-- Leaderboard Tab -->
           <div id="leaderboard" class="tab-panel hidden">
