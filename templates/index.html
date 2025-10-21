@@ -642,23 +642,6 @@
                 </div>
                 </div>
         </div>
-        </div>
-
-        </div>
-
-              <!-- MotoAction.se Banner -->
-              <div class="mb-6">
-                <a href="https://motoaction.se" target="_blank" class="block group">
-                  <div class="bg-black border-2 border-cyan-400 rounded-lg p-4 hover:border-cyan-300 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/20">
-                    <div class="flex items-center justify-center gap-4">
-                      <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MotoAction.se" class="h-12 w-auto filter brightness-110 group-hover:brightness-125 transition-all duration-300">
-                      <div class="text-center">
-                        <p class="text-cyan-300 text-sm font-medium">Powered by</p>
-                        <p class="text-white text-lg font-bold group-hover:text-cyan-200 transition-colors duration-300">MotoAction.se</p>
-      </div>
-    </div>
-                  </div>
-                </a>
               </div>
 
             <!-- Race Info -->
@@ -697,9 +680,9 @@
                               <span class="text-gray-600 dark:text-gray-400 font-bold w-6">{{ pick.position }}.</span>
     {% endif %}
                             <span class="font-medium text-gray-800 dark:text-gray-200">#{{ pick.rider_number }} {{ pick.rider_name }}</span>
-  </div>
-  {% endfor %}
-</div>
+                          </div>
+                          {% endfor %}
+                        </div>
                       </div>
                       {% endif %}
 
@@ -791,8 +774,24 @@
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Inget kommande race</h2>
                 <p class="text-gray-600 dark:text-gray-400">Inga races planerade just nu.</p>
           {% endif %}
-        </div>
+            </div>
+          </div>
+
+              <!-- MotoAction.se Banner -->
+              <div class="mb-6">
+                <a href="https://motoaction.se" target="_blank" class="block group">
+                  <div class="bg-black border-2 border-cyan-400 rounded-lg p-4 hover:border-cyan-300 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/20">
+                    <div class="flex items-center justify-center gap-4">
+                      <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MotoAction.se" class="h-12 w-auto filter brightness-110 group-hover:brightness-125 transition-all duration-300">
+                      <div class="text-center">
+                        <p class="text-cyan-300 text-sm font-medium">Powered by</p>
+                        <p class="text-white text-lg font-bold group-hover:text-cyan-200 transition-colors duration-300">MotoAction.se</p>
       </div>
+    </div>
+                  </div>
+                </a>
+              </div>
+
 
           <!-- Leaderboard Tab -->
           <div id="leaderboard" class="tab-panel hidden">
