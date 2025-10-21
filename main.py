@@ -1623,18 +1623,23 @@ def my_scores():
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Simple series page that actually works"""
+    print(f"DEBUG: series_page called with series_id={series_id}")
     try:
         # Always rollback first
         db.session.rollback()
+        print(f"DEBUG: Database rollback completed")
         
         # Get series info
         series = Series.query.get(series_id)
+        print(f"DEBUG: Series query result: {series}")
         if not series:
+            print(f"DEBUG: No series found, redirecting to index")
             return redirect(url_for("index"))
         
         # Get competitions for this series
         db.session.rollback()
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        print(f"DEBUG: Found {len(competitions)} competitions for series {series_id}")
         
         # Check if there's an active race set in admin panel
         active_race_id = None
@@ -1759,6 +1764,7 @@ def series_page(series_id):
             picks_open = next_race.event_date and next_race.event_date > current_time
         
         # Simple template render with all required variables
+        print(f"DEBUG: About to render series_page.html for series {series_id}")
         return render_template("series_page.html", 
                              series=series, 
                              competitions=competitions,
@@ -1772,6 +1778,7 @@ def series_page(series_id):
                              user_logged_in="user_id" in session)
         
     except Exception as e:
+        print(f"DEBUG: Exception in series_page: {e}")
         db.session.rollback()
         return redirect(url_for("index"))
 
