@@ -13,7 +13,7 @@ from flask import (
     flash,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text
+from sqlalchemy import text as sql_text
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -758,7 +758,7 @@ def index():
         if inspect(db.engine).has_table('users'):
             try:
                 # Try to query is_admin column
-                db.session.execute(text("SELECT is_admin FROM users LIMIT 1"))
+                db.session.execute(sql_text("SELECT is_admin FROM users LIMIT 1"))
             except Exception:
                 # Column doesn't exist, add it
                 print("Adding is_admin column to users table...")
@@ -766,7 +766,7 @@ def index():
                     # Rollback any failed transaction first
                     db.session.rollback()
                     # Add the column
-                    db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                    db.session.execute(sql_text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
                     db.session.commit()
                     print("is_admin column added successfully")
                 except Exception as e:
@@ -777,7 +777,7 @@ def index():
                         from sqlalchemy import create_engine
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                            conn.execute(sql_text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
                             conn.commit()
                         print("is_admin column added successfully via direct connection")
                     except Exception as e2:
@@ -786,7 +786,7 @@ def index():
             # Check if email column exists
             try:
                 # Try to query email column
-                db.session.execute(text("SELECT email FROM users LIMIT 1"))
+                db.session.execute(sql_text("SELECT email FROM users LIMIT 1"))
             except Exception:
                 # Column doesn't exist, add it
                 print("Adding email column to users table...")
@@ -794,7 +794,7 @@ def index():
                     # Rollback any failed transaction first
                     db.session.rollback()
                     # Add the column
-                    db.session.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
+                    db.session.execute(sql_text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
                     db.session.commit()
                     print("email column added successfully")
                 except Exception as e:
@@ -805,14 +805,14 @@ def index():
                         from sqlalchemy import create_engine
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
+                            conn.execute(sql_text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
                             conn.commit()
                         print("email column added successfully via direct connection")
                     except Exception as e2:
                         print(f"Failed to add email column via direct connection: {e2}")
         
         # Ensure rider bio columns exist globally (needed on homepage queries)
-        from sqlalchemy import text
+        from sqlalchemy import text as sql_text
         try:
             db.session.rollback()
             rider_columns = [
@@ -824,12 +824,12 @@ def index():
                 ('bio', 'TEXT'), ('achievements', 'TEXT')
             ]
             for col, typ in rider_columns:
-                exists = db.session.execute(text("""
+                exists = db.session.execute(sql_text("""
                     SELECT column_name FROM information_schema.columns 
                     WHERE table_name='riders' AND column_name=:col
                 """), {'col': col}).fetchone()
                 if not exists:
-                    db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+                    db.session.execute(sql_text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
             db.session.commit()
         except Exception as e:
             print(f"Error ensuring rider bio columns: {e}")
@@ -839,12 +839,12 @@ def index():
         if inspect(db.engine).has_table('league_memberships'):
             try:
                 # Try to query joined_at column
-                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
+                db.session.execute(sql_text("SELECT joined_at FROM league_memberships LIMIT 1"))
             except Exception:
                 # Column doesn't exist, add it
                 try:
                     db.session.rollback()
-                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.execute(sql_text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                     db.session.commit()
                     print("joined_at column added to league_memberships table successfully")
                 except Exception as e:
@@ -856,7 +856,7 @@ def index():
         if inspect(db.engine).has_table('leagues'):
             try:
                 # Try to query image columns
-                db.session.execute(text("SELECT image_data, image_mime_type FROM leagues LIMIT 1"))
+                db.session.execute(sql_text("SELECT image_data, image_mime_type FROM leagues LIMIT 1"))
             except Exception:
                 # Columns don't exist, add them
                 print("Adding image_data and image_mime_type columns to leagues table...")
@@ -864,8 +864,8 @@ def index():
                     # Rollback any failed transaction first
                     db.session.rollback()
                     # Add the columns
-                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
-                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+                    db.session.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+                    db.session.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
                     db.session.commit()
                     print("League image columns added successfully")
                 except Exception as e:
@@ -876,8 +876,8 @@ def index():
                         from sqlalchemy import create_engine
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
                             conn.commit()
                         print("League image columns added successfully via direct connection")
                     except Exception as e2:
@@ -887,15 +887,15 @@ def index():
         if inspect(db.engine).has_table('leagues'):
             try:
                 # Try to query new columns
-                db.session.execute(text("SELECT is_public, total_points, created_at FROM leagues LIMIT 1"))
+                db.session.execute(sql_text("SELECT is_public, total_points, created_at FROM leagues LIMIT 1"))
             except Exception:
                 # Columns don't exist, add them
                 print("Adding is_public, total_points, created_at columns to leagues table...")
                 try:
                     db.session.rollback()
-                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
-                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
-                    db.session.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.execute(sql_text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
+                    db.session.execute(sql_text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
+                    db.session.execute(sql_text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                     db.session.commit()
                     print("League additional columns added successfully")
                 except Exception as e:
@@ -905,9 +905,9 @@ def index():
                         from sqlalchemy import create_engine
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
+                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
+                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                             conn.commit()
                         print("League additional columns added successfully via direct connection")
                     except Exception as e2:
@@ -918,7 +918,7 @@ def index():
             print("Creating league_requests table...")
             try:
                 db.session.rollback()
-                db.session.execute(text("""
+                db.session.execute(sql_text("""
                     CREATE TABLE league_requests (
                         id SERIAL PRIMARY KEY,
                         league_id INTEGER NOT NULL REFERENCES leagues(id),
@@ -2732,7 +2732,7 @@ def admin_page():
     
     # Ensure rider bio columns exist before querying
     try:
-        from sqlalchemy import text
+        from sqlalchemy import text as sql_text
         db.session.rollback()
         columns = [
             ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
@@ -2743,12 +2743,12 @@ def admin_page():
             ('bio', 'TEXT'), ('achievements', 'TEXT')
         ]
         for col, typ in columns:
-            exists = db.session.execute(text("""
+            exists = db.session.execute(sql_text("""
                 SELECT column_name FROM information_schema.columns 
                 WHERE table_name='riders' AND column_name=:col
             """), {'col': col}).fetchone()
             if not exists:
-                db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+                db.session.execute(sql_text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -2828,7 +2828,7 @@ def rider_management():
     try:
         # Ensure new bio columns exist (auto-migration)
         try:
-            from sqlalchemy import text
+            from sqlalchemy import text as sql_text
             db.session.rollback()
             columns = [
                 ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
@@ -2839,12 +2839,12 @@ def rider_management():
                 ('bio', 'TEXT'), ('achievements', 'TEXT')
             ]
             for col, typ in columns:
-                exists = db.session.execute(text("""
+                exists = db.session.execute(sql_text("""
                     SELECT column_name FROM information_schema.columns 
                     WHERE table_name='riders' AND column_name=:col
                 """), {'col': col}).fetchone()
                 if not exists:
-                    db.session.execute(text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
+                    db.session.execute(sql_text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -3741,19 +3741,19 @@ def fix_database_tables():
         # Manually add missing columns to competitions table
         try:
             # Check and add series_id column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='series_id'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='series_id'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE competitions ADD COLUMN series_id INTEGER"))
+                db.session.execute(sql_text("ALTER TABLE competitions ADD COLUMN series_id INTEGER"))
             
             # Check and add phase column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='phase'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='phase'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE competitions ADD COLUMN phase VARCHAR(20)"))
+                db.session.execute(sql_text("ALTER TABLE competitions ADD COLUMN phase VARCHAR(20)"))
             
             # Check and add is_qualifying column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='is_qualifying'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='competitions' AND column_name='is_qualifying'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
+                db.session.execute(sql_text("ALTER TABLE competitions ADD COLUMN is_qualifying BOOLEAN DEFAULT FALSE"))
             
             db.session.commit()
         except Exception as col_error:
@@ -3762,19 +3762,19 @@ def fix_database_tables():
         # Check and add missing columns to riders table
         try:
             # Check and add series_participation column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='series_participation'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='series_participation'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE riders ADD COLUMN series_participation VARCHAR(50) DEFAULT 'all'"))
+                db.session.execute(sql_text("ALTER TABLE riders ADD COLUMN series_participation VARCHAR(50) DEFAULT 'all'"))
             
             # Check and add smx_qualified column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_qualified'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_qualified'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_qualified BOOLEAN DEFAULT FALSE"))
+                db.session.execute(sql_text("ALTER TABLE riders ADD COLUMN smx_qualified BOOLEAN DEFAULT FALSE"))
             
             # Check and add smx_seed_points column
-            result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_seed_points'"))
+            result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_seed_points'"))
             if not result.fetchone():
-                db.session.execute(text("ALTER TABLE riders ADD COLUMN smx_seed_points INTEGER DEFAULT 0"))
+                db.session.execute(sql_text("ALTER TABLE riders ADD COLUMN smx_seed_points INTEGER DEFAULT 0"))
             
             db.session.commit()
         except Exception as riders_error:
@@ -6100,13 +6100,13 @@ def fix_league_memberships_column():
         if inspect(db.engine).has_table('league_memberships'):
             try:
                 # Try to query joined_at column
-                db.session.execute(text("SELECT joined_at FROM league_memberships LIMIT 1"))
+                db.session.execute(sql_text("SELECT joined_at FROM league_memberships LIMIT 1"))
                 return "joined_at column already exists in league_memberships table"
             except Exception:
                 # Column doesn't exist, add it
                 try:
                     db.session.rollback()
-                    db.session.execute(text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                    db.session.execute(sql_text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                     db.session.commit()
                     return "✅ joined_at column added to league_memberships table successfully"
                 except Exception as e:
@@ -8893,7 +8893,7 @@ def migrate_admin_column():
         db.session.rollback()
         
         # Check if column already exists
-        result = db.session.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='is_admin'")).fetchone()
+        result = db.session.execute(sql_text("SELECT column_name FROM information_schema.columns WHERE table_name='users' AND column_name='is_admin'")).fetchone()
         
         if result:
             return jsonify({
@@ -8902,7 +8902,7 @@ def migrate_admin_column():
             })
         
         # Add the column
-        db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+        db.session.execute(sql_text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
         db.session.commit()
         
         return jsonify({
@@ -8936,7 +8936,7 @@ def fix_database_transaction():
         db.session.rollback()
         
         # Test the connection
-        db.session.execute(text("SELECT 1"))
+        db.session.execute(sql_text("SELECT 1"))
         db.session.commit()
         
         return jsonify({
@@ -9120,10 +9120,10 @@ def create_hampus_admin():
     try:
         # First ensure is_admin column exists
         try:
-            db.session.execute(text("SELECT is_admin FROM users LIMIT 1"))
+            db.session.execute(sql_text("SELECT is_admin FROM users LIMIT 1"))
         except Exception:
             # Column doesn't exist, add it
-            db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+            db.session.execute(sql_text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
             db.session.commit()
         
         # Check if Hampus user exists
@@ -10018,11 +10018,11 @@ def test_countdown():
         # Also set global simulation state for cross-device sync using database
         # Create or update global simulation record
         try:
-            from sqlalchemy import text
+            from sqlalchemy import text as sql_text
             # Rollback any existing transaction first
             db.session.rollback()
             
-            db.session.execute(text("""
+            db.session.execute(sql_text("""
                 INSERT INTO global_simulation (id, active, simulated_time, start_time, scenario) 
                 VALUES (1, :active, :simulated_time, :start_time, :scenario)
                 ON CONFLICT (id) DO UPDATE SET 
@@ -10298,7 +10298,7 @@ def race_picks_active():
     
     try:
         # Get active race from global simulation
-        result = db.session.execute(text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
+        result = db.session.execute(sql_text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
         
         if result and result[0]:
             active_race_id = result[0]
@@ -10319,7 +10319,7 @@ def reset_simulation():
     try:
         # Clear database simulation
         try:
-            db.session.execute(text("UPDATE global_simulation SET active = FALSE, active_race_id = NULL WHERE id = 1"))
+            db.session.execute(sql_text("UPDATE global_simulation SET active = FALSE, active_race_id = NULL WHERE id = 1"))
             db.session.commit()
             print("DEBUG: Reset simulation to real time")
         except Exception as db_error:
@@ -10755,7 +10755,7 @@ def clear_all_data():
         # Clear league points and scores
         try:
             # Reset league total_points to 0
-            db.session.execute(text("UPDATE leagues SET total_points = 0"))
+            db.session.execute(sql_text("UPDATE leagues SET total_points = 0"))
         except Exception as e:
             print(f"Warning: Could not reset league points: {e}")
         
@@ -10788,7 +10788,7 @@ def get_current_time():
     # Check if we're in simulation mode
     try:
         db.session.rollback()
-        result = db.session.execute(text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
+        result = db.session.execute(sql_text("SELECT active, simulated_time, start_time FROM global_simulation WHERE id = 1")).fetchone()
         
         if result and result[0]:  # active is True
             simulated_time_str = result[1] if result[1] else None
@@ -11003,7 +11003,7 @@ def is_picks_locked(competition):
         # Rollback any existing transaction first
         db.session.rollback()
         
-        result = db.session.execute(text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
+        result = db.session.execute(sql_text("SELECT active FROM global_simulation WHERE id = 1")).fetchone()
         simulation_active = result and result[0] if result else False
     except Exception as e:
         # Rollback and fallback to app globals if database table doesn't exist
@@ -11014,7 +11014,7 @@ def is_picks_locked(competition):
         # Use the same logic as test_countdown for consistency
         # Get the scenario from global database state or use default
         try:
-            result = db.session.execute(text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
+            result = db.session.execute(sql_text("SELECT scenario FROM global_simulation WHERE id = 1")).fetchone()
             scenario = result[0] if result and result[0] else 'race_in_3h'
         except Exception as e:
             scenario = session.get('test_scenario', 'race_in_3h')
@@ -11026,7 +11026,7 @@ def is_picks_locked(competition):
         if scenario and scenario.startswith('active_race_'):
             # Get the initial simulated time when simulation started
             try:
-                result = db.session.execute(text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+                result = db.session.execute(sql_text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
                 simulated_time_str = result[0] if result and result[0] else current_time.isoformat()
                 initial_simulated_time = datetime.fromisoformat(simulated_time_str)
             except Exception as e:
@@ -11045,7 +11045,7 @@ def is_picks_locked(competition):
         elif scenario == 'race_in_3h':
             # Check if this is the active race
             try:
-                result = db.session.execute(text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
+                result = db.session.execute(sql_text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
                 active_race_id = result[0] if result and result[0] else None
                 
                 if active_race_id == competition_id:
@@ -11137,7 +11137,7 @@ def is_picks_locked(competition):
         # Calculate time differences using simulated time (same as countdown)
         # Get the current simulated time from the same source as countdown
         try:
-            result = db.session.execute(text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
+            result = db.session.execute(sql_text("SELECT simulated_time FROM global_simulation WHERE id = 1")).fetchone()
             current_simulated_time_str = result[0] if result and result[0] else current_time.isoformat()
             current_simulated_time = datetime.fromisoformat(current_simulated_time_str)
         except Exception as e:
