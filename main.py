@@ -609,13 +609,16 @@ def login():
     print(f"DEBUG: Login called - method: {request.method}")
     print(f"DEBUG: Current session before login: {dict(session)}")
     
-    # Check if session is invalidated
-    if session.get('_invalidated'):
-        print(f"DEBUG: Session is invalidated, clearing it")
+    # Check if session is invalidated or reset
+    if session.get('_invalidated') or session.get('_reset'):
+        print(f"DEBUG: Session is invalidated/reset, clearing it")
         session.clear()
         session.modified = True
+        # Force a new session ID
+        session.regenerate()
+        print(f"DEBUG: Session regenerated after invalidation")
     
-    if "user_id" in session and not session.get('_invalidated'):
+    if "user_id" in session and not session.get('_invalidated') and not session.get('_reset'):
         print(f"DEBUG: User already logged in, redirecting to index")
         return redirect(url_for("index"))
     
@@ -774,12 +777,37 @@ def reset_session():
         session.modified = True
         # Set a flag to prevent session restoration
         session['_reset'] = True
+        # Force session regeneration
+        session.regenerate()
         print(f"DEBUG: Session reset completed")
     except Exception as e:
         print(f"DEBUG: Error during session reset: {e}")
         import traceback
         traceback.print_exc()
     return redirect(url_for("index"))
+
+@app.route("/kill_session")
+def kill_session():
+    """Kill session completely - ultimate nuclear option"""
+    print(f"DEBUG: Kill session called - current session: {dict(session)}")
+    try:
+        # Ultimate nuclear option
+        session.clear()
+        session.permanent = False
+        session.modified = True
+        # Force session regeneration
+        session.regenerate()
+        # Clear any potential cookies
+        response = redirect(url_for("index"))
+        response.set_cookie('session', '', expires=0)
+        response.set_cookie('session', '', expires=0, path='/', domain=None)
+        print(f"DEBUG: Session killed completely")
+        return response
+    except Exception as e:
+        print(f"DEBUG: Error during session kill: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for("index"))
 
 # -------------------------------------------------
 # Pages
