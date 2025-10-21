@@ -606,54 +606,71 @@ def generate_invite_code(length=6):
 # -------------------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    print(f"DEBUG: Login called - method: {request.method}")
+    print(f"DEBUG: Current session before login: {dict(session)}")
+    
     if "user_id" in session:
+        print(f"DEBUG: User already logged in, redirecting to index")
         return redirect(url_for("index"))
+    
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
-        print(f"Login attempt: username='{username}', password='{password}'")
+        modal = request.form.get('modal')
+        print(f"DEBUG: Login attempt - username='{username}', modal={modal}")
         
         user = User.query.filter_by(username=username).first()
-        print(f"User found: {user is not None}")
+        print(f"DEBUG: User found: {user is not None}")
         
         if user:
-            print(f"User ID: {user.id}, Username: {user.username}")
+            print(f"DEBUG: User details - ID: {user.id}, Username: {user.username}")
             password_check = check_password_hash(user.password_hash, password)
-            print(f"Password check: {password_check}")
+            print(f"DEBUG: Password check result: {password_check}")
             
             if password_check:
                 try:
+                    print(f"DEBUG: Starting session setup for user {user.id}")
                     # Clear any existing session first
+                    old_session = dict(session)
                     session.clear()
+                    print(f"DEBUG: Session cleared. Old session: {old_session}")
+                    
                     session.permanent = True  # Enable session timeout
                     session["user_id"] = user.id
                     session["username"] = user.username
                     session["login_time"] = datetime.utcnow().isoformat()
                     session.modified = True  # Force session to be saved
-                    print("Login successful, redirecting...")
+                    
+                    print(f"DEBUG: Session after setup: {dict(session)}")
+                    print(f"DEBUG: Login successful for user {user.id}")
                     
                     # Check if this is an AJAX request (from popup)
-                    if request.form.get('modal'):
+                    if modal:
+                        print(f"DEBUG: Returning AJAX response for modal login")
                         return jsonify({"success": True, "redirect": url_for("index")})
                     else:
+                        print(f"DEBUG: Redirecting to index after regular login")
                         return redirect(url_for("index"))
                 except Exception as e:
-                    print(f"Error during login session setup: {e}")
-                    if request.form.get('modal'):
-                        return jsonify({"success": False, "error": "Session error, please try again"})
+                    print(f"DEBUG: Error during login session setup: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    if modal:
+                        return jsonify({"success": False, "error": f"Session error: {str(e)}"})
                     else:
-                        flash("Session error, please try again", "error")
+                        flash(f"Session error: {str(e)}", "error")
                         return render_template("login.html")
         
-        print("Login failed")
+        print(f"DEBUG: Login failed for username '{username}'")
         # Check if this is an AJAX request (from popup)
-        if request.form.get('modal'):
+        if modal:
             return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
         else:
             flash("Felaktigt användarnamn eller lösenord", "error")
             return render_template("login.html")
     
     # Handle GET request (show login page)
+    print(f"DEBUG: Showing login page")
     return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
@@ -684,7 +701,8 @@ def register():
 
 @app.route("/logout")
 def logout():
-    print(f"Logout called - user_id before: {session.get('user_id')}")
+    print(f"DEBUG: Logout called - user_id before: {session.get('user_id')}")
+    print(f"DEBUG: Full session before logout: {dict(session)}")
     try:
         # Clear all session data
         session.clear()
@@ -692,24 +710,33 @@ def logout():
         session.permanent = False
         # Force session to be cleared
         session.modified = True
-        print(f"Logout completed - user_id after: {session.get('user_id')}")
+        print(f"DEBUG: Logout completed - user_id after: {session.get('user_id')}")
+        print(f"DEBUG: Full session after logout: {dict(session)}")
     except Exception as e:
-        print(f"Error during logout: {e}")
+        print(f"DEBUG: Error during logout: {e}")
+        import traceback
+        traceback.print_exc()
     return redirect(url_for("index"))
 
 @app.route("/force_logout")
 def force_logout():
     """Force logout - clear all sessions and cookies"""
+    print(f"DEBUG: Force logout called - user_id before: {session.get('user_id')}")
+    print(f"DEBUG: Full session before force logout: {dict(session)}")
     try:
         session.clear()
         session.permanent = False
         session.modified = True
+        print(f"DEBUG: Session cleared in force logout")
         # Clear any potential session cookies
         response = redirect(url_for("index"))
         response.set_cookie('session', '', expires=0)
+        print(f"DEBUG: Force logout completed - redirecting to index")
         return response
     except Exception as e:
-        print(f"Error during force logout: {e}")
+        print(f"DEBUG: Error during force logout: {e}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for("index"))
 
 # -------------------------------------------------
@@ -767,13 +794,19 @@ def series_status():
 
 @app.route("/")
 def index():
+    print(f"DEBUG: Index called - session: {dict(session)}")
+    print(f"DEBUG: User ID in session: {session.get('user_id')}")
+    print(f"DEBUG: Username in session: {session.get('username')}")
+    
     # Check if user is logged in
     if "user_id" in session:
         uid = session["user_id"]
         is_logged_in = True
+        print(f"DEBUG: User is logged in with ID: {uid}")
     else:
         uid = None
         is_logged_in = False
+        print(f"DEBUG: No user logged in")
     today = get_today()
 
     # Ensure database is initialized
