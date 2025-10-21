@@ -632,9 +632,19 @@ def login():
                     print(f"DEBUG: Starting session setup for user {user.id}")
                     # Clear any existing session first
                     old_session = dict(session)
-                    session.clear()
-                    print(f"DEBUG: Session cleared. Old session: {old_session}")
+                    print(f"DEBUG: Old session before clear: {old_session}")
                     
+                    # More aggressive session clearing
+                    for key in list(session.keys()):
+                        del session[key]
+                    session.clear()
+                    session.permanent = False
+                    session.modified = True
+                    
+                    print(f"DEBUG: Session cleared. Old session: {old_session}")
+                    print(f"DEBUG: Session after clear: {dict(session)}")
+                    
+                    # Set new session
                     session.permanent = True  # Enable session timeout
                     session["user_id"] = user.id
                     session["username"] = user.username
@@ -724,13 +734,19 @@ def force_logout():
     print(f"DEBUG: Force logout called - user_id before: {session.get('user_id')}")
     print(f"DEBUG: Full session before force logout: {dict(session)}")
     try:
+        # More aggressive session clearing
+        for key in list(session.keys()):
+            del session[key]
         session.clear()
         session.permanent = False
         session.modified = True
         print(f"DEBUG: Session cleared in force logout")
+        print(f"DEBUG: Session after force logout: {dict(session)}")
+        
         # Clear any potential session cookies
         response = redirect(url_for("index"))
         response.set_cookie('session', '', expires=0)
+        response.set_cookie('session', '', expires=0, path='/', domain=None)
         print(f"DEBUG: Force logout completed - redirecting to index")
         return response
     except Exception as e:
