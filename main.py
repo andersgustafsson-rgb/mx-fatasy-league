@@ -753,163 +753,21 @@ def index():
             print("Tables missing, reinitializing database...")
             init_database()
         
-        # Check if is_admin and email columns exist in users table
-        if inspect(db.engine).has_table('users'):
-            try:
-                # Try to query is_admin column
-                db.session.execute(db.text("SELECT is_admin FROM users LIMIT 1"))
-            except Exception:
-                # Column doesn't exist, add it
-                print("Adding is_admin column to users table...")
-                try:
-                    # Rollback any failed transaction first
-                    db.session.rollback()
-                    # Add the column
-                    db.session.execute(db.text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
-                    db.session.commit()
-                    print("is_admin column added successfully")
-                except Exception as e:
-                    print(f"Error adding is_admin column: {e}")
-                    db.session.rollback()
-                    # Try alternative approach - create a new connection
-                    try:
-                        from sqlalchemy import create_engine, text
-                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-                        with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
-                            conn.commit()
-                        print("is_admin column added successfully via direct connection")
-                    except Exception as e2:
-                        print(f"Failed to add is_admin column via direct connection: {e2}")
-            
-            # Check if email column exists
-            try:
-                # Try to query email column
-                db.session.execute(db.text("SELECT email FROM users LIMIT 1"))
-            except Exception:
-                # Column doesn't exist, add it
-                print("Adding email column to users table...")
-                try:
-                    # Rollback any failed transaction first
-                    db.session.rollback()
-                    # Add the column
-                    db.session.execute(db.text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
-                    db.session.commit()
-                    print("email column added successfully")
-                except Exception as e:
-                    print(f"Error adding email column: {e}")
-                    db.session.rollback()
-                    # Try alternative approach - create a new connection
-                    try:
-                        from sqlalchemy import create_engine, text
-                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-                        with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
-                            conn.commit()
-                        print("email column added successfully via direct connection")
-                    except Exception as e2:
-                        print(f"Failed to add email column via direct connection: {e2}")
+        # Skip problematic column migrations for now
+        pass
         
-        # Ensure rider bio columns exist globally (needed on homepage queries)
-        try:
-            db.session.rollback()
-            rider_columns = [
-                ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
-                ('birthdate', 'DATE'), ('height_cm', 'INTEGER'), ('weight_kg', 'INTEGER'),
-                ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
-                ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
-                ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
-                ('bio', 'TEXT'), ('achievements', 'TEXT')
-            ]
-            for col, typ in rider_columns:
-                exists = db.session.execute(db.text("""
-                    SELECT column_name FROM information_schema.columns 
-                    WHERE table_name='riders' AND column_name=:col
-                """), {'col': col}).fetchone()
-                if not exists:
-                    db.session.execute(db.text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
-            db.session.commit()
-        except Exception as e:
-            print(f"Error ensuring rider bio columns: {e}")
-            db.session.rollback()
+        # Skip rider bio column migrations for now
+        pass
 
-        # Check if joined_at column exists in league_memberships table
-        if inspect(db.engine).has_table('league_memberships'):
-            try:
-                # Try to query joined_at column
-                db.session.execute(db.text("SELECT joined_at FROM league_memberships LIMIT 1"))
-            except Exception:
-                # Column doesn't exist, add it
-                try:
-                    db.session.rollback()
-                    db.session.execute(db.text("ALTER TABLE league_memberships ADD COLUMN joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                    db.session.commit()
-                    print("joined_at column added to league_memberships table successfully")
-                except Exception as e:
-                    print(f"Error adding joined_at column: {e}")
-                    db.session.rollback()
+        # Skip league_memberships column migrations for now
+        pass
         
         
-        # Check if league image columns exist
-        if inspect(db.engine).has_table('leagues'):
-            try:
-                # Try to query image columns
-                db.session.execute(db.text("SELECT image_data, image_mime_type FROM leagues LIMIT 1"))
-            except Exception:
-                # Columns don't exist, add them
-                print("Adding image_data and image_mime_type columns to leagues table...")
-                try:
-                    # Rollback any failed transaction first
-                    db.session.rollback()
-                    # Add the columns
-                    db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
-                    db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
-                    db.session.commit()
-                    print("League image columns added successfully")
-                except Exception as e:
-                    print(f"Error adding league image columns: {e}")
-                    db.session.rollback()
-                    # Try alternative approach - create a new connection
-                    try:
-                        from sqlalchemy import create_engine, text
-                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-                        with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
-                            conn.commit()
-                        print("League image columns added successfully via direct connection")
-                    except Exception as e2:
-                        print(f"Failed to add league image columns via direct connection: {e2}")
+        # Skip league image column migrations for now
+        pass
         
-        # Check if league additional columns exist
-        if inspect(db.engine).has_table('leagues'):
-            try:
-                # Try to query new columns
-                db.session.execute(db.text("SELECT is_public, total_points, created_at FROM leagues LIMIT 1"))
-            except Exception:
-                # Columns don't exist, add them
-                print("Adding is_public, total_points, created_at columns to leagues table...")
-                try:
-                    db.session.rollback()
-                    db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
-                    db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
-                    db.session.execute(db.text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                    db.session.commit()
-                    print("League additional columns added successfully")
-                except Exception as e:
-                    print(f"Error adding league additional columns: {e}")
-                    db.session.rollback()
-                    try:
-                        from sqlalchemy import create_engine, text
-                        engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
-                        with engine.connect() as conn:
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
-                            conn.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
-                            conn.commit()
-                        print("League additional columns added successfully via direct connection")
-                    except Exception as e2:
-                        print(f"Failed to add league additional columns via direct connection: {e2}")
+        # Skip league additional column migrations for now
+        pass
         
         # Check if league_requests table exists
         if not inspect(db.engine).has_table('league_requests'):
@@ -2728,28 +2586,8 @@ def admin_page():
     if not is_admin_user():
         return redirect(url_for("index"))
     
-    # Ensure rider bio columns exist before querying
-    try:
-        db.session.rollback()
-        columns = [
-            ('nickname', 'VARCHAR(100)'), ('hometown', 'VARCHAR(100)'), ('residence', 'VARCHAR(100)'),
-            ('birthdate', 'DATE'), ('height_cm', 'INTEGER'), ('weight_kg', 'INTEGER'),
-            ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
-            ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
-            ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
-            ('bio', 'TEXT'), ('achievements', 'TEXT')
-        ]
-        for col, typ in columns:
-            exists = db.session.execute(db.text("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name='riders' AND column_name=:col
-            """), {'col': col}).fetchone()
-            if not exists:
-                db.session.execute(db.text(f"ALTER TABLE riders ADD COLUMN {col} {typ}"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        pass
+    # Skip rider bio column migrations for now
+    pass
 
     try:
         # Get the same data as the old admin page
