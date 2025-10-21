@@ -774,10 +774,10 @@ def index():
                     db.session.rollback()
                     # Try alternative approach - create a new connection
                     try:
-                        from sqlalchemy import create_engine
+                        from sqlalchemy import create_engine, text
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(sql_text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
+                            conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
                             conn.commit()
                         print("is_admin column added successfully via direct connection")
                     except Exception as e2:
@@ -802,10 +802,10 @@ def index():
                     db.session.rollback()
                     # Try alternative approach - create a new connection
                     try:
-                        from sqlalchemy import create_engine
+                        from sqlalchemy import create_engine, text
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(sql_text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
+                            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(120)"))
                             conn.commit()
                         print("email column added successfully via direct connection")
                     except Exception as e2:
@@ -873,11 +873,11 @@ def index():
                     db.session.rollback()
                     # Try alternative approach - create a new connection
                     try:
-                        from sqlalchemy import create_engine
+                        from sqlalchemy import create_engine, text
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
-                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_data TEXT"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN image_mime_type VARCHAR(50)"))
                             conn.commit()
                         print("League image columns added successfully via direct connection")
                     except Exception as e2:
@@ -902,12 +902,12 @@ def index():
                     print(f"Error adding league additional columns: {e}")
                     db.session.rollback()
                     try:
-                        from sqlalchemy import create_engine
+                        from sqlalchemy import create_engine, text
                         engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
                         with engine.connect() as conn:
-                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
-                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
-                            conn.execute(sql_text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN is_public BOOLEAN DEFAULT TRUE"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN total_points INTEGER DEFAULT 0"))
+                            conn.execute(text("ALTER TABLE leagues ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                             conn.commit()
                         print("League additional columns added successfully via direct connection")
                     except Exception as e2:
