@@ -609,7 +609,13 @@ def login():
     print(f"DEBUG: Login called - method: {request.method}")
     print(f"DEBUG: Current session before login: {dict(session)}")
     
-    if "user_id" in session:
+    # Check if session is invalidated
+    if session.get('_invalidated'):
+        print(f"DEBUG: Session is invalidated, clearing it")
+        session.clear()
+        session.modified = True
+    
+    if "user_id" in session and not session.get('_invalidated'):
         print(f"DEBUG: User already logged in, redirecting to index")
         return redirect(url_for("index"))
     
@@ -720,6 +726,8 @@ def logout():
         session.permanent = False
         # Force session to be cleared
         session.modified = True
+        # Invalidate session completely
+        session['_invalidated'] = True
         print(f"DEBUG: Logout completed - user_id after: {session.get('user_id')}")
         print(f"DEBUG: Full session after logout: {dict(session)}")
     except Exception as e:
@@ -754,6 +762,24 @@ def force_logout():
         import traceback
         traceback.print_exc()
         return redirect(url_for("index"))
+
+@app.route("/reset_session")
+def reset_session():
+    """Reset session completely - nuclear option"""
+    print(f"DEBUG: Reset session called - current session: {dict(session)}")
+    try:
+        # Nuclear option - clear everything
+        session.clear()
+        session.permanent = False
+        session.modified = True
+        # Set a flag to prevent session restoration
+        session['_reset'] = True
+        print(f"DEBUG: Session reset completed")
+    except Exception as e:
+        print(f"DEBUG: Error during session reset: {e}")
+        import traceback
+        traceback.print_exc()
+    return redirect(url_for("index"))
 
 # -------------------------------------------------
 # Pages
