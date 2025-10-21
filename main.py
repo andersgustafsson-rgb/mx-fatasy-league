@@ -3885,6 +3885,87 @@ def submit_results():
     return redirect(url_for("admin_page"))
 
 
+@app.post("/admin/simulate_all_users_picks/<int:competition_id>")
+def admin_simulate_all_users_picks(competition_id):
+    """Simulate picks for all users to test 'Se Andras Picks' functionality"""
+    if not is_admin_user():
+        return redirect(url_for("login"))
+    
+    try:
+        # Get all users except current user
+        current_user_id = session["user_id"]
+        users = User.query.filter(User.id != current_user_id).all()
+        
+        # Get all riders
+        riders_450 = Rider.query.filter_by(class_name='450cc').all()
+        riders_250 = Rider.query.filter_by(class_name='250cc').all()
+        
+        if not riders_450 or not riders_250:
+            return jsonify({"error": "No riders found"}), 400
+        
+        for user in users:
+            # Clear existing picks for this user and competition
+            RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+            HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+            WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+            
+            # Create random picks for 450cc (top 6)
+            import random
+            selected_450 = random.sample(riders_450, min(6, len(riders_450)))
+            for i, rider in enumerate(selected_450, 1):
+                pick = RacePick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=rider.id,
+                    predicted_position=i
+                )
+                db.session.add(pick)
+            
+            # Create random picks for 250cc (top 6)
+            selected_250 = random.sample(riders_250, min(6, len(riders_250)))
+            for i, rider in enumerate(selected_250, 1):
+                pick = RacePick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=rider.id,
+                    predicted_position=i
+                )
+                db.session.add(pick)
+            
+            # Create holeshot picks
+            holeshot_450 = HoleshotPick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=random.choice(riders_450).id,
+                class_name='450cc'
+            )
+            db.session.add(holeshot_450)
+            
+            holeshot_250 = HoleshotPick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=random.choice(riders_250).id,
+                class_name='250cc'
+            )
+            db.session.add(holeshot_250)
+            
+            # Create wildcard pick
+            wildcard = WildcardPick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=random.choice(riders_450 + riders_250).id,
+                position=random.randint(1, 6)
+            )
+            db.session.add(wildcard)
+        
+        db.session.commit()
+        return jsonify({"message": f"Simulated picks for {len(users)} users"})
+        
+    except Exception as e:
+        print(f"Error simulating picks: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.post("/admin/simulate/<int:competition_id>")
 def admin_simulate(competition_id):
     if not is_admin_user():
@@ -4631,7 +4712,7 @@ def get_other_users_picks(competition_id):
         if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
             print(f"DEBUG: Including user {user.username} - picks_450: {picks_450}")
             print(f"DEBUG: Including user {user.username} - picks_250: {picks_250}")
-            users_picks.append({
+            user_data = {
                 "username": user.username,
                 "display_name": getattr(user, 'display_name', None) or user.username,
                 "picks_450": picks_450,
@@ -4639,7 +4720,9 @@ def get_other_users_picks(competition_id):
                 "holeshot_450": holeshot_450,
                 "holeshot_250": holeshot_250,
                 "wildcard": wildcard
-            })
+            }
+            print(f"DEBUG: Adding user data: {user_data['display_name']} (username: {user_data['username']})")
+            users_picks.append(user_data)
         else:
             print(f"DEBUG: Excluding user {user.username} - no picks found")
     
