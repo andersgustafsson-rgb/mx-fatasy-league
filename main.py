@@ -622,17 +622,28 @@ def login():
             print(f"Password check: {password_check}")
             
             if password_check:
-                session.permanent = True  # Enable session timeout
-                session["user_id"] = user.id
-                session["username"] = user.username
-                session["login_time"] = datetime.utcnow().isoformat()
-                print("Login successful, redirecting...")
-                
-                # Check if this is an AJAX request (from popup)
-                if request.form.get('modal'):
-                    return jsonify({"success": True, "redirect": url_for("index")})
-                else:
-                    return redirect(url_for("index"))
+                try:
+                    # Clear any existing session first
+                    session.clear()
+                    session.permanent = True  # Enable session timeout
+                    session["user_id"] = user.id
+                    session["username"] = user.username
+                    session["login_time"] = datetime.utcnow().isoformat()
+                    session.modified = True  # Force session to be saved
+                    print("Login successful, redirecting...")
+                    
+                    # Check if this is an AJAX request (from popup)
+                    if request.form.get('modal'):
+                        return jsonify({"success": True, "redirect": url_for("index")})
+                    else:
+                        return redirect(url_for("index"))
+                except Exception as e:
+                    print(f"Error during login session setup: {e}")
+                    if request.form.get('modal'):
+                        return jsonify({"success": False, "error": "Session error, please try again"})
+                    else:
+                        flash("Session error, please try again", "error")
+                        return render_template("login.html")
         
         print("Login failed")
         # Check if this is an AJAX request (from popup)
@@ -674,12 +685,32 @@ def register():
 @app.route("/logout")
 def logout():
     print(f"Logout called - user_id before: {session.get('user_id')}")
-    # Clear all session data
-    session.clear()
-    # Also clear any potential session cookies
-    session.permanent = False
-    print(f"Logout completed - user_id after: {session.get('user_id')}")
+    try:
+        # Clear all session data
+        session.clear()
+        # Also clear any potential session cookies
+        session.permanent = False
+        # Force session to be cleared
+        session.modified = True
+        print(f"Logout completed - user_id after: {session.get('user_id')}")
+    except Exception as e:
+        print(f"Error during logout: {e}")
     return redirect(url_for("index"))
+
+@app.route("/force_logout")
+def force_logout():
+    """Force logout - clear all sessions and cookies"""
+    try:
+        session.clear()
+        session.permanent = False
+        session.modified = True
+        # Clear any potential session cookies
+        response = redirect(url_for("index"))
+        response.set_cookie('session', '', expires=0)
+        return response
+    except Exception as e:
+        print(f"Error during force logout: {e}")
+        return redirect(url_for("index"))
 
 # -------------------------------------------------
 # Pages
