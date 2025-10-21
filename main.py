@@ -8427,7 +8427,7 @@ def force_create_all_trackmaps():
 
 @app.route("/bulletin")
 def bulletin_board():
-    """Anslagstavla - visa alla posts"""
+    """Trash Talk Brädan - visa alla posts"""
     if "user_id" not in session:
         return redirect(url_for("login"))
     
@@ -8498,7 +8498,7 @@ def bulletin_board():
 
 @app.post("/bulletin/post")
 def create_bulletin_post():
-    """Skapa ny post på anslagstavlan"""
+    """Skapa ny post på Trash Talk Brädan"""
     if "user_id" not in session:
         return jsonify({"error": "Not logged in"}), 401
     
@@ -8551,7 +8551,7 @@ def create_bulletin_post():
 
 @app.delete("/bulletin/post/<int:post_id>")
 def delete_bulletin_post(post_id):
-    """Ta bort post från anslagstavlan"""
+    """Ta bort post från Trash Talk Brädan"""
     if "user_id" not in session:
         return jsonify({"error": "Not logged in"}), 401
     
