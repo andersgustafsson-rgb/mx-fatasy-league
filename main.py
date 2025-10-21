@@ -4559,6 +4559,8 @@ def get_other_users_picks(competition_id):
     current_user_id = session["user_id"]
     other_users = User.query.filter(User.id != current_user_id).all()
     
+    print(f"DEBUG: Found {len(other_users)} other users")
+    
     users_picks = []
     for user in other_users:
         # Get race picks for this user (only top 6 per class)
@@ -4624,9 +4626,11 @@ def get_other_users_picks(competition_id):
                     "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                 }
         
+        print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
+        
         if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
-            print(f"DEBUG: User {user.username} picks_450: {picks_450}")
-            print(f"DEBUG: User {user.username} picks_250: {picks_250}")
+            print(f"DEBUG: Including user {user.username} - picks_450: {picks_450}")
+            print(f"DEBUG: Including user {user.username} - picks_250: {picks_250}")
             users_picks.append({
                 "username": user.username,
                 "display_name": getattr(user, 'display_name', None) or user.username,
@@ -4636,7 +4640,10 @@ def get_other_users_picks(competition_id):
                 "holeshot_250": holeshot_250,
                 "wildcard": wildcard
             })
+        else:
+            print(f"DEBUG: Excluding user {user.username} - no picks found")
     
+    print(f"DEBUG: Returning {len(users_picks)} users with picks")
     return jsonify(users_picks)
 
 @app.post("/save_picks")
