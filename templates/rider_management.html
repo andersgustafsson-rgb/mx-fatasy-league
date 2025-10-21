@@ -30,6 +30,35 @@
             </div>
         </div>
 
+        <!-- Search Function -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">🔍 Sök Förare</h3>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input 
+                    type="text" 
+                    id="riderSearch" 
+                    placeholder="Sök efter namn, nummer eller team..." 
+                    class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                <button 
+                    onclick="searchRiders()" 
+                    class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                    Sök
+                </button>
+                <button 
+                    onclick="clearSearch()" 
+                    class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                    Rensa
+                </button>
+            </div>
+            <div id="searchResults" class="mt-4 hidden">
+                <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Sökresultat:</h4>
+                <div id="searchResultsList" class="space-y-2"></div>
+            </div>
+        </div>
+
         <!-- Tab Navigation -->
         <div class="flex flex-wrap gap-2 mb-6">
             <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250">
@@ -104,13 +133,13 @@
                             </thead>
                             <tbody id="riders-250">
                                 {% for rider in riders_250_east %}
-                                <tr class="border-b border-gray-700 hover:bg-gray-800">
-                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
-                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="px-4 py-3">
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">East</span>
                                     </td>
-                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east')" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
@@ -124,13 +153,13 @@
                                 </tr>
                                 {% endfor %}
                                 {% for rider in riders_250_west %}
-                                <tr class="border-b border-gray-700 hover:bg-gray-800">
-                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
-                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
+                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="px-4 py-3">
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-600 text-white">West</span>
                                     </td>
-                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west')" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
@@ -206,10 +235,10 @@
                             </thead>
                             <tbody id="riders-450">
                                 {% for rider in riders_450 %}
-                                <tr class="border-b border-gray-700 hover:bg-gray-800">
-                                    <td class="px-4 py-3 text-white">{{ rider.rider_number }}</td>
-                                    <td class="px-4 py-3 text-white">{{ rider.name }}</td>
-                                    <td class="px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
+                                    <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
+                                    <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
+                                    <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '450cc', '')" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
@@ -359,6 +388,69 @@
     </div>
 
     <script>
+        // Search functionality
+        function searchRiders() {
+            const searchTerm = document.getElementById('riderSearch').value.toLowerCase().trim();
+            const resultsDiv = document.getElementById('searchResults');
+            const resultsList = document.getElementById('searchResultsList');
+            
+            if (!searchTerm) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+            
+            // Get all riders from both tabs
+            const allRiders = [];
+            document.querySelectorAll('.rider-item').forEach(item => {
+                const name = item.querySelector('.rider-name')?.textContent?.toLowerCase() || '';
+                const number = item.querySelector('.rider-number')?.textContent?.toLowerCase() || '';
+                const team = item.querySelector('.rider-team')?.textContent?.toLowerCase() || '';
+                const bike = item.querySelector('.rider-bike')?.textContent?.toLowerCase() || '';
+                
+                if (name.includes(searchTerm) || number.includes(searchTerm) || team.includes(searchTerm) || bike.includes(searchTerm)) {
+                    allRiders.push({
+                        element: item,
+                        name: item.querySelector('.rider-name')?.textContent || '',
+                        number: item.querySelector('.rider-number')?.textContent || '',
+                        team: item.querySelector('.rider-team')?.textContent || '',
+                        bike: item.querySelector('.rider-bike')?.textContent || ''
+                    });
+                }
+            });
+            
+            if (allRiders.length === 0) {
+                resultsList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Inga förare hittades</p>';
+            } else {
+                resultsList.innerHTML = allRiders.map(rider => `
+                    <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="font-semibold text-gray-800 dark:text-white">${rider.name}</span>
+                                <span class="text-gray-600 dark:text-gray-400 ml-2">#${rider.number}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                                ${rider.team} • ${rider.bike}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            resultsDiv.classList.remove('hidden');
+        }
+        
+        function clearSearch() {
+            document.getElementById('riderSearch').value = '';
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+        
+        // Allow search on Enter key
+        document.getElementById('riderSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchRiders();
+            }
+        });
+
         // Tab functionality
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', () => {
