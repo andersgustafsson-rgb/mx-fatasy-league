@@ -1715,7 +1715,7 @@ def series_page(series_id):
             
             # Check if picks are locked for this competition - OPTIMIZED
             # Use simple date comparison instead of complex is_picks_locked function
-            if comp.event_date and comp.event_date <= current_time:
+            if comp.event_date and comp.event_date <= current_time.date():
                 picks_locked = True
             else:
                 picks_locked = False
@@ -1761,7 +1761,7 @@ def series_page(series_id):
         picks_open = False
         if next_race:
             # Use simple date comparison instead of complex is_picks_locked function
-            picks_open = next_race.event_date and next_race.event_date > current_time
+            picks_open = next_race.event_date and next_race.event_date > current_time.date()
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
