@@ -6,19 +6,109 @@
   <title>Skapa ditt Säsongsteam</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .rider-card:hover { transform: translateY(-4px); }
-    .btn-add:disabled { background-color: #4b5563; cursor: not-allowed; opacity: 0.6; }
-    .rule-valid { color: #22c55e; }
-    .rule-invalid { color: #ef4444; }
-    #toast { position: fixed; bottom: 20px; left: 50%;
+    .rider-card { 
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
+    }
+    .rider-card:hover { 
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      border-color: #3b82f6;
+    }
+    .rider-card.selected {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    }
+    .btn-add {
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-add:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    .btn-add:disabled { 
+      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      cursor: not-allowed; 
+      opacity: 0.6; 
+    }
+    .btn-add.selected {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+    .rule-valid { color: #10b981; font-weight: 600; }
+    .rule-invalid { color: #ef4444; font-weight: 600; }
+    .budget-bar {
+      height: 8px;
+      background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+    .budget-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1f2937 0%, #374151 100%);
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+    .team-card {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 2px solid #e2e8f0;
+      transition: all 0.3s ease;
+    }
+    .team-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+    }
+    .filter-btn {
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .filter-btn.active {
+      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .filter-btn:hover:not(.active) {
+      transform: scale(1.02);
+    }
+    #toast { 
+      position: fixed; 
+      bottom: 20px; 
+      left: 50%;
              transform: translateX(-50%) translateY(100px);
-             padding: 16px 24px; border-radius: 8px;
-             color: white; font-weight: bold;
-             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-             transition: transform 0.3s ease-in-out; z-index: 1000; }
-    #toast.show { transform: translateX(-50%) translateY(0); }
-    #toast.success { background-color: #22c55e; }
-    #toast.error { background-color: #ef4444; }
+      padding: 16px 24px; 
+      border-radius: 12px;
+      color: white; 
+      font-weight: bold;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+      z-index: 1000; 
+    }
+    #toast.show { transform: translateX(-50%) translateY(0) scale(1.05); }
+    #toast.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    #toast.error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .rider-image {
+      border: 3px solid #e5e7eb;
+      transition: all 0.3s ease;
+    }
+    .rider-card:hover .rider-image {
+      border-color: #3b82f6;
+      transform: scale(1.1);
+    }
+    .price-tag {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .header-gradient {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
@@ -28,9 +118,9 @@
     <!-- Header - Responsiv layout -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
       <header>
-        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-blue-500">Skapa ditt Säsongsteam</h1>
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Skapa ditt Säsongsteam</h1>
         <p class="text-base sm:text-lg mt-2 text-gray-600 dark:text-gray-400">
-          Inloggad som: <strong>{{ username }}</strong>
+          Inloggad som: <strong class="text-blue-600">{{ username }}</strong>
         </p>
       </header>
       <a href="{{ url_for('index') }}"
@@ -44,52 +134,66 @@
       <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
         <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Välj Förare</h2>
 
-        <div class="mb-3 sm:mb-4 flex flex-wrap gap-2">
-          <button id="tab-all" class="px-2 sm:px-3 py-1 rounded bg-blue-600 text-white text-xs sm:text-sm" onclick="setFilter('all')">
-            Alla
+        <div class="mb-3 sm:mb-4 flex flex-wrap gap-2 items-center">
+          <button id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium active" onclick="setFilter('all')">
+            🏍️ Alla
           </button>
-          <button id="tab-450" class="px-2 sm:px-3 py-1 rounded bg-gray-700 text-white text-xs sm:text-sm" onclick="setFilter('450cc')">
-            450cc
+          <button id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('450cc')">
+            🔥 450cc
           </button>
-          <button id="tab-250" class="px-2 sm:px-3 py-1 rounded bg-gray-700 text-white text-xs sm:text-sm" onclick="setFilter('250cc')">
-            250cc
+          <button id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('250cc')">
+            ⚡ 250cc
           </button>
-          <span class="text-xs text-gray-400 ml-2">(Klicka på + för att lägga till)</span>
+          <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
         </div>
 
         <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
       </div>
 
       <!-- Ditt team -->
-      <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg h-fit sticky top-4 sm:top-8">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Ditt Team</h2>
+      <div class="team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl h-fit sticky top-4 sm:top-8">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-blue-200 pb-3 text-blue-600">🏆 Ditt Team</h2>
 
-        <div class="mb-3 sm:mb-4">
-          <label for="team-name-input" class="block dark:text-gray-300 mb-1 sm:mb-2 text-sm sm:text-base">Teamnamn:</label>
+        <div class="mb-4">
+          <label for="team-name-input" class="block dark:text-gray-300 mb-2 text-sm font-medium">Teamnamn:</label>
           <input type="text" id="team-name-input"
-                 class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm sm:text-base"
+                 class="w-full p-3 border-2 border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                  placeholder="T.ex. Team Awesome" oninput="validateAndRender()" />
         </div>
 
-        <div class="mb-3 sm:mb-4 p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-md">
-          <h4 class="font-semibold mb-2 text-sm sm:text-base">Regler:</h4>
-          <ul class="space-y-1 text-xs sm:text-sm">
-            <li id="rule-total" class="flex justify-between"><span>Totalt:</span><span>0 / 4</span></li>
-            <li id="rule-450" class="flex justify-between"><span>450cc:</span><span>0 / 2</span></li>
-            <li id="rule-250" class="flex justify-between"><span>250cc:</span><span>0 / 2</span></li>
-            <li id="rule-budget" class="flex justify-between"><span>Budget:</span>
-              <span id="budget-remaining">1 500 000</span>
+        <div class="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-lg border border-blue-200">
+          <h4 class="font-semibold mb-3 text-sm text-blue-700 dark:text-blue-300">📋 Regler:</h4>
+          <ul class="space-y-2 text-sm">
+            <li id="rule-total" class="flex justify-between items-center">
+              <span>👥 Totalt:</span><span class="font-mono">0 / 4</span>
+            </li>
+            <li id="rule-450" class="flex justify-between items-center">
+              <span>🔥 450cc:</span><span class="font-mono">0 / 2</span>
+            </li>
+            <li id="rule-250" class="flex justify-between items-center">
+              <span>⚡ 250cc:</span><span class="font-mono">0 / 2</span>
+            </li>
+            <li id="rule-budget" class="flex justify-between items-center">
+              <span>💰 Budget:</span>
+              <span id="budget-remaining" class="font-mono text-green-600 font-bold">1 500 000</span>
             </li>
           </ul>
+          
+          <!-- Budget Progress Bar -->
+          <div class="mt-3">
+            <div class="budget-bar">
+              <div class="budget-fill" id="budget-progress" style="width: 0%"></div>
+            </div>
+          </div>
         </div>
 
         <div id="your-team-list" class="space-y-2 sm:space-y-3"></div>
 
         <button onclick="saveSeasonTeam()"
                 id="save-team-btn"
-                class="mt-4 sm:mt-6 w-full bg-green-600 hover:bg-green-700 font-bold py-2 px-3 sm:px-4 rounded text-white disabled:opacity-60 text-sm sm:text-base"
+                class="mt-6 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg"
                 disabled>
-          Spara Team
+          💾 Spara Team
         </button>
       </div>
     </main>
@@ -117,12 +221,18 @@
 
     function setFilter(cls) {
       classFilter = cls;
-      document.getElementById("tab-all").className =
-        "px-3 py-1 rounded " + (cls === "all" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
-      document.getElementById("tab-450").className =
-        "px-3 py-1 rounded " + (cls === "450cc" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
-      document.getElementById("tab-250").className =
-        "px-3 py-1 rounded " + (cls === "250cc" ? "bg-blue-600 text-white" : "bg-gray-700 text-white");
+      
+      // Update filter buttons with new classes
+      const allBtn = document.getElementById("tab-all");
+      const btn450 = document.getElementById("tab-450");
+      const btn250 = document.getElementById("tab-250");
+      
+      allBtn.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
+        (cls === "all" ? "bg-blue-600 active" : "bg-gray-600");
+      btn450.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
+        (cls === "450cc" ? "bg-blue-600 active" : "bg-gray-600");
+      btn250.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
+        (cls === "250cc" ? "bg-blue-600 active" : "bg-gray-600");
 
       renderRiderList();
     }
@@ -132,13 +242,16 @@
     }
 
     function riderCardHTML(r) {
+      const isSelected = myTeam.some(x => x.id === r.id);
+      const canAdd = canAddRider(r);
+      
       // Bygg HTML för rider-kortet: visa image_url om finns, annars logga/placeholder
       const imgHtml = r.image_url
         ? `<img src="${window.location.origin}${window.location.pathname.includes('/static') ? '' : ''}${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
                 alt="${r.name} headshot"
-                class="w-10 h-10 object-cover rounded-full" width="40" height="40"
+                class="rider-image w-12 h-12 object-cover rounded-full" width="48" height="48"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
+            <div class="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center" style="display: none;">
               ${r.bike_brand 
                 ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
                        alt="${r.bike_brand} logo" 
@@ -148,27 +261,27 @@
                 : `<span class="text-white text-xs font-bold">#${r.rider_number}</span>`}
             </div>`
         : (r.bike_brand
-              ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
+            ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                    alt="${r.bike_brand} logo"
-                   class="w-10 h-10 object-contain" width="40" height="40" />`
-            : `<div class="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                   class="rider-image w-12 h-12 object-contain" width="48" height="48" />`
+            : `<div class="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center">
                  <span class="text-white text-xs font-bold">#${r.rider_number}</span>
                </div>`);
 
       return `
-        <div class="rider-card bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow flex items-center gap-3 transition-transform">
+        <div class="rider-card bg-white dark:bg-gray-700 p-4 rounded-xl shadow-lg flex items-center gap-4 ${isSelected ? 'selected' : ''}">
           <div class="flex-shrink-0">${imgHtml}</div>
           <div class="flex-1">
-            <div class="font-bold">${r.name}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-300">
-              ${r.class} • #${r.rider_number || "-"}
+            <div class="font-bold text-gray-800 dark:text-gray-200">${r.name}</div>
+            <div class="text-xs text-gray-600 dark:text-gray-300 mb-1">
+              ${r.class === '450cc' ? '🔥' : '⚡'} ${r.class} • #${r.rider_number || "-"}
             </div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">${r.bike_brand || "—"}</div>
-            <div class="font-semibold text-green-600 mt-1">${formatCurrency(r.price)} kr</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">${r.bike_brand || "—"}</div>
+            <div class="price-tag inline-block">${formatCurrency(r.price)} kr</div>
           </div>
-          <button class="btn-add px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                  ${!canAddRider(r) ? "disabled" : ""}>
-            ${myTeam.some(x => x.id === r.id) ? "Vald" : "Lägg till +"}
+          <button class="btn-add px-4 py-2 text-white rounded-lg font-medium text-sm ${isSelected ? 'selected' : 'bg-blue-500 hover:bg-blue-600'}"
+                  ${!canAdd ? "disabled" : ""}>
+            ${isSelected ? "✅ Vald" : "➕ Lägg till"}
           </button>
         </div>
       `;
@@ -224,15 +337,15 @@
 
       myTeam.forEach((r) => {
         const row = document.createElement("div");
-        row.className = "flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-3 rounded-md";
+        row.className = "flex justify-between items-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 p-3 rounded-lg border border-green-200 dark:border-gray-600";
         row.innerHTML = `
           <div class="flex items-center gap-3">
             ${r.image_url
               ? `<img src="${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
                        alt="${r.name} headshot"
-                       class="w-8 h-8 object-cover rounded-full" width="32" height="32"
+                       class="w-10 h-10 object-cover rounded-full border-2 border-green-300" width="40" height="40"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                   <div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center" style="display: none;">
+                   <div class="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center" style="display: none;">
                      ${r.bike_brand 
                        ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
                               alt="${r.bike_brand} logo" 
@@ -244,16 +357,17 @@
               : (r.bike_brand
                   ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                          alt="${r.bike_brand} logo"
-                         class="w-8 h-8 object-contain" width="32" height="32" />`
-                  : `<div class="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                         class="w-10 h-10 object-contain border-2 border-green-300 rounded-full" width="40" height="40" />`
+                  : `<div class="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
                        <span class="text-white text-xs font-bold">#${r.rider_number}</span>
                      </div>`)}
             <div>
-              <div class="font-semibold">${r.name}</div>
-              <div class="text-xs text-gray-500">${r.class} • #${r.rider_number || "-"}</div>
+              <div class="font-semibold text-gray-800 dark:text-gray-200">${r.name}</div>
+              <div class="text-xs text-gray-600 dark:text-gray-300">${r.class === '450cc' ? '🔥' : '⚡'} ${r.class} • #${r.rider_number || "-"}</div>
+              <div class="text-xs text-green-600 font-medium">${formatCurrency(r.price)} kr</div>
             </div>
           </div>
-          <button class="text-red-500 font-bold" onclick="removeRider(${r.id})">✕</button>
+          <button class="text-red-500 hover:text-red-700 font-bold text-lg hover:scale-110 transition-transform" onclick="removeRider(${r.id})" title="Ta bort från team">🗑️</button>
         `;
         list.appendChild(row);
       });
@@ -274,6 +388,21 @@
       rule("rule-450", c450 === 2, `${c450} / 2`);
       rule("rule-250", c250 === 2, `${c250} / 2`);
       rule("rule-budget", budget >= 0, `${formatCurrency(budget)}`);
+      
+      // Update budget progress bar
+      const spent = totalBudget - budget;
+      const percentage = (spent / totalBudget) * 100;
+      const progressBar = document.getElementById("budget-progress");
+      progressBar.style.width = `${percentage}%`;
+      
+      // Change color based on budget usage
+      if (percentage > 80) {
+        progressBar.style.background = "linear-gradient(90deg, #ef4444 0%, #dc2626 100%)";
+      } else if (percentage > 60) {
+        progressBar.style.background = "linear-gradient(90deg, #f59e0b 0%, #d97706 100%)";
+      } else {
+        progressBar.style.background = "linear-gradient(90deg, #10b981 0%, #059669 100%)";
+      }
 
       // Uppdatera riderlista (disable knappar)
       renderRiderList();
