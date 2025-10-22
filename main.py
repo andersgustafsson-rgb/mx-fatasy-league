@@ -11,6 +11,7 @@ from flask import (
     redirect,
     url_for,
     flash,
+    make_response,
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
