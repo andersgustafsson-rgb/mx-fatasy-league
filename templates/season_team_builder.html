@@ -610,6 +610,10 @@
         existingTeamRiders.includes(rider.id.toString())
       );
       
+      // Calculate the cost of the current team and update the budget
+      const currentTeamCost = currentTeam.reduce((sum, rider) => sum + rider.price, 0);
+      budget = totalBudget - currentTeamCost; // Set initial budget based on current team
+      
       renderCurrentTeam();
     }
 
