@@ -464,6 +464,15 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
+        
+        // Check if response is JSON
+        const contentType = resp.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.error("Response is not JSON:", await resp.text());
+          showToast("Serverfel - fick inte JSON-svar", false);
+          return;
+        }
+        
         const data = await resp.json();
         if (!resp.ok) {
           showToast(data.message || "Kunde inte spara teamet.", false);
@@ -472,8 +481,8 @@
         showToast(data.message || "Team sparat!", true);
         setTimeout(() => (window.location.href = "/season_team"), 600);
       } catch (e) {
-        console.error(e);
-        showToast("Nätverksfel vid sparning", false);
+        console.error("Error saving team:", e);
+        showToast("Nätverksfel vid sparning: " + e.message, false);
       }
     }
 

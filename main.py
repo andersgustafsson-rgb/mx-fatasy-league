@@ -2137,74 +2137,79 @@ def delete_league(league_id):
 
 @app.post("/save_season_team")
 def save_season_team():
-    if "user_id" not in session:
-        return jsonify({"message": "not_logged_in"}), 401
-
-    data = request.get_json(silent=True) or {}
-    team_name = (data.get("team_name") or "").strip()
-    team_list = data.get("team") or []
-
-    if not team_name:
-        return jsonify({"message": "Du måste ange teamnamn"}), 400
-    if not isinstance(team_list, list) or len(team_list) != 4:
-        return jsonify({"message": "Du måste välja exakt 4 förare"}), 400
-
     try:
-        rider_ids = [int(x.get("id")) for x in team_list if x.get("id")]
-    except Exception:
-        return jsonify({"message": "Ogiltiga rider-id:n"}), 400
-    if len(set(rider_ids)) != 4:
-        return jsonify({"message": "Dubbla förare valda, välj fyra unika"}), 400
+        if "user_id" not in session:
+            return jsonify({"message": "not_logged_in"}), 401
 
-    riders = Rider.query.filter(Rider.id.in_(rider_ids)).all()
-    if len(riders) != 4:
-        return jsonify({"message": "Några förare hittades inte"}), 400
+        data = request.get_json(silent=True) or {}
+        team_name = (data.get("team_name") or "").strip()
+        team_list = data.get("team") or []
 
-    c450 = sum(1 for r in riders if r.class_name == "450cc")
-    c250 = sum(1 for r in riders if r.class_name == "250cc")
-    if c450 != 2 or c250 != 2:
-        return jsonify({"message": "Regel: 2 x 450cc och 2 x 250cc krävs"}), 400
+        if not team_name:
+            return jsonify({"message": "Du måste ange teamnamn"}), 400
+        if not isinstance(team_list, list) or len(team_list) != 4:
+            return jsonify({"message": "Du måste välja exakt 4 förare"}), 400
 
-    uid = session["user_id"]
-    team = SeasonTeam.query.filter_by(user_id=uid).first()
-    is_team_change = False
-    
-    if not team:
-        # First time creating team - no penalty
-        team = SeasonTeam(user_id=uid, team_name=team_name, total_points=0)
-        db.session.add(team)
-        db.session.flush()
-    else:
-        # Team already exists - this is a change, apply -50 point penalty
-        is_team_change = True
-        team.team_name = team_name
-        SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
+        try:
+            rider_ids = [int(x.get("id")) for x in team_list if x.get("id")]
+        except Exception:
+            return jsonify({"message": "Ogiltiga rider-id:n"}), 400
+        if len(set(rider_ids)) != 4:
+            return jsonify({"message": "Dubbla förare valda, välj fyra unika"}), 400
+
+        riders = Rider.query.filter(Rider.id.in_(rider_ids)).all()
+        if len(riders) != 4:
+            return jsonify({"message": "Några förare hittades inte"}), 400
+
+        c450 = sum(1 for r in riders if r.class_name == "450cc")
+        c250 = sum(1 for r in riders if r.class_name == "250cc")
+        if c450 != 2 or c250 != 2:
+            return jsonify({"message": "Regel: 2 x 450cc och 2 x 250cc krävs"}), 400
+
+        uid = session["user_id"]
+        team = SeasonTeam.query.filter_by(user_id=uid).first()
+        is_team_change = False
         
-        # Apply -50 point penalty to user's total points
-        user = User.query.get(uid)
-        if user:
-            # Get user's current total points from all competitions
-            total_points = db.session.query(db.func.sum(CompetitionScore.points)).filter_by(user_id=uid).scalar() or 0
+        if not team:
+            # First time creating team - no penalty
+            team = SeasonTeam(user_id=uid, team_name=team_name, total_points=0)
+            db.session.add(team)
+            db.session.flush()
+        else:
+            # Team already exists - this is a change, apply -50 point penalty
+            is_team_change = True
+            team.team_name = team_name
+            SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
             
-            # Create a penalty score entry
-            penalty_score = CompetitionScore(
-                user_id=uid,
-                competition_id=None,  # No specific competition for team change penalty
-                points=-50,
-                created_at=datetime.utcnow()
-            )
-            db.session.add(penalty_score)
-            print(f"DEBUG: Applied -50 point penalty for team change to user {uid}")
+            # Apply -50 point penalty to user's total points
+            user = User.query.get(uid)
+            if user:
+                # Create a penalty score entry
+                penalty_score = CompetitionScore(
+                    user_id=uid,
+                    competition_id=None,  # No specific competition for team change penalty
+                    points=-50,
+                    created_at=datetime.utcnow()
+                )
+                db.session.add(penalty_score)
+                print(f"DEBUG: Applied -50 point penalty for team change to user {uid}")
 
-    for r in riders:
-        db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
+        for r in riders:
+            db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
 
-    db.session.commit()
-    
-    if is_team_change:
-        return jsonify({"message": "Team uppdaterat! -50 poäng för teamändring."}), 200
-    else:
-        return jsonify({"message": "Team sparat!"}), 200
+        db.session.commit()
+        
+        if is_team_change:
+            return jsonify({"message": "Team uppdaterat! -50 poäng för teamändring."}), 200
+        else:
+            return jsonify({"message": "Team sparat!"}), 200
+            
+    except Exception as e:
+        print(f"ERROR in save_season_team: {e}")
+        import traceback
+        traceback.print_exc()
+        db.session.rollback()
+        return jsonify({"message": f"Ett fel uppstod: {str(e)}"}), 500
 
 
 # -------------------------------------------------
