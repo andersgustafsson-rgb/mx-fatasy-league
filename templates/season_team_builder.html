@@ -426,6 +426,16 @@
       const c250 = myTeam.filter((x) => x.class === "250cc").length;
       if (c450 !== 2 || c250 !== 2) { showToast("Regel: 2×450cc och 2×250cc", false); return; }
 
+      // Check if this is a team change (user already has a team)
+      const isTeamChange = await checkIfTeamExists();
+      
+      if (isTeamChange) {
+        const confirmed = confirm("⚠️ Du har redan ett team!\n\nDetta kommer att kosta 50 poäng att ändra.\n\nÄr du säker på att du vill fortsätta?");
+        if (!confirmed) {
+          return;
+        }
+      }
+
       const payload = {
         team_name: name,
         team: myTeam.map((r) => ({ id: r.id })),
@@ -447,6 +457,15 @@
       } catch (e) {
         console.error(e);
         showToast("Nätverksfel vid sparning", false);
+      }
+    }
+
+    async function checkIfTeamExists() {
+      try {
+        const resp = await fetch("/season_team");
+        return resp.ok;
+      } catch (e) {
+        return false;
       }
     }
 

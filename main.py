@@ -2160,19 +2160,44 @@ def save_season_team():
 
     uid = session["user_id"]
     team = SeasonTeam.query.filter_by(user_id=uid).first()
+    is_team_change = False
+    
     if not team:
+        # First time creating team - no penalty
         team = SeasonTeam(user_id=uid, team_name=team_name, total_points=0)
         db.session.add(team)
         db.session.flush()
     else:
+        # Team already exists - this is a change, apply -50 point penalty
+        is_team_change = True
         team.team_name = team_name
         SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
+        
+        # Apply -50 point penalty to user's total points
+        user = User.query.get(uid)
+        if user:
+            # Get user's current total points from all competitions
+            total_points = db.session.query(db.func.sum(CompetitionScore.points)).filter_by(user_id=uid).scalar() or 0
+            
+            # Create a penalty score entry
+            penalty_score = CompetitionScore(
+                user_id=uid,
+                competition_id=None,  # No specific competition for team change penalty
+                points=-50,
+                created_at=datetime.utcnow()
+            )
+            db.session.add(penalty_score)
+            print(f"DEBUG: Applied -50 point penalty for team change to user {uid}")
 
     for r in riders:
         db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
 
     db.session.commit()
-    return jsonify({"message": "Team sparat!"}), 200
+    
+    if is_team_change:
+        return jsonify({"message": "Team uppdaterat! -50 poäng för teamändring."}), 200
+    else:
+        return jsonify({"message": "Team sparat!"}), 200
 
 
 # -------------------------------------------------
