@@ -605,6 +605,7 @@
       console.log("🔍 replaceRider called with ID:", riderIdToReplace);
       console.log("🔍 currentTeam:", currentTeam);
       console.log("🔍 currentTeam IDs and names:", currentTeam.map(r => `${r.id}: ${r.name}`));
+      console.log("🔍 Looking for rider with ID:", riderIdToReplace);
       
       // Find the rider to replace
       const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
