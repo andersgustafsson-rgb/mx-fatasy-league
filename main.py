@@ -610,7 +610,6 @@ def login():
     if session.get('_invalidated') or session.get('_reset'):
         session.clear()
         session.modified = True
-        session.regenerate()
     
     if "user_id" in session and not session.get('_invalidated') and not session.get('_reset'):
         return redirect(url_for("index"))
@@ -710,8 +709,6 @@ def reset_session():
     session.modified = True
     # Set a flag to prevent session restoration
     session['_reset'] = True
-    # Force session regeneration
-    session.regenerate()
     return redirect(url_for("index"))
 
 @app.route("/kill_session")
@@ -721,8 +718,6 @@ def kill_session():
     session.clear()
     session.permanent = False
     session.modified = True
-    # Force session regeneration
-    session.regenerate()
     # Clear any potential cookies
     response = redirect(url_for("index"))
     response.set_cookie('session', '', expires=0, path='/', domain=None)
