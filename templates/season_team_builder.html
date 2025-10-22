@@ -753,11 +753,12 @@
             budget -= rider.price;
           }
         });
+        // Add the price of the rider being replaced back to budget
+        budget += riderToReplace.price;
       }
       
       // Show a message about what we're doing
-      const currentBudget = totalBudget - myTeam.reduce((sum, rider) => sum + rider.price, 0);
-      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre. Budget: ${currentBudget.toLocaleString()} kr.`, true);
+      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre. Budget: ${budget.toLocaleString()} kr.`, true);
       
       // Set filter to the same class as the rider being replaced
       setFilter(riderToReplace.class);
