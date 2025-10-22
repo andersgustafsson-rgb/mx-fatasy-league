@@ -606,81 +606,41 @@ def generate_invite_code(length=6):
 # -------------------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    print(f"DEBUG: Login called - method: {request.method}")
-    print(f"DEBUG: Current session before login: {dict(session)}")
-    
     # Check if session is invalidated or reset
     if session.get('_invalidated') or session.get('_reset'):
-        print(f"DEBUG: Session is invalidated/reset, clearing it")
         session.clear()
         session.modified = True
-        # Force a new session ID
         session.regenerate()
-        print(f"DEBUG: Session regenerated after invalidation")
     
     if "user_id" in session and not session.get('_invalidated') and not session.get('_reset'):
-        print(f"DEBUG: User already logged in, redirecting to index")
         return redirect(url_for("index"))
     
     if request.method == "POST":
         username = request.form.get("username", "")
         password = request.form.get("password", "")
         modal = request.form.get('modal')
-        print(f"DEBUG: Login attempt - username='{username}', modal={modal}")
         
         user = User.query.filter_by(username=username).first()
-        print(f"DEBUG: User found: {user is not None}")
         
-        if user:
-            print(f"DEBUG: User details - ID: {user.id}, Username: {user.username}")
-            password_check = check_password_hash(user.password_hash, password)
-            print(f"DEBUG: Password check result: {password_check}")
+        if user and check_password_hash(user.password_hash, password):
+            # Clear any existing session data
+            for key in list(session.keys()):
+                del session[key]
+            session.modified = True
             
-            if password_check:
-                try:
-                    print(f"DEBUG: Starting session setup for user {user.id}")
-                    # Clear any existing session first
-                    old_session = dict(session)
-                    print(f"DEBUG: Old session before clear: {old_session}")
-                    
-                    # More aggressive session clearing
-                    for key in list(session.keys()):
-                        del session[key]
-                    session.clear()
-                    session.permanent = False
-                    session.modified = True
-                    
-                    print(f"DEBUG: Session cleared. Old session: {old_session}")
-                    print(f"DEBUG: Session after clear: {dict(session)}")
-                    
-                    # Set new session
-                    session.permanent = True  # Enable session timeout
-                    session["user_id"] = user.id
-                    session["username"] = user.username
-                    session["login_time"] = datetime.utcnow().isoformat()
-                    session.modified = True  # Force session to be saved
-                    
-                    print(f"DEBUG: Session after setup: {dict(session)}")
-                    print(f"DEBUG: Login successful for user {user.id}")
-                    
-                    # Check if this is an AJAX request (from popup)
-                    if modal:
-                        print(f"DEBUG: Returning AJAX response for modal login")
-                        return jsonify({"success": True, "redirect": url_for("index")})
-                    else:
-                        print(f"DEBUG: Redirecting to index after regular login")
-                        return redirect(url_for("index"))
-                except Exception as e:
-                    print(f"DEBUG: Error during login session setup: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    if modal:
-                        return jsonify({"success": False, "error": f"Session error: {str(e)}"})
-                    else:
-                        flash(f"Session error: {str(e)}", "error")
-                        return render_template("login.html")
+            # Set up new session
+            session["user_id"] = user.id
+            session["username"] = user.username
+            session["login_time"] = datetime.utcnow().isoformat()
+            session.permanent = True
+            session.modified = True
+            
+            # Check if this is an AJAX request (from popup)
+            if modal:
+                return jsonify({"success": True, "redirect": url_for("index")})
+            else:
+                return redirect(url_for("index"))
         
-        print(f"DEBUG: Login failed for username '{username}'")
         # Check if this is an AJAX request (from popup)
         if modal:
             return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
@@ -689,7 +649,6 @@ def login():
             return render_template("login.html")
     
     # Handle GET request (show login page)
-    print(f"DEBUG: Showing login page")
     return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
@@ -720,94 +679,54 @@ def register():
 
 @app.route("/logout")
 def logout():
-    print(f"DEBUG: Logout called - user_id before: {session.get('user_id')}")
-    print(f"DEBUG: Full session before logout: {dict(session)}")
-    try:
-        # Clear all session data
-        session.clear()
-        # Also clear any potential session cookies
-        session.permanent = False
-        # Force session to be cleared
-        session.modified = True
-        # Invalidate session completely
-        session['_invalidated'] = True
-        print(f"DEBUG: Logout completed - user_id after: {session.get('user_id')}")
-        print(f"DEBUG: Full session after logout: {dict(session)}")
-    except Exception as e:
-        print(f"DEBUG: Error during logout: {e}")
-        import traceback
-        traceback.print_exc()
+    # Clear all session data
+    session.clear()
+    session.permanent = False
+    session.modified = True
+    session['_invalidated'] = True
     return redirect(url_for("index"))
 
 @app.route("/force_logout")
 def force_logout():
     """Force logout - clear all sessions and cookies"""
-    print(f"DEBUG: Force logout called - user_id before: {session.get('user_id')}")
-    print(f"DEBUG: Full session before force logout: {dict(session)}")
-    try:
-        # More aggressive session clearing
-        for key in list(session.keys()):
-            del session[key]
-        session.clear()
-        session.permanent = False
-        session.modified = True
-        print(f"DEBUG: Session cleared in force logout")
-        print(f"DEBUG: Session after force logout: {dict(session)}")
-        
-        # Clear any potential session cookies
-        response = redirect(url_for("index"))
-        response.set_cookie('session', '', expires=0)
-        response.set_cookie('session', '', expires=0, path='/', domain=None)
-        print(f"DEBUG: Force logout completed - redirecting to index")
-        return response
-    except Exception as e:
-        print(f"DEBUG: Error during force logout: {e}")
-        import traceback
-        traceback.print_exc()
-        return redirect(url_for("index"))
+    # More aggressive session clearing
+    for key in list(session.keys()):
+        del session[key]
+    session.clear()
+    session.permanent = False
+    session.modified = True
+    
+    # Clear any potential session cookies
+    response = redirect(url_for("index"))
+    response.set_cookie('session', '', expires=0, path='/', domain=None)
+    return response
 
 @app.route("/reset_session")
 def reset_session():
     """Reset session completely - nuclear option"""
-    print(f"DEBUG: Reset session called - current session: {dict(session)}")
-    try:
-        # Nuclear option - clear everything
-        session.clear()
-        session.permanent = False
-        session.modified = True
-        # Set a flag to prevent session restoration
-        session['_reset'] = True
-        # Force session regeneration
-        session.regenerate()
-        print(f"DEBUG: Session reset completed")
-    except Exception as e:
-        print(f"DEBUG: Error during session reset: {e}")
-        import traceback
-        traceback.print_exc()
+    # Nuclear option - clear everything
+    session.clear()
+    session.permanent = False
+    session.modified = True
+    # Set a flag to prevent session restoration
+    session['_reset'] = True
+    # Force session regeneration
+    session.regenerate()
     return redirect(url_for("index"))
 
 @app.route("/kill_session")
 def kill_session():
     """Kill session completely - ultimate nuclear option"""
-    print(f"DEBUG: Kill session called - current session: {dict(session)}")
-    try:
-        # Ultimate nuclear option
-        session.clear()
-        session.permanent = False
-        session.modified = True
-        # Force session regeneration
-        session.regenerate()
-        # Clear any potential cookies
-        response = redirect(url_for("index"))
-        response.set_cookie('session', '', expires=0)
-        response.set_cookie('session', '', expires=0, path='/', domain=None)
-        print(f"DEBUG: Session killed completely")
-        return response
-    except Exception as e:
-        print(f"DEBUG: Error during session kill: {e}")
-        import traceback
-        traceback.print_exc()
-        return redirect(url_for("index"))
+    # Ultimate nuclear option
+    session.clear()
+    session.permanent = False
+    session.modified = True
+    # Force session regeneration
+    session.regenerate()
+    # Clear any potential cookies
+    response = redirect(url_for("index"))
+    response.set_cookie('session', '', expires=0, path='/', domain=None)
+    return response
 
 # -------------------------------------------------
 # Pages
@@ -864,19 +783,13 @@ def series_status():
 
 @app.route("/")
 def index():
-    print(f"DEBUG: Index called - session: {dict(session)}")
-    print(f"DEBUG: User ID in session: {session.get('user_id')}")
-    print(f"DEBUG: Username in session: {session.get('username')}")
-    
     # Check if user is logged in
     if "user_id" in session:
         uid = session["user_id"]
         is_logged_in = True
-        print(f"DEBUG: User is logged in with ID: {uid}")
     else:
         uid = None
         is_logged_in = False
-        print(f"DEBUG: No user logged in")
     today = get_today()
 
     # Ensure database is initialized
