@@ -604,34 +604,49 @@ def generate_invite_code(length=6):
 # -------------------------------------------------
 # Auth
 # -------------------------------------------------
+
+def require_login(f):
+    """Decorator to require login for routes"""
+    def decorated_function(*args, **kwargs):
+        if "user_id" not in session or "username" not in session:
+            return redirect(url_for("login"))
+        
+        # Verify user still exists in database
+        user = User.query.get(session["user_id"])
+        if not user or user.username != session["username"]:
+            session.clear()
+            return redirect(url_for("login"))
+        
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    return decorated_function
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # Check if session is invalidated or reset
-    if session.get('_invalidated') or session.get('_reset'):
-        session.clear()
-        session.modified = True
-    
-    if "user_id" in session and not session.get('_invalidated') and not session.get('_reset'):
-        return redirect(url_for("index"))
-    
     if request.method == "POST":
-        username = request.form.get("username", "")
+        username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
         modal = request.form.get('modal')
+        
+        if not username or not password:
+            if modal:
+                return jsonify({"success": False, "error": "Användarnamn och lösenord krävs"})
+            else:
+                flash("Användarnamn och lösenord krävs", "error")
+                return render_template("login.html")
         
         user = User.query.filter_by(username=username).first()
         
         if user and check_password_hash(user.password_hash, password):
-            # Clear any existing session data
-            for key in list(session.keys()):
-                del session[key]
-            session.modified = True
+            # Complete session reset - nuclear approach
+            session.clear()
             
-            # Set up new session
+            # Set new session with minimal data
             session["user_id"] = user.id
             session["username"] = user.username
             session["login_time"] = datetime.utcnow().isoformat()
             session.permanent = True
+            
+            # Force session to be saved
             session.modified = True
             
             # Check if this is an AJAX request (from popup)
@@ -640,7 +655,7 @@ def login():
             else:
                 return redirect(url_for("index"))
         
-        # Check if this is an AJAX request (from popup)
+        # Login failed
         if modal:
             return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
         else:
@@ -678,50 +693,16 @@ def register():
 
 @app.route("/logout")
 def logout():
-    # Clear all session data
-    session.clear()
-    session.permanent = False
-    session.modified = True
-    session['_invalidated'] = True
-    return redirect(url_for("index"))
-
-@app.route("/force_logout")
-def force_logout():
-    """Force logout - clear all sessions and cookies"""
-    # More aggressive session clearing
-    for key in list(session.keys()):
-        del session[key]
+    # Complete session destruction
     session.clear()
     session.permanent = False
     session.modified = True
     
-    # Clear any potential session cookies
-    response = redirect(url_for("index"))
+    # Create response and clear cookies
+    response = make_response(redirect(url_for("index")))
     response.set_cookie('session', '', expires=0, path='/', domain=None)
     return response
 
-@app.route("/reset_session")
-def reset_session():
-    """Reset session completely - nuclear option"""
-    # Nuclear option - clear everything
-    session.clear()
-    session.permanent = False
-    session.modified = True
-    # Set a flag to prevent session restoration
-    session['_reset'] = True
-    return redirect(url_for("index"))
-
-@app.route("/kill_session")
-def kill_session():
-    """Kill session completely - ultimate nuclear option"""
-    # Ultimate nuclear option
-    session.clear()
-    session.permanent = False
-    session.modified = True
-    # Clear any potential cookies
-    response = redirect(url_for("index"))
-    response.set_cookie('session', '', expires=0, path='/', domain=None)
-    return response
 
 # -------------------------------------------------
 # Pages
@@ -778,10 +759,18 @@ def series_status():
 
 @app.route("/")
 def index():
-    # Check if user is logged in
-    if "user_id" in session:
-        uid = session["user_id"]
-        is_logged_in = True
+    # Validate session and check if user is logged in
+    if "user_id" in session and "username" in session:
+        # Verify user still exists in database
+        user = User.query.get(session["user_id"])
+        if user and user.username == session["username"]:
+            uid = session["user_id"]
+            is_logged_in = True
+        else:
+            # User no longer exists or username mismatch - clear session
+            session.clear()
+            uid = None
+            is_logged_in = False
     else:
         uid = None
         is_logged_in = False
