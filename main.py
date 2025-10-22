@@ -2198,6 +2198,19 @@ def save_season_team():
             riders_changed = len(current_rider_ids - new_rider_ids)
             penalty_points = riders_changed * 50  # 50 points per changed rider
             
+            # Check if user has enough points for the penalty
+            if penalty_points > 0:
+                user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
+                total_race_points = sum(score.race_points or 0 for score in user_scores)
+                total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
+                total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
+                user_total_points = total_race_points + total_holeshot_points + total_wildcard_points
+                
+                if user_total_points < penalty_points:
+                    return jsonify({
+                        "message": f"Du har inte tillräckligt med poäng! Du har {user_total_points} poäng men behöver {penalty_points} poäng för att byta {riders_changed} förare."
+                    }), 400
+            
             # Delete old riders and apply penalty
             SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
             
@@ -5589,6 +5602,29 @@ def update_season_team_points():
     return jsonify({
         "message": f"Updated {len(updated_teams)} season teams based on rider results",
         "updated_teams": updated_teams
+    })
+
+@app.get("/get_user_total_points")
+def get_user_total_points():
+    """Get current user's total points for team change validation"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    user_id = session["user_id"]
+    
+    # Calculate total points the same way as in profile_page
+    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    total_race_points = sum(score.race_points or 0 for score in user_scores)
+    total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
+    total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
+    
+    total_points = total_race_points + total_holeshot_points + total_wildcard_points
+    
+    return jsonify({
+        "total_points": total_points,
+        "race_points": total_race_points,
+        "holeshot_points": total_holeshot_points,
+        "wildcard_points": total_wildcard_points
     })
 
 @app.get("/debug_user_scores/<string:username>")

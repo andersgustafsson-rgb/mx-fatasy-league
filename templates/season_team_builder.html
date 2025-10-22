@@ -693,6 +693,23 @@
         const ridersChanged = calculateRidersChanged();
         const penaltyPoints = ridersChanged * 50;
         
+        if (penaltyPoints > 0) {
+          // Check if user has enough points
+          try {
+            const pointsResponse = await fetch("/get_user_total_points");
+            const pointsData = await pointsResponse.json();
+            
+            if (pointsData.total_points < penaltyPoints) {
+              showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare.`, false);
+              return;
+            }
+          } catch (error) {
+            console.error("Error checking user points:", error);
+            showToast("Kunde inte kontrollera dina poäng. Försök igen.", false);
+            return;
+          }
+        }
+        
         let confirmMessage;
         if (ridersChanged === 0) {
           confirmMessage = "⚠️ Du har redan ett team!\n\nInga förare byts ut, så det kostar inga poäng.\n\nÄr du säker på att du vill fortsätta?";
