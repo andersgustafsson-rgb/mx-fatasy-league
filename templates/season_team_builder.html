@@ -164,15 +164,18 @@
 
       <!-- Nuvarande team (om det finns) -->
       {% if has_existing_team %}
-      <div class="current-team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl mb-6 border-2 border-yellow-400">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-yellow-200 pb-3 text-yellow-600">⭐ Nuvarande Team</h2>
-        <div id="current-team-list" class="space-y-2 sm:space-y-3">
+      <div class="current-team-card bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-lg mb-4 border-2 border-yellow-400">
+        <h2 class="text-lg sm:text-xl font-semibold mb-3 border-b border-yellow-200 pb-2 text-yellow-600">⭐ Nuvarande Team</h2>
+        <div id="current-team-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           <!-- Current team riders will be loaded here -->
         </div>
-        <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200">
-          <p class="text-sm text-yellow-800 dark:text-yellow-200">
-            💡 <strong>Tips:</strong> Klicka på "Byt ut" för att ersätta en förare i taget, eller skapa ett helt nytt team nedan.
+        <div class="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200">
+          <p class="text-xs text-yellow-800 dark:text-yellow-200 mb-2">
+            💡 <strong>Tips:</strong> Klicka "Byt ut" för att ersätta en förare, eller kopiera teamet som start.
           </p>
+          <button onclick="copyCurrentTeam()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+            📋 Kopiera nuvarande team som start
+          </button>
         </div>
       </div>
       {% endif %}
@@ -498,11 +501,13 @@
         return 0;
       }
       
-      const currentRiderIds = new Set(existingTeamRiders);
-      const newRiderIds = new Set(myTeam.map(r => r.id.toString()));
+      // Get current team rider IDs (what user has selected)
+      const currentRiderIds = new Set(myTeam.map(r => r.id.toString()));
+      // Get original team rider IDs (what was saved in database)
+      const originalRiderIds = new Set(existingTeamRiders);
       
-      // Count how many riders are different
-      const ridersChanged = [...currentRiderIds].filter(id => !newRiderIds.has(id)).length;
+      // Count how many riders are different from the original team
+      const ridersChanged = [...originalRiderIds].filter(id => !currentRiderIds.has(id)).length;
       return ridersChanged;
     }
 
@@ -542,20 +547,20 @@
       list.innerHTML = "";
       
       currentTeam.forEach((rider) => {
-        const row = document.createElement("div");
-        row.className = "flex justify-between items-center bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700";
-        row.innerHTML = `
-          <div class="flex items-center gap-3">
+        const card = document.createElement("div");
+        card.className = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700";
+        card.innerHTML = `
+          <div class="flex items-center gap-2 mb-2">
             ${rider.image_url
               ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
                      alt="${rider.name} headshot"
-                     class="w-10 h-10 object-cover rounded-full border-2 border-yellow-300" width="40" height="40"
+                     class="w-8 h-8 object-cover rounded-full border border-yellow-300" width="32" height="32"
                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-               <div class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
+               <div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
                  ${rider.bike_brand 
                    ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
                           alt="${rider.bike_brand} logo" 
-                          class="w-6 h-6 object-contain"
+                          class="w-5 h-5 object-contain"
                           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                      <span class="text-white text-xs font-bold" style="display: none;">#${rider.rider_number}</span>`
                    : `<span class="text-white text-xs font-bold">#${rider.rider_number}</span>`}
@@ -563,23 +568,22 @@
               : (rider.bike_brand
                   ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
                          alt="${rider.bike_brand} logo"
-                         class="w-10 h-10 object-contain border-2 border-yellow-300 rounded-full" width="40" height="40" />`
-                  : `<div class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
+                         class="w-8 h-8 object-contain border border-yellow-300 rounded-full" width="32" height="32" />`
+                  : `<div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
                        <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
                      </div>`)}
-            <div>
-              <div class="font-semibold text-gray-800 dark:text-gray-200">${rider.name}</div>
-              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} ${rider.class} • #${rider.rider_number || "-"}</div>
-              <div class="text-xs text-yellow-600 font-medium">${formatCurrency(rider.price)} kr</div>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">${rider.name}</div>
+              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} #${rider.rider_number || "-"}</div>
             </div>
           </div>
-          <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors" 
+          <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors" 
                   onclick="replaceRider(${rider.id})" 
                   title="Byt ut denna förare">
             Byt ut
           </button>
         `;
-        list.appendChild(row);
+        list.appendChild(card);
       });
     }
 
@@ -587,6 +591,16 @@
       // Find the rider to replace
       const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
       if (!riderToReplace) return;
+      
+      // If user hasn't started building a new team yet, initialize it with current team
+      if (myTeam.length === 0) {
+        currentTeam.forEach(rider => {
+          if (rider.id !== riderIdToReplace) {
+            myTeam.push(rider);
+            budget -= rider.price;
+          }
+        });
+      }
       
       // Show a message about what we're doing
       showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}`, true);
@@ -597,8 +611,26 @@
       // Store which rider we're replacing
       window.replacingRiderId = riderIdToReplace;
       
+      // Update the display
+      validateAndRender();
+      
       // Scroll to rider list
       document.getElementById("rider-list").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyCurrentTeam() {
+      // Clear current team
+      myTeam = [];
+      budget = totalBudget;
+      
+      // Copy all current team riders
+      currentTeam.forEach(rider => {
+        myTeam.push(rider);
+        budget -= rider.price;
+      });
+      
+      showToast("Nuvarande team kopierat! Du kan nu byta ut förarna en i taget.", true);
+      validateAndRender();
     }
 
     async function saveSeasonTeam() {
