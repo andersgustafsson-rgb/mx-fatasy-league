@@ -125,7 +125,7 @@
         </p>
         <div class="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
           <p class="text-yellow-800 text-sm font-medium">
-            ⚠️ <strong>Teamändring kostar 50 poäng!</strong> Du har redan ett team: <strong>{{ existing_team.team_name }}</strong>
+            ⚠️ <strong>Teamändring kostar 50 poäng per byte!</strong> Du har redan ett team: <strong>{{ existing_team.team_name }}</strong>
           </p>
         </div>
         {% else %}
@@ -145,7 +145,7 @@
             <div class="text-right">
               <div id="current-points" class="text-2xl font-bold text-blue-800">Laddar...</div>
               <div id="penalty-preview" class="text-sm text-red-600 font-medium hidden">
-                -<span id="penalty-amount">0</span> poäng för byten
+                -<span id="penalty-amount">0</span><span class="penalty-text"> poäng för byten</span>
               </div>
             </div>
           </div>
@@ -626,6 +626,12 @@
         penaltyPreview.classList.remove("hidden");
         pointsAfterAmount.textContent = pointsAfter;
         pointsAfterChange.classList.remove("hidden");
+        
+        // Update penalty text to be more dynamic
+        const penaltyText = penaltyPreview.querySelector('.penalty-text');
+        if (penaltyText) {
+          penaltyText.textContent = ` poäng för ${ridersChanged} byte`;
+        }
         
         // Change color based on whether user has enough points
         if (pointsAfter < 0) {

@@ -1272,15 +1272,23 @@ def league_detail_page(league_id):
 def season_team_page():
     if "user_id" not in session:
         return redirect(url_for("login"))
-    team = SeasonTeam.query.filter_by(user_id=session["user_id"]).first()
+    
+    user_id = session["user_id"]
+    team = SeasonTeam.query.filter_by(user_id=user_id).first()
     riders = []
+    
+    # Calculate user's total points (same as leaderboard)
+    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    user_total_points = sum(score.total_points or 0 for score in user_scores)
+    
     if team:
         riders = (
             Rider.query.join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
             .filter(SeasonTeamRider.season_team_id == team.id)
             .all()
         )
-    return render_template("season_team.html", team=team, riders=riders)
+    
+    return render_template("season_team.html", team=team, riders=riders, user_total_points=user_total_points)
 
 @app.route("/profile")
 def profile_page():
