@@ -5633,6 +5633,47 @@ def get_user_total_points():
         "wildcard_points": total_wildcard_points
     })
 
+@app.get("/debug_my_points")
+def debug_my_points():
+    """Debug endpoint for current user to check their points"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    user_id = session["user_id"]
+    user = User.query.get(user_id)
+    
+    # Get all CompetitionScore entries for this user
+    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    
+    # Calculate totals
+    total_race_points = sum(score.race_points or 0 for score in user_scores)
+    total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
+    total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
+    total_points = total_race_points + total_holeshot_points + total_wildcard_points
+    
+    # Build detailed breakdown
+    score_breakdown = []
+    for score in user_scores:
+        score_breakdown.append({
+            "competition_id": score.competition_id,
+            "total_points": score.total_points,
+            "race_points": score.race_points,
+            "holeshot_points": score.holeshot_points,
+            "wildcard_points": score.wildcard_points,
+            "is_penalty": score.competition_id is None  # Penalty entries have no competition_id
+        })
+    
+    return jsonify({
+        "username": user.username,
+        "user_id": user_id,
+        "total_points": total_points,
+        "race_points": total_race_points,
+        "holeshot_points": total_holeshot_points,
+        "wildcard_points": total_wildcard_points,
+        "score_entries": score_breakdown,
+        "entry_count": len(user_scores)
+    })
+
 @app.get("/debug_user_scores/<string:username>")
 def debug_user_scores(username):
     """Debug endpoint to check where a user's points come from"""
