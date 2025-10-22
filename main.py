@@ -1541,6 +1541,10 @@ def season_team_builder():
         all_riders = Rider.query.all()
         print(f"Found {len(all_riders)} riders for season team builder")
         
+        # Check if user already has a team
+        existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
+        has_existing_team = existing_team is not None
+        
         # Convert riders to JSON-serializable format
         riders_data = []
         for rider in all_riders:
@@ -1555,7 +1559,10 @@ def season_team_builder():
                 'coast_250': rider.coast_250
             })
         
-        return render_template("season_team_builder.html", riders=riders_data)
+        return render_template("season_team_builder.html", 
+                             riders=riders_data, 
+                             has_existing_team=has_existing_team,
+                             existing_team=existing_team)
     except Exception as e:
         print(f"Error in season_team_builder: {e}")
         return f"Error loading riders: {str(e)}", 500
