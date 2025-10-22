@@ -141,44 +141,46 @@
       </a>
     </div>
 
-    <main class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-      <!-- Riderlista -->
-      <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Välj Förare</h2>
-
-        <div class="mb-3 sm:mb-4 flex flex-wrap gap-2 items-center">
-          <button id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium active" onclick="setFilter('all')">
-            🏍️ Alla
-          </button>
-          <button id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('450cc')">
-            🔥 450cc
-          </button>
-          <button id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('250cc')">
-            ⚡ 250cc
-          </button>
-          <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
-        </div>
-
-        <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
-      </div>
-
-      <!-- Nuvarande team (om det finns) -->
+    <main class="space-y-4 sm:space-y-6">
+      <!-- Nuvarande team (om det finns) - kompakt version ovanför -->
       {% if has_existing_team %}
-      <div class="current-team-card bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-lg shadow-lg mb-4 border-2 border-yellow-400">
-        <h2 class="text-lg sm:text-xl font-semibold mb-3 border-b border-yellow-200 pb-2 text-yellow-600">⭐ Nuvarande Team</h2>
-        <div id="current-team-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+      <div class="current-team-card bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border-2 border-yellow-400">
+        <h2 class="text-lg font-semibold mb-2 border-b border-yellow-200 pb-1 text-yellow-600">⭐ Nuvarande Team</h2>
+        <div id="current-team-list" class="grid grid-cols-4 gap-2">
           <!-- Current team riders will be loaded here -->
         </div>
-        <div class="mt-3 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200">
-          <p class="text-xs text-yellow-800 dark:text-yellow-200 mb-2">
+        <div class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200">
+          <p class="text-xs text-yellow-800 dark:text-yellow-200 mb-1">
             💡 <strong>Tips:</strong> Klicka "Byt ut" för att ersätta en förare, eller kopiera teamet som start.
           </p>
-          <button onclick="copyCurrentTeam()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+          <button onclick="copyCurrentTeam()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors">
             📋 Kopiera nuvarande team som start
           </button>
         </div>
       </div>
       {% endif %}
+
+      <!-- Huvudlayout med grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+        <!-- Riderlista -->
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
+          <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Välj Förare</h2>
+
+          <div class="mb-3 sm:mb-4 flex flex-wrap gap-2 items-center">
+            <button id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium active" onclick="setFilter('all')">
+              🏍️ Alla
+            </button>
+            <button id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('450cc')">
+              🔥 450cc
+            </button>
+            <button id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('250cc')">
+              ⚡ 250cc
+            </button>
+            <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
+          </div>
+
+          <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+        </div>
 
       <!-- Ditt team -->
       <div class="team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl h-fit sticky top-4 sm:top-8">
@@ -234,6 +236,7 @@
           {% endif %}
         </button>
       </div>
+      </div> <!-- End grid container -->
     </main>
   </div>
 
@@ -558,36 +561,38 @@
       
       currentTeam.forEach((rider) => {
         const card = document.createElement("div");
-        card.className = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700";
+        card.className = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-2 rounded-lg border border-yellow-200 dark:border-yellow-700 text-center";
         card.innerHTML = `
-          <div class="flex items-center gap-2 mb-2">
-            ${rider.image_url
-              ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
-                     alt="${rider.name} headshot"
-                     class="w-8 h-8 object-cover rounded-full border border-yellow-300" width="32" height="32"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-               <div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
-                 ${rider.bike_brand 
-                   ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
-                          alt="${rider.bike_brand} logo" 
-                          class="w-5 h-5 object-contain"
-                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                     <span class="text-white text-xs font-bold" style="display: none;">#${rider.rider_number}</span>`
-                   : `<span class="text-white text-xs font-bold">#${rider.rider_number}</span>`}
-               </div>`
-              : (rider.bike_brand
-                  ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
-                         alt="${rider.bike_brand} logo"
-                         class="w-8 h-8 object-contain border border-yellow-300 rounded-full" width="32" height="32" />`
-                  : `<div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
-                       <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
-                     </div>`)}
-            <div class="flex-1 min-w-0">
-              <div class="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">${rider.name}</div>
+          <div class="flex flex-col items-center space-y-1 mb-2">
+            <div class="flex-shrink-0">
+              ${rider.image_url
+                ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
+                       alt="${rider.name} headshot"
+                       class="w-8 h-8 object-cover rounded-full border border-yellow-300" width="32" height="32"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 <div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
+                   ${rider.bike_brand 
+                     ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
+                            alt="${rider.bike_brand} logo" 
+                            class="w-5 h-5 object-contain"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                       <span class="text-white text-xs font-bold" style="display: none;">#${rider.rider_number}</span>`
+                     : `<span class="text-white text-xs font-bold">#${rider.rider_number}</span>`}
+                 </div>`
+                : (rider.bike_brand
+                    ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
+                           alt="${rider.bike_brand} logo"
+                           class="w-8 h-8 object-contain border border-yellow-300 rounded-full" width="32" height="32" />`
+                    : `<div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
+                         <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
+                       </div>`)}
+            </div>
+            <div class="w-full">
+              <div class="font-semibold text-gray-800 dark:text-gray-200 text-xs truncate">${rider.name}</div>
               <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} #${rider.rider_number || "-"}</div>
             </div>
           </div>
-          <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors" 
+          <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 rounded text-xs font-medium transition-colors" 
                   onclick="replaceRider(${rider.id})" 
                   title="Byt ut denna förare">
             Byt ut
