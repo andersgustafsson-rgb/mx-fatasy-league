@@ -5613,13 +5613,14 @@ def get_user_total_points():
     
     user_id = session["user_id"]
     
-    # Calculate total points the same way as in profile_page
+    # Calculate total points the same way as in leaderboard (includes penalties)
     user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    total_points = sum(score.total_points or 0 for score in user_scores)
+    
+    # Also calculate individual components for debugging
     total_race_points = sum(score.race_points or 0 for score in user_scores)
     total_holeshot_points = sum(score.holeshot_points or 0 for score in user_scores)
     total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
-    
-    total_points = total_race_points + total_holeshot_points + total_wildcard_points
     
     print(f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, total={total_points}")
     print(f"DEBUG: Found {len(user_scores)} CompetitionScore entries for user {user_id}")
