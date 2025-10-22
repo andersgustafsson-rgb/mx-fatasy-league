@@ -1010,7 +1010,14 @@
   }
 
   function filterRiders(riderClass, position, searchTerm) {
-    const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    // Handle both regular race picks (with position) and holeshot/wildcard (without position)
+    let selector;
+    if (position !== undefined && position !== 0) {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+    } else {
+      selector = document.querySelector(`.rider-selector[data-class="${riderClass}"]`);
+    }
+    
     if (!selector) {
       return;
     }
@@ -1018,21 +1025,25 @@
     const searchLower = searchTerm.toLowerCase();
     
     // Get currently selected riders in this class (excluding current position)
-    const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
-    const chosenRiderIds = Array.from(selectors).map(sel => {
-      if (sel === selector) return null; // Skip current selector
-      const selectedRiderSpan = sel.querySelector('.selected-rider');
-      const currentText = selectedRiderSpan.textContent;
-      
-      // Skip if no selection made yet
-      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
-        return null;
-      }
-      
-      // Find the rider option that matches the selected text
-      const riderOption = sel.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
-      return riderOption ? riderOption.dataset.riderId : null;
-    }).filter(Boolean);
+    // For wildcard and holeshot, we don't need to check for duplicates since they're independent
+    let chosenRiderIds = [];
+    if (riderClass === '450cc' || riderClass === '250cc') {
+      const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
+      chosenRiderIds = Array.from(selectors).map(sel => {
+        if (sel === selector) return null; // Skip current selector
+        const selectedRiderSpan = sel.querySelector('.selected-rider');
+        const currentText = selectedRiderSpan.textContent;
+        
+        // Skip if no selection made yet
+        if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
+          return null;
+        }
+        
+        // Find the rider option that matches the selected text
+        const riderOption = sel.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+        return riderOption ? riderOption.dataset.riderId : null;
+      }).filter(Boolean);
+    }
     
     riderOptions.forEach(option => {
       const riderName = option.querySelector('.rider-name').textContent.toLowerCase();
@@ -1047,7 +1058,7 @@
       const isAlreadySelected = chosenRiderIds.includes(riderId);
       const isOut = option.dataset.out === 'true';
       
-      // Check coast for 250cc riders
+      // Check coast for 250cc race picks (not holeshot)
       let isWrongCoast = false;
       if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
         const riderCoast = option.dataset.coast;
