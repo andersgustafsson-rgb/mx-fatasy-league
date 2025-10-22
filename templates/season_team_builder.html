@@ -382,9 +382,19 @@
         console.log("🎯 riderToReplace in addRider:", riderToReplace);
         
         if (riderToReplace && r.class === riderToReplace.class) {
+          // Remove the old rider from myTeam first
+          const oldRiderIndex = myTeam.findIndex(rt => rt.id === window.replacingRiderId);
+          if (oldRiderIndex > -1) {
+            const oldRider = myTeam[oldRiderIndex];
+            budget += oldRider.price; // Return budget for old rider
+            myTeam.splice(oldRiderIndex, 1); // Remove old rider
+            console.log("🗑️ Removed old rider:", oldRider.name, "from myTeam");
+          }
+          
           // Add the new rider
           myTeam.push(r);
           budget -= r.price;
+          console.log("➕ Added new rider:", r.name, "to myTeam");
           
           // Clear the replacement mode
           window.replacingRiderId = null;
