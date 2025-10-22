@@ -391,6 +391,10 @@
           if (r.price > riderToReplace.price) {
             return false; // Don't allow more expensive riders
           }
+          // Also check if we have enough budget for this rider
+          if (r.price > budget) {
+            return false; // Don't allow if not enough budget
+          }
           return true; // Allow replacement of same class with same or lower price
         }
         return false; // Don't allow different class
@@ -760,11 +764,11 @@
         console.log("💰 Initializing myTeam with current team (excluding rider to replace)");
         console.log("💰 Budget before initialization:", budget);
         
+        // Add all other riders from current team to myTeam (without changing budget)
         currentTeam.forEach(rider => {
           if (rider.id !== riderIdToReplace) {
             myTeam.push(rider);
-            budget -= rider.price;
-            console.log(`💰 Added ${rider.name} (${rider.price.toLocaleString()} kr) to myTeam. Budget now: ${budget.toLocaleString()}`);
+            console.log(`💰 Added ${rider.name} to myTeam (no budget change)`);
           }
         });
         
