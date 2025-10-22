@@ -409,6 +409,7 @@
     function addRider(r) {
       console.log("🎯 addRider called with:", r.name, "ID:", r.id);
       console.log("🎯 window.replacingRiderId:", window.replacingRiderId);
+      console.log("💰 BUDGET BEFORE addRider:", budget);
       
       // Check if we're replacing a rider
       if (window.replacingRiderId) {
@@ -430,12 +431,14 @@
             budget += oldRider.price; // Return budget for old rider
             myTeam.splice(oldRiderIndex, 1); // Remove old rider
             console.log("🗑️ Removed old rider:", oldRider.name, "from myTeam");
+            console.log("💰 Budget after removing old rider:", budget);
           }
           
           // Add the new rider
           myTeam.push(r);
           budget -= r.price;
           console.log("➕ Added new rider:", r.name, "to myTeam");
+          console.log("💰 BUDGET AFTER adding new rider:", budget);
           
           // Clear the replacement mode
           window.replacingRiderId = null;
@@ -741,6 +744,7 @@
       console.log("🔍 currentTeam:", currentTeam);
       console.log("🔍 currentTeam IDs and names:", currentTeam.map(r => `${r.id}: ${r.name}`));
       console.log("🔍 Looking for rider with ID:", riderIdToReplace);
+      console.log("💰 BUDGET BEFORE replaceRider:", budget);
       
       // Find the rider to replace
       const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
@@ -753,14 +757,21 @@
       
       // If user hasn't started building a new team yet, initialize it with current team
       if (myTeam.length === 0) {
+        console.log("💰 Initializing myTeam with current team (excluding rider to replace)");
+        console.log("💰 Budget before initialization:", budget);
+        
         currentTeam.forEach(rider => {
           if (rider.id !== riderIdToReplace) {
             myTeam.push(rider);
             budget -= rider.price;
+            console.log(`💰 Added ${rider.name} (${rider.price.toLocaleString()} kr) to myTeam. Budget now: ${budget.toLocaleString()}`);
           }
         });
+        
         // Add the price of the rider being replaced back to budget
+        console.log(`💰 Adding back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget`);
         budget += riderToReplace.price;
+        console.log("💰 BUDGET AFTER adding back rider price:", budget);
       }
       
       // Show a message about what we're doing
