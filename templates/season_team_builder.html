@@ -365,10 +365,15 @@
     }
 
     function addRider(r) {
+      console.log("addRider called with:", r);
+      console.log("window.replacingRiderId:", window.replacingRiderId);
+      
       // Check if we're replacing a rider
       if (window.replacingRiderId) {
         // Find the rider being replaced
         const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
+        console.log("riderToReplace in addRider:", riderToReplace);
+        
         if (riderToReplace && r.class === riderToReplace.class) {
           // Add the new rider
           myTeam.push(r);
@@ -532,10 +537,15 @@
         return;
       }
       
+      console.log("loadCurrentTeam - existingTeamRiders:", existingTeamRiders);
+      console.log("loadCurrentTeam - allRiders sample:", allRiders.slice(0, 3));
+      
       // Find riders that match the existing team rider IDs
       currentTeam = allRiders.filter(rider => 
         existingTeamRiders.includes(rider.id.toString())
       );
+      
+      console.log("loadCurrentTeam - currentTeam found:", currentTeam);
       
       renderCurrentTeam();
     }
@@ -588,9 +598,17 @@
     }
 
     function replaceRider(riderIdToReplace) {
+      console.log("replaceRider called with ID:", riderIdToReplace);
+      console.log("currentTeam:", currentTeam);
+      
       // Find the rider to replace
       const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
-      if (!riderToReplace) return;
+      console.log("riderToReplace found:", riderToReplace);
+      
+      if (!riderToReplace) {
+        console.log("No rider found to replace!");
+        return;
+      }
       
       // If user hasn't started building a new team yet, initialize it with current team
       if (myTeam.length === 0) {
