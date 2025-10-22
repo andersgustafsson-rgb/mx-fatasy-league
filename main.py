@@ -2205,12 +2205,12 @@ def save_season_team():
             if penalty_points > 0:
                 user = User.query.get(uid)
                 if user:
-                    # Create a penalty score entry (use existing columns)
+                    # Create a penalty score entry - put penalty in race_points since that's what gets summed
                     penalty_score = CompetitionScore(
                         user_id=uid,
                         competition_id=None,  # Penalty not tied to a specific competition
                         total_points=-penalty_points,
-                        race_points=0,
+                        race_points=-penalty_points,  # Put penalty here so it gets summed in profile
                         holeshot_points=0,
                         wildcard_points=0,
                     )
