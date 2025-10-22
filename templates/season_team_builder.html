@@ -221,6 +221,7 @@
     // Data från servern (se till att du skickar 'riders' i samma format som tidigare)
     const allRiders = {{ riders | tojson | safe }};
     const hasExistingTeam = {{ has_existing_team | tojson | safe }};
+    const existingTeamRiders = {{ existing_team_riders | tojson | safe }};
 
     // Konfiguration
     const totalBudget = 1500000;
@@ -435,6 +436,38 @@
         budget >= 0 &&
         document.getElementById("team-name-input").value.trim();
       save.disabled = !valid;
+      
+      // Update save button text based on riders changed
+      updateSaveButtonText();
+    }
+
+    function calculateRidersChanged() {
+      if (!hasExistingTeam || !existingTeamRiders || existingTeamRiders.length === 0) {
+        return 0;
+      }
+      
+      const currentRiderIds = new Set(existingTeamRiders);
+      const newRiderIds = new Set(myTeam.map(r => r.id.toString()));
+      
+      // Count how many riders are different
+      const ridersChanged = [...currentRiderIds].filter(id => !newRiderIds.has(id)).length;
+      return ridersChanged;
+    }
+
+    function updateSaveButtonText() {
+      const saveBtn = document.getElementById("save-team-btn");
+      if (!hasExistingTeam) {
+        saveBtn.textContent = "💾 Spara Team";
+        return;
+      }
+      
+      const ridersChanged = calculateRidersChanged();
+      if (ridersChanged === 0) {
+        saveBtn.textContent = "💾 Uppdatera Team (Inga poängstraff)";
+      } else {
+        const penaltyPoints = ridersChanged * 50;
+        saveBtn.textContent = `⚠️ Uppdatera Team (-${penaltyPoints} poäng)`;
+      }
     }
 
     async function saveSeasonTeam() {
@@ -447,7 +480,17 @@
 
       // Check if this is a team change (user already has a team)
       if (hasExistingTeam) {
-        const confirmed = confirm("⚠️ Du har redan ett team!\n\nDetta kommer att kosta 50 poäng att ändra.\n\nÄr du säker på att du vill fortsätta?");
+        const ridersChanged = calculateRidersChanged();
+        const penaltyPoints = ridersChanged * 50;
+        
+        let confirmMessage;
+        if (ridersChanged === 0) {
+          confirmMessage = "⚠️ Du har redan ett team!\n\nInga förare byts ut, så det kostar inga poäng.\n\nÄr du säker på att du vill fortsätta?";
+        } else {
+          confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare.\nDetta kommer att kosta ${penaltyPoints} poäng.\n\nÄr du säker på att du vill fortsätta?`;
+        }
+        
+        const confirmed = confirm(confirmMessage);
         if (!confirmed) {
           return;
         }

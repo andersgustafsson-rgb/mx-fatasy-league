@@ -1545,6 +1545,12 @@ def season_team_builder():
         existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
         has_existing_team = existing_team is not None
         
+        # Get existing team riders for frontend calculation
+        existing_team_riders = []
+        if existing_team:
+            existing_team_riders = SeasonTeamRider.query.filter_by(season_team_id=existing_team.id).all()
+            existing_team_riders = [str(tr.rider_id) for tr in existing_team_riders]
+        
         # Convert riders to JSON-serializable format
         riders_data = []
         for rider in all_riders:
@@ -1562,7 +1568,8 @@ def season_team_builder():
         return render_template("season_team_builder.html", 
                              riders=riders_data, 
                              has_existing_team=has_existing_team,
-                             existing_team=existing_team)
+                             existing_team=existing_team,
+                             existing_team_riders=existing_team_riders)
     except Exception as e:
         print(f"Error in season_team_builder: {e}")
         return f"Error loading riders: {str(e)}", 500
@@ -2169,6 +2176,8 @@ def save_season_team():
         uid = session["user_id"]
         team = SeasonTeam.query.filter_by(user_id=uid).first()
         is_team_change = False
+        riders_changed = 0
+        penalty_points = 0
         
         if not team:
             # First time creating team - no penalty
@@ -2176,25 +2185,37 @@ def save_season_team():
             db.session.add(team)
             db.session.flush()
         else:
-            # Team already exists - this is a change, apply -50 point penalty
+            # Team already exists - calculate how many riders changed
             is_team_change = True
             team.team_name = team_name
+            
+            # Get current team riders
+            current_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+            current_rider_ids = set(tr.rider_id for tr in current_riders)
+            new_rider_ids = set(rider_ids)
+            
+            # Calculate how many riders changed
+            riders_changed = len(current_rider_ids - new_rider_ids)
+            penalty_points = riders_changed * 50  # 50 points per changed rider
+            
+            # Delete old riders and apply penalty
             SeasonTeamRider.query.filter_by(season_team_id=team.id).delete()
             
-            # Apply -50 point penalty to user's total points
-            user = User.query.get(uid)
-            if user:
-                # Create a penalty score entry (use existing columns)
-                penalty_score = CompetitionScore(
-                    user_id=uid,
-                    competition_id=None,  # Penalty not tied to a specific competition
-                    total_points=-50,
-                    race_points=0,
-                    holeshot_points=0,
-                    wildcard_points=0,
-                )
-                db.session.add(penalty_score)
-                print(f"DEBUG: Applied -50 point penalty for team change to user {uid}")
+            # Apply penalty to user's total points
+            if penalty_points > 0:
+                user = User.query.get(uid)
+                if user:
+                    # Create a penalty score entry (use existing columns)
+                    penalty_score = CompetitionScore(
+                        user_id=uid,
+                        competition_id=None,  # Penalty not tied to a specific competition
+                        total_points=-penalty_points,
+                        race_points=0,
+                        holeshot_points=0,
+                        wildcard_points=0,
+                    )
+                    db.session.add(penalty_score)
+                    print(f"DEBUG: Applied -{penalty_points} point penalty for {riders_changed} rider changes to user {uid}")
 
         for r in riders:
             db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
@@ -2202,7 +2223,10 @@ def save_season_team():
         db.session.commit()
         
         if is_team_change:
-            return jsonify({"message": "Team uppdaterat! -50 poäng för teamändring."}), 200
+            if penalty_points > 0:
+                return jsonify({"message": f"Team uppdaterat! -{penalty_points} poäng för {riders_changed} bytade förare."}), 200
+            else:
+                return jsonify({"message": "Team uppdaterat! Inga poängstraff (inga förare byttes)."}), 200
         else:
             return jsonify({"message": "Team sparat!"}), 200
             
