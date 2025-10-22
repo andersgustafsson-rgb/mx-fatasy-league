@@ -2184,12 +2184,14 @@ def save_season_team():
             # Apply -50 point penalty to user's total points
             user = User.query.get(uid)
             if user:
-                # Create a penalty score entry
+                # Create a penalty score entry (use existing columns)
                 penalty_score = CompetitionScore(
                     user_id=uid,
-                    competition_id=None,  # No specific competition for team change penalty
-                    points=-50,
-                    created_at=datetime.utcnow()
+                    competition_id=None,  # Penalty not tied to a specific competition
+                    total_points=-50,
+                    race_points=0,
+                    holeshot_points=0,
+                    wildcard_points=0,
                 )
                 db.session.add(penalty_score)
                 print(f"DEBUG: Applied -50 point penalty for team change to user {uid}")
