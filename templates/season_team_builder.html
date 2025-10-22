@@ -134,6 +134,27 @@
           Inloggad som: <strong class="text-blue-600">{{ username }}</strong>
         </p>
         {% endif %}
+        
+        <!-- Poängvisning -->
+        <div id="points-display" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-blue-800">💰 Dina Poäng</h3>
+              <p class="text-sm text-blue-600">Totalt tillgängliga poäng</p>
+            </div>
+            <div class="text-right">
+              <div id="current-points" class="text-2xl font-bold text-blue-800">Laddar...</div>
+              <div id="penalty-preview" class="text-sm text-red-600 font-medium hidden">
+                -<span id="penalty-amount">0</span> poäng för byten
+              </div>
+            </div>
+          </div>
+          <div class="mt-2">
+            <div class="text-xs text-gray-600">
+              <span id="points-after-change" class="font-medium">Efter ändring: <span id="points-after-amount">-</span> poäng</span>
+            </div>
+          </div>
+        </div>
       </header>
       <a href="{{ url_for('index') }}"
          class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base self-start sm:self-center">
@@ -519,6 +540,9 @@
       
       // Update save button text based on riders changed
       updateSaveButtonText();
+      
+      // Update points preview
+      updatePointsPreview();
     }
 
     function calculateRidersChanged() {
@@ -563,6 +587,58 @@
       );
       
       renderCurrentTeam();
+    }
+
+    // Load user's current points
+    async function loadUserPoints() {
+      try {
+        const response = await fetch("/get_user_total_points");
+        const data = await response.json();
+        
+        if (data.total_points !== undefined) {
+          document.getElementById("current-points").textContent = `${data.total_points} poäng`;
+          window.userTotalPoints = data.total_points;
+          updatePointsPreview();
+        } else {
+          document.getElementById("current-points").textContent = "0 poäng";
+          window.userTotalPoints = 0;
+        }
+      } catch (error) {
+        console.error("Error loading user points:", error);
+        document.getElementById("current-points").textContent = "Fel vid laddning";
+        window.userTotalPoints = 0;
+      }
+    }
+
+    // Update points preview when team changes
+    function updatePointsPreview() {
+      const ridersChanged = calculateRidersChanged();
+      const penaltyPoints = ridersChanged * 50;
+      const pointsAfter = window.userTotalPoints - penaltyPoints;
+      
+      const penaltyPreview = document.getElementById("penalty-preview");
+      const penaltyAmount = document.getElementById("penalty-amount");
+      const pointsAfterAmount = document.getElementById("points-after-amount");
+      const pointsAfterChange = document.getElementById("points-after-change");
+      
+      if (penaltyPoints > 0) {
+        penaltyAmount.textContent = penaltyPoints;
+        penaltyPreview.classList.remove("hidden");
+        pointsAfterAmount.textContent = pointsAfter;
+        pointsAfterChange.classList.remove("hidden");
+        
+        // Change color based on whether user has enough points
+        if (pointsAfter < 0) {
+          pointsAfterChange.className = "text-xs text-red-600 font-medium";
+          pointsAfterAmount.className = "text-red-600 font-bold";
+        } else {
+          pointsAfterChange.className = "text-xs text-gray-600 font-medium";
+          pointsAfterAmount.className = "text-green-600 font-bold";
+        }
+      } else {
+        penaltyPreview.classList.add("hidden");
+        pointsAfterChange.classList.add("hidden");
+      }
     }
 
     function renderCurrentTeam() {
@@ -761,6 +837,7 @@
     document.addEventListener("DOMContentLoaded", () => {
       setFilter("all");
       loadCurrentTeam(); // Load existing team if it exists
+      loadUserPoints(); // Load user's current points
       validateAndRender();
     });
   </script>
