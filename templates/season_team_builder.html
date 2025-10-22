@@ -343,6 +343,7 @@
         wrapper.innerHTML = riderCardHTML(r);
         const btn = wrapper.querySelector(".btn-add");
         btn.onclick = (event) => {
+          console.log("🖱️ Button clicked for rider:", r.name, "ID:", r.id);
           event.stopPropagation();
           addRider(r);
         };
@@ -603,6 +604,7 @@
     function replaceRider(riderIdToReplace) {
       console.log("🔍 replaceRider called with ID:", riderIdToReplace);
       console.log("🔍 currentTeam:", currentTeam);
+      console.log("🔍 currentTeam IDs and names:", currentTeam.map(r => `${r.id}: ${r.name}`));
       
       // Find the rider to replace
       const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
@@ -631,6 +633,7 @@
       
       // Store which rider we're replacing
       window.replacingRiderId = riderIdToReplace;
+      console.log("🔧 Set window.replacingRiderId to:", window.replacingRiderId);
       
       // Update the display
       validateAndRender();
