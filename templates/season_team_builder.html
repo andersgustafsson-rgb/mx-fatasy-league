@@ -310,6 +310,15 @@
       const isSelected = myTeam.some(x => x.id === r.id);
       const canAdd = canAddRider(r);
       
+      // Check if rider is too expensive for replacement
+      let isTooExpensive = false;
+      if (window.replacingRiderId) {
+        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
+        if (riderToReplace && r.class === riderToReplace.class && r.price > riderToReplace.price) {
+          isTooExpensive = true;
+        }
+      }
+      
       // Bygg HTML för rider-kortet: visa image_url om finns, annars logga/placeholder
       const imgHtml = r.image_url
         ? `<img src="${window.location.origin}${window.location.pathname.includes('/static') ? '' : ''}${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
@@ -334,7 +343,7 @@
                </div>`);
 
       return `
-        <div class="rider-card bg-white dark:bg-gray-700 p-4 rounded-xl shadow-lg flex items-center gap-4 ${isSelected ? 'selected' : ''}">
+        <div class="rider-card bg-white dark:bg-gray-700 p-4 rounded-xl shadow-lg flex items-center gap-4 ${isSelected ? 'selected' : ''} ${isTooExpensive ? 'opacity-60' : ''}">
           <div class="flex-shrink-0">${imgHtml}</div>
           <div class="flex-1">
             <div class="font-bold text-gray-800 dark:text-gray-200">${r.name}</div>
@@ -342,11 +351,12 @@
               ${r.class === '450cc' ? '🔥' : '⚡'} ${r.class} • #${r.rider_number || "-"}
             </div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">${r.bike_brand || "—"}</div>
-            <div class="price-tag inline-block">${formatCurrency(r.price)} kr</div>
+            <div class="price-tag inline-block ${isTooExpensive ? 'text-red-600 font-bold' : ''}">${formatCurrency(r.price)} kr</div>
+            ${isTooExpensive ? '<div class="text-xs text-red-600 font-medium mt-1">För dyr att byta till!</div>' : ''}
           </div>
-          <button class="btn-add px-4 py-2 text-white rounded-lg font-medium text-sm ${isSelected ? 'selected' : 'bg-blue-500 hover:bg-blue-600'}"
+          <button class="btn-add px-4 py-2 text-white rounded-lg font-medium text-sm ${isSelected ? 'selected' : isTooExpensive ? 'bg-red-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}"
                   ${!canAdd ? "disabled" : ""}>
-            ${isSelected ? "✅ Vald" : "➕ Lägg till"}
+            ${isSelected ? "✅ Vald" : isTooExpensive ? "❌ För dyr" : "➕ Lägg till"}
           </button>
         </div>
       `;
@@ -373,11 +383,15 @@
     }
 
     function canAddRider(r) {
-      // If we're in replacement mode, allow adding riders of the same class
+      // If we're in replacement mode, check price and class restrictions
       if (window.replacingRiderId) {
         const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
         if (riderToReplace && r.class === riderToReplace.class) {
-          return true; // Allow replacement of same class
+          // Check if new rider costs more than the original rider
+          if (r.price > riderToReplace.price) {
+            return false; // Don't allow more expensive riders
+          }
+          return true; // Allow replacement of same class with same or lower price
         }
         return false; // Don't allow different class
       }
@@ -427,6 +441,9 @@
           
           // Re-render current team to clear highlighting
           renderCurrentTeam();
+          return;
+        } else if (riderToReplace && r.class === riderToReplace.class && r.price > riderToReplace.price) {
+          showToast(`${r.name} kostar ${r.price.toLocaleString()} kr, men ${riderToReplace.name} kostade bara ${riderToReplace.price.toLocaleString()} kr. Du kan inte byta till en dyrare förare!`, false);
           return;
         } else {
           showToast(`Du måste välja en ${riderToReplace?.class || 'annan'} förare`, false);
@@ -728,7 +745,7 @@
       }
       
       // Show a message about what we're doing
-      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}`, true);
+      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre.`, true);
       
       // Set filter to the same class as the rider being replaced
       setFilter(riderToReplace.class);
