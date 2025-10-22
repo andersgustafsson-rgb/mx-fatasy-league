@@ -434,8 +434,15 @@
           // Clear the replacement mode
           window.replacingRiderId = null;
           
-          // Show success message
-          showToast(`${r.name} ersätter ${riderToReplace.name}`, true);
+          // Show success message with budget info
+          const budgetDiff = r.price - riderToReplace.price;
+          if (budgetDiff > 0) {
+            showToast(`${r.name} ersätter ${riderToReplace.name}. Kostar ${budgetDiff.toLocaleString()} kr mer.`, true);
+          } else if (budgetDiff < 0) {
+            showToast(`${r.name} ersätter ${riderToReplace.name}. Sparar ${Math.abs(budgetDiff).toLocaleString()} kr!`, true);
+          } else {
+            showToast(`${r.name} ersätter ${riderToReplace.name}. Samma pris.`, true);
+          }
           
           validateAndRender();
           
@@ -745,7 +752,8 @@
       }
       
       // Show a message about what we're doing
-      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre.`, true);
+      const currentBudget = totalBudget - myTeam.reduce((sum, rider) => sum + rider.price, 0);
+      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre. Budget: ${currentBudget.toLocaleString()} kr.`, true);
       
       // Set filter to the same class as the rider being replaced
       setFilter(riderToReplace.class);
@@ -775,7 +783,7 @@
         budget -= rider.price;
       });
       
-      showToast("Nuvarande team kopierat! Du kan nu byta ut förarna en i taget.", true);
+      showToast(`Nuvarande team kopierat! Budget: ${budget.toLocaleString()} kr kvar. Du kan nu byta ut förarna en i taget.`, true);
       validateAndRender();
     }
 
