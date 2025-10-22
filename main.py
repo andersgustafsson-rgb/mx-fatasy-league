@@ -2229,6 +2229,7 @@ def save_season_team():
                     )
                     db.session.add(penalty_score)
                     print(f"DEBUG: Applied -{penalty_points} point penalty for {riders_changed} rider changes to user {uid}")
+                    print(f"DEBUG: Created CompetitionScore with race_points={-penalty_points}, total_points={-penalty_points}")
 
         for r in riders:
             db.session.add(SeasonTeamRider(season_team_id=team.id, rider_id=r.id))
@@ -5619,6 +5620,11 @@ def get_user_total_points():
     total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
     
     total_points = total_race_points + total_holeshot_points + total_wildcard_points
+    
+    print(f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, total={total_points}")
+    print(f"DEBUG: Found {len(user_scores)} CompetitionScore entries for user {user_id}")
+    for score in user_scores:
+        print(f"DEBUG: Score entry - competition_id={score.competition_id}, race_points={score.race_points}, total_points={score.total_points}")
     
     return jsonify({
         "total_points": total_points,
