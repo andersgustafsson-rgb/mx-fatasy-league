@@ -416,6 +416,12 @@
         const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
         console.log("🎯 riderToReplace in addRider:", riderToReplace);
         
+        // Don't allow selecting the same rider that's being replaced
+        if (r.id === window.replacingRiderId) {
+          showToast(`Du kan inte ersätta ${r.name} med sig själv!`, false);
+          return;
+        }
+        
         if (riderToReplace && r.class === riderToReplace.class) {
           // Remove the old rider from myTeam first
           const oldRiderIndex = myTeam.findIndex(rt => rt.id === window.replacingRiderId);
