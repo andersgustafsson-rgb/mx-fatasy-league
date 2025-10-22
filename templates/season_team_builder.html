@@ -393,6 +393,9 @@
           showToast(`${r.name} ersätter ${riderToReplace.name}`, true);
           
           validateAndRender();
+          
+          // Re-render current team to clear highlighting
+          renderCurrentTeam();
           return;
         } else {
           showToast(`Du måste välja en ${riderToReplace?.class || 'annan'} förare`, false);
@@ -560,7 +563,13 @@
       
       currentTeam.forEach((rider) => {
         const card = document.createElement("div");
-        card.className = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-2 rounded-lg border border-yellow-200 dark:border-yellow-700 text-center";
+        // Highlight the rider being replaced
+        const isBeingReplaced = window.replacingRiderId === rider.id;
+        const baseClasses = "p-2 rounded-lg border text-center";
+        const normalClasses = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 border-yellow-200 dark:border-yellow-700";
+        const highlightClasses = "bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-green-400 dark:border-green-600 ring-2 ring-green-300";
+        
+        card.className = `${baseClasses} ${isBeingReplaced ? highlightClasses : normalClasses}`;
         card.innerHTML = `
           <div class="flex flex-col items-center space-y-1 mb-2">
             <div class="flex-shrink-0">
@@ -591,10 +600,10 @@
               <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} #${rider.rider_number || "-"}</div>
             </div>
           </div>
-          <button class="w-full bg-blue-600 hover:bg-blue-700 text-white px-1 py-1 rounded text-xs font-medium transition-colors" 
+          <button class="w-full ${isBeingReplaced ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-1 py-1 rounded text-xs font-medium transition-colors" 
                   onclick="event.stopPropagation(); replaceRider(${rider.id})" 
                   title="Byt ut denna förare">
-            Byt ut
+            ${isBeingReplaced ? '🔄 Byter ut...' : 'Byt ut'}
           </button>
         `;
         list.appendChild(card);
@@ -638,6 +647,9 @@
       
       // Update the display
       validateAndRender();
+      
+      // Re-render current team to show highlighting
+      renderCurrentTeam();
       
       // Scroll to rider list
       document.getElementById("rider-list").scrollIntoView({ behavior: 'smooth' });
