@@ -8039,10 +8039,12 @@ def force_recreate_data():
     
     try:
         with app.app_context():
-            # BACKUP USER PROFILE DATA BEFORE DELETION
-            print("Backing up user profile data...")
+            # BACKUP USER PROFILE DATA AND SEASON TEAMS BEFORE DELETION
+            print("Backing up user profile data and season teams...")
             users = User.query.all()
             profile_backups = []
+            season_team_backups = []
+            
             for user in users:
                 backup = {
                     'username': user.username,
@@ -8056,7 +8058,19 @@ def force_recreate_data():
                 }
                 profile_backups.append(backup)
             
-            print(f"Backed up {len(profile_backups)} user profiles")
+            # Backup season teams
+            season_teams = SeasonTeam.query.all()
+            for team in season_teams:
+                team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+                team_backup = {
+                    'user_id': team.user_id,
+                    'team_name': team.team_name,
+                    'total_points': team.total_points,
+                    'rider_ids': [tr.rider_id for tr in team_riders]
+                }
+                season_team_backups.append(team_backup)
+            
+            print(f"Backed up {len(profile_backups)} user profiles and {len(season_team_backups)} season teams")
             
             # Clear all data
             print("Clearing all existing data...")
@@ -8099,6 +8113,32 @@ def force_recreate_data():
             
             db.session.commit()
             print(f"Restored {len(profile_backups)} user profiles with their data")
+            
+            # RESTORE SEASON TEAMS
+            print("Restoring season teams...")
+            for team_backup in season_team_backups:
+                # Find the user by username (since user IDs might have changed)
+                user = User.query.filter_by(username=profile_backups[team_backup['user_id']-1]['username']).first()
+                if user:
+                    # Create the season team
+                    team = SeasonTeam(
+                        user_id=user.id,
+                        team_name=team_backup['team_name'],
+                        total_points=0  # Reset points to 0
+                    )
+                    db.session.add(team)
+                    db.session.flush()  # Get the team ID
+                    
+                    # Add the riders to the team
+                    for rider_id in team_backup['rider_ids']:
+                        team_rider = SeasonTeamRider(
+                            season_team_id=team.id,
+                            rider_id=rider_id
+                        )
+                        db.session.add(team_rider)
+            
+            db.session.commit()
+            print(f"Restored {len(season_team_backups)} season teams with their riders")
             
             # Create fresh data
             print("Creating fresh data...")
@@ -10710,9 +10750,12 @@ def clear_all_data():
         deleted_scores = CompetitionScore.query.delete()
         deleted_out_status = CompetitionRiderStatus.query.delete()
         
-        # Also clear season team data
-        deleted_season_team_riders = SeasonTeamRider.query.delete()
-        deleted_season_teams = SeasonTeam.query.delete()
+        # Reset season team points but keep the teams
+        season_teams = SeasonTeam.query.all()
+        for team in season_teams:
+            team.total_points = 0
+        deleted_season_team_riders = 0  # Keep the team riders
+        deleted_season_teams = 0  # Keep the teams
         
         # Clear league points and scores
         try:
