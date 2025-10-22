@@ -162,9 +162,26 @@
         <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
       </div>
 
+      <!-- Nuvarande team (om det finns) -->
+      {% if has_existing_team %}
+      <div class="current-team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl mb-6 border-2 border-yellow-400">
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-yellow-200 pb-3 text-yellow-600">⭐ Nuvarande Team</h2>
+        <div id="current-team-list" class="space-y-2 sm:space-y-3">
+          <!-- Current team riders will be loaded here -->
+        </div>
+        <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200">
+          <p class="text-sm text-yellow-800 dark:text-yellow-200">
+            💡 <strong>Tips:</strong> Klicka på "Byt ut" för att ersätta en förare i taget, eller skapa ett helt nytt team nedan.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Ditt team -->
       <div class="team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl h-fit sticky top-4 sm:top-8">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-blue-200 pb-3 text-blue-600">🏆 Ditt Team</h2>
+        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-blue-200 pb-3 text-blue-600">
+          {% if has_existing_team %}🔄 Nytt Team{% else %}🏆 Ditt Team{% endif %}
+        </h2>
 
         <div class="mb-4">
           <label for="team-name-input" class="block dark:text-gray-300 mb-2 text-sm font-medium">Teamnamn:</label>
@@ -230,6 +247,7 @@
     let budget = totalBudget;
     let myTeam = [];
     let classFilter = "all";
+    let currentTeam = []; // Store current team riders
 
     function showToast(msg, ok = true) {
       const t = document.getElementById("toast");
@@ -324,6 +342,16 @@
     }
 
     function canAddRider(r) {
+      // If we're in replacement mode, allow adding riders of the same class
+      if (window.replacingRiderId) {
+        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
+        if (riderToReplace && r.class === riderToReplace.class) {
+          return true; // Allow replacement of same class
+        }
+        return false; // Don't allow different class
+      }
+      
+      // Normal validation
       if (myTeam.length >= 4) return false;
       if (r.price > budget) return false;
       const c450 = myTeam.filter((x) => x.class === "450cc").length;
@@ -334,6 +362,30 @@
     }
 
     function addRider(r) {
+      // Check if we're replacing a rider
+      if (window.replacingRiderId) {
+        // Find the rider being replaced
+        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
+        if (riderToReplace && r.class === riderToReplace.class) {
+          // Add the new rider
+          myTeam.push(r);
+          budget -= r.price;
+          
+          // Clear the replacement mode
+          window.replacingRiderId = null;
+          
+          // Show success message
+          showToast(`${r.name} ersätter ${riderToReplace.name}`, true);
+          
+          validateAndRender();
+          return;
+        } else {
+          showToast(`Du måste välja en ${riderToReplace?.class || 'annan'} förare`, false);
+          return;
+        }
+      }
+      
+      // Normal add rider logic
       if (!canAddRider(r)) return;
       if (myTeam.some((x) => x.id === r.id)) return;
       myTeam.push(r);
@@ -470,6 +522,85 @@
       }
     }
 
+    function loadCurrentTeam() {
+      if (!hasExistingTeam || !existingTeamRiders || existingTeamRiders.length === 0) {
+        return;
+      }
+      
+      // Find riders that match the existing team rider IDs
+      currentTeam = allRiders.filter(rider => 
+        existingTeamRiders.includes(rider.id.toString())
+      );
+      
+      renderCurrentTeam();
+    }
+
+    function renderCurrentTeam() {
+      const list = document.getElementById("current-team-list");
+      if (!list) return;
+      
+      list.innerHTML = "";
+      
+      currentTeam.forEach((rider) => {
+        const row = document.createElement("div");
+        row.className = "flex justify-between items-center bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700";
+        row.innerHTML = `
+          <div class="flex items-center gap-3">
+            ${rider.image_url
+              ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
+                     alt="${rider.name} headshot"
+                     class="w-10 h-10 object-cover rounded-full border-2 border-yellow-300" width="40" height="40"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <div class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
+                 ${rider.bike_brand 
+                   ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
+                          alt="${rider.bike_brand} logo" 
+                          class="w-6 h-6 object-contain"
+                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     <span class="text-white text-xs font-bold" style="display: none;">#${rider.rider_number}</span>`
+                   : `<span class="text-white text-xs font-bold">#${rider.rider_number}</span>`}
+               </div>`
+              : (rider.bike_brand
+                  ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
+                         alt="${rider.bike_brand} logo"
+                         class="w-10 h-10 object-contain border-2 border-yellow-300 rounded-full" width="40" height="40" />`
+                  : `<div class="w-10 h-10 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
+                       <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
+                     </div>`)}
+            <div>
+              <div class="font-semibold text-gray-800 dark:text-gray-200">${rider.name}</div>
+              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} ${rider.class} • #${rider.rider_number || "-"}</div>
+              <div class="text-xs text-yellow-600 font-medium">${formatCurrency(rider.price)} kr</div>
+            </div>
+          </div>
+          <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors" 
+                  onclick="replaceRider(${rider.id})" 
+                  title="Byt ut denna förare">
+            Byt ut
+          </button>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function replaceRider(riderIdToReplace) {
+      // Find the rider to replace
+      const riderToReplace = currentTeam.find(r => r.id === riderIdToReplace);
+      if (!riderToReplace) return;
+      
+      // Show a message about what we're doing
+      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}`, true);
+      
+      // Set filter to the same class as the rider being replaced
+      setFilter(riderToReplace.class);
+      
+      // Store which rider we're replacing
+      window.replacingRiderId = riderIdToReplace;
+      
+      // Scroll to rider list
+      document.getElementById("rider-list").scrollIntoView({ behavior: 'smooth' });
+    }
+
     async function saveSeasonTeam() {
       const name = document.getElementById("team-name-input").value.trim();
       if (!name) { showToast("Du måste ange teamnamn", false); return; }
@@ -533,6 +664,7 @@
     // Init
     document.addEventListener("DOMContentLoaded", () => {
       setFilter("all");
+      loadCurrentTeam(); // Load existing team if it exists
       validateAndRender();
     });
   </script>
