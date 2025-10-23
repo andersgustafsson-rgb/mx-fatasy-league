@@ -428,39 +428,58 @@
         }
         
         if (riderToReplace && r.class === riderToReplace.class) {
-          // Remove the old rider from myTeam first
-          const oldRiderIndex = myTeam.findIndex(rt => rt.id === window.replacingRiderId);
-          if (oldRiderIndex > -1) {
-            const oldRider = myTeam[oldRiderIndex];
-            budget += oldRider.price; // Return budget for old rider
-            myTeam.splice(oldRiderIndex, 1); // Remove old rider
-            console.log("🗑️ Removed old rider:", oldRider.name, "from myTeam");
-            console.log("💰 Budget after removing old rider:", budget);
-          }
+          // Check if user has enough points for this change
+          const ridersChanged = calculateRidersChanged() + 1; // +1 because we're about to change one more rider
+          const penaltyPoints = ridersChanged * 50;
           
-          // Add the new rider
-          myTeam.push(r);
-          budget -= r.price;
-          console.log("➕ Added new rider:", r.name, "to myTeam");
-          console.log("💰 BUDGET AFTER adding new rider:", budget);
-          
-          // Clear the replacement mode
-          window.replacingRiderId = null;
-          
-          // Show success message with budget info
-          const budgetDiff = r.price - riderToReplace.price;
-          if (budgetDiff > 0) {
-            showToast(`${r.name} ersätter ${riderToReplace.name}. Kostar ${budgetDiff.toLocaleString()} kr mer.`, true);
-          } else if (budgetDiff < 0) {
-            showToast(`${r.name} ersätter ${riderToReplace.name}. Sparar ${Math.abs(budgetDiff).toLocaleString()} kr!`, true);
-          } else {
-            showToast(`${r.name} ersätter ${riderToReplace.name}. Samma pris.`, true);
-          }
-          
-          validateAndRender();
-          
-          // Re-render current team to clear highlighting
-          renderCurrentTeam();
+          // Get current user points
+          fetch("/get_user_total_points")
+            .then(response => response.json())
+            .then(pointsData => {
+              if (pointsData.total_points < penaltyPoints) {
+                showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare.`, false);
+                return;
+              }
+              
+              // User has enough points, proceed with the replacement
+              // Remove the old rider from myTeam first
+              const oldRiderIndex = myTeam.findIndex(rt => rt.id === window.replacingRiderId);
+              if (oldRiderIndex > -1) {
+                const oldRider = myTeam[oldRiderIndex];
+                budget += oldRider.price; // Return budget for old rider
+                myTeam.splice(oldRiderIndex, 1); // Remove old rider
+                console.log("🗑️ Removed old rider:", oldRider.name, "from myTeam");
+                console.log("💰 Budget after removing old rider:", budget);
+              }
+              
+              // Add the new rider
+              myTeam.push(r);
+              budget -= r.price;
+              console.log("➕ Added new rider:", r.name, "to myTeam");
+              console.log("💰 BUDGET AFTER adding new rider:", budget);
+              
+              // Clear the replacement mode
+              window.replacingRiderId = null;
+              
+              // Show success message with budget info
+              const budgetDiff = r.price - riderToReplace.price;
+              if (budgetDiff > 0) {
+                showToast(`${r.name} ersätter ${riderToReplace.name}. Kostar ${budgetDiff.toLocaleString()} kr mer.`, true);
+              } else if (budgetDiff < 0) {
+                showToast(`${r.name} ersätter ${riderToReplace.name}. Sparar ${Math.abs(budgetDiff).toLocaleString()} kr!`, true);
+              } else {
+                showToast(`${r.name} ersätter ${riderToReplace.name}. Samma pris.`, true);
+              }
+              
+              validateAndRender();
+              
+              // Re-render current team to clear highlighting
+              renderCurrentTeam();
+            })
+            .catch(error => {
+              console.error("Error checking user points:", error);
+              showToast("Ett fel uppstod vid kontroll av poäng. Försök igen.", false);
+            });
           return;
         } else if (riderToReplace && r.class === riderToReplace.class && r.price > riderToReplace.price) {
           showToast(`${r.name} kostar ${r.price.toLocaleString()} kr, men ${riderToReplace.name} kostade bara ${riderToReplace.price.toLocaleString()} kr. Du kan inte byta till en dyrare förare!`, false);
