@@ -3093,7 +3093,6 @@ def delete_rider(rider_id):
             db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
             db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
             db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
-            db.session.execute(text("DELETE FROM competition_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
             db.session.execute(text("DELETE FROM race_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
             db.session.execute(text("DELETE FROM holeshot_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
             db.session.execute(text("DELETE FROM wildcard_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
@@ -7558,6 +7557,48 @@ def fix_missing_images():
         return jsonify({
             "error": f"Failed to fix missing images: {str(e)}"
         }), 500
+
+@app.get("/find_duplicate_riders")
+def find_duplicate_riders():
+    """Find duplicate riders based on name and number"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        from sqlalchemy import text
+        
+        # Find riders with same name
+        same_name_query = text("""
+            SELECT name, COUNT(*) as count, GROUP_CONCAT(id) as ids, GROUP_CONCAT(rider_number) as numbers
+            FROM riders 
+            GROUP BY name 
+            HAVING COUNT(*) > 1
+            ORDER BY name
+        """)
+        
+        same_name_results = db.session.execute(same_name_query).fetchall()
+        
+        # Find riders with same number in same class
+        same_number_query = text("""
+            SELECT rider_number, class_name, COUNT(*) as count, GROUP_CONCAT(id) as ids, GROUP_CONCAT(name) as names
+            FROM riders 
+            GROUP BY rider_number, class_name 
+            HAVING COUNT(*) > 1
+            ORDER BY rider_number, class_name
+        """)
+        
+        same_number_results = db.session.execute(same_number_query).fetchall()
+        
+        duplicates = {
+            "same_name": [{"name": r[0], "count": r[1], "ids": r[2], "numbers": r[3]} for r in same_name_results],
+            "same_number": [{"number": r[0], "class": r[1], "count": r[2], "ids": r[3], "names": r[4]} for r in same_number_results]
+        }
+        
+        return jsonify(duplicates)
+        
+    except Exception as e:
+        print(f"Error finding duplicates: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.get("/routes")
 def list_routes():
