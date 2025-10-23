@@ -784,6 +784,12 @@
         console.log(`💰 Adding back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget`);
         budget += riderToReplace.price;
         console.log("💰 BUDGET AFTER adding back rider price:", budget);
+      } else {
+        // If myTeam already has riders, just add back the price of the rider being replaced
+        console.log("💰 myTeam already exists, just adding back rider price");
+        console.log(`💰 Adding back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget`);
+        budget += riderToReplace.price;
+        console.log("💰 BUDGET AFTER adding back rider price:", budget);
       }
       
       // Show a message about what we're doing
