@@ -37,7 +37,7 @@
                 <input 
                     type="text" 
                     id="riderSearch" 
-                    placeholder="Sök efter namn, nummer eller team..." 
+                    placeholder="Sök efter namn, nummer, team eller pris..." 
                     class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 >
                 <button 
@@ -79,7 +79,7 @@
                     <!-- Add New Rider Form -->
                     <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
                         <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
-                        <form id="add-rider-form-250" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <form id="add-rider-form-250" class="grid grid-cols-1 md:grid-cols-6 gap-4">
                             <input type="hidden" name="class_name" value="250cc">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Nummer</label>
@@ -111,6 +111,10 @@
                                     <option value="Beta">Beta</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
+                                <input type="number" name="price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
+                            </div>
                             <div class="flex items-end">
                                 <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
                                     Lägg till
@@ -128,6 +132,7 @@
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Coast</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Pris (kr)</th>
                                     <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
                                 </tr>
                             </thead>
@@ -140,8 +145,9 @@
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">East</span>
                                     </td>
                                     <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="rider-price px-4 py-3 text-white">{{ "{:,.0f}".format(rider.price) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east')" 
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east', {{ rider.price }})" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
                                             Redigera
                                         </button>
@@ -160,8 +166,9 @@
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-600 text-white">West</span>
                                     </td>
                                     <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="rider-price px-4 py-3 text-white">{{ "{:,.0f}".format(rider.price) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west')" 
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west', {{ rider.price }})" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
                                             Redigera
                                         </button>
@@ -189,7 +196,7 @@
                     <!-- Add New Rider Form -->
                     <div class="mb-6 p-4 bg-gray-800 rounded border border-cyan-400" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);">
                         <h3 class="text-lg font-semibold text-cyan-400 mb-4">➕ Lägg till ny förare</h3>
-                        <form id="add-rider-form-450" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <form id="add-rider-form-450" class="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <input type="hidden" name="class_name" value="450cc">
                             <input type="hidden" name="coast_250" value="">
                             <div>
@@ -214,6 +221,10 @@
                                     <option value="Beta">Beta</option>
                                 </select>
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
+                                <input type="number" name="price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
+                            </div>
                             <div class="flex items-end">
                                 <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
                                     Lägg till
@@ -230,6 +241,7 @@
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Nummer</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Namn</th>
                                     <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Märke</th>
+                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Pris (kr)</th>
                                     <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärder</th>
                                 </tr>
                             </thead>
@@ -239,8 +251,9 @@
                                     <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
+                                    <td class="rider-price px-4 py-3 text-white">{{ "{:,.0f}".format(rider.price) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '450cc', '')" 
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '450cc', '', {{ rider.price }})" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
                                             Redigera
                                         </button>
@@ -373,6 +386,10 @@
                                 <option value="Beta">Beta</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
+                            <input type="number" id="edit-rider-price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
+                        </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
                         <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors">
@@ -406,14 +423,16 @@
                 const number = item.querySelector('.rider-number')?.textContent?.toLowerCase() || '';
                 const team = item.querySelector('.rider-team')?.textContent?.toLowerCase() || '';
                 const bike = item.querySelector('.rider-bike')?.textContent?.toLowerCase() || '';
+                const price = item.querySelector('.rider-price')?.textContent?.toLowerCase() || '';
                 
-                if (name.includes(searchTerm) || number.includes(searchTerm) || team.includes(searchTerm) || bike.includes(searchTerm)) {
+                if (name.includes(searchTerm) || number.includes(searchTerm) || team.includes(searchTerm) || bike.includes(searchTerm) || price.includes(searchTerm)) {
                     allRiders.push({
                         element: item,
                         name: item.querySelector('.rider-name')?.textContent || '',
                         number: item.querySelector('.rider-number')?.textContent || '',
                         team: item.querySelector('.rider-team')?.textContent || '',
-                        bike: item.querySelector('.rider-bike')?.textContent || ''
+                        bike: item.querySelector('.rider-bike')?.textContent || '',
+                        price: item.querySelector('.rider-price')?.textContent || ''
                     });
                 }
             });
@@ -429,7 +448,7 @@
                                 <span class="text-gray-600 dark:text-gray-400 ml-2">#${rider.number}</span>
                             </div>
                             <div class="text-sm text-gray-600 dark:text-gray-400">
-                                ${rider.team} • ${rider.bike}
+                                ${rider.team} • ${rider.bike} • ${rider.price} kr
                             </div>
                         </div>
                     </div>
@@ -496,11 +515,12 @@
         });
 
         // Edit rider
-        function editRider(id, name, number, brand, className, coast) {
+        function editRider(id, name, number, brand, className, coast, price) {
             document.getElementById('edit-rider-id').value = id;
             document.getElementById('edit-rider-name').value = name;
             document.getElementById('edit-rider-number').value = number;
             document.getElementById('edit-rider-brand').value = brand;
+            document.getElementById('edit-rider-price').value = price;
             
             // Show/hide coast section based on class
             const coastSection = document.getElementById('edit-coast-section');
@@ -528,6 +548,7 @@
                 name: document.getElementById('edit-rider-name').value,
                 rider_number: parseInt(document.getElementById('edit-rider-number').value),
                 bike_brand: document.getElementById('edit-rider-brand').value,
+                price: parseInt(document.getElementById('edit-rider-price').value),
                 nickname: document.getElementById('edit-rider-nickname').value,
                 birthdate: document.getElementById('edit-rider-birthdate').value,
                 hometown: document.getElementById('edit-rider-hometown').value,

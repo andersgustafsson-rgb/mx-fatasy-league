@@ -2841,8 +2841,10 @@ def add_rider():
     
     data = request.get_json()
     
-    # Set default price based on class
-    price = 450000 if data['class_name'] == '450cc' else 50000
+    # Use price from form, or set default based on class
+    price = data.get('price')
+    if not price:
+        price = 450000 if data['class_name'] == '450cc' else 50000
     
     rider = Rider(
         name=data['name'],
@@ -2869,6 +2871,10 @@ def update_rider(rider_id):
     rider.name = data['name']
     rider.rider_number = data['rider_number']
     rider.bike_brand = data['bike_brand']
+    
+    # Update price if provided
+    if 'price' in data:
+        rider.price = data['price']
     
     # Update coast_250 if provided (for 250cc riders)
     if 'coast_250' in data:
