@@ -310,14 +310,8 @@
       const isSelected = myTeam.some(x => x.id === r.id);
       const canAdd = canAddRider(r);
       
-      // Check if rider is too expensive for replacement
+      // In replacement mode, no rider is too expensive since we're swapping
       let isTooExpensive = false;
-      if (window.replacingRiderId) {
-        const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
-        if (riderToReplace && r.class === riderToReplace.class && r.price > riderToReplace.price) {
-          isTooExpensive = true;
-        }
-      }
       
       // Bygg HTML för rider-kortet: visa image_url om finns, annars logga/placeholder
       const imgHtml = r.image_url
@@ -387,12 +381,9 @@
       if (window.replacingRiderId) {
         const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
         if (riderToReplace && r.class === riderToReplace.class) {
-          // Check if new rider costs more than the original rider
-          if (r.price > riderToReplace.price) {
-            return false; // Don't allow more expensive riders
-          }
-          // In replacement mode, we don't need to check budget since we're swapping riders
-          return true; // Allow replacement of same class with same or lower price
+          // In replacement mode, we can replace with any rider of the same class
+          // regardless of price, since we're swapping riders
+          return true; // Allow replacement of same class with any price
         }
         return false; // Don't allow different class
       }
@@ -793,7 +784,7 @@
       }
       
       // Show a message about what we're doing
-      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan bara välja förare som kostar ${riderToReplace.price.toLocaleString()} kr eller mindre. Budget: ${budget.toLocaleString()} kr.`, true);
+      showToast(`Välj en ny ${riderToReplace.class} förare att ersätta ${riderToReplace.name}. Du kan välja vilken ${riderToReplace.class} förare som helst. Budget: ${budget.toLocaleString()} kr.`, true);
       
       // Set filter to the same class as the rider being replaced
       setFilter(riderToReplace.class);
