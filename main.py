@@ -786,8 +786,21 @@ def index():
             print("Tables missing, reinitializing database...")
             init_database()
         
-        # Skip problematic column migrations for now
-        pass
+        # Add classes column if missing
+        try:
+            exists = db.session.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name='riders' AND column_name='classes'
+            """)).fetchone()
+            if not exists:
+                print("Adding classes column to riders table...")
+                db.session.execute(db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)"))
+                db.session.commit()
+                print("Classes column added successfully")
+        except Exception as e:
+            print(f"Error adding classes column: {e}")
+            db.session.rollback()
+            pass
         
         # Skip rider bio column migrations for now
         pass
@@ -2797,6 +2810,20 @@ def rider_management():
                 ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
                 ('bio', 'TEXT'), ('achievements', 'TEXT'), ('classes', 'VARCHAR(50)')
             ]
+            
+            # Special handling for classes column - add it first
+            try:
+                exists = db.session.execute(db.text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='riders' AND column_name='classes'
+                """)).fetchone()
+                if not exists:
+                    print("Adding classes column to riders table...")
+                    db.session.execute(db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)"))
+                    print("Classes column added successfully")
+            except Exception as e:
+                print(f"Error adding classes column: {e}")
+                pass
             for col, typ in columns:
                 exists = db.session.execute(db.text("""
                     SELECT column_name FROM information_schema.columns 
