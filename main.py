@@ -2989,8 +2989,13 @@ def update_rider(rider_id):
                 print(f"Error saving rider image: {e}")
     
     # Check for number conflict (excluding current rider)
-    # Use new class_name if provided, otherwise use current class
-    new_class_name = data.get('class_name', rider.class_name)
+    # Use new class_name from classes field if provided, otherwise use current class
+    new_class_name = rider.class_name
+    if 'classes' in data and data['classes']:
+        new_class_name = data['classes'].split(',')[0].strip()
+    elif 'class_name' in data:
+        new_class_name = data['class_name']
+    
     if data['rider_number'] != rider.rider_number or new_class_name != rider.class_name:
         existing_rider = Rider.query.filter_by(
             rider_number=data['rider_number'],
@@ -2998,17 +3003,32 @@ def update_rider(rider_id):
         ).filter(Rider.id != rider_id).first()
         
         if existing_rider:
-            return jsonify({
-                'error': 'conflict',
-                'message': f'Nummer {data["rider_number"]} finns redan för {existing_rider.name} ({existing_rider.class_name})',
-                'existing_rider': {
-                    'id': existing_rider.id,
-                    'name': existing_rider.name,
-                    'class_name': existing_rider.class_name,
-                    'rider_number': existing_rider.rider_number,
-                    'bike_brand': existing_rider.bike_brand
-                }
-            }), 409
+            # Automatically delete the existing rider with the same number
+            print(f"DEBUG: Found existing rider {existing_rider.name} with same number {data['rider_number']}, deleting it")
+            
+            # Delete associated data first
+            from sqlalchemy import text
+            try:
+                db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM race_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM holeshot_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM wildcard_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                db.session.execute(text("DELETE FROM competition_rider_status WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
+                
+                # Delete the existing rider
+                db.session.delete(existing_rider)
+                db.session.commit()
+                print(f"DEBUG: Successfully deleted existing rider {existing_rider.name} (ID: {existing_rider.id})")
+                
+            except Exception as e:
+                print(f"DEBUG: Error deleting existing rider: {e}")
+                db.session.rollback()
+                return jsonify({
+                    'error': 'delete_conflict_failed',
+                    'message': f'Kunde inte ta bort befintlig förare {existing_rider.name}: {str(e)}'
+                }), 500
     
     rider.name = data['name']
     rider.rider_number = data['rider_number']
