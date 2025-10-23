@@ -200,7 +200,8 @@ class Rider(db.Model):
     __tablename__ = "riders"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    class_name = db.Column("class", db.String(10), nullable=False)
+    class_name = db.Column("class", db.String(10), nullable=False)  # Keep for backward compatibility
+    classes = db.Column(db.String(50), nullable=True)  # New: comma-separated classes like "250cc,450cc"
     rider_number = db.Column(db.Integer)
     bike_brand = db.Column(db.String(50))
     image_url = db.Column(db.String(200))
@@ -2794,7 +2795,7 @@ def rider_management():
                 ('team', 'VARCHAR(150)'), ('manufacturer', 'VARCHAR(100)'), ('team_manager', 'VARCHAR(100)'),
                 ('mechanic', 'VARCHAR(100)'), ('turned_pro', 'INTEGER'), ('instagram', 'VARCHAR(100)'),
                 ('twitter', 'VARCHAR(100)'), ('facebook', 'VARCHAR(100)'), ('website', 'VARCHAR(200)'),
-                ('bio', 'TEXT'), ('achievements', 'TEXT')
+                ('bio', 'TEXT'), ('achievements', 'TEXT'), ('classes', 'VARCHAR(50)')
             ]
             for col, typ in columns:
                 exists = db.session.execute(db.text("""
@@ -2870,9 +2871,13 @@ def add_rider():
     if not price:
         price = 450000 if data['class_name'] == '450cc' else 50000
     
+    # Handle classes - if not provided, use class_name for backward compatibility
+    classes = data.get('classes', data.get('class_name', '250cc'))
+    
     rider = Rider(
         name=data['name'],
-        class_name=data['class_name'],
+        class_name=data.get('class_name', classes.split(',')[0].strip() if classes else '250cc'),
+        classes=classes,
         rider_number=data['rider_number'],
         bike_brand=data['bike_brand'],
         coast_250=data.get('coast_250'),
@@ -2927,11 +2932,17 @@ def update_rider(rider_id):
     rider.rider_number = data['rider_number']
     rider.bike_brand = data['bike_brand']
     
-    # Update class if provided
-    if 'class_name' in data:
-        rider.class_name = data['class_name']
-        # If changing to 450cc, clear coast_250
-        if data['class_name'] == '450cc':
+    # Update classes if provided
+    if 'classes' in data:
+        rider.classes = data['classes']
+        # Update class_name for backward compatibility (use first class)
+        if data['classes']:
+            rider.class_name = data['classes'].split(',')[0].strip()
+        else:
+            rider.class_name = '250cc'  # Default fallback
+        
+        # If no 250cc class, clear coast_250
+        if '250cc' not in data['classes']:
             rider.coast_250 = None
     
     # Update price if provided
