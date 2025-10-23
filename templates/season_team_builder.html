@@ -246,16 +246,25 @@
 
         <div id="your-team-list" class="space-y-2 sm:space-y-3"></div>
 
-        <button onclick="saveSeasonTeam()"
-                id="save-team-btn"
-                class="mt-6 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg"
-                disabled>
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% if has_existing_team %}
-          ⚠️ Uppdatera Team (-50 poäng)
-          {% else %}
-          💾 Spara Team
+          <button onclick="undoChanges()"
+                  id="undo-btn"
+                  class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 font-bold py-3 px-4 rounded-lg text-white text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg">
+            ↩️ Ångra
+          </button>
           {% endif %}
-        </button>
+          <button onclick="saveSeasonTeam()"
+                  id="save-team-btn"
+                  class="{% if has_existing_team %}col-span-1{% else %}col-span-2{% endif %} bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  disabled>
+            {% if has_existing_team %}
+            ⚠️ Uppdatera Team (-50 poäng)
+            {% else %}
+            💾 Spara Team
+            {% endif %}
+          </button>
+        </div>
       </div>
       </div> <!-- End grid container -->
     </main>
@@ -438,7 +447,7 @@
             .then(response => response.json())
             .then(pointsData => {
               if (pointsData.total_points < penaltyPoints) {
-                showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare.`, false);
+                showToast(`Du har inte tillräckligt med poäng! Du har ${pointsData.total_points} poäng men behöver ${penaltyPoints} poäng för att byta ${ridersChanged} förare. Klicka "Ångra" för att gå tillbaka till ditt ursprungliga team.`, false);
                 return;
               }
               
@@ -872,6 +881,25 @@
       
       showToast(`Nuvarande team kopierat! Budget: ${budget.toLocaleString()} kr kvar. Du kan nu byta ut förarna en i taget.`, true);
       validateAndRender();
+    }
+
+    function undoChanges() {
+      // Reset to original team
+      myTeam = [];
+      budget = totalBudget;
+      
+      // Add all riders from current team (original team)
+      currentTeam.forEach(rider => {
+        myTeam.push(rider);
+        budget -= rider.price;
+      });
+      
+      // Clear any replacement mode
+      window.replacingRiderId = null;
+      
+      showToast("Ångrat! Återställt till ursprungligt team.", true);
+      validateAndRender();
+      renderCurrentTeam();
     }
 
     async function saveSeasonTeam() {
