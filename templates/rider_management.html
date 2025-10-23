@@ -100,7 +100,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
-                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required onchange="handleBikeBrandChange(this)">
                                     <option value="">Välj märke</option>
                                     <option value="Honda">Honda</option>
                                     <option value="Yamaha">Yamaha</option>
@@ -110,7 +110,9 @@
                                     <option value="Husqvarna">Husqvarna</option>
                                     <option value="GasGas">GasGas</option>
                                     <option value="Beta">Beta</option>
+                                    <option value="custom">Annan...</option>
                                 </select>
+                                <input type="text" name="bike_brand_custom" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white mt-2 hidden" placeholder="Ange märke">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
@@ -210,7 +212,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
-                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                <select name="bike_brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required onchange="handleBikeBrandChange(this)">
                                     <option value="">Välj märke</option>
                                     <option value="Honda">Honda</option>
                                     <option value="Yamaha">Yamaha</option>
@@ -220,7 +222,9 @@
                                     <option value="Husqvarna">Husqvarna</option>
                                     <option value="GasGas">GasGas</option>
                                     <option value="Beta">Beta</option>
+                                    <option value="custom">Annan...</option>
                                 </select>
+                                <input type="text" name="bike_brand_custom" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white mt-2 hidden" placeholder="Ange märke">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
@@ -390,7 +394,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Märke</label>
-                            <select id="edit-rider-brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                            <select id="edit-rider-brand" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required onchange="handleBikeBrandChange(this)">
                                 <option value="">Välj märke</option>
                                 <option value="Honda">Honda</option>
                                 <option value="Yamaha">Yamaha</option>
@@ -400,7 +404,9 @@
                                 <option value="Husqvarna">Husqvarna</option>
                                 <option value="GasGas">GasGas</option>
                                 <option value="Beta">Beta</option>
+                                <option value="custom">Annan...</option>
                             </select>
+                            <input type="text" id="edit-rider-brand-custom" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white mt-2 hidden" placeholder="Ange märke">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
@@ -608,6 +614,12 @@
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData);
                 
+                // Handle custom bike brand
+                if (data.bike_brand === 'custom') {
+                    data.bike_brand = data.bike_brand_custom;
+                }
+                delete data.bike_brand_custom;
+                
                 try {
                     const response = await fetch('/api/riders', {
                         method: 'POST',
@@ -643,8 +655,18 @@
             document.getElementById('edit-rider-id').value = id;
             document.getElementById('edit-rider-name').value = name;
             document.getElementById('edit-rider-number').value = number;
-            document.getElementById('edit-rider-brand').value = brand;
             document.getElementById('edit-rider-price').value = price;
+            
+            // Handle bike brand - check if it's a custom brand
+            const predefinedBrands = ['Honda', 'Yamaha', 'KTM', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta'];
+            if (predefinedBrands.includes(brand)) {
+                document.getElementById('edit-rider-brand').value = brand;
+                document.getElementById('edit-rider-brand-custom').classList.add('hidden');
+            } else {
+                document.getElementById('edit-rider-brand').value = 'custom';
+                document.getElementById('edit-rider-brand-custom').value = brand;
+                document.getElementById('edit-rider-brand-custom').classList.remove('hidden');
+            }
             
             // Handle multiple classes - parse comma-separated classes
             const classes = className.split(',').map(c => c.trim());
@@ -678,6 +700,21 @@
             }
         });
 
+        // Handle bike brand changes
+        function handleBikeBrandChange(selectElement) {
+            const customInput = selectElement.parentNode.querySelector('input[name="bike_brand_custom"], #edit-rider-brand-custom');
+            if (selectElement.value === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.required = true;
+                selectElement.required = false;
+            } else {
+                customInput.classList.add('hidden');
+                customInput.required = false;
+                selectElement.required = true;
+                customInput.value = '';
+            }
+        }
+
         // Edit rider form
         document.getElementById('edit-rider-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -692,10 +729,16 @@
                 selectedClasses.push('450cc');
             }
             
+            // Handle custom bike brand
+            let bikeBrand = document.getElementById('edit-rider-brand').value;
+            if (bikeBrand === 'custom') {
+                bikeBrand = document.getElementById('edit-rider-brand-custom').value;
+            }
+            
             const data = {
                 name: document.getElementById('edit-rider-name').value,
                 rider_number: parseInt(document.getElementById('edit-rider-number').value),
-                bike_brand: document.getElementById('edit-rider-brand').value,
+                bike_brand: bikeBrand,
                 classes: selectedClasses.join(','),
                 price: parseInt(document.getElementById('edit-rider-price').value),
                 nickname: document.getElementById('edit-rider-nickname').value,
