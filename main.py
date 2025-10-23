@@ -2839,6 +2839,13 @@ def add_rider():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
+    # Check if season is active - prevent rider changes during season
+    if is_season_active():
+        return jsonify({
+            'error': 'season_active',
+            'message': 'Kan inte lägga till förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
+        }), 403
+    
     data = request.get_json()
     
     # Check for number conflict
@@ -2883,6 +2890,13 @@ def add_rider():
 def update_rider(rider_id):
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Check if season is active - prevent rider changes during season
+    if is_season_active():
+        return jsonify({
+            'error': 'season_active',
+            'message': 'Kan inte redigera förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
+        }), 403
     
     rider = Rider.query.get_or_404(rider_id)
     data = request.get_json()
@@ -2966,6 +2980,13 @@ def update_rider(rider_id):
 def delete_rider(rider_id):
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Check if season is active - prevent rider changes during season
+    if is_season_active():
+        return jsonify({
+            'error': 'season_active',
+            'message': 'Kan inte ta bort förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
+        }), 403
     
     rider = Rider.query.get_or_404(rider_id)
     db.session.delete(rider)
@@ -11394,6 +11415,32 @@ def is_picks_locked(competition):
         picks_locked = time_to_deadline.total_seconds() <= 0
     
     return picks_locked
+
+def is_season_active():
+    """Check if the season is active (has active races or competitions with results)"""
+    try:
+        # Check if there's an active race set
+        result = db.session.execute(db.text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
+        if result and result[0]:
+            print(f"DEBUG: is_season_active - Active race found: {result[0]}")
+            return True
+        
+        # Check if there are any competitions with results (indicating season has started)
+        competitions_with_results = db.session.execute(db.text("""
+            SELECT COUNT(*) FROM competitions c 
+            WHERE EXISTS (SELECT 1 FROM competition_results cr WHERE cr.competition_id = c.id)
+        """)).fetchone()
+        
+        if competitions_with_results and competitions_with_results[0] > 0:
+            print(f"DEBUG: is_season_active - Found {competitions_with_results[0]} competitions with results")
+            return True
+        
+        print(f"DEBUG: is_season_active - No active race or results found, season not active")
+        return False
+        
+    except Exception as e:
+        print(f"DEBUG: Exception in is_season_active: {e}")
+        return False
 
 if __name__ == "__main__":
     # Production vs Development configuration

@@ -616,6 +616,8 @@
                         const errorData = await response.json();
                         if (errorData.error === 'conflict') {
                             showConflictDialog(errorData);
+                        } else if (errorData.error === 'season_active') {
+                            alert('⚠️ ' + errorData.message);
                         } else {
                             alert('Fel vid tillägg av förare: ' + (errorData.message || 'Okänt fel'));
                         }
@@ -715,6 +717,8 @@
                     const errorData = await response.json();
                     if (errorData.error === 'conflict') {
                         showConflictDialog(errorData);
+                    } else if (errorData.error === 'season_active') {
+                        alert('⚠️ ' + errorData.message);
                     } else {
                         alert('Fel vid uppdatering av förare: ' + (errorData.message || 'Okänt fel'));
                     }
@@ -731,11 +735,16 @@
                 fetch(`/api/riders/${id}`, {
                     method: 'DELETE'
                 })
-                .then(response => {
-                    if (response.ok) {
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
                         location.reload();
                     } else {
-                        alert('Fel vid borttagning av förare');
+                        if (data.error === 'season_active') {
+                            alert('⚠️ ' + data.message);
+                        } else {
+                            alert('Fel vid borttagning av förare: ' + (data.message || 'Okänt fel'));
+                        }
                     }
                 })
                 .catch(error => {
