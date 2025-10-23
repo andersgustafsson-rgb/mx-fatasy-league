@@ -391,10 +391,7 @@
           if (r.price > riderToReplace.price) {
             return false; // Don't allow more expensive riders
           }
-          // Also check if we have enough budget for this rider
-          if (r.price > budget) {
-            return false; // Don't allow if not enough budget
-          }
+          // In replacement mode, we don't need to check budget since we're swapping riders
           return true; // Allow replacement of same class with same or lower price
         }
         return false; // Don't allow different class
