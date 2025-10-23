@@ -426,13 +426,34 @@
                 const price = item.querySelector('.rider-price')?.textContent?.toLowerCase() || '';
                 
                 if (name.includes(searchTerm) || number.includes(searchTerm) || team.includes(searchTerm) || bike.includes(searchTerm) || price.includes(searchTerm)) {
+                    // Extract rider ID and other data from the edit button's onclick attribute
+                    const editButton = item.querySelector('button[onclick*="editRider"]');
+                    const deleteButton = item.querySelector('button[onclick*="deleteRider"]');
+                    
+                    let riderId = '';
+                    let className = '';
+                    let coast = '';
+                    
+                    if (editButton) {
+                        const onclickAttr = editButton.getAttribute('onclick');
+                        const match = onclickAttr.match(/editRider\((\d+),\s*'([^']+)',\s*(\d+),\s*'([^']+)',\s*'([^']+)',\s*'([^']*)'\)/);
+                        if (match) {
+                            riderId = match[1];
+                            className = match[5];
+                            coast = match[6];
+                        }
+                    }
+                    
                     allRiders.push({
                         element: item,
                         name: item.querySelector('.rider-name')?.textContent || '',
                         number: item.querySelector('.rider-number')?.textContent || '',
                         team: item.querySelector('.rider-team')?.textContent || '',
                         bike: item.querySelector('.rider-bike')?.textContent || '',
-                        price: item.querySelector('.rider-price')?.textContent || ''
+                        price: item.querySelector('.rider-price')?.textContent || '',
+                        riderId: riderId,
+                        className: className,
+                        coast: coast
                     });
                 }
             });
@@ -447,8 +468,20 @@
                                 <span class="font-semibold text-gray-800 dark:text-white">${rider.name}</span>
                                 <span class="text-gray-600 dark:text-gray-400 ml-2">#${rider.number}</span>
                             </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400">
-                                ${rider.team} • ${rider.bike} • ${rider.price} kr
+                            <div class="flex items-center space-x-3">
+                                <div class="text-sm text-gray-600 dark:text-gray-400">
+                                    ${rider.team} • ${rider.bike} • ${rider.price} kr
+                                </div>
+                                ${rider.riderId ? `
+                                    <button onclick="editRider(${rider.riderId}, '${rider.name}', ${rider.number}, '${rider.bike}', '${rider.className}', '${rider.coast}', ${rider.price.replace(/,/g, '')})" 
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">
+                                        Redigera
+                                    </button>
+                                    <button onclick="deleteRider(${rider.riderId}, '${rider.name}')" 
+                                            class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                        Ta bort
+                                    </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
