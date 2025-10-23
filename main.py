@@ -2841,6 +2841,25 @@ def add_rider():
     
     data = request.get_json()
     
+    # Check for number conflict
+    existing_rider = Rider.query.filter_by(
+        rider_number=data['rider_number'],
+        class_name=data['class_name']
+    ).first()
+    
+    if existing_rider:
+        return jsonify({
+            'error': 'conflict',
+            'message': f'Nummer {data["rider_number"]} finns redan för {existing_rider.name} ({existing_rider.class_name})',
+            'existing_rider': {
+                'id': existing_rider.id,
+                'name': existing_rider.name,
+                'class_name': existing_rider.class_name,
+                'rider_number': existing_rider.rider_number,
+                'bike_brand': existing_rider.bike_brand
+            }
+        }), 409
+    
     # Use price from form, or set default based on class
     price = data.get('price')
     if not price:
@@ -2867,6 +2886,26 @@ def update_rider(rider_id):
     
     rider = Rider.query.get_or_404(rider_id)
     data = request.get_json()
+    
+    # Check for number conflict (excluding current rider)
+    if data['rider_number'] != rider.rider_number:
+        existing_rider = Rider.query.filter_by(
+            rider_number=data['rider_number'],
+            class_name=rider.class_name
+        ).filter(Rider.id != rider_id).first()
+        
+        if existing_rider:
+            return jsonify({
+                'error': 'conflict',
+                'message': f'Nummer {data["rider_number"]} finns redan för {existing_rider.name} ({existing_rider.class_name})',
+                'existing_rider': {
+                    'id': existing_rider.id,
+                    'name': existing_rider.name,
+                    'class_name': existing_rider.class_name,
+                    'rider_number': existing_rider.rider_number,
+                    'bike_brand': existing_rider.bike_brand
+                }
+            }), 409
     
     rider.name = data['name']
     rider.rider_number = data['rider_number']

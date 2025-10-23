@@ -510,6 +510,59 @@
             document.getElementById('searchResults').classList.add('hidden');
         }
         
+        // Show conflict dialog
+        function showConflictDialog(errorData) {
+            const existingRider = errorData.existing_rider;
+            const conflictModal = document.createElement('div');
+            conflictModal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+            conflictModal.innerHTML = `
+                <div class="bg-gray-900 rounded-lg border-2 border-red-400 p-6 w-full max-w-md" style="box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);">
+                    <h3 class="text-lg font-semibold text-red-400 mb-4">⚠️ Nummer-konflikt</h3>
+                    <p class="text-white mb-4">${errorData.message}</p>
+                    <div class="bg-gray-800 p-3 rounded mb-4">
+                        <p class="text-gray-300 text-sm">Befintlig förare:</p>
+                        <p class="text-white font-semibold">${existingRider.name} #${existingRider.rider_number}</p>
+                        <p class="text-gray-400 text-sm">${existingRider.class_name} • ${existingRider.bike_brand}</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="this.closest('.fixed').remove()" 
+                                class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded transition-colors">
+                            Avbryt
+                        </button>
+                        <button onclick="replaceExistingRider(${existingRider.id}, '${existingRider.name}')" 
+                                class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
+                            Ersätt befintlig
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(conflictModal);
+        }
+        
+        // Replace existing rider
+        function replaceExistingRider(riderId, riderName) {
+            if (confirm(`Är du säker på att du vill ta bort ${riderName} och ersätta med den nya föraren?`)) {
+                // Close conflict modal
+                document.querySelector('.fixed.inset-0').remove();
+                
+                // Delete existing rider and retry adding new one
+                fetch(`/api/riders/${riderId}`, {
+                    method: 'DELETE'
+                }).then(() => {
+                    // Retry the form submission
+                    const forms = document.querySelectorAll('[id^="add-rider-form-"]');
+                    forms.forEach(form => {
+                        if (form.querySelector('input[name="rider_number"]').value) {
+                            form.dispatchEvent(new Event('submit'));
+                        }
+                    });
+                }).catch(error => {
+                    console.error('Error deleting rider:', error);
+                    alert('Fel vid borttagning av befintlig förare');
+                });
+            }
+        }
+        
         // Allow search on Enter key
         document.getElementById('riderSearch').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -552,7 +605,12 @@
                     if (response.ok) {
                         location.reload();
                     } else {
-                        alert('Fel vid tillägg av förare');
+                        const errorData = await response.json();
+                        if (errorData.error === 'conflict') {
+                            showConflictDialog(errorData);
+                        } else {
+                            alert('Fel vid tillägg av förare: ' + (errorData.message || 'Okänt fel'));
+                        }
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -634,7 +692,12 @@
                 if (response.ok) {
                     location.reload();
                 } else {
-                    alert('Fel vid uppdatering av förare');
+                    const errorData = await response.json();
+                    if (errorData.error === 'conflict') {
+                        showConflictDialog(errorData);
+                    } else {
+                        alert('Fel vid uppdatering av förare: ' + (errorData.message || 'Okänt fel'));
+                    }
                 }
             } catch (error) {
                 console.error('Error:', error);
