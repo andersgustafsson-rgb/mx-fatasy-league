@@ -365,6 +365,14 @@
                             <label class="block text-sm font-medium text-gray-300 mb-1">Namn</label>
                             <input type="text" id="edit-rider-name" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Klass</label>
+                            <select id="edit-rider-class" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required>
+                                <option value="450cc">450cc</option>
+                                <option value="250cc">250cc</option>
+                            </select>
+                            <p class="text-xs text-yellow-400 mt-1">⚠️ Ändring av klass kan påverka befintliga picks och säsongsteam</p>
+                        </div>
                         <div id="edit-coast-section" style="display: none;">
                             <label class="block text-sm font-medium text-gray-300 mb-1">Coast</label>
                             <select id="edit-rider-coast" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white">
@@ -625,6 +633,7 @@
             document.getElementById('edit-rider-name').value = name;
             document.getElementById('edit-rider-number').value = number;
             document.getElementById('edit-rider-brand').value = brand;
+            document.getElementById('edit-rider-class').value = className;
             document.getElementById('edit-rider-price').value = price;
             
             // Show/hide coast section based on class
@@ -644,6 +653,16 @@
             document.getElementById('edit-modal').classList.add('hidden');
         }
 
+        // Handle class change in edit modal
+        document.getElementById('edit-rider-class').addEventListener('change', function() {
+            const coastSection = document.getElementById('edit-coast-section');
+            if (this.value === '250cc') {
+                coastSection.style.display = 'block';
+            } else {
+                coastSection.style.display = 'none';
+            }
+        });
+
         // Edit rider form
         document.getElementById('edit-rider-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -653,6 +672,7 @@
                 name: document.getElementById('edit-rider-name').value,
                 rider_number: parseInt(document.getElementById('edit-rider-number').value),
                 bike_brand: document.getElementById('edit-rider-brand').value,
+                class_name: document.getElementById('edit-rider-class').value,
                 price: parseInt(document.getElementById('edit-rider-price').value),
                 nickname: document.getElementById('edit-rider-nickname').value,
                 birthdate: document.getElementById('edit-rider-birthdate').value,

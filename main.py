@@ -2888,10 +2888,12 @@ def update_rider(rider_id):
     data = request.get_json()
     
     # Check for number conflict (excluding current rider)
-    if data['rider_number'] != rider.rider_number:
+    # Use new class_name if provided, otherwise use current class
+    new_class_name = data.get('class_name', rider.class_name)
+    if data['rider_number'] != rider.rider_number or new_class_name != rider.class_name:
         existing_rider = Rider.query.filter_by(
             rider_number=data['rider_number'],
-            class_name=rider.class_name
+            class_name=new_class_name
         ).filter(Rider.id != rider_id).first()
         
         if existing_rider:
@@ -2910,6 +2912,13 @@ def update_rider(rider_id):
     rider.name = data['name']
     rider.rider_number = data['rider_number']
     rider.bike_brand = data['bike_brand']
+    
+    # Update class if provided
+    if 'class_name' in data:
+        rider.class_name = data['class_name']
+        # If changing to 450cc, clear coast_250
+        if data['class_name'] == '450cc':
+            rider.coast_250 = None
     
     # Update price if provided
     if 'price' in data:
