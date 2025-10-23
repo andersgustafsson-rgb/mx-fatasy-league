@@ -358,6 +358,24 @@
       </div>
     </div>
     
+    <!-- OUT Riders List -->
+    {% if out_ids %}
+    <div class="mb-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+      <h3 class="text-sm font-semibold text-red-400 mb-2">⚠️ OUT-förare (kan inte väljas)</h3>
+      <div class="flex flex-wrap gap-2">
+        {% for rider in riders_450 + riders_250 %}
+          {% if rider.id in out_ids %}
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-800/40 text-red-200 text-xs rounded border border-red-600/50">
+              <span class="w-2 h-2 bg-red-500 rounded-full"></span>
+              #{{ rider.rider_number }} {{ rider.name }}
+              <span class="text-red-300">({{ rider.class_name }})</span>
+            </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Gissa topp 6, Holeshot & Wildcard</h2>
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
