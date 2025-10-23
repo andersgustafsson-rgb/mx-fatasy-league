@@ -2872,7 +2872,34 @@ def add_rider():
     if is_season_active():
         season_warning = "⚠️ VARNING: Säsong är igång. Nya förare kan påverka befintliga picks och säsongsteam."
     
-    data = request.get_json()
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
+    # Handle image upload
+    image_url = None
+    if 'rider_image' in request.files:
+        file = request.files['rider_image']
+        if file and file.filename:
+            try:
+                # Save image to static/riders/ directory
+                import os
+                from werkzeug.utils import secure_filename
+                
+                # Create riders directory if it doesn't exist
+                riders_dir = os.path.join(app.static_folder, 'riders')
+                os.makedirs(riders_dir, exist_ok=True)
+                
+                # Generate unique filename
+                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}.jpg")
+                file_path = os.path.join(riders_dir, filename)
+                file.save(file_path)
+                image_url = f"riders/{filename}"
+                print(f"Rider image saved: {file_path}")
+            except Exception as e:
+                print(f"Error saving rider image: {e}")
     
     # Check for number conflict
     existing_rider = Rider.query.filter_by(
@@ -2908,7 +2935,8 @@ def add_rider():
         rider_number=data['rider_number'],
         bike_brand=data['bike_brand'],
         coast_250=data.get('coast_250'),
-        price=price
+        price=price,
+        image_url=image_url
     )
     
     db.session.add(rider)
@@ -2926,12 +2954,39 @@ def update_rider(rider_id):
         return jsonify({'error': 'Unauthorized'}), 401
     
     rider = Rider.query.get_or_404(rider_id)
-    data = request.get_json()
+    
+    # Handle both JSON and form data
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
     
     # Check if season is active - show warning but allow changes
     season_warning = None
     if is_season_active():
         season_warning = "⚠️ VARNING: Säsong är igång. Ändringar kan påverka befintliga picks och säsongsteam."
+    
+    # Handle image upload
+    if 'rider_image' in request.files:
+        file = request.files['rider_image']
+        if file and file.filename:
+            try:
+                # Save image to static/riders/ directory
+                import os
+                from werkzeug.utils import secure_filename
+                
+                # Create riders directory if it doesn't exist
+                riders_dir = os.path.join(app.static_folder, 'riders')
+                os.makedirs(riders_dir, exist_ok=True)
+                
+                # Generate unique filename
+                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}.jpg")
+                file_path = os.path.join(riders_dir, filename)
+                file.save(file_path)
+                rider.image_url = f"riders/{filename}"
+                print(f"Rider image updated: {file_path}")
+            except Exception as e:
+                print(f"Error saving rider image: {e}")
     
     # Check for number conflict (excluding current rider)
     # Use new class_name if provided, otherwise use current class

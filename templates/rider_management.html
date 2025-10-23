@@ -118,6 +118,10 @@
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
                                 <input type="number" name="price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
                             </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Förare-bild</label>
+                                <input type="file" name="rider_image" accept="image/*" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700">
+                            </div>
                             <div class="flex items-end">
                                 <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
                                     Lägg till
@@ -229,6 +233,10 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
                                 <input type="number" name="price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Förare-bild</label>
+                                <input type="file" name="rider_image" accept="image/*" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700">
                             </div>
                             <div class="flex items-end">
                                 <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded transition-colors">
@@ -411,6 +419,17 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-1">Pris (kr)</label>
                             <input type="number" id="edit-rider-price" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white" required min="0" step="1000">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Förare-bild</label>
+                            <div class="space-y-2">
+                                <input type="file" id="edit-rider-image" accept="image/*" class="w-full px-3 py-2 bg-gray-700 border border-cyan-400 rounded text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-600 file:text-white hover:file:bg-cyan-700">
+                                <div id="edit-current-image" class="hidden">
+                                    <p class="text-sm text-gray-400 mb-1">Nuvarande bild:</p>
+                                    <img id="edit-image-preview" class="w-16 h-16 object-cover rounded-full border-2 border-cyan-400" alt="Current rider image">
+                                    <button type="button" id="edit-remove-image" class="ml-2 px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded">Ta bort</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
@@ -612,6 +631,18 @@
                 e.preventDefault();
                 
                 const formData = new FormData(form);
+                
+                // Handle image upload and resizing
+                const imageFile = formData.get('rider_image');
+                if (imageFile && imageFile.size > 0) {
+                    try {
+                        const resizedImage = await resizeImage(imageFile, 200, 200, 0.8);
+                        formData.set('rider_image', resizedImage, 'rider_image.jpg');
+                    } catch (error) {
+                        console.error('Error resizing image:', error);
+                    }
+                }
+                
                 const data = Object.fromEntries(formData);
                 
                 // Handle custom bike brand
@@ -623,10 +654,7 @@
                 try {
                     const response = await fetch('/api/riders', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(data)
+                        body: formData
                     });
                     
                     if (response.ok) {
@@ -715,6 +743,60 @@
             }
         }
 
+        // Handle image upload and resizing
+        function resizeImage(file, maxWidth = 200, maxHeight = 200, quality = 0.8) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = function() {
+                    // Calculate new dimensions maintaining aspect ratio
+                    let { width, height } = img;
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = (width * maxHeight) / height;
+                            height = maxHeight;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // Draw and compress
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob(resolve, 'image/jpeg', quality);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // Handle image preview in edit modal
+        document.getElementById('edit-rider-image').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('edit-image-preview');
+                    preview.src = e.target.result;
+                    document.getElementById('edit-current-image').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle remove image button
+        document.getElementById('edit-remove-image').addEventListener('click', function() {
+            document.getElementById('edit-rider-image').value = '';
+            document.getElementById('edit-current-image').classList.add('hidden');
+        });
+
         // Edit rider form
         document.getElementById('edit-rider-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -767,14 +849,30 @@
                 data.coast_250 = document.getElementById('edit-rider-coast').value;
             }
             
-            try {
-                const response = await fetch(`/api/riders/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
+                try {
+                    // Create FormData for image upload
+                    const formData = new FormData();
+                    Object.keys(data).forEach(key => {
+                        if (data[key] !== null && data[key] !== undefined) {
+                            formData.append(key, data[key]);
+                        }
+                    });
+                    
+                    // Add image file if selected
+                    const imageFile = document.getElementById('edit-rider-image').files[0];
+                    if (imageFile && imageFile.size > 0) {
+                        try {
+                            const resizedImage = await resizeImage(imageFile, 200, 200, 0.8);
+                            formData.append('rider_image', resizedImage, 'rider_image.jpg');
+                        } catch (error) {
+                            console.error('Error resizing image:', error);
+                        }
+                    }
+                    
+                    const response = await fetch(`/api/riders/${id}`, {
+                        method: 'PUT',
+                        body: formData
+                    });
                 
                 if (response.ok) {
                     const data = await response.json();
