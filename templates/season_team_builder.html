@@ -198,7 +198,7 @@
               ⚡ 250cc
             </button>
             <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
-          </div>
+        </div>
 
           <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
       </div>
@@ -714,9 +714,18 @@
         const highlightClasses = "bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-green-400 dark:border-green-600 ring-2 ring-green-300";
         
         card.className = `${baseClasses} ${isBeingReplaced ? highlightClasses : normalClasses}`;
+        // Bygg HTML för nummer-cirkeln med olika färger för 450cc och 250cc
+        const numberBgClass = rider.class === "450cc" 
+          ? "bg-gradient-to-br from-orange-500 to-red-600" 
+          : "bg-gradient-to-br from-yellow-400 to-orange-500";
+        
+        const numberHtml = `<div class="w-6 h-6 ${numberBgClass} rounded-full flex items-center justify-center shadow-md">
+          <span class="text-white text-xs font-bold">#${rider.rider_number || "-"}</span>
+        </div>`;
+
         card.innerHTML = `
           <div class="flex flex-col items-center space-y-1 mb-2">
-            <div class="flex-shrink-0">
+            <div class="flex-shrink-0 flex items-center gap-2">
               ${rider.image_url
                 ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
                        alt="${rider.name} headshot"
@@ -738,10 +747,11 @@
                     : `<div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
                          <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
                        </div>`)}
+              ${numberHtml}
             </div>
             <div class="w-full">
               <div class="font-semibold text-gray-800 dark:text-gray-200 text-xs truncate">${rider.name}</div>
-              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} #${rider.rider_number || "-"}</div>
+              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} ${rider.class}</div>
             </div>
           </div>
           <button class="w-full ${isBeingReplaced ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-1 py-1 rounded text-xs font-medium transition-colors" 
