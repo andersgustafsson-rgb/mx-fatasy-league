@@ -3088,10 +3088,25 @@ def delete_rider(rider_id):
         
         # Delete associated data first
         from sqlalchemy import text
-        db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
-        db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
-        db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
-        db.session.execute(text("DELETE FROM competition_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+        try:
+            # Delete from all tables that reference riders
+            db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM competition_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM race_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM holeshot_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM wildcard_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            db.session.execute(text("DELETE FROM competition_rider_status WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+            
+            # Commit the deletions
+            db.session.commit()
+            print(f"Successfully deleted associated data for rider {rider_id}")
+            
+        except Exception as e:
+            print(f"Error deleting associated data for rider {rider_id}: {e}")
+            db.session.rollback()
+            raise
         
         # Delete the rider
         db.session.delete(rider)
