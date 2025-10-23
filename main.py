@@ -5356,13 +5356,14 @@ def clear_competition_results(competition_id):
     existing_holeshots = HoleshotResult.query.filter_by(competition_id=competition_id).count()
     existing_scores = CompetitionScore.query.filter_by(competition_id=competition_id).count()
     existing_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).count()
-    print(f"DEBUG: Before deletion - Results: {existing_results}, Holeshots: {existing_holeshots}, Scores: {existing_scores}, Out Status: {existing_out_status}")
+    print(f"DEBUG: Before deletion - Results: {existing_results}, Holeshots: {existing_holeshots}, Scores: {existing_scores}, Out Status: {existing_out_status} (keeping OUT status)")
     
     # Delete results for this specific competition
     deleted_results = CompetitionResult.query.filter_by(competition_id=competition_id).delete()
     deleted_holeshot_results = HoleshotResult.query.filter_by(competition_id=competition_id).delete()
     deleted_scores = CompetitionScore.query.filter_by(competition_id=competition_id).delete()
-    deleted_out_status = CompetitionRiderStatus.query.filter_by(competition_id=competition_id).delete()
+    # DON'T delete OUT status - it should persist across competitions
+    deleted_out_status = 0  # OUT status is kept
     
     # ALSO delete user picks for this competition
     deleted_race_picks = RacePick.query.filter_by(competition_id=competition_id).delete()
@@ -5394,14 +5395,14 @@ def clear_competition_results(competition_id):
     
     db.session.commit()
     
-    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}")
+    print(f"DEBUG: Deleted {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id} (kept OUT status)")
     
     return jsonify({
-        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out statuses, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id}",
+        "message": f"Cleared {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks for competition {competition_id} (kept OUT status)",
         "deleted_results": deleted_results,
         "deleted_holeshot_results": deleted_holeshot_results,
         "deleted_scores": deleted_scores,
-        "deleted_out_status": deleted_out_status,
+        "deleted_out_status": 0,  # OUT status is kept
         "deleted_race_picks": deleted_race_picks,
         "deleted_holeshot_picks": deleted_holeshot_picks,
         "deleted_wildcard_picks": deleted_wildcard_picks
