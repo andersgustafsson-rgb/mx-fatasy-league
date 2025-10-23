@@ -429,7 +429,8 @@
         
         if (riderToReplace && r.class === riderToReplace.class) {
           // Check if user has enough points for this change
-          const ridersChanged = calculateRidersChanged() + 1; // +1 because we're about to change one more rider
+          // In replacement mode, we're only changing 1 rider at a time
+          const ridersChanged = 1;
           const penaltyPoints = ridersChanged * 50;
           
           // Get current user points
