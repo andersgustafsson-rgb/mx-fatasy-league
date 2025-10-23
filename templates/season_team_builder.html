@@ -489,6 +489,11 @@
     }
 
     function validateAndRender() {
+      console.log("💰 validateAndRender debug:");
+      console.log("💰 myTeam riders:", myTeam.map(r => `${r.name}: ${r.price.toLocaleString()} kr`));
+      console.log("💰 myTeam total cost:", myTeam.reduce((sum, r) => sum + r.price, 0).toLocaleString());
+      console.log("💰 current budget:", budget.toLocaleString());
+      
       // Render teamlistan
       const list = document.getElementById("your-team-list");
       list.innerHTML = myTeam.length ? "" : "<p class='text-gray-500'>Välj förare från listan.</p>";
@@ -626,6 +631,12 @@
       // Calculate the cost of the current team and update the budget
       const currentTeamCost = currentTeam.reduce((sum, rider) => sum + rider.price, 0);
       budget = totalBudget - currentTeamCost; // Set initial budget based on current team
+      
+      console.log("💰 loadCurrentTeam debug:");
+      console.log("💰 totalBudget:", totalBudget);
+      console.log("💰 currentTeam riders:", currentTeam.map(r => `${r.name}: ${r.price.toLocaleString()} kr`));
+      console.log("💰 currentTeamCost:", currentTeamCost.toLocaleString());
+      console.log("💰 calculated budget:", budget.toLocaleString());
       
       renderCurrentTeam();
     }
