@@ -193,10 +193,10 @@
             </button>
             <button id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('450cc')">
               🔥 450cc
-            </button>
+          </button>
             <button id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('250cc')">
               ⚡ 250cc
-            </button>
+          </button>
             <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
         </div>
 
@@ -819,11 +819,24 @@
         budget += riderToReplace.price;
         console.log("💰 BUDGET AFTER adding back rider price:", budget);
       } else {
-        // If myTeam already has riders, just add back the price of the rider being replaced
-        console.log("💰 myTeam already exists, just adding back rider price");
-        console.log(`💰 Adding back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget`);
-        budget += riderToReplace.price;
-        console.log("💰 BUDGET AFTER adding back rider price:", budget);
+        // If myTeam already has riders, remove the rider being replaced and add back their price
+        console.log("💰 myTeam already exists, handling replacement within existing myTeam");
+        
+        // Find and remove the rider being replaced from myTeam
+        const indexToRemove = myTeam.findIndex(r => r.id === riderIdToReplace);
+        if (indexToRemove > -1) {
+          const removedRider = myTeam[indexToRemove];
+          myTeam.splice(indexToRemove, 1); // Remove the rider from myTeam
+          console.log(`🗑️ Removed ${removedRider.name} (ID: ${removedRider.id}) from myTeam during replacement`);
+          budget += removedRider.price; // Add their price back to budget
+          console.log(`💰 Added back ${removedRider.name} price (${removedRider.price.toLocaleString()} kr) to budget`);
+        } else {
+          console.warn(`⚠️ Rider to replace (ID: ${riderIdToReplace}) not found in myTeam, but myTeam was not empty. This should not happen if myTeam is kept consistent.`);
+          // Even if not found in myTeam, if it was part of the original team, its price needs to be added back
+          budget += riderToReplace.price;
+          console.log(`💰 Added back ${riderToReplace.name} price (${riderToReplace.price.toLocaleString()} kr) to budget (rider not found in myTeam)`);
+        }
+        console.log("💰 BUDGET AFTER handling replacement in existing myTeam:", budget);
       }
       
       // Show a message about what we're doing
