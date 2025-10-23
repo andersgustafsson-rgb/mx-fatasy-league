@@ -1546,7 +1546,7 @@ def season_team_builder():
         return redirect(url_for("login"))
 
     try:
-        all_riders = Rider.query.all()
+        all_riders = Rider.query.order_by(Rider.rider_number).all()
         print(f"Found {len(all_riders)} riders for season team builder")
         
         # Check if user already has a team
