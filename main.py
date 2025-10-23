@@ -2839,8 +2839,10 @@ def add_rider():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Allow adding new riders during season (for wildcards, guest riders, etc.)
-    # Only lock editing/deleting existing riders
+    # Check if season is active - show warning but allow addition
+    season_warning = None
+    if is_season_active():
+        season_warning = "⚠️ VARNING: Säsong är igång. Nya förare kan påverka befintliga picks och säsongsteam."
     
     data = request.get_json()
     
@@ -2880,7 +2882,11 @@ def add_rider():
     db.session.add(rider)
     db.session.commit()
     
-    return jsonify({'success': True, 'id': rider.id})
+    response = {'success': True, 'id': rider.id}
+    if season_warning:
+        response['warning'] = season_warning
+    
+    return jsonify(response)
 
 @app.route('/api/riders/<int:rider_id>', methods=['PUT'])
 def update_rider(rider_id):
@@ -2890,28 +2896,10 @@ def update_rider(rider_id):
     rider = Rider.query.get_or_404(rider_id)
     data = request.get_json()
     
-    # Check if season is active - allow class changes but lock other changes
+    # Check if season is active - show warning but allow changes
+    season_warning = None
     if is_season_active():
-        # Allow class changes (250cc <-> 450cc) for wildcards
-        allowed_changes = ['class_name', 'coast_250']
-        current_data = {
-            'name': rider.name,
-            'rider_number': rider.rider_number,
-            'bike_brand': rider.bike_brand,
-            'price': rider.price
-        }
-        
-        # Check if only allowed fields are being changed
-        restricted_changes = []
-        for key, value in data.items():
-            if key not in allowed_changes and key in current_data and current_data[key] != value:
-                restricted_changes.append(key)
-        
-        if restricted_changes:
-            return jsonify({
-                'error': 'season_active',
-                'message': f'Kan inte ändra {", ".join(restricted_changes)} under pågående säsong. Endast klass-ändringar tillåtna för wildcards.'
-            }), 403
+        season_warning = "⚠️ VARNING: Säsong är igång. Ändringar kan påverka befintliga picks och säsongsteam."
     
     # Check for number conflict (excluding current rider)
     # Use new class_name if provided, otherwise use current class
@@ -2986,25 +2974,31 @@ def update_rider(rider_id):
     
     db.session.commit()
     
-    return jsonify({'success': True})
+    response = {'success': True}
+    if season_warning:
+        response['warning'] = season_warning
+    
+    return jsonify(response)
 
 @app.route('/api/riders/<int:rider_id>', methods=['DELETE'])
 def delete_rider(rider_id):
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Check if season is active - prevent rider changes during season
+    # Check if season is active - show warning but allow deletion
+    season_warning = None
     if is_season_active():
-        return jsonify({
-            'error': 'season_active',
-            'message': 'Kan inte ta bort förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
-        }), 403
+        season_warning = "⚠️ VARNING: Säsong är igång. Borttagning kan påverka befintliga picks och säsongsteam."
     
     rider = Rider.query.get_or_404(rider_id)
     db.session.delete(rider)
     db.session.commit()
     
-    return jsonify({'success': True})
+    response = {'success': True}
+    if season_warning:
+        response['warning'] = season_warning
+    
+    return jsonify(response)
 
 # Public rider profile
 @app.get('/rider/<int:rider_id>')

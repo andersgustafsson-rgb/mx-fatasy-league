@@ -612,13 +612,15 @@
                     });
                     
                     if (response.ok) {
+                        const data = await response.json();
+                        if (data.warning) {
+                            alert(data.warning);
+                        }
                         location.reload();
                     } else {
                         const errorData = await response.json();
                         if (errorData.error === 'conflict') {
                             showConflictDialog(errorData);
-                        } else if (errorData.error === 'season_active') {
-                            alert('⚠️ ' + errorData.message);
                         } else {
                             alert('Fel vid tillägg av förare: ' + (errorData.message || 'Okänt fel'));
                         }
@@ -713,13 +715,15 @@
                 });
                 
                 if (response.ok) {
+                    const data = await response.json();
+                    if (data.warning) {
+                        alert(data.warning);
+                    }
                     location.reload();
                 } else {
                     const errorData = await response.json();
                     if (errorData.error === 'conflict') {
                         showConflictDialog(errorData);
-                    } else if (errorData.error === 'season_active') {
-                        alert('⚠️ ' + errorData.message);
                     } else {
                         alert('Fel vid uppdatering av förare: ' + (errorData.message || 'Okänt fel'));
                     }
@@ -739,13 +743,12 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        if (data.warning) {
+                            alert(data.warning);
+                        }
                         location.reload();
                     } else {
-                        if (data.error === 'season_active') {
-                            alert('⚠️ ' + data.message);
-                        } else {
-                            alert('Fel vid borttagning av förare: ' + (data.message || 'Okänt fel'));
-                        }
+                        alert('Fel vid borttagning av förare: ' + (data.message || 'Okänt fel'));
                     }
                 })
                 .catch(error => {
