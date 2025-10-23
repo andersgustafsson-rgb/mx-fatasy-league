@@ -3078,20 +3078,35 @@ def delete_rider(rider_id):
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Check if season is active - show warning but allow deletion
-    season_warning = None
-    if is_season_active():
-        season_warning = "⚠️ VARNING: Säsong är igång. Borttagning kan påverka befintliga picks och säsongsteam."
-    
-    rider = Rider.query.get_or_404(rider_id)
-    db.session.delete(rider)
-    db.session.commit()
-    
-    response = {'success': True}
-    if season_warning:
-        response['warning'] = season_warning
-    
-    return jsonify(response)
+    try:
+        # Check if season is active - show warning but allow deletion
+        season_warning = None
+        if is_season_active():
+            season_warning = "⚠️ VARNING: Säsong är igång. Borttagning kan påverka befintliga picks och säsongsteam."
+        
+        rider = Rider.query.get_or_404(rider_id)
+        
+        # Delete associated data first
+        from sqlalchemy import text
+        db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+        db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+        db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+        db.session.execute(text("DELETE FROM competition_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+        
+        # Delete the rider
+        db.session.delete(rider)
+        db.session.commit()
+        
+        response = {'success': True}
+        if season_warning:
+            response['warning'] = season_warning
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"Error deleting rider {rider_id}: {e}")
+        db.session.rollback()
+        return jsonify({'error': f'Error deleting rider: {str(e)}'}), 500
 
 # Public rider profile
 @app.get('/rider/<int:rider_id>')

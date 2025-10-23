@@ -588,17 +588,30 @@
                 // Delete existing rider and retry adding new one
                 fetch(`/api/riders/${riderId}`, {
                     method: 'DELETE'
-                }).then(() => {
-                    // Retry the form submission
-                    const forms = document.querySelectorAll('[id^="add-rider-form-"]');
-                    forms.forEach(form => {
-                        if (form.querySelector('input[name="rider_number"]').value) {
-                            form.dispatchEvent(new Event('submit'));
-                        }
-                    });
-                }).catch(error => {
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Retry the form submission
+                        const forms = document.querySelectorAll('[id^="add-rider-form-"]');
+                        forms.forEach(form => {
+                            if (form.querySelector('input[name="rider_number"]').value) {
+                                form.dispatchEvent(new Event('submit'));
+                            }
+                        });
+                    } else {
+                        alert('Fel vid borttagning av befintlig förare: ' + (data.error || 'Okänt fel'));
+                    }
+                })
+                .catch(error => {
                     console.error('Error deleting rider:', error);
-                    alert('Fel vid borttagning av befintlig förare');
+                    alert('Fel vid borttagning av befintlig förare: ' + error.message);
                 });
             }
         }
