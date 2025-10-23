@@ -2839,12 +2839,8 @@ def add_rider():
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Check if season is active - prevent rider changes during season
-    if is_season_active():
-        return jsonify({
-            'error': 'season_active',
-            'message': 'Kan inte lägga till förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
-        }), 403
+    # Allow adding new riders during season (for wildcards, guest riders, etc.)
+    # Only lock editing/deleting existing riders
     
     data = request.get_json()
     
@@ -2891,15 +2887,31 @@ def update_rider(rider_id):
     if session.get("username") != "test":
         return jsonify({'error': 'Unauthorized'}), 401
     
-    # Check if season is active - prevent rider changes during season
-    if is_season_active():
-        return jsonify({
-            'error': 'season_active',
-            'message': 'Kan inte redigera förare under pågående säsong. Vänta till nästa säsong eller rensa alla resultat.'
-        }), 403
-    
     rider = Rider.query.get_or_404(rider_id)
     data = request.get_json()
+    
+    # Check if season is active - allow class changes but lock other changes
+    if is_season_active():
+        # Allow class changes (250cc <-> 450cc) for wildcards
+        allowed_changes = ['class_name', 'coast_250']
+        current_data = {
+            'name': rider.name,
+            'rider_number': rider.rider_number,
+            'bike_brand': rider.bike_brand,
+            'price': rider.price
+        }
+        
+        # Check if only allowed fields are being changed
+        restricted_changes = []
+        for key, value in data.items():
+            if key not in allowed_changes and key in current_data and current_data[key] != value:
+                restricted_changes.append(key)
+        
+        if restricted_changes:
+            return jsonify({
+                'error': 'season_active',
+                'message': f'Kan inte ändra {", ".join(restricted_changes)} under pågående säsong. Endast klass-ändringar tillåtna för wildcards.'
+            }), 403
     
     # Check for number conflict (excluding current rider)
     # Use new class_name if provided, otherwise use current class
