@@ -6540,6 +6540,107 @@ def debug_rider_images():
         print(f"Error in debug_rider_images: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/restore_rider_images")
+def restore_rider_images():
+    """Restore rider images from static/riders/ directory"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        import os
+        import re
+        from pathlib import Path
+        
+        # Get static directory
+        static_dir = Path(app.static_folder)
+        riders_dir = static_dir / "riders"
+        
+        if not riders_dir.exists():
+            return jsonify({
+                "success": False,
+                "error": "static/riders directory not found"
+            })
+        
+        # Get all image files
+        image_files = [f for f in riders_dir.iterdir() if f.is_file() and f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif']]
+        
+        if not image_files:
+            return jsonify({
+                "success": False,
+                "error": "No image files found in static/riders/"
+            })
+        
+        # Normalize function
+        def norm(s: str) -> str:
+            s = (s or "").strip().lower()
+            s = s.replace(".", "")
+            s = re.sub(r"[\s_]+", " ", s)
+            return s
+        
+        # Get all riders
+        riders = Rider.query.all()
+        
+        # Index riders by number and name
+        by_number = {}
+        by_name = {}
+        for rider in riders:
+            if rider.rider_number:
+                by_number[int(rider.rider_number)] = rider
+            by_name[norm(rider.name)] = rider
+        
+        updated = 0
+        skipped = 0
+        
+        for image_file in image_files:
+            rel_path = f"riders/{image_file.name}"
+            filename = image_file.stem
+            
+            # Try to find rider by number first
+            candidate = None
+            m = re.match(r"^(\d{1,3})[_\s-]", filename)
+            if m:
+                try:
+                    num = int(m.group(1))
+                    candidate = by_number.get(num)
+                except Exception:
+                    candidate = None
+            
+            # If not found by number, try by name
+            if not candidate:
+                # Remove leading number + separator
+                tmp = re.sub(r"^\d{1,3}[_\s-]+", "", filename)
+                name = norm(tmp)
+                candidate = by_name.get(name)
+                if not candidate:
+                    # More tolerant: only letters and spaces
+                    name2 = norm(re.sub(r"[^a-z0-9\s]", "", tmp))
+                    candidate = by_name.get(name2)
+            
+            if not candidate:
+                print(f"[SKIP] No match for file: {image_file.name}")
+                skipped += 1
+                continue
+            
+            # Set image_url
+            candidate.image_url = rel_path
+            db.session.add(candidate)
+            updated += 1
+            print(f"[OK] {candidate.name} -> {rel_path}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "updated": updated,
+            "skipped": skipped,
+            "message": f"Restored images for {updated} riders"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in restore_rider_images: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_my_points")
 def debug_my_points():
     """Debug endpoint for current user to check their points"""

@@ -128,6 +128,36 @@
             </div>
         </div>
 
+        <!-- Restore Images Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">🖼️ Återställ Förarbilder</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Restore Images -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Återställ bilder från static/riders/</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Detta kommer att matcha bildfiler i static/riders/ mappen med förarna i databasen baserat på nummer och namn.
+                    </p>
+                    <button id="restore-images-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        Återställ bilder
+                    </button>
+                    <div id="restore-images-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Debug Images -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">Debug bilder</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        Kolla status på förarbilder i databasen.
+                    </p>
+                    <button id="debug-images-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        Debug bilder
+                    </button>
+                    <div id="debug-images-status" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- CSV Import Section -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📊 CSV Import - Resultat</h3>
@@ -1220,6 +1250,53 @@
 
         // CSV Import functionality
         let uploadedCsvFile = null;
+
+        // Restore Images functionality
+        document.getElementById('restore-images-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/restore_rider_images');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('restore-images-status').innerHTML = 
+                        '<span class="text-green-600">✓ Återställde bilder för ' + result.updated + ' förare</span>';
+                    
+                    if (result.skipped > 0) {
+                        document.getElementById('restore-images-status').innerHTML += 
+                            '<br><span class="text-yellow-600">Hoppade över ' + result.skipped + ' bilder (ingen match)</span>';
+                    }
+                } else {
+                    document.getElementById('restore-images-status').innerHTML = 
+                        '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Restore images error:', error);
+                document.getElementById('restore-images-status').innerHTML = 
+                    '<span class="text-red-600">Fel vid återställning av bilder</span>';
+            }
+        });
+
+        // Debug Images functionality
+        document.getElementById('debug-images-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/debug_rider_images');
+                const result = await response.json();
+                
+                if (result.total_riders) {
+                    document.getElementById('debug-images-status').innerHTML = 
+                        '<span class="text-blue-600">Totalt: ' + result.total_riders + ' förare</span><br>' +
+                        '<span class="text-green-600">Med bilder: ' + result.riders_with_images + '</span><br>' +
+                        '<span class="text-yellow-600">Med existerande filer: ' + result.riders_with_existing_files + '</span>';
+                } else {
+                    document.getElementById('debug-images-status').innerHTML = 
+                        '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Debug images error:', error);
+                document.getElementById('debug-images-status').innerHTML = 
+                    '<span class="text-red-600">Fel vid debug av bilder</span>';
+            }
+        });
 
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
