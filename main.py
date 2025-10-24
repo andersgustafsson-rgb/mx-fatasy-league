@@ -2892,8 +2892,9 @@ def add_rider():
                 riders_dir = os.path.join(app.static_folder, 'riders')
                 os.makedirs(riders_dir, exist_ok=True)
                 
-                # Generate unique filename
-                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}.jpg")
+                # Generate unique filename - keep original extension
+                original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
+                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}{original_ext}")
                 file_path = os.path.join(riders_dir, filename)
                 file.save(file_path)
                 image_url = f"riders/{filename}"
@@ -2979,8 +2980,9 @@ def update_rider(rider_id):
                 riders_dir = os.path.join(app.static_folder, 'riders')
                 os.makedirs(riders_dir, exist_ok=True)
                 
-                # Generate unique filename
-                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}.jpg")
+                # Generate unique filename - keep original extension
+                original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
+                filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}{original_ext}")
                 file_path = os.path.join(riders_dir, filename)
                 file.save(file_path)
                 rider.image_url = f"riders/{filename}"
