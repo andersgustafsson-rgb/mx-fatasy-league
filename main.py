@@ -5935,9 +5935,9 @@ def import_entry_lists():
         
         # Parse all entry lists
         entry_lists = [
-            ("Entry_List_250_west.csv", "250cc"),
-            ("Entry_List_250_east.csv", "250cc"), 
-            ("Entry_List_450.csv", "450cc")
+            ("data/Entry_List_250_west.csv", "250cc"),
+            ("data/Entry_List_250_east.csv", "250cc"), 
+            ("data/Entry_List_450.csv", "450cc")
         ]
         
         all_riders = []
