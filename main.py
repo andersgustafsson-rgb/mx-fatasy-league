@@ -12209,12 +12209,15 @@ def parse_csv_new(csv_path, class_name):
                     print(f"DEBUG: NEW - Skipping header row {row_num}: {row}")
                 continue
             
+            print(f"DEBUG: NEW - Processing row {row_num}: {row}")
+            
             # Handle CSV format where all data is in one column
             if len(row) >= 1 and row[0].strip():
                 try:
                     # All data is in the first column, need to parse it
                     full_text = row[0].strip().strip('"')
                     print(f"DEBUG: NEW - Parsing row {row_num}: {full_text}")
+                    print(f"DEBUG: NEW - Row length: {len(row)}, First element: {row[0] if row else 'None'}")
                     
                     # Simple approach: split by spaces and find bike brand
                     parts = full_text.split()
