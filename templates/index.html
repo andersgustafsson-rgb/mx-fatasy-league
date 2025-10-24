@@ -578,6 +578,19 @@
                 
                 <!-- Quick Actions - Improved Design -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+                  <a href="{{ url_for('motocross_quiz') }}" 
+                     class="group relative bg-gradient-to-br from-orange-500 via-orange-600 to-red-800 hover:from-orange-400 hover:via-orange-500 hover:to-red-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-orange-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-orange-400/50 overflow-hidden">
+                    <!-- Animated background elements -->
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-700"></div>
+                    <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8 group-hover:scale-125 transition-transform duration-500"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                      <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">🏁</div>
+                      <h3 class="text-lg font-bold mb-2 group-hover:text-orange-100 transition-colors duration-300">Motocross Quiz</h3>
+                      <p class="text-sm opacity-90 group-hover:opacity-100 transition-opacity duration-300">Testa dina kunskaper!</p>
+                    </div>
+                  </a>
+                  
                   <a href="{{ url_for('season_team_page') }}" 
                      class="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 hover:from-blue-400 hover:via-blue-500 hover:to-blue-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-blue-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-blue-400/50 overflow-hidden">
                     <!-- Animated background elements -->

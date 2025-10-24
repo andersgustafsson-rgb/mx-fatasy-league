@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motocross Quiz - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background-attachment: fixed;
+        }
+        
+        .cyberpunk-header {
+            font-family: 'Orbitron', monospace;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        }
+        
+        .quiz-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+            color: #0f172a;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .btn-success:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+        }
+        
+        .option-btn {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .option-btn:hover {
+            border-color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+        }
+        .option-btn.selected {
+            border-color: #22d3ee;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+        }
+        .option-btn.correct {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .option-btn.incorrect {
+            border-color: #ef4444;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%);
+            transition: width 0.5s ease;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">🏁 MOTOCROSS QUIZ</h1>
+            <p class="text-gray-300 text-lg">Testa dina kunskaper om Motocross!</p>
+        </div>
+
+        <!-- Game Container -->
+        <div id="game-container" class="max-w-4xl mx-auto">
+            <!-- Start Screen -->
+            <div id="start-screen" class="quiz-card rounded-lg p-8 text-center">
+                <h2 class="text-3xl font-bold text-cyan-400 mb-6">Välkommen till Motocross Quiz!</h2>
+                <p class="text-gray-300 text-lg mb-8">Svara på 10 slumpmässiga frågor om Motocross och se hur bra du är!</p>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Välj svårighetsgrad:</label>
+                    <select id="difficulty-select" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400">
+                        <option value="easy">Lätt - Nybörjare</option>
+                        <option value="medium" selected>Medium - Erfaren</option>
+                        <option value="hard">Svår - Expert</option>
+                    </select>
+                </div>
+                
+                <button onclick="startQuiz()" class="btn-primary px-8 py-4 rounded-lg text-xl">
+                    🚀 Starta Quiz!
+                </button>
+            </div>
+
+            <!-- Quiz Screen -->
+            <div id="quiz-screen" class="quiz-card rounded-lg p-8 hidden">
+                <!-- Progress Bar -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-300">Fråga <span id="current-question">1</span> av <span id="total-questions">10</span></span>
+                        <span class="text-sm font-medium text-cyan-400">Poäng: <span id="current-score">0</span></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-3">
+                        <div id="progress-bar" class="progress-bar h-3 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Question -->
+                <div class="mb-8">
+                    <h3 id="question-text" class="text-2xl font-bold text-white mb-6 text-center"></h3>
+                    <div id="question-image" class="mb-6 text-center hidden">
+                        <img id="question-img" src="" alt="Question image" class="max-w-md mx-auto rounded-lg shadow-lg">
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <!-- Options will be generated here -->
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-center gap-4">
+                    <button id="submit-btn" onclick="submitAnswer()" class="btn-primary px-6 py-3 rounded-lg" disabled>
+                        ✅ Svara
+                    </button>
+                    <button id="next-btn" onclick="nextQuestion()" class="btn-success px-6 py-3 rounded-lg hidden">
+                        ➡️ Nästa
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen" class="quiz-card rounded-lg p-8 text-center hidden">
+                <h2 class="text-3xl font-bold text-cyan-400 mb-6">🎉 Quiz Klart!</h2>
+                <div class="mb-8">
+                    <div class="text-6xl mb-4">
+                        <span id="result-emoji">🏆</span>
+                    </div>
+                    <p class="text-2xl font-bold text-white mb-2">Du fick <span id="final-score">0</span> av 10 rätt!</p>
+                    <p id="result-message" class="text-lg text-gray-300"></p>
+                </div>
+                
+                <div class="flex justify-center gap-4">
+                    <button onclick="playAgain()" class="btn-primary px-6 py-3 rounded-lg">
+                        🔄 Spela igen
+                    </button>
+                    <button onclick="goHome()" class="btn-success px-6 py-3 rounded-lg">
+                        🏠 Tillbaka till startsidan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Quiz data
+        const quizData = {
+            easy: [
+                {
+                    question: "Vilken färg har vanligtvis en Yamaha motorcykel?",
+                    options: ["Röd", "Blå", "Grön", "Gul"],
+                    correct: 1,
+                    explanation: "Yamaha använder traditionellt blå färger för sina motorcyklar."
+                },
+                {
+                    question: "Hur många hjul har en motocross-motorcykel?",
+                    options: ["Ett", "Två", "Tre", "Fyra"],
+                    correct: 1,
+                    explanation: "En motocross-motorcykel har två hjul, precis som en vanlig motorcykel."
+                },
+                {
+                    question: "Vad kallas den första kurvan i en motocross-bana?",
+                    options: ["Start", "Holeshot", "Finish", "Jump"],
+                    correct: 1,
+                    explanation: "Holeshot är den första kurvan efter startlinjen."
+                },
+                {
+                    question: "Vilken klass körs vanligtvis först i en Supercross-tävling?",
+                    options: ["450cc", "250cc", "125cc", "65cc"],
+                    correct: 1,
+                    explanation: "250cc-klassen körs vanligtvis först, följt av 450cc."
+                },
+                {
+                    question: "Vad använder förare för att skydda huvudet?",
+                    options: ["Hjälm", "Hatt", "Keps", "Ingenting"],
+                    correct: 0,
+                    explanation: "En hjälm är obligatorisk för att skydda huvudet."
+                }
+            ],
+            medium: [
+                {
+                    question: "Vilken förare vann 2023 Supercross 450cc mästerskapet?",
+                    options: ["Eli Tomac", "Cooper Webb", "Chase Sexton", "Jason Anderson"],
+                    correct: 2,
+                    explanation: "Chase Sexton vann 2023 Supercross 450cc mästerskapet."
+                },
+                {
+                    question: "Hur många rundor körs vanligtvis i en Supercross heat?",
+                    options: ["5-6", "8-10", "12-15", "20+"],
+                    correct: 1,
+                    explanation: "En Supercross heat är vanligtvis 8-10 rundor lång."
+                },
+                {
+                    question: "Vilken bana är känd som 'The Monster'?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 0,
+                    explanation: "Anaheim Stadium är känd som 'The Monster' i Supercross-världen."
+                },
+                {
+                    question: "Vad kallas en hoppramp som går både upp och ner?",
+                    options: ["Tabletop", "Double", "Triple", "Whoops"],
+                    correct: 0,
+                    explanation: "En tabletop är en hoppramp med platt topp som går både upp och ner."
+                },
+                {
+                    question: "Vilken förare har flest Supercross 450cc titlar?",
+                    options: ["Ricky Carmichael", "Jeremy McGrath", "Ryan Dungey", "Eli Tomac"],
+                    correct: 1,
+                    explanation: "Jeremy McGrath har 7 Supercross 450cc titlar, flest någonsin."
+                }
+            ],
+            hard: [
+                {
+                    question: "Vilken förare vann 2024 Supercross 250cc West Coast mästerskapet?",
+                    options: ["Jett Lawrence", "Levi Kitchen", "RJ Hampshire", "Cameron McAdoo"],
+                    correct: 1,
+                    explanation: "Levi Kitchen vann 2024 Supercross 250cc West Coast mästerskapet."
+                },
+                {
+                    question: "Vilken bana har den längsta straightaway i Supercross?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 1,
+                    explanation: "Daytona har den längsta straightaway i Supercross-serien."
+                },
+                {
+                    question: "Vilken förare kallas 'The GOAT' (Greatest Of All Time)?",
+                    options: ["Ricky Carmichael", "Jeremy McGrath", "Ryan Dungey", "Eli Tomac"],
+                    correct: 0,
+                    explanation: "Ricky Carmichael kallas 'The GOAT' för sina 15 AMA mästerskap."
+                },
+                {
+                    question: "Vilken förare har flest AMA Motocross 450cc titlar?",
+                    options: ["Ricky Carmichael", "Ryan Dungey", "Eli Tomac", "Jeremy McGrath"],
+                    correct: 0,
+                    explanation: "Ricky Carmichael har 5 AMA Motocross 450cc titlar, flest någonsin."
+                },
+                {
+                    question: "Vilken bana är känd för sin 'Sand Section'?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 1,
+                    explanation: "Daytona är känd för sin utmanande sandsektion."
+                }
+            ]
+        };
+
+        let currentQuiz = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let selectedAnswer = null;
+        let answered = false;
+
+        function startQuiz() {
+            const difficulty = document.getElementById('difficulty-select').value;
+            currentQuiz = [...quizData[difficulty]];
+            
+            // Shuffle questions and take 10 random ones
+            currentQuiz = shuffleArray(currentQuiz).slice(0, 10);
+            
+            currentQuestion = 0;
+            score = 0;
+            selectedAnswer = null;
+            answered = false;
+            
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('results-screen').classList.add('hidden');
+            
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const question = currentQuiz[currentQuestion];
+            document.getElementById('question-text').textContent = question.question;
+            document.getElementById('current-question').textContent = currentQuestion + 1;
+            document.getElementById('current-score').textContent = score;
+            
+            // Update progress bar
+            const progress = ((currentQuestion) / currentQuiz.length) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+            
+            // Generate options
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn w-full p-4 text-left rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition-all';
+                button.textContent = option;
+                button.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+            
+            // Reset buttons
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').classList.remove('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            selectedAnswer = null;
+            answered = false;
+        }
+
+        function selectAnswer(index) {
+            if (answered) return;
+            
+            // Remove previous selection
+            document.querySelectorAll('.option-btn').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Add selection to clicked button
+            document.querySelectorAll('.option-btn')[index].classList.add('selected');
+            selectedAnswer = index;
+            document.getElementById('submit-btn').disabled = false;
+        }
+
+        function submitAnswer() {
+            if (selectedAnswer === null || answered) return;
+            
+            answered = true;
+            const question = currentQuiz[currentQuestion];
+            const isCorrect = selectedAnswer === question.correct;
+            
+            if (isCorrect) {
+                score++;
+            }
+            
+            // Show correct/incorrect answers
+            document.querySelectorAll('.option-btn').forEach((btn, index) => {
+                btn.classList.remove('selected');
+                if (index === question.correct) {
+                    btn.classList.add('correct');
+                } else if (index === selectedAnswer && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+            });
+            
+            // Show explanation
+            setTimeout(() => {
+                alert(`Förklaring: ${question.explanation}`);
+            }, 1000);
+            
+            // Show next button
+            document.getElementById('submit-btn').classList.add('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            
+            if (currentQuestion < currentQuiz.length) {
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('results-screen').classList.remove('hidden');
+            
+            document.getElementById('final-score').textContent = score;
+            
+            // Set result emoji and message
+            const resultEmoji = document.getElementById('result-emoji');
+            const resultMessage = document.getElementById('result-message');
+            
+            if (score >= 9) {
+                resultEmoji.textContent = '🏆';
+                resultMessage.textContent = 'Fantastiskt! Du är en riktig Motocross-expert!';
+            } else if (score >= 7) {
+                resultEmoji.textContent = '🥇';
+                resultMessage.textContent = 'Bra jobbat! Du har goda kunskaper om Motocross!';
+            } else if (score >= 5) {
+                resultEmoji.textContent = '🥈';
+                resultMessage.textContent = 'Helt okej! Du kan lite om Motocross!';
+            } else {
+                resultEmoji.textContent = '🥉';
+                resultMessage.textContent = 'Du behöver läsa på mer om Motocross!';
+            }
+        }
+
+        function playAgain() {
+            document.getElementById('results-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        function goHome() {
+            window.location.href = '/';
+        }
+
+        // Utility functions
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+    </script>
+</body>
+</html>

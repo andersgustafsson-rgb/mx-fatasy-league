@@ -12158,8 +12158,12 @@ def clear_all_picks():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/motocross_quiz")
+def motocross_quiz():
+    """Motocross Quiz game"""
+    return render_template("motocross_quiz.html")
+
 @app.route("/clear_all_data")
-def clear_all_data():
     """Clear all picks and results - full reset"""
     try:
         if not is_admin_user():
