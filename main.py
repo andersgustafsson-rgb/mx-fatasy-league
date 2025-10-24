@@ -5935,17 +5935,34 @@ def import_entry_lists_new():
         print(f"DEBUG: 250 East exists: {east_file.exists()}")
         print(f"DEBUG: 450 exists: {four_fifty_file.exists()}")
         
+        # Only parse files that were recently uploaded (check modification time)
+        import time
+        current_time = time.time()
+        recent_threshold = 300  # 5 minutes ago
+        
         if west_file.exists():
-            entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
-            print(f"DEBUG: ✅ Found 250 West file")
+            file_age = current_time - west_file.stat().st_mtime
+            if file_age < recent_threshold:
+                entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
+                print(f"DEBUG: ✅ Found recent 250 West file (age: {file_age:.0f}s)")
+            else:
+                print(f"DEBUG: ⏰ Skipping old 250 West file (age: {file_age:.0f}s)")
         
         if east_file.exists():
-            entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
-            print(f"DEBUG: ✅ Found 250 East file")
+            file_age = current_time - east_file.stat().st_mtime
+            if file_age < recent_threshold:
+                entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
+                print(f"DEBUG: ✅ Found recent 250 East file (age: {file_age:.0f}s)")
+            else:
+                print(f"DEBUG: ⏰ Skipping old 250 East file (age: {file_age:.0f}s)")
             
         if four_fifty_file.exists():
-            entry_lists.append(("data/Entry_List_450.csv", "450cc"))
-            print(f"DEBUG: ✅ Found 450 file")
+            file_age = current_time - four_fifty_file.stat().st_mtime
+            if file_age < recent_threshold:
+                entry_lists.append(("data/Entry_List_450.csv", "450cc"))
+                print(f"DEBUG: ✅ Found recent 450 file (age: {file_age:.0f}s)")
+            else:
+                print(f"DEBUG: ⏰ Skipping old 450 file (age: {file_age:.0f}s)")
         
         print(f"DEBUG: Will parse {len(entry_lists)} files: {[f[0] for f in entry_lists]}")
         
