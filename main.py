@@ -5941,6 +5941,7 @@ def import_entry_lists_new():
                 print(f"DEBUG: Parsing {csv_file} for class {class_name}")
                 riders = parse_csv_simple(csv_path, class_name)
                 print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
+                print(f"DEBUG: Riders from {csv_file}: {[r['number'] for r in riders[:5]]}...")  # Show first 5 rider numbers
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
@@ -6065,6 +6066,7 @@ def import_entry_lists():
                 print(f"DEBUG: Parsing {csv_file} for class {class_name}")
                 riders = parse_csv_simple(csv_path, class_name)
                 print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
+                print(f"DEBUG: Riders from {csv_file}: {[r['number'] for r in riders[:5]]}...")  # Show first 5 rider numbers
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
