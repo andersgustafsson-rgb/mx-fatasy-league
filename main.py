@@ -6620,11 +6620,47 @@ def import_race_results_complete():
                             
                             if len(row) >= 8 and row[1].strip().isdigit():
                                 try:
-                                    rider_number = int(row[1].strip())
-                                    rider_name = row[2].strip()
-                                    position = int(row[7].split()[0])  # First number in result column
+                                    # Parse the single-column format: "1        38   Haiden Deegan        Yamaha        1                   1 (1)             Temecula, CA"
+                                    full_text = row[0].strip()
+                                    print(f"🔍 DEBUG: Full text: {full_text}")
                                     
-                                    print(f"🔍 DEBUG: Found 250cc rider: #{rider_number} {rider_name} at position {position}")
+                                    # Split by multiple spaces to get parts
+                                    parts = [p for p in full_text.split() if p]
+                                    print(f"🔍 DEBUG: Parts: {parts}")
+                                    
+                                    if len(parts) >= 4:
+                                        # Find rider number (first number after position)
+                                        rider_number = None
+                                        rider_name_parts = []
+                                        position = None
+                                        
+                                        # Look for pattern: position, rider_number, name_parts, bike, position_again
+                                        for i, part in enumerate(parts):
+                                            if part.isdigit() and i > 0:  # Not the first position number
+                                                # This could be rider number
+                                                if i + 1 < len(parts) and not parts[i + 1].isdigit():
+                                                    rider_number = int(part)
+                                                    # Name starts after rider number
+                                                    j = i + 1
+                                                    while j < len(parts) and not parts[j] in ['Yamaha', 'KTM', 'Honda', 'Kawasaki', 'Triumph', 'GasGas', 'Husqvarna', 'Suzuki']:
+                                                        rider_name_parts.append(parts[j])
+                                                        j += 1
+                                                    # Position is the last number before hometown
+                                                    for k in range(j, len(parts)):
+                                                        if parts[k].isdigit():
+                                                            position = int(parts[k])
+                                                            break
+                                                    break
+                                        
+                                        if rider_number and rider_name_parts and position:
+                                            rider_name = ' '.join(rider_name_parts)
+                                            print(f"🔍 DEBUG: Parsed - #{rider_number} {rider_name} at position {position}")
+                                        else:
+                                            print(f"🔍 DEBUG: Could not parse row: {full_text}")
+                                            continue
+                                    else:
+                                        print(f"🔍 DEBUG: Not enough parts in row: {full_text}")
+                                        continue
                                     
                                     # Find rider
                                     rider = Rider.query.filter_by(
@@ -6681,9 +6717,47 @@ def import_race_results_complete():
                             
                             if len(row) >= 8 and row[1].strip().isdigit():
                                 try:
-                                    rider_number = int(row[1].strip())
-                                    rider_name = row[2].strip()
-                                    position = int(row[7].split()[0])  # First number in result column
+                                    # Parse the single-column format for 450cc
+                                    full_text = row[0].strip()
+                                    print(f"🔍 DEBUG: 450cc full text: {full_text}")
+                                    
+                                    # Split by multiple spaces to get parts
+                                    parts = [p for p in full_text.split() if p]
+                                    print(f"🔍 DEBUG: 450cc parts: {parts}")
+                                    
+                                    if len(parts) >= 4:
+                                        # Find rider number (first number after position)
+                                        rider_number = None
+                                        rider_name_parts = []
+                                        position = None
+                                        
+                                        # Look for pattern: position, rider_number, name_parts, bike, position_again
+                                        for i, part in enumerate(parts):
+                                            if part.isdigit() and i > 0:  # Not the first position number
+                                                # This could be rider number
+                                                if i + 1 < len(parts) and not parts[i + 1].isdigit():
+                                                    rider_number = int(part)
+                                                    # Name starts after rider number
+                                                    j = i + 1
+                                                    while j < len(parts) and not parts[j] in ['Yamaha', 'KTM', 'Honda', 'Kawasaki', 'Triumph', 'GasGas', 'Husqvarna', 'Suzuki']:
+                                                        rider_name_parts.append(parts[j])
+                                                        j += 1
+                                                    # Position is the last number before hometown
+                                                    for k in range(j, len(parts)):
+                                                        if parts[k].isdigit():
+                                                            position = int(parts[k])
+                                                            break
+                                                    break
+                                        
+                                        if rider_number and rider_name_parts and position:
+                                            rider_name = ' '.join(rider_name_parts)
+                                            print(f"🔍 DEBUG: 450cc parsed - #{rider_number} {rider_name} at position {position}")
+                                        else:
+                                            print(f"🔍 DEBUG: Could not parse 450cc row: {full_text}")
+                                            continue
+                                    else:
+                                        print(f"🔍 DEBUG: Not enough parts in 450cc row: {full_text}")
+                                        continue
                                     
                                     # Find rider
                                     rider = Rider.query.filter_by(
