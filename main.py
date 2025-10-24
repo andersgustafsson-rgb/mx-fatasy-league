@@ -6025,63 +6025,70 @@ def import_entry_lists():
             return brand_map.get(brand, brand)
         
         def parse_entry_list(csv_path, class_name):
+            # Use the same parsing logic as parse_csv_simple
             riders = []
-            print(f"DEBUG: Starting to parse {csv_path}")
+            print(f"🔥 CONFIRM PARSER - Starting to parse {csv_path}")
             
             with open(csv_path, 'r', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 
                 for row_num, row in enumerate(reader, 1):
-                    if row_num <= 7 or not row or len(row) < 4:
-                        if row_num <= 7:
-                            print(f"DEBUG: Skipping header row {row_num}: {row}")
+                    print(f"🔥 ROW {row_num}: {row}")
+                    
+                    # Skip first 7 rows (headers)
+                    if row_num <= 7:
+                        print(f"🔥 SKIPPING HEADER {row_num}")
                         continue
                     
-                    # Handle CSV format where all data is in one column
-                    if len(row) >= 1 and row[0].strip():
-                        try:
-                            # All data is in the first column, need to parse it
-                            full_text = row[0].strip().strip('"')
-                            print(f"DEBUG: Parsing row {row_num}: {full_text}")
+                    # Check if row has content
+                    if not row or len(row) == 0:
+                        print(f"🔥 EMPTY ROW {row_num}")
+                        continue
+                        
+                    # Get the text from first column
+                    text = row[0].strip().strip('"')
+                    print(f"🔥 TEXT: {text}")
+                    
+                    # Check if it starts with a number
+                    if text and text[0].isdigit():
+                        print(f"🔥 FOUND RIDER ROW: {text}")
+                        
+                        # Split by spaces
+                        parts = text.split()
+                        print(f"🔥 PARTS: {parts}")
+                        
+                        if len(parts) >= 5:
+                            # Find bike brand
+                            bike_idx = 2
+                            for i, part in enumerate(parts[2:], 2):
+                                if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
+                                    bike_idx = i
+                                    break
                             
-                            # Simple approach: split by spaces and find bike brand
-                            parts = full_text.split()
-                            if len(parts) >= 5 and parts[0].isdigit():
-                                number_str = parts[0]
-                                print(f"DEBUG: Found number: {number_str}")
+                            if bike_idx < len(parts):
+                                name = ' '.join(parts[1:bike_idx])
+                                bike = parts[bike_idx]
+                                hometown = ' '.join(parts[bike_idx+1:-1])
+                                team = parts[-1]
                                 
-                                # Find bike brand by looking for known brands
-                                bike_idx = 2
-                                for i, part in enumerate(parts[2:], 2):
-                                    if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
-                                        bike_idx = i
-                                        break
-                                
-                                if bike_idx < len(parts):
-                                    name = ' '.join(parts[1:bike_idx])
-                                    bike = parts[bike_idx]
-                                    hometown = ' '.join(parts[bike_idx+1:-1])
-                                    team = parts[-1]
-                                    
-                                    print(f"DEBUG: Parsed - Name: {name}, Bike: {bike}, Hometown: {hometown}, Team: {team}")
-                                    
-                                    rider_data = {
-                                        'number': int(number_str),
-                                        'name': clean_rider_name(name),
-                                        'bike_brand': normalize_bike_brand(bike),
-                                        'hometown': hometown.strip(),
-                                        'team': team.strip(),
-                                        'class': class_name
-                                    }
-                                    riders.append(rider_data)
-                                    print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
-                                else:
-                                    print(f"DEBUG: Could not find bike brand in row {row_num}")
+                                rider_data = {
+                                    'number': int(parts[0]),
+                                    'name': clean_rider_name(name),
+                                    'bike_brand': normalize_bike_brand(bike),
+                                    'hometown': hometown.strip(),
+                                    'team': team.strip(),
+                                    'class': class_name
+                                }
+                                riders.append(rider_data)
+                                print(f"🔥 ADDED RIDER: {rider_data['number']} - {rider_data['name']}")
                             else:
-                                print(f"DEBUG: Row {row_num} does not have enough parts or doesn't start with number")
-                        except (ValueError, IndexError) as e:
-                            print(f"Error parsing row {row_num}: {e}")
-                            continue
+                                print(f"🔥 NO BIKE BRAND FOUND")
+                        else:
+                            print(f"🔥 NOT ENOUGH PARTS")
+                    else:
+                        print(f"🔥 NOT A RIDER ROW")
+            
+            print(f"🔥 TOTAL RIDERS FOUND: {len(riders)}")
             return riders
         
         # Parse all entry lists
@@ -6150,63 +6157,70 @@ def confirm_import_entry_lists():
             return brand_map.get(brand, brand)
         
         def parse_entry_list(csv_path, class_name):
+            # Use the same parsing logic as parse_csv_simple
             riders = []
-            print(f"DEBUG: Starting to parse {csv_path}")
+            print(f"🔥 CONFIRM PARSER - Starting to parse {csv_path}")
             
             with open(csv_path, 'r', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 
                 for row_num, row in enumerate(reader, 1):
-                    if row_num <= 7 or not row or len(row) < 4:
-                        if row_num <= 7:
-                            print(f"DEBUG: Skipping header row {row_num}: {row}")
+                    print(f"🔥 ROW {row_num}: {row}")
+                    
+                    # Skip first 7 rows (headers)
+                    if row_num <= 7:
+                        print(f"🔥 SKIPPING HEADER {row_num}")
                         continue
                     
-                    # Handle CSV format where all data is in one column
-                    if len(row) >= 1 and row[0].strip():
-                        try:
-                            # All data is in the first column, need to parse it
-                            full_text = row[0].strip().strip('"')
-                            print(f"DEBUG: Parsing row {row_num}: {full_text}")
+                    # Check if row has content
+                    if not row or len(row) == 0:
+                        print(f"🔥 EMPTY ROW {row_num}")
+                        continue
+                        
+                    # Get the text from first column
+                    text = row[0].strip().strip('"')
+                    print(f"🔥 TEXT: {text}")
+                    
+                    # Check if it starts with a number
+                    if text and text[0].isdigit():
+                        print(f"🔥 FOUND RIDER ROW: {text}")
+                        
+                        # Split by spaces
+                        parts = text.split()
+                        print(f"🔥 PARTS: {parts}")
+                        
+                        if len(parts) >= 5:
+                            # Find bike brand
+                            bike_idx = 2
+                            for i, part in enumerate(parts[2:], 2):
+                                if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
+                                    bike_idx = i
+                                    break
                             
-                            # Simple approach: split by spaces and find bike brand
-                            parts = full_text.split()
-                            if len(parts) >= 5 and parts[0].isdigit():
-                                number_str = parts[0]
-                                print(f"DEBUG: Found number: {number_str}")
+                            if bike_idx < len(parts):
+                                name = ' '.join(parts[1:bike_idx])
+                                bike = parts[bike_idx]
+                                hometown = ' '.join(parts[bike_idx+1:-1])
+                                team = parts[-1]
                                 
-                                # Find bike brand by looking for known brands
-                                bike_idx = 2
-                                for i, part in enumerate(parts[2:], 2):
-                                    if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
-                                        bike_idx = i
-                                        break
-                                
-                                if bike_idx < len(parts):
-                                    name = ' '.join(parts[1:bike_idx])
-                                    bike = parts[bike_idx]
-                                    hometown = ' '.join(parts[bike_idx+1:-1])
-                                    team = parts[-1]
-                                    
-                                    print(f"DEBUG: Parsed - Name: {name}, Bike: {bike}, Hometown: {hometown}, Team: {team}")
-                                    
-                                    rider_data = {
-                                        'number': int(number_str),
-                                        'name': clean_rider_name(name),
-                                        'bike_brand': normalize_bike_brand(bike),
-                                        'hometown': hometown.strip(),
-                                        'team': team.strip(),
-                                        'class': class_name
-                                    }
-                                    riders.append(rider_data)
-                                    print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
-                                else:
-                                    print(f"DEBUG: Could not find bike brand in row {row_num}")
+                                rider_data = {
+                                    'number': int(parts[0]),
+                                    'name': clean_rider_name(name),
+                                    'bike_brand': normalize_bike_brand(bike),
+                                    'hometown': hometown.strip(),
+                                    'team': team.strip(),
+                                    'class': class_name
+                                }
+                                riders.append(rider_data)
+                                print(f"🔥 ADDED RIDER: {rider_data['number']} - {rider_data['name']}")
                             else:
-                                print(f"DEBUG: Row {row_num} does not have enough parts or doesn't start with number")
-                        except (ValueError, IndexError) as e:
-                            print(f"Error parsing row {row_num}: {e}")
-                            continue
+                                print(f"🔥 NO BIKE BRAND FOUND")
+                        else:
+                            print(f"🔥 NOT ENOUGH PARTS")
+                    else:
+                        print(f"🔥 NOT A RIDER ROW")
+            
+            print(f"🔥 TOTAL RIDERS FOUND: {len(riders)}")
             return riders
         
         # Parse all entry lists
