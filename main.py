@@ -5876,6 +5876,20 @@ def upload_entry_list():
             # Save to data folder
             filename = f"data/{file.filename}"
             file.save(filename)
+            print(f"DEBUG: File uploaded to {filename}")
+            
+            # Debug: Check if file exists and show first few lines
+            from pathlib import Path
+            if Path(filename).exists():
+                print(f"DEBUG: File exists, size: {Path(filename).stat().st_size} bytes")
+                with open(filename, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()[:10]
+                    print(f"DEBUG: First 10 lines of {filename}:")
+                    for i, line in enumerate(lines, 1):
+                        print(f"  {i}: {line.strip()}")
+            else:
+                print(f"DEBUG: File does not exist after upload!")
+            
             return jsonify({
                 "success": True,
                 "message": f"File {filename} uploaded successfully"
@@ -5911,12 +5925,15 @@ def import_entry_lists():
         
         def parse_entry_list(csv_path, class_name):
             riders = []
+            print(f"DEBUG: Starting to parse {csv_path}")
             
             with open(csv_path, 'r', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 
                 for row_num, row in enumerate(reader, 1):
                     if row_num <= 7 or not row or len(row) < 4:
+                        if row_num <= 7:
+                            print(f"DEBUG: Skipping header row {row_num}: {row}")
                         continue
                     
                     # Handle CSV format with quotes
@@ -5931,14 +5948,18 @@ def import_entry_lists():
                             
                             # Validate that we have a number
                             if number_str.isdigit():
-                                riders.append({
+                                rider_data = {
                                     'number': int(number_str),
                                     'name': clean_rider_name(name),
                                     'bike_brand': normalize_bike_brand(bike),
                                     'hometown': hometown,
                                     'team': team,
                                     'class': class_name
-                                })
+                                }
+                                riders.append(rider_data)
+                                print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
+                            else:
+                                print(f"DEBUG: Skipping row {row_num} - not a valid number: {number_str}")
                         except (ValueError, IndexError) as e:
                             print(f"Error parsing row {row_num}: {e}")
                             continue
@@ -5956,11 +5977,17 @@ def import_entry_lists():
         
         for csv_file, class_name in entry_lists:
             csv_path = Path(csv_file)
+            print(f"DEBUG: Looking for file: {csv_path}")
+            print(f"DEBUG: File exists: {csv_path.exists()}")
+            
             if csv_path.exists():
+                print(f"DEBUG: Parsing {csv_file} for class {class_name}")
                 riders = parse_entry_list(csv_path, class_name)
+                print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
+                print(f"DEBUG: File not found: {csv_file}")
                 results[class_name] = f"File not found: {csv_file}"
         
         # Show preview
@@ -6004,12 +6031,15 @@ def confirm_import_entry_lists():
         
         def parse_entry_list(csv_path, class_name):
             riders = []
+            print(f"DEBUG: Starting to parse {csv_path}")
             
             with open(csv_path, 'r', encoding='utf-8') as file:
                 reader = csv.reader(file)
                 
                 for row_num, row in enumerate(reader, 1):
                     if row_num <= 7 or not row or len(row) < 4:
+                        if row_num <= 7:
+                            print(f"DEBUG: Skipping header row {row_num}: {row}")
                         continue
                     
                     # Handle CSV format with quotes
@@ -6024,14 +6054,18 @@ def confirm_import_entry_lists():
                             
                             # Validate that we have a number
                             if number_str.isdigit():
-                                riders.append({
+                                rider_data = {
                                     'number': int(number_str),
                                     'name': clean_rider_name(name),
                                     'bike_brand': normalize_bike_brand(bike),
                                     'hometown': hometown,
                                     'team': team,
                                     'class': class_name
-                                })
+                                }
+                                riders.append(rider_data)
+                                print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
+                            else:
+                                print(f"DEBUG: Skipping row {row_num} - not a valid number: {number_str}")
                         except (ValueError, IndexError) as e:
                             print(f"Error parsing row {row_num}: {e}")
                             continue
