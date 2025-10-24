@@ -7316,16 +7316,16 @@ def calculate_league_points(league_id, competition_id):
         if not member_scores:
             return 0
         
-        # Simple calculation: average of member scores
-        # This gives reasonable points (e.g., 31p race = 31p league points)
-        average_score = sum(member_scores) / len(member_scores)
+        # Fair calculation: same points regardless of league size
+        # Use the best score in the league (or average if only one member)
+        if len(member_scores) == 1:
+            # Single member: use their score directly
+            final_score = member_scores[0]
+        else:
+            # Multiple members: use the best score (encourages competition)
+            final_score = max(member_scores)
         
-        # Add small participation bonus
-        participation_bonus = min(len(member_scores) * 2, 10)  # Max 10 points
-        
-        final_score = average_score + participation_bonus
-        
-        print(f"🏆 League {league_id}: {len(member_scores)} members, avg score: {average_score:.1f}, bonus: {participation_bonus}, final: {final_score:.1f}")
+        print(f"🏆 League {league_id}: {len(member_scores)} members, best score: {final_score:.1f}")
         
         return round(final_score, 1)
         
