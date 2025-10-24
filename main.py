@@ -12196,6 +12196,7 @@ def is_season_active():
 
 # NEW CSV PARSING FUNCTION - This should definitely work
 def parse_csv_new(csv_path, class_name):
+    import csv
     riders = []
     print(f"DEBUG: NEW FUNCTION - Starting to parse {csv_path}")
     
