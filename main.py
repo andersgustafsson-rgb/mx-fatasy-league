@@ -11826,48 +11826,48 @@ def clear_all_data():
         
         print("🧹 Starting full reset - clearing all data...")
         
-        # Clear all picks and results
-        deleted_race_picks = RacePick.query.delete()
-        deleted_holeshot_picks = HoleshotPick.query.delete()
-        deleted_wildcard_picks = WildcardPick.query.delete()
-        deleted_results = CompetitionResult.query.delete()
-        deleted_holeshot_results = HoleshotResult.query.delete()
-        deleted_scores = CompetitionScore.query.delete()
-        deleted_out_status = CompetitionRiderStatus.query.delete()
-        
-        # Clear season team riders and reset team points
-        deleted_season_team_riders = SeasonTeamRider.query.delete()
-        season_teams = SeasonTeam.query.all()
-        for team in season_teams:
-            team.total_points = 0
-        deleted_season_teams = 0  # Keep the teams but clear riders
-        
-        # Clear league points and scores
-        try:
-            # Reset league total_points to 0
-            db.session.execute(db.text("UPDATE leagues SET total_points = 0"))
-        except Exception as e:
-            print(f"Warning: Could not reset league points: {e}")
-        
-        db.session.commit()
-        
-        print(f"✅ Full reset complete - deleted: {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks, {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out status, {deleted_season_team_riders} season team riders, {deleted_season_teams} season teams")
-        
-        return jsonify({
-            "message": "All data cleared successfully - full reset complete",
-            "cleared": {
-                "race_picks": deleted_race_picks,
-                "holeshot_picks": deleted_holeshot_picks,
-                "wildcard_picks": deleted_wildcard_picks,
-                "results": deleted_results,
-                "holeshot_results": deleted_holeshot_results,
-                "scores": deleted_scores,
-                "out_status": deleted_out_status,
-                "season_team_riders": deleted_season_team_riders,
-                "season_teams": deleted_season_teams
-            }
-        })
-        
+    # Clear all picks and results
+    deleted_race_picks = RacePick.query.delete()
+    deleted_holeshot_picks = HoleshotPick.query.delete()
+    deleted_wildcard_picks = WildcardPick.query.delete()
+    deleted_results = CompetitionResult.query.delete()
+    deleted_holeshot_results = HoleshotResult.query.delete()
+    deleted_scores = CompetitionScore.query.delete()
+    deleted_out_status = CompetitionRiderStatus.query.delete()
+    
+    # Clear season team riders and reset team points
+    deleted_season_team_riders = SeasonTeamRider.query.delete()
+    season_teams = SeasonTeam.query.all()
+    for team in season_teams:
+        team.total_points = 0
+    deleted_season_teams = 0  # Keep the teams but clear riders
+    
+    # Clear league points and scores
+    try:
+        # Reset league total_points to 0
+        db.session.execute(db.text("UPDATE leagues SET total_points = 0"))
+    except Exception as e:
+        print(f"Warning: Could not reset league points: {e}")
+    
+    db.session.commit()
+    
+    print(f"✅ Full reset complete - deleted: {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks, {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out status, {deleted_season_team_riders} season team riders, {deleted_season_teams} season teams")
+    
+    return jsonify({
+        "message": "All data cleared successfully - full reset complete",
+        "cleared": {
+            "race_picks": deleted_race_picks,
+            "holeshot_picks": deleted_holeshot_picks,
+            "wildcard_picks": deleted_wildcard_picks,
+            "results": deleted_results,
+            "holeshot_results": deleted_holeshot_results,
+            "scores": deleted_scores,
+            "out_status": deleted_out_status,
+            "season_team_riders": deleted_season_team_riders,
+            "season_teams": deleted_season_teams
+        }
+    })
+    
     except Exception as e:
         print(f"Error clearing all data: {e}")
         db.session.rollback()
