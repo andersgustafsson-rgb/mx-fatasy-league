@@ -12149,7 +12149,7 @@ def clear_all_data():
         deleted_wildcard_picks = WildcardPick.query.delete()
         deleted_results = CompetitionResult.query.delete()
         deleted_holeshot_results = HoleshotResult.query.delete()
-        deleted_wildcard_results = db.session.query(WildcardResult).delete()
+        # Wildcard results are calculated automatically from user picks vs race results
         deleted_scores = CompetitionScore.query.delete()
         deleted_out_status = CompetitionRiderStatus.query.delete()
         
@@ -12169,7 +12169,7 @@ def clear_all_data():
         
         db.session.commit()
         
-        print(f"✅ Full reset complete - deleted: {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks, {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_wildcard_results} wildcard results, {deleted_scores} scores, {deleted_out_status} out status, {deleted_season_team_riders} season team riders, {deleted_season_teams} season teams")
+        print(f"✅ Full reset complete - deleted: {deleted_race_picks} race picks, {deleted_holeshot_picks} holeshot picks, {deleted_wildcard_picks} wildcard picks, {deleted_results} results, {deleted_holeshot_results} holeshot results, {deleted_scores} scores, {deleted_out_status} out status, {deleted_season_team_riders} season team riders, {deleted_season_teams} season teams")
         
         return jsonify({
             "message": "All data cleared successfully - full reset complete",
@@ -12179,7 +12179,6 @@ def clear_all_data():
                 "wildcard_picks": deleted_wildcard_picks,
                 "results": deleted_results,
                 "holeshot_results": deleted_holeshot_results,
-                "wildcard_results": deleted_wildcard_results,
                 "scores": deleted_scores,
                 "out_status": deleted_out_status,
                 "season_team_riders": deleted_season_team_riders,
