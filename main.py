@@ -6585,7 +6585,7 @@ def import_race_results_complete():
         wildcard_250 = data.get('wildcard_250')
         wildcard_450 = data.get('wildcard_450')
         
-        if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450, wildcard_450]):
+        if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450]):
             return jsonify({"error": "Missing required data"}), 400
         
         # Check if competition exists
@@ -6728,20 +6728,8 @@ def import_race_results_complete():
         except Exception as e:
             errors.append(f"Error adding holeshot results: {str(e)}")
         
-        # Add wildcard results (only 450cc)
-        try:
-            # 450cc wildcard
-            if wildcard_450:
-                wildcard_rider_450 = Rider.query.get(wildcard_450)
-                if wildcard_rider_450:
-                    wildcard_result = WildcardResult(
-                        competition_id=competition_id,
-                        rider_id=wildcard_450,
-                        class_name="450cc"
-                    )
-                    db.session.add(wildcard_result)
-        except Exception as e:
-            errors.append(f"Error adding wildcard results: {str(e)}")
+        # Note: Wildcard results are calculated automatically from the full 450cc results
+        # No manual wildcard selection needed - system will calculate from user picks vs results
         
         # Commit all changes
         db.session.commit()
@@ -12161,7 +12149,7 @@ def clear_all_data():
         deleted_wildcard_picks = WildcardPick.query.delete()
         deleted_results = CompetitionResult.query.delete()
         deleted_holeshot_results = HoleshotResult.query.delete()
-        deleted_wildcard_results = WildcardResult.query.delete()
+        deleted_wildcard_results = db.session.query(WildcardResult).delete()
         deleted_scores = CompetitionScore.query.delete()
         deleted_out_status = CompetitionRiderStatus.query.delete()
         

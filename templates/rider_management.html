@@ -205,10 +205,10 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">450cc Wildcard:</label>
-                        <select id="wildcard-450" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                            <option value="">Välj förare...</option>
-                        </select>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wildcard Info:</label>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Wildcard räknas automatiskt från hela 450cc resultatet. Ladda bara upp hela 450cc resultatet så fungerar det.
+                        </p>
                     </div>
                     <div>
                         <!-- Empty div for layout -->
@@ -1384,10 +1384,9 @@
                 .then(riders => {
                     const holeshot250 = document.getElementById('holeshot-250');
                     const holeshot450 = document.getElementById('holeshot-450');
-                    const wildcard450 = document.getElementById('wildcard-450');
                     
                     // Clear existing options
-                    [holeshot250, holeshot450, wildcard450].forEach(select => {
+                    [holeshot250, holeshot450].forEach(select => {
                         select.innerHTML = '<option value="">Välj förare...</option>';
                     });
                     
@@ -1401,7 +1400,6 @@
                             holeshot250.appendChild(option.cloneNode(true));
                         } else if (rider.class === '450') {
                             holeshot450.appendChild(option.cloneNode(true));
-                            wildcard450.appendChild(option.cloneNode(true));
                         }
                     });
                 })
@@ -1487,10 +1485,9 @@
             const competition = document.getElementById('competition-select-results').value;
             const holeshot250 = document.getElementById('holeshot-250').value;
             const holeshot450 = document.getElementById('holeshot-450').value;
-            const wildcard450 = document.getElementById('wildcard-450').value;
             
             if (uploaded250Results && uploaded450Results && competition && 
-                holeshot250 && holeshot450 && wildcard450) {
+                holeshot250 && holeshot450) {
                 document.getElementById('import-race-results-btn').disabled = false;
             }
         }
@@ -1500,7 +1497,6 @@
             const competition = document.getElementById('competition-select-results').value;
             const holeshot250 = document.getElementById('holeshot-250').value;
             const holeshot450 = document.getElementById('holeshot-450').value;
-            const wildcard450 = document.getElementById('wildcard-450').value;
             
             try {
                 const response = await fetch('/import_race_results_complete', {
@@ -1513,8 +1509,7 @@
                         results_250: uploaded250Results,
                         results_450: uploaded450Results,
                         holeshot_250: holeshot250,
-                        holeshot_450: holeshot450,
-                        wildcard_450: wildcard450
+                        holeshot_450: holeshot450
                     })
                 });
                 
