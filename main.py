@@ -5919,19 +5919,29 @@ def import_entry_lists():
                     if row_num <= 7 or not row or len(row) < 4:
                         continue
                     
-                    full_text = ' '.join(row)
-                    match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
-                    
-                    if match:
-                        number, name, bike, hometown, team = match.groups()
-                        riders.append({
-                            'number': int(number),
-                            'name': clean_rider_name(name),
-                            'bike_brand': normalize_bike_brand(bike),
-                            'hometown': hometown.strip(),
-                            'team': team.strip(),
-                            'class': class_name
-                        })
+                    # Handle CSV format with quotes
+                    if len(row) >= 4:
+                        try:
+                            # Extract data from CSV format
+                            number_str = row[0].strip().strip('"')
+                            name = row[1].strip().strip('"')
+                            bike = row[2].strip().strip('"')
+                            hometown = row[3].strip().strip('"')
+                            team = row[4].strip().strip('"') if len(row) > 4 else ""
+                            
+                            # Validate that we have a number
+                            if number_str.isdigit():
+                                riders.append({
+                                    'number': int(number_str),
+                                    'name': clean_rider_name(name),
+                                    'bike_brand': normalize_bike_brand(bike),
+                                    'hometown': hometown,
+                                    'team': team,
+                                    'class': class_name
+                                })
+                        except (ValueError, IndexError) as e:
+                            print(f"Error parsing row {row_num}: {e}")
+                            continue
             return riders
         
         # Parse all entry lists
@@ -6002,19 +6012,29 @@ def confirm_import_entry_lists():
                     if row_num <= 7 or not row or len(row) < 4:
                         continue
                     
-                    full_text = ' '.join(row)
-                    match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
-                    
-                    if match:
-                        number, name, bike, hometown, team = match.groups()
-                        riders.append({
-                            'number': int(number),
-                            'name': clean_rider_name(name),
-                            'bike_brand': normalize_bike_brand(bike),
-                            'hometown': hometown.strip(),
-                            'team': team.strip(),
-                            'class': class_name
-                        })
+                    # Handle CSV format with quotes
+                    if len(row) >= 4:
+                        try:
+                            # Extract data from CSV format
+                            number_str = row[0].strip().strip('"')
+                            name = row[1].strip().strip('"')
+                            bike = row[2].strip().strip('"')
+                            hometown = row[3].strip().strip('"')
+                            team = row[4].strip().strip('"') if len(row) > 4 else ""
+                            
+                            # Validate that we have a number
+                            if number_str.isdigit():
+                                riders.append({
+                                    'number': int(number_str),
+                                    'name': clean_rider_name(name),
+                                    'bike_brand': normalize_bike_brand(bike),
+                                    'hometown': hometown,
+                                    'team': team,
+                                    'class': class_name
+                                })
+                        except (ValueError, IndexError) as e:
+                            print(f"Error parsing row {row_num}: {e}")
+                            continue
             return riders
         
         # Parse all entry lists
@@ -6284,8 +6304,8 @@ def get_competitions_for_import():
             competition_list.append({
                 "id": comp.id,
                 "name": comp.name,
-                "event_date": comp.event_date.isoformat(),
-                "location": comp.location,
+                "event_date": comp.event_date.isoformat() if comp.event_date else None,
+                "location": getattr(comp, 'location', 'Unknown'),
                 "has_results": bool(CompetitionResult.query.filter_by(competition_id=comp.id).first())
             })
         
