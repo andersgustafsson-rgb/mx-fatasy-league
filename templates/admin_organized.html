@@ -293,16 +293,31 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">🏁 Race Simulation</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <button onclick="setSimulatedTime('before_race')" class="btn-primary px-4 py-2 rounded-lg">
-                                ⏰ 3h Before Race
-                            </button>
-                            <button onclick="setSimulatedTime('race_start')" class="btn-primary px-4 py-2 rounded-lg">
-                                🏁 Race Start
-                            </button>
-                            <button onclick="setSimulatedTime('after_race')" class="btn-primary px-4 py-2 rounded-lg">
-                                ✅ After Race
-                            </button>
+                        <!-- Competition Selection -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Select Competition:</label>
+                            <select id="simulation-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                <option value="">Loading competitions...</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Time Scenarios -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Time Scenarios:</label>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <button onclick="setSimulatedTime('race_in_3h')" class="btn-primary px-4 py-2 rounded-lg">
+                                    ⏰ 3h Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_in_1h')" class="btn-primary px-4 py-2 rounded-lg">
+                                    🏁 1h Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_in_30m')" class="btn-primary px-4 py-2 rounded-lg">
+                                    ⚡ 30m Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_tomorrow')" class="btn-primary px-4 py-2 rounded-lg">
+                                    📅 1 Day Before
+                                </button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <button onclick="generateSimulatedResults()" class="btn-warning px-4 py-2 rounded-lg">
@@ -412,8 +427,16 @@
 
         // Race Simulation Functions
         async function setSimulatedTime(scenario) {
+            const competitionSelect = document.getElementById('simulation-competition');
+            const competitionId = competitionSelect.value;
+            
+            if (!competitionId) {
+                alert('❌ Please select a competition first');
+                return;
+            }
+            
             try {
-                const response = await fetch(`/set_simulated_time?scenario=${scenario}`);
+                const response = await fetch(`/set_simulated_time?scenario=${scenario}&competition_id=${competitionId}`);
                 const result = await response.json();
                 if (result.message) {
                     alert('✅ ' + result.message);
@@ -442,30 +465,60 @@
         }
 
         async function simulateAllUsersPicks() {
+            const competitionSelect = document.getElementById('simulation-competition');
+            const competitionId = competitionSelect.value;
+            
+            if (!competitionId) {
+                alert('❌ Please select a competition first');
+                return;
+            }
+            
             if (confirm('This will simulate picks for all users. Continue?')) {
                 try {
-                    // Get the first available competition
-                    const response = await fetch('/admin/competitions');
-                    const competitions = await response.json();
-                    if (competitions && competitions.length > 0) {
-                        const compId = competitions[0].id;
-                        const simResponse = await fetch(`/admin/simulate_all_users_picks/${compId}`, {
-                            method: 'POST'
-                        });
-                        const result = await simResponse.json();
-                        if (result.message) {
-                            alert('✅ ' + result.message);
-                        } else {
-                            alert('❌ Error: ' + result.error);
-                        }
+                    const simResponse = await fetch(`/admin/simulate_all_users_picks/${competitionId}`, {
+                        method: 'POST'
+                    });
+                    const result = await simResponse.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
                     } else {
-                        alert('❌ No competitions found');
+                        alert('❌ Error: ' + result.error);
                     }
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }
             }
         }
+
+        // Load competitions for simulation
+        async function loadSimulationCompetitions() {
+            try {
+                const response = await fetch('/get_competitions_for_import');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('simulation-competition');
+                    select.innerHTML = '<option value="">Välj tävling...</option>';
+                    
+                    data.competitions.forEach(comp => {
+                        const option = document.createElement('option');
+                        option.value = comp.id;
+                        option.textContent = comp.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    document.getElementById('simulation-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            } catch (error) {
+                console.error('Error loading competitions:', error);
+                document.getElementById('simulation-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSimulationCompetitions();
+        });
     </script>
 </body>
 </html>
