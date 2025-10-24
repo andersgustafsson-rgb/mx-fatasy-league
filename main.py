@@ -5873,7 +5873,8 @@ def upload_entry_list():
             return jsonify({"error": "No file selected"}), 400
         
         if file and file.filename.endswith('.csv'):
-            filename = file.filename
+            # Save to data folder
+            filename = f"data/{file.filename}"
             file.save(filename)
             return jsonify({
                 "success": True,

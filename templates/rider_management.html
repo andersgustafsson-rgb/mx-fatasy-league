@@ -1021,6 +1021,58 @@
         // Entry List Import functionality
         let entryListPreview = null;
 
+        // Upload entry lists form handler
+        document.getElementById('upload-entry-lists-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('entry-csv-files');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                document.getElementById('upload-entry-status').innerHTML = '<span class="text-red-600">Välj CSV-filer</span>';
+                return;
+            }
+            
+            let uploadedCount = 0;
+            let errors = [];
+            
+            for (let file of files) {
+                if (file.name.endsWith('.csv')) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    try {
+                        const response = await fetch('/upload_entry_list', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            uploadedCount++;
+                        } else {
+                            errors.push(`${file.name}: ${result.error}`);
+                        }
+                    } catch (error) {
+                        errors.push(`${file.name}: Upload error`);
+                    }
+                } else {
+                    errors.push(`${file.name}: Not a CSV file`);
+                }
+            }
+            
+            if (uploadedCount > 0) {
+                document.getElementById('upload-entry-status').innerHTML = 
+                    '<span class="text-green-600">✓ Laddade upp ' + uploadedCount + ' filer</span>';
+            }
+            
+            if (errors.length > 0) {
+                document.getElementById('upload-entry-status').innerHTML += 
+                    '<br><span class="text-red-600">Fel: ' + errors.join(', ') + '</span>';
+            }
+        });
+
         // Preview entry lists button handler
         document.getElementById('preview-entry-lists-btn').addEventListener('click', async function() {
             try {
