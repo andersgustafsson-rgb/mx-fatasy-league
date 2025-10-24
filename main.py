@@ -5944,7 +5944,30 @@ def import_entry_lists():
                             print(f"DEBUG: Parsing row {row_num}: {full_text}")
                             
                             # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
+                            # The format has multiple spaces between fields, so we need a more flexible regex
                             match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                            
+                            # If that doesn't work, try a simpler approach
+                            if not match:
+                                # Split by multiple spaces and reconstruct
+                                parts = full_text.split()
+                                if len(parts) >= 5 and parts[0].isdigit():
+                                    number_str = parts[0]
+                                    # Find bike brand (usually 3rd element)
+                                    bike_idx = 2
+                                    for i, part in enumerate(parts[2:], 2):
+                                        if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta']:
+                                            bike_idx = i
+                                            break
+                                    
+                                    name = ' '.join(parts[1:bike_idx])
+                                    bike = parts[bike_idx]
+                                    hometown = ' '.join(parts[bike_idx+1:-1])
+                                    team = parts[-1]
+                                    
+                                    match = type('Match', (), {
+                                        'groups': lambda: (number_str, name, bike, hometown, team)
+                                    })()
                             
                             if match:
                                 number_str, name, bike, hometown, team = match.groups()
@@ -6055,7 +6078,30 @@ def confirm_import_entry_lists():
                             print(f"DEBUG: Parsing row {row_num}: {full_text}")
                             
                             # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
+                            # The format has multiple spaces between fields, so we need a more flexible regex
                             match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                            
+                            # If that doesn't work, try a simpler approach
+                            if not match:
+                                # Split by multiple spaces and reconstruct
+                                parts = full_text.split()
+                                if len(parts) >= 5 and parts[0].isdigit():
+                                    number_str = parts[0]
+                                    # Find bike brand (usually 3rd element)
+                                    bike_idx = 2
+                                    for i, part in enumerate(parts[2:], 2):
+                                        if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta']:
+                                            bike_idx = i
+                                            break
+                                    
+                                    name = ' '.join(parts[1:bike_idx])
+                                    bike = parts[bike_idx]
+                                    hometown = ' '.join(parts[bike_idx+1:-1])
+                                    team = parts[-1]
+                                    
+                                    match = type('Match', (), {
+                                        'groups': lambda: (number_str, name, bike, hometown, team)
+                                    })()
                             
                             if match:
                                 number_str, name, bike, hometown, team = match.groups()
