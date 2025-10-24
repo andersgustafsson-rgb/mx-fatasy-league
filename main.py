@@ -3003,32 +3003,20 @@ def update_rider(rider_id):
         ).filter(Rider.id != rider_id).first()
         
         if existing_rider:
-            # Automatically delete the existing rider with the same number
-            print(f"DEBUG: Found existing rider {existing_rider.name} with same number {data['rider_number']}, deleting it")
-            
-            # Delete associated data first
-            from sqlalchemy import text
-            try:
-                db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM race_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM holeshot_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM wildcard_picks WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                db.session.execute(text("DELETE FROM competition_rider_status WHERE rider_id = :rider_id"), {'rider_id': existing_rider.id})
-                
-                # Delete the existing rider
-                db.session.delete(existing_rider)
-                db.session.commit()
-                print(f"DEBUG: Successfully deleted existing rider {existing_rider.name} (ID: {existing_rider.id})")
-                
-            except Exception as e:
-                print(f"DEBUG: Error deleting existing rider: {e}")
-                db.session.rollback()
-                return jsonify({
-                    'error': 'delete_conflict_failed',
-                    'message': f'Kunde inte ta bort befintlig förare {existing_rider.name}: {str(e)}'
-                }), 500
+            return jsonify({
+                'error': 'conflict',
+                'message': f'Nummer {data["rider_number"]} finns redan för {existing_rider.name} ({existing_rider.class_name}). Du måste ändra nummer på den andra föraren först.',
+                'existing_rider': {
+                    'id': existing_rider.id,
+                    'name': existing_rider.name,
+                    'class_name': existing_rider.class_name,
+                    'rider_number': existing_rider.rider_number,
+                    'bike_brand': existing_rider.bike_brand
+                }
+            }), 409
+    
+    print(f"DEBUG: Updating rider {rider.name} (ID: {rider.id})")
+    print(f"DEBUG: New name: {data['name']}, number: {data['rider_number']}, brand: {data['bike_brand']}")
     
     rider.name = data['name']
     rider.rider_number = data['rider_number']
@@ -3085,7 +3073,9 @@ def update_rider(rider_id):
         except Exception:
             pass
     
+    print(f"DEBUG: About to commit rider update for {rider.name} (ID: {rider.id})")
     db.session.commit()
+    print(f"DEBUG: Successfully updated rider {rider.name} (ID: {rider.id})")
     
     response = {'success': True}
     if season_warning:
