@@ -6585,7 +6585,7 @@ def import_race_results_complete():
         wildcard_250 = data.get('wildcard_250')
         wildcard_450 = data.get('wildcard_450')
         
-        if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450, wildcard_250, wildcard_450]):
+        if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450, wildcard_450]):
             return jsonify({"error": "Missing required data"}), 400
         
         # Check if competition exists
@@ -6728,19 +6728,8 @@ def import_race_results_complete():
         except Exception as e:
             errors.append(f"Error adding holeshot results: {str(e)}")
         
-        # Add wildcard results
+        # Add wildcard results (only 450cc)
         try:
-            # 250cc wildcard
-            if wildcard_250:
-                wildcard_rider_250 = Rider.query.get(wildcard_250)
-                if wildcard_rider_250:
-                    wildcard_result = WildcardResult(
-                        competition_id=competition_id,
-                        rider_id=wildcard_250,
-                        class_name="250cc"
-                    )
-                    db.session.add(wildcard_result)
-            
             # 450cc wildcard
             if wildcard_450:
                 wildcard_rider_450 = Rider.query.get(wildcard_450)
