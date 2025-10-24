@@ -6577,13 +6577,16 @@ def import_race_results_complete():
     
     try:
         data = request.get_json()
+        print(f"🔍 DEBUG: Received data: {data}")
+        
         competition_id = data.get('competition_id')
         results_250 = data.get('results_250')
         results_450 = data.get('results_450')
         holeshot_250 = data.get('holeshot_250')
         holeshot_450 = data.get('holeshot_450')
-        wildcard_250 = data.get('wildcard_250')
-        wildcard_450 = data.get('wildcard_450')
+        
+        print(f"🔍 DEBUG: Parsed data - competition_id: {competition_id}, results_250: {results_250}, results_450: {results_450}")
+        print(f"🔍 DEBUG: holeshot_250: {holeshot_250}, holeshot_450: {holeshot_450}")
         
         if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450]):
             return jsonify({"error": "Missing required data"}), 400
