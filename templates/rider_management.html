@@ -83,6 +83,29 @@
                         Förhandsvisa Entry Lists
                     </button>
                     <div id="preview-status" class="mt-2 text-sm"></div>
+                    
+                    <!-- Preview Table -->
+                    <div id="preview-table" class="mt-4 hidden">
+                        <h5 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Förhandsvisning av förare:</h5>
+                        <div class="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
+                            <table class="w-full text-xs">
+                                <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                                    <tr>
+                                        <th class="px-2 py-1 text-left">#</th>
+                                        <th class="px-2 py-1 text-left">Namn</th>
+                                        <th class="px-2 py-1 text-left">Märke</th>
+                                        <th class="px-2 py-1 text-left">Klass</th>
+                                        <th class="px-2 py-1 text-left">Kust</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-riders-list">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                            <span id="preview-summary"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Import Entry Lists -->
@@ -1021,6 +1044,49 @@
         // Entry List Import functionality
         let entryListPreview = null;
 
+        // Function to show preview table
+        function showPreviewTable(sampleRiders, totalRiders, byClass) {
+            const previewTable = document.getElementById('preview-table');
+            const previewList = document.getElementById('preview-riders-list');
+            const previewSummary = document.getElementById('preview-summary');
+            
+            // Clear previous content
+            previewList.innerHTML = '';
+            
+            // Show sample riders (first 20)
+            const ridersToShow = sampleRiders.slice(0, 20);
+            ridersToShow.forEach(rider => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-200 dark:border-gray-600';
+                
+                // Determine coast for 250cc riders
+                let coast = '';
+                if (rider.class === '250cc') {
+                    // This is a simplified approach - in reality you'd need to track which file each rider came from
+                    coast = 'East/West';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-2 py-1 font-mono">${rider.number}</td>
+                    <td class="px-2 py-1">${rider.name}</td>
+                    <td class="px-2 py-1">${rider.bike_brand}</td>
+                    <td class="px-2 py-1">${rider.class}</td>
+                    <td class="px-2 py-1">${coast}</td>
+                `;
+                previewList.appendChild(row);
+            });
+            
+            // Show summary
+            previewSummary.innerHTML = `
+                <strong>Sammanfattning:</strong> ${totalRiders} förare totalt 
+                (250cc: ${byClass['250cc']}, 450cc: ${byClass['450cc']})
+                ${sampleRiders.length > 20 ? ` - Visar första 20 av ${sampleRiders.length} förare` : ''}
+            `;
+            
+            // Show the table
+            previewTable.classList.remove('hidden');
+        }
+
         // Upload entry lists form handler
         document.getElementById('upload-entry-lists-form').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1085,6 +1151,9 @@
                         '<span class="text-green-600">✓ Hittade ' + result.preview.total_riders + ' förare</span><br>' +
                         '<span class="text-blue-600">250cc: ' + result.preview.by_class['250cc'] + ' förare</span><br>' +
                         '<span class="text-blue-600">450cc: ' + result.preview.by_class['450cc'] + ' förare</span>';
+                    
+                    // Show preview table
+                    showPreviewTable(result.preview.sample_riders, result.preview.total_riders, result.preview.by_class);
                     
                     document.getElementById('import-entry-lists-btn').disabled = false;
                 } else {
