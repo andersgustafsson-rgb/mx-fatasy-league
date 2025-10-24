@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MX Fantasy League</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background-attachment: fixed;
+        }
+        
+        .cyberpunk-header {
+            font-family: 'Orbitron', monospace;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+        }
+        
+        .section-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+            color: #0f172a;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.4);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            font-weight: 600;
+        }
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">ADMIN PANEL</h1>
+            <p class="text-gray-300 text-lg">MX Fantasy League Management</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap justify-center mb-8 border-b border-gray-600">
+            <button onclick="showSection('race-results')" class="tab-btn active px-6 py-3 text-lg">
+                🏁 Race Results
+            </button>
+            <button onclick="showSection('rider-management')" class="tab-btn px-6 py-3 text-lg">
+                👥 Rider Management
+            </button>
+            <button onclick="showSection('competition-management')" class="tab-btn px-6 py-3 text-lg">
+                🏆 Competitions
+            </button>
+            <button onclick="showSection('user-management')" class="tab-btn px-6 py-3 text-lg">
+                👤 Users
+            </button>
+            <button onclick="showSection('league-management')" class="tab-btn px-6 py-3 text-lg">
+                🏅 Leagues
+            </button>
+            <button onclick="showSection('system-tools')" class="tab-btn px-6 py-3 text-lg">
+                🔧 System Tools
+            </button>
+        </div>
+
+        <!-- Race Results Section -->
+        <div id="race-results" class="section-panel active">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏁 Race Results Management</h2>
+                
+                <!-- CSV Import -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">📊 CSV Import System</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Import race results from CSV files with automatic holeshot and wildcard calculation.</p>
+                        <a href="/rider_management" class="btn-primary px-6 py-3 rounded-lg inline-block">
+                            📁 Go to CSV Import
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Manual Results -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Add race results manually for individual riders.</p>
+                        <a href="/admin/competitions" class="btn-primary px-6 py-3 rounded-lg inline-block">
+                            🏆 Manage Competitions
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Out Riders -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">❌ Out Riders Management</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Mark riders as out for specific competitions.</p>
+                        <a href="/admin/competitions" class="btn-primary px-6 py-3 rounded-lg inline-block">
+                            🚫 Manage Out Riders
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rider Management Section -->
+        <div id="rider-management" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">👥 Rider Management</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Import Riders -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">📥 Import Riders</h3>
+                        <p class="text-gray-300 mb-4">Import rider lists from CSV files.</p>
+                        <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Import Entry Lists
+                        </a>
+                    </div>
+
+                    <!-- Restore Images -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">🖼️ Restore Images</h3>
+                        <p class="text-gray-300 mb-4">Restore rider images from static folder.</p>
+                        <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Restore Images
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Competition Management Section -->
+        <div id="competition-management" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏆 Competition Management</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Create Competition -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">➕ Create Competition</h3>
+                        <p class="text-gray-300 mb-4">Add new competitions to the season.</p>
+                        <a href="/admin/competitions" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Create New
+                        </a>
+                    </div>
+
+                    <!-- Manage Competitions -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">📋 Manage Competitions</h3>
+                        <p class="text-gray-300 mb-4">Edit, delete, or update competitions.</p>
+                        <a href="/admin/competitions" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Manage All
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management Section -->
+        <div id="user-management" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">👤 User Management</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Manage Users -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">👥 Manage Users</h3>
+                        <p class="text-gray-300 mb-4">View, edit, or delete user accounts.</p>
+                        <a href="/admin/users" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Manage Users
+                        </a>
+                    </div>
+
+                    <!-- User Statistics -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">📊 User Statistics</h3>
+                        <p class="text-gray-300 mb-4">View user activity and statistics.</p>
+                        <a href="/admin/users" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            View Stats
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- League Management Section -->
+        <div id="league-management" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏅 League Management</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Manage Leagues -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">🏆 Manage Leagues</h3>
+                        <p class="text-gray-300 mb-4">Create, edit, or delete leagues.</p>
+                        <a href="/admin/leagues" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Manage Leagues
+                        </a>
+                    </div>
+
+                    <!-- League Points -->
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <h3 class="text-lg font-semibold text-white mb-3">📊 League Points</h3>
+                        <p class="text-gray-300 mb-4">Calculate and manage league points.</p>
+                        <a href="/admin/leagues" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                            Points Management
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Tools Section -->
+        <div id="system-tools" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🔧 System Tools</h2>
+                
+                <!-- Data Management -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🗄️ Data Management</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="clearAllData()" class="btn-danger px-4 py-2 rounded-lg">
+                                🧹 Full Reset
+                            </button>
+                            <button onclick="clearRaceResults()" class="btn-warning px-4 py-2 rounded-lg">
+                                🏁 Clear Results
+                            </button>
+                            <button onclick="clearUserPicks()" class="btn-warning px-4 py-2 rounded-lg">
+                                👤 Clear Picks
+                            </button>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2">
+                            ⚠️ Full Reset removes ALL data. Use with caution!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Database Tools -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">💾 Database Tools</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <a href="/fix_database" class="btn-primary px-4 py-2 rounded-lg inline-block text-center">
+                                🔧 Fix Database
+                            </a>
+                            <a href="/update_season_team_points" class="btn-primary px-4 py-2 rounded-lg inline-block text-center">
+                                📊 Update Team Points
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- League Points -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🏆 League Points</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <button onclick="calculateAllLeaguePoints()" class="btn-primary px-4 py-2 rounded-lg">
+                            🏅 Calculate All League Points
+                        </button>
+                        <p class="text-gray-400 text-sm mt-2">
+                            Recalculates league points for all competitions
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section-panel').forEach(panel => {
+                panel.classList.add('hidden');
+                panel.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.remove('hidden');
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Data management functions
+        async function clearAllData() {
+            if (confirm('⚠️ This will delete ALL data including users, picks, results, and leagues. Are you sure?')) {
+                try {
+                    const response = await fetch('/clear_all_data');
+                    const result = await response.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function clearRaceResults() {
+            if (confirm('This will clear all race results. Continue?')) {
+                try {
+                    const response = await fetch('/clear_all_results');
+                    const result = await response.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function clearUserPicks() {
+            if (confirm('This will clear all user picks. Continue?')) {
+                try {
+                    const response = await fetch('/clear_all_picks');
+                    const result = await response.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function calculateAllLeaguePoints() {
+            if (confirm('This will recalculate league points for all competitions. Continue?')) {
+                try {
+                    const response = await fetch('/admin/leagues/calculate_all_points', {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

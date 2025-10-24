@@ -2779,12 +2779,7 @@ def admin_page():
     for comp in competitions:
         comp_coast_map[comp.id] = comp.coast_250
     
-    return render_template("admin_new.html", 
-                         competitions=competitions_data,
-                         riders_450=riders_450_data,
-                         riders_250=riders_250_data,
-                         comp_coast_map=comp_coast_map,
-                         today=today)
+    return render_template("admin_organized.html")
 
 @app.route('/competition_management')
 def competition_management():
