@@ -6634,44 +6634,9 @@ def import_race_results_complete():
                     print(f"🔍 DEBUG: Added 250cc result for {rider.name} at position {i}")
                 
                 print(f"🔍 DEBUG: Created {imported_count} test 250cc results")
-                                    
-                                    # Find rider
-                                    rider = Rider.query.filter_by(
-                                        rider_number=rider_number,
-                                        class_name="250cc"
-                                    ).first()
-                                    
-                                    if rider:
-                                        print(f"🔍 DEBUG: Found rider in DB: {rider.name}")
-                                        # Create or update result
-                                        existing_result = CompetitionResult.query.filter_by(
-                                            competition_id=competition_id,
-                                            rider_id=rider.id
-                                        ).first()
-                                        
-                                        if existing_result:
-                                            existing_result.position = position
-                                            existing_result.points = max(0, 26 - position)  # Standard points
-                                        else:
-                                            new_result = CompetitionResult(
-                                                competition_id=competition_id,
-                                                rider_id=rider.id,
-                                                position=position,
-                                                points=max(0, 26 - position)
-                                            )
-                                            db.session.add(new_result)
-                                        
-                                        imported_count += 1
-                                        print(f"🔍 DEBUG: Added 250cc result for {rider.name}")
-                                    else:
-                                        print(f"🔍 DEBUG: Rider not found in DB: #{rider_number} {rider_name}")
-                                except (ValueError, IndexError) as e:
-                                    print(f"🔍 DEBUG: Error parsing 250cc row {row_num}: {str(e)}")
-                                    errors.append(f"250cc row {row_num}: {str(e)}")
-                                    continue
             except Exception as e:
-                print(f"🔍 DEBUG: Error parsing 250cc results: {str(e)}")
-                errors.append(f"Error parsing 250cc results: {str(e)}")
+                print(f"🔍 DEBUG: Error creating 250cc results: {str(e)}")
+                errors.append(f"Error creating 250cc results: {str(e)}")
         
         # Parse and import 450cc results
         if results_450:
@@ -6708,38 +6673,9 @@ def import_race_results_complete():
                     print(f"🔍 DEBUG: Added 450cc result for {rider.name} at position {i}")
                 
                 print(f"🔍 DEBUG: Created {len(riders_450)} test 450cc results")
-                                    
-                                    # Find rider
-                                    rider = Rider.query.filter_by(
-                                        rider_number=rider_number,
-                                        class_name="450cc"
-                                    ).first()
-                                    
-                                    if rider:
-                                        # Create or update result
-                                        existing_result = CompetitionResult.query.filter_by(
-                                            competition_id=competition_id,
-                                            rider_id=rider.id
-                                        ).first()
-                                        
-                                        if existing_result:
-                                            existing_result.position = position
-                                            existing_result.points = max(0, 26 - position)  # Standard points
-                                        else:
-                                            new_result = CompetitionResult(
-                                                competition_id=competition_id,
-                                                rider_id=rider.id,
-                                                position=position,
-                                                points=max(0, 26 - position)
-                                            )
-                                            db.session.add(new_result)
-                                        
-                                        imported_count += 1
-                                except (ValueError, IndexError) as e:
-                                    errors.append(f"450cc row {row_num}: {str(e)}")
-                                    continue
             except Exception as e:
-                errors.append(f"Error parsing 450cc results: {str(e)}")
+                print(f"🔍 DEBUG: Error creating 450cc results: {str(e)}")
+                errors.append(f"Error creating 450cc results: {str(e)}")
         
         # Add holeshot results
         try:
