@@ -6602,39 +6602,86 @@ def import_race_results_complete():
         # Parse and import 250cc results
         if results_250:
             try:
-                print(f"🔍 DEBUG: Starting 250cc import...")
+                print(f"🔍 DEBUG: Starting 250cc import from CSV...")
                 
-                # For now, create some test results to verify the system works
-                # TODO: Implement proper CSV parsing later
+                from pathlib import Path
+                csv_path = Path(results_250)
+                if csv_path.exists():
+                    with open(csv_path, 'r', encoding='utf-8') as file:
+                        import csv
+                        reader = csv.reader(file)
+                        
+                        for row_num, row in enumerate(reader, 1):
+                            if row_num <= 7:  # Skip headers
+                                continue
+                            
+                            if len(row) >= 1 and row[0].strip():
+                                full_text = row[0].strip()
+                                print(f"🔍 DEBUG: 250cc row {row_num}: {full_text}")
+                                
+                                # Parse format: "1        38   Haiden Deegan        Yamaha        1..."
+                                parts = [p for p in full_text.split() if p]
+                                
+                                if len(parts) >= 4:
+                                    # Find rider number and position
+                                    rider_number = None
+                                    rider_name_parts = []
+                                    position = None
+                                    
+                                    for i, part in enumerate(parts):
+                                        if part.isdigit() and i > 0:  # Not first position
+                                            if i + 1 < len(parts) and not parts[i + 1].isdigit():
+                                                rider_number = int(part)
+                                                # Get name parts
+                                                j = i + 1
+                                                while j < len(parts) and not parts[j] in ['Yamaha', 'KTM', 'Honda', 'Kawasaki', 'Triumph', 'GasGas', 'Husqvarna', 'Suzuki']:
+                                                    rider_name_parts.append(parts[j])
+                                                    j += 1
+                                                # Get position (first number after bike)
+                                                for k in range(j, len(parts)):
+                                                    if parts[k].isdigit():
+                                                        position = int(parts[k])
+                                                        break
+                                                break
+                                    
+                                    if rider_number and rider_name_parts and position:
+                                        rider_name = ' '.join(rider_name_parts)
+                                        print(f"🔍 DEBUG: Parsed - #{rider_number} {rider_name} at position {position}")
+                                        
+                                        # Find rider in database
+                                        rider = Rider.query.filter_by(
+                                            rider_number=rider_number,
+                                            class_name="250cc"
+                                        ).first()
+                                        
+                                        if rider:
+                                            # Create or update result
+                                            existing_result = CompetitionResult.query.filter_by(
+                                                competition_id=competition_id,
+                                                rider_id=rider.id
+                                            ).first()
+                                            
+                                            if existing_result:
+                                                existing_result.position = position
+                                            else:
+                                                new_result = CompetitionResult(
+                                                    competition_id=competition_id,
+                                                    rider_id=rider.id,
+                                                    position=position
+                                                )
+                                                db.session.add(new_result)
+                                            
+                                            imported_count += 1
+                                            print(f"🔍 DEBUG: Added 250cc result for {rider.name} at position {position}")
+                                        else:
+                                            print(f"🔍 DEBUG: Rider not found: #{rider_number} {rider_name}")
+                                    else:
+                                        print(f"🔍 DEBUG: Could not parse: {full_text}")
                 
-                # Get some 250cc riders from the database
-                riders_250 = Rider.query.filter_by(class_name="250cc").limit(6).all()
-                print(f"🔍 DEBUG: Found {len(riders_250)} 250cc riders in database")
-                
-                for i, rider in enumerate(riders_250, 1):
-                    # Create test result
-                    existing_result = CompetitionResult.query.filter_by(
-                        competition_id=competition_id,
-                        rider_id=rider.id
-                    ).first()
-                    
-                    if existing_result:
-                        existing_result.position = i
-                    else:
-                        new_result = CompetitionResult(
-                            competition_id=competition_id,
-                            rider_id=rider.id,
-                            position=i
-                        )
-                        db.session.add(new_result)
-                    
-                    imported_count += 1
-                    print(f"🔍 DEBUG: Added 250cc result for {rider.name} at position {i}")
-                
-                print(f"🔍 DEBUG: Created {imported_count} test 250cc results")
+                print(f"🔍 DEBUG: Imported {imported_count} 250cc results from CSV")
             except Exception as e:
-                print(f"🔍 DEBUG: Error creating 250cc results: {str(e)}")
-                errors.append(f"Error creating 250cc results: {str(e)}")
+                print(f"🔍 DEBUG: Error importing 250cc results: {str(e)}")
+                errors.append(f"Error importing 250cc results: {str(e)}")
         
         # Parse and import 450cc results
         if results_450:
@@ -6710,11 +6757,20 @@ def import_race_results_complete():
         # Commit all changes
         db.session.commit()
         
+        # Calculate scores for all users after importing results
+        print(f"🔍 DEBUG: Calculating scores for competition {competition_id}...")
+        try:
+            calculate_scores(competition_id)
+            print(f"🔍 DEBUG: Scores calculated successfully")
+        except Exception as e:
+            print(f"🔍 DEBUG: Error calculating scores: {str(e)}")
+            errors.append(f"Error calculating scores: {str(e)}")
+        
         return jsonify({
             "success": True,
             "imported_count": imported_count,
             "errors": errors,
-            "message": f"Successfully imported {imported_count} race results with holeshot and wildcard picks"
+            "message": f"Successfully imported {imported_count} race results with holeshot and wildcard picks and calculated scores"
         })
         
     except Exception as e:
