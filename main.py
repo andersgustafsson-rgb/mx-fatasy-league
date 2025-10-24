@@ -12158,6 +12158,53 @@ def clear_all_picks():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/admin/leagues/calculate_all_points", methods=['POST'])
+def calculate_all_league_points():
+    """Calculate league points for all competitions - admin only"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all competitions
+        competitions = Competition.query.all()
+        total_calculated = 0
+        
+        for comp in competitions:
+            # Get all leagues
+            leagues = League.query.all()
+            
+            for league in leagues:
+                # Calculate league points for this competition
+                league_points = calculate_league_points(league.id, comp.id)
+                
+                # Update or create league competition score
+                existing_score = db.session.query(LeagueCompetitionScore).filter_by(
+                    league_id=league.id,
+                    competition_id=comp.id
+                ).first()
+                
+                if existing_score:
+                    existing_score.points = league_points
+                else:
+                    new_score = LeagueCompetitionScore(
+                        league_id=league.id,
+                        competition_id=comp.id,
+                        points=league_points
+                    )
+                    db.session.add(new_score)
+                
+                total_calculated += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Successfully calculated league points for {total_calculated} league-competition combinations"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/clear_all_data")
 def clear_all_data():
     """Clear all picks and results - full reset"""
