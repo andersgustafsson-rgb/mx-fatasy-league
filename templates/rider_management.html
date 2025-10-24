@@ -1433,9 +1433,11 @@
                 
                 if (result.success) {
                     uploaded250Results = result.filename;
+                    console.log('✅ 250cc uploaded:', uploaded250Results);
                     document.getElementById('upload-250-status').innerHTML = '<span class="text-green-600">✓ 250cc resultat uppladdat</span>';
                     checkImportReady();
                 } else {
+                    console.log('❌ 250cc upload failed:', result.error);
                     document.getElementById('upload-250-status').innerHTML = '<span class="text-red-600">Fel: ' + result.error + '</span>';
                 }
             } catch (error) {
@@ -1469,9 +1471,11 @@
                 
                 if (result.success) {
                     uploaded450Results = result.filename;
+                    console.log('✅ 450cc uploaded:', uploaded450Results);
                     document.getElementById('upload-450-status').innerHTML = '<span class="text-green-600">✓ 450cc resultat uppladdat</span>';
                     checkImportReady();
                 } else {
+                    console.log('❌ 450cc upload failed:', result.error);
                     document.getElementById('upload-450-status').innerHTML = '<span class="text-red-600">Fel: ' + result.error + '</span>';
                 }
             } catch (error) {
