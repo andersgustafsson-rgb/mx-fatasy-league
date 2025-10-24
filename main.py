@@ -6540,6 +6540,235 @@ def debug_rider_images():
         print(f"Error in debug_rider_images: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/upload_race_results", methods=['POST'])
+def upload_race_results():
+    """Upload race results CSV file"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if file and file.filename.endswith('.csv'):
+            filename = f"data/results_{file.filename}"
+            file.save(filename)
+            return jsonify({
+                "success": True,
+                "filename": filename,
+                "message": f"Results file {filename} uploaded successfully"
+            })
+        else:
+            return jsonify({"error": "Only CSV files allowed"}), 400
+            
+    except Exception as e:
+        print(f"Error uploading race results file: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/import_race_results_complete", methods=['POST'])
+def import_race_results_complete():
+    """Import complete race results with holeshot and wildcard picks"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json()
+        competition_id = data.get('competition_id')
+        results_250 = data.get('results_250')
+        results_450 = data.get('results_450')
+        holeshot_250 = data.get('holeshot_250')
+        holeshot_450 = data.get('holeshot_450')
+        wildcard_250 = data.get('wildcard_250')
+        wildcard_450 = data.get('wildcard_450')
+        
+        if not all([competition_id, results_250, results_450, holeshot_250, holeshot_450, wildcard_250, wildcard_450]):
+            return jsonify({"error": "Missing required data"}), 400
+        
+        # Check if competition exists
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+        
+        imported_count = 0
+        errors = []
+        
+        # Parse and import 250cc results
+        if results_250:
+            try:
+                from pathlib import Path
+                csv_path = Path(results_250)
+                if csv_path.exists():
+                    # Parse 250cc results
+                    with open(csv_path, 'r', encoding='utf-8') as file:
+                        import csv
+                        reader = csv.reader(file)
+                        
+                        for row_num, row in enumerate(reader, 1):
+                            if row_num <= 7:  # Skip headers
+                                continue
+                            
+                            if len(row) >= 8 and row[1].strip().isdigit():
+                                try:
+                                    rider_number = int(row[1].strip())
+                                    rider_name = row[2].strip()
+                                    position = int(row[7].split()[0])  # First number in result column
+                                    
+                                    # Find rider
+                                    rider = Rider.query.filter_by(
+                                        rider_number=rider_number,
+                                        class_name="250cc"
+                                    ).first()
+                                    
+                                    if rider:
+                                        # Create or update result
+                                        existing_result = CompetitionResult.query.filter_by(
+                                            competition_id=competition_id,
+                                            rider_id=rider.id
+                                        ).first()
+                                        
+                                        if existing_result:
+                                            existing_result.position = position
+                                            existing_result.points = max(0, 26 - position)  # Standard points
+                                        else:
+                                            new_result = CompetitionResult(
+                                                competition_id=competition_id,
+                                                rider_id=rider.id,
+                                                position=position,
+                                                points=max(0, 26 - position)
+                                            )
+                                            db.session.add(new_result)
+                                        
+                                        imported_count += 1
+                                except (ValueError, IndexError) as e:
+                                    errors.append(f"250cc row {row_num}: {str(e)}")
+                                    continue
+            except Exception as e:
+                errors.append(f"Error parsing 250cc results: {str(e)}")
+        
+        # Parse and import 450cc results
+        if results_450:
+            try:
+                from pathlib import Path
+                csv_path = Path(results_450)
+                if csv_path.exists():
+                    # Parse 450cc results
+                    with open(csv_path, 'r', encoding='utf-8') as file:
+                        import csv
+                        reader = csv.reader(file)
+                        
+                        for row_num, row in enumerate(reader, 1):
+                            if row_num <= 7:  # Skip headers
+                                continue
+                            
+                            if len(row) >= 8 and row[1].strip().isdigit():
+                                try:
+                                    rider_number = int(row[1].strip())
+                                    rider_name = row[2].strip()
+                                    position = int(row[7].split()[0])  # First number in result column
+                                    
+                                    # Find rider
+                                    rider = Rider.query.filter_by(
+                                        rider_number=rider_number,
+                                        class_name="450cc"
+                                    ).first()
+                                    
+                                    if rider:
+                                        # Create or update result
+                                        existing_result = CompetitionResult.query.filter_by(
+                                            competition_id=competition_id,
+                                            rider_id=rider.id
+                                        ).first()
+                                        
+                                        if existing_result:
+                                            existing_result.position = position
+                                            existing_result.points = max(0, 26 - position)  # Standard points
+                                        else:
+                                            new_result = CompetitionResult(
+                                                competition_id=competition_id,
+                                                rider_id=rider.id,
+                                                position=position,
+                                                points=max(0, 26 - position)
+                                            )
+                                            db.session.add(new_result)
+                                        
+                                        imported_count += 1
+                                except (ValueError, IndexError) as e:
+                                    errors.append(f"450cc row {row_num}: {str(e)}")
+                                    continue
+            except Exception as e:
+                errors.append(f"Error parsing 450cc results: {str(e)}")
+        
+        # Add holeshot results
+        try:
+            # 250cc holeshot
+            if holeshot_250:
+                holeshot_rider_250 = Rider.query.get(holeshot_250)
+                if holeshot_rider_250:
+                    holeshot_result = HoleshotResult(
+                        competition_id=competition_id,
+                        rider_id=holeshot_250,
+                        class_name="250cc"
+                    )
+                    db.session.add(holeshot_result)
+            
+            # 450cc holeshot
+            if holeshot_450:
+                holeshot_rider_450 = Rider.query.get(holeshot_450)
+                if holeshot_rider_450:
+                    holeshot_result = HoleshotResult(
+                        competition_id=competition_id,
+                        rider_id=holeshot_450,
+                        class_name="450cc"
+                    )
+                    db.session.add(holeshot_result)
+        except Exception as e:
+            errors.append(f"Error adding holeshot results: {str(e)}")
+        
+        # Add wildcard results
+        try:
+            # 250cc wildcard
+            if wildcard_250:
+                wildcard_rider_250 = Rider.query.get(wildcard_250)
+                if wildcard_rider_250:
+                    wildcard_result = WildcardResult(
+                        competition_id=competition_id,
+                        rider_id=wildcard_250,
+                        class_name="250cc"
+                    )
+                    db.session.add(wildcard_result)
+            
+            # 450cc wildcard
+            if wildcard_450:
+                wildcard_rider_450 = Rider.query.get(wildcard_450)
+                if wildcard_rider_450:
+                    wildcard_result = WildcardResult(
+                        competition_id=competition_id,
+                        rider_id=wildcard_450,
+                        class_name="450cc"
+                    )
+                    db.session.add(wildcard_result)
+        except Exception as e:
+            errors.append(f"Error adding wildcard results: {str(e)}")
+        
+        # Commit all changes
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "imported_count": imported_count,
+            "errors": errors,
+            "message": f"Successfully imported {imported_count} race results with holeshot and wildcard picks"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in import_race_results_complete: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/restore_rider_images")
 def restore_rider_images():
     """Restore rider images from static/riders/ directory"""

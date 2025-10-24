@@ -158,9 +158,87 @@
             </div>
         </div>
 
+        <!-- Race Results Import Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">🏁 Race Results Import</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- Upload 250 Results -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">250cc Resultat</h4>
+                    <form id="upload-250-results-form" enctype="multipart/form-data">
+                        <input type="file" id="results-250-file" accept=".csv" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-3">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            Ladda upp 250cc
+                        </button>
+                    </form>
+                    <div id="upload-250-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Upload 450 Results -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">450cc Resultat</h4>
+                    <form id="upload-450-results-form" enctype="multipart/form-data">
+                        <input type="file" id="results-450-file" accept=".csv" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-3">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            Ladda upp 450cc
+                        </button>
+                    </form>
+                    <div id="upload-450-status" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Manual Picks Section -->
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4">
+                <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3">🎯 Holeshot & Wildcard Picks</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Holeshot Picks -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">250cc Holeshot:</label>
+                        <select id="holeshot-250" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">Välj förare...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">450cc Holeshot:</label>
+                        <select id="holeshot-450" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">Välj förare...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">250cc Wildcard:</label>
+                        <select id="wildcard-250" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">Välj förare...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">450cc Wildcard:</label>
+                        <select id="wildcard-450" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">Välj förare...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Competition Selection -->
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4">
+                <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">🏆 Välj Tävling</h4>
+                <select id="competition-select-results" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <option value="">Laddar tävlingar...</option>
+                </select>
+            </div>
+
+            <!-- Import Button -->
+            <div class="text-center">
+                <button id="import-race-results-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors text-lg font-semibold" disabled>
+                    🏁 Importera Race Results
+                </button>
+                <div id="import-results-status" class="mt-2 text-sm"></div>
+            </div>
+        </div>
+
         <!-- CSV Import Section -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
-            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📊 CSV Import - Resultat</h3>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📊 CSV Import - Resultat (Gammal)</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Upload CSV -->
                 <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
@@ -1298,9 +1376,175 @@
             }
         });
 
+        // Race Results Import functionality
+        let uploaded250Results = null;
+        let uploaded450Results = null;
+
+        // Load riders for holeshot/wildcard dropdowns
+        function loadRidersForPicks() {
+            fetch('/api/riders')
+                .then(response => response.json())
+                .then(riders => {
+                    const holeshot250 = document.getElementById('holeshot-250');
+                    const holeshot450 = document.getElementById('holeshot-450');
+                    const wildcard250 = document.getElementById('wildcard-250');
+                    const wildcard450 = document.getElementById('wildcard-450');
+                    
+                    // Clear existing options
+                    [holeshot250, holeshot450, wildcard250, wildcard450].forEach(select => {
+                        select.innerHTML = '<option value="">Välj förare...</option>';
+                    });
+                    
+                    // Add riders to dropdowns
+                    riders.forEach(rider => {
+                        const option = document.createElement('option');
+                        option.value = rider.id;
+                        option.textContent = `#${rider.number} ${rider.name} (${rider.class})`;
+                        
+                        if (rider.class === '250') {
+                            holeshot250.appendChild(option.cloneNode(true));
+                            wildcard250.appendChild(option.cloneNode(true));
+                        } else if (rider.class === '450') {
+                            holeshot450.appendChild(option.cloneNode(true));
+                            wildcard450.appendChild(option.cloneNode(true));
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading riders:', error);
+                });
+        }
+
+        // Upload 250 results
+        document.getElementById('upload-250-results-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('results-250-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('upload-250-status').innerHTML = '<span class="text-red-600">Välj en CSV-fil</span>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload_race_results', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploaded250Results = result.filename;
+                    document.getElementById('upload-250-status').innerHTML = '<span class="text-green-600">✓ 250cc resultat uppladdat</span>';
+                    checkImportReady();
+                } else {
+                    document.getElementById('upload-250-status').innerHTML = '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                document.getElementById('upload-250-status').innerHTML = '<span class="text-red-600">Fel vid uppladdning</span>';
+            }
+        });
+
+        // Upload 450 results
+        document.getElementById('upload-450-results-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('results-450-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('upload-450-status').innerHTML = '<span class="text-red-600">Välj en CSV-fil</span>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload_race_results', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploaded450Results = result.filename;
+                    document.getElementById('upload-450-status').innerHTML = '<span class="text-green-600">✓ 450cc resultat uppladdat</span>';
+                    checkImportReady();
+                } else {
+                    document.getElementById('upload-450-status').innerHTML = '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                document.getElementById('upload-450-status').innerHTML = '<span class="text-red-600">Fel vid uppladdning</span>';
+            }
+        });
+
+        // Check if ready to import
+        function checkImportReady() {
+            const competition = document.getElementById('competition-select-results').value;
+            const holeshot250 = document.getElementById('holeshot-250').value;
+            const holeshot450 = document.getElementById('holeshot-450').value;
+            const wildcard250 = document.getElementById('wildcard-250').value;
+            const wildcard450 = document.getElementById('wildcard-450').value;
+            
+            if (uploaded250Results && uploaded450Results && competition && 
+                holeshot250 && holeshot450 && wildcard250 && wildcard450) {
+                document.getElementById('import-race-results-btn').disabled = false;
+            }
+        }
+
+        // Import race results
+        document.getElementById('import-race-results-btn').addEventListener('click', async function() {
+            const competition = document.getElementById('competition-select-results').value;
+            const holeshot250 = document.getElementById('holeshot-250').value;
+            const holeshot450 = document.getElementById('holeshot-450').value;
+            const wildcard250 = document.getElementById('wildcard-250').value;
+            const wildcard450 = document.getElementById('wildcard-450').value;
+            
+            try {
+                const response = await fetch('/import_race_results_complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        competition_id: competition,
+                        results_250: uploaded250Results,
+                        results_450: uploaded450Results,
+                        holeshot_250: holeshot250,
+                        holeshot_450: holeshot450,
+                        wildcard_250: wildcard250,
+                        wildcard_450: wildcard450
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('import-results-status').innerHTML = 
+                        '<span class="text-green-600">✓ Importerade race results för ' + result.imported_count + ' förare</span>';
+                } else {
+                    document.getElementById('import-results-status').innerHTML = 
+                        '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                document.getElementById('import-results-status').innerHTML = '<span class="text-red-600">Fel vid import</span>';
+            }
+        });
+
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadCompetitions();
+            loadRidersForPicks();
         });
 
         function loadCompetitions() {
@@ -1308,20 +1552,29 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        // Load competitions for old CSV import
                         const select = document.getElementById('competition-select');
                         select.innerHTML = '<option value="">Välj tävling...</option>';
+                        
+                        // Load competitions for new race results import
+                        const selectResults = document.getElementById('competition-select-results');
+                        selectResults.innerHTML = '<option value="">Välj tävling...</option>';
                         
                         data.competitions.forEach(comp => {
                             const option = document.createElement('option');
                             option.value = comp.id;
                             option.textContent = `${comp.name} - ${comp.event_date} ${comp.has_results ? '(har resultat)' : ''}`;
                             select.appendChild(option);
+                            
+                            const optionResults = option.cloneNode(true);
+                            selectResults.appendChild(optionResults);
                         });
                     }
                 })
                 .catch(error => {
                     console.error('Error loading competitions:', error);
                     document.getElementById('competition-select').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                    document.getElementById('competition-select-results').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
                 });
         }
 
