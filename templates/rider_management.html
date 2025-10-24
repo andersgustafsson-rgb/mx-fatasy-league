@@ -1486,17 +1486,37 @@
             const holeshot250 = document.getElementById('holeshot-250').value;
             const holeshot450 = document.getElementById('holeshot-450').value;
             
+            console.log('Checking import readiness:', {
+                uploaded250Results,
+                uploaded450Results,
+                competition,
+                holeshot250,
+                holeshot450
+            });
+            
             if (uploaded250Results && uploaded450Results && competition && 
                 holeshot250 && holeshot450) {
                 document.getElementById('import-race-results-btn').disabled = false;
+                console.log('Import button enabled!');
+            } else {
+                document.getElementById('import-race-results-btn').disabled = true;
             }
         }
 
         // Import race results
         document.getElementById('import-race-results-btn').addEventListener('click', async function() {
+            console.log('Import button clicked!');
             const competition = document.getElementById('competition-select-results').value;
             const holeshot250 = document.getElementById('holeshot-250').value;
             const holeshot450 = document.getElementById('holeshot-450').value;
+            
+            console.log('Import data:', {
+                competition,
+                holeshot250,
+                holeshot450,
+                uploaded250Results,
+                uploaded450Results
+            });
             
             try {
                 const response = await fetch('/import_race_results_complete', {
@@ -1532,6 +1552,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadCompetitions();
             loadRidersForPicks();
+            
+            // Add event listeners for import readiness
+            document.getElementById('competition-select-results').addEventListener('change', checkImportReady);
+            document.getElementById('holeshot-250').addEventListener('change', checkImportReady);
+            document.getElementById('holeshot-450').addEventListener('change', checkImportReady);
         });
 
         function loadCompetitions() {
