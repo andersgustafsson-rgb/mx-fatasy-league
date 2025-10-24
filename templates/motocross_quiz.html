@@ -176,6 +176,9 @@
                     <button onclick="playAgain()" class="btn-primary px-6 py-3 rounded-lg">
                         🔄 Spela igen
                     </button>
+                    <button onclick="showHighScores()" class="btn-warning px-6 py-3 rounded-lg">
+                        🏆 Highscores
+                    </button>
                     <button onclick="goHome()" class="btn-success px-6 py-3 rounded-lg">
                         🏠 Tillbaka till startsidan
                     </button>
@@ -217,6 +220,66 @@
                     options: ["Hjälm", "Hatt", "Keps", "Ingenting"],
                     correct: 0,
                     explanation: "En hjälm är obligatorisk för att skydda huvudet."
+                },
+                {
+                    question: "Vilken färg har vanligtvis en Honda motorcykel?",
+                    options: ["Röd", "Blå", "Grön", "Gul"],
+                    correct: 0,
+                    explanation: "Honda använder traditionellt röda färger för sina motorcyklar."
+                },
+                {
+                    question: "Vad kallas en motorcykel som är designad för terrängkörning?",
+                    options: ["Road bike", "Motocross", "Scooter", "Chopper"],
+                    correct: 1,
+                    explanation: "Motocross är en motorcykel designad för terrängkörning."
+                },
+                {
+                    question: "Hur många cylindrar har en typisk 450cc motorcykel?",
+                    options: ["En", "Två", "Tre", "Fyra"],
+                    correct: 0,
+                    explanation: "En typisk 450cc motorcykel har en cylinder."
+                },
+                {
+                    question: "Vad kallas det när en förare hoppar över en hoppramp?",
+                    options: ["Jump", "Leap", "Bounce", "Spring"],
+                    correct: 0,
+                    explanation: "Jump är det korrekta ordet för att hoppa över en hoppramp."
+                },
+                {
+                    question: "Vilken del av motorcykeln används för att bromsa?",
+                    options: ["Handtag", "Broms", "Pedal", "Kedja"],
+                    correct: 1,
+                    explanation: "Broms används för att stoppa motorcykeln."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom vatten?",
+                    options: ["Swim", "Splash", "Water crossing", "Dive"],
+                    correct: 2,
+                    explanation: "Water crossing är det korrekta ordet för att köra genom vatten."
+                },
+                {
+                    question: "Vilken färg har vanligtvis en KTM motorcykel?",
+                    options: ["Röd", "Blå", "Orange", "Gul"],
+                    correct: 2,
+                    explanation: "KTM använder traditionellt orange färger för sina motorcyklar."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom sand?",
+                    options: ["Sand riding", "Beach crossing", "Desert racing", "Dune jumping"],
+                    correct: 0,
+                    explanation: "Sand riding är det korrekta ordet för att köra genom sand."
+                },
+                {
+                    question: "Hur många hjul har en typisk motocross-bana?",
+                    options: ["Ett", "Två", "Tre", "Fyra"],
+                    correct: 1,
+                    explanation: "En motocross-bana har två hjul, precis som en vanlig motorcykel."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom lera?",
+                    options: ["Mud riding", "Clay crossing", "Dirt racing", "Wet riding"],
+                    correct: 0,
+                    explanation: "Mud riding är det korrekta ordet för att köra genom lera."
                 }
             ],
             medium: [
@@ -249,6 +312,96 @@
                     options: ["Ricky Carmichael", "Jeremy McGrath", "Ryan Dungey", "Eli Tomac"],
                     correct: 1,
                     explanation: "Jeremy McGrath har 7 Supercross 450cc titlar, flest någonsin."
+                },
+                {
+                    question: "Vilken förare vann 2024 Supercross 250cc East Coast mästerskapet?",
+                    options: ["Jett Lawrence", "Levi Kitchen", "RJ Hampshire", "Cameron McAdoo"],
+                    correct: 0,
+                    explanation: "Jett Lawrence vann 2024 Supercross 250cc East Coast mästerskapet."
+                },
+                {
+                    question: "Vilken bana är känd för sin 'Sand Section'?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 1,
+                    explanation: "Daytona är känd för sin utmanande sandsektion."
+                },
+                {
+                    question: "Hur många förare kvalificerar sig för Supercross huvudtävlingen?",
+                    options: ["20", "22", "24", "26"],
+                    correct: 1,
+                    explanation: "22 förare kvalificerar sig för Supercross huvudtävlingen."
+                },
+                {
+                    question: "Vilken förare kallas 'The GOAT' (Greatest Of All Time)?",
+                    options: ["Ricky Carmichael", "Jeremy McGrath", "Ryan Dungey", "Eli Tomac"],
+                    correct: 0,
+                    explanation: "Ricky Carmichael kallas 'The GOAT' för sina 15 AMA mästerskap."
+                },
+                {
+                    question: "Vad kallas en serie av små hopprampar?",
+                    options: ["Tabletop", "Double", "Triple", "Whoops"],
+                    correct: 3,
+                    explanation: "Whoops är en serie av små hopprampar som kräver snabb teknik."
+                },
+                {
+                    question: "Vilken förare vann 2022 Supercross 450cc mästerskapet?",
+                    options: ["Eli Tomac", "Cooper Webb", "Chase Sexton", "Jason Anderson"],
+                    correct: 0,
+                    explanation: "Eli Tomac vann 2022 Supercross 450cc mästerskapet."
+                },
+                {
+                    question: "Vilken bana är känd som 'The Big One'?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 1,
+                    explanation: "Daytona är känd som 'The Big One' för sin enorma storlek."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom en kurva?",
+                    options: ["Cornering", "Turning", "Bending", "Curving"],
+                    correct: 0,
+                    explanation: "Cornering är det korrekta ordet för att köra genom en kurva."
+                },
+                {
+                    question: "Vilken förare har flest AMA Motocross 450cc titlar?",
+                    options: ["Ricky Carmichael", "Ryan Dungey", "Eli Tomac", "Jeremy McGrath"],
+                    correct: 0,
+                    explanation: "Ricky Carmichael har 5 AMA Motocross 450cc titlar, flest någonsin."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom en hoppramp?",
+                    options: ["Jumping", "Leaping", "Bouncing", "Springing"],
+                    correct: 0,
+                    explanation: "Jumping är det korrekta ordet för att köra genom en hoppramp."
+                },
+                {
+                    question: "Vilken förare vann 2021 Supercross 450cc mästerskapet?",
+                    options: ["Eli Tomac", "Cooper Webb", "Chase Sexton", "Jason Anderson"],
+                    correct: 1,
+                    explanation: "Cooper Webb vann 2021 Supercross 450cc mästerskapet."
+                },
+                {
+                    question: "Vilken bana är känd för sin 'Triple Crown'?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 0,
+                    explanation: "Anaheim är känd för sin 'Triple Crown' med tre separata tävlingar."
+                },
+                {
+                    question: "Vad kallas det när en förare kör genom en kurva med hög hastighet?",
+                    options: ["Fast cornering", "Speed turning", "Quick bending", "Rapid curving"],
+                    correct: 0,
+                    explanation: "Fast cornering är det korrekta ordet för att köra genom en kurva med hög hastighet."
+                },
+                {
+                    question: "Vilken förare vann 2020 Supercross 450cc mästerskapet?",
+                    options: ["Eli Tomac", "Cooper Webb", "Chase Sexton", "Jason Anderson"],
+                    correct: 0,
+                    explanation: "Eli Tomac vann 2020 Supercross 450cc mästerskapet."
+                },
+                {
+                    question: "Vilken bana är känd för sin 'Monster Energy' sponsring?",
+                    options: ["Anaheim", "Daytona", "Las Vegas", "Salt Lake City"],
+                    correct: 0,
+                    explanation: "Anaheim är känd för sin 'Monster Energy' sponsring."
                 }
             ],
             hard: [
@@ -418,6 +571,52 @@
                 resultEmoji.textContent = '🥉';
                 resultMessage.textContent = 'Du behöver läsa på mer om Motocross!';
             }
+            
+            // Save high score
+            saveHighScore(score);
+        }
+
+        function saveHighScore(score) {
+            const difficulty = document.getElementById('difficulty-select').value;
+            const highScores = getHighScores();
+            const currentDate = new Date().toLocaleDateString('sv-SE');
+            
+            // Add new score
+            highScores.push({
+                score: score,
+                difficulty: difficulty,
+                date: currentDate,
+                timestamp: Date.now()
+            });
+            
+            // Sort by score (descending) and keep top 10
+            highScores.sort((a, b) => b.score - a.score);
+            const topScores = highScores.slice(0, 10);
+            
+            // Save to localStorage
+            localStorage.setItem('motocrossQuizHighScores', JSON.stringify(topScores));
+            
+            // Show if it's a new high score
+            if (score === topScores[0].score && topScores[0].timestamp === Date.now()) {
+                showNewHighScore();
+            }
+        }
+
+        function getHighScores() {
+            const scores = localStorage.getItem('motocrossQuizHighScores');
+            return scores ? JSON.parse(scores) : [];
+        }
+
+        function showNewHighScore() {
+            // Create a temporary high score notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-yellow-500 text-black font-bold px-6 py-3 rounded-lg shadow-lg z-50 animate-bounce';
+            notification.innerHTML = '🏆 NYTT HIGHSCORE! 🏆';
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
         }
 
         function playAgain() {
@@ -427,6 +626,37 @@
 
         function goHome() {
             window.location.href = '/';
+        }
+
+        function showHighScores() {
+            const highScores = getHighScores();
+            
+            if (highScores.length === 0) {
+                alert('Inga highscores ännu! Spela för att skapa en!');
+                return;
+            }
+            
+            let highScoreHTML = '<div class="quiz-card rounded-lg p-6 text-center">';
+            highScoreHTML += '<h2 class="text-2xl font-bold text-cyan-400 mb-4">🏆 Highscores</h2>';
+            highScoreHTML += '<div class="space-y-2">';
+            
+            highScores.forEach((score, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+                const difficultyText = score.difficulty === 'easy' ? 'Lätt' : score.difficulty === 'medium' ? 'Medium' : 'Svår';
+                highScoreHTML += `<div class="flex justify-between items-center bg-gray-700 p-3 rounded-lg">
+                    <span class="text-2xl">${medal}</span>
+                    <span class="text-white font-bold">${score.score}/10</span>
+                    <span class="text-gray-300">${difficultyText}</span>
+                    <span class="text-gray-400 text-sm">${score.date}</span>
+                </div>`;
+            });
+            
+            highScoreHTML += '</div>';
+            highScoreHTML += '<button onclick="playAgain()" class="btn-primary px-6 py-3 rounded-lg mt-4">🔄 Spela igen</button>';
+            highScoreHTML += '</div>';
+            
+            // Replace the results screen with high scores
+            document.getElementById('results-screen').innerHTML = highScoreHTML;
         }
 
         // Utility functions
