@@ -5943,39 +5943,27 @@ def import_entry_lists():
                             full_text = row[0].strip().strip('"')
                             print(f"DEBUG: Parsing row {row_num}: {full_text}")
                             
-                            # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
-                            # The format has multiple spaces between fields, so we need a more flexible regex
-                            match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
-                            print(f"DEBUG: Regex match result: {match}")
-                            
-                            # If that doesn't work, try a simpler approach
-                            if not match:
-                                print(f"DEBUG: Regex failed, trying fallback method for row {row_num}")
-                                # Split by multiple spaces and reconstruct
-                                parts = full_text.split()
-                                if len(parts) >= 5 and parts[0].isdigit():
-                                    number_str = parts[0]
-                                    # Find bike brand (usually 3rd element)
-                                    bike_idx = 2
-                                    for i, part in enumerate(parts[2:], 2):
-                                        if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta']:
-                                            bike_idx = i
-                                            break
-                                    
+                            # Simple approach: split by spaces and find bike brand
+                            parts = full_text.split()
+                            if len(parts) >= 5 and parts[0].isdigit():
+                                number_str = parts[0]
+                                print(f"DEBUG: Found number: {number_str}")
+                                
+                                # Find bike brand by looking for known brands
+                                bike_idx = 2
+                                for i, part in enumerate(parts[2:], 2):
+                                    if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
+                                        bike_idx = i
+                                        break
+                                
+                                if bike_idx < len(parts):
                                     name = ' '.join(parts[1:bike_idx])
                                     bike = parts[bike_idx]
                                     hometown = ' '.join(parts[bike_idx+1:-1])
                                     team = parts[-1]
                                     
-                                    match = type('Match', (), {
-                                        'groups': lambda: (number_str, name, bike, hometown, team)
-                                    })()
-                            
-                            if match:
-                                number_str, name, bike, hometown, team = match.groups()
-                                
-                                # Validate that we have a number
-                                if number_str.isdigit():
+                                    print(f"DEBUG: Parsed - Name: {name}, Bike: {bike}, Hometown: {hometown}, Team: {team}")
+                                    
                                     rider_data = {
                                         'number': int(number_str),
                                         'name': clean_rider_name(name),
@@ -5987,9 +5975,9 @@ def import_entry_lists():
                                     riders.append(rider_data)
                                     print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
                                 else:
-                                    print(f"DEBUG: Skipping row {row_num} - not a valid number: {number_str}")
+                                    print(f"DEBUG: Could not find bike brand in row {row_num}")
                             else:
-                                print(f"DEBUG: Skipping row {row_num} - regex didn't match: {full_text}")
+                                print(f"DEBUG: Row {row_num} does not have enough parts or doesn't start with number")
                         except (ValueError, IndexError) as e:
                             print(f"Error parsing row {row_num}: {e}")
                             continue
@@ -6079,39 +6067,27 @@ def confirm_import_entry_lists():
                             full_text = row[0].strip().strip('"')
                             print(f"DEBUG: Parsing row {row_num}: {full_text}")
                             
-                            # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
-                            # The format has multiple spaces between fields, so we need a more flexible regex
-                            match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
-                            print(f"DEBUG: Regex match result: {match}")
-                            
-                            # If that doesn't work, try a simpler approach
-                            if not match:
-                                print(f"DEBUG: Regex failed, trying fallback method for row {row_num}")
-                                # Split by multiple spaces and reconstruct
-                                parts = full_text.split()
-                                if len(parts) >= 5 and parts[0].isdigit():
-                                    number_str = parts[0]
-                                    # Find bike brand (usually 3rd element)
-                                    bike_idx = 2
-                                    for i, part in enumerate(parts[2:], 2):
-                                        if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta']:
-                                            bike_idx = i
-                                            break
-                                    
+                            # Simple approach: split by spaces and find bike brand
+                            parts = full_text.split()
+                            if len(parts) >= 5 and parts[0].isdigit():
+                                number_str = parts[0]
+                                print(f"DEBUG: Found number: {number_str}")
+                                
+                                # Find bike brand by looking for known brands
+                                bike_idx = 2
+                                for i, part in enumerate(parts[2:], 2):
+                                    if part in ['KTM', 'Honda', 'Yamaha', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph']:
+                                        bike_idx = i
+                                        break
+                                
+                                if bike_idx < len(parts):
                                     name = ' '.join(parts[1:bike_idx])
                                     bike = parts[bike_idx]
                                     hometown = ' '.join(parts[bike_idx+1:-1])
                                     team = parts[-1]
                                     
-                                    match = type('Match', (), {
-                                        'groups': lambda: (number_str, name, bike, hometown, team)
-                                    })()
-                            
-                            if match:
-                                number_str, name, bike, hometown, team = match.groups()
-                                
-                                # Validate that we have a number
-                                if number_str.isdigit():
+                                    print(f"DEBUG: Parsed - Name: {name}, Bike: {bike}, Hometown: {hometown}, Team: {team}")
+                                    
                                     rider_data = {
                                         'number': int(number_str),
                                         'name': clean_rider_name(name),
@@ -6123,9 +6099,9 @@ def confirm_import_entry_lists():
                                     riders.append(rider_data)
                                     print(f"DEBUG: Added rider {rider_data['number']}: {rider_data['name']}")
                                 else:
-                                    print(f"DEBUG: Skipping row {row_num} - not a valid number: {number_str}")
+                                    print(f"DEBUG: Could not find bike brand in row {row_num}")
                             else:
-                                print(f"DEBUG: Skipping row {row_num} - regex didn't match: {full_text}")
+                                print(f"DEBUG: Row {row_num} does not have enough parts or doesn't start with number")
                         except (ValueError, IndexError) as e:
                             print(f"Error parsing row {row_num}: {e}")
                             continue
