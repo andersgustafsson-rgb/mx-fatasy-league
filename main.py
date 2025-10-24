@@ -11835,12 +11835,12 @@ def clear_all_data():
         deleted_scores = CompetitionScore.query.delete()
         deleted_out_status = CompetitionRiderStatus.query.delete()
         
-        # Reset season team points but keep the teams
+        # Clear season team riders and reset team points
+        deleted_season_team_riders = SeasonTeamRider.query.delete()
         season_teams = SeasonTeam.query.all()
         for team in season_teams:
             team.total_points = 0
-        deleted_season_team_riders = 0  # Keep the team riders
-        deleted_season_teams = 0  # Keep the teams
+        deleted_season_teams = 0  # Keep the teams but clear riders
         
         # Clear league points and scores
         try:
