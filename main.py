@@ -6620,13 +6620,11 @@ def import_race_results_complete():
                     
                     if existing_result:
                         existing_result.position = i
-                        existing_result.points = max(0, 26 - i)
                     else:
                         new_result = CompetitionResult(
                             competition_id=competition_id,
                             rider_id=rider.id,
-                            position=i,
-                            points=max(0, 26 - i)
+                            position=i
                         )
                         db.session.add(new_result)
                     
@@ -6659,13 +6657,11 @@ def import_race_results_complete():
                     
                     if existing_result:
                         existing_result.position = i
-                        existing_result.points = max(0, 26 - i)
                     else:
                         new_result = CompetitionResult(
                             competition_id=competition_id,
                             rider_id=rider.id,
-                            position=i,
-                            points=max(0, 26 - i)
+                            position=i
                         )
                         db.session.add(new_result)
                     
