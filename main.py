@@ -5930,17 +5930,22 @@ def import_entry_lists_new():
         east_file = Path("data/Entry_List_250_east.csv")
         four_fifty_file = Path("data/Entry_List_450.csv")
         
+        print(f"DEBUG: Checking files:")
+        print(f"DEBUG: 250 West exists: {west_file.exists()}")
+        print(f"DEBUG: 250 East exists: {east_file.exists()}")
+        print(f"DEBUG: 450 exists: {four_fifty_file.exists()}")
+        
         if west_file.exists():
             entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
-            print(f"DEBUG: Found 250 West file")
+            print(f"DEBUG: ✅ Found 250 West file")
         
         if east_file.exists():
             entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
-            print(f"DEBUG: Found 250 East file")
+            print(f"DEBUG: ✅ Found 250 East file")
             
         if four_fifty_file.exists():
             entry_lists.append(("data/Entry_List_450.csv", "450cc"))
-            print(f"DEBUG: Found 450 file")
+            print(f"DEBUG: ✅ Found 450 file")
         
         print(f"DEBUG: Will parse {len(entry_lists)} files: {[f[0] for f in entry_lists]}")
         
