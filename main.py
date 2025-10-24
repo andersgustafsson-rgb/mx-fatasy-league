@@ -6225,18 +6225,21 @@ def confirm_import_entry_lists():
         
         # Parse all entry lists
         entry_lists = [
-            ("data/Entry_List_250_west.csv", "250cc"),
-            ("data/Entry_List_250_east.csv", "250cc"), 
-            ("data/Entry_List_450.csv", "450cc")
+            ("data/Entry_List_250_west.csv", "250cc", "west"),
+            ("data/Entry_List_250_east.csv", "250cc", "east"), 
+            ("data/Entry_List_450.csv", "450cc", None)
         ]
         
         all_riders = []
         results = {}
         
-        for csv_file, class_name in entry_lists:
+        for csv_file, class_name, coast in entry_lists:
             csv_path = Path(csv_file)
             if csv_path.exists():
                 riders = parse_entry_list(csv_path, class_name)
+                # Add coast information to each rider
+                for rider in riders:
+                    rider['coast'] = coast
                 all_riders.extend(riders)
                 results[class_name] = len(riders)
             else:
@@ -6253,15 +6256,8 @@ def confirm_import_entry_lists():
         # Import new riders
         for rider_data in all_riders:
             try:
-                # Determine coast for 250cc riders
-                coast = None
-                if rider_data['class'] == '250cc':
-                    # Check filename to determine coast
-                    for csv_file, class_name in entry_lists:
-                        if class_name == '250cc' and 'west' in csv_file:
-                            coast = 'west'
-                        elif class_name == '250cc' and 'east' in csv_file:
-                            coast = 'east'
+                # Use the coast information we added during parsing
+                coast = rider_data.get('coast')
                 
                 new_rider = Rider(
                     rider_number=rider_data['number'],
