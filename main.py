@@ -6604,6 +6604,8 @@ def import_race_results_complete():
             try:
                 from pathlib import Path
                 csv_path = Path(results_250)
+                print(f"🔍 DEBUG: Checking 250cc file: {csv_path} - exists: {csv_path.exists()}")
+                
                 if csv_path.exists():
                     # Parse 250cc results
                     with open(csv_path, 'r', encoding='utf-8') as file:
@@ -6614,11 +6616,15 @@ def import_race_results_complete():
                             if row_num <= 7:  # Skip headers
                                 continue
                             
+                            print(f"🔍 DEBUG: 250cc row {row_num}: {row}")
+                            
                             if len(row) >= 8 and row[1].strip().isdigit():
                                 try:
                                     rider_number = int(row[1].strip())
                                     rider_name = row[2].strip()
                                     position = int(row[7].split()[0])  # First number in result column
+                                    
+                                    print(f"🔍 DEBUG: Found 250cc rider: #{rider_number} {rider_name} at position {position}")
                                     
                                     # Find rider
                                     rider = Rider.query.filter_by(
@@ -6627,6 +6633,7 @@ def import_race_results_complete():
                                     ).first()
                                     
                                     if rider:
+                                        print(f"🔍 DEBUG: Found rider in DB: {rider.name}")
                                         # Create or update result
                                         existing_result = CompetitionResult.query.filter_by(
                                             competition_id=competition_id,
@@ -6646,10 +6653,15 @@ def import_race_results_complete():
                                             db.session.add(new_result)
                                         
                                         imported_count += 1
+                                        print(f"🔍 DEBUG: Added 250cc result for {rider.name}")
+                                    else:
+                                        print(f"🔍 DEBUG: Rider not found in DB: #{rider_number} {rider_name}")
                                 except (ValueError, IndexError) as e:
+                                    print(f"🔍 DEBUG: Error parsing 250cc row {row_num}: {str(e)}")
                                     errors.append(f"250cc row {row_num}: {str(e)}")
                                     continue
             except Exception as e:
+                print(f"🔍 DEBUG: Error parsing 250cc results: {str(e)}")
                 errors.append(f"Error parsing 250cc results: {str(e)}")
         
         # Parse and import 450cc results
