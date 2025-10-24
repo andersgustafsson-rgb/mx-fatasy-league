@@ -5856,6 +5856,46 @@ def get_user_total_points():
         "wildcard_points": total_wildcard_points
     })
 
+@app.get("/debug_rider_images")
+def debug_rider_images():
+    """Debug endpoint to check rider images in database"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all riders with their image_url
+        riders = Rider.query.all()
+        rider_data = []
+        
+        for rider in riders:
+            # Check if image file exists
+            image_exists = False
+            if rider.image_url:
+                from pathlib import Path
+                image_path = Path(f"static/{rider.image_url}")
+                image_exists = image_path.exists()
+            
+            rider_data.append({
+                "id": rider.id,
+                "name": rider.name,
+                "rider_number": rider.rider_number,
+                "class_name": rider.class_name,
+                "image_url": rider.image_url,
+                "image_exists": image_exists,
+                "bike_brand": rider.bike_brand
+            })
+        
+        return jsonify({
+            "total_riders": len(riders),
+            "riders_with_images": len([r for r in rider_data if r["image_url"]]),
+            "riders_with_existing_files": len([r for r in rider_data if r["image_exists"]]),
+            "riders": rider_data
+        })
+        
+    except Exception as e:
+        print(f"Error in debug_rider_images: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_my_points")
 def debug_my_points():
     """Debug endpoint for current user to check their points"""
