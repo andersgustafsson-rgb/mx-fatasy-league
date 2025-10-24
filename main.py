@@ -5858,6 +5858,89 @@ def get_user_total_points():
         "wildcard_points": total_wildcard_points
     })
 
+@app.get("/import_entry_lists")
+def import_entry_lists():
+    """Import riders from official entry lists and replace existing riders"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        import csv
+        import re
+        from pathlib import Path
+        
+        def clean_rider_name(name):
+            return re.sub(r'\s+', ' ', name.strip())
+        
+        def normalize_bike_brand(brand):
+            brand_map = {
+                'Triumph': 'Triumph', 'KTM': 'KTM', 'GasGas': 'GasGas',
+                'Honda': 'Honda', 'Kawasaki': 'Kawasaki', 'Yamaha': 'Yamaha',
+                'Husqvarna': 'Husqvarna', 'Suzuki': 'Suzuki', 'Beta': 'Beta'
+            }
+            return brand_map.get(brand, brand)
+        
+        def parse_entry_list(csv_path, class_name):
+            riders = []
+            
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.reader(file)
+                
+                for row_num, row in enumerate(reader, 1):
+                    if row_num <= 7 or not row or len(row) < 4:
+                        continue
+                    
+                    full_text = ' '.join(row)
+                    match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                    
+                    if match:
+                        number, name, bike, hometown, team = match.groups()
+                        riders.append({
+                            'number': int(number),
+                            'name': clean_rider_name(name),
+                            'bike_brand': normalize_bike_brand(bike),
+                            'hometown': hometown.strip(),
+                            'team': team.strip(),
+                            'class': class_name
+                        })
+            return riders
+        
+        # Parse all entry lists
+        entry_lists = [
+            ("Entry_List_250_west.csv", "250cc"),
+            ("Entry_List_250_east.csv", "250cc"), 
+            ("Entry_List_450.csv", "450cc")
+        ]
+        
+        all_riders = []
+        results = {}
+        
+        for csv_file, class_name in entry_lists:
+            csv_path = Path(csv_file)
+            if csv_path.exists():
+                riders = parse_entry_list(csv_path, class_name)
+                all_riders.extend(riders)
+                results[class_name] = len(riders)
+            else:
+                results[class_name] = f"File not found: {csv_file}"
+        
+        # Show preview
+        preview = {
+            "total_riders": len(all_riders),
+            "by_class": results,
+            "sample_riders": all_riders[:10]
+        }
+        
+        return jsonify({
+            "success": True,
+            "preview": preview,
+            "message": f"Found {len(all_riders)} riders. Ready for import."
+        })
+        
+    except Exception as e:
+        print(f"Error in import_entry_lists: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_rider_images")
 def debug_rider_images():
     """Debug endpoint to check rider images in database"""
