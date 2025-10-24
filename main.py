@@ -5946,9 +5946,11 @@ def import_entry_lists():
                             # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
                             # The format has multiple spaces between fields, so we need a more flexible regex
                             match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                            print(f"DEBUG: Regex match result: {match}")
                             
                             # If that doesn't work, try a simpler approach
                             if not match:
+                                print(f"DEBUG: Regex failed, trying fallback method for row {row_num}")
                                 # Split by multiple spaces and reconstruct
                                 parts = full_text.split()
                                 if len(parts) >= 5 and parts[0].isdigit():
@@ -6080,9 +6082,11 @@ def confirm_import_entry_lists():
                             # Use regex to parse the format: "1      Tom Vialle                   KTM       France                                     Red Bull KTM Factory Racing"
                             # The format has multiple spaces between fields, so we need a more flexible regex
                             match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                            print(f"DEBUG: Regex match result: {match}")
                             
                             # If that doesn't work, try a simpler approach
                             if not match:
+                                print(f"DEBUG: Regex failed, trying fallback method for row {row_num}")
                                 # Split by multiple spaces and reconstruct
                                 parts = full_text.split()
                                 if len(parts) >= 5 and parts[0].isdigit():
