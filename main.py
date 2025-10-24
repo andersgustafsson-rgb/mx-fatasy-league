@@ -5922,12 +5922,27 @@ def import_entry_lists_new():
             }
             return brand_map.get(brand, brand)
         
-        # Parse all entry lists using the new function
-        entry_lists = [
-            ("data/Entry_List_250_west.csv", "250cc"),
-            ("data/Entry_List_250_east.csv", "250cc"), 
-            ("data/Entry_List_450.csv", "450cc")
-        ]
+        # Parse only the files that actually exist and were uploaded
+        entry_lists = []
+        
+        # Check which files exist
+        west_file = Path("data/Entry_List_250_west.csv")
+        east_file = Path("data/Entry_List_250_east.csv")
+        four_fifty_file = Path("data/Entry_List_450.csv")
+        
+        if west_file.exists():
+            entry_lists.append(("data/Entry_List_250_west.csv", "250cc"))
+            print(f"DEBUG: Found 250 West file")
+        
+        if east_file.exists():
+            entry_lists.append(("data/Entry_List_250_east.csv", "250cc"))
+            print(f"DEBUG: Found 250 East file")
+            
+        if four_fifty_file.exists():
+            entry_lists.append(("data/Entry_List_450.csv", "450cc"))
+            print(f"DEBUG: Found 450 file")
+        
+        print(f"DEBUG: Will parse {len(entry_lists)} files: {[f[0] for f in entry_lists]}")
         
         all_riders = []
         results = {}
