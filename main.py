@@ -5901,6 +5901,69 @@ def upload_entry_list():
         print(f"Error uploading file: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.get("/import_entry_lists_new")
+def import_entry_lists_new():
+    """Import riders from official entry lists using the new parsing function"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        from pathlib import Path
+        
+        def clean_rider_name(name):
+            import re
+            return re.sub(r'\s+', ' ', name.strip())
+        
+        def normalize_bike_brand(brand):
+            brand_map = {
+                'Triumph': 'Triumph', 'KTM': 'KTM', 'GasGas': 'GasGas',
+                'Honda': 'Honda', 'Kawasaki': 'Kawasaki', 'Yamaha': 'Yamaha',
+                'Husqvarna': 'Husqvarna', 'Suzuki': 'Suzuki', 'Beta': 'Beta'
+            }
+            return brand_map.get(brand, brand)
+        
+        # Parse all entry lists using the new function
+        entry_lists = [
+            ("data/Entry_List_250_west.csv", "250cc"),
+            ("data/Entry_List_250_east.csv", "250cc"), 
+            ("data/Entry_List_450.csv", "450cc")
+        ]
+        
+        all_riders = []
+        results = {}
+        
+        for csv_file, class_name in entry_lists:
+            csv_path = Path(csv_file)
+            print(f"DEBUG: Looking for file: {csv_path}")
+            print(f"DEBUG: File exists: {csv_path.exists()}")
+            
+            if csv_path.exists():
+                print(f"DEBUG: Parsing {csv_file} for class {class_name}")
+                riders = parse_csv_new(csv_path, class_name)
+                print(f"DEBUG: Found {len(riders)} riders in {csv_file}")
+                all_riders.extend(riders)
+                results[class_name] = len(riders)
+            else:
+                print(f"DEBUG: File not found: {csv_file}")
+                results[class_name] = f"File not found: {csv_file}"
+        
+        # Show preview
+        preview = {
+            "total_riders": len(all_riders),
+            "by_class": results,
+            "sample_riders": all_riders[:10]
+        }
+        
+        return jsonify({
+            "success": True,
+            "preview": preview,
+            "message": f"Found {len(all_riders)} riders. Ready for import."
+        })
+        
+    except Exception as e:
+        print(f"Error in import_entry_lists_new: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/import_entry_lists")
 def import_entry_lists():
     """Import riders from official entry lists and replace existing riders"""

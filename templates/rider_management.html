@@ -1076,7 +1076,7 @@
         // Preview entry lists button handler
         document.getElementById('preview-entry-lists-btn').addEventListener('click', async function() {
             try {
-                const response = await fetch('/import_entry_lists');
+                const response = await fetch('/import_entry_lists_new');
                 const result = await response.json();
                 
                 if (result.success) {
