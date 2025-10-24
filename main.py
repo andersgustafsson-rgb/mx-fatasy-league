@@ -12164,6 +12164,7 @@ def motocross_quiz():
     return render_template("motocross_quiz.html")
 
 @app.route("/clear_all_data")
+def clear_all_data():
     """Clear all picks and results - full reset"""
     try:
         if not is_admin_user():
