@@ -60,6 +60,81 @@
             </div>
         </div>
 
+        <!-- Entry List Import Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📋 Entry List Import - Förare</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Preview Entry Lists -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">1. Förhandsvisa Entry Lists</h4>
+                    <button id="preview-entry-lists-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        Förhandsvisa Entry Lists
+                    </button>
+                    <div id="preview-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Import Entry Lists -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">2. Ersätt alla förare</h4>
+                    <button id="import-entry-lists-btn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors" disabled>
+                        Ersätt alla förare
+                    </button>
+                    <div id="import-entry-status" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+            
+            <!-- Entry List Info -->
+            <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+                <h5 class="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">⚠️ Varning:</h5>
+                <p class="text-xs text-yellow-700 dark:text-yellow-300">
+                    Detta kommer att <strong>ta bort alla befintliga förare</strong> och ersätta dem med de från officiella entry lists.
+                    Kontrollera att CSV-filerna finns i data-mappen först.
+                </p>
+            </div>
+        </div>
+
+        <!-- CSV Import Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📊 CSV Import - Resultat</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Upload CSV -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">1. Ladda upp CSV-fil</h4>
+                    <form id="upload-results-form" enctype="multipart/form-data">
+                        <input type="file" id="results-csv-file" accept=".csv" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-3">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                            Ladda upp
+                        </button>
+                    </form>
+                    <div id="upload-status" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Import Results -->
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="text-md font-semibold text-gray-700 dark:text-gray-300 mb-2">2. Importera till tävling</h4>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Välj tävling:</label>
+                        <select id="competition-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">Laddar tävlingar...</option>
+                        </select>
+                    </div>
+                    <button id="import-results-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors" disabled>
+                        Importera resultat
+                    </button>
+                    <div id="import-status" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+            
+            <!-- CSV Format Info -->
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900 rounded-lg">
+                <h5 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">CSV Format:</h5>
+                <p class="text-xs text-blue-700 dark:text-blue-300">
+                    Kolumner: position, rider_number, rider_name, points, class<br>
+                    Exempel: 1, 1, "Cooper Webb", 25, "450cc"
+                </p>
+            </div>
+        </div>
+
         <!-- Tab Navigation -->
         <div class="flex flex-wrap gap-2 mb-6">
             <button class="tab-button active px-4 py-2 rounded border-2 border-gray-600 bg-gray-800 text-white transition-all" data-tab="250">
@@ -930,6 +1005,224 @@
                 });
             }
         }
+
+        // Entry List Import functionality
+        let entryListPreview = null;
+
+        // Preview entry lists button handler
+        document.getElementById('preview-entry-lists-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/import_entry_lists');
+                const result = await response.json();
+                
+                if (result.success) {
+                    entryListPreview = result;
+                    document.getElementById('preview-status').innerHTML = 
+                        '<span class="text-green-600">✓ Hittade ' + result.preview.total_riders + ' förare</span><br>' +
+                        '<span class="text-blue-600">250cc: ' + result.preview.by_class['250cc'] + ' förare</span><br>' +
+                        '<span class="text-blue-600">450cc: ' + result.preview.by_class['450cc'] + ' förare</span>';
+                    
+                    document.getElementById('import-entry-lists-btn').disabled = false;
+                } else {
+                    document.getElementById('preview-status').innerHTML = 
+                        '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Preview error:', error);
+                document.getElementById('preview-status').innerHTML = 
+                    '<span class="text-red-600">Fel vid förhandsvisning</span>';
+            }
+        });
+
+        // Import entry lists button handler
+        document.getElementById('import-entry-lists-btn').addEventListener('click', async function() {
+            if (!entryListPreview) {
+                document.getElementById('import-entry-status').innerHTML = 
+                    '<span class="text-red-600">Förhandsvisa entry lists först</span>';
+                return;
+            }
+            
+            const confirmImport = confirm(
+                `Detta kommer att TA BORT ALLA befintliga förare och ersätta dem med ${entryListPreview.preview.total_riders} förare från entry lists.\n\n` +
+                `250cc: ${entryListPreview.preview.by_class['250cc']} förare\n` +
+                `450cc: ${entryListPreview.preview.by_class['450cc']} förare\n\n` +
+                `Är du säker på att du vill fortsätta?`
+            );
+            
+            if (confirmImport) {
+                try {
+                    const response = await fetch('/confirm_import_entry_lists', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        document.getElementById('import-entry-status').innerHTML = 
+                            '<span class="text-green-600">✓ Importerade ' + result.imported_count + ' förare</span>';
+                        
+                        if (result.errors.length > 0) {
+                            document.getElementById('import-entry-status').innerHTML += 
+                                '<br><span class="text-yellow-600">Varningar: ' + result.errors.length + ' fel</span>';
+                        }
+                        
+                        // Reload page to show new riders
+                        setTimeout(() => {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        document.getElementById('import-entry-status').innerHTML = 
+                            '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                    }
+                } catch (error) {
+                    console.error('Import error:', error);
+                    document.getElementById('import-entry-status').innerHTML = 
+                        '<span class="text-red-600">Fel vid import</span>';
+                }
+            }
+        });
+
+        // CSV Import functionality
+        let uploadedCsvFile = null;
+
+        // Load competitions on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCompetitions();
+        });
+
+        function loadCompetitions() {
+            fetch('/get_competitions_for_import')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const select = document.getElementById('competition-select');
+                        select.innerHTML = '<option value="">Välj tävling...</option>';
+                        
+                        data.competitions.forEach(comp => {
+                            const option = document.createElement('option');
+                            option.value = comp.id;
+                            option.textContent = `${comp.name} - ${comp.event_date} ${comp.has_results ? '(har resultat)' : ''}`;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading competitions:', error);
+                    document.getElementById('competition-select').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                });
+        }
+
+        // Upload CSV form handler
+        document.getElementById('upload-results-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('results-csv-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                document.getElementById('upload-status').innerHTML = '<span class="text-red-600">Välj en CSV-fil</span>';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/upload_results_csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    uploadedCsvFile = result.message.split(' ')[2]; // Extract filename
+                    document.getElementById('upload-status').innerHTML = '<span class="text-green-600">✓ Fil uppladdad: ' + uploadedCsvFile + '</span>';
+                    document.getElementById('import-results-btn').disabled = false;
+                } else {
+                    document.getElementById('upload-status').innerHTML = '<span class="text-red-600">Fel: ' + result.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                document.getElementById('upload-status').innerHTML = '<span class="text-red-600">Fel vid uppladdning</span>';
+            }
+        });
+
+        // Import results button handler
+        document.getElementById('import-results-btn').addEventListener('click', async function() {
+            const competitionId = document.getElementById('competition-select').value;
+            
+            if (!competitionId) {
+                document.getElementById('import-status').innerHTML = '<span class="text-red-600">Välj en tävling</span>';
+                return;
+            }
+            
+            if (!uploadedCsvFile) {
+                document.getElementById('import-status').innerHTML = '<span class="text-red-600">Ladda upp en CSV-fil först</span>';
+                return;
+            }
+            
+            // First, preview the import
+            try {
+                const previewResponse = await fetch('/import_results_csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        csv_file: uploadedCsvFile
+                    })
+                });
+                
+                const previewResult = await previewResponse.json();
+                
+                if (previewResult.success) {
+                    const confirmImport = confirm(
+                        `Hittade ${previewResult.preview.total_results} resultat.\n` +
+                        `Klasser: ${previewResult.preview.classes.join(', ')}\n\n` +
+                        `Vill du importera dessa resultat till tävlingen?`
+                    );
+                    
+                    if (confirmImport) {
+                        // Confirm the import
+                        const importResponse = await fetch('/confirm_import_results', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                csv_file: uploadedCsvFile,
+                                competition_id: competitionId
+                            })
+                        });
+                        
+                        const importResult = await importResponse.json();
+                        
+                        if (importResult.success) {
+                            document.getElementById('import-status').innerHTML = 
+                                '<span class="text-green-600">✓ Importerade ' + importResult.imported_count + ' resultat</span>';
+                            
+                            if (importResult.errors.length > 0) {
+                                document.getElementById('import-status').innerHTML += 
+                                    '<br><span class="text-yellow-600">Varningar: ' + importResult.errors.length + ' fel</span>';
+                            }
+                        } else {
+                            document.getElementById('import-status').innerHTML = 
+                                '<span class="text-red-600">Fel: ' + importResult.error + '</span>';
+                        }
+                    }
+                } else {
+                    document.getElementById('import-status').innerHTML = 
+                        '<span class="text-red-600">Fel vid förhandsvisning: ' + previewResult.error + '</span>';
+                }
+            } catch (error) {
+                console.error('Import error:', error);
+                document.getElementById('import-status').innerHTML = '<span class="text-red-600">Fel vid import</span>';
+            }
+        });
     </script>
 </body>
 </html>

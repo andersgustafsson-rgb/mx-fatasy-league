@@ -5858,6 +5858,34 @@ def get_user_total_points():
         "wildcard_points": total_wildcard_points
     })
 
+@app.post("/upload_entry_list")
+def upload_entry_list():
+    """Upload entry list CSV file"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if file and file.filename.endswith('.csv'):
+            filename = file.filename
+            file.save(filename)
+            return jsonify({
+                "success": True,
+                "message": f"File {filename} uploaded successfully"
+            })
+        else:
+            return jsonify({"error": "Only CSV files allowed"}), 400
+            
+    except Exception as e:
+        print(f"Error uploading file: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/import_entry_lists")
 def import_entry_lists():
     """Import riders from official entry lists and replace existing riders"""
@@ -5939,6 +5967,334 @@ def import_entry_lists():
         
     except Exception as e:
         print(f"Error in import_entry_lists: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/confirm_import_entry_lists")
+def confirm_import_entry_lists():
+    """Confirm and import entry lists, replacing existing riders"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        import csv
+        import re
+        from pathlib import Path
+        
+        def clean_rider_name(name):
+            return re.sub(r'\s+', ' ', name.strip())
+        
+        def normalize_bike_brand(brand):
+            brand_map = {
+                'Triumph': 'Triumph', 'KTM': 'KTM', 'GasGas': 'GasGas',
+                'Honda': 'Honda', 'Kawasaki': 'Kawasaki', 'Yamaha': 'Yamaha',
+                'Husqvarna': 'Husqvarna', 'Suzuki': 'Suzuki', 'Beta': 'Beta'
+            }
+            return brand_map.get(brand, brand)
+        
+        def parse_entry_list(csv_path, class_name):
+            riders = []
+            
+            with open(csv_path, 'r', encoding='utf-8') as file:
+                reader = csv.reader(file)
+                
+                for row_num, row in enumerate(reader, 1):
+                    if row_num <= 7 or not row or len(row) < 4:
+                        continue
+                    
+                    full_text = ' '.join(row)
+                    match = re.match(r'^(\d+)\s+(.+?)\s+([A-Za-z]+)\s+(.+?)\s+(.+)$', full_text)
+                    
+                    if match:
+                        number, name, bike, hometown, team = match.groups()
+                        riders.append({
+                            'number': int(number),
+                            'name': clean_rider_name(name),
+                            'bike_brand': normalize_bike_brand(bike),
+                            'hometown': hometown.strip(),
+                            'team': team.strip(),
+                            'class': class_name
+                        })
+            return riders
+        
+        # Parse all entry lists
+        entry_lists = [
+            ("data/Entry_List_250_west.csv", "250cc"),
+            ("data/Entry_List_250_east.csv", "250cc"), 
+            ("data/Entry_List_450.csv", "450cc")
+        ]
+        
+        all_riders = []
+        results = {}
+        
+        for csv_file, class_name in entry_lists:
+            csv_path = Path(csv_file)
+            if csv_path.exists():
+                riders = parse_entry_list(csv_path, class_name)
+                all_riders.extend(riders)
+                results[class_name] = len(riders)
+            else:
+                results[class_name] = f"File not found: {csv_file}"
+        
+        # Delete existing riders and import new ones
+        imported_count = 0
+        errors = []
+        
+        # Delete all existing riders
+        db.session.execute(db.text("DELETE FROM riders"))
+        db.session.commit()
+        
+        # Import new riders
+        for rider_data in all_riders:
+            try:
+                # Determine coast for 250cc riders
+                coast = None
+                if rider_data['class'] == '250cc':
+                    # Check filename to determine coast
+                    for csv_file, class_name in entry_lists:
+                        if class_name == '250cc' and 'west' in csv_file:
+                            coast = 'west'
+                        elif class_name == '250cc' and 'east' in csv_file:
+                            coast = 'east'
+                
+                new_rider = Rider(
+                    rider_number=rider_data['number'],
+                    name=rider_data['name'],
+                    bike_brand=rider_data['bike_brand'],
+                    class_name=rider_data['class'],
+                    coast_250=coast,
+                    price=100000,  # Default price
+                    hometown=rider_data.get('hometown', ''),
+                    team=rider_data.get('team', '')
+                )
+                
+                db.session.add(new_rider)
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"Error importing {rider_data['name']}: {str(e)}")
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "imported_count": imported_count,
+            "errors": errors,
+            "results": results,
+            "message": f"Successfully imported {imported_count} riders, replacing all existing riders"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in confirm_import_entry_lists: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/upload_results_csv")
+def upload_results_csv():
+    """Upload race results CSV file"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        if file and file.filename.endswith('.csv'):
+            filename = f"data/results_{file.filename}"
+            file.save(filename)
+            return jsonify({
+                "success": True,
+                "message": f"Results file {filename} uploaded successfully"
+            })
+        else:
+            return jsonify({"error": "Only CSV files allowed"}), 400
+            
+    except Exception as e:
+        print(f"Error uploading results file: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/import_results_csv")
+def import_results_csv():
+    """Import race results from CSV file"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        import csv
+        from pathlib import Path
+        
+        # Get the CSV file path from request
+        csv_file = request.json.get('csv_file')
+        if not csv_file:
+            return jsonify({"error": "No CSV file specified"}), 400
+        
+        csv_path = Path(csv_file)
+        if not csv_path.exists():
+            return jsonify({"error": f"File not found: {csv_file}"}), 400
+        
+        # Parse CSV file
+        results = []
+        with open(csv_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            
+            for row_num, row in enumerate(reader, 1):
+                try:
+                    # Expected CSV format: position, rider_number, rider_name, points, class
+                    position = int(row.get('position', 0))
+                    rider_number = int(row.get('rider_number', 0))
+                    rider_name = row.get('rider_name', '').strip()
+                    points = float(row.get('points', 0))
+                    class_name = row.get('class', '').strip()
+                    
+                    if position > 0 and rider_number > 0 and rider_name:
+                        results.append({
+                            'position': position,
+                            'rider_number': rider_number,
+                            'rider_name': rider_name,
+                            'points': points,
+                            'class': class_name
+                        })
+                except (ValueError, KeyError) as e:
+                    print(f"Error parsing row {row_num}: {e}")
+                    continue
+        
+        # Show preview
+        preview = {
+            "total_results": len(results),
+            "sample_results": results[:10],
+            "classes": list(set([r['class'] for r in results if r['class']]))
+        }
+        
+        return jsonify({
+            "success": True,
+            "preview": preview,
+            "message": f"Found {len(results)} results. Ready for import."
+        })
+        
+    except Exception as e:
+        print(f"Error in import_results_csv: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/confirm_import_results")
+def confirm_import_results():
+    """Confirm and import race results to database"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        import csv
+        from pathlib import Path
+        
+        # Get parameters from request
+        csv_file = request.json.get('csv_file')
+        competition_id = request.json.get('competition_id')
+        
+        if not csv_file or not competition_id:
+            return jsonify({"error": "Missing csv_file or competition_id"}), 400
+        
+        csv_path = Path(csv_file)
+        if not csv_path.exists():
+            return jsonify({"error": f"File not found: {csv_file}"}), 400
+        
+        # Check if competition exists
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+        
+        # Parse and import results
+        imported_count = 0
+        errors = []
+        
+        with open(csv_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            
+            for row_num, row in enumerate(reader, 1):
+                try:
+                    position = int(row.get('position', 0))
+                    rider_number = int(row.get('rider_number', 0))
+                    rider_name = row.get('rider_name', '').strip()
+                    points = float(row.get('points', 0))
+                    class_name = row.get('class', '').strip()
+                    
+                    if position > 0 and rider_number > 0 and rider_name:
+                        # Find rider by number and name
+                        rider = Rider.query.filter_by(
+                            rider_number=rider_number,
+                            name=rider_name
+                        ).first()
+                        
+                        if rider:
+                            # Create or update competition result
+                            existing_result = CompetitionResult.query.filter_by(
+                                competition_id=competition_id,
+                                rider_id=rider.id
+                            ).first()
+                            
+                            if existing_result:
+                                existing_result.position = position
+                                existing_result.points = points
+                            else:
+                                new_result = CompetitionResult(
+                                    competition_id=competition_id,
+                                    rider_id=rider.id,
+                                    position=position,
+                                    points=points
+                                )
+                                db.session.add(new_result)
+                            
+                            imported_count += 1
+                        else:
+                            errors.append(f"Row {row_num}: Rider {rider_name} (#{rider_number}) not found")
+                            
+                except (ValueError, KeyError) as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    continue
+        
+        # Commit changes
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "imported_count": imported_count,
+            "errors": errors,
+            "message": f"Successfully imported {imported_count} results"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in confirm_import_results: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/get_competitions_for_import")
+def get_competitions_for_import():
+    """Get list of competitions for CSV import"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        competitions = Competition.query.order_by(Competition.event_date.desc()).all()
+        competition_list = []
+        
+        for comp in competitions:
+            competition_list.append({
+                "id": comp.id,
+                "name": comp.name,
+                "event_date": comp.event_date.isoformat(),
+                "location": comp.location,
+                "has_results": bool(CompetitionResult.query.filter_by(competition_id=comp.id).first())
+            })
+        
+        return jsonify({
+            "success": True,
+            "competitions": competition_list
+        })
+        
+    except Exception as e:
+        print(f"Error in get_competitions_for_import: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.get("/debug_rider_images")
