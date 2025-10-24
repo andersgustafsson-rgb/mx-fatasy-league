@@ -7293,7 +7293,7 @@ def admin_reset_league_points(league_id):
 
 
 def calculate_league_points(league_id, competition_id):
-    """Calculate fair league points based on member performance"""
+    """Calculate simple league points based on member race pick performance"""
     try:
         # Get all members in the league
         members = db.session.query(User).join(LeagueMembership).filter(
@@ -7303,7 +7303,7 @@ def calculate_league_points(league_id, competition_id):
         if not members:
             return 0
         
-        # Get their scores for this competition
+        # Get their race pick scores for this competition
         member_scores = []
         for member in members:
             score = CompetitionScore.query.filter_by(
@@ -7316,66 +7316,16 @@ def calculate_league_points(league_id, competition_id):
         if not member_scores:
             return 0
         
-        # Sort scores (highest first)
-        member_scores.sort(reverse=True)
-        member_count = len(member_scores)
+        # Simple calculation: average of member scores
+        # This gives reasonable points (e.g., 31p race = 31p league points)
+        average_score = sum(member_scores) / len(member_scores)
         
-        # Calculate different scoring methods
-        methods = {}
+        # Add small participation bonus
+        participation_bonus = min(len(member_scores) * 2, 10)  # Max 10 points
         
-        # 1. Top Performers (40% weight) - Adaptive based on league size
-        if member_count >= 5:
-            # 5+ members: Use top 5
-            top_scores = member_scores[:5]
-        elif member_count >= 3:
-            # 3-4 members: Use top 3
-            top_scores = member_scores[:3]
-        else:
-            # 1-2 members: Use all members
-            top_scores = member_scores
+        final_score = average_score + participation_bonus
         
-        methods['top_performers'] = sum(top_scores) / len(top_scores)
-        
-        # 2. Average Quality (30% weight)
-        methods['average_quality'] = sum(member_scores) / len(member_scores)
-        
-        # 3. Percentile Ranking (20% weight) - Get global percentiles
-        global_scores = db.session.query(CompetitionScore.total_points).filter(
-            CompetitionScore.competition_id == competition_id,
-            CompetitionScore.total_points.isnot(None)
-        ).order_by(CompetitionScore.total_points.desc()).all()
-        
-        if global_scores:
-            total_players = len(global_scores)
-            percentile_scores = []
-            
-            for score in member_scores:
-                # Find percentile for this score
-                better_players = sum(1 for gs in global_scores if gs[0] > score)
-                percentile = ((total_players - better_players) / total_players) * 100
-                percentile_scores.append(percentile)
-            
-            methods['percentile_ranking'] = sum(percentile_scores) / len(percentile_scores)
-        else:
-            methods['percentile_ranking'] = 50  # Default if no global data
-        
-        # 4. Participation Bonus (10% weight) - Adaptive for small leagues
-        if member_count >= 5:
-            participation_bonus = min(member_count * 2, 20)  # Max 20 points
-        elif member_count >= 3:
-            participation_bonus = member_count * 3  # 3-4 members get more per person
-        else:
-            participation_bonus = member_count * 5  # 1-2 members get even more per person
-        
-        methods['participation_bonus'] = participation_bonus
-        
-        # Calculate weighted final score
-        final_score = (
-            methods['top_performers'] * 0.4 +
-            methods['average_quality'] * 0.3 +
-            methods['percentile_ranking'] * 0.2 +
-            methods['participation_bonus'] * 0.1
-        )
+        print(f"🏆 League {league_id}: {len(member_scores)} members, avg score: {average_score:.1f}, bonus: {participation_bonus}, final: {final_score:.1f}")
         
         return round(final_score, 1)
         
