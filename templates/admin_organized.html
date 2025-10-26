@@ -289,6 +289,19 @@
                     </div>
                 </div>
 
+                <!-- Game Highscores -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🎮 Game Highscores</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <button onclick="clearAllGameHighscores()" class="btn-danger px-4 py-2 rounded-lg">
+                            🗑️ Clear All Game Highscores
+                        </button>
+                        <p class="text-gray-400 text-sm mt-2">
+                            Clears all Cross Jump and Motocross Quiz highscores
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Race Simulation -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">🏁 Race Simulation</h3>
@@ -419,6 +432,20 @@
                     } else {
                         alert('❌ Error: ' + result.error);
                     }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function clearAllGameHighscores() {
+            if (confirm('This will clear all game highscores (Cross Jump and Motocross Quiz). Continue?')) {
+                try {
+                    // Clear localStorage highscores
+                    localStorage.removeItem('crossJumpHighScores');
+                    localStorage.removeItem('motocrossQuizHighScores');
+                    
+                    alert('✅ All game highscores have been cleared!');
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }

@@ -973,12 +973,6 @@
                   </div>
                 </div>
                 
-                <!-- Clear All Highscores Button -->
-                <div class="text-center">
-                  <button onclick="clearAllGameHighscores()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">
-                    🗑️ Rensa alla highscores
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -1594,14 +1588,6 @@
       return scores ? JSON.parse(scores) : [];
     }
 
-    function clearAllGameHighscores() {
-      if (confirm('Är du säker på att du vill radera alla game highscores?')) {
-        localStorage.removeItem('crossJumpHighScores');
-        localStorage.removeItem('motocrossQuizHighScores');
-        loadGameHighscores();
-        alert('Alla highscores har raderats!');
-      }
-    }
     
     // Cross Jump Highscores
     async function fetchCrossDinoHighscores() {
