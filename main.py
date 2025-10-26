@@ -5282,36 +5282,52 @@ def get_my_race_results(competition_id):
     for p in picks:
         act = actual_by_rider.get(p.rider_id)
         if not act:
-            breakdown.append(f"❌ Pick rider_id={p.rider_id} hittades inte i resultat")
+            # Try to get rider name for better error message
+            rider = Rider.query.get(p.rider_id)
+            rider_name = rider.name if rider else f"rider {p.rider_id}"
+            breakdown.append(f"❌ Pick {rider_name} hittades inte i resultat")
             continue
+        
+        # Get rider name for display
+        rider = Rider.query.get(p.rider_id)
+        rider_name = rider.name if rider else f"rider {p.rider_id}"
+        
         if act.position == p.predicted_position:
-            breakdown.append(f"✅ Perfekt: rider {p.rider_id} på pos {p.predicted_position} (+25)")
+            breakdown.append(f"✅ Perfekt: {rider_name} på pos {p.predicted_position} (+25)")
             total += 25
         elif act.position <= 6:
-            breakdown.append(f"⚠️ Top6: rider {p.rider_id} var {act.position} (+5)")
+            breakdown.append(f"⚠️ Top6: {rider_name} var {act.position} (+5)")
             total += 5
         else:
-            breakdown.append(f"❌ Miss: rider {p.rider_id} var {act.position}")
+            breakdown.append(f"❌ Miss: {rider_name} var {act.position}")
 
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
     holo_by_class = {h.class_name: h for h in holos}
     for hp in holopicks:
         act = holo_by_class.get(hp.class_name)
+        # Get rider name for holeshot display
+        rider = Rider.query.get(hp.rider_id)
+        rider_name = rider.name if rider else f"rider {hp.rider_id}"
+        
         if act and act.rider_id == hp.rider_id:
-            breakdown.append(f"✅ Holeshot {hp.class_name}: rätt (+3)")
+            breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+3)")
             total += 3
         else:
-            breakdown.append(f"❌ Holeshot {hp.class_name}: fel")
+            breakdown.append(f"❌ Holeshot {hp.class_name}: {rider_name} fel")
 
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
     if wc:
         target = next((r for r in actual if r.position == wc.position), None)
+        # Get rider name for wildcard display
+        rider = Rider.query.get(wc.rider_id)
+        rider_name = rider.name if rider else f"rider {wc.rider_id}"
+        
         if target and target.rider_id == wc.rider_id:
-            breakdown.append("✅ Wildcard: rätt (+15)")
+            breakdown.append(f"✅ Wildcard: {rider_name} på pos {wc.position} (+15)")
             total += 15
         else:
-            breakdown.append("❌ Wildcard: fel")
+            breakdown.append(f"❌ Wildcard: {rider_name} fel")
 
     return jsonify({"breakdown": breakdown, "total": total})
 
