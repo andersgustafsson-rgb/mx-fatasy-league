@@ -55,6 +55,20 @@
             background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
             transform: translateY(-2px);
         }
+        
+        .btn-primary:disabled,
+        .btn-warning:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-primary:disabled:hover,
+        .btn-warning:disabled:hover {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            transform: none;
+            box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3);
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -309,34 +323,42 @@
                         <!-- Competition Selection -->
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Select Competition:</label>
-                            <select id="simulation-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
-                                <option value="">Loading competitions...</option>
-                            </select>
+                            <div class="flex gap-2">
+                                <select id="simulation-competition" class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                    <option value="">Loading competitions...</option>
+                                </select>
+                                <button onclick="confirmCompetitionSelection()" class="btn-primary px-4 py-2 rounded-lg">
+                                    ✅ Confirm
+                                </button>
+                            </div>
+                            <div id="selected-competition-info" class="mt-2 text-sm text-gray-400 hidden">
+                                <span class="text-cyan-400">Selected:</span> <span id="selected-competition-name"></span>
+                            </div>
                         </div>
                         
                         <!-- Time Scenarios -->
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Time Scenarios:</label>
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <button onclick="setSimulatedTime('race_in_3h')" class="btn-primary px-4 py-2 rounded-lg">
+                                <button onclick="setSimulatedTime('race_in_3h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
                                     ⏰ 3h Before
                                 </button>
-                                <button onclick="setSimulatedTime('race_in_1h')" class="btn-primary px-4 py-2 rounded-lg">
+                                <button onclick="setSimulatedTime('race_in_1h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
                                     🏁 1h Before
                                 </button>
-                                <button onclick="setSimulatedTime('race_in_30m')" class="btn-primary px-4 py-2 rounded-lg">
+                                <button onclick="setSimulatedTime('race_in_30m')" class="btn-primary px-4 py-2 rounded-lg" disabled>
                                     ⚡ 30m Before
                                 </button>
-                                <button onclick="setSimulatedTime('race_tomorrow')" class="btn-primary px-4 py-2 rounded-lg">
+                                <button onclick="setSimulatedTime('race_tomorrow')" class="btn-primary px-4 py-2 rounded-lg" disabled>
                                     📅 1 Day Before
                                 </button>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            <button onclick="generateSimulatedResults()" class="btn-warning px-4 py-2 rounded-lg">
+                            <button onclick="generateSimulatedResults()" class="btn-warning px-4 py-2 rounded-lg" disabled>
                                 🎲 Generate Simulated Results
                             </button>
-                            <button onclick="simulateAllUsersPicks()" class="btn-warning px-4 py-2 rounded-lg">
+                            <button onclick="simulateAllUsersPicks()" class="btn-warning px-4 py-2 rounded-lg" disabled>
                                 👥 Simulate All Picks
                             </button>
                         </div>
@@ -540,6 +562,38 @@
                 console.error('Error loading competitions:', error);
                 document.getElementById('simulation-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
             }
+        }
+
+        // Confirm competition selection
+        function confirmCompetitionSelection() {
+            const select = document.getElementById('simulation-competition');
+            const selectedValue = select.value;
+            const selectedText = select.options[select.selectedIndex].text;
+            
+            if (!selectedValue) {
+                alert('❌ Välj en tävling först!');
+                return;
+            }
+            
+            // Show selected competition info
+            document.getElementById('selected-competition-name').textContent = selectedText;
+            document.getElementById('selected-competition-info').classList.remove('hidden');
+            
+            // Enable time scenario buttons
+            const timeButtons = document.querySelectorAll('[onclick^="setSimulatedTime"]');
+            timeButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+            
+            // Enable simulation buttons
+            const simButtons = document.querySelectorAll('[onclick^="generateSimulatedResults"], [onclick^="simulateAllUsersPicks"]');
+            simButtons.forEach(btn => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+            
+            alert(`✅ Tävling vald: ${selectedText}\n\nNu kan du:\n• Sätta simulerad tid\n• Generera simulerade resultat\n• Simulera användarpicks`);
         }
 
         // Initialize page
