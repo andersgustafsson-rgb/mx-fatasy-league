@@ -573,7 +573,7 @@
         }
 
         // Confirm competition selection
-        function confirmCompetitionSelection() {
+        async function confirmCompetitionSelection() {
             const select = document.getElementById('simulation-competition');
             const selectedValue = select.value;
             const selectedText = select.options[select.selectedIndex].text;
@@ -582,6 +582,23 @@
             
             if (!selectedValue) {
                 alert('❌ Välj en tävling först!');
+                return;
+            }
+            
+            // Set this competition as active race
+            try {
+                console.log('🔍 Setting active race:', selectedValue);
+                const response = await fetch(`/set_active_race?competition_id=${selectedValue}`);
+                const result = await response.json();
+                console.log('🔍 Set active race response:', result);
+                
+                if (result.error) {
+                    alert('❌ Error setting active race: ' + result.error);
+                    return;
+                }
+            } catch (error) {
+                console.error('🔍 Error setting active race:', error);
+                alert('❌ Error setting active race: ' + error.message);
                 return;
             }
             
@@ -607,7 +624,7 @@
                 console.log('🔍 Enabled button:', btn.textContent.trim());
             });
             
-            alert(`✅ Tävling vald: ${selectedText}\n\nNu kan du:\n• Sätta simulerad tid\n• Generera simulerade resultat\n• Simulera användarpicks`);
+            alert(`✅ Tävling vald: ${selectedText}\n\nNu kan du:\n• Göra picks för denna tävling\n• Sätta simulerad tid\n• Generera simulerade resultat\n• Simulera användarpicks`);
         }
 
         // Initialize page
