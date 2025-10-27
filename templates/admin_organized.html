@@ -56,6 +56,26 @@
             transform: translateY(-2px);
         }
         
+        .tab-btn {
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            color: #ffffff;
+            border-color: #0ea5e9;
+        }
+        
         .btn-primary:disabled,
         .btn-warning:disabled {
             opacity: 0.5;
@@ -84,11 +104,8 @@
             <button onclick="showSection('race-results')" class="tab-btn active px-6 py-3 text-lg">
                 🏁 Race Results
             </button>
-            <button onclick="showSection('rider-management')" class="tab-btn px-6 py-3 text-lg">
-                👥 Rider Management
-            </button>
-            <button onclick="showSection('competition-management')" class="tab-btn px-6 py-3 text-lg">
-                🏆 Competitions
+            <button onclick="showSection('rider-competition-management')" class="tab-btn px-6 py-3 text-lg">
+                👥 Rider & Competition Management
             </button>
             <button onclick="showSection('user-management')" class="tab-btn px-6 py-3 text-lg">
                 👤 Users
@@ -138,58 +155,110 @@
                         </a>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Rider Management Section -->
-        <div id="rider-management" class="section-panel hidden">
-            <div class="section-card rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-cyan-400 mb-4">👥 Rider Management</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Import Riders -->
+                <!-- Race Simulation -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🎮 Race Simulation</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">📥 Import Riders</h3>
-                        <p class="text-gray-300 mb-4">Import rider lists from CSV files.</p>
-                        <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Import Entry Lists
-                        </a>
-                    </div>
-
-                    <!-- Restore Images -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">🖼️ Restore Images</h3>
-                        <p class="text-gray-300 mb-4">Restore rider images from static folder.</p>
-                        <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Restore Images
-                        </a>
+                        <!-- Competition Selection -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Select Competition:</label>
+                            <div class="flex gap-2">
+                                <select id="simulation-competition" class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                    <option value="">Loading competitions...</option>
+                                </select>
+                                <button onclick="confirmCompetitionSelection()" class="btn-primary px-4 py-2 rounded-lg">
+                                    ✅ Confirm
+                                </button>
+                            </div>
+                            <div id="selected-competition-info" class="mt-2 text-sm text-gray-400 hidden">
+                                <span class="text-cyan-400">Selected:</span> <span id="selected-competition-name"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Time Scenarios -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Time Scenarios:</label>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <button onclick="setSimulatedTime('race_in_3h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
+                                    ⏰ 3h Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_in_1h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
+                                    🏁 1h Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_in_30m')" class="btn-primary px-4 py-2 rounded-lg" disabled>
+                                    ⚡ 30m Before
+                                </button>
+                                <button onclick="setSimulatedTime('race_tomorrow')" class="btn-primary px-4 py-2 rounded-lg" disabled>
+                                    📅 1 Day Before
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <button onclick="generateSimulatedResults()" class="btn-warning px-4 py-2 rounded-lg" disabled>
+                                🎲 Generate Simulated Results
+                            </button>
+                            <button onclick="simulateAllUsersPicks()" class="btn-warning px-4 py-2 rounded-lg" disabled>
+                                👥 Simulate All Picks
+                            </button>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2">
+                            Test different race scenarios and generate simulated data
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Competition Management Section -->
-        <div id="competition-management" class="section-panel hidden">
-            <div class="section-card rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏆 Competition Management</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Create Competition -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">➕ Create Competition</h3>
-                        <p class="text-gray-300 mb-4">Add new competitions to the season.</p>
-                        <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Create New
-                        </a>
-                    </div>
 
-                    <!-- Manage Competitions -->
+        <!-- Rider & Competition Management Section -->
+        <div id="rider-competition-management" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">👥 Rider & Competition Management</h2>
+                
+                <!-- Rider Management -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">👥 Rider Management</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">📋 Manage Competitions</h3>
-                        <p class="text-gray-300 mb-4">Edit, delete, or update competitions.</p>
-                        <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Manage All
-                        </a>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-lg font-semibold text-white mb-2">Import Riders</h4>
+                                <p class="text-gray-300 mb-3">Import rider entry lists from CSV files.</p>
+                                <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg">
+                                    📁 Import Riders
+                                </a>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold text-white mb-2">Restore Images</h4>
+                                <p class="text-gray-300 mb-3">Restore rider images from static folder.</p>
+                                <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg">
+                                    🖼️ Restore Images
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Competition Management -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🏆 Competition Management</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-lg font-semibold text-white mb-2">Create Competition</h4>
+                                <p class="text-gray-300 mb-3">Create new competitions and manage existing ones.</p>
+                                <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg">
+                                    ➕ Create Competition
+                                </a>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-semibold text-white mb-2">Manage Competitions</h4>
+                                <p class="text-gray-300 mb-3">Edit competitions, manage riders, and set results.</p>
+                                <a href="/competition_management" class="btn-primary px-4 py-2 rounded-lg">
+                                    🏆 Manage Competitions
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -280,23 +349,15 @@
                     <h3 class="text-xl font-semibold text-white mb-3">💾 Database Tools</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <a href="/fix_database" class="btn-primary px-4 py-2 rounded-lg inline-block text-center">
-                                🔧 Fix Database
-                            </a>
-                            <a href="/update_season_team_points" class="btn-primary px-4 py-2 rounded-lg inline-block text-center">
-                                📊 Update Team Points
-                            </a>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                             <button onclick="clearSeasonTeams()" class="btn-warning px-4 py-2 rounded-lg">
                                 🏁 Clear Season Teams
                             </button>
-                            <button onclick="checkSeasonTeams()" class="btn-primary px-4 py-2 rounded-lg">
-                                👥 Check Season Teams
+                            <button onclick="clearAllGameHighscores()" class="btn-warning px-4 py-2 rounded-lg">
+                                🗑️ Clear Game Highscores
                             </button>
                         </div>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                            Clear Season Teams removes all season teams and riders. Check Season Teams shows which users have teams.
+                            Clear Season Teams removes all season teams and riders. Clear Game Highscores removes Cross Jump and Quiz highscores.
                         </p>
                     </div>
                 </div>
@@ -314,70 +375,7 @@
                     </div>
                 </div>
 
-                <!-- Game Highscores -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">🎮 Game Highscores</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <button onclick="clearAllGameHighscores()" class="btn-danger px-4 py-2 rounded-lg">
-                            🗑️ Clear All Game Highscores
-                        </button>
-                        <p class="text-gray-400 text-sm mt-2">
-                            Clears all Cross Jump and Motocross Quiz highscores
-                        </p>
-                    </div>
-                </div>
 
-                <!-- Race Simulation -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">🏁 Race Simulation</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <!-- Competition Selection -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Select Competition:</label>
-                            <div class="flex gap-2">
-                                <select id="simulation-competition" class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
-                                    <option value="">Loading competitions...</option>
-                                </select>
-                                <button onclick="confirmCompetitionSelection()" class="btn-primary px-4 py-2 rounded-lg">
-                                    ✅ Confirm
-                                </button>
-                            </div>
-                            <div id="selected-competition-info" class="mt-2 text-sm text-gray-400 hidden">
-                                <span class="text-cyan-400">Selected:</span> <span id="selected-competition-name"></span>
-                            </div>
-                        </div>
-                        
-                        <!-- Time Scenarios -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Time Scenarios:</label>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <button onclick="setSimulatedTime('race_in_3h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
-                                    ⏰ 3h Before
-                                </button>
-                                <button onclick="setSimulatedTime('race_in_1h')" class="btn-primary px-4 py-2 rounded-lg" disabled>
-                                    🏁 1h Before
-                                </button>
-                                <button onclick="setSimulatedTime('race_in_30m')" class="btn-primary px-4 py-2 rounded-lg" disabled>
-                                    ⚡ 30m Before
-                                </button>
-                                <button onclick="setSimulatedTime('race_tomorrow')" class="btn-primary px-4 py-2 rounded-lg" disabled>
-                                    📅 1 Day Before
-                                </button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            <button onclick="generateSimulatedResults()" class="btn-warning px-4 py-2 rounded-lg" disabled>
-                                🎲 Generate Simulated Results
-                            </button>
-                            <button onclick="simulateAllUsersPicks()" class="btn-warning px-4 py-2 rounded-lg" disabled>
-                                👥 Simulate All Picks
-                            </button>
-                        </div>
-                        <p class="text-gray-400 text-sm mt-2">
-                            Test different race scenarios and generate simulated data
-                        </p>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
