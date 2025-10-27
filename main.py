@@ -10326,10 +10326,68 @@ def recalculate_scores(competition_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.get("/debug_csv_row/<int:competition_id>/<int:row_number>")
+def debug_csv_row(competition_id, row_number):
+    """Debug specific CSV row for a competition"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find the competition
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 404
+        
+        # Look for CSV files in data directory
+        import os
+        import glob
+        
+        csv_files = glob.glob("data/results_*anaheim2*.csv")
+        
+        result = {
+            "competition": {
+                "id": competition.id,
+                "name": competition.name
+            },
+            "row_number": row_number,
+            "csv_files": [],
+            "row_contents": {}
+        }
+        
+        for csv_file in csv_files:
+            result["csv_files"].append(csv_file)
+            
+            try:
+                with open(csv_file, 'r', encoding='utf-8') as file:
+                    lines = file.readlines()
+                
+                if row_number <= len(lines):
+                    line_content = lines[row_number - 1].strip()
+                    result["row_contents"][csv_file] = {
+                        "line_number": row_number,
+                        "content": line_content,
+                        "length": len(line_content),
+                        "is_empty": len(line_content) == 0,
+                        "starts_with_quote": line_content.startswith('"'),
+                        "ends_with_quote": line_content.endswith('"')
+                    }
+                else:
+                    result["row_contents"][csv_file] = {
+                        "error": f"Row {row_number} does not exist (file has {len(lines)} lines)"
+                    }
+                    
+            except Exception as e:
+                result["row_contents"][csv_file] = {
+                    "error": str(e)
+                }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_competitions")
 def debug_competitions():
-    """List all competitions with their IDs"""
-    try:
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         
         comp_data = []
