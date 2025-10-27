@@ -10388,6 +10388,8 @@ def debug_csv_row(competition_id, row_number):
 
 @app.get("/debug_competitions")
 def debug_competitions():
+    """List all competitions with their IDs"""
+    try:
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         
         comp_data = []
