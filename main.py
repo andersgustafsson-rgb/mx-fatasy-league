@@ -4572,7 +4572,7 @@ def race_results_page():
                 )
                 .join(Rider, Rider.id == CompetitionResult.rider_id)
                 .filter(CompetitionResult.competition_id == comp.id)
-                .order_by(CompetitionResult.position.asc())
+                .order_by(Rider.class_name.asc(), CompetitionResult.position.asc())
                 .all()
             )
             
@@ -9841,7 +9841,7 @@ def debug_anaheim1():
         if not anaheim1:
             return jsonify({"error": "Anaheim 1 competition not found"})
         
-        # Get all results for Anaheim 1, ordered by position
+        # Get all results for Anaheim 1, ordered by class and position
         results = CompetitionResult.query.filter_by(competition_id=anaheim1.id).order_by(CompetitionResult.position.asc()).all()
         
         # Get rider names for each result
@@ -9856,14 +9856,23 @@ def debug_anaheim1():
                 "class_name": rider.class_name if rider else "Unknown"
             })
         
-        # Check for missing positions
-        positions = [r["position"] for r in results_with_names]
-        missing_positions = []
-        if positions:
-            max_pos = max(positions)
-            for i in range(1, max_pos + 1):
-                if i not in positions:
-                    missing_positions.append(i)
+        # Check for missing positions per class
+        class_positions = {}
+        for result in results_with_names:
+            class_name = result["class_name"]
+            if class_name not in class_positions:
+                class_positions[class_name] = []
+            class_positions[class_name].append(result["position"])
+        
+        missing_positions_per_class = {}
+        for class_name, positions in class_positions.items():
+            missing_positions = []
+            if positions:
+                max_pos = max(positions)
+                for i in range(1, max_pos + 1):
+                    if i not in positions:
+                        missing_positions.append(i)
+            missing_positions_per_class[class_name] = missing_positions
         
         return jsonify({
             "competition": {
@@ -9872,8 +9881,8 @@ def debug_anaheim1():
                 "date": anaheim1.event_date.isoformat() if anaheim1.event_date else None
             },
             "total_results": len(results),
-            "positions_found": positions,
-            "missing_positions": missing_positions,
+            "class_positions": class_positions,
+            "missing_positions_per_class": missing_positions_per_class,
             "all_results": results_with_names
         })
         
