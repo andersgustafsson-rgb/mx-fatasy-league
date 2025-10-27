@@ -1651,37 +1651,60 @@
         
         // Show preview results
         function showPreviewResults(preview) {
+            console.log('🔍 showPreviewResults called with:', preview);
+            
             const previewTable = document.getElementById('preview-results-table');
             const preview250 = document.getElementById('preview-250-results');
             const preview450 = document.getElementById('preview-450-results');
             
+            console.log('🔍 250cc results:', preview['250cc_results']);
+            console.log('🔍 450cc results:', preview['450cc_results']);
+            console.log('🔍 Errors:', preview['errors']);
+            
             // Show 250cc results
             preview250.innerHTML = '';
-            preview['250cc_results'].forEach(result => {
-                const statusIcon = result.found_in_db ? '✅' : '❌';
-                const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
-                preview250.innerHTML += `
-                    <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
-                        <span class="font-semibold">${result.position}.</span>
-                        <span>#${result.rider_number} ${result.rider_name}</span>
-                        <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
-                    </div>
-                `;
-            });
+            if (preview['250cc_results'] && preview['250cc_results'].length > 0) {
+                preview['250cc_results'].forEach(result => {
+                    const statusIcon = result.found_in_db ? '✅' : '❌';
+                    const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
+                    preview250.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                            <span class="font-semibold">${result.position}.</span>
+                            <span>#${result.rider_number} ${result.rider_name}</span>
+                            <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                preview250.innerHTML = '<div class="text-gray-500 text-sm">Inga 250cc resultat hittades</div>';
+            }
             
             // Show 450cc results
             preview450.innerHTML = '';
-            preview['450cc_results'].forEach(result => {
-                const statusIcon = result.found_in_db ? '✅' : '❌';
-                const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
-                preview450.innerHTML += `
-                    <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
-                        <span class="font-semibold">${result.position}.</span>
-                        <span>#${result.rider_number} ${result.rider_name}</span>
-                        <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
-                    </div>
-                `;
-            });
+            if (preview['450cc_results'] && preview['450cc_results'].length > 0) {
+                preview['450cc_results'].forEach(result => {
+                    const statusIcon = result.found_in_db ? '✅' : '❌';
+                    const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
+                    preview450.innerHTML += `
+                        <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                            <span class="font-semibold">${result.position}.</span>
+                            <span>#${result.rider_number} ${result.rider_name}</span>
+                            <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                preview450.innerHTML = '<div class="text-gray-500 text-sm">Inga 450cc resultat hittades</div>';
+            }
+            
+            // Show errors if any
+            if (preview['errors'] && preview['errors'].length > 0) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg';
+                errorDiv.innerHTML = '<h6 class="font-semibold text-red-800 dark:text-red-200">⚠️ Varningar:</h6>' +
+                    preview['errors'].map(error => `<div class="text-sm text-red-700 dark:text-red-300">${error}</div>`).join('');
+                previewTable.appendChild(errorDiv);
+            }
             
             previewTable.classList.remove('hidden');
         }
