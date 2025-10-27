@@ -5318,7 +5318,14 @@ def get_my_race_results(competition_id):
 
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
     if wc:
-        target = next((r for r in actual if r.position == wc.position), None)
+        # Wildcard is always 450cc, so filter results to only 450cc
+        actual_450cc = []
+        for r in actual:
+            rider = Rider.query.get(r.rider_id)
+            if rider and rider.class_name == "450cc":
+                actual_450cc.append(r)
+        
+        target = next((r for r in actual_450cc if r.position == wc.position), None)
         # Get rider name for wildcard display
         rider = Rider.query.get(wc.rider_id)
         rider_name = rider.name if rider else f"rider {wc.rider_id}"
@@ -5377,8 +5384,16 @@ def calculate_scores(comp_id: int):
             user_id=user.id, competition_id=comp_id
         ).first()
         if wc_pick:
+            # Wildcard is always 450cc, so filter results to only 450cc
+            # Get rider names to filter by class
+            actual_results_450cc = []
+            for res in actual_results:
+                rider = Rider.query.get(res.rider_id)
+                if rider and rider.class_name == "450cc":
+                    actual_results_450cc.append(res)
+            
             actual_wc = next(
-                (res for res in actual_results if res.position == wc_pick.position), None
+                (res for res in actual_results_450cc if res.position == wc_pick.position), None
             )
             if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
                 wildcard_points += 15
