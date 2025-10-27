@@ -1532,12 +1532,23 @@
                 holeshot450
             });
             
-            if (uploaded250Results && uploaded450Results && competition && 
-                holeshot250 && holeshot450) {
+            const isReady = uploaded250Results && uploaded450Results && competition && holeshot250 && holeshot450;
+            const isPreviewReady = uploaded250Results && uploaded450Results && competition;
+            
+            // Enable/disable import button
+            if (isReady) {
                 document.getElementById('import-race-results-btn').disabled = false;
                 console.log('Import button enabled!');
             } else {
                 document.getElementById('import-race-results-btn').disabled = true;
+            }
+            
+            // Enable/disable preview button
+            if (isPreviewReady) {
+                document.getElementById('preview-results-btn').disabled = false;
+                console.log('Preview button enabled!');
+            } else {
+                document.getElementById('preview-results-btn').disabled = true;
             }
         }
 
