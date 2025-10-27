@@ -7400,13 +7400,38 @@ def debug_user_scores(username):
     
     return jsonify(result)
 
-@app.get("/check_season_teams")
-def check_season_teams():
-    """Check if users have season teams and create them if missing"""
+@app.get("/clear_season_teams")
+def clear_season_teams():
+    """Clear all season teams (admin only)"""
     if session.get("username") != "test":
         return jsonify({"error": "admin_only"}), 403
     
-    print("DEBUG: check_season_teams called")
+    try:
+        print("🧹 Clearing all season teams...")
+        
+        # Clear season team riders first (foreign key constraint)
+        deleted_season_team_riders = SeasonTeamRider.query.delete()
+        
+        # Clear season teams
+        deleted_season_teams = SeasonTeam.query.delete()
+        
+        db.session.commit()
+        
+        print(f"✅ Season teams cleared - deleted: {deleted_season_teams} teams, {deleted_season_team_riders} team riders")
+        
+        return jsonify({
+            "message": f"Season teams cleared successfully! Deleted {deleted_season_teams} teams and {deleted_season_team_riders} team riders.",
+            "deleted_teams": deleted_season_teams,
+            "deleted_riders": deleted_season_team_riders
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error clearing season teams: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/check_season_teams")
+def check_season_teams():
     
     all_users = User.query.all()
     missing_teams = []

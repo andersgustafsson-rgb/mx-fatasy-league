@@ -287,6 +287,17 @@
                                 📊 Update Team Points
                             </a>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <button onclick="clearSeasonTeams()" class="btn-warning px-4 py-2 rounded-lg">
+                                🏁 Clear Season Teams
+                            </button>
+                            <button onclick="checkSeasonTeams()" class="btn-primary px-4 py-2 rounded-lg">
+                                👥 Check Season Teams
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                            Clear Season Teams removes all season teams and riders. Check Season Teams shows which users have teams.
+                        </p>
                     </div>
                 </div>
 
@@ -460,17 +471,46 @@
             }
         }
 
-        async function clearAllGameHighscores() {
-            if (confirm('This will clear all game highscores (Cross Jump and Motocross Quiz). Continue?')) {
+        async function clearSeasonTeams() {
+            if (confirm('This will clear ALL season teams and riders. Continue?')) {
                 try {
-                    // Clear localStorage highscores
-                    localStorage.removeItem('crossJumpHighScores');
-                    localStorage.removeItem('motocrossQuizHighScores');
-                    
-                    alert('✅ All game highscores have been cleared!');
+                    const response = await fetch('/clear_season_teams');
+                    const result = await response.json();
+                    if (result.message) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
                 } catch (error) {
                     alert('❌ Error: ' + error.message);
                 }
+            }
+        }
+
+        async function checkSeasonTeams() {
+            try {
+                const response = await fetch('/check_season_teams');
+                const result = await response.json();
+                if (result.message) {
+                    let message = result.message + '\n\n';
+                    if (result.existing_teams && result.existing_teams.length > 0) {
+                        message += 'Existing teams:\n';
+                        result.existing_teams.forEach(team => {
+                            message += `• ${team.username}: ${team.team_name} (${team.total_points} points)\n`;
+                        });
+                    }
+                    if (result.missing_teams && result.missing_teams.length > 0) {
+                        message += '\nMissing teams:\n';
+                        result.missing_teams.forEach(user => {
+                            message += `• ${user.username}\n`;
+                        });
+                    }
+                    alert(message);
+                } else {
+                    alert('❌ Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
             }
         }
 
