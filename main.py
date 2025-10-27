@@ -10239,10 +10239,31 @@ def fix_anaheim1_results():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/debug_competitions")
+def debug_competitions():
+    """List all competitions with their IDs"""
+    try:
+        competitions = Competition.query.order_by(Competition.event_date.asc()).all()
+        
+        comp_data = []
+        for comp in competitions:
+            comp_data.append({
+                "id": comp.id,
+                "name": comp.name,
+                "date": comp.event_date.isoformat() if comp.event_date else None,
+                "series": comp.series
+            })
+        
+        return jsonify({
+            "competitions": comp_data,
+            "total": len(comp_data)
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.get("/debug_wildcard/<int:competition_id>")
 def debug_wildcard(competition_id):
-    """Debug wildcard picks and results for a competition"""
-    try:
         # Get competition
         competition = Competition.query.get(competition_id)
         if not competition:
@@ -10305,6 +10326,8 @@ def debug_wildcard(competition_id):
 
 @app.get("/debug_anaheim1")
 def debug_anaheim1():
+    """Debug Anaheim 1 results to see what's missing"""
+    try:
         # Find Anaheim 1 competition
         anaheim1 = Competition.query.filter_by(name="Anaheim 1").first()
         if not anaheim1:
