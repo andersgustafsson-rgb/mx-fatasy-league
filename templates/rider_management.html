@@ -223,6 +223,40 @@
                     <option value="">Laddar tävlingar...</option>
                 </select>
             </div>
+            
+            <!-- Preview Button -->
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 text-center">
+                <button id="preview-results-btn" onclick="previewRaceResults()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg transition-colors" disabled>
+                    👁️ Förhandsvisa Resultat
+                </button>
+                <div id="preview-status" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
+            </div>
+            
+            <!-- Preview Table -->
+            <div id="preview-results-table" class="border border-gray-300 dark:border-gray-600 rounded-lg p-4 mb-4 hidden">
+                <h4 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📋 Förhandsvisning av Resultat</h4>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- 250cc Preview -->
+                    <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                        <h5 class="text-md font-semibold text-blue-600 dark:text-blue-400 mb-2">250cc Results</h5>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-64 overflow-y-auto">
+                            <div id="preview-250-results" class="space-y-1 text-sm">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 450cc Preview -->
+                    <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                        <h5 class="text-md font-semibold text-orange-600 dark:text-orange-400 mb-2">450cc Results</h5>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-64 overflow-y-auto">
+                            <div id="preview-450-results" class="space-y-1 text-sm">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Import Button -->
             <div class="text-center">
@@ -1551,6 +1585,80 @@
                 document.getElementById('import-results-status').innerHTML = '<span class="text-red-600">Fel vid import</span>';
             }
         });
+
+        // Preview race results before importing
+        function previewRaceResults() {
+            const competitionId = document.getElementById('competition-select-results').value;
+            
+            if (!competitionId || !uploaded250Results || !uploaded450Results) {
+                alert('❌ Välj tävling och ladda upp båda resultatfiler först!');
+                return;
+            }
+            
+            document.getElementById('preview-status').innerHTML = 'Laddar förhandsvisning...';
+            
+            fetch('/preview_race_results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    competition_id: competitionId,
+                    results_250: uploaded250Results,
+                    results_450: uploaded450Results
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showPreviewResults(data.preview);
+                    document.getElementById('preview-status').innerHTML = '✅ Förhandsvisning klar!';
+                } else {
+                    document.getElementById('preview-status').innerHTML = '❌ Fel: ' + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('preview-status').innerHTML = '❌ Fel vid förhandsvisning';
+            });
+        }
+        
+        // Show preview results
+        function showPreviewResults(preview) {
+            const previewTable = document.getElementById('preview-results-table');
+            const preview250 = document.getElementById('preview-250-results');
+            const preview450 = document.getElementById('preview-450-results');
+            
+            // Show 250cc results
+            preview250.innerHTML = '';
+            preview['250cc_results'].forEach(result => {
+                const statusIcon = result.found_in_db ? '✅' : '❌';
+                const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
+                preview250.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                        <span class="font-semibold">${result.position}.</span>
+                        <span>#${result.rider_number} ${result.rider_name}</span>
+                        <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
+                    </div>
+                `;
+            });
+            
+            // Show 450cc results
+            preview450.innerHTML = '';
+            preview['450cc_results'].forEach(result => {
+                const statusIcon = result.found_in_db ? '✅' : '❌';
+                const statusText = result.found_in_db ? 'Hittad' : 'Saknas i DB';
+                preview450.innerHTML += `
+                    <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-600 rounded">
+                        <span class="font-semibold">${result.position}.</span>
+                        <span>#${result.rider_number} ${result.rider_name}</span>
+                        <span class="text-xs ${result.found_in_db ? 'text-green-600' : 'text-red-600'}">${statusIcon} ${statusText}</span>
+                    </div>
+                `;
+            });
+            
+            previewTable.classList.remove('hidden');
+        }
 
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
