@@ -11074,30 +11074,6 @@ def fix_mx_coast_250():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-@app.route("/recalculate_scores/<int:competition_id>")
-def recalculate_scores(competition_id):
-    """Manually recalculate scores for a specific competition"""
-    try:
-        if not is_admin_user():
-            return jsonify({"error": "admin_only"}), 403
-        
-        # Check if competition exists
-        competition = Competition.query.get(competition_id)
-        if not competition:
-            return jsonify({"error": "Competition not found"}), 404
-        
-        # Run score calculation
-        calculate_scores(competition_id)
-        
-        return jsonify({
-            "message": f"Scores recalculated for {competition.name}",
-            "competition_id": competition_id,
-            "competition_name": competition.name
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/recalculate_all_scores")
 def recalculate_all_scores():
     """Manually recalculate scores for all competitions that have results"""
