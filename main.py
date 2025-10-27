@@ -9832,6 +9832,54 @@ def check_anaheim2():
     except Exception as e:
         return jsonify({"error": str(e)})
 
+@app.get("/debug_anaheim1")
+def debug_anaheim1():
+    """Debug Anaheim 1 results to see what's missing"""
+    try:
+        # Find Anaheim 1 competition
+        anaheim1 = Competition.query.filter_by(name="Anaheim 1").first()
+        if not anaheim1:
+            return jsonify({"error": "Anaheim 1 competition not found"})
+        
+        # Get all results for Anaheim 1, ordered by position
+        results = CompetitionResult.query.filter_by(competition_id=anaheim1.id).order_by(CompetitionResult.position.asc()).all()
+        
+        # Get rider names for each result
+        results_with_names = []
+        for result in results:
+            rider = Rider.query.get(result.rider_id)
+            results_with_names.append({
+                "position": result.position,
+                "rider_id": result.rider_id,
+                "rider_name": rider.name if rider else "Unknown",
+                "rider_number": rider.rider_number if rider else "Unknown",
+                "class_name": rider.class_name if rider else "Unknown"
+            })
+        
+        # Check for missing positions
+        positions = [r["position"] for r in results_with_names]
+        missing_positions = []
+        if positions:
+            max_pos = max(positions)
+            for i in range(1, max_pos + 1):
+                if i not in positions:
+                    missing_positions.append(i)
+        
+        return jsonify({
+            "competition": {
+                "id": anaheim1.id,
+                "name": anaheim1.name,
+                "date": anaheim1.event_date.isoformat() if anaheim1.event_date else None
+            },
+            "total_results": len(results),
+            "positions_found": positions,
+            "missing_positions": missing_positions,
+            "all_results": results_with_names
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.get("/debug_database")
 def debug_database():
     """Debug database configuration and status"""
