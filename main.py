@@ -10254,10 +10254,31 @@ def fix_anaheim1_results():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/recalculate_scores/<int:competition_id>")
+def recalculate_scores(competition_id):
+    """Recalculate scores for a specific competition"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Call the calculate_scores function
+        calculate_scores(competition_id)
+        
+        # Get competition name
+        competition = Competition.query.get(competition_id)
+        comp_name = competition.name if competition else f"Competition {competition_id}"
+        
+        return jsonify({
+            "success": True,
+            "message": f"Scores recalculated for {comp_name}",
+            "competition_id": competition_id
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_competitions")
 def debug_competitions():
-    """List all competitions with their IDs"""
-    try:
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         
         comp_data = []
