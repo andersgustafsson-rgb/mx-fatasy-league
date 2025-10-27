@@ -1599,7 +1599,14 @@
 
         // Preview race results before importing
         function previewRaceResults() {
+            console.log('🔍 previewRaceResults called');
             const competitionId = document.getElementById('competition-select-results').value;
+            
+            console.log('🔍 Data check:', {
+                competitionId,
+                uploaded250Results,
+                uploaded450Results
+            });
             
             if (!competitionId || !uploaded250Results || !uploaded450Results) {
                 alert('❌ Välj tävling och ladda upp båda resultatfiler först!');
@@ -1608,19 +1615,27 @@
             
             document.getElementById('preview-status').innerHTML = 'Laddar förhandsvisning...';
             
+            const requestData = {
+                competition_id: competitionId,
+                results_250: uploaded250Results,
+                results_450: uploaded450Results
+            };
+            
+            console.log('🔍 Sending request:', requestData);
+            
             fetch('/preview_race_results', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    competition_id: competitionId,
-                    results_250: uploaded250Results,
-                    results_450: uploaded450Results
-                })
+                body: JSON.stringify(requestData)
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('🔍 Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('🔍 Response data:', data);
                 if (data.success) {
                     showPreviewResults(data.preview);
                     document.getElementById('preview-status').innerHTML = '✅ Förhandsvisning klar!';
@@ -1629,7 +1644,7 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('🔍 Error:', error);
                 document.getElementById('preview-status').innerHTML = '❌ Fel vid förhandsvisning';
             });
         }
