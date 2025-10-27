@@ -10239,10 +10239,72 @@ def fix_anaheim1_results():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/debug_wildcard/<int:competition_id>")
+def debug_wildcard(competition_id):
+    """Debug wildcard picks and results for a competition"""
+    try:
+        # Get competition
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"})
+        
+        # Get all wildcard picks for this competition
+        wildcard_picks = WildcardPick.query.filter_by(competition_id=competition_id).all()
+        
+        # Get all results for this competition
+        results = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+        
+        # Get rider names
+        wildcard_data = []
+        for wc in wildcard_picks:
+            rider = Rider.query.get(wc.rider_id)
+            wildcard_data.append({
+                "user_id": wc.user_id,
+                "rider_id": wc.rider_id,
+                "rider_name": rider.name if rider else "Unknown",
+                "rider_number": rider.rider_number if rider else "Unknown",
+                "predicted_position": wc.position
+            })
+        
+        # Get actual results at each position
+        results_data = []
+        for result in results:
+            rider = Rider.query.get(result.rider_id)
+            results_data.append({
+                "position": result.position,
+                "rider_id": result.rider_id,
+                "rider_name": rider.name if rider else "Unknown",
+                "rider_number": rider.rider_number if rider else "Unknown"
+            })
+        
+        # Check wildcard matches
+        matches = []
+        for wc in wildcard_data:
+            actual_result = next((r for r in results_data if r["position"] == wc["predicted_position"]), None)
+            if actual_result:
+                is_match = actual_result["rider_id"] == wc["rider_id"]
+                matches.append({
+                    "user_id": wc["user_id"],
+                    "predicted": f"#{wc['rider_number']} {wc['rider_name']} at position {wc['predicted_position']}",
+                    "actual": f"#{actual_result['rider_number']} {actual_result['rider_name']} at position {actual_result['position']}",
+                    "is_match": is_match
+                })
+        
+        return jsonify({
+            "competition": {
+                "id": competition.id,
+                "name": competition.name
+            },
+            "wildcard_picks": wildcard_data,
+            "actual_results": results_data,
+            "wildcard_matches": matches
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.get("/debug_anaheim1")
 def debug_anaheim1():
-    """Debug Anaheim 1 results to see what's missing"""
-    try:
         # Find Anaheim 1 competition
         anaheim1 = Competition.query.filter_by(name="Anaheim 1").first()
         if not anaheim1:
