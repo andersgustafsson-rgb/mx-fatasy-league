@@ -6623,6 +6623,10 @@ def preview_race_results():
             },
             "250cc_results": [],
             "450cc_results": [],
+            "missing_riders": {
+                "250cc": [],
+                "450cc": []
+            },
             "errors": []
         }
         
@@ -6671,6 +6675,14 @@ def preview_race_results():
                                     "found_in_db": rider is not None,
                                     "db_name": rider.name if rider else None
                                 })
+                                
+                                # If rider not found, add to missing list
+                                if not rider:
+                                    preview_data["missing_riders"]["250cc"].append({
+                                        "position": position,
+                                        "rider_number": rider_number,
+                                        "rider_name": rider_name
+                                    })
                         except (ValueError, IndexError):
                             preview_data["errors"].append(f"250cc row {i}: Could not parse line")
             
@@ -6722,6 +6734,14 @@ def preview_race_results():
                                     "found_in_db": rider is not None,
                                     "db_name": rider.name if rider else None
                                 })
+                                
+                                # If rider not found, add to missing list
+                                if not rider:
+                                    preview_data["missing_riders"]["450cc"].append({
+                                        "position": position,
+                                        "rider_number": rider_number,
+                                        "rider_name": rider_name
+                                    })
                         except (ValueError, IndexError):
                             preview_data["errors"].append(f"450cc row {i}: Could not parse line")
             

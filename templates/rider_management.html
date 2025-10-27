@@ -1706,6 +1706,38 @@
                 previewTable.appendChild(errorDiv);
             }
             
+            // Show missing riders warning
+            if (preview['missing_riders']) {
+                const missing250 = preview['missing_riders']['250cc'] || [];
+                const missing450 = preview['missing_riders']['450cc'] || [];
+                
+                if (missing250.length > 0 || missing450.length > 0) {
+                    const missingDiv = document.createElement('div');
+                    missingDiv.className = 'mt-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg';
+                    let missingHTML = '<h6 class="font-semibold text-yellow-800 dark:text-yellow-200">⚠️ Förare saknas i databasen:</h6>';
+                    
+                    if (missing250.length > 0) {
+                        missingHTML += '<div class="mt-2"><strong>250cc:</strong>';
+                        missing250.forEach(rider => {
+                            missingHTML += `<div class="text-sm text-yellow-700 dark:text-yellow-300">• Pos ${rider.position}: #${rider.rider_number} ${rider.rider_name}</div>`;
+                        });
+                        missingHTML += '</div>';
+                    }
+                    
+                    if (missing450.length > 0) {
+                        missingHTML += '<div class="mt-2"><strong>450cc:</strong>';
+                        missing450.forEach(rider => {
+                            missingHTML += `<div class="text-sm text-yellow-700 dark:text-yellow-300">• Pos ${rider.position}: #${rider.rider_number} ${rider.rider_name}</div>`;
+                        });
+                        missingHTML += '</div>';
+                    }
+                    
+                    missingHTML += '<div class="mt-2 text-xs text-yellow-600 dark:text-yellow-400">Lägg till dessa förare i databasen först innan du importerar resultat.</div>';
+                    missingDiv.innerHTML = missingHTML;
+                    previewTable.appendChild(missingDiv);
+                }
+            }
+            
             previewTable.classList.remove('hidden');
         }
 
