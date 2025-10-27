@@ -10254,6 +10254,30 @@ def fix_anaheim1_results():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.get("/recalculate_san_diego")
+def recalculate_san_diego():
+    """Recalculate scores for San Diego competition (GET endpoint)"""
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find San Diego competition
+        san_diego = Competition.query.filter_by(name="San Diego").first()
+        if not san_diego:
+            return jsonify({"error": "San Diego competition not found"}), 404
+        
+        # Call the calculate_scores function
+        calculate_scores(san_diego.id)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Scores recalculated for San Diego (ID: {san_diego.id})",
+            "competition_id": san_diego.id
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/recalculate_scores/<int:competition_id>")
 def recalculate_scores(competition_id):
     """Recalculate scores for a specific competition"""
