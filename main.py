@@ -10264,6 +10264,8 @@ def debug_competitions():
 
 @app.get("/debug_wildcard/<int:competition_id>")
 def debug_wildcard(competition_id):
+    """Debug wildcard picks and results for a competition"""
+    try:
         # Get competition
         competition = Competition.query.get(competition_id)
         if not competition:
