@@ -4348,25 +4348,34 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
     lines = pasted_text.splitlines()
     results = []
-    for raw in lines:
+    print(f"🔍 DEBUG: Parsing {format_type} format with {len(lines)} lines")
+    
+    for i, raw in enumerate(lines):
         line = raw.strip()
         if not line:
             continue
         if line in bike_brands:
             continue
         
+        print(f"🔍 DEBUG: Line {i+1}: '{line}'")
+        
         # Handle Supercross format: "1    94    KEN ROCZEN    1    1 (1)    Mattstedt, Germany"
         if format_type == 'supercross':
-            supercross_match = re.match(r'^(\d+)\s+(\d+)\s+([A-Z\s]+?)\s+\d+\s+\d+\s+\([^)]+\)\s+.*$', line)
+            # More flexible regex for Supercross
+            supercross_match = re.match(r'^(\d+)\s+(\d+)\s+([A-Z\s]+?)\s+\d+.*$', line)
             if supercross_match:
                 position = int(supercross_match.group(1))
                 rider_name = supercross_match.group(3).strip()
+                print(f"🔍 DEBUG: Supercross match - Position: {position}, Name: '{rider_name}'")
                 # Convert "KEN ROCZEN" to "Ken Roczen"
                 rider_name = _title_case_name(rider_name)
                 rider_name = _dedupe_concatenated_name(rider_name)
                 if rider_name:
                     results.append({"position": position, "rider_name": rider_name})
+                    print(f"🔍 DEBUG: Added: {position}. {rider_name}")
                     continue
+            else:
+                print(f"🔍 DEBUG: No Supercross match for line: '{line}'")
         
         # Handle Motocross/SMX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
         # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
@@ -4385,6 +4394,9 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             rider_name = re.sub(r"\s{2,}.*$", "", rider_name).strip()
             if rider_name:
                 results.append({"position": position, "rider_name": rider_name})
+                print(f"🔍 DEBUG: Motocross/SMX match - Position: {position}, Name: '{rider_name}'")
+    
+    print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
 
 @app.post('/bulk_preview_results')
