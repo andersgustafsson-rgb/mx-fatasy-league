@@ -760,6 +760,15 @@
                 alert('Välj tävling, klass, format och klistra in resultat.');
                 return;
             }
+            
+            // Clear previous results immediately
+            const tbody = document.getElementById('bulk-preview-rows');
+            const preview = document.getElementById('bulk-preview');
+            const missing = document.getElementById('bulk-missing');
+            tbody.innerHTML = '';
+            preview.classList.add('hidden');
+            missing.classList.add('hidden');
+            
             const res = await fetch('/bulk_preview_results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -775,10 +784,8 @@
                 alert('Fel: ' + (data.error || 'Okänt fel'));
                 return;
             }
-            const tbody = document.getElementById('bulk-preview-rows');
-            const preview = document.getElementById('bulk-preview');
-            const missing = document.getElementById('bulk-missing');
-            tbody.innerHTML = '';
+            
+            // Populate new results
             data.rows.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `<td class="px-2 py-1">${r.position}</td><td class="px-2 py-1">${r.rider_name}</td><td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
