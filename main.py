@@ -4338,7 +4338,13 @@ def _normalize_name(s: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
-def _parse_bulk_results(pasted_text: str):
+def _title_case_name(s: str) -> str:
+    """Convert 'KEN ROCZEN' to 'Ken Roczen' for better matching"""
+    if not s:
+        return s
+    return ' '.join(word.capitalize() for word in s.split())
+
+def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
     lines = pasted_text.splitlines()
     results = []
@@ -4348,6 +4354,21 @@ def _parse_bulk_results(pasted_text: str):
             continue
         if line in bike_brands:
             continue
+        
+        # Handle Supercross format: "1    94    KEN ROCZEN    1    1 (1)    Mattstedt, Germany"
+        if format_type == 'supercross':
+            supercross_match = re.match(r'^(\d+)\s+(\d+)\s+([A-Z\s]+?)\s+\d+\s+\d+\s+\([^)]+\)\s+.*$', line)
+            if supercross_match:
+                position = int(supercross_match.group(1))
+                rider_name = supercross_match.group(3).strip()
+                # Convert "KEN ROCZEN" to "Ken Roczen"
+                rider_name = _title_case_name(rider_name)
+                rider_name = _dedupe_concatenated_name(rider_name)
+                if rider_name:
+                    results.append({"position": position, "rider_name": rider_name})
+                    continue
+        
+        # Handle Motocross/SMX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
         # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
         cols = re.split(r"\t+|\s{2,}", line)
         if len(cols) >= 2 and cols[0].strip().isdigit():
@@ -4374,11 +4395,12 @@ def bulk_preview_results():
         data = request.get_json(force=True)
         competition_id = data.get('competition_id')
         class_name = data.get('class_name')
+        format_type = data.get('format', 'motocross')  # Default to motocross
         pasted_text = data.get('pasted_text', '')
         if not competition_id or not class_name or not pasted_text:
             return jsonify({"error": "Missing required data"}), 400
 
-        parsed = _parse_bulk_results(pasted_text)
+        parsed = _parse_bulk_results(pasted_text, format_type)
         rows = []
         missing = []
         for row in parsed:
@@ -4449,6 +4471,7 @@ def bulk_import_results():
         data = request.get_json(force=True)
         competition_id = data.get('competition_id')
         class_name = data.get('class_name')
+        format_type = data.get('format', 'motocross')  # Default to motocross
         pasted_text = data.get('pasted_text', '')
         if not competition_id or not class_name or not pasted_text:
             return jsonify({"error": "Missing required data"}), 400
@@ -4457,7 +4480,7 @@ def bulk_import_results():
         if not competition:
             return jsonify({"error": "Competition not found"}), 400
 
-        parsed = _parse_bulk_results(pasted_text)
+        parsed = _parse_bulk_results(pasted_text, format_type)
         imported = 0
         skipped = []
         for row in parsed:

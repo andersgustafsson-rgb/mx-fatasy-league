@@ -156,7 +156,7 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <p class="text-gray-300 mb-4">Paste overall results directly from the results website. We use only overall positions and rider names.</p>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
                                 <select id="bulk-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
@@ -168,6 +168,14 @@
                                 <select id="bulk-class" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                     <option value="450cc">450cc</option>
                                     <option value="250cc">250cc</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Format</label>
+                                <select id="bulk-format" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="motocross">Motocross (Overall)</option>
+                                    <option value="supercross">Supercross</option>
+                                    <option value="smx">SMX (SuperMotocross)</option>
                                 </select>
                             </div>
                             <div class="flex items-end">
@@ -746,15 +754,21 @@
         async function bulkPreviewResults() {
             const competitionId = document.getElementById('bulk-competition').value;
             const className = document.getElementById('bulk-class').value;
+            const format = document.getElementById('bulk-format').value;
             const text = document.getElementById('bulk-text').value;
-            if (!competitionId || !className || !text.trim()) {
-                alert('Välj tävling, klass och klistra in resultat.');
+            if (!competitionId || !className || !format || !text.trim()) {
+                alert('Välj tävling, klass, format och klistra in resultat.');
                 return;
             }
             const res = await fetch('/bulk_preview_results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ competition_id: competitionId, class_name: className, pasted_text: text })
+                body: JSON.stringify({ 
+                    competition_id: competitionId, 
+                    class_name: className, 
+                    format: format,
+                    pasted_text: text 
+                })
             });
             const data = await res.json();
             if (!data.success) {
@@ -783,16 +797,22 @@
         async function bulkImportResults() {
             const competitionId = document.getElementById('bulk-competition').value;
             const className = document.getElementById('bulk-class').value;
+            const format = document.getElementById('bulk-format').value;
             const text = document.getElementById('bulk-text').value;
-            if (!competitionId || !className || !text.trim()) {
-                alert('Välj tävling, klass och klistra in resultat.');
+            if (!competitionId || !className || !format || !text.trim()) {
+                alert('Välj tävling, klass, format och klistra in resultat.');
                 return;
             }
             if (!confirm('Importera resultaten? Detta uppdaterar/ersätter befintliga positioner för valda klassen.')) return;
             const res = await fetch('/bulk_import_results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ competition_id: competitionId, class_name: className, pasted_text: text })
+                body: JSON.stringify({ 
+                    competition_id: competitionId, 
+                    class_name: className, 
+                    format: format,
+                    pasted_text: text 
+                })
             });
             const data = await res.json();
             if (data.success) {
