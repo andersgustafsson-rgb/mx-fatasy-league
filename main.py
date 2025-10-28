@@ -4301,11 +4301,24 @@ def _dedupe_concatenated_name(name: str) -> str:
     name = name.strip()
     if not name:
         return name
-    parts = name.split()
-    half = len(parts) // 2
-    if len(parts) % 2 == 0 and parts[:half] == parts[half:]:
-        return ' '.join(parts[:half])
-    return ' '.join(parts)
+    
+    # Handle cases like "Jett LawrenceJett Lawrence" -> "Jett Lawrence"
+    # Split by common patterns
+    if 'Lawrence' in name and name.count('Lawrence') > 1:
+        # Find the first complete name
+        parts = name.split('Lawrence')
+        if len(parts) >= 2:
+            first_part = parts[0].strip()
+            return f"{first_part} Lawrence"
+    
+    # General deduplication for repeated words
+    words = name.split()
+    if len(words) >= 4:  # Only dedupe if we have enough words
+        half = len(words) // 2
+        if len(words) % 2 == 0 and words[:half] == words[half:]:
+            return ' '.join(words[:half])
+    
+    return ' '.join(words)
 
 def _parse_bulk_results(pasted_text: str):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
@@ -4351,10 +4364,40 @@ def bulk_preview_results():
         rows = []
         missing = []
         for row in parsed:
+            # Try multiple matching strategies
+            rider = None
+            
+            # Strategy 1: Exact match
             rider = Rider.query.filter(
                 Rider.name.ilike(row['rider_name']),
                 Rider.class_name == class_name
             ).first()
+            
+            # Strategy 2: Partial match (contains)
+            if not rider:
+                rider = Rider.query.filter(
+                    Rider.name.contains(row['rider_name']),
+                    Rider.class_name == class_name
+                ).first()
+            
+            # Strategy 3: Reverse match (database name contains our name)
+            if not rider:
+                rider = Rider.query.filter(
+                    Rider.name.like(f"%{row['rider_name']}%"),
+                    Rider.class_name == class_name
+                ).first()
+            
+            # Strategy 4: Split names and match parts
+            if not rider:
+                name_parts = row['rider_name'].split()
+                if len(name_parts) >= 2:
+                    first_name = name_parts[0]
+                    last_name = name_parts[-1]
+                    rider = Rider.query.filter(
+                        Rider.name.like(f"%{first_name}%{last_name}%"),
+                        Rider.class_name == class_name
+                    ).first()
+            
             rows.append({
                 "position": row['position'],
                 "rider_name": row['rider_name'],
@@ -4391,10 +4434,40 @@ def bulk_import_results():
         imported = 0
         skipped = []
         for row in parsed:
+            # Try multiple matching strategies (same as preview)
+            rider = None
+            
+            # Strategy 1: Exact match
             rider = Rider.query.filter(
                 Rider.name.ilike(row['rider_name']),
                 Rider.class_name == class_name
             ).first()
+            
+            # Strategy 2: Partial match (contains)
+            if not rider:
+                rider = Rider.query.filter(
+                    Rider.name.contains(row['rider_name']),
+                    Rider.class_name == class_name
+                ).first()
+            
+            # Strategy 3: Reverse match (database name contains our name)
+            if not rider:
+                rider = Rider.query.filter(
+                    Rider.name.like(f"%{row['rider_name']}%"),
+                    Rider.class_name == class_name
+                ).first()
+            
+            # Strategy 4: Split names and match parts
+            if not rider:
+                name_parts = row['rider_name'].split()
+                if len(name_parts) >= 2:
+                    first_name = name_parts[0]
+                    last_name = name_parts[-1]
+                    rider = Rider.query.filter(
+                        Rider.name.like(f"%{first_name}%{last_name}%"),
+                        Rider.class_name == class_name
+                    ).first()
+            
             if not rider:
                 skipped.append(row)
                 continue
