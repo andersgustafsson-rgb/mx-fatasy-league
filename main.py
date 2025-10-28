@@ -4359,15 +4359,16 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
         
         print(f"🔍 DEBUG: Line {i+1}: '{line}'")
         
-        # Handle Supercross format: "1    94    KEN ROCZEN    1    1 (1)    Mattstedt, Germany"
+        # Handle Supercross format: "JOEY SAVATGY	14	7 (1)	Clermont, FL"
         if format_type == 'supercross':
-            # More flexible regex for Supercross
-            supercross_match = re.match(r'^(\d+)\s+(\d+)\s+([A-Z\s]+?)\s+\d+.*$', line)
+            # Handle format: "JOEY SAVATGY	14	7 (1)	Clermont, FL"
+            # Pattern: rider_name, position, moto_info, location
+            supercross_match = re.match(r'^([A-Z\s]+?)\s+(\d+)\s+\d+\s+\([^)]+\)\s+.*$', line)
             if supercross_match:
-                position = int(supercross_match.group(1))
-                rider_name = supercross_match.group(3).strip()
+                rider_name = supercross_match.group(1).strip()
+                position = int(supercross_match.group(2))
                 print(f"🔍 DEBUG: Supercross match - Position: {position}, Name: '{rider_name}'")
-                # Convert "KEN ROCZEN" to "Ken Roczen"
+                # Convert "JOEY SAVATGY" to "Joey Savatgy"
                 rider_name = _title_case_name(rider_name)
                 rider_name = _dedupe_concatenated_name(rider_name)
                 if rider_name:
