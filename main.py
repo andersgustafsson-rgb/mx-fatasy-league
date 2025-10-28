@@ -715,26 +715,41 @@ def logout():
 def series_status():
     """Get status of all series for user interface"""
     try:
+        print(f"🔍 DEBUG: series_status called")
+        
         # Always show all series for 2026, not just active ones
         # Sort by custom order: Supercross, Motocross, SMX Finals
         series = Series.query.filter_by(year=2026).all()
+        print(f"🔍 DEBUG: Found {len(series)} series for 2026")
+        
         # Custom sort order
         series_order = {'Supercross': 1, 'Motocross': 2, 'SMX Finals': 3}
         series.sort(key=lambda s: series_order.get(s.name, 999))
         
         # Use simulated date if available, otherwise use real date
         current_date = get_today()
+        print(f"🔍 DEBUG: Current date: {current_date}")
         
         series_data = []
         for s in series:
+            print(f"🔍 DEBUG: Processing series: {s.name}")
+            
             # Use is_active from database (set by simulation) or fallback to date-based logic
             is_currently_active = s.is_active
             
             # If not explicitly set by simulation, use date-based logic as fallback
             # Check if any series is currently being simulated
-            simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
-            if not simulation:
-                # No active simulation, use date-based logic
+            try:
+                simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
+                if not simulation:
+                    # No active simulation, use date-based logic
+                    if s.start_date and s.end_date:
+                        is_currently_active = s.start_date <= current_date <= s.end_date
+                    elif s.start_date:
+                        is_currently_active = current_date >= s.start_date
+            except Exception as sim_error:
+                print(f"🔍 DEBUG: Simulation query error: {sim_error}")
+                # Fallback to date-based logic
                 if s.start_date and s.end_date:
                     is_currently_active = s.start_date <= current_date <= s.end_date
                 elif s.start_date:
@@ -744,17 +759,23 @@ def series_status():
             # If there is an explicitly active competition set via simulation/admin,
             # prefer showing that as the "next" race for the corresponding series.
             next_race = None
-            active_simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
-            if active_simulation and active_simulation.active_competition_id:
-                active_comp = Competition.query.get(active_simulation.active_competition_id)
-                if active_comp and active_comp.series_id == s.id:
-                    next_race = active_comp
+            try:
+                active_simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
+                if active_simulation and active_simulation.active_competition_id:
+                    active_comp = Competition.query.get(active_simulation.active_competition_id)
+                    if active_comp and active_comp.series_id == s.id:
+                        next_race = active_comp
+                        print(f"🔍 DEBUG: Using active competition: {next_race.name}")
+            except Exception as active_error:
+                print(f"🔍 DEBUG: Active simulation query error: {active_error}")
 
             # Fallback to the chronologically next upcoming race if no active one applies
             if not next_race:
                 next_race = Competition.query.filter_by(series_id=s.id).filter(
                     Competition.event_date >= current_date
                 ).order_by(Competition.event_date).first()
+                if next_race:
+                    print(f"🔍 DEBUG: Using next upcoming race: {next_race.name}")
                 
             series_data.append({
                 'id': s.id,
@@ -768,8 +789,12 @@ def series_status():
                 } if next_race else None
             })
         
+        print(f"🔍 DEBUG: Returning {len(series_data)} series")
         return jsonify(series_data)
     except Exception as e:
+        print(f"🔍 DEBUG: series_status error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route("/")
