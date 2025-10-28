@@ -4359,7 +4359,7 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
         
         print(f"🔍 DEBUG: Line {i+1}: '{line}'")
         
-        # Handle Supercross format: "JOEY SAVATGY	14	7 (1)	Clermont, FL"
+        # Handle Supercross format: "JOEY SAVATGY	14	7 (1)	Clermont, FL" or "FREDDIE NOREN	19	LCQ [1 6/6:23.932 (1) H1]	Lidköping, Sweden"
         if format_type == 'supercross':
             # Handle format: "JOEY SAVATGY	14	7 (1)	Clermont, FL"
             # Pattern: rider_name, position, moto_info, location
@@ -4375,10 +4375,24 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                     results.append({"position": position, "rider_name": rider_name})
                     print(f"🔍 DEBUG: Added: {position}. {rider_name}")
                     continue
-            else:
-                print(f"🔍 DEBUG: No Supercross match for line: '{line}'")
-                # Don't fall back to Motocross parser if format is Supercross
-                continue
+            
+            # Handle LCQ format: "FREDDIE NOREN	19	LCQ [1 6/6:23.932 (1) H1]	Lidköping, Sweden"
+            lcq_match = re.match(r'^([A-Z\s]+?)\s+(\d+)\s+LCQ\s+\[.*?\]\s+.*$', line)
+            if lcq_match:
+                rider_name = lcq_match.group(1).strip()
+                position = int(lcq_match.group(2))
+                print(f"🔍 DEBUG: LCQ match - Position: {position}, Name: '{rider_name}'")
+                # Convert "FREDDIE NOREN" to "Freddie Noren"
+                rider_name = _title_case_name(rider_name)
+                rider_name = _dedupe_concatenated_name(rider_name)
+                if rider_name:
+                    results.append({"position": position, "rider_name": rider_name})
+                    print(f"🔍 DEBUG: Added: {position}. {rider_name}")
+                    continue
+            
+            print(f"🔍 DEBUG: No Supercross match for line: '{line}'")
+            # Don't fall back to Motocross parser if format is Supercross
+            continue
         
         # Handle Motocross/SMX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
         # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
