@@ -740,7 +740,18 @@ def series_status():
                 elif s.start_date:
                     is_currently_active = current_date >= s.start_date
             
-            # Get next race in this series
+        # Get next race in this series
+        # If there is an explicitly active competition set via simulation/admin,
+        # prefer showing that as the "next" race for the corresponding series.
+        next_race = None
+        active_simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
+        if active_simulation and active_simulation.active_competition_id:
+            active_comp = Competition.query.get(active_simulation.active_competition_id)
+            if active_comp and active_comp.series_id == s.id:
+                next_race = active_comp
+
+        # Fallback to the chronologically next upcoming race if no active one applies
+        if not next_race:
             next_race = Competition.query.filter_by(series_id=s.id).filter(
                 Competition.event_date >= current_date
             ).order_by(Competition.event_date).first()
