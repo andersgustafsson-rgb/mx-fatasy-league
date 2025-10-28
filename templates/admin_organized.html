@@ -788,7 +788,10 @@
             // Populate new results
             data.rows.forEach(r => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="px-2 py-1">${r.position}</td><td class="px-2 py-1">${r.rider_name}</td><td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
+                const riderDisplay = r.found_in_db && r.db_rider_name ? 
+                    `${r.rider_name} → ${r.db_rider_name}` : 
+                    r.rider_name;
+                tr.innerHTML = `<td class="px-2 py-1">${r.position}</td><td class="px-2 py-1">${riderDisplay}</td><td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
                 tbody.appendChild(tr);
             });
             preview.classList.remove('hidden');

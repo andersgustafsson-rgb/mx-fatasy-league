@@ -4466,7 +4466,8 @@ def bulk_preview_results():
                 "position": row['position'],
                 "rider_name": row['rider_name'],
                 "found_in_db": rider is not None,
-                "rider_id": rider.id if rider else None
+                "rider_id": rider.id if rider else None,
+                "db_rider_name": rider.name if rider else None
             })
             if not rider:
                 missing.append({
