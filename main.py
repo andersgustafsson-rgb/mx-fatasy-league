@@ -4376,6 +4376,8 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                     continue
             else:
                 print(f"🔍 DEBUG: No Supercross match for line: '{line}'")
+                # Don't fall back to Motocross parser if format is Supercross
+                continue
         
         # Handle Motocross/SMX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
         # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
