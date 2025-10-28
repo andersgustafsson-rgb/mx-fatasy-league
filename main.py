@@ -14,6 +14,7 @@ from flask import (
     make_response,
 )
 import re
+import unicodedata
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -4301,24 +4302,41 @@ def _dedupe_concatenated_name(name: str) -> str:
     name = name.strip()
     if not name:
         return name
-    
-    # Handle cases like "Jett LawrenceJett Lawrence" -> "Jett Lawrence"
-    # Split by common patterns
-    if 'Lawrence' in name and name.count('Lawrence') > 1:
-        # Find the first complete name
-        parts = name.split('Lawrence')
-        if len(parts) >= 2:
-            first_part = parts[0].strip()
-            return f"{first_part} Lawrence"
-    
-    # General deduplication for repeated words
+    # Remove extra internal whitespace
+    name = re.sub(r"\s+", " ", name)
+
+    # Case 1: Entire string is a double repeat: "Justin CooperJustin Cooper"
+    m = re.match(r"^(?P<dup>.+?)\1$", name)
+    if m:
+        return m.group('dup').strip()
+
+    # Case 2: Even-length exact half repeat by characters
+    if len(name) % 2 == 0:
+        mid = len(name) // 2
+        if name[:mid] == name[mid:]:
+            return name[:mid].strip()
+
+    # Case 3: Word-level duplication (e.g., "Justin Cooper Justin Cooper")
     words = name.split()
-    if len(words) >= 4:  # Only dedupe if we have enough words
+    if len(words) >= 4:
         half = len(words) // 2
         if len(words) % 2 == 0 and words[:half] == words[half:]:
             return ' '.join(words[:half])
-    
+
     return ' '.join(words)
+
+def _normalize_name(s: str) -> str:
+    if not s:
+        return ''
+    # Strip accents/diacritics
+    s = unicodedata.normalize('NFKD', s)
+    s = s.encode('ascii', 'ignore').decode('ascii')
+    # Lowercase and remove punctuation
+    s = s.lower()
+    s = s.replace('.', ' ')
+    s = re.sub(r"[^a-z\s]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
 def _parse_bulk_results(pasted_text: str):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
@@ -4364,6 +4382,7 @@ def bulk_preview_results():
         rows = []
         missing = []
         for row in parsed:
+            target_norm = _normalize_name(row['rider_name'])
             # Try multiple matching strategies
             rider = None
             
@@ -4397,6 +4416,14 @@ def bulk_preview_results():
                         Rider.name.like(f"%{first_name}%{last_name}%"),
                         Rider.class_name == class_name
                     ).first()
+
+            # Strategy 5: Normalized best-effort match over all riders in class
+            if not rider:
+                candidates = Rider.query.filter(Rider.class_name == class_name).all()
+                for cand in candidates:
+                    if _normalize_name(cand.name) == target_norm:
+                        rider = cand
+                        break
             
             rows.append({
                 "position": row['position'],
@@ -4434,6 +4461,7 @@ def bulk_import_results():
         imported = 0
         skipped = []
         for row in parsed:
+            target_norm = _normalize_name(row['rider_name'])
             # Try multiple matching strategies (same as preview)
             rider = None
             
@@ -4467,6 +4495,14 @@ def bulk_import_results():
                         Rider.name.like(f"%{first_name}%{last_name}%"),
                         Rider.class_name == class_name
                     ).first()
+
+            # Strategy 5: Normalized best-effort match over all riders in class
+            if not rider:
+                candidates = Rider.query.filter(Rider.class_name == class_name).all()
+                for cand in candidates:
+                    if _normalize_name(cand.name) == target_norm:
+                        rider = cand
+                        break
             
             if not rider:
                 skipped.append(row)
