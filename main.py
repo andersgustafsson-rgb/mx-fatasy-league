@@ -13,6 +13,7 @@ from flask import (
     flash,
     make_response,
 )
+import re
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -4290,6 +4291,137 @@ def admin_simulate_all_users_picks(competition_id):
         
     except Exception as e:
         print(f"Error simulating picks: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------------------------
+# Bulk Paste Results: Preview and Import (SX/MX/SMX Overall)
+# ---------------------------------------------
+
+def _dedupe_concatenated_name(name: str) -> str:
+    name = name.strip()
+    if not name:
+        return name
+    parts = name.split()
+    half = len(parts) // 2
+    if len(parts) % 2 == 0 and parts[:half] == parts[half:]:
+        return ' '.join(parts[:half])
+    return ' '.join(parts)
+
+def _parse_bulk_results(pasted_text: str):
+    bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
+    lines = pasted_text.splitlines()
+    results = []
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        if line in bike_brands:
+            continue
+        # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
+        cols = re.split(r"\t+|\s{2,}", line)
+        if len(cols) >= 2 and cols[0].strip().isdigit():
+            try:
+                position = int(cols[0].strip())
+            except ValueError:
+                continue
+            rider_field = cols[1].strip()
+            if not rider_field:
+                # Fallback: remove leading position from the line
+                m = re.match(r"^(\d+)\s+(.*)$", line)
+                rider_field = m.group(2) if m else ''
+            rider_name = _dedupe_concatenated_name(rider_field)
+            rider_name = re.sub(r"\s{2,}.*$", "", rider_name).strip()
+            if rider_name:
+                results.append({"position": position, "rider_name": rider_name})
+    return results
+
+@app.post('/bulk_preview_results')
+def bulk_preview_results():
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        data = request.get_json(force=True)
+        competition_id = data.get('competition_id')
+        class_name = data.get('class_name')
+        pasted_text = data.get('pasted_text', '')
+        if not competition_id or not class_name or not pasted_text:
+            return jsonify({"error": "Missing required data"}), 400
+
+        parsed = _parse_bulk_results(pasted_text)
+        rows = []
+        missing = []
+        for row in parsed:
+            rider = Rider.query.filter(
+                Rider.name.ilike(row['rider_name']),
+                Rider.class_name == class_name
+            ).first()
+            rows.append({
+                "position": row['position'],
+                "rider_name": row['rider_name'],
+                "found_in_db": rider is not None,
+                "rider_id": rider.id if rider else None
+            })
+            if not rider:
+                missing.append({
+                    "position": row['position'],
+                    "rider_name": row['rider_name']
+                })
+
+        return jsonify({"success": True, "rows": rows, "missing_riders": missing})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.post('/bulk_import_results')
+def bulk_import_results():
+    if session.get("username") != "test":
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        data = request.get_json(force=True)
+        competition_id = data.get('competition_id')
+        class_name = data.get('class_name')
+        pasted_text = data.get('pasted_text', '')
+        if not competition_id or not class_name or not pasted_text:
+            return jsonify({"error": "Missing required data"}), 400
+
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 400
+
+        parsed = _parse_bulk_results(pasted_text)
+        imported = 0
+        skipped = []
+        for row in parsed:
+            rider = Rider.query.filter(
+                Rider.name.ilike(row['rider_name']),
+                Rider.class_name == class_name
+            ).first()
+            if not rider:
+                skipped.append(row)
+                continue
+            existing = CompetitionResult.query.filter_by(
+                competition_id=competition_id,
+                rider_id=rider.id
+            ).first()
+            if existing:
+                existing.position = row['position']
+            else:
+                db.session.add(CompetitionResult(
+                    competition_id=competition_id,
+                    rider_id=rider.id,
+                    position=row['position']
+                ))
+            imported += 1
+
+        db.session.commit()
+
+        try:
+            calculate_scores(int(competition_id))
+        except Exception:
+            pass
+
+        return jsonify({"success": True, "imported": imported, "skipped": skipped})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
