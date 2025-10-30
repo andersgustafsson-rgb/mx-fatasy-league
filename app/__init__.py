@@ -80,4 +80,11 @@ def create_app() -> Flask:
 	except Exception:
 		pass
 
+	# Backward-compat endpoint alias so templates using url_for('admin_page') still work
+	try:
+		if 'admin.admin_page' in app.view_functions and 'admin_page' not in app.view_functions:
+			app.add_url_rule('/admin', endpoint='admin_page', view_func=app.view_functions['admin.admin_page'])
+	except Exception:
+		pass
+
 	return app

@@ -112,6 +112,13 @@ try:
 except Exception:
     pass
 
+# Endpoint alias to preserve url_for('admin_page') in templates
+try:
+    if 'admin.admin_page' in app.view_functions and 'admin_page' not in app.view_functions:
+        app.add_url_rule('/admin', endpoint='admin_page', view_func=app.view_functions['admin.admin_page'])
+except Exception:
+    pass
+
 # Debug: Print database configuration
 # Database configuration loaded
 
