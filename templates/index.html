@@ -151,6 +151,12 @@
       background-size: cover;
       background-position: center;
     }
+    .bg-wsx {
+      /* Replace with final WSX hero once downloaded */
+      background-image: url('/static/images/wsx_hero.jpg');
+      background-size: cover;
+      background-position: center;
+    }
     
     /* Racing Logo Styling */
     .racing-logo {
@@ -1980,6 +1986,8 @@
             backgroundClass = 'bg-motocross';
           } else if (serie.name.toLowerCase().includes('smx')) {
             backgroundClass = 'bg-smx';
+          } else if (serie.name.toLowerCase().includes('wsx')) {
+            backgroundClass = 'bg-wsx';
           }
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
