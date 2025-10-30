@@ -140,21 +140,29 @@
       background-image: url('/static/images/2024-jett-1.jpg');
       background-size: cover;
       background-position: center;
+      min-height: 180px;
+      background-repeat: no-repeat;
     }
     .bg-motocross {
       background-image: url('/static/images/deegan motoacross.avif');
       background-size: cover;
       background-position: center;
+      min-height: 180px;
+      background-repeat: no-repeat;
     }
     .bg-smx {
       background-image: url('/static/images/smx playoffs.webp');
       background-size: cover;
       background-position: center;
+      min-height: 180px;
+      background-repeat: no-repeat;
     }
     .bg-wsx {
       background-image: url('/static/images/wsx_hero.jpg');
       background-size: cover;
       background-position: center;
+      min-height: 180px;
+      background-repeat: no-repeat;
     }
     
     /* Racing Logo Styling */
@@ -2015,21 +2023,28 @@
 
         // WSX background debug: verify computed background image loads
         try {
+          const DEBUG_WSX = true;
           const wsxCards = [...seriesContainer.querySelectorAll('.bg-wsx')];
           wsxCards.forEach((el, idx) => {
+            if (DEBUG_WSX) el.style.outline = '2px dashed red';
             const cs = getComputedStyle(el).backgroundImage;
             console.debug('[WSX-BG] card', idx, 'computed backgroundImage:', cs);
             const m = cs && cs.match(/url\("?(.*?)"?\)/);
             const url = m ? m[1] : null;
             console.debug('[WSX-BG] parsed url:', url);
-            if (url) {
-              const probe = new Image();
-              probe.onload = () => console.debug('[WSX-BG] loaded OK:', url, probe.width, probe.height);
-              probe.onerror = (e) => console.error('[WSX-BG] load FAILED:', url, e);
-              probe.src = url;
-            } else {
-              console.warn('[WSX-BG] No background url found on card');
+
+            if (!url || cs === 'none') {
+              console.warn('[WSX-BG] Missing background, forcing inline WSX image');
+              el.style.backgroundImage = 'url("/static/images/wsx_hero.jpg")';
+              el.style.backgroundSize = 'cover';
+              el.style.backgroundPosition = 'center';
             }
+
+            const probeUrl = url || '/static/images/wsx_hero.jpg';
+            const probe = new Image();
+            probe.onload = () => console.debug('[WSX-BG] loaded OK:', probeUrl, probe.width, probe.height);
+            probe.onerror = (e) => console.error('[WSX-BG] load FAILED:', probeUrl, e);
+            probe.src = probeUrl;
           });
         } catch (dbgErr) {
           console.error('[WSX-BG] debug failed:', dbgErr);
