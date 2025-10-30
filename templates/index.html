@@ -1254,7 +1254,8 @@
         // Update countdowns
         updateRealCountdowns(data);
         
-        // Don't update picks status from real countdown during testing - test countdown controls picks status
+        // Update picks status from real countdown (test countdown removed)
+        updateRealPicksStatus(data);
         
       } catch (error) {
         console.error('Error fetching real countdown data:', error);
