@@ -60,6 +60,7 @@
                 <option value="SX">Supercross (SX)</option>
                 <option value="MX">Motocross (MX)</option>
                 <option value="SMX">SuperMotocross (SMX)</option>
+                <option value="WSX">WSX</option>
             </select>
         </div>
 
@@ -121,6 +122,7 @@
                             <option value="SX">Supercross (SX)</option>
                             <option value="MX">Motocross (MX)</option>
                             <option value="SMX">SuperMotocross (SMX)</option>
+                            <option value="WSX">WSX</option>
                         </select>
                     </div>
                     <div>
@@ -237,7 +239,8 @@
                         <span class="px-2 py-1 rounded text-xs font-medium ${
                             comp.series === 'SX' ? 'bg-red-600' : 
                             comp.series === 'MX' ? 'bg-green-600' : 
-                            'bg-purple-600'
+                            comp.series === 'SMX' ? 'bg-purple-600' :
+                            'bg-cyan-600'
                         }">${comp.series}</span>
                     </td>
                     <td class="px-4 py-3 text-sm">${comp.coast_250 || '-'}</td>
