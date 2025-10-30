@@ -1980,6 +1980,12 @@
           } else if (serie.name.toLowerCase().includes('wsx')) {
             backgroundClass = 'bg-wsx';
           }
+
+          console.debug('[SeriesCard]', {
+            name: serie.name,
+            id: serie.id,
+            backgroundClass
+          });
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
           // WSX inline fallback to ensure the hero shows even if class fails
@@ -2006,6 +2012,28 @@
         
         // Set the HTML content
         seriesContainer.innerHTML = seriesHTML;
+
+        // WSX background debug: verify computed background image loads
+        try {
+          const wsxCards = [...seriesContainer.querySelectorAll('.bg-wsx')];
+          wsxCards.forEach((el, idx) => {
+            const cs = getComputedStyle(el).backgroundImage;
+            console.debug('[WSX-BG] card', idx, 'computed backgroundImage:', cs);
+            const m = cs && cs.match(/url\("?(.*?)"?\)/);
+            const url = m ? m[1] : null;
+            console.debug('[WSX-BG] parsed url:', url);
+            if (url) {
+              const probe = new Image();
+              probe.onload = () => console.debug('[WSX-BG] loaded OK:', url, probe.width, probe.height);
+              probe.onerror = (e) => console.error('[WSX-BG] load FAILED:', url, e);
+              probe.src = url;
+            } else {
+              console.warn('[WSX-BG] No background url found on card');
+            }
+          });
+        } catch (dbgErr) {
+          console.error('[WSX-BG] debug failed:', dbgErr);
+        }
         
       } catch (error) {
         console.error('Error loading series:', error);
