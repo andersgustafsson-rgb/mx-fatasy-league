@@ -5381,6 +5381,9 @@ def get_my_race_results(competition_id):
 # -------------------------------------------------
 def calculate_scores(comp_id: int):
     
+    # Determine series for this competition (to disable features for WSX)
+    comp = Competition.query.get(comp_id)
+    series_name = getattr(comp, 'series', None)
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
     
@@ -5418,23 +5421,23 @@ def calculate_scores(comp_id: int):
             if actual_hs and actual_hs.rider_id == hp.rider_id:
                 holeshot_points += 3
 
-        wc_pick = WildcardPick.query.filter_by(
-            user_id=user.id, competition_id=comp_id
-        ).first()
-        if wc_pick:
-            # Wildcard is always 450cc, so filter results to only 450cc
-            # Get rider names to filter by class
-            actual_results_450cc = []
-            for res in actual_results:
-                rider = Rider.query.get(res.rider_id)
-                if rider and rider.class_name == "450cc":
-                    actual_results_450cc.append(res)
-            
-            actual_wc = next(
-                (res for res in actual_results_450cc if res.position == wc_pick.position), None
-            )
-            if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
-                wildcard_points += 15
+        # Disable wildcard scoring for WSX competitions
+        if series_name != 'WSX':
+            wc_pick = WildcardPick.query.filter_by(
+                user_id=user.id, competition_id=comp_id
+            ).first()
+            if wc_pick:
+                # Wildcard is always 450cc, so filter results to only 450cc
+                actual_results_450cc = []
+                for res in actual_results:
+                    rider = Rider.query.get(res.rider_id)
+                    if rider and rider.class_name == "450cc":
+                        actual_results_450cc.append(res)
+                actual_wc = next(
+                    (res for res in actual_results_450cc if res.position == wc_pick.position), None
+                )
+                if actual_wc and actual_wc.rider_id == wc_pick.rider_id:
+                    wildcard_points += 15
 
         total_points = race_points + holeshot_points + wildcard_points
 

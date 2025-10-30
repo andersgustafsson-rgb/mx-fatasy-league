@@ -912,6 +912,23 @@
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
+            // Manual results client-side validation (prevent duplicates, allow partial)
+            const form = document.getElementById('manual-results-form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    // collect selected riders
+                    const r450 = Array.from(form.querySelectorAll('select[name="riders_450[]"]')).map(s => s.value).filter(Boolean);
+                    const r250 = Array.from(form.querySelectorAll('select[name="riders_250[]"]')).map(s => s.value).filter(Boolean);
+                    const dup450 = hasDuplicates(r450);
+                    const dup250 = hasDuplicates(r250);
+                    if (dup450 || dup250) {
+                        e.preventDefault();
+                        alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och WSX SX2.');
+                        return false;
+                    }
+                    // nothing else - empties är ok (servern skippar tomma)
+                });
+            }
         });
 
         // Manual Results helpers
@@ -1008,6 +1025,10 @@
                 outListSx1.innerHTML = sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
                 outListSx2.innerHTML = sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
             }
+        }
+
+        function hasDuplicates(arr) {
+            return new Set(arr).size !== arr.length;
         }
 
         async function setWsxOut(status) {
