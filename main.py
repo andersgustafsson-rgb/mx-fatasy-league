@@ -131,6 +131,16 @@ def ensure_wsx_series_and_competitions():
     else:
         print("[WSX-SEED] WSX-serie fanns redan!")
 
+@app.post("/admin/seed_wsx")
+def admin_seed_wsx():
+    if session.get("username") != "test":
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        ensure_wsx_series_and_competitions()
+        return jsonify({"message": "WSX seeded/verified"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 def is_admin_user():
     """Check if current user is admin"""
     username = session.get("username")
