@@ -2006,10 +2006,11 @@
           `;
           
           
-          const bgStyle = `background-image: ${backgroundImage}; background-size: cover; background-position: center;`;
+          const bgStyle = backgroundImage ? `background-image: ${backgroundImage}; background-size: cover; background-position: center;` : '';
+          // Render card HTML
           return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${bgStyle}; cursor: pointer; text-decoration: none;">${cardContent}</a>`
-            : `<div class="${finalCardClass}" style="${bgStyle}">${cardContent}</div>`;
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}"${bgStyle ? ` style="${bgStyle}; cursor: pointer; text-decoration: none;"` : ' style="cursor: pointer; text-decoration: none;"'}>${cardContent}</a>`
+            : `<div class="${finalCardClass}"${bgStyle ? ` style="${bgStyle}"` : ''}>${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
