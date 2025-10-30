@@ -66,4 +66,11 @@ def create_app() -> Flask:
 		# Allow app to start even if blueprints are not present yet
 		pass
 
+	# API blueprint (safe to register even before routes are fully migrated)
+	try:
+		from .routes.api import bp as api_bp  # noqa: F401
+		app.register_blueprint(api_bp)
+	except Exception:
+		pass
+
 	return app

@@ -11891,63 +11891,11 @@ def excitebike_clone():
     """Excitebike Clone game - Based on AlamantusGameDev repository"""
     return render_template("excitebike_clone.html")
 
-@app.route("/api/cross_dino/highscores", methods=["GET"])
-def get_cross_dino_highscores():
-    """Get top 5 Cross Dino highscores"""
-    try:
-        highscores = CrossDinoHighScore.query.order_by(CrossDinoHighScore.score.desc()).limit(5).all()
-        return jsonify([score.to_dict() for score in highscores])
-    except Exception as e:
-        print(f"Error getting highscores: {e}")
-        return jsonify([])
+## Moved to api blueprint in app/routes/api.py
 
-@app.route("/api/cross_dino/highscores", methods=["POST"])
-def submit_cross_dino_highscore():
-    """Submit a new Cross Dino highscore"""
-    try:
-        data = request.get_json()
-        player_name = data.get('player_name', 'Anonym')
-        score = int(data.get('score', 0))
-        
-        if score <= 0:
-            return jsonify({"error": "Invalid score"}), 400
-        
-        # Create new highscore
-        highscore = CrossDinoHighScore(
-            player_name=player_name,
-            score=score
-        )
-        
-        db.session.add(highscore)
-        db.session.commit()
-        
-        # Return top 5 highscores
-        highscores = CrossDinoHighScore.query.order_by(CrossDinoHighScore.score.desc()).limit(5).all()
-        return jsonify([score.to_dict() for score in highscores])
-        
-    except Exception as e:
-        print(f"Error submitting highscore: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Failed to submit highscore"}), 500
+## Moved to api blueprint in app/routes/api.py
 
-@app.route("/api/cross_dino/reset_highscores", methods=["POST"])
-def reset_cross_dino_highscores():
-    """Reset all Cross Dino highscores (admin only)"""
-    try:
-        # Check if user is admin (you might want to add proper admin authentication here)
-        if "user_id" not in session:
-            return jsonify({"error": "Not authenticated"}), 401
-        
-        # Delete all highscores
-        CrossDinoHighScore.query.delete()
-        db.session.commit()
-        
-        return jsonify({"success": True, "message": "All highscores have been reset"})
-        
-    except Exception as e:
-        print(f"Error resetting highscores: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Failed to reset highscores"}), 500
+## Moved to api blueprint in app/routes/api.py
 
 @app.route("/api/smx_qualification")
 def get_smx_qualification():
