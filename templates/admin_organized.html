@@ -1016,14 +1016,31 @@
             const sx1Sel = document.getElementById('wsx-out-sx1');
             const sx2Sel = document.getElementById('wsx-out-sx2');
             const riderIds = [sx1Sel?.value, sx2Sel?.value].filter(Boolean);
-            for (const rid of riderIds) {
-                await fetch('/admin/set_out_status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ competition_id: parseInt(compId), rider_id: parseInt(rid), status })
-                });
+            if (riderIds.length === 0) { alert('Välj minst en förare att uppdatera.'); return; }
+
+            const verb = status === 'OUT' ? 'sätta OUT på' : 'rensa OUT för';
+            if (!confirm(`Bekräfta att du vill ${verb} ${riderIds.length} förare?`)) return;
+
+            try {
+                console.log('WSX OUT action', { status, compId, riderIds });
+                for (const rid of riderIds) {
+                    const resp = await fetch('/admin/set_out_status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ competition_id: parseInt(compId), rider_id: parseInt(rid), status })
+                    });
+                    const data = await resp.json().catch(() => ({}));
+                    console.log('WSX OUT response', rid, data);
+                }
+                await manualCompetitionChanged();
+                // Nollställ val
+                if (sx1Sel) sx1Sel.value = '';
+                if (sx2Sel) sx2Sel.value = '';
+                alert(status === 'OUT' ? '✅ Förare markerade som OUT' : '✅ OUT rensat');
+            } catch (e) {
+                console.error('WSX OUT error', e);
+                alert('❌ Fel vid uppdatering av OUT: ' + e.message);
             }
-            await manualCompetitionChanged();
         }
     </script>
 </body>
