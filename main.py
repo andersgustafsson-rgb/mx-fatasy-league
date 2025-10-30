@@ -93,6 +93,25 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 # Database is initialized in models.py and bound here via db.init_app(app)
 
+# --- Backward-compatible blueprint registration (prod runs main:app) ---
+try:
+    from app.routes.public import bp as public_bp  # type: ignore
+    app.register_blueprint(public_bp)
+except Exception:
+    pass
+
+try:
+    from app.routes.api import bp as api_bp  # type: ignore
+    app.register_blueprint(api_bp)
+except Exception:
+    pass
+
+try:
+    from app.routes.admin import bp as admin_bp  # type: ignore
+    app.register_blueprint(admin_bp)
+except Exception:
+    pass
+
 # Debug: Print database configuration
 # Database configuration loaded
 
