@@ -1566,7 +1566,16 @@
     }
 
     function loadQuizHighscores() {
-      const quizScores = getQuizHighscores();
+      // Backfill names if missing using last known player name from localStorage
+      let quizScores = getQuizHighscores();
+      try {
+        const storedName = localStorage.getItem('currentPlayerName');
+        let changed = false;
+        quizScores.forEach(s => {
+          if (!('name' in s) || !s.name) { s.name = storedName || 'Anonym'; changed = true; }
+        });
+        if (changed) localStorage.setItem('motocrossQuizHighScores', JSON.stringify(quizScores));
+      } catch (e) {}
       const container = document.getElementById('quiz-highscores');
       
       if (quizScores.length === 0) {

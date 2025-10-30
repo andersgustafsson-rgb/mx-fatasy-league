@@ -190,6 +190,9 @@
     <script>
         // Current player (display name > username), injected from server
         window.currentPlayerName = {{ (current_player_name or 'null')|tojson }};
+        if (window.currentPlayerName) {
+            try { localStorage.setItem('currentPlayerName', window.currentPlayerName); } catch (e) {}
+        }
         // Quiz data
         const quizData = {
             easy: [
@@ -590,12 +593,25 @@
             const currentDate = new Date().toLocaleDateString('sv-SE');
             
             // Add new score
+            // Determine name (prompt if no user context)
+            let playerName = window.currentPlayerName;
+            if (!playerName) {
+                try {
+                    const stored = localStorage.getItem('currentPlayerName');
+                    if (stored) playerName = stored;
+                } catch (e) {}
+            }
+            if (!playerName) {
+                playerName = prompt('Ange namn för highscore (valfritt):', 'Anonym') || 'Anonym';
+                try { localStorage.setItem('currentPlayerName', playerName); } catch (e) {}
+            }
+
             highScores.push({
                 score: score,
                 difficulty: difficulty,
                 date: currentDate,
                 timestamp: Date.now(),
-                name: window.currentPlayerName || 'Anonym'
+                name: playerName
             });
             
             // Sort by score (descending) and keep top 10
@@ -613,7 +629,21 @@
 
         function getHighScores() {
             const scores = localStorage.getItem('motocrossQuizHighScores');
-            return scores ? JSON.parse(scores) : [];
+            const arr = scores ? JSON.parse(scores) : [];
+            // Backfill missing names using stored currentPlayerName
+            let changed = false;
+            let storedName = null;
+            try { storedName = localStorage.getItem('currentPlayerName'); } catch (e) {}
+            for (const s of arr) {
+                if (!('name' in s) || !s.name) {
+                    s.name = storedName || window.currentPlayerName || 'Anonym';
+                    changed = true;
+                }
+            }
+            if (changed) {
+                try { localStorage.setItem('motocrossQuizHighScores', JSON.stringify(arr)); } catch (e) {}
+            }
+            return arr;
         }
 
         function showNewHighScore() {
