@@ -11303,6 +11303,23 @@ def race_countdown():
             except Exception as _e:
                 db.session.rollback()
                 print(f"DEBUG: autoset active_race_id failed: {_e}")
+
+            # Self-heal timezone/start_time for known WSX Buenos Aires if missing
+            try:
+                needs_commit = False
+                if 'buenos aires' in (next_race_obj.name or '').lower():
+                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
+                        next_race_obj.timezone = 'America/Argentina/Buenos_Aires'
+                        needs_commit = True
+                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                        from datetime import time as _t
+                        next_race_obj.start_time = _t(hour=13, minute=0)
+                        needs_commit = True
+                if needs_commit:
+                    db.session.commit()
+            except Exception as _e2:
+                db.session.rollback()
+                print(f"DEBUG: failed to auto-fix BA timezone/start_time: {_e2}")
             
             # Calculate countdown to race start using start_time from database
             # Ensure event_date is a datetime object
@@ -11359,13 +11376,29 @@ def race_countdown():
         
         # Use is_picks_locked for consistency
         # Find the actual competition for this race
-        upcoming_race = Competition.query.filter(
+            upcoming_race = Competition.query.filter(
             Competition.event_date >= today,
             Competition.event_date <= today + timedelta(days=7)
         ).order_by(Competition.event_date).first()
         
         picks_locked = False
         if upcoming_race:
+                # Ensure same self-heal for BA when checking lock state
+                try:
+                    needs_commit2 = False
+                    if 'buenos aires' in (upcoming_race.name or '').lower():
+                        if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
+                            upcoming_race.timezone = 'America/Argentina/Buenos_Aires'
+                            needs_commit2 = True
+                        if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                            from datetime import time as _t
+                            upcoming_race.start_time = _t(hour=13, minute=0)
+                            needs_commit2 = True
+                    if needs_commit2:
+                        db.session.commit()
+                except Exception as _e3:
+                    db.session.rollback()
+                    print(f"DEBUG: lock-check BA fix failed: {_e3}")
             picks_locked = is_picks_locked(upcoming_race)
         
         return jsonify({
