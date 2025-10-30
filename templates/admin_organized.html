@@ -908,26 +908,24 @@
         }
 
         // Initialize page
+        // Manual results client-side validation (duplicate blocking, partial entries accepted)
         document.addEventListener('DOMContentLoaded', function() {
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
-            // Manual results client-side validation (prevent duplicates, allow partial)
+            
             const form = document.getElementById('manual-results-form');
             if (form) {
-                form.addEventListener('submit', function(e) {
+                form.onsubmit = function(e) {
                     // collect selected riders
                     const r450 = Array.from(form.querySelectorAll('select[name="riders_450[]"]')).map(s => s.value).filter(Boolean);
                     const r250 = Array.from(form.querySelectorAll('select[name="riders_250[]"]')).map(s => s.value).filter(Boolean);
-                    const dup450 = hasDuplicates(r450);
-                    const dup250 = hasDuplicates(r250);
-                    if (dup450 || dup250) {
+                    if (hasDuplicates(r450) || hasDuplicates(r250)) {
                         e.preventDefault();
-                        alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och WSX SX2.');
+                        alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och SX2.');
                         return false;
                     }
-                    // nothing else - empties är ok (servern skippar tomma)
-                });
+                };
             }
         });
 
@@ -1025,10 +1023,40 @@
                 outListSx1.innerHTML = sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
                 outListSx2.innerHTML = sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
             }
+            
+            // Enforce unique selections live (disable already chosen riders)
+            setupUniqueSelects('select[name="riders_450[]"]');
+            setupUniqueSelects('select[name="riders_250[]"]');
         }
 
         function hasDuplicates(arr) {
             return new Set(arr).size !== arr.length;
+        }
+
+        function setupUniqueSelects(selector) {
+            const selects = Array.from(document.querySelectorAll(selector));
+            const refresh = () => {
+                const chosen = new Map();
+                selects.forEach(sel => {
+                    const v = sel.value;
+                    if (v) chosen.set(sel, v);
+                });
+                const chosenValues = new Set(Array.from(chosen.values()));
+                selects.forEach(sel => {
+                    const current = sel.value;
+                    Array.from(sel.options).forEach(opt => {
+                        if (!opt.value) { opt.disabled = false; return; }
+                        // Disable if chosen elsewhere
+                        if (opt.value !== current && chosenValues.has(opt.value)) {
+                            opt.disabled = true;
+                        } else {
+                            opt.disabled = false;
+                        }
+                    });
+                });
+            };
+            selects.forEach(sel => sel.addEventListener('change', refresh));
+            refresh();
         }
 
         async function setWsxOut(status) {
