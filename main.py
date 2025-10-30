@@ -2572,11 +2572,16 @@ def rider_management():
         riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number).all()
         riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number).all()
         riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number).all()
+        # WSX classes
+        riders_wsx_sx1 = Rider.query.filter_by(class_name='wsx_sx1').order_by(Rider.rider_number).all()
+        riders_wsx_sx2 = Rider.query.filter_by(class_name='wsx_sx2').order_by(Rider.rider_number).all()
         
         return render_template('rider_management.html',
                              riders_450=riders_450,
                              riders_250_east=riders_250_east,
-                             riders_250_west=riders_250_west)
+                             riders_250_west=riders_250_west,
+                             riders_wsx_sx1=riders_wsx_sx1,
+                             riders_wsx_sx2=riders_wsx_sx2)
     except Exception as e:
         print(f"DEBUG: Error in rider_management: {e}")
         return f'''

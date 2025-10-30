@@ -567,6 +567,53 @@
                 </form>
                 <p class="text-xs text-gray-400 mt-2">WSX‑förare märks även med series_participation='wsx' automatiskt.</p>
             </div>
+
+            <!-- WSX list -->
+            <div class="bg-gray-800/40 rounded-lg p-4 mt-4 border border-gray-700">
+                <h3 class="text-lg font-semibold text-white mb-3">WSX Förare</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm text-gray-200">
+                        <thead class="text-gray-400">
+                            <tr>
+                                <th class="px-2 py-1">Nr</th>
+                                <th class="px-2 py-1">Namn</th>
+                                <th class="px-2 py-1">Klass</th>
+                                <th class="px-2 py-1">Märke</th>
+                                <th class="px-2 py-1">Pris</th>
+                                <th class="px-2 py-1">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rider in riders_wsx_sx1 %}
+                            <tr class="border-t border-gray-700/60">
+                                <td class="px-2 py-1">{{ rider.rider_number }}</td>
+                                <td class="px-2 py-1">{{ rider.name }}</td>
+                                <td class="px-2 py-1">wsx_sx1</td>
+                                <td class="px-2 py-1">{{ rider.bike_brand }}</td>
+                                <td class="px-2 py-1">{{ rider.price }}</td>
+                                <td class="px-2 py-1 space-x-2">
+                                    <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', 'wsx_sx1', '', {{ rider.price }})" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded">Redigera</button>
+                                    <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% for rider in riders_wsx_sx2 %}
+                            <tr class="border-t border-gray-700/60">
+                                <td class="px-2 py-1">{{ rider.rider_number }}</td>
+                                <td class="px-2 py-1">{{ rider.name }}</td>
+                                <td class="px-2 py-1">wsx_sx2</td>
+                                <td class="px-2 py-1">{{ rider.bike_brand }}</td>
+                                <td class="px-2 py-1">{{ rider.price }}</td>
+                                <td class="px-2 py-1 space-x-2">
+                                    <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', 'wsx_sx2', '', {{ rider.price }})" class="px-2 py-1 bg-blue-600 hover:bg-blue-500 rounded">Redigera</button>
+                                    <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <script>
@@ -695,6 +742,11 @@
                                 <label class="flex items-center">
                                     <input type="checkbox" id="edit-rider-class-450" class="mr-2 text-cyan-400" value="450cc">
                                     <span class="text-white">450cc</span>
+                                    <div class="mt-2"></div>
+                                    <input type="checkbox" id="edit-rider-class-wsx1" class="mr-2 text-cyan-400" value="wsx_sx1">
+                                    <span class="text-white">WSX SX1</span>
+                                    <input type="checkbox" id="edit-rider-class-wsx2" class="ml-4 mr-2 text-cyan-400" value="wsx_sx2">
+                                    <span class="text-white">WSX SX2</span>
                                 </label>
                             </div>
                             <p class="text-xs text-yellow-400 mt-1">⚠️ Ändring av klasser kan påverka befintliga picks och säsongsteam</p>
@@ -1021,6 +1073,10 @@
             const classes = className.split(',').map(c => c.trim());
             document.getElementById('edit-rider-class-250').checked = classes.includes('250cc');
             document.getElementById('edit-rider-class-450').checked = classes.includes('450cc');
+            const cWsx1 = document.getElementById('edit-rider-class-wsx1');
+            const cWsx2 = document.getElementById('edit-rider-class-wsx2');
+            if (cWsx1) cWsx1.checked = classes.includes('wsx_sx1');
+            if (cWsx2) cWsx2.checked = classes.includes('wsx_sx2');
             
             // Show/hide coast section based on 250cc class
             const coastSection = document.getElementById('edit-coast-section');
@@ -1130,6 +1186,10 @@
             }
             if (document.getElementById('edit-rider-class-450').checked) {
                 selectedClasses.push('450cc');
+            const cWsx1b = document.getElementById('edit-rider-class-wsx1');
+            const cWsx2b = document.getElementById('edit-rider-class-wsx2');
+            if (cWsx1b && cWsx1b.checked) selectedClasses.push('wsx_sx1');
+            if (cWsx2b && cWsx2b.checked) selectedClasses.push('wsx_sx2');
             }
             
             // Handle custom bike brand
