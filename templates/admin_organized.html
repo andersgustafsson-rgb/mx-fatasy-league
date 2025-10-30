@@ -139,6 +139,38 @@
                     </div>
                 </div>
 
+                <!-- Rider OUT (WSX) -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🚫 Rider OUT (WSX)</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">WSX SX1 (450)</label>
+                                <select id="wsx-out-sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">WSX SX2 (250)</label>
+                                <select id="wsx-out-sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="setWsxOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
+                                <button type="button" onclick="setWsxOut('CLEAR')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">OUT – WSX SX1</h4>
+                                <ul id="wsx-out-list-sx1" class="text-gray-300 text-sm list-disc pl-5"></ul>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">OUT – WSX SX2</h4>
+                                <ul id="wsx-out-list-sx2" class="text-gray-300 text-sm list-disc pl-5"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Manual Results -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry (WSX‑stöd)</h3>
@@ -926,7 +958,7 @@
                     <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
                     <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                         <option value="">Välj förare</option>
-                        ${sx1.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                        ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
                     </select>
                 `;
                 sx1List.appendChild(wrapper);
@@ -944,7 +976,7 @@
                     <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
                     <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                         <option value="">Välj förare</option>
-                        ${sx2.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                        ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
                     </select>
                 `;
                 sx2List.appendChild(wrapper);
@@ -958,8 +990,40 @@
             // Holeshots
             const hs450 = document.getElementById('manual-hs-450');
             const hs250 = document.getElementById('manual-hs-250');
-            hs450.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-            hs250.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+            hs450.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
+            hs250.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
+
+            // OUT selects and current OUT lists (if panel exists)
+            const outSx1 = document.getElementById('wsx-out-sx1');
+            const outSx2 = document.getElementById('wsx-out-sx2');
+            const outListSx1 = document.getElementById('wsx-out-list-sx1');
+            const outListSx2 = document.getElementById('wsx-out-list-sx2');
+            if (outSx1 && outSx2) {
+                outSx1.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
+                outSx2.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
+            }
+            if (outListSx1 && outListSx2) {
+                const sx1Out = sx1.filter(r => r.is_out);
+                const sx2Out = sx2.filter(r => r.is_out);
+                outListSx1.innerHTML = sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
+                outListSx2.innerHTML = sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
+            }
+        }
+
+        async function setWsxOut(status) {
+            const compId = document.getElementById('manual-competition').value;
+            if (!compId) { alert('Välj tävling först'); return; }
+            const sx1Sel = document.getElementById('wsx-out-sx1');
+            const sx2Sel = document.getElementById('wsx-out-sx2');
+            const riderIds = [sx1Sel?.value, sx2Sel?.value].filter(Boolean);
+            for (const rid of riderIds) {
+                await fetch('/admin/set_out_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ competition_id: parseInt(compId), rider_id: parseInt(rid), status })
+                });
+            }
+            await manualCompetitionChanged();
         }
     </script>
 </body>
