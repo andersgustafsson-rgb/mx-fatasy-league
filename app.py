@@ -250,10 +250,10 @@ def login():
             print(f"Password check: {password_check}")
             
             if password_check:
-            session["user_id"] = user.id
-            session["username"] = user.username
+                session["user_id"] = user.id
+                session["username"] = user.username
                 print("Login successful, redirecting...")
-            return redirect(url_for("index"))
+                return redirect(url_for("index"))
         
         print("Login failed")
         flash("Felaktigt användarnamn eller lösenord", "error")
