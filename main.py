@@ -143,19 +143,46 @@ def ensure_wsx_series_and_competitions():
         )
         db.session.add(wsx)
         db.session.flush()
+        # name, location, date, timezone, start_time (HH:MM local) or None
         comps = [
-            ('Buenos Aires City GP', 'Buenos Aires, Argentina', _date(2025, 11, 8)),
-            ('Canadian GP', 'Vancouver, Canada', _date(2025, 11, 15)),
-            ('Australian GP', 'Gold Coast, Australia', _date(2025, 11, 29)),
-            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6)),
-            ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13)),
+            ('Buenos Aires City GP', 'Buenos Aires, Argentina', _date(2025, 11, 8), 'America/Argentina/Buenos_Aires', '13:00'),
+            ('Canadian GP', 'Vancouver, Canada', _date(2025, 11, 15), 'America/Los_Angeles', None),
+            ('Australian GP', 'Gold Coast, Australia', _date(2025, 11, 29), 'Australia/Brisbane', None),
+            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6), 'Europe/Stockholm', None),
+            ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13), 'Africa/Johannesburg', None),
         ]
-        for n, loc, d in comps:
-            # Competition has no 'location' column; store series link and date
-            db.session.add(Competition(name=n, event_date=d, series='WSX', series_id=wsx.id))
+        from datetime import time as _time
+        for n, loc, d, tz, start_hhmm in comps:
+            comp = Competition.query.filter_by(name=n).first()
+            if comp is None:
+                comp = Competition(name=n, event_date=d, series='WSX', series_id=wsx.id)
+                db.session.add(comp)
+            # Set timezone if column exists
+            if hasattr(comp, 'timezone'):
+                comp.timezone = tz
+            # Set start_time if column exists in DB (handled via property in model)
+            if start_hhmm and hasattr(comp, 'start_time'):
+                try:
+                    hh, mm = map(int, start_hhmm.split(':'))
+                    comp.start_time = _time(hour=hh, minute=mm)
+                except Exception:
+                    pass
         db.session.commit()
         print("[WSX-SEED] WSX-serie och 5 tävlingar skapade!")
     else:
+        # Series already exists – ensure Buenos Aires has correct timezone and start_time
+        try:
+            from datetime import time as _time
+            comp = Competition.query.filter_by(name='Buenos Aires City GP').first()
+            if comp:
+                if hasattr(comp, 'timezone'):
+                    comp.timezone = 'America/Argentina/Buenos_Aires'
+                if hasattr(comp, 'start_time'):
+                    comp.start_time = _time(hour=13, minute=0)
+                db.session.commit()
+                print("[WSX-SEED] Updated Buenos Aires timezone/start_time to 13:00 local")
+        except Exception as e:
+            print(f"[WSX-SEED] Failed to update BA start time: {e}")
         print("[WSX-SEED] WSX-serie fanns redan!")
 
 @app.post("/admin/seed_wsx")
@@ -11259,6 +11286,23 @@ def race_countdown():
             
             if not next_race_obj:
                 return jsonify({"error": "No upcoming races"})
+
+            # Auto-set active_race_id to next race in real mode for rolling operation
+            try:
+                gs = GlobalSimulation.query.filter_by(id=1).first()
+                if gs:
+                    if gs.active or gs.active_race_id != next_race_obj.id:
+                        gs.active = False
+                        gs.active_race_id = next_race_obj.id
+                        gs.scenario = None
+                        db.session.commit()
+                else:
+                    gs = GlobalSimulation(id=1, active=False, active_race_id=next_race_obj.id)
+                    db.session.add(gs)
+                    db.session.commit()
+            except Exception as _e:
+                db.session.rollback()
+                print(f"DEBUG: autoset active_race_id failed: {_e}")
             
             # Calculate countdown to race start using start_time from database
             # Ensure event_date is a datetime object
@@ -11589,7 +11633,8 @@ def test_countdown():
             'America/Denver': -7,       # MST  
             'America/Phoenix': -7,      # MST (no DST)
             'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
+            'America/New_York': -5,     # EST
+            'America/Argentina/Buenos_Aires': -3
         }
         
         timezone = getattr(next_race_date, 'timezone', 'America/Los_Angeles')
@@ -11683,7 +11728,8 @@ def test_countdown():
             'America/Denver': -7,       # MST  
             'America/Phoenix': -7,      # MST (no DST)
             'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
+            'America/New_York': -5,     # EST
+            'America/Argentina/Buenos_Aires': -3
         }
         
         timezone = getattr(next_race, 'timezone', 'America/Los_Angeles')
@@ -11891,6 +11937,60 @@ def set_active_race():
         
     except Exception as e:
         print(f"Error setting active race: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/set_active_race_next")
+def set_active_race_next():
+    """Convenience: set active race to next upcoming competition."""
+    try:
+        today = get_today()
+        comp = (
+            Competition.query
+            .filter(Competition.event_date >= today)
+            .order_by(Competition.event_date.asc())
+            .first()
+        )
+        if not comp:
+            return jsonify({"error": "No upcoming competitions"}), 404
+        # Reuse logic by redirecting to set_active_race
+        from flask import Response
+        with app.test_request_context(f"/set_active_race?competition_id={comp.id}"):
+            return set_active_race()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/set_active_race_only")
+def set_active_race_only():
+    """Set active_race_id for real mode (no simulated time). Keeps 'active' False so countdown uses real time."""
+    try:
+        competition_id = request.args.get('competition_id')
+        if not competition_id:
+            return jsonify({"error": "competition_id required"}), 400
+        try:
+            competition_id = int(competition_id)
+        except ValueError:
+            return jsonify({"error": "competition_id must be a number"}), 400
+
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": "Competition not found"}), 404
+
+        existing = GlobalSimulation.query.filter_by(id=1).first()
+        if existing:
+            existing.active = False
+            existing.active_race_id = competition_id
+            existing.scenario = None
+            # do not touch simulated_time/start_time
+        else:
+            new_rec = GlobalSimulation(id=1, active=False, active_race_id=competition_id)
+            db.session.add(new_rec)
+        db.session.commit()
+        return jsonify({
+            "message": f"active_race_id set (real mode) to {competition_id}",
+            "competition_id": competition_id
+        })
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/race_picks_active")
