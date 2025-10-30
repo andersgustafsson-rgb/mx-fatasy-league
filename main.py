@@ -1599,32 +1599,44 @@ def race_picks_page(competition_id):
     ).all()
     out_ids = set(rid for (rid,) in out_rows)
 
-    # 2) Bygg listor (450 + 250 med coast-logik)
-    # 450 – ingen coast-filtrering
-    riders_450 = (
-        Rider.query
-        .filter_by(class_name="450cc")
-        .order_by(Rider.rider_number)
-        .all()
-    )
+    # 2) Bygg listor per serie
+    is_wsx = (getattr(comp, 'series', None) == 'WSX')
 
-    # 250 – coast-logik
-    riders_250_query = Rider.query.filter_by(class_name="250cc")
-    
-    if comp.coast_250 == "both":
-        # Showdown: tillåt east/west/both
-        riders_250_query = riders_250_query.filter(
-            (Rider.coast_250 == "east")
-            | (Rider.coast_250 == "west")
-            | (Rider.coast_250 == "both")
+    if is_wsx:
+        # WSX använder egna klasser och separata förare
+        riders_450 = (
+            Rider.query
+            .filter_by(class_name="wsx_sx1")
+            .order_by(Rider.rider_number)
+            .all()
         )
-    elif comp.coast_250 in ("east", "west"):
-        # Vanligt SX: endast samma coast eller 'both'
-        riders_250_query = riders_250_query.filter(
-            (Rider.coast_250 == comp.coast_250) | (Rider.coast_250 == "both")
+        riders_250 = (
+            Rider.query
+            .filter_by(class_name="wsx_sx2")
+            .order_by(Rider.rider_number)
+            .all()
         )
-    # Annars (None): visa alla 250
-    riders_250 = riders_250_query.order_by(Rider.rider_number).all()
+    else:
+        # SX/MX/SMX – befintlig logik
+        riders_450 = (
+            Rider.query
+            .filter_by(class_name="450cc")
+            .order_by(Rider.rider_number)
+            .all()
+        )
+
+        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        if comp.coast_250 == "both":
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == "east")
+                | (Rider.coast_250 == "west")
+                | (Rider.coast_250 == "both")
+            )
+        elif comp.coast_250 in ("east", "west"):
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == comp.coast_250) | (Rider.coast_250 == "both")
+            )
+        riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
