@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request, session, current_app as app
-from models import db, CrossDinoHighScore, Rider
+from models import db, CrossDinoHighScore, Rider, Competition
+from datetime import datetime
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -267,3 +268,120 @@ def delete_rider(rider_id: int):
 		print(f"Error deleting rider {rider_id}: {e}")
 		db.session.rollback()
 		return jsonify({'error': f'Error deleting rider: {str(e)}'}), 500
+
+# --- Competitions management (core CRUD used by admin UI) ---
+
+@bp.route('/competitions/list', methods=['GET'])
+def list_competitions():
+	if session.get("username") != "test":
+		return jsonify({'error': 'Unauthorized'}), 401
+	try:
+		# Detect presence of optional start_time column
+		try:
+			db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
+			has_start_time = True
+		except Exception:
+			has_start_time = False
+		competitions = Competition.query.order_by(Competition.event_date).all()
+		result = []
+		for comp in competitions:
+			comp_data = {
+				'id': comp.id,
+				'name': comp.name,
+				'event_date': comp.event_date.isoformat() if comp.event_date else None,
+				'series': comp.series,
+				'coast_250': comp.coast_250,
+				'point_multiplier': comp.point_multiplier,
+				'is_triple_crown': comp.is_triple_crown,
+				'timezone': comp.timezone,
+			}
+			if has_start_time and hasattr(comp, 'start_time'):
+				comp_data['start_time'] = comp.start_time.isoformat() if comp.start_time else None
+			else:
+				comp_data['start_time'] = None
+			result.append(comp_data)
+		return jsonify(result)
+	except Exception as e:
+		print(f"Error in list_competitions: {e}")
+		return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/competitions/create', methods=['POST'])
+def create_competition():
+	if session.get("username") != "test":
+		return jsonify({'error': 'Unauthorized'}), 401
+	data = request.get_json()
+	try:
+		competition_data = {
+			'name': data['name'],
+			'event_date': datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None,
+			'series': data['series'],
+			'coast_250': data.get('coast_250'),
+			'point_multiplier': data.get('point_multiplier', 1.0),
+			'is_triple_crown': data.get('is_triple_crown', False),
+			'timezone': data.get('timezone')
+		}
+		if hasattr(Competition, 'start_time') and data.get('start_time'):
+			try:
+				time_str = data['start_time']
+				competition_data['start_time'] = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
+			except ValueError:
+				competition_data['start_time'] = None
+		competition = Competition(**competition_data)
+		db.session.add(competition)
+		db.session.commit()
+		return jsonify({'success': True, 'id': competition.id})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/competitions/update/<int:competition_id>', methods=['PUT'])
+def update_competition(competition_id: int):
+	if session.get("username") != "test":
+		return jsonify({'error': 'Unauthorized'}), 401
+	comp = Competition.query.get_or_404(competition_id)
+	data = request.get_json()
+	try:
+		comp.name = data['name']
+		comp.event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data.get('event_date') else None
+		comp.series = data.get('series', comp.series)
+		comp.coast_250 = data.get('coast_250')
+		comp.point_multiplier = data.get('point_multiplier', comp.point_multiplier)
+		comp.is_triple_crown = data.get('is_triple_crown', comp.is_triple_crown)
+		comp.timezone = data.get('timezone')
+		if hasattr(Competition, 'start_time') and data.get('start_time') is not None:
+			try:
+				time_str = data['start_time']
+				comp.start_time = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
+			except ValueError:
+				comp.start_time = None
+		db.session.commit()
+		return jsonify({'success': True})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/competitions/delete/<int:competition_id>', methods=['DELETE'])
+def delete_competition(competition_id: int):
+	if session.get("username") != "test":
+		return jsonify({'error': 'Unauthorized'}), 401
+	try:
+		from sqlalchemy import text
+		force = request.args.get('force') == 'true'
+		if force:
+			# Best-effort cascading clean-up similar to main.py
+			db.session.execute(text("DELETE FROM competition_results WHERE competition_id = :id"), {'id': competition_id})
+			db.session.execute(text("DELETE FROM race_picks WHERE competition_id = :id"), {'id': competition_id})
+			db.session.execute(text("DELETE FROM holeshot_picks WHERE competition_id = :id"), {'id': competition_id})
+			db.session.execute(text("DELETE FROM wildcard_picks WHERE competition_id = :id"), {'id': competition_id})
+			db.session.execute(text("DELETE FROM competition_rider_status WHERE competition_id = :id"), {'id': competition_id})
+			db.session.commit()
+		comp = Competition.query.get_or_404(competition_id)
+		db.session.delete(comp)
+		db.session.commit()
+		return jsonify({'success': True})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({'error': str(e)}), 500
