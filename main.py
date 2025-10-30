@@ -125,7 +125,8 @@ def ensure_wsx_series_and_competitions():
             ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13)),
         ]
         for n, loc, d in comps:
-            db.session.add(Competition(name=n, event_date=d, location=loc, series_id=wsx.id))
+            # Competition has no 'location' column; store series link and date
+            db.session.add(Competition(name=n, event_date=d, series='WSX', series_id=wsx.id))
         db.session.commit()
         print("[WSX-SEED] WSX-serie och 5 tävlingar skapade!")
     else:
