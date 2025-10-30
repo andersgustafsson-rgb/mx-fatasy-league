@@ -460,29 +460,7 @@
               </div>
             </div>
             
-            <!-- Test Countdown Widget -->
-            <div id="test-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-purple-400 flex-1 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}'); background-size: cover; background-position: center;">
-              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
-              <div class="relative z-10">
-              <div class="text-center">
-                <h3 class="text-purple-400 font-bold text-lg sm:text-xl lg:text-2xl mb-3" id="test-countdown-race-name">Test Mode</h3>
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
-                  <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-red-700">
-                    <div class="text-red-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">🏁 Race Start</div>
-                    <div id="test-race-countdown" class="text-red-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
-                  </div>
-                  <div class="bg-orange-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-orange-700">
-                    <div class="text-orange-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">⏰ Pick Deadline</div>
-                    <div id="test-deadline-countdown" class="text-orange-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
-                  </div>
-                </div>
-                <div id="test-picks-status" class="mt-3 text-xs sm:text-sm">
-                  <span id="test-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
-                  <span id="test-picks-open-status" class="hidden bg-green-600 text-white px-3 py-2 rounded-lg font-semibold">✅ Picks öppna</span>
-                </div>
-              </div>
-              </div>
-            </div>
+            <!-- Test Countdown Widget removed -->
           </div>
         </div>
         
@@ -1287,32 +1265,7 @@
     }
     
     async function fetchTestCountdownData() {
-      try {
-        const response = await fetch('/race_countdown?mode=test');
-        const data = await response.json();
-        
-        if (data.error) {
-          document.getElementById('test-countdown-race-name').textContent = 'Test Mode';
-          document.getElementById('test-race-countdown').textContent = '--:--:--';
-          document.getElementById('test-deadline-countdown').textContent = '--:--:--';
-          return;
-        }
-        
-        // Update race name
-        document.getElementById('test-countdown-race-name').textContent = data.next_race.name;
-        
-        // Update countdowns
-        updateTestCountdowns(data);
-        
-        // Update picks status (test countdown controls picks during testing)
-        updateTestPicksStatus(data);
-        
-      } catch (error) {
-        console.error('Error fetching test countdown data:', error);
-        document.getElementById('test-countdown-race-name').textContent = 'Test Mode';
-        document.getElementById('test-race-countdown').textContent = '--:--:--';
-        document.getElementById('test-deadline-countdown').textContent = '--:--:--';
-      }
+      // test countdown removed
     }
     
     function updateRealCountdowns(data) {
@@ -1341,48 +1294,7 @@
       document.getElementById('real-deadline-countdown').textContent = formatTime(deadlineCountdown);
     }
     
-    function updateTestCountdowns(data) {
-      const raceCountdown = data.countdown.race_start;
-      const deadlineCountdown = data.countdown.pick_deadline;
-      
-      // Check if countdown has finished
-      if (raceCountdown.total_seconds <= 0 && deadlineCountdown.total_seconds <= 0) {
-        // Stop the countdown when both reach zero
-        document.getElementById('test-race-countdown').textContent = '00:00:00';
-        document.getElementById('test-deadline-countdown').textContent = '00:00:00';
-        
-        // Stop the test countdown interval
-        if (testCountdownInterval) {
-          clearInterval(testCountdownInterval);
-          testCountdownInterval = null;
-        }
-        return;
-      }
-      
-      // Format time display
-      function formatTime(countdown) {
-        if (countdown.total_seconds <= 0) {
-          return '00:00:00';
-        }
-        
-        const days = countdown.days;
-        const hours = countdown.hours;
-        const minutes = countdown.minutes;
-        const seconds = countdown.seconds;
-        
-        if (days > 0) {
-          return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        } else {
-          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-      }
-      
-      const raceTimeFormatted = formatTime(raceCountdown);
-      const deadlineTimeFormatted = formatTime(deadlineCountdown);
-      
-      document.getElementById('test-race-countdown').textContent = raceTimeFormatted;
-      document.getElementById('test-deadline-countdown').textContent = deadlineTimeFormatted;
-    }
+    // updateTestCountdowns removed
     
     function updateRealPicksStatus(data) {
       const lockedStatus = document.getElementById('real-picks-locked-status');
@@ -1423,49 +1335,11 @@
       }
     }
     
-    function updateTestPicksStatus(data) {
-      const lockedStatus = document.getElementById('test-picks-locked-status');
-      const openStatus = document.getElementById('test-picks-open-status');
-      const raceResultsButton = document.getElementById('race-results-button');
-      const picksDeadlineStatus = document.getElementById('picks-deadline-status');
-      
-      if (data.picks_locked) {
-        lockedStatus.classList.remove('hidden');
-        openStatus.classList.add('hidden');
-        
-        
-        // Disable Race Results button
-        if (raceResultsButton) {
-          raceResultsButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Resultat (Låsta)</span>';
-        }
-        
-        // Update picks deadline status
-        if (picksDeadlineStatus) {
-          picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300">🔒 <strong>Picks låsta (Test Mode).</strong> Du kan inte längre ändra dina val.</p>';
-          picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
-        }
-      } else {
-        lockedStatus.classList.add('hidden');
-        openStatus.classList.remove('hidden');
-        
-        
-        // Enable Race Results button
-        if (raceResultsButton) {
-          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
-        }
-        
-        // Update picks deadline status
-        if (picksDeadlineStatus) {
-          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">⏰ <strong>Picks öppna (Test Mode).</strong> Andra användares picks är dolda tills deadline.</p>';
-          picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
-        }
-      }
-    }
+    // updateTestPicksStatus removed
     
     function startCountdown() {
-      // Fetch initial data for both countdowns
+      // Fetch initial data
       fetchRealCountdownData();
-      fetchTestCountdownData();
       
       // Check if mobile device
       const isMobile = window.innerWidth <= 768;
@@ -1476,10 +1350,7 @@
         fetchRealCountdownData();
       }, updateInterval);
       
-      // Update test countdown
-      testCountdownInterval = setInterval(() => {
-        fetchTestCountdownData();
-      }, updateInterval);
+      // test countdown updates removed
     }
     
     function stopCountdown() {
