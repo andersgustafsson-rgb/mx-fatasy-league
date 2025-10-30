@@ -1972,6 +1972,8 @@
             backgroundImage = 'url("/static/images/deegan motoacross.avif")';
           } else if (serie.name.toLowerCase().includes('smx')) {
             backgroundImage = 'url("/static/images/smx playoffs.webp")';
+          } else if (serie.name.toLowerCase().includes('wsx')) {
+            backgroundImage = 'url("/static/images/wsx_hero.jpg")';
           }
           
           const cardClass = isClickable 
@@ -2004,9 +2006,10 @@
           `;
           
           
+          const bgStyle = `background-image: ${backgroundImage}; background-size: cover; background-position: center;`;
           return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="cursor: pointer; text-decoration: none;">${cardContent}</a>`
-            : `<div class="${finalCardClass}">${cardContent}</div>`;
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${bgStyle}; cursor: pointer; text-decoration: none;">${cardContent}</a>`
+            : `<div class="${finalCardClass}" style="${bgStyle}">${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
