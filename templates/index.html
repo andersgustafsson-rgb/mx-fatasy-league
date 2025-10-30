@@ -454,7 +454,9 @@
                 </div>
                 <div id="real-picks-status" class="mt-3 text-xs sm:text-sm">
                   <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
-                  <span id="real-picks-open-status" class="hidden bg-green-600 text-white px-3 py-2 rounded-lg font-semibold">✅ Picks öppna</span>
+                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold">
+                    {% if picks_status == 'has_picks' %}✅ Picks klara (Visa){% else %}✅ Picks öppna (Gå till){% endif %}
+                  </a>
                 </div>
               </div>
               </div>
