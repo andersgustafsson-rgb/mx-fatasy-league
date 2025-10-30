@@ -489,7 +489,7 @@
                             <button onclick="clearSeasonTeams()" class="btn-warning px-4 py-2 rounded-lg">
                                 🏁 Clear Season Teams
                             </button>
-                            <button onclick="clearAllGameHighscores()" class="btn-warning px-4 py-2 rounded-lg">
+                            <button onclick="openClearGameHighscoresModal()" class="btn-warning px-4 py-2 rounded-lg">
                                 🗑️ Clear Game Highscores
                             </button>
                         </div>
@@ -514,6 +514,20 @@
 
 
             </div>
+        </div>
+    </div>
+
+    <!-- Modal: Clear Game Highscores -->
+    <div id="clearGameModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden z-50">
+        <div class="bg-gray-800 border border-cyan-400 rounded-lg p-6 w-80 shadow-2xl">
+            <h3 class="text-lg font-semibold text-white mb-4">Nollställ Game Highscores</h3>
+            <div class="space-y-2">
+                <button onclick="performClearGameHighscores('both')" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Båda (Cross Jump + Quiz)</button>
+                <button onclick="performClearGameHighscores('cross')" class="w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded">Endast Cross Jump</button>
+                <button onclick="performClearGameHighscores('quiz')" class="w-full bg-yellow-600 hover:bg-yellow-700 text-black px-4 py-2 rounded">Endast Motocross Quiz</button>
+                <button onclick="closeClearGameHighscoresModal()" class="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">Avbryt</button>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">Obs: Motocross Quiz-highscores rensas per webbläsare (localStorage).</p>
         </div>
     </div>
 
@@ -556,15 +570,17 @@
             }
         }
 
-        // Clear highscores for Cross Jump (server + localStorage) and Motocross Quiz (localStorage)
-        async function clearAllGameHighscores() {
+        // Modal for Clear Game Highscores (clickable choices)
+        function openClearGameHighscoresModal() {
+            document.getElementById('clearGameModal').classList.remove('hidden');
+        }
+        function closeClearGameHighscoresModal() {
+            document.getElementById('clearGameModal').classList.add('hidden');
+        }
+        async function performClearGameHighscores(choice) {
             try {
-                // Ask what to clear
-                const choice = prompt('Vad vill du nollställa?\n1 = Båda\n2 = Cross Jump (server)\n3 = Motocross Quiz (denna webbläsare)', '1');
-                if (!choice) return;
-                const wantCrossJump = choice === '1' || choice === '2';
-                const wantQuiz = choice === '1' || choice === '3';
-
+                const wantCrossJump = choice === 'both' || choice === 'cross';
+                const wantQuiz = choice === 'both' || choice === 'quiz';
                 let messages = [];
 
                 if (wantCrossJump) {
@@ -579,12 +595,10 @@
                     } catch (e) {
                         messages.push('❌ Fel vid nollställning Cross Jump (server): ' + e);
                     }
-                    // Also clear localStorage fallback values used av spelet
                     try { localStorage.removeItem('crossDinoGlobalHighScore'); } catch (e) {}
                 }
 
                 if (wantQuiz) {
-                    // Quiz highscores är endast localStorage per webbläsare
                     try {
                         localStorage.removeItem('motocrossQuizHighScores');
                         messages.push('✅ Motocross Quiz highscores nollställda (denna webbläsare)');
@@ -593,8 +607,10 @@
                     }
                 }
 
+                closeClearGameHighscoresModal();
                 alert(messages.join('\n'));
             } catch (err) {
+                closeClearGameHighscoresModal();
                 alert('❌ Fel vid Clear Game Highscores: ' + err);
             }
         }
