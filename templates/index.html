@@ -1982,6 +1982,10 @@
           }
           
           const finalCardClass = `${cardClass} ${backgroundClass}`;
+          // WSX inline fallback to ensure the hero shows even if class fails
+          const wsxInlineBg = serie.name.toLowerCase().includes('wsx')
+            ? 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;'
+            : '';
           
           
           const cardContent = `
@@ -1996,8 +2000,8 @@
           
           
           return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="cursor: pointer; text-decoration: none;">${cardContent}</a>`
-            : `<div class="${finalCardClass}">${cardContent}</div>`;
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg} cursor: pointer; text-decoration: none;">${cardContent}</a>`
+            : `<div class="${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
