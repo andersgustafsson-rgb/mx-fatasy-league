@@ -188,6 +188,8 @@
     </div>
 
     <script>
+        // Current player (display name > username), injected from server
+        window.currentPlayerName = {{ (current_player_name or 'null')|tojson }};
         // Quiz data
         const quizData = {
             easy: [
@@ -592,7 +594,8 @@
                 score: score,
                 difficulty: difficulty,
                 date: currentDate,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                name: window.currentPlayerName || 'Anonym'
             });
             
             // Sort by score (descending) and keep top 10
@@ -667,6 +670,7 @@
                     <span class="text-2xl">${medal}</span>
                     <span class="text-white font-bold">${score.score}/10</span>
                     <span class="text-gray-300">${difficultyText}</span>
+                    <span class="text-gray-200">${score.name || 'Anonym'}</span>
                     <span class="text-gray-400 text-sm">${score.date}</span>
                 </div>`;
             });

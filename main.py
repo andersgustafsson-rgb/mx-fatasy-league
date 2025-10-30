@@ -12484,7 +12484,16 @@ def clear_all_picks():
 @app.route("/motocross_quiz")
 def motocross_quiz():
     """Motocross Quiz game"""
-    return render_template("motocross_quiz.html")
+    # Provide current player's name for highscores (display_name > username)
+    player_name = None
+    try:
+        if "user_id" in session:
+            user = User.query.get(session["user_id"])
+            if user:
+                player_name = user.display_name or user.username
+    except Exception:
+        player_name = session.get("username")
+    return render_template("motocross_quiz.html", current_player_name=player_name)
 
 @app.route("/clear_all_data")
 def clear_all_data():
