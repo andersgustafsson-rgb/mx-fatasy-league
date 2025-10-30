@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+from app.models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore
 
 # -------------------------------------------------
 # Flask app & config
@@ -55,6 +56,7 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
     print("Using local SQLite database file")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db.init_app(app)
 
 # Security settings
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour session timeout
@@ -89,366 +91,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
-# Database
-db = SQLAlchemy(app)
+# Database is initialized in models.py and bound here via db.init_app(app)
 
 # Debug: Print database configuration
 # Database configuration loaded
-
-# -------------------------------------------------
-# Modeller
-# -------------------------------------------------
-class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True)  # E-post för lösenordsåterställning
-    display_name = db.Column(db.String(100), nullable=True)  # Användarens riktiga namn
-    profile_picture_url = db.Column(db.Text, nullable=True)  # Profilbild (base64 data)
-    bio = db.Column(db.Text, nullable=True)  # Kort beskrivning om sig själv
-    favorite_rider = db.Column(db.String(100), nullable=True)  # Favoritförare
-    favorite_team = db.Column(db.String(100), nullable=True)  # Favoritlag
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # När kontot skapades
-    is_admin = db.Column(db.Boolean, default=False)  # Admin-flagga
-    season_team = db.relationship(
-        "SeasonTeam", backref="user", uselist=False, cascade="all, delete-orphan"
-    )
-
-
-class GlobalSimulation(db.Model):
-    __tablename__ = "global_simulation"
-    id = db.Column(db.Integer, primary_key=True)
-    active = db.Column(db.Boolean, default=False)
-    simulated_time = db.Column(db.String(50), nullable=True)
-    start_time = db.Column(db.String(50), nullable=True)
-    scenario = db.Column(db.String(50), nullable=True)
-    active_race_id = db.Column(db.Integer, nullable=True)  # Which race is currently active for picks
-
-class Series(db.Model):
-    __tablename__ = "series"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)  # 'Supercross', 'Motocross', 'SMX Finals'
-    year = db.Column(db.Integer, nullable=False)
-    start_date = db.Column(db.Date, nullable=True)
-    end_date = db.Column(db.Date, nullable=True)
-    is_active = db.Column(db.Boolean, default=True)
-    points_system = db.Column(db.String(20), default='standard')  # 'standard', 'double', 'triple'
-
-class Competition(db.Model):
-    __tablename__ = "competitions"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    event_date = db.Column(db.Date)
-    series = db.Column(db.String(10), nullable=False)
-    point_multiplier = db.Column(db.Float, default=1.0)
-    is_triple_crown = db.Column(db.Integer, default=0)
-    coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
-    timezone = db.Column(db.String(50), nullable=True)  # <-- tidszon för banan
-    
-    # New SMX fields
-    series_id = db.Column(db.Integer, db.ForeignKey('series.id'), nullable=True)
-    phase = db.Column(db.String(20), nullable=True)  # 'regular', 'playoff1', 'playoff2', 'final'
-    is_qualifying = db.Column(db.Boolean, default=False)  # For SMX Finals qualification
-    
-    # Relationship
-    series_ref = db.relationship('Series', backref='competitions', lazy=True)
-    
-    # Check if start_time column exists in database (cached)
-    _start_time_column_exists = None
-    
-    @classmethod
-    def has_start_time_column(cls):
-        if cls._start_time_column_exists is None:
-            try:
-                db.session.execute(db.text("SELECT start_time FROM competitions LIMIT 1"))
-                cls._start_time_column_exists = True
-            except Exception:
-                cls._start_time_column_exists = False
-        return cls._start_time_column_exists
-    
-    # Dynamic property for start_time to handle missing column gracefully
-    @property
-    def start_time(self):
-        if not self.has_start_time_column():
-            return None
-        try:
-            # Use raw SQL to get start_time if column exists
-            result = db.session.execute(
-                db.text("SELECT start_time FROM competitions WHERE id = :id"), 
-                {'id': self.id}
-            ).fetchone()
-            if result and result[0]:
-                from datetime import time
-                return result[0] if isinstance(result[0], time) else None
-            return None
-        except Exception:
-            return None
-    
-    @start_time.setter
-    def start_time(self, value):
-        if not self.has_start_time_column():
-            return
-        try:
-            # Use raw SQL to set start_time if column exists
-            db.session.execute(
-                db.text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
-                {'start_time': value, 'id': self.id}
-            )
-        except Exception:
-            pass
-
-class Rider(db.Model):
-    __tablename__ = "riders"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    class_name = db.Column("class", db.String(10), nullable=False)  # Keep for backward compatibility
-    classes = db.Column(db.String(50), nullable=True)  # New: comma-separated classes like "250cc,450cc"
-    rider_number = db.Column(db.Integer)
-    bike_brand = db.Column(db.String(50))
-    image_url = db.Column(db.String(200))
-    price = db.Column(db.Integer, nullable=False)
-    coast_250 = db.Column(db.String(10), nullable=True)  # <-- lägg till
-    
-    # New SMX fields
-    series_participation = db.Column(db.String(50), default='all')  # 'supercross', 'motocross', 'all'
-    smx_qualified = db.Column(db.Boolean, default=False)  # Qualified for SMX Finals
-    smx_seed_points = db.Column(db.Integer, default=0)  # Starting points for SMX Finals
-    
-    # Bio fields (nullable)
-    nickname = db.Column(db.String(100))
-    hometown = db.Column(db.String(100))
-    residence = db.Column(db.String(100))
-    birthdate = db.Column(db.Date)
-    height_cm = db.Column(db.Integer)
-    weight_kg = db.Column(db.Integer)
-    team = db.Column(db.String(150))
-    manufacturer = db.Column(db.String(100))
-    team_manager = db.Column(db.String(100))
-    mechanic = db.Column(db.String(100))
-    turned_pro = db.Column(db.Integer)
-    instagram = db.Column(db.String(100))
-    twitter = db.Column(db.String(100))
-    facebook = db.Column(db.String(100))
-    website = db.Column(db.String(200))
-    bio = db.Column(db.Text)
-    achievements = db.Column(db.Text)
-    
-
-
-class SeasonTeam(db.Model):
-    __tablename__ = "season_teams"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(
-        db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False
-    )
-    team_name = db.Column(db.String(100), nullable=False)
-    total_points = db.Column(db.Integer, default=0)
-    riders = db.relationship(
-        "SeasonTeamRider", backref="team", cascade="all, delete-orphan"
-    )
-
-
-class SeasonTeamRider(db.Model):
-    __tablename__ = "season_team_riders"
-    entry_id = db.Column(db.Integer, primary_key=True)
-    season_team_id = db.Column(db.Integer, db.ForeignKey("season_teams.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-
-
-class League(db.Model):
-    __tablename__ = "leagues"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    creator_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    invite_code = db.Column(db.String(10), unique=True, nullable=False)
-    image_url = db.Column(db.String(200))  # Legacy: file path (deprecated)
-    image_data = db.Column(db.Text)  # NEW: base64 encoded image data
-    image_mime_type = db.Column(db.String(50))  # NEW: image MIME type (e.g., 'image/png')
-    description = db.Column(db.String(255))  # NY: kort beskrivning (nullable)
-    is_public = db.Column(db.Boolean, default=True)  # NEW: public/private league
-    total_points = db.Column(db.Integer, default=0)  # NEW: league competition points
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # NEW: creation date
-
-
-class LeagueMembership(db.Model):
-    __tablename__ = "league_memberships"
-    id = db.Column(db.Integer, primary_key=True)
-    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
-    __table_args__ = (db.UniqueConstraint('league_id', 'user_id', name='uq_league_user'),)
-
-
-class LeagueRequest(db.Model):
-    __tablename__ = "league_requests"
-    id = db.Column(db.Integer, primary_key=True)
-    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    message = db.Column(db.String(500))  # Optional message from requester
-    status = db.Column(db.String(20), default='pending')  # pending, approved, rejected
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    processed_at = db.Column(db.DateTime)
-    __table_args__ = (db.UniqueConstraint('league_id', 'user_id', name='uq_league_request'),)
-
-class BulletinPost(db.Model):
-    __tablename__ = "bulletin_posts"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    content = db.Column(db.Text, nullable=False)
-    category = db.Column(db.String(20), default="general")  # general, tips, question, discussion
-    parent_id = db.Column(db.Integer, db.ForeignKey("bulletin_posts.id"), nullable=True)  # For replies
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_deleted = db.Column(db.Boolean, default=False)
-    
-    # Relationships
-    user = db.relationship("User", backref="bulletin_posts")
-    parent = db.relationship("BulletinPost", remote_side=[id], backref="replies")
-    reactions = db.relationship("BulletinReaction", backref="post", cascade="all, delete-orphan")
-
-class BulletinReaction(db.Model):
-    __tablename__ = "bulletin_reactions"
-    id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey("bulletin_posts.id"), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    emoji = db.Column(db.String(10), nullable=False)  # 🚀, 😂, 👍, etc.
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = db.relationship("User", backref="bulletin_reactions")
-    
-    # Unique constraint - one reaction per user per post per emoji
-    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', 'emoji', name='unique_user_post_emoji'),)
-
-
-class RacePick(db.Model):
-    __tablename__ = "race_picks"
-    pick_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-    predicted_position = db.Column(db.Integer)
-
-
-class CompetitionScore(db.Model):
-    __tablename__ = "competition_scores"
-    score_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    total_points = db.Column(db.Integer)
-    race_points = db.Column(db.Integer, default=0)
-    holeshot_points = db.Column(db.Integer, default=0)
-    wildcard_points = db.Column(db.Integer, default=0)
-class LeaderboardHistory(db.Model):
-    __tablename__ = "leaderboard_history"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    ranking = db.Column(db.Integer, nullable=False)
-    total_points = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Index för snabbare queries
-    __table_args__ = (
-        db.Index('idx_leaderboard_history_user_created', 'user_id', 'created_at'),
-    )
-
-class CompetitionRiderStatus(db.Model):
-    __tablename__ = "competition_rider_status"
-    id = db.Column(db.Integer, primary_key=True)
-
-    # Tävling som statusen gäller
-    competition_id = db.Column(
-        db.Integer,
-        db.ForeignKey("competitions.id"),
-        nullable=False,
-        index=True,
-    )
-
-    # Förare som statusen gäller
-    rider_id = db.Column(
-        db.Integer,
-        db.ForeignKey("riders.id"),
-        nullable=False,
-        index=True,
-    )
-
-    # Status (börja med 'OUT', du kan utöka senare: 'PROB', 'DNS', osv.)
-    status = db.Column(db.String(20), nullable=False, default="OUT")
-
-    # Säkra att vi inte sparar dubletter för samma (tävling, förare)
-    __table_args__ = (
-        db.UniqueConstraint("competition_id", "rider_id", name="uq_comp_rider"),
-    )
-
-class CompetitionResult(db.Model):
-    __tablename__ = "competition_results"
-    result_id = db.Column(db.Integer, primary_key=True)
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-    position = db.Column(db.Integer, nullable=False)
-    
-    # Relationships
-    competition = db.relationship('Competition', backref='results', lazy=True)
-    rider = db.relationship('Rider', backref='results', lazy=True)
-    
-    # Unique constraint to prevent duplicate results for same rider in same competition
-    __table_args__ = (
-        db.UniqueConstraint('competition_id', 'rider_id', name='uq_comp_rider_result'),
-    )
-
-
-class HoleshotPick(db.Model):
-    __tablename__ = "holeshot_picks"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-    class_name = db.Column("class", db.String(10))
-
-
-class HoleshotResult(db.Model):
-    __tablename__ = "holeshot_results"
-    id = db.Column(db.Integer, primary_key=True)
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-    class_name = db.Column("class", db.String(10))
-
-
-class WildcardPick(db.Model):
-    __tablename__ = "wildcard_picks"
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
-    rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
-    position = db.Column(db.Integer)
-
-class CompetitionImage(db.Model):
-    __tablename__ = "competition_images"
-    id = db.Column(db.Integer, primary_key=True)
-    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False)
-    image_url = db.Column(db.String(300), nullable=False)  # ex: "trackmaps/2026/001_Rd03_Anaheim_Overview03.jpg"
-    sort_order = db.Column(db.Integer, default=0)
-
-    competition = db.relationship(
-        "Competition",
-        backref=db.backref("images", cascade="all, delete-orphan", lazy="dynamic")
-    )
-
-
-class CrossDinoHighScore(db.Model):
-    __tablename__ = 'cross_dino_highscores'
-    id = db.Column(db.Integer, primary_key=True)
-    player_name = db.Column(db.String(100), nullable=False)
-    score = db.Column(db.Integer, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.player_name,
-            'score': self.score,
-            'created_at': self.created_at.isoformat()
-        }    
 
 # -------------------------------------------------
 # Helpers
@@ -457,6 +103,33 @@ def get_today():
     """Get today's date - simplified without old simulation"""
     today = date.today()
     return today
+
+def ensure_wsx_series_and_competitions():
+    """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns."""
+    from datetime import date as _date
+    wsx = Series.query.filter_by(name='WSX', year=2025).first()
+    if not wsx:
+        wsx = Series(
+            name='WSX', year=2025,
+            start_date=_date(2025, 11, 8),
+            end_date=_date(2025, 12, 13),
+            is_active=True, points_system='standard'
+        )
+        db.session.add(wsx)
+        db.session.flush()
+        comps = [
+            ('Buenos Aires City GP', 'Buenos Aires, Argentina', _date(2025, 11, 8)),
+            ('Canadian GP', 'Vancouver, Canada', _date(2025, 11, 15)),
+            ('Australian GP', 'Gold Coast, Australia', _date(2025, 11, 29)),
+            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6)),
+            ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13)),
+        ]
+        for n, loc, d in comps:
+            db.session.add(Competition(name=n, event_date=d, location=loc, series_id=wsx.id))
+        db.session.commit()
+        print("[WSX-SEED] WSX-serie och 5 tävlingar skapade!")
+    else:
+        print("[WSX-SEED] WSX-serie fanns redan!")
 
 def is_admin_user():
     """Check if current user is admin"""
@@ -716,22 +389,24 @@ def series_status():
     """Get status of all series for user interface"""
     try:
         print(f"🔍 DEBUG: series_status called")
+        from sqlalchemy import or_, and_
         
-        # Always show all series for 2026, not just active ones
-        # Sort by custom order: Supercross, Motocross, SMX Finals
-        series = Series.query.filter_by(year=2026).all()
-        print(f"🔍 DEBUG: Found {len(series)} series for 2026")
+        # Include all 2026 series + ongoing 2025 series (e.g., WSX 2025)
+        current_date = get_today()
+        all_series = Series.query.filter(
+            or_(
+                Series.year == 2026,
+                and_(Series.year == 2025, Series.end_date != None, Series.end_date >= current_date)
+            )
+        ).all()
+        print(f"🔍 DEBUG: Found {len(all_series)} series (2026 + ongoing 2025)")
         
         # Custom sort order
-        series_order = {'Supercross': 1, 'Motocross': 2, 'SMX Finals': 3}
-        series.sort(key=lambda s: series_order.get(s.name, 999))
-        
-        # Use simulated date if available, otherwise use real date
-        current_date = get_today()
-        print(f"🔍 DEBUG: Current date: {current_date}")
+        series_order = {'Supercross': 1, 'Motocross': 2, 'SMX Finals': 3, 'WSX': 4}
+        all_series.sort(key=lambda s: series_order.get(s.name, 999))
         
         series_data = []
-        for s in series:
+        for s in all_series:
             print(f"🔍 DEBUG: Processing series: {s.name}")
             
             # Use is_active from database (set by simulation) or fallback to date-based logic
@@ -761,8 +436,9 @@ def series_status():
             next_race = None
             try:
                 active_simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
-                if active_simulation and active_simulation.active_competition_id:
-                    active_comp = Competition.query.get(active_simulation.active_competition_id)
+                # Our model uses active_race_id as the active competition id
+                if active_simulation and getattr(active_simulation, 'active_race_id', None):
+                    active_comp = Competition.query.get(active_simulation.active_race_id)
                     if active_comp and active_comp.series_id == s.id:
                         next_race = active_comp
                         print(f"🔍 DEBUG: Using active competition: {next_race.name}")
@@ -10060,6 +9736,11 @@ def init_database():
             try:
                 db.create_all()
                 print("Database tables created successfully")
+                # Auto-seed WSX 2025 so it always exists for the UI
+                try:
+                    ensure_wsx_series_and_competitions()
+                except Exception as seed_err:
+                    print(f"Warning: WSX seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             
