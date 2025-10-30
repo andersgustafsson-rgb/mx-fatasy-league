@@ -556,6 +556,49 @@
             }
         }
 
+        // Clear highscores for Cross Jump (server + localStorage) and Motocross Quiz (localStorage)
+        async function clearAllGameHighscores() {
+            try {
+                // Ask what to clear
+                const choice = prompt('Vad vill du nollställa?\n1 = Båda\n2 = Cross Jump (server)\n3 = Motocross Quiz (denna webbläsare)', '1');
+                if (!choice) return;
+                const wantCrossJump = choice === '1' || choice === '2';
+                const wantQuiz = choice === '1' || choice === '3';
+
+                let messages = [];
+
+                if (wantCrossJump) {
+                    try {
+                        const resp = await fetch('/api/cross_dino/reset_highscores', { method: 'POST' });
+                        if (resp.ok) {
+                            messages.push('✅ Cross Jump highscores nollställda (server)');
+                        } else {
+                            const t = await resp.text();
+                            messages.push('❌ Kunde inte nollställa Cross Jump (server): ' + t);
+                        }
+                    } catch (e) {
+                        messages.push('❌ Fel vid nollställning Cross Jump (server): ' + e);
+                    }
+                    // Also clear localStorage fallback values used av spelet
+                    try { localStorage.removeItem('crossDinoGlobalHighScore'); } catch (e) {}
+                }
+
+                if (wantQuiz) {
+                    // Quiz highscores är endast localStorage per webbläsare
+                    try {
+                        localStorage.removeItem('motocrossQuizHighScores');
+                        messages.push('✅ Motocross Quiz highscores nollställda (denna webbläsare)');
+                    } catch (e) {
+                        messages.push('❌ Fel vid nollställning Motocross Quiz (localStorage): ' + e);
+                    }
+                }
+
+                alert(messages.join('\n'));
+            } catch (err) {
+                alert('❌ Fel vid Clear Game Highscores: ' + err);
+            }
+        }
+
         async function clearRaceResults() {
             if (confirm('This will clear all race results. Continue?')) {
                 try {
