@@ -2657,7 +2657,8 @@ def add_rider():
         bike_brand=data['bike_brand'],
         coast_250=data.get('coast_250'),
         price=price,
-        image_url=image_url
+        image_url=image_url,
+        series_participation=data.get('series_participation')
     )
     
     db.session.add(rider)
@@ -2772,6 +2773,9 @@ def update_rider(rider_id):
     ]:
         if field in data:
             setattr(rider, field, data[field])
+    # Allow updating series participation (e.g., 'wsx')
+    if 'series_participation' in data:
+        rider.series_participation = data['series_participation'] or rider.series_participation
     
     if 'birthdate' in data:
         try:
