@@ -73,4 +73,11 @@ def create_app() -> Flask:
 	except Exception:
 		pass
 
+	# Register admin blueprint
+	try:
+		from .routes.admin import bp as admin_bp  # noqa: F401
+		app.register_blueprint(admin_bp)
+	except Exception:
+		pass
+
 	return app
