@@ -11376,29 +11376,29 @@ def race_countdown():
         
         # Use is_picks_locked for consistency
         # Find the actual competition for this race
-            upcoming_race = Competition.query.filter(
+        upcoming_race = Competition.query.filter(
             Competition.event_date >= today,
             Competition.event_date <= today + timedelta(days=7)
         ).order_by(Competition.event_date).first()
-        
+
         picks_locked = False
         if upcoming_race:
-                # Ensure same self-heal for BA when checking lock state
-                try:
-                    needs_commit2 = False
-                    if 'buenos aires' in (upcoming_race.name or '').lower():
-                        if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
-                            upcoming_race.timezone = 'America/Argentina/Buenos_Aires'
-                            needs_commit2 = True
-                        if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
-                            from datetime import time as _t
-                            upcoming_race.start_time = _t(hour=13, minute=0)
-                            needs_commit2 = True
-                    if needs_commit2:
-                        db.session.commit()
-                except Exception as _e3:
-                    db.session.rollback()
-                    print(f"DEBUG: lock-check BA fix failed: {_e3}")
+            # Ensure same self-heal for BA when checking lock state
+            try:
+                needs_commit2 = False
+                if 'buenos aires' in (upcoming_race.name or '').lower():
+                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
+                        upcoming_race.timezone = 'America/Argentina/Buenos_Aires'
+                        needs_commit2 = True
+                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                        from datetime import time as _t
+                        upcoming_race.start_time = _t(hour=13, minute=0)
+                        needs_commit2 = True
+                if needs_commit2:
+                    db.session.commit()
+            except Exception as _e3:
+                db.session.rollback()
+                print(f"DEBUG: lock-check BA fix failed: {_e3}")
             picks_locked = is_picks_locked(upcoming_race)
         
         return jsonify({
