@@ -440,54 +440,60 @@
           </div>
           {% endif %}
           
-          <!-- Mobile: Login/Logout, Settings, Spel and Manual buttons above countdown -->
+          <!-- Mobile: Quick Access Buttons above countdown -->
           <div class="mb-4 sm:hidden">
-            <div class="grid grid-cols-2 gap-2 bg-black bg-opacity-40 rounded-lg p-2">
+            <div class="bg-black bg-opacity-40 rounded-lg p-2 border border-gray-600">
               <!-- Row 1: Login/Logout and Settings -->
-              <div class="flex items-center gap-2 col-span-2">
+              <div class="flex items-center gap-2 mb-2">
                 <!-- Login/Logout Button -->
-                <div class="flex items-center gap-1 flex-shrink-0">
                 {% if is_logged_in %}
-                  <a href="{{ url_for('logout') }}" class="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200" title="Logga ut">
+                  <a href="{{ url_for('logout') }}" class="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 border border-red-400 shadow-md" title="Logga ut">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
                     <span>Logga ut</span>
                   </a>
                 {% else %}
-                  <button onclick="openLoginModal();" class="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200" title="Logga in">
+                  <button onclick="openLoginModal();" class="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 border border-green-400 shadow-md" title="Logga in">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                     </svg>
                     <span>Logga in</span>
                   </button>
                 {% endif %}
-                </div>
                 
                 <!-- Settings button -->
                 <button 
-                  class="flex-1 tab-btn settings-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  class="flex-1 tab-btn settings-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
                   data-tab="settings"
                 >
                   ⚙️ Settings
                 </button>
               </div>
               
-              <!-- Row 2: Spel and Manual -->
-              <button 
-                class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="games"
-              >
-                🎮 Spel
-              </button>
-              <a 
-                href="{{ url_for('manual_page') }}"
-                class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 text-center"
-                target="_blank"
-                title="Öppna spelmanualen i ny flik"
-              >
-                📖 Manual
-              </a>
+              <!-- Row 2: Quick access tabs -->
+              <div class="grid grid-cols-3 gap-2">
+                <button 
+                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
+                  data-tab="leaderboard"
+                >
+                  👥 Leaderboard
+                </button>
+                <button 
+                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
+                  data-tab="games"
+                >
+                  🎮 Spel
+                </button>
+                <a 
+                  href="{{ url_for('manual_page') }}"
+                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 text-center border border-gray-500 bg-gray-800 bg-opacity-60"
+                  target="_blank"
+                  title="Öppna spelmanualen i ny flik"
+                >
+                  📖 Manual
+                </a>
+              </div>
             </div>
           </div>
           
@@ -649,8 +655,9 @@
                 >
                   🏁 Race Info
                 </button>
+                <!-- Leaderboard button - hidden on mobile (moved above) -->
                 <button 
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  class="tab-btn hidden sm:flex px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                   data-tab="leaderboard"
                 >
                   👥 Leaderboard
