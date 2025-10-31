@@ -11102,8 +11102,9 @@ def delete_user(user_id):
         # 11. Delete season team (cascade should handle riders, but let's be explicit)
         SeasonTeam.query.filter_by(user_id=user_id).delete()
         
-        # 12. Delete high scores (CrossDinoHighScore)
-        CrossDinoHighScore.query.filter_by(user_id=user_id).delete()
+        # 12. Delete high scores - CrossDinoHighScore uses player_name, not user_id
+        # Match by username since player_name is used instead of user_id
+        CrossDinoHighScore.query.filter_by(player_name=username).delete()
         
         # 13. Finally, delete the user
         db.session.delete(user)
