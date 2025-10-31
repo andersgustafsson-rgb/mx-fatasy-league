@@ -10944,6 +10944,11 @@ def create_hampus_admin():
         print(f"Error creating Hampus admin: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/manual")
+def manual_page():
+    """Manual page for the game"""
+    return render_template("manual.html")
+
 @app.route("/admin/users")
 def admin_users():
     """Admin page to manage users"""
