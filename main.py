@@ -4600,9 +4600,9 @@ def get_other_users_picks(competition_id):
                         }
                     elif holeshot.class_name == '250cc' and not holeshot_250:
                         holeshot_250 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
         
         # Get wildcard pick (only for non-WSX series)
         wildcard = None
