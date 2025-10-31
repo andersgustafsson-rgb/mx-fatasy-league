@@ -1947,21 +1947,21 @@ def delete_league(league_id):
         return redirect(url_for("login"))
     
     try:
-        league = League.query.get_or_404(league_id)
-        if league.creator_id != session["user_id"]:
-            flash("Endast skaparen kan radera ligan.", "error")
-            return redirect(url_for("league_detail_page", league_id=league_id))
+    league = League.query.get_or_404(league_id)
+    if league.creator_id != session["user_id"]:
+        flash("Endast skaparen kan radera ligan.", "error")
+        return redirect(url_for("league_detail_page", league_id=league_id))
         
         # Delete all related data first (same as admin_delete_league)
         LeagueRequest.query.filter_by(league_id=league_id).delete()
-        LeagueMembership.query.filter_by(league_id=league_id).delete()
+    LeagueMembership.query.filter_by(league_id=league_id).delete()
         
         # Delete the league
-        db.session.delete(league)
-        db.session.commit()
+    db.session.delete(league)
+    db.session.commit()
         
-        flash("Ligan är raderad.", "success")
-        return redirect(url_for("leagues_page"))
+    flash("Ligan är raderad.", "success")
+    return redirect(url_for("leagues_page"))
         
     except Exception as e:
         db.session.rollback()
@@ -11426,13 +11426,17 @@ def race_countdown():
                 print(f"DEBUG: lock-check BA fix failed: {_e3}")
             picks_locked = is_picks_locked(upcoming_race)
         
+        # Check if race has results (is completed)
+        has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
+        
         return jsonify({
             "next_race": next_race,
             "countdown": {
                 "race_start": format_countdown(race_diff),
                 "pick_deadline": format_countdown(deadline_diff)
             },
-            "picks_locked": picks_locked
+            "picks_locked": picks_locked,
+            "has_results": has_results
         })
         
     except Exception as e:

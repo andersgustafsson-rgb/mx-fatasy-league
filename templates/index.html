@@ -1305,7 +1305,29 @@
       const raceResultsButton = document.getElementById('race-results-button');
       const picksDeadlineStatus = document.getElementById('picks-deadline-status');
       
-      if (data.picks_locked) {
+      // Check if race has results (is completed)
+      const hasResults = data.has_results || false;
+      
+      if (hasResults) {
+        // Race is completed - show "Race färdigt" instead of picks status
+        lockedStatus.classList.add('hidden');
+        openStatus.classList.remove('hidden');
+        openStatus.innerHTML = '<span class="bg-blue-600 text-white px-3 py-2 rounded-lg font-semibold">🏁 Race färdigt</span>';
+        openStatus.href = '/race_results';
+        openStatus.className = 'hidden inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+        
+        // Enable Race Results button
+        if (raceResultsButton) {
+          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
+        }
+        
+        // Update picks deadline status
+        if (picksDeadlineStatus) {
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">🏁 <strong>Race färdigt.</strong> Resultat är nu tillgängliga!</p>';
+          picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
+        }
+      } else if (data.picks_locked) {
+        // Picks are locked but race not completed yet
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
         
@@ -1321,9 +1343,12 @@
           picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
         }
       } else {
+        // Picks are still open
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
-        
+        // Restore original link and text based on picks_status from server
+        openStatus.href = '/race_picks_active';
+        openStatus.className = 'hidden inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
         
         // Enable Race Results button
         if (raceResultsButton) {
