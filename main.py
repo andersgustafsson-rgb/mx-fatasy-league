@@ -6061,6 +6061,7 @@ def get_competitions_for_import():
             competition_list.append({
                 "id": comp.id,
                 "name": comp.name,
+                "series": comp.series,  # Include series to check if WSX
                 "event_date": comp.event_date.isoformat() if comp.event_date else None,
                 "location": getattr(comp, 'location', 'Unknown'),
                 "has_results": bool(CompetitionResult.query.filter_by(competition_id=comp.id).first())

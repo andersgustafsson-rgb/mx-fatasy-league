@@ -1015,8 +1015,12 @@
             // Fetch competition info to check series
             const compRes = await fetch(`/get_competitions_for_import`);
             const compData = await compRes.json();
-            const competition = compData.competitions?.find(c => c.id == compId);
+            // Convert compId to number for comparison since API returns numbers
+            const compIdNum = parseInt(compId);
+            const competition = compData.competitions?.find(c => c.id === compIdNum || c.id == compId);
             const isWSX = competition?.series === 'WSX';
+            
+            console.log('Manual competition changed:', { compId, compIdNum, competition, isWSX });
             
             // Fetch riders for this competition (admin endpoint returns all riders incl. class)
             const res = await fetch(`/admin/get_out_status/${compId}`);
