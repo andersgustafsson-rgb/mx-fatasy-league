@@ -5,7 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ competition.name }} - Race Picks</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
+    /* Dark background like leagues page */
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
+      background-attachment: fixed !important;
+      min-height: 100vh !important;
+    }
   .result-correct { border-left: 4px solid #22c55e; }
   .dark .result-correct { background-color: rgba(34, 197, 94, 0.1); }
   .result-close { border-left: 4px solid #eab308; }
@@ -207,7 +215,7 @@
   }
 </style>
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans">
+<body class="text-gray-200 font-sans min-h-screen">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
 
     <!-- Header - Responsiv layout -->
@@ -217,7 +225,7 @@
 
     {# Visa datum om du har det #}
     {% if competition.event_date %}
-          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p class="text-xs sm:text-sm text-gray-300 mt-1">
         {{ competition.event_date.strftime('%Y-%m-%d') }}
       </p>
     {% endif %}
@@ -225,7 +233,7 @@
     {# 250SX East/West label #}
     {% if competition.coast_250 %}
       <div class="mt-2 inline-flex items-center gap-2">
-        <span class="text-xs text-gray-600 dark:text-gray-400">
+        <span class="text-xs text-gray-300">
           250SX {{ competition.coast_250|capitalize }}
         </span>
         <span class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white">
@@ -247,14 +255,14 @@
 
     <!-- Trackmap Section with Side Info -->
     {% if trackmap_images and trackmap_images|length > 0 %}
-    <div class="mb-6 bg-gray-200 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
-      <h2 class="text-xl font-bold text-cyan-700 dark:text-cyan-400 mb-4 flex items-center">
+    <div class="mb-6 bg-gray-800 rounded-lg p-4 border border-cyan-500">
+      <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
         🗺️ Track Map
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <!-- Track Map - Smaller -->
-        <div class="lg:col-span-2 bg-gray-300 dark:bg-gray-700 rounded-lg p-4 border border-gray-400 dark:border-gray-600">
+        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border border-cyan-500">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=trackmap_images[0].image_url) }}"
                alt="Track Map {{ competition.name }}"
@@ -348,17 +356,17 @@
     {% set outset = out_ids | default([]) %}
     
     <!-- Picks Status Indicator -->
-    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-gray-500 dark:border-gray-600 bg-gray-200 dark:bg-gray-800">
+    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div id="status-icon" class="text-2xl">⏳</div>
           <div>
-            <h3 id="status-title" class="text-lg font-semibold text-gray-700 dark:text-gray-300">Laddar picks-status...</h3>
-            <p id="status-message" class="text-sm text-gray-500 dark:text-gray-400">Kontrollerar om du har gjort dina val</p>
+            <h3 id="status-title" class="text-lg font-semibold text-cyan-400">Laddar picks-status...</h3>
+            <p id="status-message" class="text-sm text-gray-300">Kontrollerar om du har gjort dina val</p>
           </div>
         </div>
         <div id="status-actions" class="hidden">
-          <button onclick="clearAllPicks()" class="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
+          <button onclick="clearAllPicks()" class="text-sm text-red-400 hover:text-red-300">
             Rensa alla val
           </button>
         </div>
@@ -383,19 +391,19 @@
     </div>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-200 border-b border-gray-300 dark:border-gray-700 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
 <div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
 
   <!-- Kolumn: 450cc -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">450cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">450cc</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-450-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
-          <span class="w-8 text-gray-900 dark:text-gray-300 font-semibold">{{ i }}.</span>
+          <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="450cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('450cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
@@ -430,12 +438,12 @@
 
   <!-- Kolumn: 250cc -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">250cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">250cc</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-250-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
-          <span class="w-8 text-gray-900 dark:text-gray-300 font-semibold">{{ i }}.</span>
+          <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="250cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('250cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
@@ -491,10 +499,10 @@
 
 
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Gissa Holeshot</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <label class="block text-sm sm:text-base mb-1 text-gray-900 dark:text-gray-300 font-semibold">450cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">450cc:</label>
           <div class="rider-selector" data-class="holeshot-450">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-450', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -521,7 +529,7 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm sm:text-base mb-1 text-gray-900 dark:text-gray-300 font-semibold">250cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">250cc:</label>
           <div class="rider-selector" data-class="holeshot-250">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-250', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -615,27 +623,27 @@
     </div>
 
     {% else %}
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-200 border-b border-gray-300 dark:border-gray-700 pb-2">Resultat vs Dina Val</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">450cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">450cc</h3>
         <div id="results-450" class="space-y-1 sm:space-y-2"></div>
       </div>
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">250cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">250cc</h3>
         <div id="results-250" class="space-y-1 sm:space-y-2"></div>
       </div>
     </div>
 
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Holeshot Resultat</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Holeshot Resultat</h3>
       <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
     {% if competition.series != 'WSX' %}
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Wildcard Resultat</h3>
-      <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-100 dark:bg-purple-700 rounded"></div>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Wildcard Resultat</h3>
+      <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-900/40 border border-purple-500 rounded"></div>
     </div>
     {% endif %}
     {% endif %}
@@ -1525,21 +1533,21 @@ function updatePicksStatus(myPicks) {
     statusIcon.textContent = '📝';
     statusTitle.textContent = 'Inga val gjorda än';
     statusMessage.textContent = isWSXSeries ? 'Gör dina val för topp 6 och holeshot' : 'Gör dina val för topp 6, holeshot och wildcard';
-    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
     statusActions.classList.add('hidden');
   } else if (totalPicks < totalRequired) {
     // Partial picks
     statusIcon.textContent = '⚠️';
     statusTitle.textContent = `Delvis klart (${totalPicks}/${totalRequired} val)`;
     statusMessage.textContent = 'Du har gjort några val, men inte alla. Komplettera dina picks!';
-    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30';
     statusActions.classList.remove('hidden');
   } else {
     // All picks made
     statusIcon.textContent = '✅';
     statusTitle.textContent = 'Alla val gjorda!';
     statusMessage.textContent = 'Du har gjort alla dina val för detta race. Lycka till!';
-    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20';
+    statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30';
     statusActions.classList.remove('hidden');
   }
 }
@@ -1633,7 +1641,7 @@ function onPickChange(cls, pos, riderId = null) {
         const resultName = result ? `${findRiderName(result.id)}` : "Inget resultat";
         const pickName = pick ? `${findRiderName(pick.rider_id)}` : "Inget val";
 
-        let cardClass = "bg-gray-50 dark:bg-gray-700";
+        let cardClass = "bg-gray-700";
         if (pick && result && String(pick.rider_id) === String(result.id)) {
           cardClass += " result-correct";
         } else if (
@@ -1652,7 +1660,7 @@ function onPickChange(cls, pos, riderId = null) {
         html += `
           <div class="p-3 rounded ${cardClass}">
             <p class="font-bold">${i}. ${resultName}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400 pl-4">Ditt val: ${pickName}</p>
+            <p class="text-sm text-gray-300 pl-4">Ditt val: ${pickName}</p>
           </div>`;
       }
       if (container) container.innerHTML = html;
@@ -1667,14 +1675,14 @@ function onPickChange(cls, pos, riderId = null) {
           const pickName = pickId ? findRiderName(pickId) : "Inget val";
           const resultName = result ? findRiderName(result.rider_id) : "Inget resultat";
 
-          let cardClass = "bg-gray-50 dark:bg-gray-700";
+          let cardClass = "bg-gray-700";
           if (result && pickId && String(result.rider_id) === String(pickId)) {
             cardClass += " result-correct";
           }
           return `
             <div class="p-3 rounded ${cardClass}">
               <p class="font-bold">${cls}: ${resultName}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 pl-4">Ditt val: ${pickName}</p>
+              <p class="text-sm text-gray-300 pl-4">Ditt val: ${pickName}</p>
             </div>`;
         })
         .join("");
