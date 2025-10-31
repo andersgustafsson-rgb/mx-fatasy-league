@@ -175,7 +175,7 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry (WSX‑stöd)</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Lägg in resultat manuellt. För WSX används SX1 Top‑20 och SX2 Top‑6. Holeshot för båda.</p>
+                        <p class="text-gray-300 mb-4">Lägg in resultat manuellt. För WSX används SX1 Top‑6 och SX2 Top‑6. Holeshot för båda. (Ingen wildcard för WSX)</p>
 
                         <form id="manual-results-form" method="POST" action="/admin/submit_results" class="space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -199,9 +199,9 @@
                                 </div>
                             </div>
 
-                            <!-- SX1 Top 20 (maps to 450cc arrays) -->
+                            <!-- SX1 Top 6 (maps to 450cc arrays) -->
                             <div class="mt-4">
-                                <h4 class="text-lg font-semibold text-white mb-2">WSX SX1 – Top 20</h4>
+                                <h4 id="sx1-header" class="text-lg font-semibold text-white mb-2">WSX SX1 – Top 6</h4>
                                 <div id="manual-sx1-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                             </div>
 
@@ -1011,6 +1011,13 @@
         async function manualCompetitionChanged() {
             const compId = document.getElementById('manual-competition').value;
             if (!compId) return;
+            
+            // Fetch competition info to check series
+            const compRes = await fetch(`/get_competitions_for_import`);
+            const compData = await compRes.json();
+            const competition = compData.competitions?.find(c => c.id == compId);
+            const isWSX = competition?.series === 'WSX';
+            
             // Fetch riders for this competition (admin endpoint returns all riders incl. class)
             const res = await fetch(`/admin/get_out_status/${compId}`);
             const riders = await res.json();
@@ -1020,13 +1027,20 @@
             // Build selects
             const sx1List = document.getElementById('manual-sx1-list');
             const sx2List = document.getElementById('manual-sx2-list');
+            const sx1Header = document.getElementById('sx1-header');
             const hidden = document.getElementById('manual-hidden-inputs');
             sx1List.innerHTML = '';
             sx2List.innerHTML = '';
             hidden.innerHTML = '';
 
-            // SX1 Top 20 → backend 450 arrays
-            for (let pos = 1; pos <= 20; pos++) {
+            // Update header based on series
+            if (sx1Header) {
+                sx1Header.textContent = isWSX ? 'WSX SX1 – Top 6' : 'WSX SX1 – Top 20';
+            }
+
+            // SX1 Top 6 for WSX, Top 20 for others → backend 450 arrays
+            const sx1MaxPos = isWSX ? 6 : 20;
+            for (let pos = 1; pos <= sx1MaxPos; pos++) {
                 const wrapper = document.createElement('div');
                 wrapper.innerHTML = `
                     <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
