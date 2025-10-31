@@ -11052,7 +11052,7 @@ def toggle_admin(user_id):
 
 @app.route("/admin/delete_user/<int:user_id>", methods=['DELETE'])
 def delete_user(user_id):
-    """Delete a user - admin only"""
+    """Delete a user and all related data - admin only"""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
@@ -11063,16 +11063,58 @@ def delete_user(user_id):
         if user.username == 'test':
             return jsonify({"error": "Cannot delete admin user"}), 400
         
-        # Delete user and all related data
         username = user.username
+        
+        # Delete all related data first to avoid foreign key constraint violations
+        # This needs to be done in the correct order
+        
+        # 1. Delete leaderboard history
+        LeaderboardHistory.query.filter_by(user_id=user_id).delete()
+        
+        # 2. Delete competition scores
+        CompetitionScore.query.filter_by(user_id=user_id).delete()
+        
+        # 3. Delete race picks
+        RacePick.query.filter_by(user_id=user_id).delete()
+        
+        # 4. Delete holeshot picks
+        HoleshotPick.query.filter_by(user_id=user_id).delete()
+        
+        # 5. Delete wildcard picks
+        WildcardPick.query.filter_by(user_id=user_id).delete()
+        
+        # 6. Delete bulletin reactions (must be before bulletin posts if they have foreign keys)
+        BulletinReaction.query.filter_by(user_id=user_id).delete()
+        
+        # 7. Delete bulletin posts (user's own posts)
+        BulletinPost.query.filter_by(user_id=user_id).delete()
+        
+        # 8. Delete league requests
+        LeagueRequest.query.filter_by(user_id=user_id).delete()
+        
+        # 9. Delete league memberships
+        LeagueMembership.query.filter_by(user_id=user_id).delete()
+        
+        # 10. Delete leagues where user is creator (handle carefully - might want to transfer ownership)
+        # For now, we'll delete them but you might want to handle this differently
+        League.query.filter_by(creator_id=user_id).delete()
+        
+        # 11. Delete season team (cascade should handle riders, but let's be explicit)
+        SeasonTeam.query.filter_by(user_id=user_id).delete()
+        
+        # 12. Delete high scores (CrossDinoHighScore)
+        CrossDinoHighScore.query.filter_by(user_id=user_id).delete()
+        
+        # 13. Finally, delete the user
         db.session.delete(user)
         db.session.commit()
         
         return jsonify({
-            "message": f"User '{username}' deleted successfully"
+            "message": f"User '{username}' and all related data deleted successfully"
         })
         
     except Exception as e:
+        db.session.rollback()
         print(f"Error deleting user: {e}")
         return jsonify({"error": str(e)}), 500
 
