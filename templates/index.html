@@ -536,36 +536,91 @@
             </button>
 
             <!-- Center: Tab Buttons (now has more space on mobile) -->
-            <div class="relative flex flex-1 items-center">
-              <!-- Left fade gradient and scroll indicator (mobile only) -->
-              <div id="tab-scroll-left-indicator" class="hidden sm:hidden absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none bg-gradient-to-r from-black from-opacity-60 to-transparent items-center justify-center" style="background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                <div class="absolute left-2 top-1/2 transform -translate-y-1/2 text-white opacity-70">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                  </svg>
-                </div>
-              </div>
-              
+            <div class="flex flex-1 items-center relative">
               <!-- Scrollable tabs container -->
-              <div id="tab-scroll-container" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; touch-action: pan-x;">
+              <div id="tab-scroll-container" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="-webkit-overflow-scrolling: touch; touch-action: pan-x;">
                 <style>
-                  /* Hide scrollbar for Chrome, Safari and Opera */
-                  #tab-scroll-container::-webkit-scrollbar {
-                    display: none;
-                  }
-                  /* Ensure touch scrolling works on mobile */
+                  /* Visible scrollbar on mobile for better UX */
                   @media (max-width: 640px) {
                     #tab-scroll-container {
                       touch-action: pan-x !important;
                       -webkit-overflow-scrolling: touch !important;
                       overflow-x: auto !important;
                       overflow-y: hidden !important;
-                      scroll-snap-type: x proximity;
+                      scrollbar-width: thin;
+                      scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+                      /* Add subtle gradient at edges to show more content */
+                      mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+                      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
                     }
                     
-                    /* Subtle scroll snap for tabs on mobile */
-                    #tab-scroll-container .tab-btn {
-                      scroll-snap-align: start;
+                    /* Custom scrollbar styling for webkit browsers */
+                    #tab-scroll-container::-webkit-scrollbar {
+                      height: 4px;
+                      display: block;
+                    }
+                    
+                    #tab-scroll-container::-webkit-scrollbar-track {
+                      background: rgba(0, 0, 0, 0.3);
+                      border-radius: 2px;
+                    }
+                    
+                    #tab-scroll-container::-webkit-scrollbar-thumb {
+                      background: rgba(156, 163, 175, 0.7);
+                      border-radius: 2px;
+                    }
+                    
+                    #tab-scroll-container::-webkit-scrollbar-thumb:hover {
+                      background: rgba(156, 163, 175, 0.9);
+                    }
+                    
+                    /* Add visible overflow indicators - show partial tabs */
+                    #tab-scroll-container::before {
+                      content: '';
+                      position: absolute;
+                      left: 0;
+                      top: 0;
+                      bottom: 0;
+                      width: 20px;
+                      pointer-events: none;
+                      background: linear-gradient(to right, rgba(0, 0, 0, 0.6), transparent);
+                      opacity: 0;
+                      transition: opacity 0.3s;
+                      z-index: 5;
+                    }
+                    
+                    #tab-scroll-container::after {
+                      content: '';
+                      position: absolute;
+                      right: 0;
+                      top: 0;
+                      bottom: 0;
+                      width: 20px;
+                      pointer-events: none;
+                      background: linear-gradient(to left, rgba(0, 0, 0, 0.6), transparent);
+                      opacity: 0;
+                      transition: opacity 0.3s;
+                      z-index: 5;
+                    }
+                    
+                    /* Show indicators when scrollable */
+                    #tab-scroll-container.scrollable-left::before {
+                      opacity: 1;
+                    }
+                    
+                    #tab-scroll-container.scrollable-right::after {
+                      opacity: 1;
+                    }
+                  }
+                  
+                  /* Hide scrollbar on desktop */
+                  @media (min-width: 641px) {
+                    #tab-scroll-container::-webkit-scrollbar {
+                      display: none;
+                    }
+                    #tab-scroll-container {
+                      scrollbar-width: none;
+                      -ms-overflow-style: none;
                     }
                   }
                 </style>
@@ -619,15 +674,6 @@
                 >
                   📖 Manual
                 </a>
-              </div>
-              
-              <!-- Right fade gradient and scroll indicator (mobile only) -->
-              <div id="tab-scroll-right-indicator" class="hidden sm:hidden absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none items-center justify-center" style="background: linear-gradient(to left, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                <div class="absolute right-2 top-1/2 transform -translate-y-1/2 text-white opacity-70">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                  </svg>
-                </div>
               </div>
             </div>
 
@@ -1536,16 +1582,12 @@
     // Update scroll indicators for tab container
     function updateTabScrollIndicators() {
       const container = document.getElementById('tab-scroll-container');
-      const leftIndicator = document.getElementById('tab-scroll-left-indicator');
-      const rightIndicator = document.getElementById('tab-scroll-right-indicator');
-      
-      if (!container || !leftIndicator || !rightIndicator) return;
+      if (!container) return;
       
       // Only show on mobile
       const isMobile = window.innerWidth <= 640;
       if (!isMobile) {
-        leftIndicator.classList.add('hidden');
-        rightIndicator.classList.add('hidden');
+        container.classList.remove('scrollable-left', 'scrollable-right');
         return;
       }
       
@@ -1556,16 +1598,16 @@
       
       // Show/hide left indicator
       if (scrollLeft > 10) {
-        leftIndicator.classList.remove('hidden');
+        container.classList.add('scrollable-left');
       } else {
-        leftIndicator.classList.add('hidden');
+        container.classList.remove('scrollable-left');
       }
       
       // Show/hide right indicator
       if (scrollLeft < maxScroll - 10) {
-        rightIndicator.classList.remove('hidden');
+        container.classList.add('scrollable-right');
       } else {
-        rightIndicator.classList.add('hidden');
+        container.classList.remove('scrollable-right');
       }
     }
     
