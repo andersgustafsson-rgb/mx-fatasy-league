@@ -312,6 +312,146 @@
         .dark .handwritten-title {
             color: #DEB887;
         }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            /* Reduce frame padding and margin on mobile */
+            .bulletin-frame {
+                margin: 10px !important;
+                padding: 15px !important;
+            }
+            
+            /* Make header responsive */
+            .vintage-header {
+                padding: 15px !important;
+            }
+            
+            .vintage-header h1 {
+                font-size: 1.2rem !important;
+            }
+            
+            /* Responsive header flex */
+            .vintage-header > div {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            .vintage-header > div > div:first-child {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+            }
+            
+            /* Reduce form padding */
+            .vintage-form {
+                padding: 15px !important;
+            }
+            
+            /* Make category selection wrap */
+            .vintage-form .flex-wrap {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+            
+            /* Make textarea responsive */
+            .vintage-textarea {
+                font-size: 16px !important; /* Prevents zoom on iOS */
+            }
+            
+            /* Reduce note padding and margin */
+            .vintage-note {
+                margin: 10px 0 !important;
+                padding: 15px !important;
+            }
+            
+            /* Make post header responsive */
+            .vintage-note > div:first-of-type {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+            
+            /* Make reaction buttons wrap */
+            .vintage-note .flex.items-center.space-x-2 {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+            
+            /* Reduce reaction button size on mobile */
+            .reaction-btn {
+                padding: 4px 8px !important;
+                font-size: 14px !important;
+            }
+            
+            /* Make replies section more compact */
+            .replies-section {
+                margin-left: 0 !important;
+                padding-left: 10px !important;
+                border-left-width: 2px !important;
+            }
+            
+            /* Make reply items more compact */
+            .reply-item {
+                padding: 8px !important;
+                margin-bottom: 8px !important;
+            }
+            
+            /* Ensure content doesn't overflow */
+            .post-content {
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+                max-width: 100% !important;
+            }
+            
+            /* Make buttons stack on mobile */
+            .vintage-form .flex.justify-between {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+            
+            .vintage-form .flex.justify-between > * {
+                width: 100% !important;
+            }
+            
+            /* Toast position on mobile */
+            #toast {
+                top: 10px !important;
+                right: 10px !important;
+                left: 10px !important;
+                transform: translateY(-150%) !important;
+            }
+            
+            #toast.translate-x-full {
+                transform: translateY(-150%) !important;
+            }
+        }
+        
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .bulletin-frame {
+                margin: 5px !important;
+                padding: 10px !important;
+            }
+            
+            .vintage-header {
+                padding: 10px !important;
+            }
+            
+            .vintage-header h1 {
+                font-size: 1rem !important;
+            }
+            
+            .handwritten-title {
+                font-size: 1rem !important;
+            }
+            
+            .vintage-form {
+                padding: 10px !important;
+            }
+            
+            .vintage-note {
+                padding: 10px !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -525,7 +665,7 @@
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+    <div id="toast" class="fixed top-4 right-4 left-4 sm:left-auto bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 max-w-md sm:max-w-none mx-auto sm:mx-0">
         <div class="flex items-center space-x-2">
             <span>✅</span>
             <span id="toast-message">Meddelande skickat!</span>
@@ -922,18 +1062,19 @@
             toastMessage.textContent = message;
             
             // Set color based on type
-            toast.className = `fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 ${
+            const isMobile = window.innerWidth <= 768;
+            toast.className = `fixed top-4 right-4 ${isMobile ? 'left-4' : ''} text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg transform ${isMobile ? 'translate-y-[-150%]' : 'translate-x-full'} transition-transform duration-300 z-50 ${isMobile ? 'max-w-md mx-auto' : ''} ${
                 type === 'success' ? 'bg-green-500' : 'bg-red-500'
             }`;
             
             // Show toast
             setTimeout(() => {
-                toast.classList.remove('translate-x-full');
+                toast.classList.remove(isMobile ? 'translate-y-[-150%]' : 'translate-x-full');
             }, 100);
             
             // Hide toast after 3 seconds
             setTimeout(() => {
-                toast.classList.add('translate-x-full');
+                toast.classList.add(isMobile ? 'translate-y-[-150%]' : 'translate-x-full');
             }, 3000);
         }
 
