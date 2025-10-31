@@ -674,10 +674,10 @@
 
                     <!-- Show picks for both classes (user can always see their own picks) -->
                     <div class="space-y-3 mb-3">
-                      <!-- 450cc picks -->
+                      <!-- 450cc picks / SX1 for WSX -->
                       {% if current_picks_450 %}
                       <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg p-3">
-                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏆 Dina topp 6 (450cc):</h4>
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏆 Dina topp 6 {% if upcoming_race and upcoming_race.series == 'WSX' %}(SX1){% else %}(450cc){% endif %}:</h4>
                         <div class="space-y-1">
                           {% for pick in current_picks_450[:6] %}
                           <div class="flex items-center gap-3 text-sm">
@@ -697,10 +697,10 @@
                       </div>
                       {% endif %}
 
-                      <!-- 250cc picks -->
+                      <!-- 250cc picks / SX2 for WSX -->
                       {% if current_picks_250 %}
                       <div class="bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg p-3">
-                        <h4 class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">🏆 Dina topp 6 (250cc):</h4>
+                        <h4 class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-2">🏆 Dina topp 6 {% if upcoming_race and upcoming_race.series == 'WSX' %}(SX2){% else %}(250cc){% endif %}:</h4>
                         <div class="space-y-1">
                           {% for pick in current_picks_250[:6] %}
                           <div class="flex items-center gap-3 text-sm">
@@ -727,14 +727,14 @@
                         <div class="space-y-1">
                           {% if current_holeshot_450 %}
                           <div class="flex items-center gap-3 text-sm">
-                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">450cc:</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">{% if upcoming_race and upcoming_race.series == 'WSX' %}SX1{% else %}450cc{% endif %}:</span>
                             <span class="text-lg">🏁</span>
                             <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_450.rider_number }} {{ current_holeshot_450.rider_name }}</span>
                           </div>
                           {% endif %}
                           {% if current_holeshot_250 %}
                           <div class="flex items-center gap-3 text-sm">
-                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">250cc:</span>
+                            <span class="text-yellow-600 dark:text-yellow-400 font-bold">{% if upcoming_race and upcoming_race.series == 'WSX' %}SX2{% else %}250cc{% endif %}:</span>
                             <span class="text-lg">🏁</span>
                             <span class="font-medium text-yellow-800 dark:text-yellow-200">#{{ current_holeshot_250.rider_number }} {{ current_holeshot_250.rider_name }}</span>
                           </div>
@@ -743,8 +743,8 @@
                       </div>
           {% endif %}
 
-                      <!-- Wildcard pick -->
-                      {% if current_wildcard %}
+                      <!-- Wildcard pick (only for non-WSX series) -->
+                      {% if current_wildcard and upcoming_race and upcoming_race.series != 'WSX' %}
                       <div class="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
                         <h4 class="text-sm font-semibold text-purple-700 dark:text-purple-300 mb-2">🃏 Ditt Wildcard-val:</h4>
                         <div class="flex items-center gap-3 text-sm">

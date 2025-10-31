@@ -741,10 +741,12 @@ def index():
                                 "class": rider.class_name
                             }
                             
-                            # Separate by class
-                            if rider.class_name == "450cc":
+                            # Separate by class (map WSX classes to display classes)
+                            # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
+                            # For other series: use class_name directly
+                            if rider.class_name in ("450cc", "wsx_sx1"):
                                 current_picks_450.append(pick_data)
-                            elif rider.class_name == "250cc":
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
                                 current_picks_250.append(pick_data)
                         
                     # Process holeshot picks
@@ -753,22 +755,23 @@ def index():
                     for holeshot in holeshot_picks:
                         rider = Rider.query.get(holeshot.rider_id)
                         if rider:
-                            if rider.class_name == "450cc":
+                            # Map WSX classes to display classes
+                            if rider.class_name in ("450cc", "wsx_sx1"):
                                 current_holeshot_450 = {
                                     "rider_name": rider.name,
                                     "rider_number": rider.rider_number,
                                     "class": rider.class_name
                                 }
-                            elif rider.class_name == "250cc":
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
                                 current_holeshot_250 = {
                                     "rider_name": rider.name,
                                     "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
                     
-                    # Process wildcard pick
+                    # Process wildcard pick (only for non-WSX series)
                     current_wildcard = None
-                    if wildcard_pick and wildcard_pick.rider_id:
+                    if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
                         rider = Rider.query.get(wildcard_pick.rider_id)
                         if rider:
                             current_wildcard = {
@@ -11387,7 +11390,7 @@ def race_countdown():
             Competition.event_date >= today,
             Competition.event_date <= today + timedelta(days=7)
         ).order_by(Competition.event_date).first()
-
+        
         picks_locked = False
         if upcoming_race:
             # Ensure same self-heal for BA when checking lock state
