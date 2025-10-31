@@ -967,9 +967,11 @@
             const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
             if (isWSX && rider.name) {
               const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-              const base = `/static/riders/wsx/${rider.rider_number ? rider.rider_number + '_' : ''}${slug}`;
-              // Try with (1) suffix first (Windows adds this), then without
-              img.src = `${base} (1).jpg`;
+              // Try without number first (files don't have numbers), encode space as underscore
+              const baseNoNum = `/static/riders/wsx/${slug}`;
+              const baseWithNum = `/static/riders/wsx/${rider.rider_number ? rider.rider_number + '_' : ''}${slug}`;
+              // Try with (1) suffix first, but use underscore instead of space to avoid URL encoding
+              img.src = `${baseNoNum}_(1).jpg`;
               img.setAttribute('data-rider-id', riderId);
               // Debug log (remove after testing)
               console.log('[WSX-IMG-DROPDOWN] Trying:', img.src, 'for rider:', rider.name, 'class:', rider.class);
@@ -1370,9 +1372,11 @@ function imgSrcFor(riderId) {
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
     const slug = wsxSlug(r.name);
-    const base = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${slug}`;
-    // Try with (1) suffix first (Windows adds this), then without
-    const url = `${base} (1).jpg`;
+    // Try without number first (files don't have numbers), then with number
+    const baseNoNum = `/static/riders/wsx/${slug}`;
+    const baseWithNum = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${slug}`;
+    // Try with (1) suffix first (Windows adds this), encode space as underscore to avoid URL encoding issues
+    const url = `${baseNoNum}_(1).jpg`;
     // Debug log (remove after testing)
     console.log('[WSX-IMG] Trying:', url, 'for rider:', r.name, 'class:', r.class, 'number:', r.rider_number);
     return url;
@@ -1393,7 +1397,39 @@ function handleImageError(img) {
   // If we tried jpg from wsx folder, try variations
   const src = img.getAttribute('src') || '';
   if (src.includes('/static/riders/wsx/')) {
-    // Try without (1) suffix if it had one
+    // Try variations: _(1).jpg -> _(2).jpg -> space version (1).jpg -> .jpg -> .png
+    if (src.includes('_(1).jpg')) {
+      // Try (2) suffix with underscore
+      const withTwo = src.replace('_(1).jpg', '_(2).jpg');
+      img.onerror = function() {
+        // Try with space instead of underscore
+        const withSpace = src.replace('_(1).jpg', ' (1).jpg');
+        img.onerror = function() {
+          // Try without suffix
+          const withoutSuffix = src.replace('_(1).jpg', '.jpg');
+          img.onerror = function() {
+            // Try png
+            const png = src.replace('_(1).jpg', '.png');
+            img.onerror = function() {
+              // Fall back to brand logo
+              const riderId = img.getAttribute('data-rider-id');
+              const r = allRiders.find((x) => String(x.id) === String(riderId));
+              if (r && r.bike_brand) {
+                img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase().replace(/\s+/g, '_')}.png`;
+              } else {
+                img.src = '/static/brand_logos/honda.png';
+              }
+            };
+            img.src = png;
+          };
+          img.src = withoutSuffix;
+        };
+        img.src = withSpace;
+      };
+      img.src = withTwo;
+      return;
+    }
+    // Try without (1) suffix if it had one (with space)
     if (src.includes(' (1).jpg')) {
       const withoutSuffix = src.replace(' (1).jpg', '.jpg');
       img.onerror = function() {
@@ -1407,7 +1443,7 @@ function handleImageError(img) {
             const riderId = img.getAttribute('data-rider-id');
             const r = allRiders.find((x) => String(x.id) === String(riderId));
             if (r && r.bike_brand) {
-              img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+              img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase().replace(/\s+/g, '_')}.png`;
             } else {
               img.src = '/static/brand_logos/honda.png';
             }
