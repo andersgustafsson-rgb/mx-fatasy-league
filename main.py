@@ -4582,10 +4582,10 @@ def get_other_users_picks(competition_id):
                 if is_wsx:
                     # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
                     if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
-                holeshot_450 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                        holeshot_450 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
                     elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
                         holeshot_250 = {
                             "rider_number": getattr(rider, 'rider_number', '?') or '?',
@@ -4599,10 +4599,10 @@ def get_other_users_picks(competition_id):
                             "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                         }
                     elif holeshot.class_name == '250cc' and not holeshot_250:
-                holeshot_250 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                        holeshot_250 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
         
         # Get wildcard pick (only for non-WSX series)
         wildcard = None
