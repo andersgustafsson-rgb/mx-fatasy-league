@@ -187,7 +187,7 @@ def ensure_wsx_series_and_competitions():
 
 @app.post("/admin/seed_wsx")
 def admin_seed_wsx():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
     try:
         ensure_wsx_series_and_competitions()
@@ -2087,7 +2087,7 @@ def save_season_team():
 @app.route("/save_leaderboard_snapshot")
 def save_leaderboard_snapshot():
     """Manually save current leaderboard as a snapshot"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2130,7 +2130,7 @@ def save_leaderboard_snapshot():
 @app.route("/create_initial_snapshot")
 def create_initial_snapshot():
     """Create initial leaderboard snapshot for comparison"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2178,7 +2178,7 @@ def create_initial_snapshot():
 @app.route("/force_snapshot")
 def force_snapshot():
     """Force create a snapshot even if no changes detected"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2221,7 +2221,7 @@ def force_snapshot():
 @app.route("/test_delta")
 def test_delta():
     """Test delta calculation by creating two snapshots"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2293,7 +2293,7 @@ def test_delta():
 @app.route("/create_baseline")
 def create_baseline():
     """Create a baseline snapshot and disable auto-saving"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2343,7 +2343,7 @@ def create_baseline():
 @app.route("/debug_leaderboard")
 def debug_leaderboard():
     """Debug route to check leaderboard history"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2385,7 +2385,7 @@ def debug_leaderboard():
 @app.route("/clear_history")
 def clear_history():
     """Clear all leaderboard history"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2400,7 +2400,7 @@ def clear_history():
 @app.route("/set_baseline")
 def set_baseline():
     """Set baseline ranking in session - SIMPLE VERSION"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2439,7 +2439,7 @@ def set_baseline():
 @app.route("/test_session")
 def test_session():
     """Test what's in session"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     result = "Session contents:\n\n"
@@ -2452,7 +2452,7 @@ def test_session():
 @app.route("/run_migration")
 def run_migration():
     """Run database migration - temporary route"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     
     try:
@@ -2569,7 +2569,7 @@ def riders_directory():
 @app.route('/api/competitions/migrate_start_time', methods=['POST'])
 def migrate_start_time():
     """Add start_time column to competitions table if it doesn't exist"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -2625,7 +2625,7 @@ def migrate_start_time():
 @app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
 def update_seasons_to_2026():
     """Update all 2025 series and competitions to 2026"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -2666,7 +2666,7 @@ def update_seasons_to_2026():
 @app.route('/api/competitions/update_to_official_2026', methods=['POST'])
 def update_to_official_2026():
     """Update all competitions to match official 2026 SMX schedule"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -2758,7 +2758,7 @@ def get_series():
 @app.route('/api/series', methods=['POST'])
 def create_series():
     """Create a new series"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     data = request.get_json()
@@ -2780,7 +2780,7 @@ def create_series():
 @app.route('/api/series/<int:series_id>', methods=['PUT'])
 def update_series(series_id):
     """Update a series"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     series = Series.query.get_or_404(series_id)
@@ -2800,7 +2800,7 @@ def update_series(series_id):
 @app.route('/api/series/<int:series_id>', methods=['DELETE'])
 def delete_series(series_id):
     """Delete a series"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     series = Series.query.get_or_404(series_id)
@@ -2812,7 +2812,7 @@ def delete_series(series_id):
 @app.route('/api/series/create_default_2025', methods=['POST'])
 def create_default_series_2025():
     """Create default SMX series for 2026"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     # First, delete any old 2025 series
@@ -3034,7 +3034,7 @@ def create_smx_finals_competitions(smx_series_id):
 @app.route('/api/competitions/create_motocross_2025', methods=['POST'])
 def create_motocross_competitions_2025():
     """Create all Motocross competitions for 2026"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -3101,7 +3101,7 @@ def create_motocross_competitions_2025():
 @app.route('/api/competitions/create_smx_finals_2025', methods=['POST'])
 def create_smx_finals_competitions_2025():
     """Create SMX Finals competitions for 2026"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -3160,7 +3160,7 @@ def create_smx_finals_competitions_2025():
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
     """Fix missing database tables and columns"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
     try:
@@ -3322,7 +3322,7 @@ def fix_database_page():
 
 @app.route("/admin_old")
 def admin_page_old():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("index"))
     competitions = Competition.query.order_by(Competition.event_date).all()
     riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.rider_number).all()
@@ -3380,7 +3380,7 @@ def admin_page_old():
 
 @app.get("/admin/get_results/<int:competition_id>")
 def admin_get_results(competition_id):
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
 
     try:
@@ -3422,7 +3422,7 @@ def admin_get_results(competition_id):
 
 @app.post("/admin/submit_results")
 def submit_results():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
 
     comp_id = request.form.get("competition_id", type=int)
@@ -3677,7 +3677,7 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
 
 @app.post('/bulk_preview_results')
 def bulk_preview_results():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     try:
         data = request.get_json(force=True)
@@ -3754,7 +3754,7 @@ def bulk_preview_results():
 
 @app.post('/bulk_import_results')
 def bulk_import_results():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     try:
         data = request.get_json(force=True)
@@ -3941,7 +3941,7 @@ def admin_simulate(competition_id):
 
 @app.post("/admin/set_date")
 def admin_set_date():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
     flash("Simulerat datum är inte implementerat i denna version.", "error")
     return redirect(url_for("admin_page"))
@@ -5222,7 +5222,7 @@ def calculate_rider_points_for_position(position):
 @app.get("/update_rider_numbers")
 def update_rider_numbers():
     """Update rider numbers and coast assignments in database"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5262,7 +5262,7 @@ def update_rider_numbers():
 @app.get("/clear_all_user_picks")
 def clear_all_user_picks():
     """Clear all picks for all users - admin only"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5294,7 +5294,7 @@ def clear_all_user_picks():
 @app.get("/clear_all_riders")
 def clear_all_riders():
     """Clear all riders from database - use rider management to recreate"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5309,7 +5309,7 @@ def clear_all_riders():
 @app.get("/remove_duplicate_riders")
 def remove_duplicate_riders():
     """Remove duplicate riders - keep the one with highest ID"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5364,7 +5364,7 @@ def remove_duplicate_riders():
 @app.get("/fix_rider_duplicates")
 def fix_rider_duplicates():
     """Fix rider duplicates and coast issues"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5406,7 +5406,7 @@ def fix_rider_duplicates():
 @app.get("/update_season_team_points")
 def update_season_team_points():
     """Update all season team points based on rider results"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     print("DEBUG: update_season_team_points called - calculating based on rider results")
@@ -5481,7 +5481,7 @@ def get_user_total_points():
 @app.post("/upload_entry_list")
 def upload_entry_list():
     """Upload entry list CSV file"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5524,7 +5524,7 @@ def upload_entry_list():
 @app.get("/import_entry_lists_new")
 def import_entry_lists_new():
     """Import riders from official entry lists using the new parsing function"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5625,7 +5625,7 @@ def import_entry_lists_new():
 @app.get("/import_entry_lists")
 def import_entry_lists():
     """Import riders from official entry lists and replace existing riders"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5757,7 +5757,7 @@ def import_entry_lists():
 @app.post("/confirm_import_entry_lists")
 def confirm_import_entry_lists():
     """Confirm and import entry lists, replacing existing riders"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5915,7 +5915,7 @@ def confirm_import_entry_lists():
 @app.post("/upload_results_csv")
 def upload_results_csv():
     """Upload race results CSV file"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -5943,7 +5943,7 @@ def upload_results_csv():
 @app.post("/import_results_csv")
 def import_results_csv():
     """Import race results from CSV file"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6005,7 +6005,7 @@ def import_results_csv():
 @app.post("/confirm_import_results")
 def confirm_import_results():
     """Confirm and import race results to database"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6124,7 +6124,7 @@ def get_competitions_for_import():
 @app.get("/debug_rider_images")
 def debug_rider_images():
     """Debug endpoint to check rider images in database"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6164,7 +6164,7 @@ def debug_rider_images():
 @app.route("/upload_race_results", methods=['POST'])
 def upload_race_results():
     """Upload race results CSV file"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6193,7 +6193,7 @@ def upload_race_results():
 @app.route("/preview_race_results", methods=['POST'])
 def preview_race_results():
     """Preview race results before importing"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6353,7 +6353,7 @@ def preview_race_results():
 @app.route("/import_race_results_complete", methods=['POST'])
 def import_race_results_complete():
     """Import complete race results with holeshot and wildcard picks"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6821,7 +6821,7 @@ def import_race_results_complete():
 @app.route("/restore_rider_images")
 def restore_rider_images():
     """Restore rider images from static/riders/ directory"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -6963,7 +6963,7 @@ def debug_my_points():
 @app.get("/debug_user_scores/<string:username>")
 def debug_user_scores(username):
     """Debug endpoint to check where a user's points come from"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     user = User.query.filter_by(username=username).first()
@@ -7018,7 +7018,7 @@ def debug_user_scores(username):
 @app.get("/clear_season_teams")
 def clear_season_teams():
     """Clear all season teams (admin only)"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -7612,7 +7612,7 @@ def fix_profile_columns():
 @app.get("/backup_profiles")
 def backup_profiles():
     """Backup all user profile data to JSON"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -7648,7 +7648,7 @@ def backup_profiles():
 @app.post("/restore_profiles")
 def restore_profiles():
     """Restore user profile data from backup"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -7687,7 +7687,7 @@ def restore_profiles():
 @app.get("/fix_profile_picture_column")
 def fix_profile_picture_column():
     """Fix profile_picture_url column to support base64 data"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
 
 @app.get("/fix_column_public")
@@ -7725,7 +7725,7 @@ def fix_column_public():
 @app.get("/update_rider_prices")
 def update_rider_prices():
     """Update rider prices based on 2025 point standings"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -7854,7 +7854,7 @@ def update_rider_prices():
 @app.get("/import_all_2025_riders_fixed")
 def import_all_2025_riders_fixed():
     """Import all riders from 2025 point standings with proper data"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -8040,7 +8040,7 @@ def import_all_2025_riders_fixed():
 @app.get("/fix_existing_riders")
 def fix_existing_riders():
     """Fix existing riders in database - update names, numbers, and bike brands"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -8123,7 +8123,7 @@ def fix_existing_riders():
 @app.get("/fix_rider_coasts")
 def fix_rider_coasts():
     """Fix coast assignments for 250cc riders based on point standings 2025.txt"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -8248,7 +8248,7 @@ def fix_rider_coasts():
 @app.get("/debug_rider_coasts")
 def debug_rider_coasts():
     """Debug coast assignments for 250cc riders"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -8574,7 +8574,7 @@ def fix_column_now():
 @app.get("/fix_missing_images")
 def fix_missing_images():
     """Fix missing rider images by clearing invalid image_urls"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     print("DEBUG: fix_missing_images called")
@@ -8609,7 +8609,7 @@ def fix_missing_images():
 @app.get("/find_duplicate_riders")
 def find_duplicate_riders():
     """Find duplicate riders based on name and number"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9453,7 +9453,7 @@ else:
 @app.get("/create_test_data")
 def create_test_data_route():
     """Manually create test data - useful for development"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
     
     try:
@@ -9488,7 +9488,7 @@ def create_test_data_route():
 @app.get("/force_recreate_data")
 def force_recreate_data():
     """Force recreate all data - clears everything and recreates"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
     
     try:
@@ -9655,7 +9655,7 @@ def debug_riders():
 @app.get("/set_anaheim2_active")
 def set_anaheim2_active():
     """Just set Anaheim 2 as active race without creating picks/results"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9691,7 +9691,7 @@ def set_anaheim2_active():
 @app.get("/quick_anaheim2_simulation")
 def quick_anaheim2_simulation():
     """Quick simulation for Anaheim 2 - both picks and results"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9847,7 +9847,7 @@ def check_anaheim2():
 @app.post("/fix_anaheim1_results")
 def fix_anaheim1_results():
     """Fix Anaheim 1 results by adding Jett Lawrence at position 2"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9902,7 +9902,7 @@ def fix_anaheim1_results():
 @app.get("/recalculate_san_diego")
 def recalculate_san_diego():
     """Recalculate scores for San Diego competition (GET endpoint)"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9926,7 +9926,7 @@ def recalculate_san_diego():
 @app.get("/recalculate_scores/<int:competition_id>")
 def recalculate_scores(competition_id):
     """Recalculate scores for a specific competition"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -9949,7 +9949,7 @@ def recalculate_scores(competition_id):
 @app.get("/debug_csv_row/<int:competition_id>/<int:row_number>")
 def debug_csv_row(competition_id, row_number):
     """Debug specific CSV row for a competition"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:
@@ -10228,7 +10228,7 @@ def debug_database():
 @app.get("/clear_anaheim1")
 def clear_anaheim1():
     """Clear all data for Anaheim 1 specifically - for debugging"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return redirect(url_for("login"))
     
     try:
@@ -10600,7 +10600,7 @@ def fix_bulletin_columns():
 @app.route("/create_global_simulation_table")
 def create_global_simulation_table():
     """Create global simulation table for cross-device sync"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     try:
@@ -11099,7 +11099,7 @@ def debug_session():
 @app.route("/api/races")
 def api_races():
     """Get all races for admin panel"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     races = Competition.query.order_by(Competition.event_date).all()
@@ -11112,7 +11112,7 @@ def api_races():
 @app.route("/api/riders")
 def api_riders():
     """Get all riders for admin panel"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     riders = Rider.query.order_by(Rider.class_name, Rider.rider_number).all()
@@ -11127,7 +11127,7 @@ def api_riders():
 @app.route("/debug_simulation_status")
 def debug_simulation_status():
     """Debug route to check simulation status"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     try:
@@ -11152,7 +11152,7 @@ def debug_simulation_status():
 @app.route("/reset_test_simulation")
 def reset_test_simulation():
     """Reset test simulation to start fresh"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     try:
@@ -11173,7 +11173,7 @@ def reset_test_simulation():
 @app.route("/debug_missing_bike_brands")
 def debug_missing_bike_brands():
     """Debug route to check which riders are missing bike_brand"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     # Find riders with NULL or empty bike_brand
@@ -11210,7 +11210,7 @@ def debug_missing_bike_brands():
 @app.route("/fix_missing_bike_brands")
 def fix_missing_bike_brands():
     """Fix all riders that are missing bike_brand"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     try:
@@ -11486,7 +11486,7 @@ def race_countdown():
 @app.route("/simulate_race/<int:race_id>", methods=['POST'])
 def simulate_race(race_id):
     """Simulate a race - placeholder for now"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
     # TODO: Implement actual race simulation
