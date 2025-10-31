@@ -68,43 +68,47 @@
 
           {% set results = competition_results[comp.id] %}
           {% if results.results or results.holeshots %}
-            <!-- 450cc Results -->
-            {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
+            <!-- 450cc Results / SX1 for WSX -->
+            {% set results450 = results.results | selectattr('class_name', 'in', ['450cc', 'wsx_sx1']) | list %}
             {% if results450 %}
               <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results (Top 20) - {{ results450|length }} results found</h3>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <!-- Left Column: Positions 1-10 -->
+                {% if comp.series == 'WSX' %}
+                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">WSX SX1 Results (Top 6) - {{ results450|length }} results found</h3>
+                {% else %}
+                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results (Top 20) - {{ results450|length }} results found</h3>
+                {% endif %}
+                {% if comp.series == 'WSX' %}
+                  <!-- WSX SX1: Show only Top 6 in a single table -->
                   <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
                     <div class="overflow-x-auto">
                       <table class="w-full">
                         <thead class="bg-gray-100 dark:bg-gray-700">
                           <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Points</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                          {% for result in results450[:10] %}
+                          {% for result in results450[:6] %}
                           <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <td class="px-3 py-2 whitespace-nowrap">
-                              <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
+                            <td class="px-4 py-3 whitespace-nowrap">
+                              <div class="w-6 h-6 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-green-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
                                 {{ result.position }}
                               </div>
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                               {{ result.rider_name }}
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                               #{{ result.rider_number }}
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                               {{ result.bike_brand }}
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">
                               {{ result.points or 0 }}
                             </td>
                           </tr>
@@ -113,55 +117,102 @@
                       </table>
                     </div>
                   </div>
-                  
-                  <!-- Right Column: Positions 11-20 -->
-                  <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
-                    <div class="overflow-x-auto">
-                      <table class="w-full">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
-                          <tr>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                          {% for result in results450[10:20] %}
-                          <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <td class="px-3 py-2 whitespace-nowrap">
-                              <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
-                                {{ result.position }}
-                              </div>
-                            </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
-                              {{ result.rider_name }}
-                            </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                              #{{ result.rider_number }}
-                            </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                              {{ result.bike_brand }}
-                            </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
-                              {{ result.points or 0 }}
-                            </td>
-                          </tr>
-                          {% endfor %}
-                        </tbody>
-                      </table>
+                {% else %}
+                  <!-- Non-WSX: Show Top 20 in two columns -->
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Left Column: Positions 1-10 -->
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
+                      <div class="overflow-x-auto">
+                        <table class="w-full">
+                          <thead class="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                            {% for result in results450[:10] %}
+                            <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                              <td class="px-3 py-2 whitespace-nowrap">
+                                <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
+                                  {{ result.position }}
+                                </div>
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
+                                {{ result.rider_name }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                                #{{ result.rider_number }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                                {{ result.bike_brand }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                {{ result.points or 0 }}
+                              </td>
+                            </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    
+                    <!-- Right Column: Positions 11-20 -->
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
+                      <div class="overflow-x-auto">
+                        <table class="w-full">
+                          <thead class="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
+                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                            {% for result in results450[10:20] %}
+                            <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                              <td class="px-3 py-2 whitespace-nowrap">
+                                <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
+                                  {{ result.position }}
+                                </div>
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
+                                {{ result.rider_name }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                                #{{ result.rider_number }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
+                                {{ result.bike_brand }}
+                              </td>
+                              <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                {{ result.points or 0 }}
+                              </td>
+                            </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
-                </div>
+                {% endif %}
               </div>
             {% endif %}
 
-            <!-- 250cc Results -->
-            {% set results250 = results.results | selectattr('class_name', 'equalto', '250cc') | list %}
+            <!-- 250cc Results / SX2 for WSX -->
+            {% set results250 = results.results | selectattr('class_name', 'in', ['250cc', 'wsx_sx2']) | list %}
             {% if results250 %}
               <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results (Top 6) - {{ results250|length }} results found</h3>
+                {% if comp.series == 'WSX' %}
+                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">WSX SX2 Results (Top 6) - {{ results250|length }} results found</h3>
+                {% else %}
+                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results (Top 6) - {{ results250|length }} results found</h3>
+                {% endif %}
                 <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
                   <div class="overflow-x-auto">
                     <table class="w-full">
