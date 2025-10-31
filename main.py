@@ -1945,15 +1945,29 @@ def edit_league(league_id):
 def delete_league(league_id):
     if "user_id" not in session:
         return redirect(url_for("login"))
+    
+    try:
     league = League.query.get_or_404(league_id)
     if league.creator_id != session["user_id"]:
         flash("Endast skaparen kan radera ligan.", "error")
         return redirect(url_for("league_detail_page", league_id=league_id))
+        
+        # Delete all related data first (same as admin_delete_league)
+        LeagueRequest.query.filter_by(league_id=league_id).delete()
     LeagueMembership.query.filter_by(league_id=league_id).delete()
+        
+        # Delete the league
     db.session.delete(league)
     db.session.commit()
+        
     flash("Ligan är raderad.", "success")
     return redirect(url_for("leagues_page"))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting league {league_id}: {e}")
+        flash(f"Fel vid radering av liga: {str(e)}", "error")
+        return redirect(url_for("league_detail_page", league_id=league_id))
 
 
 
