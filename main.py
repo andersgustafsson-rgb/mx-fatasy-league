@@ -4608,14 +4608,14 @@ def get_other_users_picks(competition_id):
         wildcard = None
         if not is_wsx:
             wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
-        if wildcard_pick:
-            rider = riders_dict.get(wildcard_pick.rider_id)
-            if rider:
-                wildcard = {
-                    "position": wildcard_pick.position,
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+            if wildcard_pick:
+                rider = riders_dict.get(wildcard_pick.rider_id)
+                if rider:
+                    wildcard = {
+                        "position": wildcard_pick.position,
+                        "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                        "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                    }
         
         print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
         
