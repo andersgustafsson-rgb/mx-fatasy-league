@@ -4765,8 +4765,8 @@ def save_picks():
         except Exception:
             pass
 
-    # 7) Wildcard – spara efter validering
-    if wc_pick and wc_pos:
+    # 7) Wildcard – spara efter validering (skip for WSX)
+    if wc_pick and wc_pos and comp.series != "WSX":
         try:
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
