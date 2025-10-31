@@ -11024,6 +11024,42 @@ def admin_leagues():
         print(f"Error loading leagues: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/admin/rename_test_to_spliffan", methods=['POST'])
+def rename_test_to_spliffan():
+    """Rename test account to spliffan - one-time operation"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        test_user = User.query.filter_by(username='test').first()
+        if not test_user:
+            return jsonify({"error": "Test user not found"}), 404
+        
+        # Check if spliffan already exists
+        existing = User.query.filter_by(username='spliffan').first()
+        if existing:
+            return jsonify({"error": "Username 'spliffan' is already taken"}), 400
+        
+        old_username = test_user.username
+        test_user.username = 'spliffan'
+        
+        # Update CrossDinoHighScore if it exists
+        try:
+            CrossDinoHighScore.query.filter_by(player_name=old_username).update({"player_name": 'spliffan'})
+        except:
+            pass
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Användarnamn ändrat från 'test' till 'spliffan'"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error renaming test to spliffan: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/admin/update_username/<int:user_id>", methods=['POST'])
 def update_username(user_id):
     """Update a user's username - admin only"""
