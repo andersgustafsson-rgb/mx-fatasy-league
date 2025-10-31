@@ -488,62 +488,75 @@
           {% endif %}
             </div>
 
-            <!-- Center: Tab Buttons -->
-            <div class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none;">
-              <style>
-                /* Hide scrollbar for Chrome, Safari and Opera */
-                div.flex.flex-1.gap-1.overflow-x-auto::-webkit-scrollbar {
-                  display: none;
-                }
-              </style>
-              <button 
-                class="tab-btn active px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 bg-yellow-500 text-white whitespace-nowrap flex-shrink-0"
-                data-tab="race-info"
-              >
-                🏁 Race Info
-              </button>
-              <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="leaderboard"
-              >
-                👥 Leaderboard
-              </button>
-              <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="stats"
-              >
-                📊 Stats
-              </button>
-              <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="games"
-              >
-                🎮 Spel
-              </button>
-              <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="leagues"
-              >
-                🏆 Ligor
-              </button>
-              <button 
-                {% if upcoming_race and upcoming_race.series == 'WSX' %}
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-500 bg-gray-800 cursor-not-allowed opacity-60 whitespace-nowrap flex-shrink-0"
-                disabled
-                title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
-                {% else %}
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="season-team"
-                {% endif %}
-              >
-                👤 Team
-              </button>
-              <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                data-tab="settings"
-              >
-                ⚙️ Settings
-              </button>
+            <!-- Center: Tab Buttons with scroll indicators -->
+            <div class="relative flex-1 sm:relative">
+              <!-- Left fade gradient (shown when can scroll left) -->
+              <div id="tab-scroll-left-fade" class="hidden sm:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/80 via-black/50 to-transparent z-10 pointer-events-none transition-opacity duration-300"></div>
+              
+              <!-- Right fade gradient (shown when can scroll right) -->
+              <div id="tab-scroll-right-fade" class="hidden sm:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-black/80 via-black/50 to-transparent z-10 pointer-events-none transition-opacity duration-300"></div>
+              
+              <!-- Tab Buttons Container -->
+              <div id="tab-buttons-scroll" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none;">
+                <style>
+                  /* Hide scrollbar for Chrome, Safari and Opera */
+                  #tab-buttons-scroll::-webkit-scrollbar {
+                    display: none;
+                  }
+                  /* Smooth scrolling */
+                  #tab-buttons-scroll {
+                    scroll-behavior: smooth;
+                  }
+                </style>
+                <button 
+                  class="tab-btn active px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 bg-yellow-500 text-white whitespace-nowrap flex-shrink-0"
+                  data-tab="race-info"
+                >
+                  🏁 Race Info
+                </button>
+                <button 
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="leaderboard"
+                >
+                  👥 Leaderboard
+                </button>
+                <button 
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="stats"
+                >
+                  📊 Stats
+                </button>
+                <button 
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="games"
+                >
+                  🎮 Spel
+                </button>
+                <button 
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="leagues"
+                >
+                  🏆 Ligor
+                </button>
+                <button 
+                  {% if upcoming_race and upcoming_race.series == 'WSX' %}
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-500 bg-gray-800 cursor-not-allowed opacity-60 whitespace-nowrap flex-shrink-0"
+                  disabled
+                  title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
+                  {% else %}
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="season-team"
+                  {% endif %}
+                >
+                  👤 Team
+                </button>
+                <button 
+                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
+                  data-tab="settings"
+                >
+                  ⚙️ Settings
+                </button>
+              </div>
             </div>
 
             <!-- Right: Spacer to keep center alignment (hidden on mobile) -->
@@ -2043,11 +2056,58 @@
       // Initialize tabs
       initTabs();
       
+      // Initialize tab scroll indicators
+      updateTabScrollIndicators();
+      
       // Set race picks URL for dynamic updates
       {% if upcoming_race %}
         window.racePicksUrl = "{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}";
       {% endif %}
     });
+    
+    // Function to update tab scroll indicators (fade gradients)
+    function updateTabScrollIndicators() {
+      const scrollContainer = document.getElementById('tab-buttons-scroll');
+      const leftFade = document.getElementById('tab-scroll-left-fade');
+      const rightFade = document.getElementById('tab-scroll-right-fade');
+      
+      if (!scrollContainer || !leftFade || !rightFade) return;
+      
+      // Check if scrolling is needed (only on mobile)
+      if (window.innerWidth >= 640) {
+        leftFade.classList.add('hidden');
+        rightFade.classList.add('hidden');
+        return;
+      }
+      
+      const checkScroll = () => {
+        const canScrollLeft = scrollContainer.scrollLeft > 0;
+        const canScrollRight = scrollContainer.scrollLeft < (scrollContainer.scrollWidth - scrollContainer.clientWidth - 1);
+        
+        if (canScrollLeft) {
+          leftFade.classList.remove('hidden');
+        } else {
+          leftFade.classList.add('hidden');
+        }
+        
+        if (canScrollRight) {
+          rightFade.classList.remove('hidden');
+        } else {
+          rightFade.classList.add('hidden');
+        }
+      };
+      
+      // Check on scroll
+      scrollContainer.addEventListener('scroll', checkScroll);
+      
+      // Check on resize
+      window.addEventListener('resize', () => {
+        setTimeout(checkScroll, 100);
+      });
+      
+      // Initial check
+      setTimeout(checkScroll, 100);
+    }
     
     // Clean up on page unload
     window.addEventListener('beforeunload', stopCountdown);
