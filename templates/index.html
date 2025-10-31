@@ -490,14 +490,13 @@
 
             <!-- Center: Tab Buttons with scroll indicators -->
             <div class="relative flex-1 sm:relative">
-              <!-- Left fade gradient (shown when can scroll left) -->
-              <div id="tab-scroll-left-fade" class="hidden sm:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/80 via-black/50 to-transparent z-20 pointer-events-none transition-opacity duration-300"></div>
-              
-              <!-- Right fade gradient (shown when can scroll right) -->
-              <div id="tab-scroll-right-fade" class="hidden sm:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-black/80 via-black/50 to-transparent z-20 pointer-events-none transition-opacity duration-300"></div>
-              
               <!-- Tab Buttons Container -->
-              <div id="tab-buttons-scroll" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; position: relative; z-index: 10;">
+              <div id="tab-buttons-scroll" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch;">
+              <!-- Left fade gradient (shown when can scroll left) - positioned after scroll container so it doesn't block -->
+              <div id="tab-scroll-left-fade" class="hidden sm:hidden absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-black/80 via-black/50 to-transparent z-10 pointer-events-none transition-opacity duration-300" style="pointer-events: none !important;"></div>
+              
+              <!-- Right fade gradient (shown when can scroll right) - positioned after scroll container so it doesn't block -->
+              <div id="tab-scroll-right-fade" class="hidden sm:hidden absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-black/80 via-black/50 to-transparent z-10 pointer-events-none transition-opacity duration-300" style="pointer-events: none !important;"></div>
                 <style>
                   /* Hide scrollbar for Chrome, Safari and Opera */
                   #tab-buttons-scroll::-webkit-scrollbar {
