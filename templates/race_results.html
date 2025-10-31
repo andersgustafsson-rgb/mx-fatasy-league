@@ -69,7 +69,11 @@
           {% set results = competition_results[comp.id] %}
           {% if results.results or results.holeshots %}
             <!-- 450cc Results / SX1 for WSX -->
-            {% set results450 = results.results | selectattr('class_name', 'in', ['450cc', 'wsx_sx1']) | list %}
+            {% if comp.series == 'WSX' %}
+              {% set results450 = results.results | selectattr('class_name', 'equalto', 'wsx_sx1') | list %}
+            {% else %}
+              {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
+            {% endif %}
             {% if results450 %}
               <div class="mb-6">
                 {% if comp.series == 'WSX' %}
@@ -205,7 +209,11 @@
             {% endif %}
 
             <!-- 250cc Results / SX2 for WSX -->
-            {% set results250 = results.results | selectattr('class_name', 'in', ['250cc', 'wsx_sx2']) | list %}
+            {% if comp.series == 'WSX' %}
+              {% set results250 = results.results | selectattr('class_name', 'equalto', 'wsx_sx2') | list %}
+            {% else %}
+              {% set results250 = results.results | selectattr('class_name', 'equalto', '250cc') | list %}
+            {% endif %}
             {% if results250 %}
               <div class="mb-6">
                 {% if comp.series == 'WSX' %}
