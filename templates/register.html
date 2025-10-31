@@ -72,19 +72,32 @@
             <h1 class="text-3xl font-bold text-center text-blue-500 dark:text-blue-400 login-title">MX Fantasy League</h1>
         </div>
         
-        <form method="POST" action="{{ url_for('register') }}">
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-4">
+                    {% for category, message in messages %}
+                        <div class="p-3 rounded {% if category == 'error' %}bg-red-500 text-white{% else %}bg-green-500 text-white{% endif %} mb-2">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('register') }}" autocomplete="off">
             <div class="mb-4">
                 <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Användarnamn</label>
-                <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
+                <input type="text" id="username" name="username" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" placeholder="Ange användarnamn" required autocomplete="off">
             </div>
             <div class="mb-4">
                 <label for="email" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">E-post (valfritt)</label>
-                <input type="email" id="email" name="email" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" placeholder="din@email.com">
+                <input type="email" id="email" name="email" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" placeholder="din@email.com (valfritt)" autocomplete="off">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Behövs för lösenordsåterställning</p>
             </div>
             <div class="mb-6">
                 <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Lösenord</label>
-                <input type="password" id="password" name="password" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
+                <input type="password" id="password" name="password" value="" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" placeholder="Ange lösenord (minst 4 tecken)" required autocomplete="off" minlength="4">
             </div>
             <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors login-button">
                 Registrera

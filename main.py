@@ -411,25 +411,54 @@ def register():
     if "user_id" in session:
         return redirect(url_for("index"))
     if request.method == "POST":
-        username = request.form["username"]
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
         email = request.form.get("email", "").strip()
+        
+        # Validate inputs
+        if not username:
+            flash("Användarnamn krävs", "error")
+            return render_template("register.html")
+        if not password:
+            flash("Lösenord krävs", "error")
+            return render_template("register.html")
+        if len(password) < 4:
+            flash("Lösenordet måste vara minst 4 tecken långt", "error")
+            return render_template("register.html")
         
         # Check if username is already taken
         if User.query.filter_by(username=username).first():
             flash("Användarnamnet är redan upptaget", "error")
+            return render_template("register.html")
         # Check if email is already taken (if provided)
-        elif email and User.query.filter_by(email=email).first():
+        if email and User.query.filter_by(email=email).first():
             flash("E-postadressen är redan registrerad", "error")
-        else:
+            return render_template("register.html")
+        
+        try:
             new_user = User(
                 username=username,
-                password_hash=generate_password_hash(request.form["password"]),
+                password_hash=generate_password_hash(password),
                 email=email if email else None,
             )
             db.session.add(new_user)
             db.session.commit()
-            flash("Konto skapat! Du kan nu logga in.", "success")
-            return redirect(url_for("login"))
+            
+            # Automatically log in the new user
+            session.clear()
+            session["user_id"] = new_user.id
+            session["username"] = new_user.username
+            session["login_time"] = datetime.utcnow().isoformat()
+            session.permanent = True
+            session.modified = True
+            
+            flash("Konto skapat! Du är nu inloggad.", "success")
+            return redirect(url_for("index"))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Ett fel uppstod vid registreringen: {str(e)}", "error")
+            return render_template("register.html")
+    
     return render_template("register.html")
 
 @app.route("/logout")
