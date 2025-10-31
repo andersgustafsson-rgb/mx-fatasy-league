@@ -4560,10 +4560,10 @@ def get_other_users_picks(competition_id):
                         picks_250.append(pick_data)
                 else:
                     # Regular series: 450cc and 250cc
-                if rider.class_name == '450cc' and len(picks_450) < 6:
-                    picks_450.append(pick_data)
-                elif rider.class_name == '250cc' and len(picks_250) < 6:
-                    picks_250.append(pick_data)
+                    if rider.class_name == '450cc' and len(picks_450) < 6:
+                        picks_450.append(pick_data)
+                    elif rider.class_name == '250cc' and len(picks_250) < 6:
+                        picks_250.append(pick_data)
         
         # Sort by position and take only top 6
         picks_450.sort(key=lambda x: x['position'])
