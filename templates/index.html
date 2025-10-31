@@ -26,8 +26,8 @@
       cursor: not-allowed;
     }
     
-    /* Disable interactive buttons in readonly mode, but allow login buttons */
-    .readonly-mode .tab-btn,
+    /* Disable interactive buttons in readonly mode, but allow login buttons and settings tab */
+    .readonly-mode .tab-btn:not([data-tab="settings"]),
     .readonly-mode button[onclick*="showOtherUsersPicksFromMain"],
     .readonly-mode button[onclick*="toggleSeriesExpansion"],
     .readonly-mode button[onclick*="toggleSMXExpansion"] {
@@ -36,8 +36,9 @@
       cursor: not-allowed;
     }
     
-    /* Ensure login buttons are always clickable */
-    .readonly-mode button[onclick*="openLoginModal"] {
+    /* Ensure login buttons and settings tab are always clickable */
+    .readonly-mode button[onclick*="openLoginModal"],
+    .readonly-mode .tab-btn[data-tab="settings"] {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -468,7 +469,7 @@
         
         <!-- Tab Navigation -->
         <div class="mb-6">
-          <div class="flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
+          <div class="relative flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
             <!-- Left: Login/Logout Button (hidden on mobile, shown in Settings tab instead) -->
             <div class="hidden sm:flex items-center gap-1">
             {% if is_logged_in %}
@@ -487,6 +488,15 @@
               </button>
           {% endif %}
             </div>
+            
+            <!-- Settings tab button - always visible, positioned to the right on mobile when logged out -->
+            <button 
+              class="tab-btn settings-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 {% if not is_logged_in %}sm:hidden{% endif %}"
+              data-tab="settings"
+              style="{% if not is_logged_in %}position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); z-index: 50;{% endif %}"
+            >
+              ⚙️ Settings
+            </button>
 
             <!-- Center: Tab Buttons -->
             <div class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; touch-action: pan-x;">
@@ -546,12 +556,6 @@
                   {% endif %}
                 >
                   👤 Team
-                </button>
-                <button 
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="settings"
-                >
-                  ⚙️ Settings
                 </button>
             </div>
 
@@ -1068,6 +1072,7 @@
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">👤 Profil & Inställningar</h2>
                 <div class="space-y-4">
+                  {% if is_logged_in %}
                   <a href="{{ url_for('profile_page') }}" class="group relative bg-gradient-to-br from-pink-500 via-pink-600 to-rose-700 hover:from-pink-400 hover:via-pink-500 hover:to-rose-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-pink-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     <div class="relative z-10 flex items-center justify-center gap-3">
@@ -1084,12 +1089,26 @@
                     </div>
                   </a>
                   
-                  {% if is_logged_in %}
                   <a href="{{ url_for('logout') }}" class="group relative bg-gradient-to-br from-red-500 via-red-600 to-red-700 hover:from-red-400 hover:via-red-500 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-red-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     <div class="relative z-10 flex items-center justify-center gap-3">
                       <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🚪</span>
                       <span class="text-lg">Logga ut</span>
+                    </div>
+                  </a>
+                  {% else %}
+                  <button onclick="openLoginModal();" class="w-full group relative bg-gradient-to-br from-green-500 via-green-600 to-green-700 hover:from-green-400 hover:via-green-500 hover:to-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    <div class="relative z-10 flex items-center justify-center gap-3">
+                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🔐</span>
+                      <span class="text-lg">Logga in</span>
+                    </div>
+                  </button>
+                  <a href="{{ url_for('register') }}" class="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-400 hover:via-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                    <div class="relative z-10 flex items-center justify-center gap-3">
+                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">📝</span>
+                      <span class="text-lg">Registrera dig</span>
                     </div>
                   </a>
                   {% endif %}
