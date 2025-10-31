@@ -962,28 +962,24 @@
               this.src = '/static/brand_logos/honda.png'; // Default to Honda
             }
           };
+        } else {
+          // If no image_url, construct path same way as other riders
+          const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
+          if (isWSX && rider.name) {
+            const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            // Files are: name (1).jpg in wsx/ folder
+            // Build path same as other riders: riders/wsx/filename
+            const imagePath = `riders/wsx/${slug} (1).jpg`;
+            img.src = `/static/${imagePath}`;
+            img.setAttribute('data-rider-id', riderId);
+            img.onerror = function(){ handleImageError(this); };
+          } else if (rider && rider.bike_brand) {
+            // Bike brand fallback
+            img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
           } else {
-            // Try WSX drop-in path first
-            const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
-            if (isWSX && rider.name) {
-              const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-              // Files don't have numbers, just name with space before (1)
-              // Try: name (1).jpg (with actual space, browser will encode it)
-              img.src = `/static/riders/wsx/${slug} (1).jpg`;
-              img.setAttribute('data-rider-id', riderId);
-              // Debug log (remove after testing)
-              console.log('[WSX-IMG-DROPDOWN] Trying:', img.src, 'for rider:', rider.name, 'class:', rider.class, 'slug:', slug);
-              img.onerror = function(){ 
-                console.log('[WSX-IMG-DROPDOWN] Failed:', img.src);
-                handleImageError(this); 
-              };
-            } else if (rider && rider.bike_brand) {
-              // Bike brand fallback
-              img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}\.png`;
-            } else {
-              img.src = '/static/brand_logos/honda.png';
-            }
+            img.src = '/static/brand_logos/honda.png';
           }
+        }
       }
     });
   }
@@ -1366,15 +1362,14 @@ function imgSrcFor(riderId) {
     return url;
   }
   
-  // If WSX rider without image, try drop-in folder convention
+  // If WSX rider without image_url in DB, construct path same way as other riders
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
     const slug = wsxSlug(r.name);
-    // Files don't have rider numbers, just name with space before (1)
-    // Try: name (1).jpg (with actual space, URL will encode it correctly)
-    const url = `/static/riders/wsx/${slug} (1).jpg`;
-    // Debug log (remove after testing)
-    console.log('[WSX-IMG] Trying:', url, 'for rider:', r.name, 'class:', r.class, 'slug:', slug);
+    // Files are: name (1).jpg in wsx/ folder
+    // Build path same as other riders: riders/wsx/filename
+    const imagePath = `riders/wsx/${slug} (1).jpg`;
+    const url = `/static/${imagePath}`;
     return url;
   }
 
