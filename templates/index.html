@@ -469,8 +469,8 @@
         <!-- Tab Navigation -->
         <div class="mb-6">
           <div class="flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
-            <!-- Left: Login/Logout Button -->
-            <div class="flex items-center gap-1">
+            <!-- Left: Login/Logout Button (hidden on mobile, shown in Settings tab instead) -->
+            <div class="hidden sm:flex items-center gap-1">
             {% if is_logged_in %}
               <a href="{{ url_for('logout') }}" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" title="Logga ut">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -489,51 +489,57 @@
             </div>
 
             <!-- Center: Tab Buttons -->
-            <div class="grid grid-cols-3 sm:flex sm:flex-wrap sm:justify-center gap-1 sm:gap-1 flex-1 overflow-x-auto sm:overflow-x-visible">
+            <div class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="scrollbar-width: none; -ms-overflow-style: none;">
+              <style>
+                /* Hide scrollbar for Chrome, Safari and Opera */
+                div.flex.flex-1.gap-1.overflow-x-auto::-webkit-scrollbar {
+                  display: none;
+                }
+              </style>
               <button 
-                class="tab-btn active px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 bg-yellow-500 text-white whitespace-nowrap"
+                class="tab-btn active px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 bg-yellow-500 text-white whitespace-nowrap flex-shrink-0"
                 data-tab="race-info"
               >
                 🏁 Race Info
               </button>
               <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="leaderboard"
               >
                 👥 Leaderboard
               </button>
               <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="stats"
               >
                 📊 Stats
               </button>
               <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="games"
               >
                 🎮 Spel
               </button>
               <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="leagues"
               >
                 🏆 Ligor
               </button>
               <button 
                 {% if upcoming_race and upcoming_race.series == 'WSX' %}
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-500 bg-gray-800 cursor-not-allowed opacity-60 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-500 bg-gray-800 cursor-not-allowed opacity-60 whitespace-nowrap flex-shrink-0"
                 disabled
                 title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
                 {% else %}
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="season-team"
                 {% endif %}
               >
                 👤 Team
               </button>
               <button 
-                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap"
+                class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
                 data-tab="settings"
               >
                 ⚙️ Settings
