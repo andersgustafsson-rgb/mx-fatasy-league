@@ -621,9 +621,8 @@
                   
                   <!-- Se Andras Picks Button -->
           {% if upcoming_race %}
-                    {% if picks_locked %}
-                      <button onclick="showOtherUsersPicksFromMain()" 
-                              class="group relative bg-gradient-to-br from-green-500 via-green-600 to-green-800 hover:from-green-400 hover:via-green-500 hover:to-green-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-green-400/50 overflow-hidden">
+                      <button id="se-andras-picks-btn" onclick="showOtherUsersPicksFromMain()" 
+                              class="group relative bg-gradient-to-br from-green-500 via-green-600 to-green-800 hover:from-green-400 hover:via-green-500 hover:to-green-700 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-110 hover:-translate-y-2 transition-all duration-500 text-center backdrop-blur-sm border-2 border-green-400/50 overflow-hidden hidden">
                         <!-- Animated background elements -->
                         <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10 group-hover:scale-150 transition-transform duration-700"></div>
                         <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8 group-hover:scale-125 transition-transform duration-700"></div>
@@ -637,8 +636,7 @@
                         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                         <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </button>
-          {% else %}
-                      <div class="group relative bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl text-center backdrop-blur-sm border-2 border-gray-400/50 overflow-hidden cursor-not-allowed opacity-75">
+                      <div id="picks-locked-disabled-btn" class="group relative bg-gradient-to-br from-gray-400 via-gray-500 to-gray-600 text-white font-bold py-6 px-8 rounded-2xl shadow-2xl text-center backdrop-blur-sm border-2 border-gray-400/50 overflow-hidden cursor-not-allowed opacity-75 hidden">
                         <!-- Animated background elements -->
                         <div class="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10"></div>
                         <div class="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-8 -translate-x-8"></div>
@@ -648,7 +646,6 @@
                           <span class="text-base font-bold tracking-wide">Picks Låsta</span>
                         </div>
                       </div>
-                    {% endif %}
           {% endif %}
                 </div>
                 </div>
@@ -1308,6 +1305,10 @@
       // Check if race has results (is completed)
       const hasResults = data.has_results || false;
       
+      // Handle "Se Andras Picks" button visibility
+      const seAndrasPicksBtn = document.getElementById('se-andras-picks-btn');
+      const picksLockedDisabledBtn = document.getElementById('picks-locked-disabled-btn');
+      
       if (hasResults) {
         // Race is completed - show "Race färdigt" instead of picks status
         lockedStatus.classList.add('hidden');
@@ -1315,6 +1316,14 @@
         openStatus.textContent = '🏁 Race färdigt';
         openStatus.href = '/race_results';
         openStatus.className = 'inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+        
+        // Show "Se Andras Picks" button when race is completed
+        if (seAndrasPicksBtn) {
+          seAndrasPicksBtn.classList.remove('hidden');
+        }
+        if (picksLockedDisabledBtn) {
+          picksLockedDisabledBtn.classList.add('hidden');
+        }
         
         // Enable Race Results button
         if (raceResultsButton) {
@@ -1331,6 +1340,13 @@
         lockedStatus.classList.remove('hidden');
         openStatus.classList.add('hidden');
         
+        // Show "Se Andras Picks" button when picks are locked
+        if (seAndrasPicksBtn) {
+          seAndrasPicksBtn.classList.remove('hidden');
+        }
+        if (picksLockedDisabledBtn) {
+          picksLockedDisabledBtn.classList.add('hidden');
+        }
         
         // Disable Race Results button
         if (raceResultsButton) {
@@ -1350,6 +1366,14 @@
         openStatus.href = '/race_picks_active';
         openStatus.className = 'inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
         // Text is set from server-side template, so we don't change it here
+        
+        // Hide "Se Andras Picks" button when picks are still open
+        if (seAndrasPicksBtn) {
+          seAndrasPicksBtn.classList.add('hidden');
+        }
+        if (picksLockedDisabledBtn) {
+          picksLockedDisabledBtn.classList.remove('hidden');
+        }
         
         // Enable Race Results button
         if (raceResultsButton) {
@@ -2003,6 +2027,11 @@
         const usersPicks = await response.json();
         // Received users picks data
         
+        // Determine if WSX series (check first user or use upcoming_race series)
+        const isWSX = (usersPicks.length > 0 && usersPicks[0].is_wsx) || {% if upcoming_race and upcoming_race.series == 'WSX' %}true{% else %}false{% endif %};
+        const classLabel450 = isWSX ? 'SX1' : '450cc';
+        const classLabel250 = isWSX ? 'SX2' : '250cc';
+        
         // Create modal to display picks
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
@@ -2018,7 +2047,7 @@
                   <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
-                      <h5 class="text-sm font-medium text-yellow-400 mb-2">450cc Picks</h5>
+                      <h5 class="text-sm font-medium text-yellow-400 mb-2">${classLabel450} Picks</h5>
                       <div class="space-y-1">
                         ${user.picks_450.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
@@ -2029,7 +2058,7 @@
                       </div>
                     </div>
                     <div>
-                      <h5 class="text-sm font-medium text-blue-400 mb-2">250cc Picks</h5>
+                      <h5 class="text-sm font-medium text-blue-400 mb-2">${classLabel250} Picks</h5>
                       <div class="space-y-1">
                         ${user.picks_250.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
@@ -2044,12 +2073,12 @@
                     <div class="mt-3 pt-3 border-t border-gray-600">
                       <h5 class="text-sm font-medium text-green-400 mb-2">Holeshot Picks</h5>
                       <div class="flex gap-4 text-sm">
-                        ${user.holeshot_450 ? `<span class="text-white">450cc: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
-                        ${user.holeshot_250 ? `<span class="text-white">250cc: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
+                        ${user.holeshot_450 ? `<span class="text-white">${classLabel450}: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
+                        ${user.holeshot_250 ? `<span class="text-white">${classLabel250}: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
                       </div>
                     </div>
                   ` : ''}
-                  ${user.wildcard ? `
+                  ${user.wildcard && !isWSX ? `
                     <div class="mt-3 pt-3 border-t border-gray-600">
                       <h5 class="text-sm font-medium text-purple-400 mb-2">Wildcard</h5>
                       <span class="text-white text-sm">Position ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>

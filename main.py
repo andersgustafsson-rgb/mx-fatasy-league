@@ -4512,6 +4512,10 @@ def get_other_users_picks(competition_id):
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
+    # Get competition to determine series
+    comp = Competition.query.get_or_404(competition_id)
+    is_wsx = getattr(comp, 'series', None) == 'WSX'
+    
     # Get all riders once as master list
     all_riders = Rider.query.all()
     riders_dict = {rider.id: rider for rider in all_riders}
@@ -4521,6 +4525,7 @@ def get_other_users_picks(competition_id):
     other_users = User.query.filter(User.id != current_user_id).all()
     
     print(f"DEBUG: Found {len(other_users)} other users")
+    print(f"DEBUG: Competition {comp.name} is WSX: {is_wsx}")
     
     users_picks = []
     for user in other_users:
@@ -4546,10 +4551,19 @@ def get_other_users_picks(competition_id):
                 }
                 print(f"DEBUG: Created pick_data: {pick_data}")
                 
-                if rider.class_name == '450cc' and len(picks_450) < 6:
-                    picks_450.append(pick_data)
-                elif rider.class_name == '250cc' and len(picks_250) < 6:
-                    picks_250.append(pick_data)
+                # Handle both regular classes and WSX classes
+                if is_wsx:
+                    # WSX: map wsx_sx1 to picks_450, wsx_sx2 to picks_250
+                    if rider.class_name == 'wsx_sx1' and len(picks_450) < 6:
+                        picks_450.append(pick_data)
+                    elif rider.class_name == 'wsx_sx2' and len(picks_250) < 6:
+                        picks_250.append(pick_data)
+                else:
+                    # Regular series: 450cc and 250cc
+                    if rider.class_name == '450cc' and len(picks_450) < 6:
+                        picks_450.append(pick_data)
+                    elif rider.class_name == '250cc' and len(picks_250) < 6:
+                        picks_250.append(pick_data)
         
         # Sort by position and take only top 6
         picks_450.sort(key=lambda x: x['position'])
@@ -4564,28 +4578,44 @@ def get_other_users_picks(competition_id):
         
         for holeshot in holeshot_picks:
             rider = riders_dict.get(holeshot.rider_id)
-            if rider and holeshot.class_name == '450cc':
-                holeshot_450 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
-            elif rider and holeshot.class_name == '250cc':
-                holeshot_250 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
-        
-        # Get wildcard pick
-        wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
-        wildcard = None
-        if wildcard_pick:
-            rider = riders_dict.get(wildcard_pick.rider_id)
             if rider:
-                wildcard = {
-                    "position": wildcard_pick.position,
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                if is_wsx:
+                    # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
+                    if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
+                        holeshot_450 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
+                    elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
+                        holeshot_250 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
+                else:
+                    # Regular series
+                    if holeshot.class_name == '450cc' and not holeshot_450:
+                        holeshot_450 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
+                    elif holeshot.class_name == '250cc' and not holeshot_250:
+                        holeshot_250 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
+        
+        # Get wildcard pick (only for non-WSX series)
+        wildcard = None
+        if not is_wsx:
+            wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
+            if wildcard_pick:
+                rider = riders_dict.get(wildcard_pick.rider_id)
+                if rider:
+                    wildcard = {
+                        "position": wildcard_pick.position,
+                        "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                        "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                    }
         
         print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
         
@@ -4599,7 +4629,8 @@ def get_other_users_picks(competition_id):
                 "picks_250": picks_250,
                 "holeshot_450": holeshot_450,
                 "holeshot_250": holeshot_250,
-                "wildcard": wildcard
+                "wildcard": wildcard,
+                "is_wsx": is_wsx  # Include series info for frontend
             }
             print(f"DEBUG: Adding user data: {user_data['display_name']} (username: {user_data['username']})")
             users_picks.append(user_data)
