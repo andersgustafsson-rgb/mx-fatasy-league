@@ -268,6 +268,7 @@
                 <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">🏁 Holeshot Winners</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {% for holeshot in results.holeshots %}
+                    {% set display_class = 'SX1' if (comp.series == 'WSX' and holeshot.class_name == '450cc') else ('SX2' if (comp.series == 'WSX' and holeshot.class_name == '250cc') else holeshot.class_name) %}
                     <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 p-4 rounded-lg border-l-4 border-yellow-500 shadow-sm">
                       <div class="flex items-center space-x-3">
                         <!-- Holeshot Icon -->
@@ -313,7 +314,7 @@
                         <!-- Rider Info -->
                         <div class="flex-1">
                           <div class="font-semibold text-yellow-800 dark:text-yellow-200">
-                            {{ holeshot.class_name }}: {{ holeshot.name }}
+                            {{ display_class }}: {{ holeshot.name }}
                           </div>
                           <div class="text-sm text-yellow-700 dark:text-yellow-300">
                             #{{ holeshot.rider_number }}
