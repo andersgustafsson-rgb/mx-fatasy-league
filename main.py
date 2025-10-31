@@ -6050,7 +6050,7 @@ def confirm_import_results():
 @app.get("/get_competitions_for_import")
 def get_competitions_for_import():
     """Get list of competitions for CSV import"""
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
     try:

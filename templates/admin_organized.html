@@ -995,6 +995,14 @@
                 const data = await res.json();
                 const select = document.getElementById('manual-competition');
                 if (!select) return;
+                
+                // Check if we got an error (e.g., not admin)
+                if (data.error) {
+                    console.error('Error loading competitions:', data.error);
+                    select.innerHTML = '<option value="">Error: ' + data.error + '</option>';
+                    return;
+                }
+                
                 if (data.success) {
                     select.innerHTML = '<option value="">Välj tävling...</option>';
                     data.competitions.forEach(comp => {
@@ -1003,9 +1011,18 @@
                         opt.textContent = comp.name;
                         select.appendChild(opt);
                     });
+                } else {
+                    console.error('Failed to load competitions:', data);
+                    select.innerHTML = '<option value="">Error loading competitions</option>';
                 }
                 select.addEventListener('change', manualCompetitionChanged);
-            } catch {}
+            } catch (error) {
+                console.error('Exception loading competitions:', error);
+                const select = document.getElementById('manual-competition');
+                if (select) {
+                    select.innerHTML = '<option value="">Error: ' + error.message + '</option>';
+                }
+            }
         }
 
         async function manualCompetitionChanged() {
