@@ -160,11 +160,13 @@
                     <div class="text-xs sm:text-sm text-yellow-300">Holeshot</div>
                   </div>
                   
+                  {% if result.competition.series != 'WSX' %}
                   <!-- Wildcard Points -->
                   <div class="text-center">
                     <div class="text-2xl sm:text-3xl font-bold text-purple-400">{{ result.wildcard_points }}</div>
                     <div class="text-xs sm:text-sm text-purple-300">Wildcard</div>
                   </div>
+                  {% endif %}
                   
                   <!-- Total Points -->
                   <div class="text-center border-l-2 border-cyan-400 pl-4">
@@ -217,12 +219,14 @@
           <div class="text-sm text-yellow-300">Holeshot Poäng</div>
         </div>
         
+        {% if race_results | selectattr('competition.series', 'ne', 'WSX') | list | length > 0 %}
         <div class="text-center">
           <div class="text-3xl sm:text-4xl font-bold text-purple-400">
-            {{ (race_results | sum(attribute='wildcard_points')) }}
+            {{ (race_results | selectattr('competition.series', 'ne', 'WSX') | sum(attribute='wildcard_points')) }}
           </div>
           <div class="text-sm text-purple-300">Wildcard Poäng</div>
         </div>
+        {% endif %}
       </div>
     </div>
     {% endif %}
