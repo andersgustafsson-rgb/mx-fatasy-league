@@ -743,6 +743,9 @@
             const categoryBadge = getCategoryBadge(post.category);
             const noteColor = getRandomNoteColor();
             
+            // Check if current user can delete this post (owner or admin)
+            const canDelete = (post.user_id == {{ current_user_id|default('null') }}) || ({{ 'true' if is_current_user_admin else 'false' }});
+            
             const postHtml = `
                 <div class="vintage-note ${noteColor} group" data-post-id="${post.id}">
                     <div class="note-pin"></div>
@@ -758,6 +761,7 @@
                             </span>
                             ${categoryBadge}
                         </div>
+                        ${canDelete ? `
                         <button 
                             class="delete-post-btn text-red-600 hover:text-red-800 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 handwritten"
                             data-post-id="${post.id}"
@@ -765,6 +769,7 @@
                         >
                             🗑️
                         </button>
+                        ` : ''}
                     </div>
                     <div class="post-content handwritten whitespace-pre-wrap mb-3">${post.content}</div>
                     

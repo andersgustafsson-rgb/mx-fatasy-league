@@ -4600,22 +4600,22 @@ def get_other_users_picks(competition_id):
                         }
                     elif holeshot.class_name == '250cc' and not holeshot_250:
                         holeshot_250 = {
-                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                        }
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
         
         # Get wildcard pick (only for non-WSX series)
         wildcard = None
         if not is_wsx:
             wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
-            if wildcard_pick:
-                rider = riders_dict.get(wildcard_pick.rider_id)
-                if rider:
-                    wildcard = {
-                        "position": wildcard_pick.position,
-                        "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                        "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                    }
+        if wildcard_pick:
+            rider = riders_dict.get(wildcard_pick.rider_id)
+            if rider:
+                wildcard = {
+                    "position": wildcard_pick.position,
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
         
         print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
         
@@ -10406,13 +10406,20 @@ def bulletin_board():
                 'author': post.user.username if post.user else 'Okänd',
                 'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
                 'created_at': post.created_at,
+                'user_id': post.user_id,
                 'is_own_post': post.user_id == session.get('user_id'),
-                'is_admin': session.get('username') == 'test',
+                'is_admin': is_admin_user(),
                 'reactions': reactions,
                 'replies': replies
             })
         
-        return render_template("bulletin.html", posts=formatted_posts)
+        current_user_id = session.get('user_id')
+        is_current_user_admin = is_admin_user()
+        
+        return render_template("bulletin.html", 
+                             posts=formatted_posts,
+                             current_user_id=current_user_id,
+                             is_current_user_admin=is_current_user_admin)
         
     except Exception as e:
         print(f"Error loading bulletin board: {e}")
@@ -10462,7 +10469,9 @@ def create_bulletin_post():
                 'author': post.user.username if post.user else 'Okänd',
                 'author_display_name': getattr(post.user, 'display_name', None) or post.user.username if post.user else 'Okänd',
                 'created_at': post.created_at.isoformat(),
+                'user_id': post.user_id,
                 'is_own_post': True,
+                'is_admin': is_admin_user(),
                 'parent_id': post.parent_id
             }
         })
@@ -10481,7 +10490,7 @@ def delete_bulletin_post(post_id):
         post = BulletinPost.query.get_or_404(post_id)
         
         # Kontrollera att användaren äger posten eller är admin
-        if post.user_id != session['user_id'] and session.get('username') != 'test':
+        if post.user_id != session['user_id'] and not is_admin_user():
             return jsonify({"error": "Du kan bara ta bort dina egna posts"}), 403
         
         # Markera som borttagen istället för att ta bort
