@@ -11024,6 +11024,47 @@ def admin_leagues():
         print(f"Error loading leagues: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/admin/update_username/<int:user_id>", methods=['POST'])
+def update_username(user_id):
+    """Update a user's username - admin only"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json()
+        new_username = data.get("username", "").strip()
+        
+        if not new_username:
+            return jsonify({"error": "Användarnamn krävs"}), 400
+        
+        user = User.query.get_or_404(user_id)
+        old_username = user.username
+        
+        # Check if new username is already taken
+        existing_user = User.query.filter_by(username=new_username).first()
+        if existing_user and existing_user.id != user_id:
+            return jsonify({"error": "Användarnamnet är redan upptaget"}), 400
+        
+        # Update username
+        user.username = new_username
+        db.session.commit()
+        
+        # Update CrossDinoHighScore if it exists (uses player_name instead of user_id)
+        try:
+            CrossDinoHighScore.query.filter_by(player_name=old_username).update({"player_name": new_username})
+            db.session.commit()
+        except:
+            pass
+        
+        return jsonify({
+            "message": f"Användarnamn ändrat från '{old_username}' till '{new_username}'"
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating username: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/admin/toggle_admin/<int:user_id>", methods=['POST'])
 def toggle_admin(user_id):
     """Toggle admin status for a user"""
@@ -11059,9 +11100,9 @@ def delete_user(user_id):
     try:
         user = User.query.get_or_404(user_id)
         
-        # Don't allow deleting admin user
-        if user.username == 'test':
-            return jsonify({"error": "Cannot delete admin user"}), 400
+        # Don't allow deleting admin users
+        if user.is_admin:
+            return jsonify({"error": "Cannot delete admin users"}), 400
         
         username = user.username
         

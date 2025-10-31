@@ -68,7 +68,17 @@
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.id }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ user.username }}</div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-900" id="username-{{ user.id }}">{{ user.username }}</span>
+                                    <button 
+                                        class="edit-username-btn text-blue-600 hover:text-blue-800 text-xs"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        title="Ändra användarnamn"
+                                    >
+                                        ✏️
+                                    </button>
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">{{ user.display_name or '-' }}</div>
@@ -158,6 +168,44 @@
                         if (response.ok) {
                             // Reload the page to show updated status
                             location.reload();
+                        } else {
+                            showToast(result.error || 'Ett fel uppstod', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('Ett fel uppstod', 'error');
+                    }
+                }
+            }
+        });
+
+        // Edit username functionality
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('edit-username-btn')) {
+                const userId = e.target.getAttribute('data-user-id');
+                const currentUsername = e.target.getAttribute('data-username');
+                
+                const newUsername = prompt(`Ange nytt användarnamn för "${currentUsername}":`, currentUsername);
+                
+                if (newUsername && newUsername.trim() && newUsername.trim() !== currentUsername) {
+                    try {
+                        const response = await fetch(`/admin/update_username/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ username: newUsername.trim() })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (response.ok) {
+                            // Update username in the UI
+                            document.getElementById(`username-${userId}`).textContent = newUsername.trim();
+                            e.target.setAttribute('data-username', newUsername.trim());
+                            showToast(result.message || 'Användarnamn uppdaterat!');
+                            // Reload page to ensure all references are updated
+                            setTimeout(() => location.reload(), 1000);
                         } else {
                             showToast(result.error || 'Ett fel uppstod', 'error');
                         }
