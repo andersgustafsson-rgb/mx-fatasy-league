@@ -207,7 +207,7 @@
   }
 </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-sans">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
 
     <!-- Header - Responsiv layout -->
@@ -217,7 +217,7 @@
 
     {# Visa datum om du har det #}
     {% if competition.event_date %}
-          <p class="text-xs sm:text-sm text-gray-400 mt-1">
+          <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
         {{ competition.event_date.strftime('%Y-%m-%d') }}
       </p>
     {% endif %}
@@ -225,7 +225,7 @@
     {# 250SX East/West label #}
     {% if competition.coast_250 %}
       <div class="mt-2 inline-flex items-center gap-2">
-        <span class="text-xs text-gray-400">
+        <span class="text-xs text-gray-600 dark:text-gray-400">
           250SX {{ competition.coast_250|capitalize }}
         </span>
         <span class="text-[10px] px-2 py-0.5 rounded bg-blue-600 text-white">
@@ -247,14 +247,14 @@
 
     <!-- Trackmap Section with Side Info -->
     {% if trackmap_images and trackmap_images|length > 0 %}
-    <div class="mb-6 bg-gray-800 rounded-lg p-4">
-      <h2 class="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+    <div class="mb-6 bg-gray-200 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+      <h2 class="text-xl font-bold text-cyan-700 dark:text-cyan-400 mb-4 flex items-center">
         🗺️ Track Map
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <!-- Track Map - Smaller -->
-        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4">
+        <div class="lg:col-span-2 bg-gray-300 dark:bg-gray-700 rounded-lg p-4 border border-gray-400 dark:border-gray-600">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=trackmap_images[0].image_url) }}"
                alt="Track Map {{ competition.name }}"
@@ -348,7 +348,7 @@
     {% set outset = out_ids | default([]) %}
     
     <!-- Picks Status Indicator -->
-    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-gray-400 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-gray-500 dark:border-gray-600 bg-gray-200 dark:bg-gray-800">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div id="status-icon" class="text-2xl">⏳</div>
@@ -383,19 +383,19 @@
     </div>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-200 border-b border-gray-300 dark:border-gray-700 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
 <div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
 
   <!-- Kolumn: 450cc -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">450cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">450cc</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-450-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
-          <span class="w-8">{{ i }}.</span>
+          <span class="w-8 text-gray-900 dark:text-gray-300 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="450cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('450cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
@@ -430,12 +430,12 @@
 
   <!-- Kolumn: 250cc -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">250cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">250cc</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-250-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
-          <span class="w-8">{{ i }}.</span>
+          <span class="w-8 text-gray-900 dark:text-gray-300 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="250cc" data-position="{{ i }}">
             <div class="rider-selector-input" onclick="toggleRiderSelector('250cc', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
@@ -491,10 +491,10 @@
 
 
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Gissa Holeshot</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <label class="block text-sm sm:text-base mb-1">450cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-gray-900 dark:text-gray-300 font-semibold">450cc:</label>
           <div class="rider-selector" data-class="holeshot-450">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-450', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -521,7 +521,7 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm sm:text-base mb-1">250cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-gray-900 dark:text-gray-300 font-semibold">250cc:</label>
           <div class="rider-selector" data-class="holeshot-250">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-250', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -615,26 +615,26 @@
     </div>
 
     {% else %}
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Resultat vs Dina Val</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-200 border-b border-gray-300 dark:border-gray-700 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">450cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">450cc</h3>
         <div id="results-450" class="space-y-1 sm:space-y-2"></div>
       </div>
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">250cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">250cc</h3>
         <div id="results-250" class="space-y-1 sm:space-y-2"></div>
       </div>
     </div>
 
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Holeshot Resultat</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Holeshot Resultat</h3>
       <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
     {% if competition.series != 'WSX' %}
     <div class="mt-4 sm:mt-6">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Wildcard Resultat</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-gray-900 dark:text-gray-200 bg-gray-200 dark:bg-gray-800 px-3 py-2 rounded-md">Wildcard Resultat</h3>
       <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-100 dark:bg-purple-700 rounded"></div>
     </div>
     {% endif %}
