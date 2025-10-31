@@ -4322,7 +4322,7 @@ def list_trackmap_files():
     return redirect(url_for("trackmaps_page"))
 @app.get("/admin/get_out_status/<int:competition_id>")
 def admin_get_out_status(competition_id):
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
 
     try:
@@ -4374,7 +4374,7 @@ def admin_get_out_status(competition_id):
 
 @app.post("/admin/set_out_status")
 def admin_set_out_status():
-    if session.get("username") != "test":
+    if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
 
     data = request.get_json(force=True) or {}

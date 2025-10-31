@@ -1041,7 +1041,18 @@
             
             // Fetch riders for this competition (admin endpoint returns all riders incl. class)
             const res = await fetch(`/admin/get_out_status/${compId}`);
+            if (!res.ok) {
+                console.error('Error fetching riders:', res.status, res.statusText);
+                const errorData = await res.json().catch(() => ({}));
+                alert('Kunde inte hämta förarlista. Kontrollera att du är inloggad som admin. Error: ' + (errorData.error || res.statusText));
+                return;
+            }
             const riders = await res.json();
+            if (!Array.isArray(riders)) {
+                console.error('Invalid riders response:', riders);
+                alert('Ogiltigt svar från servern när förarlist skulle hämtas.');
+                return;
+            }
             const sx1 = riders.filter(r => r.class === 'wsx_sx1');
             const sx2 = riders.filter(r => r.class === 'wsx_sx2');
 
