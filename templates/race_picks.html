@@ -814,8 +814,8 @@
         }
       });
 
-      // Load wildcard pick
-      if (picks.wildcardPick) {
+      // Load wildcard pick (only for non-WSX series)
+      if (!isWSXSeries && picks.wildcardPick) {
         const pick = picks.wildcardPick;
         const selector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
         if (selector && pick) {
@@ -830,10 +830,12 @@
         }
       }
 
-      // Load wildcard position
-      if (picks.wildcardPosition) {
-        document.getElementById('wildcard-position').value = picks.wildcardPosition;
-        document.getElementById('wildcard-position-label').textContent = `Plats ${picks.wildcardPosition}`;
+      // Load wildcard position (only for non-WSX series)
+      if (!isWSXSeries && picks.wildcardPosition) {
+        const wildcardPosEl = document.getElementById('wildcard-position');
+        const wildcardLabelEl = document.getElementById('wildcard-position-label');
+        if (wildcardPosEl) wildcardPosEl.value = picks.wildcardPosition;
+        if (wildcardLabelEl) wildcardLabelEl.textContent = `Plats ${picks.wildcardPosition}`;
       }
 
       // Update rider selectors to hide selected riders

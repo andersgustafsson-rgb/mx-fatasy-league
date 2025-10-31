@@ -4644,8 +4644,15 @@ def save_picks():
     print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
 
     # 5) Validera wildcard EFTER att gamla picks rensats
+    # Wildcard handling - skip for WSX series
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
+    
+    # Skip wildcard validation and saving for WSX series
+    if comp.series == "WSX":
+        wc_pick = None
+        wc_pos = None
+    
     if wc_pick and wc_pos:
         try:
             wc_pick_i = int(wc_pick)
