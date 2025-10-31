@@ -967,7 +967,8 @@
             if ((rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx')) && rider.name) {
               const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
               const base = `/static/riders/wsx/${rider.rider_number ? rider.rider_number + '_' : ''}${slug}`;
-              img.src = `${base}.jpg`;
+              // Try with (1) suffix first (Windows adds this), then without
+              img.src = `${base} (1).jpg`;
               img.setAttribute('data-rider-id', riderId);
               img.onerror = function(){ handleImageError(this); };
             } else if (rider && rider.bike_brand) {
@@ -1361,9 +1362,10 @@ function imgSrcFor(riderId) {
   
   // If WSX rider without image, try drop-in folder convention
   if ((r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation.toLowerCase() === 'wsx')) && r.name) {
-    const base = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${wsxSlug(r.name)}`;
-    // Prefer jpg; if it fails we'll swap to png in onerror
-    return `${base}.jpg`;
+    const slug = wsxSlug(r.name);
+    const base = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${slug}`;
+    // Try with (1) suffix first (Windows adds this), then without
+    return `${base} (1).jpg`;
   }
 
   // Fall back to bike brand logo if no rider image
@@ -1378,22 +1380,51 @@ function imgSrcFor(riderId) {
 
   // Function to handle image loading errors
 function handleImageError(img) {
-  // If we tried jpg from wsx folder, attempt png once
+  // If we tried jpg from wsx folder, try variations
   const src = img.getAttribute('src') || '';
-  if (src.includes('/static/riders/wsx/') && src.endsWith('.jpg')) {
-    const png = src.replace(/\.jpg$/i, '.png');
-    img.onerror = function() {
-      // Fall back to brand logo
-      const riderId = img.getAttribute('data-rider-id');
-      const r = allRiders.find((x) => String(x.id) === String(riderId));
-      if (r && r.bike_brand) {
-        img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
-      } else {
-        img.src = '/static/brand_logos/honda.png';
-      }
-    };
-    img.src = png;
-    return;
+  if (src.includes('/static/riders/wsx/')) {
+    // Try without (1) suffix if it had one
+    if (src.includes(' (1).jpg')) {
+      const withoutSuffix = src.replace(' (1).jpg', '.jpg');
+      img.onerror = function() {
+        // Try (2) suffix
+        const withTwo = src.replace(' (1).jpg', ' (2).jpg');
+        img.onerror = function() {
+          // Try png
+          const png = src.replace(' (1).jpg', '.png');
+          img.onerror = function() {
+            // Fall back to brand logo
+            const riderId = img.getAttribute('data-rider-id');
+            const r = allRiders.find((x) => String(x.id) === String(riderId));
+            if (r && r.bike_brand) {
+              img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+            } else {
+              img.src = '/static/brand_logos/honda.png';
+            }
+          };
+          img.src = png;
+        };
+        img.src = withTwo;
+      };
+      img.src = withoutSuffix;
+      return;
+    }
+    // Try png if it was regular jpg
+    if (src.endsWith('.jpg')) {
+      const png = src.replace(/\.jpg$/i, '.png');
+      img.onerror = function() {
+        // Fall back to brand logo
+        const riderId = img.getAttribute('data-rider-id');
+        const r = allRiders.find((x) => String(x.id) === String(riderId));
+        if (r && r.bike_brand) {
+          img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+        } else {
+          img.src = '/static/brand_logos/honda.png';
+        }
+      };
+      img.src = png;
+      return;
+    }
   }
 
   // Replace with minimal placeholder
