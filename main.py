@@ -494,8 +494,8 @@ def series_status():
         ).all()
         print(f"🔍 DEBUG: Found {len(all_series)} series (2026 + ongoing 2025)")
         
-        # Custom sort order
-        series_order = {'Supercross': 1, 'Motocross': 2, 'SMX Finals': 3, 'WSX': 4}
+        # Custom sort order - WSX first (active series), then others
+        series_order = {'WSX': 1, 'Supercross': 2, 'Motocross': 3, 'SMX Finals': 4}
         all_series.sort(key=lambda s: series_order.get(s.name, 999))
         
         series_data = []
