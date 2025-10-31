@@ -1312,9 +1312,9 @@
         // Race is completed - show "Race färdigt" instead of picks status
         lockedStatus.classList.add('hidden');
         openStatus.classList.remove('hidden');
-        openStatus.innerHTML = '<span class="bg-blue-600 text-white px-3 py-2 rounded-lg font-semibold">🏁 Race färdigt</span>';
+        openStatus.textContent = '🏁 Race färdigt';
         openStatus.href = '/race_results';
-        openStatus.className = 'hidden inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+        openStatus.className = 'inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
         
         // Enable Race Results button
         if (raceResultsButton) {
@@ -1348,7 +1348,8 @@
         openStatus.classList.remove('hidden');
         // Restore original link and text based on picks_status from server
         openStatus.href = '/race_picks_active';
-        openStatus.className = 'hidden inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
+        openStatus.className = 'inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
+        // Text is set from server-side template, so we don't change it here
         
         // Enable Race Results button
         if (raceResultsButton) {
