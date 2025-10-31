@@ -26,8 +26,8 @@
       cursor: not-allowed;
     }
     
-    /* Disable interactive buttons in readonly mode, but allow login buttons and settings tab */
-    .readonly-mode .tab-btn:not([data-tab="settings"]),
+    /* Disable interactive buttons in readonly mode, but allow login buttons, settings tab and manual link */
+    .readonly-mode .tab-btn:not([data-tab="settings"]):not([href*="manual"]),
     .readonly-mode button[onclick*="showOtherUsersPicksFromMain"],
     .readonly-mode button[onclick*="toggleSeriesExpansion"],
     .readonly-mode button[onclick*="toggleSMXExpansion"] {
@@ -36,9 +36,10 @@
       cursor: not-allowed;
     }
     
-    /* Ensure login buttons and settings tab are always clickable */
+    /* Ensure login buttons, settings tab and manual link are always clickable */
     .readonly-mode button[onclick*="openLoginModal"],
-    .readonly-mode .tab-btn[data-tab="settings"] {
+    .readonly-mode .tab-btn[data-tab="settings"],
+    .readonly-mode a.tab-btn[href*="manual"] {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
