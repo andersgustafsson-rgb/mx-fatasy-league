@@ -936,10 +936,14 @@
       // Load rider images when dropdown opens
       loadRiderImages(riderClass, position);
       
-      // Focus search input
-      const searchInput = dropdown.querySelector('input');
-      if (searchInput) {
-        setTimeout(() => searchInput.focus(), 100);
+      // Don't focus search input on mobile to prevent keyboard from appearing
+      // This allows scrolling without keyboard blocking the view
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile) {
+        const searchInput = dropdown.querySelector('input');
+        if (searchInput) {
+          setTimeout(() => searchInput.focus(), 100);
+        }
       }
     }
   }
