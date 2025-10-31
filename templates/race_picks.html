@@ -966,10 +966,11 @@
           // If no image_url, construct path same way as other riders
           const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
           if (isWSX && rider.name) {
-            const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-            // Files are: name (1).jpg in wsx/ folder
+            // Files are: name (1).jpg (without underscores, just lowercase with space before (1))
+            // Remove spaces and special chars for filename matching
+            const fileSlug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
             // Build path same as other riders: riders/wsx/filename
-            const imagePath = `riders/wsx/${slug} (1).jpg`;
+            const imagePath = `riders/wsx/${fileSlug} (1).jpg`;
             img.src = `/static/${imagePath}`;
             img.setAttribute('data-rider-id', riderId);
             img.onerror = function(){ handleImageError(this); };
@@ -1365,10 +1366,11 @@ function imgSrcFor(riderId) {
   // If WSX rider without image_url in DB, construct path same way as other riders
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
-    const slug = wsxSlug(r.name);
-    // Files are: name (1).jpg in wsx/ folder
+    // Files are: name (1).jpg (without underscores, just lowercase with space before (1))
+    // Remove spaces and special chars for filename matching
+    const fileSlug = (r.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     // Build path same as other riders: riders/wsx/filename
-    const imagePath = `riders/wsx/${slug} (1).jpg`;
+    const imagePath = `riders/wsx/${fileSlug} (1).jpg`;
     const url = `/static/${imagePath}`;
     return url;
   }
