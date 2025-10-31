@@ -962,14 +962,21 @@
               this.src = '/static/brand_logos/honda.png'; // Default to Honda
             }
           };
-        } else {
-          // Use bike brand logo if no rider image
-          if (rider && rider.bike_brand) {
-            img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
           } else {
-            img.src = '/static/brand_logos/honda.png'; // Default to Honda
+            // Try WSX drop-in path first
+            if ((rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx')) && rider.name) {
+              const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+              const base = `/static/riders/wsx/${rider.rider_number ? rider.rider_number + '_' : ''}${slug}`;
+              img.src = `${base}.jpg`;
+              img.setAttribute('data-rider-id', riderId);
+              img.onerror = function(){ handleImageError(this); };
+            } else if (rider && rider.bike_brand) {
+              // Bike brand fallback
+              img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}\.png`;
+            } else {
+              img.src = '/static/brand_logos/honda.png';
+            }
           }
-        }
       }
     });
   }
@@ -1333,6 +1340,10 @@
   };
 
   // Bygg bild-URL från rider-data: headshot först, annars brand-logga
+function wsxSlug(name) {
+  return (name || "").toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
+
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
@@ -1348,6 +1359,13 @@ function imgSrcFor(riderId) {
     return url;
   }
   
+  // If WSX rider without image, try drop-in folder convention
+  if ((r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation.toLowerCase() === 'wsx')) && r.name) {
+    const base = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${wsxSlug(r.name)}`;
+    // Prefer jpg; if it fails we'll swap to png in onerror
+    return `${base}.jpg`;
+  }
+
   // Fall back to bike brand logo if no rider image
   if (r.bike_brand) {
     const url = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
@@ -1360,16 +1378,29 @@ function imgSrcFor(riderId) {
 
   // Function to handle image loading errors
 function handleImageError(img) {
-  
-  // Replace the image with a simple placeholder that doesn't break layout
+  // If we tried jpg from wsx folder, attempt png once
+  const src = img.getAttribute('src') || '';
+  if (src.includes('/static/riders/wsx/') && src.endsWith('.jpg')) {
+    const png = src.replace(/\.jpg$/i, '.png');
+    img.onerror = function() {
+      // Fall back to brand logo
+      const riderId = img.getAttribute('data-rider-id');
+      const r = allRiders.find((x) => String(x.id) === String(riderId));
+      if (r && r.bike_brand) {
+        img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
+      } else {
+        img.src = '/static/brand_logos/honda.png';
+      }
+    };
+    img.src = png;
+    return;
+  }
+
+  // Replace with minimal placeholder
   img.style.display = 'none';
-  
-  // Create a small placeholder that fits in the same space
   const placeholder = document.createElement('div');
   placeholder.className = 'w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0';
   placeholder.innerHTML = '<span class="text-white text-xs">🏍️</span>';
-  
-  // Replace the image with placeholder
   img.parentNode.replaceChild(placeholder, img);
 }
 
@@ -1464,6 +1495,7 @@ function onPickChange(cls, pos, riderId = null) {
   if (img) {
     if (src) {
       img.src = src;
+      if (val) img.setAttribute('data-rider-id', String(val));
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
       img.onerror = function() { handleImageError(this); };

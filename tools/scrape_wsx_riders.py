@@ -10,9 +10,9 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
-# Update these URLs when you find the actual WSX riders page
-BASE = "https://www.wsxchampionship.com"  # or wherever WSX riders are listed
-LIST_URL = "https://www.wsxchampionship.com/riders"  # Update this URL
+# WSX riders page (official)
+BASE = "https://worldsupercrosschampionship.com"
+LIST_URL = "https://worldsupercrosschampionship.com/riders/"
 
 OUT_DIR = pathlib.Path("data")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -125,8 +125,9 @@ def main():
         if not href:
             continue
         url = urljoin(BASE, href)
-        # Filter to rider detail pages (adjust pattern as needed)
-        if "/rider" in url.lower() and url not in links:
+        # Filter to rider detail pages (accept '/rider' or '/riders')
+        low = url.lower()
+        if (("/rider" in low) or ("/riders" in low)) and url not in links:
             links.add(url)
 
     if not links:

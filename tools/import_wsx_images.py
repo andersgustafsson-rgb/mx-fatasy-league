@@ -20,7 +20,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import app, db, Rider  # noqa: E402
+from app import create_app  # noqa: E402
+from models import db, Rider  # noqa: E402
 
 CSV_IN = pathlib.Path("data/wsx_riders_2025.csv")
 OVR_PATH = pathlib.Path("data/wsx_name_map.csv")  # Optional overrides
@@ -83,6 +84,7 @@ def main():
 
     overrides = load_overrides()
 
+    app = create_app()
     with app.app_context():
         rows = list(csv.DictReader(CSV_IN.open(encoding="utf-8")))
         scraped_total = len(rows)
