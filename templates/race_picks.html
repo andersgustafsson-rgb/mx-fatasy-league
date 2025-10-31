@@ -310,10 +310,12 @@
                 <span class="text-green-300">•</span>
                 <span>Holeshot är ofta avgörande för segern</span>
               </div>
+              {% if competition.series != 'WSX' %}
               <div class="flex items-start space-x-2">
                 <span class="text-green-300">•</span>
                 <span>Wildcard kan ge stora poäng om du gissar rätt</span>
               </div>
+              {% endif %}
             </div>
           </div>
           
@@ -381,7 +383,7 @@
     </div>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Gissa topp 6, Holeshot & Wildcard</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
 <div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
@@ -562,6 +564,7 @@
           </select>
         </div>
 
+    {% if competition.series != 'WSX' %}
     <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-100 dark:bg-purple-800 rounded">
       <h3 class="font-bold text-base sm:text-lg text-purple-900 dark:text-purple-200">🎲 Wildcard – slumpa en plats (10–20) & välj en 450cc‑förare</h3>
       <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:items-center">
@@ -602,6 +605,7 @@
         </select>
       </div>
     </div>
+    {% endif %}
 
     <div class="mt-4 sm:mt-6 flex gap-3">
       <button onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
@@ -628,10 +632,12 @@
       <div id="holeshot-results" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
+    {% if competition.series != 'WSX' %}
     <div class="mt-4 sm:mt-6">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3">Wildcard Resultat</h3>
       <div id="wildcard-result" class="p-3 sm:p-4 bg-purple-100 dark:bg-purple-700 rounded"></div>
     </div>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -640,6 +646,8 @@
   // Serverdata
   const competitionId = {{ competition.id|tojson }};
   const competitionName = {{ competition.name|tojson }};
+  const competitionSeries = {{ competition.series|tojson }};
+  const isWSXSeries = competitionSeries === 'WSX';
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
@@ -714,27 +722,29 @@
       }
     });
 
-    // Save wildcard pick
-    const wildcardSelector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
-    if (wildcardSelector) {
-      const selectedRiderSpan = wildcardSelector.querySelector('.selected-rider');
-      const currentText = selectedRiderSpan.textContent;
-      
-      if (currentText !== '-- välj 450cc förare --') {
-        const riderOption = wildcardSelector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
-        if (riderOption) {
-          picks.wildcardPick = {
-            riderId: riderOption.dataset.riderId,
-            riderName: riderOption.dataset.riderName
-          };
+    // Save wildcard pick (only for non-WSX series)
+    if (!isWSXSeries) {
+      const wildcardSelector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
+      if (wildcardSelector) {
+        const selectedRiderSpan = wildcardSelector.querySelector('.selected-rider');
+        const currentText = selectedRiderSpan.textContent;
+        
+        if (currentText !== '-- välj 450cc förare --') {
+          const riderOption = wildcardSelector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
+          if (riderOption) {
+            picks.wildcardPick = {
+              riderId: riderOption.dataset.riderId,
+              riderName: riderOption.dataset.riderName
+            };
+          }
         }
       }
-    }
 
-    // Save wildcard position
-    const wildcardPosition = document.getElementById('wildcard-position');
-    if (wildcardPosition && wildcardPosition.value) {
-      picks.wildcardPosition = wildcardPosition.value;
+      // Save wildcard position
+      const wildcardPosition = document.getElementById('wildcard-position');
+      if (wildcardPosition && wildcardPosition.value) {
+        picks.wildcardPosition = wildcardPosition.value;
+      }
     }
 
     localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(picks));
@@ -1492,23 +1502,29 @@ function updatePicksStatus(myPicks) {
   const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
   const hasHoleshotPicks = myPicks.holeshot_picks && 
     (myPicks.holeshot_picks['450cc'] || myPicks.holeshot_picks['250cc']);
-  const hasWildcardPick = myPicks.wildcard_pick;
+  const hasWildcardPick = myPicks.wildcard_pick && !isWSXSeries; // Wildcard not for WSX
   
-  const totalPicks = (myPicks.top6_picks?.length || 0) + 
-    (hasHoleshotPicks ? 1 : 0) + 
-    (hasWildcardPick ? 1 : 0);
+  // Count picks: top6_picks is array of all picks (12 total: 6 for 450cc + 6 for 250cc)
+  // For holeshot: count 2 if both 450cc and 250cc are picked, 1 if only one
+  const holeshotCount = myPicks.holeshot_picks ? 
+    ((myPicks.holeshot_picks['450cc'] ? 1 : 0) + (myPicks.holeshot_picks['250cc'] ? 1 : 0)) : 0;
+  
+  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0);
+  
+  // Required picks: 12 top picks (6+6) + 2 holeshots + (0 for WSX, 1 wildcard for others) = 14 for WSX, 15 for others
+  const totalRequired = isWSXSeries ? 14 : 15;
   
   if (totalPicks === 0) {
     // No picks made
     statusIcon.textContent = '📝';
     statusTitle.textContent = 'Inga val gjorda än';
-    statusMessage.textContent = 'Gör dina val för topp 6, holeshot och wildcard';
+    statusMessage.textContent = isWSXSeries ? 'Gör dina val för topp 6 och holeshot' : 'Gör dina val för topp 6, holeshot och wildcard';
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
     statusActions.classList.add('hidden');
-  } else if (totalPicks < 8) {
+  } else if (totalPicks < totalRequired) {
     // Partial picks
     statusIcon.textContent = '⚠️';
-    statusTitle.textContent = `Delvis klart (${totalPicks}/8 val)`;
+    statusTitle.textContent = `Delvis klart (${totalPicks}/${totalRequired} val)`;
     statusMessage.textContent = 'Du har gjort några val, men inte alla. Komplettera dina picks!';
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 dark:border-orange-600 bg-orange-50 dark:bg-orange-900/20';
     statusActions.classList.remove('hidden');
@@ -1896,7 +1912,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
                     </div>
                   </div>
                 ` : ''}
-                ${user.wildcard ? `
+                ${user.wildcard && !isWSXSeries ? `
                   <div class="mt-3 pt-3 border-t border-gray-600">
                     <h5 class="text-sm font-medium text-purple-400 mb-2">Wildcard</h5>
                     <span class="text-white text-sm">Position ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
@@ -2020,8 +2036,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       picks: picks,
       holeshot_450: document.getElementById("holeshot-450")?.value,
       holeshot_250: document.getElementById("holeshot-250")?.value,
-      wildcard_pick: document.getElementById("wildcard-pick")?.value,
-      wildcard_pos: document.getElementById("wildcard-position")?.value,
+      wildcard_pick: isWSXSeries ? null : (document.getElementById("wildcard-pick")?.value || null),
+      wildcard_pos: isWSXSeries ? null : (document.getElementById("wildcard-position")?.value || null),
     };
 
 
