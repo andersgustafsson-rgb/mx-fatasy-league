@@ -13,11 +13,11 @@
   .picks-locked { pointer-events: none; opacity: 0.6; }
 
   /* Smalare rader + större preview */
-  .pick-row { grid-template-columns: 48px 1fr; gap: 12px; align-items: center; }
+  .pick-row { grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
   .preview-img {
-    width: 44px; height: 44px; border-radius: 9999px;
+    width: 64px; height: 64px; border-radius: 9999px;
     object-fit: cover; 
-    object-position: center top;
+    object-position: center 25%;
     background: #4b5563; opacity: .85;
     transition: opacity .15s ease, transform .15s ease;
     border: 2px solid #6b7280;
@@ -139,14 +139,14 @@
   }
 
   .rider-avatar {
-    width: 32px;
-    height: 32px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-right: 10px;
     object-fit: cover;
-    object-position: center top;
+    object-position: center 25%;
     background: #374151;
-    border: 1px solid #4b5563;
+    border: 2px solid #4b5563;
     flex-shrink: 0;
   }
 
@@ -197,8 +197,8 @@
     }
     
     .rider-avatar {
-      width: 28px;
-      height: 28px;
+      width: 48px;
+      height: 48px;
     }
     
     .rider-name {
