@@ -16,9 +16,12 @@
   .pick-row { grid-template-columns: 48px 1fr; gap: 12px; align-items: center; }
   .preview-img {
     width: 44px; height: 44px; border-radius: 9999px;
-    object-fit: cover; background: #4b5563; opacity: .85;
+    object-fit: cover; 
+    object-position: center top;
+    background: #4b5563; opacity: .85;
     transition: opacity .15s ease, transform .15s ease;
     border: 2px solid #6b7280;
+    flex-shrink: 0;
   }
   .preview-img.has-src { opacity: 1; }
   .pick-select-sm {
@@ -141,8 +144,10 @@
     border-radius: 50%;
     margin-right: 8px;
     object-fit: cover;
+    object-position: center top;
     background: #374151;
     border: 1px solid #4b5563;
+    flex-shrink: 0;
   }
 
   .rider-info {
