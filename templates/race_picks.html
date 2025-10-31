@@ -964,13 +964,19 @@
           };
           } else {
             // Try WSX drop-in path first
-            if ((rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx')) && rider.name) {
+            const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
+            if (isWSX && rider.name) {
               const slug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
               const base = `/static/riders/wsx/${rider.rider_number ? rider.rider_number + '_' : ''}${slug}`;
               // Try with (1) suffix first (Windows adds this), then without
               img.src = `${base} (1).jpg`;
               img.setAttribute('data-rider-id', riderId);
-              img.onerror = function(){ handleImageError(this); };
+              // Debug log (remove after testing)
+              console.log('[WSX-IMG-DROPDOWN] Trying:', img.src, 'for rider:', rider.name, 'class:', rider.class);
+              img.onerror = function(){ 
+                console.log('[WSX-IMG-DROPDOWN] Failed:', img.src);
+                handleImageError(this); 
+              };
             } else if (rider && rider.bike_brand) {
               // Bike brand fallback
               img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}\.png`;
@@ -1361,11 +1367,15 @@ function imgSrcFor(riderId) {
   }
   
   // If WSX rider without image, try drop-in folder convention
-  if ((r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation.toLowerCase() === 'wsx')) && r.name) {
+  const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
+  if (isWSX && r.name) {
     const slug = wsxSlug(r.name);
     const base = `/static/riders/wsx/${r.rider_number ? r.rider_number + '_' : ''}${slug}`;
     // Try with (1) suffix first (Windows adds this), then without
-    return `${base} (1).jpg`;
+    const url = `${base} (1).jpg`;
+    // Debug log (remove after testing)
+    console.log('[WSX-IMG] Trying:', url, 'for rider:', r.name, 'class:', r.class, 'number:', r.rider_number);
+    return url;
   }
 
   // Fall back to bike brand logo if no rider image
