@@ -268,6 +268,33 @@
   </style>
 </head>
 <body class="relative font-sans min-h-screen text-gray-200">
+  <!-- Admin Announcement Modal -->
+  {% if admin_message %}
+  <div id="admin-announcement-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 border-2 rounded-lg p-6 max-w-md w-11/12 mx-4 shadow-2xl {% if admin_message_priority == 'important' %}border-red-500{% else %}border-blue-500{% endif %}">
+      <div class="flex items-start gap-4 mb-4">
+        <div class="text-4xl {% if admin_message_priority == 'important' %}text-red-400{% else %}text-blue-400{% endif %}">
+          {% if admin_message_priority == 'important' %}⚠️{% else %}ℹ️{% endif %}
+        </div>
+        <div class="flex-1">
+          <h3 class="text-2xl font-bold {% if admin_message_priority == 'important' %}text-red-400{% else %}text-blue-400{% endif %} mb-3">
+            {% if admin_message_priority == 'important' %}Viktigt Meddelande{% else %}Information{% endif %}
+          </h3>
+          <div class="text-gray-200 whitespace-pre-wrap">{{ admin_message }}</div>
+        </div>
+        <button onclick="closeAdminAnnouncement()" class="text-gray-400 hover:text-white text-2xl font-bold leading-none">
+          ×
+        </button>
+      </div>
+      <button 
+        onclick="closeAdminAnnouncement()" 
+        class="w-full mt-4 px-4 py-2 rounded-lg font-semibold transition-all {% if admin_message_priority == 'important' %}bg-red-600 hover:bg-red-700 text-white{% else %}bg-blue-600 hover:bg-blue-700 text-white{% endif %}">
+        OK, Jag förstår
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Bakgrund -->
   <div
     class="absolute inset-0 bg-cover bg-center"
@@ -2247,6 +2274,60 @@
       }
     }
     
+    // Admin Announcement functions
+    function closeAdminAnnouncement() {
+      const modal = document.getElementById('admin-announcement-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        // Save to localStorage that user has seen this message
+        // Use message content hash to reset if message changes
+        try {
+          const messageText = modal.querySelector('.text-gray-200').textContent.trim();
+          // Create simple hash from first 30 chars of message
+          const messageHash = messageText.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
+          localStorage.setItem('admin_announcement_seen_' + messageHash, 'true');
+        } catch (e) {
+          console.error('Error saving to localStorage:', e);
+        }
+      }
+    }
+    
+    function checkAdminAnnouncement() {
+      {% if admin_message %}
+      try {
+        const modal = document.getElementById('admin-announcement-modal');
+        if (!modal) return;
+        
+        // Get message text from modal
+        const messageElement = modal.querySelector('.text-gray-200');
+        if (!messageElement) return;
+        
+        const messageText = messageElement.textContent.trim();
+        // Create simple hash from first 30 chars of message
+        const messageHash = messageText.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
+        const seenKey = 'admin_announcement_seen_' + messageHash;
+        
+        // Check if user has seen this specific message
+        const hasSeen = localStorage.getItem(seenKey);
+        if (!hasSeen) {
+          // Show modal after a short delay
+          setTimeout(() => {
+            modal.classList.remove('hidden');
+          }, 500);
+        }
+      } catch (e) {
+        console.error('Error checking admin announcement:', e);
+        // If error, show anyway
+        setTimeout(() => {
+          const modal = document.getElementById('admin-announcement-modal');
+          if (modal) {
+            modal.classList.remove('hidden');
+          }
+        }, 500);
+      }
+      {% endif %}
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
       // DOM loaded, fetching leaderboard
       fetchSeasonLeaderboard();
@@ -2267,6 +2348,9 @@
       
       // Initialize tabs
       initTabs();
+      
+      // Check and show admin announcement if needed
+      checkAdminAnnouncement();
       
       // Set race picks URL for dynamic updates
       {% if upcoming_race %}

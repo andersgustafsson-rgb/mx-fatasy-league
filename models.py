@@ -28,6 +28,9 @@ class GlobalSimulation(db.Model):
     start_time = db.Column(db.String(50), nullable=True)
     scenario = db.Column(db.String(50), nullable=True)
     active_race_id = db.Column(db.Integer, nullable=True)  # Which race is currently active for picks
+    admin_message = db.Column(db.Text, nullable=True)  # Admin announcement message
+    admin_message_priority = db.Column(db.String(20), nullable=True, default='info')  # 'important' or 'info'
+    admin_message_active = db.Column(db.Boolean, default=False)  # Whether announcement is active
 
 class Series(db.Model):
     __tablename__ = "series"

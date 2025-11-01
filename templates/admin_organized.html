@@ -121,6 +121,9 @@
             <button onclick="showSection('system-tools')" class="tab-btn px-6 py-3 text-lg">
                 🔧 System Tools
             </button>
+            <button onclick="showSection('announcements')" class="tab-btn px-6 py-3 text-lg">
+                📢 Announcements
+            </button>
         </div>
 
         <!-- Race Results Section -->
@@ -499,6 +502,71 @@
                             Points Management
                         </a>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Announcements Section -->
+        <div id="announcements" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">📢 Announcements</h2>
+                
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-gray-300 mb-4">
+                        Skapa ett popup-meddelande som visas för alla användare på huvudsidan. 
+                        Meddelandet visas en gång per användare (sparas i webbläsaren).
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Meddelande:</label>
+                            <textarea 
+                                id="announcement-message" 
+                                rows="4" 
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                                placeholder="Skriv ditt meddelande här..."></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Prioritet:</label>
+                            <select 
+                                id="announcement-priority" 
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                <option value="info">ℹ️ Allmän Info (Blå)</option>
+                                <option value="important">⚠️ Viktigt Meddelande (Röd/Varning)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-center gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="announcement-active" 
+                                    class="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500">
+                                <span class="text-gray-300">Aktivt meddelande</span>
+                            </label>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button 
+                                onclick="saveAnnouncement()" 
+                                class="btn-primary px-4 py-2 rounded-lg">
+                                💾 Spara meddelande
+                            </button>
+                            <button 
+                                onclick="loadAnnouncement()" 
+                                class="btn-warning px-4 py-2 rounded-lg">
+                                📥 Ladda befintligt
+                            </button>
+                            <button 
+                                onclick="clearAnnouncement()" 
+                                class="btn-danger px-4 py-2 rounded-lg">
+                                🗑️ Ta bort meddelande
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="announcement-status" class="mt-4 hidden"></div>
                 </div>
             </div>
         </div>
@@ -1075,11 +1143,116 @@
 
         // Initialize page
         // Manual results client-side validation (duplicate blocking, partial entries accepted)
+        // Announcement functions
+        async function saveAnnouncement() {
+            const message = document.getElementById('announcement-message').value.trim();
+            const priority = document.getElementById('announcement-priority').value;
+            const active = document.getElementById('announcement-active').checked;
+            
+            if (active && !message) {
+                alert('❌ Du måste skriva ett meddelande om det ska vara aktivt!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/set_announcement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        priority: priority,
+                        active: active
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const statusDiv = document.getElementById('announcement-status');
+                    statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
+                    statusDiv.textContent = active ? '✅ Meddelande sparat och aktiverat!' : '✅ Meddelande deaktiverat!';
+                    statusDiv.classList.remove('hidden');
+                    
+                    // Auto-hide after 3 seconds
+                    setTimeout(() => {
+                        statusDiv.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    alert('❌ Fel: ' + (result.error || 'Okänt fel'));
+                }
+            } catch (error) {
+                alert('❌ Fel vid sparande: ' + error.message);
+            }
+        }
+        
+        async function loadAnnouncement() {
+            try {
+                const response = await fetch('/admin/get_announcement');
+                const result = await response.json();
+                
+                if (response.ok && result.active && result.message) {
+                    document.getElementById('announcement-message').value = result.message;
+                    document.getElementById('announcement-priority').value = result.priority || 'info';
+                    document.getElementById('announcement-active').checked = true;
+                } else {
+                    document.getElementById('announcement-message').value = '';
+                    document.getElementById('announcement-priority').value = 'info';
+                    document.getElementById('announcement-active').checked = false;
+                }
+            } catch (error) {
+                console.error('Error loading announcement:', error);
+            }
+        }
+        
+        async function clearAnnouncement() {
+            if (!confirm('Är du säker på att du vill ta bort meddelandet?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/set_announcement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: '',
+                        priority: 'info',
+                        active: false
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('announcement-message').value = '';
+                    document.getElementById('announcement-priority').value = 'info';
+                    document.getElementById('announcement-active').checked = false;
+                    
+                    const statusDiv = document.getElementById('announcement-status');
+                    statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
+                    statusDiv.textContent = '✅ Meddelande borttaget!';
+                    statusDiv.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        statusDiv.classList.add('hidden');
+                    }, 3000);
+                } else {
+                    alert('❌ Fel: ' + (result.error || 'Okänt fel'));
+                }
+            } catch (error) {
+                alert('❌ Fel vid borttagning: ' + error.message);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
             loadPicksStatsCompetitions();
+            loadAnnouncement(); // Load existing announcement when page loads
             
             const form = document.getElementById('manual-results-form');
             if (form) {

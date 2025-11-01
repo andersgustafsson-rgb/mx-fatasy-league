@@ -622,6 +622,24 @@ def index():
         # Skip league additional column migrations for now
         pass
         
+        # Add admin announcement columns to global_simulation if missing
+        try:
+            exists = db.session.execute(db.text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name='global_simulation' AND column_name='admin_message'
+            """)).fetchone()
+            if not exists:
+                print("Adding admin announcement columns to global_simulation table...")
+                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT"))
+                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"))
+                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"))
+                db.session.commit()
+                print("Admin announcement columns added successfully")
+        except Exception as e:
+            print(f"Error adding admin announcement columns: {e}")
+            db.session.rollback()
+            pass
+        
         # Check if league_requests table exists
         if not inspect(db.engine).has_table('league_requests'):
             print("Creating league_requests table...")
@@ -862,6 +880,18 @@ def index():
         print(f"Error checking league requests: {e}")
         league_requests_count = 0
 
+    # Get admin announcement message
+    admin_message = None
+    admin_message_priority = None
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.admin_message_active and global_sim.admin_message:
+            admin_message = global_sim.admin_message
+            admin_message_priority = global_sim.admin_message_priority or 'info'
+    except Exception as e:
+        print(f"Error fetching admin message: {e}")
+        admin_message = None
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -882,6 +912,8 @@ def index():
         picks_locked=picks_locked,
         is_admin=is_admin_user() if is_logged_in else False,
         is_logged_in=is_logged_in,
+        admin_message=admin_message,
+        admin_message_priority=admin_message_priority,
     )
 
 
@@ -3509,6 +3541,64 @@ def admin_picks_stats(competition_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+
+@app.post("/admin/set_announcement")
+def set_admin_announcement():
+    """Set or update admin announcement message"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        priority = data.get('priority', 'info')  # 'important' or 'info'
+        active = data.get('active', False)
+        
+        # Get or create global_simulation record
+        global_sim = GlobalSimulation.query.first()
+        if not global_sim:
+            global_sim = GlobalSimulation(id=1, active=False)
+            db.session.add(global_sim)
+        
+        if active and message:
+            global_sim.admin_message = message
+            global_sim.admin_message_priority = priority
+            global_sim.admin_message_active = True
+        else:
+            # Deactivate if no message or active=false
+            global_sim.admin_message_active = False
+            if not message:
+                global_sim.admin_message = None
+                global_sim.admin_message_priority = None
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Announcement updated successfully",
+            "active": global_sim.admin_message_active
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/admin/get_announcement")
+def get_admin_announcement():
+    """Get current admin announcement"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.admin_message_active:
+            return jsonify({
+                "message": global_sim.admin_message,
+                "priority": global_sim.admin_message_priority or 'info',
+                "active": True
+            })
+        return jsonify({"message": None, "active": False})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.post("/admin/submit_results")
 def submit_results():
