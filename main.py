@@ -4710,6 +4710,14 @@ def get_other_users_picks(competition_id):
     
     # Get competition to determine series
     comp = Competition.query.get_or_404(competition_id)
+    
+    # IMPORTANT: Only allow viewing other users' picks when picks are locked or race has results
+    picks_locked = is_picks_locked(comp)
+    has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
+    
+    if not picks_locked and not has_results:
+        return jsonify({"error": "Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks"}), 403
+    
     is_wsx = getattr(comp, 'series', None) == 'WSX'
     
     # Get all riders once as master list
