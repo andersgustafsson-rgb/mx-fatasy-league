@@ -477,13 +477,51 @@ def register():
 @app.route("/logout")
 def logout():
     # Complete session destruction
+    username = session.get("username", "Unknown")
+    
+    # Clear all session data
     session.clear()
     session.permanent = False
     session.modified = True
     
-    # Create response and clear cookies
+    # Create response and clear session cookie with proper settings
     response = make_response(redirect(url_for("index")))
-    response.set_cookie('session', '', expires=0, path='/', domain=None)
+    
+    # Get cookie settings from Flask config
+    cookie_name = app.config.get('SESSION_COOKIE_NAME', 'session')
+    cookie_path = app.config.get('SESSION_COOKIE_PATH', '/')
+    cookie_domain = app.config.get('SESSION_COOKIE_DOMAIN', None)
+    cookie_samesite = app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
+    cookie_httponly = app.config.get('SESSION_COOKIE_HTTPONLY', True)
+    cookie_secure = app.config.get('SESSION_COOKIE_SECURE', False)
+    
+    # Clear the session cookie with same settings it was created with
+    response.set_cookie(
+        cookie_name,
+        value='',
+        expires=0,
+        path=cookie_path,
+        domain=cookie_domain,
+        samesite=cookie_samesite,
+        httponly=cookie_httponly,
+        secure=cookie_secure
+    )
+    
+    # Also clear the default 'session' cookie name as fallback
+    if cookie_name != 'session':
+        response.set_cookie(
+            'session',
+            value='',
+            expires=0,
+            path=cookie_path,
+            domain=cookie_domain,
+            samesite=cookie_samesite,
+            httponly=cookie_httponly,
+            secure=cookie_secure
+        )
+    
+    print(f"🚪 User '{username}' logged out - session cleared and cookies removed")
+    
     return response
 
 
