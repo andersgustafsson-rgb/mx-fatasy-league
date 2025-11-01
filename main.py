@@ -11206,7 +11206,9 @@ def create_hampus_admin():
 @app.route("/manual")
 def manual_page():
     """Manual page for the game"""
-    return render_template("manual.html")
+    is_logged_in = "user_id" in session
+    username = session.get("username", "Gäst") if is_logged_in else "Gäst"
+    return render_template("manual.html", is_logged_in=is_logged_in, username=username)
 
 @app.route("/admin/users")
 def admin_users():
