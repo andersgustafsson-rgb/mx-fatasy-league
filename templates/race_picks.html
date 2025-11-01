@@ -1025,66 +1025,15 @@
       if (img && riderId && !img.src) {
         // Set image source using the same logic as imgSrcFor
         const rider = allRiders.find(r => r.id == riderId);
+        // Set data-rider-id so handleImageError can find the rider for brand logo fallback
+        img.setAttribute('data-rider-id', riderId);
         // Use imgSrcFor to get the correct image source (handles all cases including brand logos)
         const imageSrc = imgSrcFor(riderId);
         if (imageSrc) {
           img.src = imageSrc;
           img.onerror = function() {
-            // If image fails to load, try JPG if we tried PNG (for constructed filenames)
-            if (imageSrc.endsWith('.png') && rider && rider.rider_number && rider.name) {
-              const nameSlug = (rider.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-              const jpgPath = `riders/${rider.rider_number}_${nameSlug}.jpg`;
-              this.src = `/static/${jpgPath}`;
-              this.onerror = function() {
-                // If JPG also fails, try brand logo
-                if (rider && rider.bike_brand) {
-                  const brandName = (rider.bike_brand || "").toLowerCase().trim();
-                  const brandMap = {
-                    'honda': 'honda',
-                    'ktm': 'ktm',
-                    'yamaha': 'yamaha',
-                    'kawasaki': 'kawasaki',
-                    'suzuki': 'suzuki',
-                    'husqvarna': 'husqvarna',
-                    'gasgas': 'gasgas',
-                    'beta': 'beta',
-                    'triumph': 'triumph'
-                  };
-                  const logoName = brandMap[brandName] || brandName;
-                  this.src = `/static/brand_logos/${logoName}.png`;
-                  this.onerror = function() {
-                    // Final fallback
-                    this.src = '/static/brand_logos/honda.png';
-                  };
-                } else {
-                  this.src = '/static/brand_logos/honda.png';
-                }
-              };
-              return;
-            }
-            // If not a constructed filename or JPG already tried, try brand logo
-            if (rider && rider.bike_brand) {
-              const brandName = (rider.bike_brand || "").toLowerCase().trim();
-              const brandMap = {
-                'honda': 'honda',
-                'ktm': 'ktm',
-                'yamaha': 'yamaha',
-                'kawasaki': 'kawasaki',
-                'suzuki': 'suzuki',
-                'husqvarna': 'husqvarna',
-                'gasgas': 'gasgas',
-                'beta': 'beta',
-                'triumph': 'triumph'
-              };
-              const logoName = brandMap[brandName] || brandName;
-              this.src = `/static/brand_logos/${logoName}.png`;
-              this.onerror = function() {
-                // Final fallback
-                this.src = '/static/brand_logos/honda.png';
-              };
-            } else {
-              this.src = '/static/brand_logos/honda.png';
-            }
+            // Use handleImageError for proper fallback handling
+            handleImageError(this);
           };
         } else {
           // No image found, use brand logo directly
@@ -1480,7 +1429,7 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
   
-  // Try rider image first (check both PNG and JPG)
+  // 1. Try rider image first if image_url exists
   if (r.image_url) {
     // Remove 'riders/' prefix if it exists to avoid double path
     const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
@@ -1488,73 +1437,68 @@ function imgSrcFor(riderId) {
     return url;
   }
   
-  // If WSX rider without image_url in DB, construct path same way as other riders
+  // 2. Check if this is a WSX rider - try WSX folder first (before standard format)
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
-    // WSX files have varying formats: 
-    // - name (1).jpg (no spaces in name): cole_thompson (1).jpg
-    // - name (1).jpg (with spaces): gregaranda (2).jpg
-    // - name_(1).jpg: sometimes with underscore before number
     const nameLower = (r.name || '').toLowerCase().trim();
-    // Try with underscores first (some files have underscores in name like cole_thompson)
     const fileSlugWithUnderscores = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    // Try without underscores (remove all special chars)
-    const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-    
-    // Try most common variants first: (1), then (2), then _(1), then _(2)
-    // Priority: underscore name with space, underscore name with underscore, no underscore with space
-    const variants = [
-      `${fileSlugWithUnderscores} (1).jpg`,  // cole_thompson (1).jpg
-      `${fileSlugWithUnderscores} (2).jpg`,  // cole_thompson (2).jpg
-      `${fileSlugWithUnderscores}_(1).jpg`,  // cole_thompson_(1).jpg
-      `${fileSlugWithUnderscores}_(2).jpg`,  // cole_thompson_(2).jpg
-      `${fileSlugNoSpaces} (1).jpg`,         // gregaranda (1).jpg
-      `${fileSlugNoSpaces} (2).jpg`          // gregaranda (2).jpg
-    ];
-    
-    // Return first variant - browser will try and onerror handler will try next variants
-    const imagePath = `riders/wsx/${variants[0]}`;
-    const url = `/static/${imagePath}`;
-    return url;
+    // Try most common variants first
+    const imagePath = `riders/wsx/${fileSlugWithUnderscores} (1).jpg`;
+    return `/static/${imagePath}`;
   }
-
-  // If no image_url, try to construct filename from rider_number and name (standard format: 50_enzo_lopes.png)
+  
+  // 3. If no image_url, try to construct filename from rider_number and name (standard format: 50_enzo_lopes.png)
+  // This works for ALL riders (both regular and WSX) as fallback
   if (r.rider_number && r.name) {
     const nameSlug = (r.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     // Try PNG first
     const pngPath = `riders/${r.rider_number}_${nameSlug}.png`;
-    const jpgPath = `riders/${r.rider_number}_${nameSlug}.jpg`;
-    // Return PNG path (we'll handle fallback to JPG in onerror handler)
     return `/static/${pngPath}`;
   }
 
-  // If no rider image, use bike brand logo directly
+  // 4. If no rider image found, use bike brand logo directly
   if (r.bike_brand) {
     const brandName = (r.bike_brand || "").toLowerCase().trim();
-    // Map common brand names to logo files
     const brandMap = {
-      'honda': 'honda',
-      'ktm': 'ktm',
-      'yamaha': 'yamaha',
-      'kawasaki': 'kawasaki',
-      'suzuki': 'suzuki',
-      'husqvarna': 'husqvarna',
-      'gasgas': 'gasgas',
-      'beta': 'beta',
-      'triumph': 'triumph'
+      'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
+      'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
+      'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
     };
     const logoName = brandMap[brandName] || brandName;
     return `/static/brand_logos/${logoName}.png`;
   }
   
-  // Final fallback to Honda logo
+  // 5. Final fallback to Honda logo
   return '/static/brand_logos/honda.png';
 }
 
   // Function to handle image loading errors
 function handleImageError(img) {
-  // If we tried jpg from wsx folder, try variations
   const src = img.getAttribute('src') || '';
+  const riderId = img.getAttribute('data-rider-id');
+  const rider = riderId ? allRiders.find((x) => Number(x.id) === Number(riderId)) : null;
+  
+  // Always have a fallback to brand logo
+  const fallbackToBrandLogo = function() {
+    if (rider && rider.bike_brand) {
+      const brandName = (rider.bike_brand || "").toLowerCase().trim();
+      const brandMap = {
+        'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
+        'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
+        'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
+      };
+      const logoName = brandMap[brandName] || brandName;
+      img.src = `/static/brand_logos/${logoName}.png`;
+      img.onerror = function() {
+        // Final fallback
+        img.src = '/static/brand_logos/honda.png';
+      };
+    } else {
+      img.src = '/static/brand_logos/honda.png';
+    }
+  };
+  
+  // If we tried jpg from wsx folder, try variations
   if (src.includes('/static/riders/wsx/')) {
     const filename = src.split('/').pop();
     
@@ -1566,23 +1510,7 @@ function handleImageError(img) {
         const tryUnderscore1 = src.replace(' (1).jpg', '_(1).jpg');
         img.onerror = function() {
           const tryUnderscore2 = src.replace(' (1).jpg', '_(2).jpg');
-          img.onerror = function() {
-            // Fall back to brand logo
-            const riderId = img.getAttribute('data-rider-id');
-            const r = allRiders.find((x) => String(x.id) === String(riderId));
-            if (r && r.bike_brand) {
-              const brandName = (r.bike_brand || "").toLowerCase().trim();
-              const brandMap = {
-                'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
-                'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
-                'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
-              };
-              const logoName = brandMap[brandName] || brandName;
-              img.src = `/static/brand_logos/${logoName}.png`;
-            } else {
-              img.src = '/static/brand_logos/honda.png';
-            }
-          };
+          img.onerror = fallbackToBrandLogo;
           img.src = tryUnderscore2;
         };
         img.src = tryUnderscore1;
@@ -1599,23 +1527,7 @@ function handleImageError(img) {
         const trySpace1 = src.replace('_(1).jpg', ' (1).jpg');
         img.onerror = function() {
           const trySpace2 = src.replace('_(1).jpg', ' (2).jpg');
-          img.onerror = function() {
-            // Fall back to brand logo
-            const riderId = img.getAttribute('data-rider-id');
-            const r = allRiders.find((x) => String(x.id) === String(riderId));
-            if (r && r.bike_brand) {
-              const brandName = (r.bike_brand || "").toLowerCase().trim();
-              const brandMap = {
-                'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
-                'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
-                'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
-              };
-              const logoName = brandMap[brandName] || brandName;
-              img.src = `/static/brand_logos/${logoName}.png`;
-            } else {
-              img.src = '/static/brand_logos/honda.png';
-            }
-          };
+          img.onerror = fallbackToBrandLogo;
           img.src = trySpace2;
         };
         img.src = trySpace1;
@@ -1626,27 +1538,22 @@ function handleImageError(img) {
     // Try png if it was regular jpg
     if (src.endsWith('.jpg')) {
       const png = src.replace(/\.jpg$/i, '.png');
-      img.onerror = function() {
-        // Fall back to brand logo
-        const riderId = img.getAttribute('data-rider-id');
-        const r = allRiders.find((x) => String(x.id) === String(riderId));
-        if (r && r.bike_brand) {
-          img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
-        } else {
-          img.src = '/static/brand_logos/honda.png';
-        }
-      };
+      img.onerror = fallbackToBrandLogo;
       img.src = png;
+      return;
+    }
+    
+    // If it was a PNG from riders folder (not wsx), try JPG
+    if (src.endsWith('.png') && src.includes('/static/riders/') && !src.includes('/static/riders/wsx/')) {
+      const jpg = src.replace(/\.png$/i, '.jpg');
+      img.onerror = fallbackToBrandLogo;
+      img.src = jpg;
       return;
     }
   }
 
-  // Replace with minimal placeholder
-  img.style.display = 'none';
-  const placeholder = document.createElement('div');
-  placeholder.className = 'w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0';
-  placeholder.innerHTML = '<span class="text-white text-xs">🏍️</span>';
-  img.parentNode.replaceChild(placeholder, img);
+  // If all else fails, use brand logo (never show placeholder - always use brand logo)
+  fallbackToBrandLogo();
 }
 
 // Function to update picks status indicator
