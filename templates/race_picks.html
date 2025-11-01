@@ -1512,23 +1512,27 @@ function handleImageError(img) {
     if (filename.includes(' (1).jpg')) {
       const try2 = src.replace(' (1).jpg', ' (2).jpg');
       img.onerror = function() {
-        // Extract base name (without (1).jpg) - e.g. "shanemcelrath" or "cole_thompson"
-        const baseName = filename.replace(' (1).jpg', '');
-        // If baseName doesn't have underscore, try with underscore format
-        // Reconstruct from original rider name if possible
+        // Try underscore format if we tried no-spaces format
+        // Reconstruct from original rider name
         if (rider) {
           const nameLower = (rider.name || '').toLowerCase().trim();
+          // Try with underscore format (for names like Cole Thompson -> cole_thompson)
           const withUnderscore = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-          const tryUnderscore1 = `/static/riders/wsx/${withUnderscore} (1).jpg`;
-          img.onerror = function() {
-            const tryUnderscore2 = `/static/riders/wsx/${withUnderscore} (2).jpg`;
-            img.onerror = fallbackToBrandLogo;
-            img.src = tryUnderscore2;
-          };
-          img.src = tryUnderscore1;
-        } else {
-          fallbackToBrandLogo();
+          // Only try underscore if it's different from what we already tried
+          const baseNameNoSpaces = filename.replace(' (1).jpg', '');
+          if (withUnderscore !== baseNameNoSpaces) {
+            const tryUnderscore1 = `/static/riders/wsx/${withUnderscore} (1).jpg`;
+            img.onerror = function() {
+              const tryUnderscore2 = `/static/riders/wsx/${withUnderscore} (2).jpg`;
+              img.onerror = fallbackToBrandLogo;
+              img.src = tryUnderscore2;
+            };
+            img.src = tryUnderscore1;
+            return;
+          }
         }
+        // If no underscore variant to try, fall back to brand logo
+        fallbackToBrandLogo();
       };
       img.src = try2;
       return;
