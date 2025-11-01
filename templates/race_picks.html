@@ -1491,11 +1491,29 @@ function imgSrcFor(riderId) {
   // If WSX rider without image_url in DB, construct path same way as other riders
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
-    // Files are: name (1).jpg (without underscores, just lowercase with space before (1))
-    // Remove spaces and special chars for filename matching
-    const fileSlug = (r.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-    // Build path same as other riders: riders/wsx/filename
-    const imagePath = `riders/wsx/${fileSlug} (1).jpg`;
+    // WSX files have varying formats: 
+    // - name (1).jpg (no spaces in name): cole_thompson (1).jpg
+    // - name (1).jpg (with spaces): gregaranda (2).jpg
+    // - name_(1).jpg: sometimes with underscore before number
+    const nameLower = (r.name || '').toLowerCase().trim();
+    // Try with underscores first (some files have underscores in name like cole_thompson)
+    const fileSlugWithUnderscores = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    // Try without underscores (remove all special chars)
+    const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+    
+    // Try most common variants first: (1), then (2), then _(1), then _(2)
+    // Priority: underscore name with space, underscore name with underscore, no underscore with space
+    const variants = [
+      `${fileSlugWithUnderscores} (1).jpg`,  // cole_thompson (1).jpg
+      `${fileSlugWithUnderscores} (2).jpg`,  // cole_thompson (2).jpg
+      `${fileSlugWithUnderscores}_(1).jpg`,  // cole_thompson_(1).jpg
+      `${fileSlugWithUnderscores}_(2).jpg`,  // cole_thompson_(2).jpg
+      `${fileSlugNoSpaces} (1).jpg`,         // gregaranda (1).jpg
+      `${fileSlugNoSpaces} (2).jpg`          // gregaranda (2).jpg
+    ];
+    
+    // Return first variant - browser will try and onerror handler will try next variants
+    const imagePath = `riders/wsx/${variants[0]}`;
     const url = `/static/${imagePath}`;
     return url;
   }
@@ -1538,62 +1556,71 @@ function handleImageError(img) {
   // If we tried jpg from wsx folder, try variations
   const src = img.getAttribute('src') || '';
   if (src.includes('/static/riders/wsx/')) {
-    // Try variations: _(1).jpg -> _(2).jpg -> space version (1).jpg -> .jpg -> .png
-    if (src.includes('_(1).jpg')) {
-      // Try (2) suffix with underscore
-      const withTwo = src.replace('_(1).jpg', '_(2).jpg');
+    const filename = src.split('/').pop();
+    
+    // Try (2) if we tried (1)
+    if (filename.includes(' (1).jpg')) {
+      const try2 = src.replace(' (1).jpg', ' (2).jpg');
       img.onerror = function() {
-        // Try with space instead of underscore
-        const withSpace = src.replace('_(1).jpg', ' (1).jpg');
+        // Try underscore variants if we used space
+        const tryUnderscore1 = src.replace(' (1).jpg', '_(1).jpg');
         img.onerror = function() {
-          // Try without suffix
-          const withoutSuffix = src.replace('_(1).jpg', '.jpg');
-          img.onerror = function() {
-            // Try png
-            const png = src.replace('_(1).jpg', '.png');
-            img.onerror = function() {
-              // Fall back to brand logo
-              const riderId = img.getAttribute('data-rider-id');
-              const r = allRiders.find((x) => String(x.id) === String(riderId));
-              if (r && r.bike_brand) {
-                img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase().replace(/\s+/g, '_')}.png`;
-              } else {
-                img.src = '/static/brand_logos/honda.png';
-              }
-            };
-            img.src = png;
-          };
-          img.src = withoutSuffix;
-        };
-        img.src = withSpace;
-      };
-      img.src = withTwo;
-      return;
-    }
-    // Try without (1) suffix if it had one (with space)
-    if (src.includes(' (1).jpg')) {
-      const withoutSuffix = src.replace(' (1).jpg', '.jpg');
-      img.onerror = function() {
-        // Try (2) suffix
-        const withTwo = src.replace(' (1).jpg', ' (2).jpg');
-        img.onerror = function() {
-          // Try png
-          const png = src.replace(' (1).jpg', '.png');
+          const tryUnderscore2 = src.replace(' (1).jpg', '_(2).jpg');
           img.onerror = function() {
             // Fall back to brand logo
             const riderId = img.getAttribute('data-rider-id');
             const r = allRiders.find((x) => String(x.id) === String(riderId));
             if (r && r.bike_brand) {
-              img.src = `/static/brand_logos/${(r.bike_brand || "").toLowerCase().replace(/\s+/g, '_')}.png`;
+              const brandName = (r.bike_brand || "").toLowerCase().trim();
+              const brandMap = {
+                'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
+                'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
+                'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
+              };
+              const logoName = brandMap[brandName] || brandName;
+              img.src = `/static/brand_logos/${logoName}.png`;
             } else {
               img.src = '/static/brand_logos/honda.png';
             }
           };
-          img.src = png;
+          img.src = tryUnderscore2;
         };
-        img.src = withTwo;
+        img.src = tryUnderscore1;
       };
-      img.src = withoutSuffix;
+      img.src = try2;
+      return;
+    }
+    
+    // Try (2) if we tried _(1)
+    if (filename.includes('_(1).jpg')) {
+      const try2 = src.replace('_(1).jpg', '_(2).jpg');
+      img.onerror = function() {
+        // Try with space instead of underscore
+        const trySpace1 = src.replace('_(1).jpg', ' (1).jpg');
+        img.onerror = function() {
+          const trySpace2 = src.replace('_(1).jpg', ' (2).jpg');
+          img.onerror = function() {
+            // Fall back to brand logo
+            const riderId = img.getAttribute('data-rider-id');
+            const r = allRiders.find((x) => String(x.id) === String(riderId));
+            if (r && r.bike_brand) {
+              const brandName = (r.bike_brand || "").toLowerCase().trim();
+              const brandMap = {
+                'honda': 'honda', 'ktm': 'ktm', 'yamaha': 'yamaha',
+                'kawasaki': 'kawasaki', 'suzuki': 'suzuki', 'husqvarna': 'husqvarna',
+                'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
+              };
+              const logoName = brandMap[brandName] || brandName;
+              img.src = `/static/brand_logos/${logoName}.png`;
+            } else {
+              img.src = '/static/brand_logos/honda.png';
+            }
+          };
+          img.src = trySpace2;
+        };
+        img.src = trySpace1;
+      };
+      img.src = try2;
       return;
     }
     // Try png if it was regular jpg
@@ -1979,19 +2006,27 @@ function onPickChange(cls, pos, riderId = null) {
         }
 
         // Wildcard-knapp: lås endast om position faktiskt finns
-        const btn = document.getElementById("wildcard-roll-btn");
-        const posVal = myPicks.wildcard_pos;
-        if (posVal !== null && posVal !== undefined && String(posVal).trim() !== "") {
-          document.getElementById("wildcard-position").value = posVal;
-          document.getElementById("wildcard-position-label").textContent =
-            `Din plats: ${posVal}`;
-          btn.disabled = true;
-          btn.classList.add("opacity-50", "cursor-not-allowed");
-        } else {
-          btn.disabled = false;
-          btn.classList.remove("opacity-50", "cursor-not-allowed");
-          document.getElementById("wildcard-position").value = "";
-          document.getElementById("wildcard-position-label").textContent = "";
+        // Update wildcard pick - both hidden select and visual element (only for non-WSX)
+        if (!isWSXSeries) {
+          const btn = document.getElementById("wildcard-roll-btn");
+          const posVal = myPicks.wildcard_pos;
+          if (btn) {
+            if (posVal !== null && posVal !== undefined && String(posVal).trim() !== "") {
+              const wildcardPosEl = document.getElementById("wildcard-position");
+              const wildcardLabelEl = document.getElementById("wildcard-position-label");
+              if (wildcardPosEl) wildcardPosEl.value = posVal;
+              if (wildcardLabelEl) wildcardLabelEl.textContent = `Din plats: ${posVal}`;
+              btn.disabled = true;
+              btn.classList.add("opacity-50", "cursor-not-allowed");
+            } else {
+              btn.disabled = false;
+              btn.classList.remove("opacity-50", "cursor-not-allowed");
+              const wildcardPosEl = document.getElementById("wildcard-position");
+              const wildcardLabelEl = document.getElementById("wildcard-position-label");
+              if (wildcardPosEl) wildcardPosEl.value = "";
+              if (wildcardLabelEl) wildcardLabelEl.textContent = "";
+            }
+          }
         }
 
         // Holeshot: rensa om OUT
