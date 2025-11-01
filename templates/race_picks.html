@@ -1441,9 +1441,15 @@ function imgSrcFor(riderId) {
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (isWSX && r.name) {
     const nameLower = (r.name || '').toLowerCase().trim();
+    // WSX files have inconsistent formats:
+    // - Some have underscores: "cole_thompson (1).jpg" 
+    // - Some don't: "shanemcelrath (1).jpg"
+    // Try both: first no spaces/underscores, then with underscores
+    const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     const fileSlugWithUnderscores = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    // Try most common variants first
-    const imagePath = `riders/wsx/${fileSlugWithUnderscores} (1).jpg`;
+    
+    // Try no-spaces format first (most common: shanemcelrath, cooperwebb, etc.)
+    const imagePath = `riders/wsx/${fileSlugNoSpaces} (1).jpg`;
     return `/static/${imagePath}`;
   }
   
@@ -1506,14 +1512,23 @@ function handleImageError(img) {
     if (filename.includes(' (1).jpg')) {
       const try2 = src.replace(' (1).jpg', ' (2).jpg');
       img.onerror = function() {
-        // Try underscore variants if we used space
-        const tryUnderscore1 = src.replace(' (1).jpg', '_(1).jpg');
-        img.onerror = function() {
-          const tryUnderscore2 = src.replace(' (1).jpg', '_(2).jpg');
-          img.onerror = fallbackToBrandLogo;
-          img.src = tryUnderscore2;
-        };
-        img.src = tryUnderscore1;
+        // Extract base name (without (1).jpg) - e.g. "shanemcelrath" or "cole_thompson"
+        const baseName = filename.replace(' (1).jpg', '');
+        // If baseName doesn't have underscore, try with underscore format
+        // Reconstruct from original rider name if possible
+        if (rider) {
+          const nameLower = (rider.name || '').toLowerCase().trim();
+          const withUnderscore = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+          const tryUnderscore1 = `/static/riders/wsx/${withUnderscore} (1).jpg`;
+          img.onerror = function() {
+            const tryUnderscore2 = `/static/riders/wsx/${withUnderscore} (2).jpg`;
+            img.onerror = fallbackToBrandLogo;
+            img.src = tryUnderscore2;
+          };
+          img.src = tryUnderscore1;
+        } else {
+          fallbackToBrandLogo();
+        }
       };
       img.src = try2;
       return;
