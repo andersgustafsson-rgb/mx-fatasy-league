@@ -4677,11 +4677,15 @@ def get_my_picks(competition_id):
     )
     holos = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+    
+    # Check if this is a WSX competition
+    comp = Competition.query.get(competition_id)
+    is_wsx = comp and getattr(comp, 'series', None) == 'WSX'
 
-    print(f"DEBUG: Found {len(picks)} picks, {len(holos)} holeshots, wildcard: {wc is not None}")
+    print(f"DEBUG: Found {len(picks)} picks, {len(holos)} holeshots, wildcard: {wc is not None}, is_wsx: {is_wsx}")
     for p in picks:
         rider = Rider.query.get(p.rider_id)
-        print(f"DEBUG: Pick - position {p.predicted_position}: {rider.name if rider else 'Unknown'} (ID: {p.rider_id})")
+        print(f"DEBUG: Pick - position {p.predicted_position}: {rider.name if rider else 'Unknown'} (ID: {p.rider_id}, class: {rider.class_name if rider else 'Unknown'})")
 
     result = {
         "top6_picks": [
@@ -4693,8 +4697,12 @@ def get_my_picks(competition_id):
             for p in picks
         ],
         "holeshot_picks": {
-            "450cc": next((h.rider_id for h in holos if h.class_name == "450cc"), None),
-            "250cc": next((h.rider_id for h in holos if h.class_name == "250cc"), None),
+            # For WSX, check both regular and WSX classes
+            "450cc": next((h.rider_id for h in holos if h.class_name in ("450cc", "wsx_sx1")), None),
+            "250cc": next((h.rider_id for h in holos if h.class_name in ("250cc", "wsx_sx2")), None),
+            # Also include WSX keys if it's a WSX competition
+            **({"wsx_sx1": next((h.rider_id for h in holos if h.class_name == "wsx_sx1"), None),
+                "wsx_sx2": next((h.rider_id for h in holos if h.class_name == "wsx_sx2"), None)} if is_wsx else {})
         },
         "wildcard_pick": wc.rider_id if wc else None,
         "wildcard_pos": wc.position if wc else None,

@@ -377,11 +377,11 @@
                 <span class="text-white font-semibold">{{ riders_450|length + riders_250|length }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-purple-200">450cc:</span>
+                <span class="text-purple-200">{{ class_450_label }}:</span>
                 <span class="text-white font-semibold">{{ riders_450|length }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-purple-200">250cc:</span>
+                <span class="text-purple-200">{{ class_250_label }}:</span>
                 <span class="text-white font-semibold">{{ riders_250|length }}</span>
               </div>
             </div>
@@ -434,30 +434,35 @@
 
 <!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
 <div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+  {% set is_wsx = competition.series == 'WSX' %}
+  {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
+  {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
+  {% set class_450_data = 'wsx_sx1' if is_wsx else '450cc' %}
+  {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
 
-  <!-- Kolumn: 450cc -->
+  <!-- Kolumn: 450cc / SX1 -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">450cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-450-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
           <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
-          <div class="rider-selector" data-class="450cc" data-position="{{ i }}">
-            <div class="rider-selector-input" onclick="toggleRiderSelector('450cc', {{ i }})">
+          <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_450_data }}', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
               <div class="flex items-center gap-2">
-                <span class="clear-selection" onclick="clearRiderSelection('450cc', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                <span class="clear-selection" onclick="clearRiderSelection('{{ class_450_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
                 <span class="dropdown-arrow">▼</span>
               </div>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
               <div class="search-box">
-                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('450cc', {{ i }}, this.value)">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_450_data }}', {{ i }}, this.value)">
               </div>
               <div class="rider-list">
             {% for rider in riders_450 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('450cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('{{ class_450_data }}', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
                     <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
@@ -475,29 +480,29 @@
     {% endfor %}
   </div>
 
-  <!-- Kolumn: 250cc -->
+  <!-- Kolumn: 250cc / SX2 -->
   <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">250cc</h3>
+    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
         <img id="prev-250-{{ i }}" class="preview-img" alt="" />
         <div class="flex items-center gap-2">
           <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
-          <div class="rider-selector" data-class="250cc" data-position="{{ i }}">
-            <div class="rider-selector-input" onclick="toggleRiderSelector('250cc', {{ i }})">
+          <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
+            <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_250_data }}', {{ i }})">
               <span class="selected-rider">-- välj förare --</span>
               <div class="flex items-center gap-2">
-                <span class="clear-selection" onclick="clearRiderSelection('250cc', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                <span class="clear-selection" onclick="clearRiderSelection('{{ class_250_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
                 <span class="dropdown-arrow">▼</span>
               </div>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
               <div class="search-box">
-                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('250cc', {{ i }}, this.value)">
+                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_250_data }}', {{ i }}, this.value)">
               </div>
               <div class="rider-list">
             {% for rider in riders_250 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('250cc', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
+                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('{{ class_250_data }}', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
                     <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
                     <span class="rider-info">
                       <span class="rider-number">#{{ rider.rider_number }}</span>
@@ -541,7 +546,7 @@
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">450cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_450_label }}:</label>
           <div class="rider-selector" data-class="holeshot-450">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-450', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -568,7 +573,7 @@
           </div>
         </div>
         <div>
-          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">250cc:</label>
+          <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_250_label }}:</label>
           <div class="rider-selector" data-class="holeshot-250">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-250', 0)">
               <span class="selected-rider">-- välj förare --</span>
@@ -665,11 +670,11 @@
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">450cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
         <div id="results-450" class="space-y-1 sm:space-y-2"></div>
       </div>
       <div>
-        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">250cc</h3>
+        <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
         <div id="results-250" class="space-y-1 sm:space-y-2"></div>
       </div>
     </div>
@@ -728,8 +733,9 @@
       wildcardPosition: null
     };
 
-    // Save race picks (450cc and 250cc)
-    ['450cc', '250cc'].forEach(riderClass => {
+    // Save race picks (450cc/wsx_sx1 and 250cc/wsx_sx2)
+    const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    riderClasses.forEach(riderClass => {
       picks.racePicks[riderClass] = {};
       for (let i = 1; i <= 6; i++) {
         const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${i}"]`);
@@ -815,7 +821,8 @@
       }
 
       // Load race picks
-      ['450cc', '250cc'].forEach(riderClass => {
+      const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      riderClasses.forEach(riderClass => {
         if (picks.racePicks[riderClass]) {
           Object.keys(picks.racePicks[riderClass]).forEach(position => {
             const pick = picks.racePicks[riderClass][position];
@@ -886,8 +893,8 @@
       }
 
       // Update rider selectors to hide selected riders
-      updateRiderSelectors('450cc');
-      updateRiderSelectors('250cc');
+      const riderClassesForUpdate = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      riderClassesForUpdate.forEach(cls => updateRiderSelectors(cls));
       
       // Remove wrong coast selections after loading picks
       removeWrongCoastSelections();
@@ -976,7 +983,7 @@
       selector.classList.add('open');
       
       // Update rider selectors to hide already selected riders
-      if (riderClass === '450cc' || riderClass === '250cc') {
+      if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
         updateRiderSelectors(riderClass);
       }
       
@@ -1553,14 +1560,16 @@ function updatePicksStatus(myPicks) {
   if (!statusIcon || !statusTitle || !statusMessage) return;
   
   const hasTop6Picks = myPicks.top6_picks && myPicks.top6_picks.length > 0;
-  const hasHoleshotPicks = myPicks.holeshot_picks && 
-    (myPicks.holeshot_picks['450cc'] || myPicks.holeshot_picks['250cc']);
+  // Check for holeshot picks - backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2'
+  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'];
+  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'];
+  const hasHoleshotPicks = myPicks.holeshot_picks && (holeshot450 || holeshot250);
   const hasWildcardPick = myPicks.wildcard_pick && !isWSXSeries; // Wildcard not for WSX
   
-  // Count picks: top6_picks is array of all picks (12 total: 6 for 450cc + 6 for 250cc)
+  // Count picks: top6_picks is array of all picks (12 total: 6 for 450cc/wsx_sx1 + 6 for 250cc/wsx_sx2)
   // For holeshot: count 2 if both 450cc and 250cc are picked, 1 if only one
   const holeshotCount = myPicks.holeshot_picks ? 
-    ((myPicks.holeshot_picks['450cc'] ? 1 : 0) + (myPicks.holeshot_picks['250cc'] ? 1 : 0)) : 0;
+    ((holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0)) : 0;
   
   const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0);
   
@@ -1739,58 +1748,94 @@ function onPickChange(cls, pos, riderId = null) {
       updatePicksStatus(myPicks);
 
       if (!actualResults || actualResults.length === 0) {
-        // Återställ tidigare val i UI
+        // Återställ tidigare val i UI - samma logik som holeshot picksen
         (myPicks.top6_picks || []).forEach((p) => {
+          // Map WSX classes to data-class attributes in HTML
+          let dataClass = p.class;
+          if (dataClass === 'wsx_sx1') {
+            dataClass = 'wsx_sx1'; // Match the data-class we set in HTML
+          } else if (dataClass === 'wsx_sx2') {
+            dataClass = 'wsx_sx2'; // Match the data-class we set in HTML
+          }
+          
+          // Find the rider name from the rider ID (same logic as holeshot uses)
+          const rider = allRiders.find(r => Number(r.id) === Number(p.rider_id));
+          
+          if (!rider) {
+            console.log(`DEBUG: Rider not found for ID ${p.rider_id}, class ${p.class}. Available rider IDs:`, allRiders.map(r => r.id));
+            return;
+          }
+          
+          console.log(`DEBUG: Found rider for pick: ${rider.name} (ID: ${p.rider_id}, class: ${p.class}), position: ${p.predicted_position}`);
+          
           const selector = document.querySelector(
-            `.rider-selector[data-class="${p.class}"][data-position="${p.predicted_position}"]`
+            `.rider-selector[data-class="${dataClass}"][data-position="${p.predicted_position}"]`
           );
-          if (selector) {
-            const selectedRiderSpan = selector.querySelector('.selected-rider');
-            // Find the rider name from the rider ID
-            const rider = allRiders.find(r => r.id === p.rider_id);
-            if (rider && selectedRiderSpan) {
-              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
-              selectedRiderSpan.textContent = riderText;
-              
-              // Show clear button
-              const clearBtn = selector.querySelector('.clear-selection');
-              if (clearBtn) {
-                clearBtn.style.display = 'block';
-              }
-              
-              // Update hidden select element
-              const hiddenSelect = document.querySelector(`select[name="pick_${p.class.replace('cc', '')}_${p.predicted_position}"]`);
-              if (hiddenSelect) {
-                hiddenSelect.value = p.rider_id;
-              }
-              
-              // Update preview image
-              const imgId = p.class.startsWith("450")
-                ? `prev-450-${p.predicted_position}`
-                : `prev-250-${p.predicted_position}`;
-              const img = document.getElementById(imgId);
-              const src = imgSrcFor(p.rider_id);
-              if (img && src) {
-                img.src = src;
-                img.style.background = "transparent";
-              }
+          
+          if (!selector) {
+            console.log(`DEBUG: Selector not found for class ${dataClass}, position ${p.predicted_position}`);
+            return;
+          }
+          
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          if (!selectedRiderSpan) {
+            console.log(`DEBUG: Selected rider span not found`);
+            return;
+          }
+          
+          // Update visual selector (same as holeshot does)
+          const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          selectedRiderSpan.textContent = riderText;
+          
+          // Show clear button
+          const clearBtn = selector.querySelector('.clear-selection');
+          if (clearBtn) {
+            clearBtn.style.display = 'block';
+          }
+          
+          // Update hidden select element - use 450/250 for hidden selects regardless of WSX
+          const hiddenSelectClass = (p.class === 'wsx_sx1' || p.class === '450cc') ? '450' : '250';
+          const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
+          if (hiddenSelect) {
+            hiddenSelect.value = p.rider_id;
+          } else {
+            console.log(`DEBUG: Hidden select not found: pick_${hiddenSelectClass}_${p.predicted_position}`);
+          }
+          
+          // Update preview image
+          const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || p.class.startsWith("450"))
+            ? `prev-450-${p.predicted_position}`
+            : `prev-250-${p.predicted_position}`;
+          const img = document.getElementById(imgId);
+          if (img) {
+            const src = imgSrcFor(p.rider_id);
+            if (src) {
+              img.src = src;
+              img.style.background = "transparent";
             }
           }
         });
         
         // Update rider selectors to reflect loaded picks (hide selected riders in other dropdowns)
-        updateRiderSelectors('450cc');
-        updateRiderSelectors('250cc');
+        // For WSX, use wsx_sx1 and wsx_sx2, otherwise use 450cc and 250cc
+        const isWSX = competitionSeries === 'WSX';
+        const class450 = isWSX ? 'wsx_sx1' : '450cc';
+        const class250 = isWSX ? 'wsx_sx2' : '250cc';
+        updateRiderSelectors(class450);
+        updateRiderSelectors(class250);
         
         // Update holeshot picks - both hidden selects and visual elements
-        if (myPicks.holeshot_picks?.["450cc"]) {
-          const riderId = myPicks.holeshot_picks["450cc"];
-          document.getElementById("holeshot-450").value = riderId;
+        // Backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2' for holeshot
+        const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"];
+        const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"];
+        
+        if (holeshot450Id) {
+          document.getElementById("holeshot-450").value = holeshot450Id;
           
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
           if (selector) {
-            const rider = allRiders.find(r => r.id === riderId);
+            const rider = allRiders.find(r => r.id === holeshot450Id);
             if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
@@ -1805,14 +1850,13 @@ function onPickChange(cls, pos, riderId = null) {
           }
         }
         
-        if (myPicks.holeshot_picks?.["250cc"]) {
-          const riderId = myPicks.holeshot_picks["250cc"];
-          document.getElementById("holeshot-250").value = riderId;
+        if (holeshot250Id) {
+          document.getElementById("holeshot-250").value = holeshot250Id;
           
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
           if (selector) {
-            const rider = allRiders.find(r => r.id === riderId);
+            const rider = allRiders.find(r => r.id === holeshot250Id);
             if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
@@ -2060,31 +2104,33 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     // Get race picks from rider-selector elements
     const picks = [];
     
-    // Get 450cc picks
+    // Get 450cc/wsx_sx1 picks
+    const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
     for (let i = 1; i <= 6; i++) {
-      const selector = document.querySelector(`.rider-selector[data-class="450cc"][data-position="${i}"]`);
+      const selector = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
         if (riderId) {
           picks.push({
             position: i,
             rider_id: riderId,
-            class: '450cc'
+            class: class450
           });
         }
       }
     }
     
-    // Get 250cc picks
+    // Get 250cc/wsx_sx2 picks
+    const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
     for (let i = 1; i <= 6; i++) {
-      const selector = document.querySelector(`.rider-selector[data-class="250cc"][data-position="${i}"]`);
+      const selector = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
       if (selector) {
         const riderId = getRiderIdFromSelector(selector);
         if (riderId) {
           picks.push({
             position: i,
             rider_id: riderId,
-            class: '250cc'
+            class: class250
           });
         }
       }
@@ -2168,8 +2214,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
     document.addEventListener("DOMContentLoaded", async () => {
       // Initialize rider selectors with coast filtering
-      updateRiderSelectors("450cc");
-      updateRiderSelectors("250cc");
+      const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
       updateHoleshotDropdowns();
       
       // Initialize all preview images
@@ -2180,8 +2226,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
   // Re-apply coast filtering after picks are loaded
   setTimeout(() => {
-    updateRiderSelectors("450cc");
-    updateRiderSelectors("250cc");
+    riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
     removeWrongCoastSelections();
   }, 100);
     });
