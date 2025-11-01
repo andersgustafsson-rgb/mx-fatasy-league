@@ -837,9 +837,12 @@ def index():
     latest_post_author = None
     try:
         from datetime import timedelta
-        yesterday = today - timedelta(days=1)
+        # Use current time (datetime) instead of today (date) for accurate 24-hour calculation
+        current_time = get_current_time()
+        twenty_four_hours_ago = current_time - timedelta(hours=24)
+        
         new_posts = BulletinPost.query.filter(
-            BulletinPost.created_at >= yesterday,
+            BulletinPost.created_at >= twenty_four_hours_ago,
             BulletinPost.is_deleted == False,
             BulletinPost.parent_id == None  # Only count main posts, not replies
         ).order_by(BulletinPost.created_at.desc()).all()
