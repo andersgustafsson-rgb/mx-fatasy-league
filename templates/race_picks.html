@@ -1752,19 +1752,36 @@ function onPickChange(cls, pos, riderId = null) {
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
               selectedRiderSpan.textContent = riderText;
               
+              // Show clear button
+              const clearBtn = selector.querySelector('.clear-selection');
+              if (clearBtn) {
+                clearBtn.style.display = 'block';
+              }
+              
+              // Update hidden select element
+              const hiddenSelect = document.querySelector(`select[name="pick_${p.class.replace('cc', '')}_${p.predicted_position}"]`);
+              if (hiddenSelect) {
+                hiddenSelect.value = p.rider_id;
+              }
+              
               // Update preview image
-const imgId = p.class.startsWith("450")
-  ? `prev-450-${p.predicted_position}`
-  : `prev-250-${p.predicted_position}`;
-const img = document.getElementById(imgId);
-const src = imgSrcFor(p.rider_id);
-if (img && src) {
-  img.src = src;
-  img.style.background = "transparent";
+              const imgId = p.class.startsWith("450")
+                ? `prev-450-${p.predicted_position}`
+                : `prev-250-${p.predicted_position}`;
+              const img = document.getElementById(imgId);
+              const src = imgSrcFor(p.rider_id);
+              if (img && src) {
+                img.src = src;
+                img.style.background = "transparent";
               }
             }
           }
         });
+        
+        // Update rider selectors to reflect loaded picks (hide selected riders in other dropdowns)
+        updateRiderSelectors('450cc');
+        updateRiderSelectors('250cc');
+        
         // Update holeshot picks - both hidden selects and visual elements
         if (myPicks.holeshot_picks?.["450cc"]) {
           const riderId = myPicks.holeshot_picks["450cc"];
@@ -1773,10 +1790,17 @@ if (img && src) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
           if (selector) {
-            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
-            if (riderOption) {
+            const rider = allRiders.find(r => r.id === riderId);
+            if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
-              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+              selectedRiderSpan.textContent = riderText;
+              
+              // Show clear button
+              const clearBtn = selector.querySelector('.clear-selection');
+              if (clearBtn) {
+                clearBtn.style.display = 'block';
+              }
             }
           }
         }
@@ -1788,10 +1812,17 @@ if (img && src) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
           if (selector) {
-            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
-            if (riderOption) {
+            const rider = allRiders.find(r => r.id === riderId);
+            if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
-              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+              selectedRiderSpan.textContent = riderText;
+              
+              // Show clear button
+              const clearBtn = selector.querySelector('.clear-selection');
+              if (clearBtn) {
+                clearBtn.style.display = 'block';
+              }
             }
           }
         }
@@ -1804,10 +1835,17 @@ if (img && src) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
           if (selector) {
-            const riderOption = selector.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
-            if (riderOption) {
+            const rider = allRiders.find(r => r.id === riderId);
+            if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
-              selectedRiderSpan.textContent = riderOption.dataset.riderName;
+              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+              selectedRiderSpan.textContent = riderText;
+              
+              // Show clear button
+              const clearBtn = selector.querySelector('.clear-selection');
+              if (clearBtn) {
+                clearBtn.style.display = 'block';
+              }
             }
           }
         }
