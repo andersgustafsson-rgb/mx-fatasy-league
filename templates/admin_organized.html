@@ -293,6 +293,54 @@
                     </div>
                 </div>
 
+                <!-- Picks Statistics -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">📊 Picks Statistics</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Visa hur många användare som gjort sina picks för en tävling.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Välj tävling:</label>
+                                <select id="picks-stats-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                    <option value="">Loading competitions...</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="loadPicksStats()" class="btn-primary px-4 py-2 rounded-lg w-full">
+                                    📊 Visa statistik
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Display -->
+                        <div id="picks-stats-display" class="hidden bg-gray-900 rounded-lg p-4 border border-gray-700">
+                            <h4 class="text-lg font-semibold text-cyan-400 mb-3" id="picks-stats-title">Picks Statistik</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-cyan-400" id="picks-stats-total">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">Totalt med picks</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-green-400" id="picks-stats-percentage">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">Procent</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-yellow-400" id="picks-stats-race">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">Race picks</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-orange-400" id="picks-stats-holeshot">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">Holeshot</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-sm text-gray-400">
+                                <span id="picks-stats-total-users">Totalt antal användare: -</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Race Simulation -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">🎮 Race Simulation</h3>
@@ -806,6 +854,65 @@
             }
         }
 
+        // Load competitions for picks statistics
+        async function loadPicksStatsCompetitions() {
+            try {
+                const response = await fetch('/get_competitions_for_import');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('picks-stats-competition');
+                    select.innerHTML = '<option value="">Välj tävling...</option>';
+                    
+                    data.competitions.forEach(comp => {
+                        const option = document.createElement('option');
+                        option.value = comp.id;
+                        option.textContent = comp.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    document.getElementById('picks-stats-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            } catch (error) {
+                console.error('Error loading competitions for picks stats:', error);
+                document.getElementById('picks-stats-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+            }
+        }
+
+        // Load picks statistics for selected competition
+        async function loadPicksStats() {
+            const competitionId = document.getElementById('picks-stats-competition').value;
+            
+            if (!competitionId) {
+                alert('❌ Välj en tävling först!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/picks_stats/${competitionId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('❌ Fel vid hämtning av statistik: ' + data.error);
+                    return;
+                }
+                
+                // Update display
+                document.getElementById('picks-stats-title').textContent = `Picks Statistik: ${data.competition_name}`;
+                document.getElementById('picks-stats-total').textContent = data.total_users_with_picks;
+                document.getElementById('picks-stats-percentage').textContent = data.percentage + '%';
+                document.getElementById('picks-stats-race').textContent = data.users_with_race_picks;
+                document.getElementById('picks-stats-holeshot').textContent = data.users_with_holeshot;
+                document.getElementById('picks-stats-total-users').textContent = `Totalt antal användare: ${data.total_users}`;
+                
+                // Show the display
+                document.getElementById('picks-stats-display').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading picks stats:', error);
+                alert('❌ Fel vid hämtning av statistik: ' + error.message);
+            }
+        }
+
         // Confirm competition selection
         async function confirmCompetitionSelection() {
             const select = document.getElementById('simulation-competition');
@@ -972,6 +1079,7 @@
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
+            loadPicksStatsCompetitions();
             
             const form = document.getElementById('manual-results-form');
             if (form) {

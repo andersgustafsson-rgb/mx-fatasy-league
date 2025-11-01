@@ -726,8 +726,15 @@
                         const globalHighscore = leaderboard[0].score;
                         if (globalHighscore > this.highScore) {
                             this.highScore = globalHighscore;
+                            // Update localStorage to match backend
+                            localStorage.setItem('crossDinoGlobalHighScore', this.highScore);
                             console.log('DEBUG: Synced highscore from backend:', this.highScore);
                         }
+                    } else {
+                        // Database is empty (reset), clear localStorage and reset highscore
+                        this.highScore = 0;
+                        localStorage.removeItem('crossDinoGlobalHighScore');
+                        console.log('DEBUG: Database empty, reset highscore to 0');
                     }
                     
                     // Always update the display to show current highscore
