@@ -1101,13 +1101,31 @@ def league_detail_page(league_id):
     member_user_ids = [m[0] for m in db.session.query(LeagueMembership.user_id).filter_by(league_id=league_id).all()]
     season_leaderboard = []
     if member_user_ids:
-        season_leaderboard = (
-            db.session.query(User.id, User.username, User.display_name, SeasonTeam.total_points)
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+        # Calculate individual points from CompetitionScore (race picks) for each member
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                User.display_name,
+                db.func.sum(CompetitionScore.total_points).label('total_points')
+            )
+            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
             .filter(User.id.in_(member_user_ids))
-            .order_by(SeasonTeam.total_points.desc().nullslast())
+            .group_by(User.id, User.username, User.display_name)
+            .order_by(db.func.sum(CompetitionScore.total_points).desc().nullslast())
             .all()
         )
+        
+        # Convert to list of dicts with proper formatting
+        season_leaderboard = [
+            {
+                "user_id": row.id,
+                "username": row.username,
+                "display_name": getattr(row, 'display_name', None) or row.username,
+                "total_points": int(row.total_points or 0)
+            }
+            for row in user_scores
+        ]
 
     competitions = Competition.query.order_by(Competition.event_date).all()
     
@@ -1131,10 +1149,7 @@ def league_detail_page(league_id):
         league=league,
         members=[type("Row", (), {"id": m.id, "username": m.username}) for m in members],
         competitions=competitions,
-        season_leaderboard=[
-            {"user_id": row.id, "username": row.username, "display_name": getattr(row, 'display_name', None) or row.username, "total_points": row.total_points or 0}
-            for row in season_leaderboard
-        ],
+        season_leaderboard=season_leaderboard,
         pending_requests=pending_requests,
         is_creator=is_creator,
     )

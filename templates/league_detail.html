@@ -238,9 +238,9 @@
       <!-- Leaderboard + Schedule -->
       <div class="md:col-span-2 space-y-8">
 
-        <!-- Season leaderboard -->
+        <!-- League leaderboard -->
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-semibold mb-4">Säsongens Leaderboard</h2>
+          <h2 class="text-2xl font-semibold mb-4">Ligans Leaderboard</h2>
           <div class="space-y-2">
             {% if season_leaderboard %}
               {% for team in season_leaderboard %}
@@ -256,7 +256,7 @@
                 </div>
               {% endfor %}
             {% else %}
-              <p class="text-gray-400">Inga säsongsteam skapade än.</p>
+              <p class="text-gray-400">Inga poäng registrerade än.</p>
             {% endif %}
           </div>
         </div>
