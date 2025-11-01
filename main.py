@@ -32,7 +32,20 @@ from models import db, User, GlobalSimulation, Series, Competition, Rider, Seaso
 app = Flask(__name__)
 
 # Configuration from environment variables
-app.secret_key = os.getenv('SECRET_KEY', 'din_hemliga_nyckel_har_change_in_production')
+# SECRET_KEY: Critical for security - must be set in production!
+# Generate a secure key: python -c "import secrets; print(secrets.token_hex(32))"
+secret_key = os.getenv('SECRET_KEY')
+if not secret_key:
+    if os.getenv('FLASK_ENV') == 'production' or os.getenv('RENDER'):
+        # In production, SECRET_KEY must be set - fail if missing
+        raise ValueError(
+            "CRITICAL: SECRET_KEY environment variable must be set in production! "
+            "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    # Development fallback (INSECURE - do not use in production)
+    secret_key = 'dev-secret-key-change-in-production-do-not-use-in-production'
+    print("⚠️  WARNING: Using development SECRET_KEY. Set SECRET_KEY environment variable in production!")
+app.secret_key = secret_key
 
 # Database configuration
 # For Render deployment, use PostgreSQL if available, otherwise in-memory SQLite
