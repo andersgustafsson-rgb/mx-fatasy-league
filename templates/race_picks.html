@@ -1030,7 +1030,39 @@
         if (imageSrc) {
           img.src = imageSrc;
           img.onerror = function() {
-            // If image fails to load, try brand logo
+            // If image fails to load, try JPG if we tried PNG (for constructed filenames)
+            if (imageSrc.endsWith('.png') && rider && rider.rider_number && rider.name) {
+              const nameSlug = (rider.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+              const jpgPath = `riders/${rider.rider_number}_${nameSlug}.jpg`;
+              this.src = `/static/${jpgPath}`;
+              this.onerror = function() {
+                // If JPG also fails, try brand logo
+                if (rider && rider.bike_brand) {
+                  const brandName = (rider.bike_brand || "").toLowerCase().trim();
+                  const brandMap = {
+                    'honda': 'honda',
+                    'ktm': 'ktm',
+                    'yamaha': 'yamaha',
+                    'kawasaki': 'kawasaki',
+                    'suzuki': 'suzuki',
+                    'husqvarna': 'husqvarna',
+                    'gasgas': 'gasgas',
+                    'beta': 'beta',
+                    'triumph': 'triumph'
+                  };
+                  const logoName = brandMap[brandName] || brandName;
+                  this.src = `/static/brand_logos/${logoName}.png`;
+                  this.onerror = function() {
+                    // Final fallback
+                    this.src = '/static/brand_logos/honda.png';
+                  };
+                } else {
+                  this.src = '/static/brand_logos/honda.png';
+                }
+              };
+              return;
+            }
+            // If not a constructed filename or JPG already tried, try brand logo
             if (rider && rider.bike_brand) {
               const brandName = (rider.bike_brand || "").toLowerCase().trim();
               const brandMap = {
@@ -1466,6 +1498,16 @@ function imgSrcFor(riderId) {
     const imagePath = `riders/wsx/${fileSlug} (1).jpg`;
     const url = `/static/${imagePath}`;
     return url;
+  }
+
+  // If no image_url, try to construct filename from rider_number and name (standard format: 50_enzo_lopes.png)
+  if (r.rider_number && r.name) {
+    const nameSlug = (r.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    // Try PNG first
+    const pngPath = `riders/${r.rider_number}_${nameSlug}.png`;
+    const jpgPath = `riders/${r.rider_number}_${nameSlug}.jpg`;
+    // Return PNG path (we'll handle fallback to JPG in onerror handler)
+    return `/static/${pngPath}`;
   }
 
   // If no rider image, use bike brand logo directly
