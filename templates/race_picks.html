@@ -1426,6 +1426,7 @@ function wsxSlug(name) {
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
+    console.log(`DEBUG imgSrcFor: Rider ${riderId} not found in allRiders`);
     return '/static/brand_logos/honda.png'; // Default fallback
   }
   
@@ -1434,6 +1435,7 @@ function imgSrcFor(riderId) {
     // Remove 'riders/' prefix if it exists to avoid double path
     const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
     const url = `/static/${imagePath}`;
+    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Using image_url: ${url}`);
     return url;
   }
   
@@ -1444,13 +1446,12 @@ function imgSrcFor(riderId) {
     // WSX files have inconsistent formats:
     // - Some have underscores: "cole_thompson (1).jpg" 
     // - Some don't: "shanemcelrath (1).jpg"
-    // Try both: first no spaces/underscores, then with underscores
-    const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-    const fileSlugWithUnderscores = nameLower.replace(/\./g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    
     // Try no-spaces format first (most common: shanemcelrath, cooperwebb, etc.)
+    const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     const imagePath = `riders/wsx/${fileSlugNoSpaces} (1).jpg`;
-    return `/static/${imagePath}`;
+    const url = `/static/${imagePath}`;
+    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - WSX rider, trying: ${url}`);
+    return url;
   }
   
   // 3. If no image_url, try to construct filename from rider_number and name (standard format: 50_enzo_lopes.png)
@@ -1459,7 +1460,9 @@ function imgSrcFor(riderId) {
     const nameSlug = (r.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
     // Try PNG first
     const pngPath = `riders/${r.rider_number}_${nameSlug}.png`;
-    return `/static/${pngPath}`;
+    const url = `/static/${pngPath}`;
+    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Constructed filename: ${url}`);
+    return url;
   }
 
   // 4. If no rider image found, use bike brand logo directly
@@ -1471,10 +1474,13 @@ function imgSrcFor(riderId) {
       'gasgas': 'gasgas', 'beta': 'beta', 'triumph': 'triumph'
     };
     const logoName = brandMap[brandName] || brandName;
-    return `/static/brand_logos/${logoName}.png`;
+    const url = `/static/brand_logos/${logoName}.png`;
+    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Using brand logo: ${url}`);
+    return url;
   }
   
   // 5. Final fallback to Honda logo
+  console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - No image found, using Honda logo`);
   return '/static/brand_logos/honda.png';
 }
 
@@ -1483,6 +1489,8 @@ function handleImageError(img) {
   const src = img.getAttribute('src') || '';
   const riderId = img.getAttribute('data-rider-id');
   const rider = riderId ? allRiders.find((x) => Number(x.id) === Number(riderId)) : null;
+  
+  console.log(`DEBUG handleImageError: Failed to load ${src}, riderId: ${riderId}, rider: ${rider ? rider.name : 'not found'}`);
   
   // Always have a fallback to brand logo
   const fallbackToBrandLogo = function() {
@@ -1673,11 +1681,17 @@ function onPickChange(cls, pos, riderId = null) {
   
   if (img) {
     if (src) {
+      // Always set data-rider-id so handleImageError can find the rider
+      if (val) {
+        img.setAttribute('data-rider-id', String(val));
+      }
       img.src = src;
-      if (val) img.setAttribute('data-rider-id', String(val));
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
-      img.onerror = function() { handleImageError(this); };
+      img.onerror = function() { 
+        console.log(`DEBUG onPickChange: Image failed to load ${src} for rider ${val}`);
+        handleImageError(this); 
+      };
     } else {
       img.removeAttribute("src");
       img.classList.remove("has-src");
@@ -1845,10 +1859,16 @@ function onPickChange(cls, pos, riderId = null) {
             : `prev-250-${p.predicted_position}`;
           const img = document.getElementById(imgId);
           if (img) {
+            // Always set data-rider-id so handleImageError can find the rider
+            img.setAttribute('data-rider-id', String(p.rider_id));
             const src = imgSrcFor(p.rider_id);
             if (src) {
               img.src = src;
               img.style.background = "transparent";
+              img.onerror = function() {
+                console.log(`DEBUG fetchAndDisplayMyPicks: Preview image failed to load ${src} for rider ${p.rider_id}`);
+                handleImageError(this);
+              };
             }
           }
         });
