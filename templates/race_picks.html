@@ -1716,12 +1716,23 @@ function onPickChange(cls, pos, riderId = null) {
 
     const hsContainer = document.getElementById("holeshot-results");
     if (hsContainer) {
-      hsContainer.innerHTML = ["450cc", "250cc"]
-        .map((cls) => {
-          const result = holeshotResults.find((r) => r.class === cls);
-          const pickId = myPicks.holeshot_picks[cls];
+      // Use correct class names based on series
+      const holeshotClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+      const holeshotLabels = isWSXSeries ? ['SX1', 'SX2'] : ['450cc', '250cc'];
+      
+      hsContainer.innerHTML = holeshotClasses
+        .map((cls, index) => {
+          // Also check for legacy keys
+          const pickId = myPicks.holeshot_picks?.[cls] || 
+                        (cls === 'wsx_sx1' ? myPicks.holeshot_picks?.['450cc'] : null) ||
+                        (cls === 'wsx_sx2' ? myPicks.holeshot_picks?.['250cc'] : null);
           const pickName = pickId ? findRiderName(pickId) : "Inget val";
+          // Check both new and legacy class names for results
+          const result = holeshotResults.find((r) => r.class === cls || 
+            (cls === 'wsx_sx1' && r.class === '450cc') ||
+            (cls === 'wsx_sx2' && r.class === '250cc'));
           const resultName = result ? findRiderName(result.rider_id) : "Inget resultat";
+          const label = holeshotLabels[index];
 
           let cardClass = "bg-gray-700";
           if (result && pickId && String(result.rider_id) === String(pickId)) {
@@ -1729,7 +1740,7 @@ function onPickChange(cls, pos, riderId = null) {
           }
           return `
             <div class="p-3 rounded ${cardClass}">
-              <p class="font-bold">${cls}: ${resultName}</p>
+              <p class="font-bold">${label}: ${resultName}</p>
               <p class="text-sm text-gray-300 pl-4">Ditt val: ${pickName}</p>
             </div>`;
         })
@@ -2016,7 +2027,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
                 <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
-                    <h5 class="text-sm font-medium text-yellow-400 mb-2">450cc Picks</h5>
+                    <h5 class="text-sm font-medium text-yellow-400 mb-2">${isWSXSeries ? 'SX1' : '450cc'} Picks</h5>
                     <div class="space-y-1">
                       ${user.picks_450.map((pick, index) => `
                         <div class="flex items-center gap-2 text-sm">
@@ -2027,7 +2038,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
                     </div>
                   </div>
                   <div>
-                    <h5 class="text-sm font-medium text-blue-400 mb-2">250cc Picks</h5>
+                    <h5 class="text-sm font-medium text-blue-400 mb-2">${isWSXSeries ? 'SX2' : '250cc'} Picks</h5>
                     <div class="space-y-1">
                       ${user.picks_250.map((pick, index) => `
                         <div class="flex items-center gap-2 text-sm">
@@ -2042,8 +2053,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
                   <div class="mt-3 pt-3 border-t border-gray-600">
                     <h5 class="text-sm font-medium text-green-400 mb-2">Holeshot Picks</h5>
                     <div class="flex gap-4 text-sm">
-                      ${user.holeshot_450 ? `<span class="text-white">450cc: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
-                      ${user.holeshot_250 ? `<span class="text-white">250cc: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
+                      ${user.holeshot_450 ? `<span class="text-white">${isWSXSeries ? 'SX1' : '450cc'}: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
+                      ${user.holeshot_250 ? `<span class="text-white">${isWSXSeries ? 'SX2' : '250cc'}: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
                     </div>
                   </div>
                 ` : ''}
