@@ -328,9 +328,11 @@
             <a href="/" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
                 🏠 Tillbaka till Huvudsida
             </a>
+            {% if series.name and 'WSX' not in series.name %}
             <a href="/season_team_page" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
                 👥 Säsongsteam
             </a>
+            {% endif %}
             <a href="/my_scores" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
                 📊 Mina Poäng
             </a>
