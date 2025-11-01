@@ -12096,6 +12096,47 @@ def get_series_leaders():
         print(f"ERROR in get_series_leaders: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/wsx_leaders")
+def api_wsx_leaders():
+    """Get current leaders for WSX series (SX1 and SX2)"""
+    try:
+        leaders = get_wsx_leaders()
+        
+        # Format leaders data
+        leaders_data = {}
+        for series, data in leaders.items():
+            if data['leader']:
+                rider = data['leader']
+                leaders_data[series] = {
+                    'leader': {
+                        'rider_name': rider.name,
+                        'rider_number': rider.rider_number,
+                        'bike_brand': rider.bike_brand,
+                        'points': data['points']
+                    },
+                    'top_5': [
+                        {
+                            'rider_name': item['rider'].name,
+                            'rider_number': item['rider'].rider_number,
+                            'bike_brand': item['rider'].bike_brand,
+                            'points': item['points']
+                        } for item in data['top_5']
+                    ]
+                }
+            else:
+                leaders_data[series] = None
+        
+        return jsonify({
+            'success': True,
+            'leaders': leaders_data
+        })
+        
+    except Exception as e:
+        print(f"ERROR in api_wsx_leaders: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/test_countdown")
 def test_countdown():
     """Test countdown with simulated time - for development only"""
@@ -13174,6 +13215,76 @@ def get_series_leaders():
         leaders[series]['top_5'] = leaders[series]['top_5'][:5]
     
     print(f"DEBUG: Series leaders calculated:")
+    for series, data in leaders.items():
+        if data['leader']:
+            print(f"  {series}: {data['leader'].name} - {data['points']} points")
+        else:
+            print(f"  {series}: No leader yet")
+    
+    return leaders
+
+def get_wsx_leaders():
+    """Get current leaders for WSX series (SX1 and SX2) - sum points from all WSX competitions"""
+    
+    leaders = {
+        'wsx_sx1': {'leader': None, 'points': 0, 'top_5': []},
+        'wsx_sx2': {'leader': None, 'points': 0, 'top_5': []}
+    }
+    
+    # Get all riders with WSX classes
+    riders = Rider.query.filter(Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])).all()
+    
+    # Get all WSX competitions
+    wsx_competitions = Competition.query.filter_by(series='WSX').all()
+    
+    if not wsx_competitions:
+        print("DEBUG: No WSX competitions found")
+        return leaders
+    
+    # Calculate points for all WSX riders
+    rider_points = {}
+    for rider in riders:
+        total_points = 0
+        
+        # Get results for this rider from WSX competitions only
+        results = db.session.query(CompetitionResult).join(Competition).filter(
+            CompetitionResult.rider_id == rider.id,
+            Competition.series == 'WSX'
+        ).all()
+        
+        # Calculate total points from all WSX competitions
+        for result in results:
+            if result.position and result.position <= 20:
+                points = get_smx_qualification_points(result.position)
+                total_points += points
+        
+        rider_points[rider.id] = {
+            'rider': rider,
+            'points': total_points
+        }
+    
+    # Sort riders by class, get top 5 for each
+    for rider_id, data in rider_points.items():
+        rider = data['rider']
+        points = data['points']
+        
+        if rider.class_name == 'wsx_sx1':
+            leaders['wsx_sx1']['top_5'].append({'rider': rider, 'points': points})
+            if points > leaders['wsx_sx1']['points']:
+                leaders['wsx_sx1']['leader'] = rider
+                leaders['wsx_sx1']['points'] = points
+        elif rider.class_name == 'wsx_sx2':
+            leaders['wsx_sx2']['top_5'].append({'rider': rider, 'points': points})
+            if points > leaders['wsx_sx2']['points']:
+                leaders['wsx_sx2']['leader'] = rider
+                leaders['wsx_sx2']['points'] = points
+    
+    # Sort top 5 for each series
+    for series in leaders:
+        leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
+        leaders[series]['top_5'] = leaders[series]['top_5'][:5]
+    
+    print(f"DEBUG: WSX leaders calculated:")
     for series, data in leaders.items():
         if data['leader']:
             print(f"  {series}: {data['leader'].name} - {data['points']} points")
