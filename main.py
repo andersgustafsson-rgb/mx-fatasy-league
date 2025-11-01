@@ -3448,6 +3448,67 @@ def admin_get_results(competition_id):
         traceback.print_exc()
         return jsonify({"error": "internal_error"}), 500
 
+@app.get("/admin/picks_stats/<int:competition_id>")
+def admin_picks_stats(competition_id):
+    """Get statistics about picks made for a competition"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+
+    try:
+        # Count distinct users who have made picks
+        # A user has made picks if they have at least one RacePick, HoleshotPick, or WildcardPick
+        
+        # Get all users who have RacePicks
+        users_with_race_picks = db.session.query(RacePick.user_id).filter_by(
+            competition_id=competition_id
+        ).distinct().all()
+        
+        # Get all users who have HoleshotPicks
+        users_with_holeshot = db.session.query(HoleshotPick.user_id).filter_by(
+            competition_id=competition_id
+        ).distinct().all()
+        
+        # Get all users who have WildcardPicks (only for non-WSX series)
+        comp = Competition.query.get(competition_id)
+        users_with_wildcard = []
+        if comp and comp.series != "WSX":
+            users_with_wildcard = db.session.query(WildcardPick.user_id).filter_by(
+                competition_id=competition_id
+            ).distinct().all()
+        
+        # Combine all user IDs
+        all_user_ids = set()
+        for (user_id,) in users_with_race_picks:
+            all_user_ids.add(user_id)
+        for (user_id,) in users_with_holeshot:
+            all_user_ids.add(user_id)
+        for (user_id,) in users_with_wildcard:
+            all_user_ids.add(user_id)
+        
+        # Total number of users who have made at least one pick
+        total_users_with_picks = len(all_user_ids)
+        
+        # Get total number of registered users
+        total_users = User.query.count()
+        
+        # Calculate percentage
+        percentage = round((total_users_with_picks / total_users * 100) if total_users > 0 else 0, 1)
+        
+        return jsonify({
+            "competition_id": competition_id,
+            "competition_name": comp.name if comp else "Unknown",
+            "total_users_with_picks": total_users_with_picks,
+            "total_users": total_users,
+            "percentage": percentage,
+            "users_with_race_picks": len(users_with_race_picks),
+            "users_with_holeshot": len(users_with_holeshot),
+            "users_with_wildcard": len(users_with_wildcard) if comp and comp.series != "WSX" else 0
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 
 @app.post("/admin/submit_results")
 def submit_results():
@@ -7340,7 +7401,18 @@ def admin_reset_league_points(league_id):
 
 
 def calculate_league_points(league_id, competition_id):
-    """Calculate simple league points based on member race pick performance"""
+    """Calculate fair league points based on member race pick performance.
+    
+    Fair system that works regardless of league size:
+    - 1 member: Use their score directly
+    - 2 members: Use average of both
+    - 3-4 members: Use average of top 2
+    - 5-6 members: Use average of top 3
+    - 7+ members: Use average of top 50% (rounded up)
+    
+    This ensures smaller leagues can compete fairly with larger ones,
+    while still rewarding leagues with multiple strong performers.
+    """
     try:
         # Get all members in the league
         members = db.session.query(User).join(LeagueMembership).filter(
@@ -7363,16 +7435,33 @@ def calculate_league_points(league_id, competition_id):
         if not member_scores:
             return 0
         
-        # Fair calculation: same points regardless of league size
-        # Use the best score in the league (or average if only one member)
-        if len(member_scores) == 1:
+        # Sort scores descending (best first)
+        member_scores.sort(reverse=True)
+        num_members = len(member_scores)
+        
+        # Fair calculation based on league size
+        if num_members == 1:
             # Single member: use their score directly
             final_score = member_scores[0]
+            top_n = 1
+        elif num_members == 2:
+            # 2 members: average of both
+            final_score = sum(member_scores) / 2
+            top_n = 2
+        elif num_members <= 4:
+            # 3-4 members: average of top 2
+            final_score = sum(member_scores[:2]) / 2
+            top_n = 2
+        elif num_members <= 6:
+            # 5-6 members: average of top 3
+            final_score = sum(member_scores[:3]) / 3
+            top_n = 3
         else:
-            # Multiple members: use the best score (encourages competition)
-            final_score = max(member_scores)
+            # 7+ members: average of top 50% (rounded up)
+            top_n = (num_members + 1) // 2  # Round up
+            final_score = sum(member_scores[:top_n]) / top_n
         
-        print(f"🏆 League {league_id}: {len(member_scores)} members, best score: {final_score:.1f}")
+        print(f"🏆 League {league_id}: {num_members} members, using top {top_n}, league score: {final_score:.1f}")
         
         return round(final_score, 1)
         

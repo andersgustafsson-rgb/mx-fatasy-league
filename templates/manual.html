@@ -577,11 +577,37 @@
                 </div>
 
                 <div class="points-box">
-                    <p class="font-semibold text-gray-800 dark:text-gray-200 mb-2">🏆 Ligapoäng:</p>
-                    <p class="text-gray-700 dark:text-gray-300">
-                        Varje liga räknar poäng baserat på medlemmarnas race pick-prestationer. 
-                        Den bästa poängen i ligan för varje race räknas. Du kan se liga-leaderboard i <strong>Ligor</strong>-tabben!
-                    </p>
+                    <p class="font-semibold text-gray-800 dark:text-gray-200 mb-3">🏆 Ligapoängsystem:</p>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">📊 Inom ligan:</h4>
+                        <p class="text-gray-700 dark:text-gray-300 mb-2">
+                            Medlemmarna i din liga tävlar mot varandra med sina <strong>totala säsongspoäng</strong> 
+                            (summan av alla race-poäng från alla tävlingar). Till exempel: om du fick 240p för Anaheim 
+                            och 200p för San Diego, så har du totalt <strong>440p</strong>. Den som har högst totala 
+                            poäng leder ligan! Du kan se ligans leaderboard i <strong>Ligor</strong>-tabben.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="font-semibold text-gray-800 dark:text-gray-200 mb-2">⚔️ Mellan ligor:</h4>
+                        <p class="text-gray-700 dark:text-gray-300 mb-2">
+                            Ligorna tävlar också mot varandra i en global liga-ranking. För att systemet ska vara 
+                            <strong>rättvist oavsett ligastorlek</strong> använder vi ett smart poängsystem per tävling:
+                        </p>
+                        <ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300 ml-4 mb-2">
+                            <li><strong>1 medlem:</strong> Använder den personens poäng direkt</li>
+                            <li><strong>2 medlemmar:</strong> Genomsnittet av båda medlemmarnas poäng</li>
+                            <li><strong>3-4 medlemmar:</strong> Genomsnittet av de 2 bästa poängen</li>
+                            <li><strong>5-6 medlemmar:</strong> Genomsnittet av de 3 bästa poängen</li>
+                            <li><strong>7+ medlemmar:</strong> Genomsnittet av de bästa 50% (avrundat uppåt)</li>
+                        </ul>
+                        <p class="text-gray-700 dark:text-gray-300">
+                            Ligan summerar sedan poäng från alla tävlingar för att få sin totala liga-poäng. 
+                            Detta gör att både små ligor (2-3 medlemmar) och stora ligor (10-25 medlemmar) 
+                            kan tävla rättvist mot varandra - <strong>det bästa laget vinner, oavsett antal medlemmar!</strong>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
