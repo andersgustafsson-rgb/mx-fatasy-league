@@ -104,25 +104,27 @@
             {% endif %}
             {% else %}
             <!-- Real Race or Selected Competition from Admin -->
-            {% set race_name_slug = next_race.name.lower().replace(" ", "").replace("national", "").replace("classic", "") %}
+            {% set race_name_lower = next_race.name.lower() %}
             {% set race_series = next_race.series if next_race.series else "SX" %}
             {% if race_series == "WSX" %}
               {# WSX GP races: map to correct filename #}
-              {% if "buenos aires city" in race_name_slug %}
+              {% if "buenos aires" in race_name_lower %}
                 {% set bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
-              {% elif "canadian" in race_name_slug %}
+              {% elif "canadian" in race_name_lower %}
                 {% set bg_image = "trackmaps/compressed/canadiangp.png" %}
-              {% elif "australian" in race_name_slug %}
+              {% elif "australian" in race_name_lower %}
                 {% set bg_image = "trackmaps/compressed/australiangp.jpg" %}
-              {% elif "swedish" in race_name_slug %}
+              {% elif "swedish" in race_name_lower %}
                 {% set bg_image = "trackmaps/compressed/swedishgp.jpg" %}
-              {% elif "south african" in race_name_slug %}
+              {% elif "south african" in race_name_lower %}
                 {% set bg_image = "trackmaps/compressed/southafricangp.png" %}
               {% else %}
+                {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
                 {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
               {% endif %}
             {% else %}
               {# SX/MX races: try .jpg first, then .png if needed #}
+              {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
               {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
             {% endif %}
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 

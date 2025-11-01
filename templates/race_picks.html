@@ -261,18 +261,19 @@
 
     <!-- WSX Background Banner -->
     {% if competition.series == "WSX" %}
-      {% set race_name_slug = competition.name.lower().replace(" ", "").replace("national", "").replace("classic", "") %}
-      {% if "buenos aires city" in race_name_slug %}
+      {% set race_name_lower = competition.name.lower() %}
+      {% if "buenos aires" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
-      {% elif "canadian" in race_name_slug %}
+      {% elif "canadian" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/canadiangp.png" %}
-      {% elif "australian" in race_name_slug %}
+      {% elif "australian" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/australiangp.jpg" %}
-      {% elif "swedish" in race_name_slug %}
+      {% elif "swedish" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/swedishgp.jpg" %}
-      {% elif "south african" in race_name_slug %}
+      {% elif "south african" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/southafricangp.png" %}
       {% else %}
+        {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
         {% set wsx_bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
       {% endif %}
     <div class="mb-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
