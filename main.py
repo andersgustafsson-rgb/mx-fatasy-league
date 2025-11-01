@@ -5099,17 +5099,39 @@ def get_my_race_results(competition_id):
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
     holo_by_class = {h.class_name: h for h in holos}
+    
+    # Calculate holeshot points
+    holeshot_450_correct = False
+    holeshot_250_correct = False
+    holeshot_points = 0
+    
     for hp in holopicks:
         act = holo_by_class.get(hp.class_name)
-        # Get rider name for holeshot display
         rider = Rider.query.get(hp.rider_id)
         rider_name = rider.name if rider else f"rider {hp.rider_id}"
         
         if act and act.rider_id == hp.rider_id:
-            breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+3)")
-            total += 3
+            if hp.class_name == "450cc":
+                holeshot_450_correct = True
+                holeshot_points += 10
+                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
+            elif hp.class_name == "250cc":
+                holeshot_250_correct = True
+                holeshot_points += 10
+                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
         else:
             breakdown.append(f"❌ Holeshot {hp.class_name}: {rider_name} fel")
+    
+    # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
+    if holeshot_450_correct and holeshot_250_correct:
+        holeshot_points = 25
+        # Update breakdown to show bonus
+        breakdown = [b for b in breakdown if not (b.startswith("✅ Holeshot") or b.startswith("❌ Holeshot"))]
+        breakdown.append("✅ Holeshot 450cc: rätt (+10)")
+        breakdown.append("✅ Holeshot 250cc: rätt (+10)")
+        breakdown.append("🎯 Bonus: Båda holeshots rätt! (+5 bonus = 25 totalt)")
+    
+    total += holeshot_points
 
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
     if wc:
@@ -5173,10 +5195,21 @@ def calculate_scores(comp_id: int):
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
         ).all()
+        holeshot_450_correct = False
+        holeshot_250_correct = False
         for hp in holeshot_picks:
             actual_hs = actual_holeshots_dict.get(hp.class_name)
             if actual_hs and actual_hs.rider_id == hp.rider_id:
-                holeshot_points += 3
+                if hp.class_name == "450cc":
+                    holeshot_450_correct = True
+                    holeshot_points += 10
+                elif hp.class_name == "250cc":
+                    holeshot_250_correct = True
+                    holeshot_points += 10
+        
+        # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
+        if holeshot_450_correct and holeshot_250_correct:
+            holeshot_points = 25
 
         # Disable wildcard scoring for WSX competitions
         if series_name != 'WSX':
