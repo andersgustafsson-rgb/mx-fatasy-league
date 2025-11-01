@@ -20,6 +20,12 @@
   .dark .result-close { background-color: rgba(234, 179, 8, 0.1); }
   .picks-locked { pointer-events: none; opacity: 0.6; }
 
+  .track-background {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
   /* Smalare rader + större preview */
   .pick-row { grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
   .preview-img {
@@ -252,6 +258,38 @@
   </a>
       </div>
 </div>
+
+    <!-- WSX Background Banner -->
+    {% if competition.series == "WSX" %}
+      {% set race_name_slug = competition.name.lower().replace(" ", "").replace("national", "").replace("classic", "") %}
+      {% if "buenos aires city" in race_name_slug %}
+        {% set wsx_bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
+      {% elif "canadian" in race_name_slug %}
+        {% set wsx_bg_image = "trackmaps/compressed/canadiangp.png" %}
+      {% elif "australian" in race_name_slug %}
+        {% set wsx_bg_image = "trackmaps/compressed/australiangp.jpg" %}
+      {% elif "swedish" in race_name_slug %}
+        {% set wsx_bg_image = "trackmaps/compressed/swedishgp.jpg" %}
+      {% elif "south african" in race_name_slug %}
+        {% set wsx_bg_image = "trackmaps/compressed/southafricangp.png" %}
+      {% else %}
+        {% set wsx_bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+      {% endif %}
+    <div class="mb-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
+         style="background-image: url('{{ url_for("static", filename=wsx_bg_image) }}'); background-size: cover; background-position: center; min-height: 200px;">
+      <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+      <div class="relative z-10 p-6 text-center">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+          🏁 {{ competition.name }}
+        </h2>
+        {% if competition.event_date %}
+        <p class="text-cyan-300 text-lg">
+          {{ competition.event_date.strftime('%d %B %Y') }}
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Trackmap Section with Side Info -->
     {% if trackmap_images and trackmap_images|length > 0 %}

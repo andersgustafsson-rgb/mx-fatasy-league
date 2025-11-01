@@ -104,8 +104,29 @@
             {% endif %}
             {% else %}
             <!-- Real Race or Selected Competition from Admin -->
+            {% set race_name_slug = next_race.name.lower().replace(" ", "").replace("national", "").replace("classic", "") %}
+            {% set race_series = next_race.series if next_race.series else "SX" %}
+            {% if race_series == "WSX" %}
+              {# WSX GP races: map to correct filename #}
+              {% if "buenos aires city" in race_name_slug %}
+                {% set bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
+              {% elif "canadian" in race_name_slug %}
+                {% set bg_image = "trackmaps/compressed/canadiangp.png" %}
+              {% elif "australian" in race_name_slug %}
+                {% set bg_image = "trackmaps/compressed/australiangp.jpg" %}
+              {% elif "swedish" in race_name_slug %}
+                {% set bg_image = "trackmaps/compressed/swedishgp.jpg" %}
+              {% elif "south african" in race_name_slug %}
+                {% set bg_image = "trackmaps/compressed/southafricangp.png" %}
+              {% else %}
+                {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+              {% endif %}
+            {% else %}
+              {# SX/MX races: try .jpg first, then .png if needed #}
+              {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+            {% endif %}
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/" + next_race.name.lower().replace(" ", "").replace("national", "").replace("classic", "") + ".jpg") }}');">
+                 style="background-image: url('{{ url_for("static", filename=bg_image) }}');">
             {% endif %}
                 <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                 <div class="relative z-10">
