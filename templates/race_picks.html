@@ -1025,33 +1025,52 @@
       if (img && riderId && !img.src) {
         // Set image source using the same logic as imgSrcFor
         const rider = allRiders.find(r => r.id == riderId);
-        if (rider && rider.image_url) {
-          // Remove 'riders/' prefix if it exists to avoid double path
-          const imagePath = rider.image_url.startsWith('riders/') ? rider.image_url : `riders/${rider.image_url}`;
-          img.src = `/static/${imagePath}`;
+        // Use imgSrcFor to get the correct image source (handles all cases including brand logos)
+        const imageSrc = imgSrcFor(riderId);
+        if (imageSrc) {
+          img.src = imageSrc;
           img.onerror = function() {
-            // Use bike brand logo as fallback
-            if (rider.bike_brand) {
-              this.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
+            // If image fails to load, try brand logo
+            if (rider && rider.bike_brand) {
+              const brandName = (rider.bike_brand || "").toLowerCase().trim();
+              const brandMap = {
+                'honda': 'honda',
+                'ktm': 'ktm',
+                'yamaha': 'yamaha',
+                'kawasaki': 'kawasaki',
+                'suzuki': 'suzuki',
+                'husqvarna': 'husqvarna',
+                'gasgas': 'gasgas',
+                'beta': 'beta',
+                'triumph': 'triumph'
+              };
+              const logoName = brandMap[brandName] || brandName;
+              this.src = `/static/brand_logos/${logoName}.png`;
+              this.onerror = function() {
+                // Final fallback
+                this.src = '/static/brand_logos/honda.png';
+              };
             } else {
-              this.src = '/static/brand_logos/honda.png'; // Default to Honda
+              this.src = '/static/brand_logos/honda.png';
             }
           };
         } else {
-          // If no image_url, construct path same way as other riders
-          const isWSX = (rider.class === 'wsx_sx1' || rider.class === 'wsx_sx2' || (rider.series_participation && rider.series_participation.toLowerCase() === 'wsx'));
-          if (isWSX && rider.name) {
-            // Files are: name (1).jpg (without underscores, just lowercase with space before (1))
-            // Remove spaces and special chars for filename matching
-            const fileSlug = (rider.name || '').toLowerCase().trim().replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-            // Build path same as other riders: riders/wsx/filename
-            const imagePath = `riders/wsx/${fileSlug} (1).jpg`;
-            img.src = `/static/${imagePath}`;
-            img.setAttribute('data-rider-id', riderId);
-            img.onerror = function(){ handleImageError(this); };
-          } else if (rider && rider.bike_brand) {
-            // Bike brand fallback
-            img.src = `/static/brand_logos/${rider.bike_brand.toLowerCase()}.png`;
+          // No image found, use brand logo directly
+          if (rider && rider.bike_brand) {
+            const brandName = (rider.bike_brand || "").toLowerCase().trim();
+            const brandMap = {
+              'honda': 'honda',
+              'ktm': 'ktm',
+              'yamaha': 'yamaha',
+              'kawasaki': 'kawasaki',
+              'suzuki': 'suzuki',
+              'husqvarna': 'husqvarna',
+              'gasgas': 'gasgas',
+              'beta': 'beta',
+              'triumph': 'triumph'
+            };
+            const logoName = brandMap[brandName] || brandName;
+            img.src = `/static/brand_logos/${logoName}.png`;
           } else {
             img.src = '/static/brand_logos/honda.png';
           }
@@ -1426,9 +1445,8 @@ function wsxSlug(name) {
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
-  return null;
-}
-  
+    return '/static/brand_logos/honda.png'; // Default fallback
+  }
   
   // Try rider image first (check both PNG and JPG)
   if (r.image_url) {
@@ -1450,10 +1468,23 @@ function imgSrcFor(riderId) {
     return url;
   }
 
-  // Fall back to bike brand logo if no rider image
+  // If no rider image, use bike brand logo directly
   if (r.bike_brand) {
-    const url = `/static/brand_logos/${(r.bike_brand || "").toLowerCase()}.png`;
-    return url;
+    const brandName = (r.bike_brand || "").toLowerCase().trim();
+    // Map common brand names to logo files
+    const brandMap = {
+      'honda': 'honda',
+      'ktm': 'ktm',
+      'yamaha': 'yamaha',
+      'kawasaki': 'kawasaki',
+      'suzuki': 'suzuki',
+      'husqvarna': 'husqvarna',
+      'gasgas': 'gasgas',
+      'beta': 'beta',
+      'triumph': 'triumph'
+    };
+    const logoName = brandMap[brandName] || brandName;
+    return `/static/brand_logos/${logoName}.png`;
   }
   
   // Final fallback to Honda logo
