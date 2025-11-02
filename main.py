@@ -11891,9 +11891,23 @@ def race_countdown():
             
             # Use start_time from database if available, otherwise default to 8 PM
             if next_race_obj.start_time:
-                race_datetime = datetime.combine(event_date.date(), next_race_obj.start_time)
+                race_datetime_local = datetime.combine(event_date.date(), next_race_obj.start_time)
             else:
-                race_datetime = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+                race_datetime_local = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
+            
+            # Convert local time to UTC for accurate countdown
+            timezone_offsets = {
+                'America/Los_Angeles': -8,  # PST
+                'America/Denver': -7,       # MST  
+                'America/Phoenix': -7,      # MST (no DST)
+                'America/Chicago': -6,      # CST
+                'America/New_York': -5,     # EST
+                'America/Argentina/Buenos_Aires': -3  # ART (no DST)
+            }
+            
+            timezone = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
+            utc_offset = timezone_offsets.get(timezone, -8)
+            race_datetime = race_datetime_local - timedelta(hours=utc_offset)
             
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
             
@@ -13593,7 +13607,8 @@ def is_picks_locked(competition):
             'America/Denver': -7,       # MST  
             'America/Phoenix': -7,      # MST (no DST)
             'America/Chicago': -6,      # CST
-            'America/New_York': -5      # EST
+            'America/New_York': -5,     # EST
+            'America/Argentina/Buenos_Aires': -3  # ART (no DST)
         }
         
         timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
