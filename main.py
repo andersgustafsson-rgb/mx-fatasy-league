@@ -946,6 +946,43 @@ def index():
         print(f"Error fetching admin message: {e}")
         admin_message = None
 
+    # Calculate user statistics for stats tab (only if logged in)
+    user_total_points = 0
+    races_participated = 0
+    best_position = None
+    
+    if is_logged_in:
+        try:
+            # Get all scores for this user
+            user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
+            user_total_points = sum(score.total_points or 0 for score in user_scores)
+            races_participated = len([s for s in user_scores if s.total_points and s.total_points > 0])
+            
+            # Find best position (lowest position in leaderboard across all competitions)
+            if races_participated > 0:
+                best_positions = []
+                for score in user_scores:
+                    if score.total_points and score.total_points > 0:
+                        # Find user's position in this competition
+                        all_scores_for_comp = CompetitionScore.query.filter_by(
+                            competition_id=score.competition_id
+                        ).order_by(CompetitionScore.total_points.desc()).all()
+                        
+                        position = 1
+                        for i, s in enumerate(all_scores_for_comp):
+                            if s.user_id == uid:
+                                position = i + 1
+                                break
+                        best_positions.append(position)
+                
+                if best_positions:
+                    best_position = min(best_positions)
+        except Exception as e:
+            print(f"Error calculating user statistics: {e}")
+            user_total_points = 0
+            races_participated = 0
+            best_position = None
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -968,6 +1005,9 @@ def index():
         is_logged_in=is_logged_in,
         admin_message=admin_message,
         admin_message_priority=admin_message_priority,
+        user_total_points=user_total_points,
+        races_participated=races_participated,
+        best_position=best_position,
     )
 
 
