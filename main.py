@@ -4251,12 +4251,13 @@ def get_season_leaderboard():
         db.session.query(
             User.id,
             User.username,
+            User.display_name,
             SeasonTeam.team_name,
             func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-        .group_by(User.id, User.username, SeasonTeam.team_name)
+        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
         .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
         .all()
     )
@@ -4281,10 +4282,10 @@ def get_season_leaderboard():
         else:
             print("DEBUG: No previous ranking history found - will create baseline")
             # Create initial baseline ranking (all users start at rank 0)
-            for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+            for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
                 previous_ranking[str(user_id)] = 0  # All start at rank 0
         
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
             
@@ -4299,6 +4300,7 @@ def get_season_leaderboard():
             result.append({
                 "user_id": user_id,
                 "username": username,
+                "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
                 "rank": current_rank,
@@ -4327,10 +4329,11 @@ def get_season_leaderboard():
         print(f"DEBUG: Error in leaderboard ranking: {e}")
         db.session.rollback()
         # Fallback to no deltas if database fails
-        for i, (user_id, username, team_name, total_points) in enumerate(user_scores, 1):
+        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
             result.append({
                 "user_id": user_id,
                 "username": username,
+                "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
                 "rank": i,
