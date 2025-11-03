@@ -4293,9 +4293,9 @@ def get_season_leaderboard():
                 delta = current_rank - previous_rank
                 print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
             else:
-                # First time or baseline (rank 0) - show improvement
-                delta = -current_rank
-                print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: {delta}")
+                # First time or baseline (rank 0) - no delta to show
+                delta = None
+                print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: None")
             
             result.append({
                 "user_id": user_id,
