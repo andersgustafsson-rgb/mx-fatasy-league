@@ -2634,6 +2634,9 @@ def run_migration():
         db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS holeshot_points INTEGER DEFAULT 0"))
         db.session.execute(db.text("ALTER TABLE competition_scores ADD COLUMN IF NOT EXISTS wildcard_points INTEGER DEFAULT 0"))
         
+        # Add rider_points column to competition_results table for WSX manual entry
+        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS rider_points INTEGER"))
+        
         # Create leaderboard_history table
         db.session.execute(db.text("""
             CREATE TABLE IF NOT EXISTS leaderboard_history (
@@ -3733,6 +3736,14 @@ def submit_results():
     riders_450 = request.form.getlist("riders_450[]", type=int)
     positions_250 = request.form.getlist("positions_250[]", type=int)
     riders_250 = request.form.getlist("riders_250[]", type=int)
+    
+    # Get rider points for WSX (if provided)
+    rider_points_450 = request.form.getlist("rider_points_450[]", type=int)
+    rider_points_250 = request.form.getlist("rider_points_250[]", type=int)
+    
+    # Check if this is a WSX competition
+    competition = Competition.query.get(comp_id)
+    is_wsx = competition and competition.series == 'WSX'
 
     # Validera att inga dubletter finns inom samma klass
     riders_450_filtered = [rid for rid in riders_450 if rid]
@@ -3746,12 +3757,31 @@ def submit_results():
         flash("Du kan inte sätta samma 250cc-förare flera gånger.", "error")
         return redirect(url_for("admin_page"))
 
-    for pos, rid in zip(positions_450, riders_450):
+    # Save 450cc/SX1 results
+    for i, (pos, rid) in enumerate(zip(positions_450, riders_450)):
         if rid:
-            db.session.add(CompetitionResult(competition_id=comp_id, rider_id=rid, position=pos))
-    for pos, rid in zip(positions_250, riders_250):
+            rider_points = None
+            if is_wsx and i < len(rider_points_450) and rider_points_450[i]:
+                rider_points = rider_points_450[i]
+            db.session.add(CompetitionResult(
+                competition_id=comp_id, 
+                rider_id=rid, 
+                position=pos,
+                rider_points=rider_points
+            ))
+    
+    # Save 250cc/SX2 results
+    for i, (pos, rid) in enumerate(zip(positions_250, riders_250)):
         if rid:
-            db.session.add(CompetitionResult(competition_id=comp_id, rider_id=rid, position=pos))
+            rider_points = None
+            if is_wsx and i < len(rider_points_250) and rider_points_250[i]:
+                rider_points = rider_points_250[i]
+            db.session.add(CompetitionResult(
+                competition_id=comp_id, 
+                rider_id=rid, 
+                position=pos,
+                rider_points=rider_points
+            ))
 
     db.session.commit()
     # Results saved for competition
@@ -4409,6 +4439,7 @@ def race_results_page():
                 db.session.query(
                     CompetitionResult.rider_id,
                     CompetitionResult.position,
+                    CompetitionResult.rider_points,
                     Rider.name.label('rider_name'),
                     Rider.class_name,
                     Rider.rider_number,
@@ -4439,7 +4470,13 @@ def race_results_page():
             results_with_points = []
             for result in results:
                 # Use appropriate point system based on series
-                if comp.series == "SX":
+                if comp.series == "WSX":
+                    # For WSX, use rider_points if provided (manual entry), otherwise calculate from position
+                    if hasattr(result, 'rider_points') and result.rider_points is not None:
+                        points = result.rider_points
+                    else:
+                        points = get_smx_qualification_points(result.position)
+                elif comp.series == "SX":
                     points = get_smx_qualification_points(result.position)  # Supercross uses SMX points
                 elif comp.series == "MX":
                     points = get_smx_qualification_points(result.position)  # Motocross uses SMX points
@@ -5372,6 +5409,7 @@ def calculate_scores(comp_id: int):
             rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
             
             for result in rider_results:
+                # Season team always uses position-based points (not WSX rider_points)
                 points = calculate_rider_points_for_position(result.position)
                 total_season_points += points
         
@@ -5518,6 +5556,7 @@ def clear_competition_results(competition_id):
             rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
             
             for result in rider_results:
+                # Season team always uses position-based points (not WSX rider_points)
                 points = calculate_rider_points_for_position(result.position)
                 total_season_points += points
         
@@ -5768,6 +5807,7 @@ def update_season_team_points():
             rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
             
             for result in rider_results:
+                # Season team always uses position-based points (not WSX rider_points)
                 points = calculate_rider_points_for_position(result.position)
                 total_season_points += points
                 print(f"DEBUG: Rider {rider_id} finished {result.position} in competition {result.competition_id}, got {points} points")
@@ -13373,9 +13413,15 @@ def get_wsx_leaders():
         ).all()
         
         # Calculate total points from all WSX competitions
+        # Use rider_points if provided (manual entry), otherwise calculate from position
         for result in results:
             if result.position and result.position <= 20:
-                points = get_smx_qualification_points(result.position)
+                if result.rider_points is not None:
+                    # Use manually entered total points for WSX
+                    points = result.rider_points
+                else:
+                    # Fallback to calculating from position (for backwards compatibility)
+                    points = get_smx_qualification_points(result.position)
                 total_points += points
         
         rider_points[rider.id] = {

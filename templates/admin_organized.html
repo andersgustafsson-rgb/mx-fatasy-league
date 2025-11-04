@@ -1355,13 +1355,26 @@
             const sx1MaxPos = 20;
             for (let pos = 1; pos <= sx1MaxPos; pos++) {
                 const wrapper = document.createElement('div');
-                wrapper.innerHTML = `
-                    <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                    <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                        <option value="">Välj förare</option>
-                        ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                    </select>
-                `;
+                if (isWSX) {
+                    // For WSX: show rider select + total points input
+                    wrapper.innerHTML = `
+                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                        <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
+                            <option value="">Välj förare</option>
+                            ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
+                        </select>
+                        <input type="number" name="rider_points_450[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />
+                    `;
+                } else {
+                    // For non-WSX: just show rider select
+                    wrapper.innerHTML = `
+                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                        <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                            <option value="">Välj förare</option>
+                            ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
+                        </select>
+                    `;
+                }
                 sx1List.appendChild(wrapper);
                 const hiddenPos = document.createElement('input');
                 hiddenPos.type = 'hidden';
@@ -1374,13 +1387,26 @@
             const sx2MaxPos = 20;
             for (let pos = 1; pos <= sx2MaxPos; pos++) {
                 const wrapper = document.createElement('div');
-                wrapper.innerHTML = `
-                    <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                    <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                        <option value="">Välj förare</option>
-                        ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                    </select>
-                `;
+                if (isWSX) {
+                    // For WSX: show rider select + total points input
+                    wrapper.innerHTML = `
+                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                        <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
+                            <option value="">Välj förare</option>
+                            ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
+                        </select>
+                        <input type="number" name="rider_points_250[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />
+                    `;
+                } else {
+                    // For non-WSX: just show rider select
+                    wrapper.innerHTML = `
+                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                        <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                            <option value="">Välj förare</option>
+                            ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
+                        </select>
+                    `;
+                }
                 sx2List.appendChild(wrapper);
                 const hiddenPos = document.createElement('input');
                 hiddenPos.type = 'hidden';

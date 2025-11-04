@@ -244,6 +244,7 @@ class CompetitionResult(db.Model):
     competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"))
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
     position = db.Column(db.Integer, nullable=False)
+    rider_points = db.Column(db.Integer, nullable=True)  # Total points for WSX riders (manual entry)
     competition = db.relationship('Competition', backref='results', lazy=True)
     rider = db.relationship('Rider', backref='results', lazy=True)
     __table_args__ = (
