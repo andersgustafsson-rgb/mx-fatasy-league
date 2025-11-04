@@ -1672,7 +1672,9 @@ function onPickChange(cls, pos, riderId = null) {
     val = sel?.value;
   }
   
-  const imgId = cls.startsWith("450") ? `prev-450-${pos}` : `prev-250-${pos}`;
+  // Determine if this is 450cc/SX1 or 250cc/SX2 (handles both regular and WSX)
+  const is450 = cls.startsWith("450") || cls === 'wsx_sx1';
+  const imgId = is450 ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
 
@@ -2211,17 +2213,20 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
     }
 
     // Kontrollera att exakt 6 förare är valda för varje klass
-    const picks450 = picks.filter(p => p.class === '450cc');
-    const picks250 = picks.filter(p => p.class === '250cc');
+    // For WSX, class is 'wsx_sx1'/'wsx_sx2', for others it's '450cc'/'250cc'
+    const picks450 = picks.filter(p => p.class === '450cc' || p.class === 'wsx_sx1');
+    const picks250 = picks.filter(p => p.class === '250cc' || p.class === 'wsx_sx2');
     
     
     if (picks450.length !== 6) {
-      alert("Du måste välja exakt 6 förare för 450cc (Top 6).");
+      const classLabel = isWSXSeries ? 'SX1' : '450cc';
+      alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
       return;
     }
     
     if (picks250.length !== 6) {
-      alert("Du måste välja exakt 6 förare för 250cc (Top 6).");
+      const classLabel = isWSXSeries ? 'SX2' : '250cc';
+      alert(`Du måste välja exakt 6 förare för ${classLabel} (Top 6).`);
       return;
     }
 
