@@ -409,38 +409,24 @@
                                 </tr>
                             </thead>
                             <tbody id="riders-250">
-                                {% for rider in riders_250_east %}
+                                {% for rider in riders_smx %}
+                                {% if rider.class_name == '250cc' %}
                                 <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
                                     <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
                                     <td class="px-4 py-3">
+                                        {% if rider.coast_250 == 'east' %}
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">East</span>
-                                    </td>
-                                    <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
-                                    <td class="rider-price px-4 py-3 text-white">{{ "{:,.0f}".format(rider.price) }}</td>
-                                    <td class="px-4 py-3 text-center">
-                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'east', {{ rider.price }})" 
-                                                class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
-                                            Redigera
-                                        </button>
-                                        <button onclick="deleteRider({{ rider.id }}, '{{ rider.name }}')" 
-                                                class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
-                                            Ta bort
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% for rider in riders_250_west %}
-                                <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
-                                    <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
-                                    <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
-                                    <td class="px-4 py-3">
+                                        {% elif rider.coast_250 == 'west' %}
                                         <span class="px-2 py-1 rounded text-xs font-semibold bg-orange-600 text-white">West</span>
+                                        {% else %}
+                                        <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-600 text-white">{{ rider.coast_250 or 'N/A' }}</span>
+                                        {% endif %}
                                     </td>
                                     <td class="rider-bike px-4 py-3 text-white">{{ rider.bike_brand }}</td>
                                     <td class="rider-price px-4 py-3 text-white">{{ "{:,.0f}".format(rider.price) }}</td>
                                     <td class="px-4 py-3 text-center">
-                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', 'west', {{ rider.price }})" 
+                                        <button onclick="editRider({{ rider.id }}, '{{ rider.name }}', {{ rider.rider_number }}, '{{ rider.bike_brand }}', '250cc', '{{ rider.coast_250 or '' }}', {{ rider.price }})" 
                                                 class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs mr-2">
                                             Redigera
                                         </button>
@@ -450,6 +436,7 @@
                                         </button>
                                     </td>
                                 </tr>
+                                {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -524,7 +511,8 @@
                                 </tr>
                             </thead>
                             <tbody id="riders-450">
-                                {% for rider in riders_450 %}
+                                {% for rider in riders_smx %}
+                                {% if rider.class_name == '450cc' %}
                                 <tr class="rider-item border-b border-gray-700 hover:bg-gray-800">
                                     <td class="rider-number px-4 py-3 text-white">{{ rider.rider_number }}</td>
                                     <td class="rider-name px-4 py-3 text-white">{{ rider.name }}</td>
@@ -541,6 +529,7 @@
                                         </button>
                                     </td>
                                 </tr>
+                                {% endif %}
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -600,7 +589,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for rider in riders_wsx_sx1 %}
+                            {% for rider in riders_wsx %}
+                            {% if rider.class_name == 'wsx_sx1' %}
                             <tr class="border-t border-gray-700/60">
                                 <td class="px-2 py-1">{{ rider.rider_number }}</td>
                                 <td class="px-2 py-1">{{ rider.name }}</td>
@@ -612,8 +602,7 @@
                                     <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
                                 </td>
                             </tr>
-                            {% endfor %}
-                            {% for rider in riders_wsx_sx2 %}
+                            {% elif rider.class_name == 'wsx_sx2' %}
                             <tr class="border-t border-gray-700/60">
                                 <td class="px-2 py-1">{{ rider.rider_number }}</td>
                                 <td class="px-2 py-1">{{ rider.name }}</td>
@@ -625,6 +614,7 @@
                                     <button onclick="deleteRider({{ rider.id }})" class="px-2 py-1 bg-red-600 hover:bg-red-500 rounded">Ta bort</button>
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
