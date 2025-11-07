@@ -141,94 +141,118 @@ def add_rider():
 
 @bp.route('/riders/<int:rider_id>', methods=['PUT'])
 def update_rider(rider_id: int):
-	if session.get("username") != "test":
-		return jsonify({'error': 'Unauthorized'}), 401
-	rider = Rider.query.get_or_404(rider_id)
-	data = request.get_json() if request.is_json else request.form.to_dict()
-
-	season_warning = None
 	try:
-		from main import is_season_active
-		if is_season_active():
-			season_warning = "⚠️ VARNING: Säsong är igång. Ändringar kan påverka befintliga picks och säsongsteam."
-	except Exception:
-		pass
+		if session.get("username") != "test":
+			return jsonify({'error': 'Unauthorized'}), 401
+		rider = Rider.query.get_or_404(rider_id)
+		data = request.get_json() if request.is_json else request.form.to_dict()
 
-	# Optional new image
-	if 'rider_image' in request.files:
-		file = request.files['rider_image']
-		if file and file.filename:
-			try:
-				import os
-				from werkzeug.utils import secure_filename
-				riders_dir = os.path.join(app.static_folder, 'riders')
-				os.makedirs(riders_dir, exist_ok=True)
-				original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
-				filename = secure_filename(f"{data['name'].replace(' ', '_')}_{data['rider_number']}{original_ext}")
-				file_path = os.path.join(riders_dir, filename)
-				file.save(file_path)
-				rider.image_url = f"riders/{filename}"
-			except Exception as e:
-				print(f"Error saving rider image: {e}")
+		# Validate required fields
+		if 'name' not in data:
+			return jsonify({'error': 'Namn krävs'}), 400
+		if 'rider_number' not in data or not data['rider_number']:
+			return jsonify({'error': 'Förarenummer krävs'}), 400
+		if 'bike_brand' not in data:
+			return jsonify({'error': 'Märke krävs'}), 400
 
-	new_class_name = rider.class_name
-	if 'classes' in data and data['classes']:
-		new_class_name = data['classes'].split(',')[0].strip()
-	elif 'class_name' in data:
-		new_class_name = data['class_name']
-
-	if data['rider_number'] != rider.rider_number or new_class_name != rider.class_name:
-		existing_rider = Rider.query.filter_by(
-			rider_number=data['rider_number'],
-			class_name=new_class_name
-		).filter(Rider.id != rider_id).first()
-		if existing_rider:
-			return jsonify({
-				'error': 'conflict',
-				'message': f"Nummer {data['rider_number']} finns redan för {existing_rider.name} ({existing_rider.class_name}). Du måste ändra nummer på den andra föraren först.",
-				'existing_rider': {
-					'id': existing_rider.id,
-					'name': existing_rider.name,
-					'class_name': existing_rider.class_name,
-					'rider_number': existing_rider.rider_number,
-					'bike_brand': existing_rider.bike_brand
-				}
-			}), 409
-
-	rider.name = data['name']
-	rider.rider_number = data['rider_number']
-	rider.bike_brand = data['bike_brand']
-	if 'classes' in data:
-		rider.classes = data['classes']
-		rider.class_name = data['classes'].split(',')[0].strip() if data['classes'] else '250cc'
-		if '250cc' not in data['classes']:
-			rider.coast_250 = None
-	if 'price' in data:
-		rider.price = data['price']
-	if 'coast_250' in data:
-		rider.coast_250 = data['coast_250']
-	for field in ['nickname','hometown','residence','team','manufacturer','team_manager','mechanic','instagram','twitter','facebook','website','bio','achievements']:
-		if field in data:
-			setattr(rider, field, data[field])
-	if 'series_participation' in data:
-		rider.series_participation = data['series_participation'] or rider.series_participation
-	if 'birthdate' in data:
+		# Convert rider_number to int if it's a string
 		try:
-			from datetime import datetime as _dt
-			rider.birthdate = _dt.strptime(data['birthdate'], '%Y-%m-%d').date() if data['birthdate'] else None
+			rider_number = int(data['rider_number'])
+		except (ValueError, TypeError):
+			return jsonify({'error': 'Ogiltigt förarenummer'}), 400
+
+		season_warning = None
+		try:
+			from main import is_season_active
+			if is_season_active():
+				season_warning = "⚠️ VARNING: Säsong är igång. Ändringar kan påverka befintliga picks och säsongsteam."
 		except Exception:
 			pass
-	for k in ['height_cm','weight_kg','turned_pro']:
-		if k in data:
+
+		# Optional new image
+		if 'rider_image' in request.files:
+			file = request.files['rider_image']
+			if file and file.filename:
+				try:
+					import os
+					from werkzeug.utils import secure_filename
+					riders_dir = os.path.join(app.static_folder, 'riders')
+					os.makedirs(riders_dir, exist_ok=True)
+					original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
+					filename = secure_filename(f"{data['name'].replace(' ', '_')}_{rider_number}{original_ext}")
+					file_path = os.path.join(riders_dir, filename)
+					file.save(file_path)
+					rider.image_url = f"riders/{filename}"
+				except Exception as e:
+					print(f"Error saving rider image: {e}")
+
+		new_class_name = rider.class_name
+		if 'classes' in data and data['classes']:
+			new_class_name = data['classes'].split(',')[0].strip()
+		elif 'class_name' in data:
+			new_class_name = data['class_name']
+
+		if rider_number != rider.rider_number or new_class_name != rider.class_name:
+			existing_rider = Rider.query.filter_by(
+				rider_number=rider_number,
+				class_name=new_class_name
+			).filter(Rider.id != rider_id).first()
+			if existing_rider:
+				return jsonify({
+					'error': 'conflict',
+					'message': f"Nummer {rider_number} finns redan för {existing_rider.name} ({existing_rider.class_name}). Du måste ändra nummer på den andra föraren först.",
+					'existing_rider': {
+						'id': existing_rider.id,
+						'name': existing_rider.name,
+						'class_name': existing_rider.class_name,
+						'rider_number': existing_rider.rider_number,
+						'bike_brand': existing_rider.bike_brand
+					}
+				}), 409
+
+		rider.name = data['name']
+		rider.rider_number = rider_number
+		rider.bike_brand = data['bike_brand']
+		if 'classes' in data:
+			rider.classes = data['classes']
+			rider.class_name = data['classes'].split(',')[0].strip() if data['classes'] else '250cc'
+			if '250cc' not in data['classes']:
+				rider.coast_250 = None
+		if 'price' in data:
+			rider.price = data['price']
+		if 'coast_250' in data:
+			rider.coast_250 = data['coast_250']
+		for field in ['nickname','hometown','residence','team','manufacturer','team_manager','mechanic','instagram','twitter','facebook','website','bio','achievements']:
+			if field in data:
+				setattr(rider, field, data[field])
+		if 'series_participation' in data:
+			rider.series_participation = data['series_participation'] or rider.series_participation
+		if 'birthdate' in data:
 			try:
-				setattr(rider, k, int(data[k]) if data[k] else None)
+				from datetime import datetime as _dt
+				rider.birthdate = _dt.strptime(data['birthdate'], '%Y-%m-%d').date() if data['birthdate'] else None
 			except Exception:
 				pass
-	db.session.commit()
-	response = {'success': True}
-	if season_warning:
-		response['warning'] = season_warning
-	return jsonify(response)
+		for k in ['height_cm','weight_kg','turned_pro']:
+			if k in data:
+				try:
+					setattr(rider, k, int(data[k]) if data[k] else None)
+				except Exception:
+					pass
+		db.session.commit()
+		response = {'success': True}
+		if season_warning:
+			response['warning'] = season_warning
+		return jsonify(response)
+	except KeyError as e:
+		db.session.rollback()
+		return jsonify({'error': f'Saknat fält: {str(e)}'}), 400
+	except Exception as e:
+		db.session.rollback()
+		print(f"Error updating rider {rider_id}: {e}")
+		import traceback
+		traceback.print_exc()
+		return jsonify({'error': f'Fel vid uppdatering: {str(e)}'}), 500
 
 
 @bp.route('/riders/<int:rider_id>', methods=['DELETE'])
