@@ -156,8 +156,8 @@ def add_rider():
 @bp.route('/riders/<int:rider_id>', methods=['PUT'])
 def update_rider(rider_id: int):
 	try:
-	if not is_admin_user():
-		return jsonify({'error': 'Unauthorized'}), 401
+		if not is_admin_user():
+			return jsonify({'error': 'Unauthorized'}), 401
 		rider = Rider.query.get_or_404(rider_id)
 		data = request.get_json() if request.is_json else request.form.to_dict()
 
