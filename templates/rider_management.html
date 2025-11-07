@@ -1198,12 +1198,27 @@
                 bikeBrand = document.getElementById('edit-rider-brand-custom').value;
             }
             
+            // Validate required fields
+            const riderNumberInput = document.getElementById('edit-rider-number').value;
+            const riderNumber = parseInt(riderNumberInput);
+            if (!riderNumberInput || isNaN(riderNumber)) {
+                alert('Förarenummer måste vara ett giltigt nummer');
+                return;
+            }
+            
+            const priceInput = document.getElementById('edit-rider-price').value;
+            const price = parseInt(priceInput);
+            if (!priceInput || isNaN(price)) {
+                alert('Pris måste vara ett giltigt nummer');
+                return;
+            }
+            
             const data = {
                 name: document.getElementById('edit-rider-name').value,
-                rider_number: parseInt(document.getElementById('edit-rider-number').value),
+                rider_number: riderNumber,
                 bike_brand: bikeBrand,
                 classes: selectedClasses.join(','),
-                price: parseInt(document.getElementById('edit-rider-price').value),
+                price: price,
                 nickname: document.getElementById('edit-rider-nickname').value,
                 birthdate: document.getElementById('edit-rider-birthdate').value,
                 hometown: document.getElementById('edit-rider-hometown').value,
