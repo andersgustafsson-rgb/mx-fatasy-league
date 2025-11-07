@@ -1,8 +1,22 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request, session, current_app as app
-from models import db, CrossDinoHighScore, Rider, Competition
+from models import db, CrossDinoHighScore, Rider, Competition, User
 from datetime import datetime
+
+def is_admin_user() -> bool:
+	"""Check if current user is admin"""
+	username = session.get("username")
+	if not username:
+		return False
+	try:
+		user = User.query.filter_by(username=username).first()
+		if user and hasattr(user, 'is_admin') and user.is_admin:
+			return True
+	except Exception:
+		pass
+	# Fallback to old method for backward compatibility
+	return username == "test"
 
 bp = Blueprint('api', __name__, url_prefix='/api')
 
@@ -69,7 +83,7 @@ def reset_cross_dino_highscores():
 
 @bp.route('/riders', methods=['POST'])
 def add_rider():
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	season_warning = None
 	try:
@@ -257,7 +271,7 @@ def update_rider(rider_id: int):
 
 @bp.route('/riders/<int:rider_id>', methods=['DELETE'])
 def delete_rider(rider_id: int):
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	try:
 		season_warning = None
@@ -297,7 +311,7 @@ def delete_rider(rider_id: int):
 
 @bp.route('/competitions/list', methods=['GET'])
 def list_competitions():
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	try:
 		# Detect presence of optional start_time column
@@ -332,7 +346,7 @@ def list_competitions():
 
 @bp.route('/competitions/create', methods=['POST'])
 def create_competition():
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	data = request.get_json()
 	try:
@@ -362,7 +376,7 @@ def create_competition():
 
 @bp.route('/competitions/update/<int:competition_id>', methods=['PUT'])
 def update_competition(competition_id: int):
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	comp = Competition.query.get_or_404(competition_id)
 	data = request.get_json()
@@ -389,7 +403,7 @@ def update_competition(competition_id: int):
 
 @bp.route('/competitions/delete/<int:competition_id>', methods=['DELETE'])
 def delete_competition(competition_id: int):
-	if session.get("username") != "test":
+	if not is_admin_user():
 		return jsonify({'error': 'Unauthorized'}), 401
 	try:
 		from sqlalchemy import text
