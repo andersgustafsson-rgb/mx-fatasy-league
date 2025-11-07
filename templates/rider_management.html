@@ -60,6 +60,22 @@
             </div>
         </div>
 
+        <!-- Bulk Update Rider Numbers -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-yellow-400">
+            <h3 class="text-lg font-semibold text-yellow-400 mb-3">🔄 Bulk Uppdatera Förarenummer (SMX)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Uppdaterar alla SMX-förares nummer enligt den nya listan. Konflikter hanteras automatiskt med temporära nummer.
+            </p>
+            <button 
+                onclick="bulkUpdateRiderNumbers()" 
+                id="bulkUpdateBtn"
+                class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold px-6 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                Uppdatera Alla Nummer
+            </button>
+            <div id="bulkUpdateStatus" class="mt-4 hidden"></div>
+        </div>
+
         <!-- Entry List Import Section -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📋 Entry List Import - Förare</h3>
@@ -908,6 +924,64 @@
         function clearSearch() {
             document.getElementById('riderSearch').value = '';
             document.getElementById('searchResults').classList.add('hidden');
+        }
+        
+        // Bulk update rider numbers
+        async function bulkUpdateRiderNumbers() {
+            const btn = document.getElementById('bulkUpdateBtn');
+            const statusDiv = document.getElementById('bulkUpdateStatus');
+            
+            if (!confirm('Är du säker på att du vill uppdatera alla SMX-förares nummer? Detta kan inte ångras.')) {
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = 'Uppdaterar...';
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = '<p class="text-yellow-400">⏳ Uppdaterar nummer...</p>';
+            
+            try {
+                const response = await fetch('/rider_management/bulk_update_numbers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    statusDiv.innerHTML = `
+                        <div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
+                            <p class="text-green-400 font-semibold">✅ ${data.message}</p>
+                            <p class="text-green-300 text-sm mt-2">Uppdaterade: ${data.updated} förare</p>
+                            ${data.conflicts_resolved > 0 ? `<p class="text-green-300 text-sm">Konflikter lösta: ${data.conflicts_resolved}</p>` : ''}
+                        </div>
+                    `;
+                    // Reload page after 2 seconds to show updated numbers
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = `
+                        <div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                            <p class="text-red-400 font-semibold">❌ Fel vid uppdatering</p>
+                            <p class="text-red-300 text-sm mt-2">${data.error || data.message || 'Okänt fel'}</p>
+                        </div>
+                    `;
+                    btn.disabled = false;
+                    btn.textContent = 'Uppdatera Alla Nummer';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                        <p class="text-red-400 font-semibold">❌ Fel vid uppdatering</p>
+                        <p class="text-red-300 text-sm mt-2">${error.message}</p>
+                    </div>
+                `;
+                btn.disabled = false;
+                btn.textContent = 'Uppdatera Alla Nummer';
+            }
         }
         
         // Show conflict dialog
