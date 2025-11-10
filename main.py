@@ -3771,10 +3771,34 @@ def submit_results():
 
     hs_450 = request.form.get("holeshot_450", type=int)
     hs_250 = request.form.get("holeshot_250", type=int)
+    
     if hs_450:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+        if complement_mode:
+            # Update or add holeshot
+            existing_hs_450 = HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="450cc"
+            ).first()
+            if existing_hs_450:
+                existing_hs_450.rider_id = hs_450
+            else:
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+        else:
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+    
     if hs_250:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+        if complement_mode:
+            # Update or add holeshot
+            existing_hs_250 = HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="250cc"
+            ).first()
+            if existing_hs_250:
+                existing_hs_250.rider_id = hs_250
+            else:
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+        else:
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
     positions_450 = request.form.getlist("positions_450[]", type=int)
     riders_450 = request.form.getlist("riders_450[]", type=int)
