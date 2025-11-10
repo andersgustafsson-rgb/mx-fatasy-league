@@ -2795,6 +2795,41 @@ def migrate_start_time():
         print(f"Migration error: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/fix_canadian_gp_time', methods=['POST'])
+def fix_canadian_gp_time():
+    """Fix Canadian GP start_time to 17:00"""
+    if not is_admin_user():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        from datetime import time
+        
+        # Find Canadian GP
+        canadian_gp = Competition.query.filter(
+            Competition.name.ilike('%canadian%')
+        ).first()
+        
+        if not canadian_gp:
+            return jsonify({'error': 'Canadian GP not found'}), 404
+        
+        # Set start_time to 17:00
+        canadian_gp.start_time = time(17, 0)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated {canadian_gp.name} start_time to 17:00',
+            'competition': {
+                'id': canadian_gp.id,
+                'name': canadian_gp.name,
+                'start_time': '17:00'
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error fixing Canadian GP time: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
 def update_seasons_to_2026():
     """Update all 2025 series and competitions to 2026"""
