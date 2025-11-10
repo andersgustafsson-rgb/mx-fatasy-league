@@ -1157,6 +1157,75 @@ def api_leagues_leaderboard():
     return jsonify(leaderboard)
 
 
+@app.get("/api/leagues/stats")
+def api_leagues_stats():
+    """API endpoint for user's league statistics (JSON)."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    try:
+        uid = session["user_id"]
+        
+        # Get user's leagues
+        my_leagues = League.query.join(LeagueMembership).filter(
+            LeagueMembership.user_id == uid
+        ).all()
+        
+        if not my_leagues:
+            return jsonify({
+                "leagues": [],
+                "message": "Du är inte medlem i någon liga ännu."
+            })
+        
+        # Get all competitions that have results
+        competitions = Competition.query.join(CompetitionResult).distinct().order_by(
+            Competition.event_date.asc()
+        ).all()
+        
+        stats = []
+        for league in my_leagues:
+            # Get league members
+            member_ids = [m.user_id for m in LeagueMembership.query.filter_by(
+                league_id=league.id
+            ).all()]
+            
+            # Calculate points per competition
+            competition_history = []
+            cumulative_points = 0
+            
+            for comp in competitions:
+                # Calculate league points for this competition
+                comp_points = calculate_league_points(league.id, comp.id)
+                
+                if comp_points > 0:  # Only include competitions with points
+                    cumulative_points += comp_points
+                    competition_history.append({
+                        "competition_id": comp.id,
+                        "name": comp.name,
+                        "series": comp.series,
+                        "date": comp.event_date.strftime("%Y-%m-%d") if comp.event_date else "",
+                        "points": round(comp_points, 1),
+                        "cumulative": round(cumulative_points, 1)
+                    })
+            
+            stats.append({
+                "league_id": league.id,
+                "name": league.name,
+                "total_points": league.total_points or 0,
+                "member_count": len(member_ids),
+                "competitions": competition_history,
+                "best_competition": max(competition_history, key=lambda x: x["points"]) if competition_history else None
+            })
+        
+        return jsonify({
+            "leagues": stats
+        })
+        
+    except Exception as e:
+        print(f"Error loading league statistics: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/leagues/<int:league_id>")
