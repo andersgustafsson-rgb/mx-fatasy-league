@@ -11905,7 +11905,7 @@ def race_countdown():
                 db.session.rollback()
                 print(f"DEBUG: autoset active_race_id failed: {_e}")
 
-            # Self-heal timezone/start_time for known WSX Buenos Aires if missing
+            # Self-heal timezone/start_time for known races if missing
             try:
                 needs_commit = False
                 if 'buenos aires' in (next_race_obj.name or '').lower():
@@ -11916,11 +11916,16 @@ def race_countdown():
                         from datetime import time as _t
                         next_race_obj.start_time = _t(hour=13, minute=0)
                         needs_commit = True
+                elif 'canadian' in (next_race_obj.name or '').lower():
+                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                        from datetime import time as _t
+                        next_race_obj.start_time = _t(hour=17, minute=0)
+                        needs_commit = True
                 if needs_commit:
                     db.session.commit()
             except Exception as _e2:
                 db.session.rollback()
-                print(f"DEBUG: failed to auto-fix BA timezone/start_time: {_e2}")
+                print(f"DEBUG: failed to auto-fix timezone/start_time: {_e2}")
             
             # Calculate countdown to race start using start_time from database
             # Ensure event_date is a datetime object
