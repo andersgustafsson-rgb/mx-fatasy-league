@@ -3860,17 +3860,25 @@ def submit_results():
                             existing_at_position = res
                             break
                 
-                if existing_at_position and existing_at_position.rider_id != rid:
-                    # Update the existing result at this position (same class, different rider)
-                    existing_at_position.rider_id = rid
-                    if rider_points is not None:
-                        existing_at_position.rider_points = rider_points
-                elif existing:
-                    # Update existing result (same rider, same position)
+                # In complement mode, we should only update if:
+                # 1. The exact same rider+position already exists (update rider_points if provided)
+                # 2. OR it's a completely new result (add it)
+                # We should NOT overwrite existing results at the same position with different riders
+                # unless explicitly intended (which would be normal mode, not complement mode)
+                
+                if existing:
+                    # Same rider at same position - just update rider_points if provided
                     if rider_points is not None:
                         existing.rider_points = rider_points
+                    # Don't change anything else - keep existing result as is
+                elif existing_at_position and existing_at_position.rider_id != rid:
+                    # There's already a different rider at this position
+                    # In complement mode, we should NOT overwrite - this is a conflict
+                    # Log a warning but don't change the existing result
+                    print(f"⚠️ WARNING: Position {pos} already has rider {existing_at_position.rider_id}, "
+                          f"but trying to add rider {rid}. Skipping in complement mode.")
                 else:
-                    # Add new result
+                    # No existing result at this position - add new one
                     db.session.add(CompetitionResult(
                         competition_id=comp_id, 
                         rider_id=rid, 
@@ -3921,17 +3929,25 @@ def submit_results():
                             existing_at_position = res
                             break
                 
-                if existing_at_position and existing_at_position.rider_id != rid:
-                    # Update the existing result at this position (same class, different rider)
-                    existing_at_position.rider_id = rid
-                    if rider_points is not None:
-                        existing_at_position.rider_points = rider_points
-                elif existing:
-                    # Update existing result (same rider, same position)
+                # In complement mode, we should only update if:
+                # 1. The exact same rider+position already exists (update rider_points if provided)
+                # 2. OR it's a completely new result (add it)
+                # We should NOT overwrite existing results at the same position with different riders
+                # unless explicitly intended (which would be normal mode, not complement mode)
+                
+                if existing:
+                    # Same rider at same position - just update rider_points if provided
                     if rider_points is not None:
                         existing.rider_points = rider_points
+                    # Don't change anything else - keep existing result as is
+                elif existing_at_position and existing_at_position.rider_id != rid:
+                    # There's already a different rider at this position
+                    # In complement mode, we should NOT overwrite - this is a conflict
+                    # Log a warning but don't change the existing result
+                    print(f"⚠️ WARNING: Position {pos} already has rider {existing_at_position.rider_id}, "
+                          f"but trying to add rider {rid}. Skipping in complement mode.")
                 else:
-                    # Add new result
+                    # No existing result at this position - add new one
                     db.session.add(CompetitionResult(
                         competition_id=comp_id, 
                         rider_id=rid, 
