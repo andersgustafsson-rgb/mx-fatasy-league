@@ -10519,6 +10519,47 @@ def recalculate_scores(competition_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.post("/recalculate_all_competition_scores")
+def recalculate_all_competition_scores():
+    """Recalculate scores for all competitions that have results - emergency recovery"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find all competitions that have results
+        competitions_with_results = (
+            db.session.query(Competition.id, Competition.name)
+            .join(CompetitionResult, Competition.id == CompetitionResult.competition_id)
+            .distinct()
+            .all()
+        )
+        
+        recalculated = []
+        errors = []
+        
+        for comp_id, comp_name in competitions_with_results:
+            try:
+                print(f"🔄 Recalculating scores for {comp_name} (ID: {comp_id})...")
+                calculate_scores(comp_id)
+                recalculated.append({"id": comp_id, "name": comp_name})
+                print(f"✅ Recalculated scores for {comp_name}")
+            except Exception as e:
+                error_msg = f"Error recalculating {comp_name}: {str(e)}"
+                errors.append(error_msg)
+                print(f"❌ {error_msg}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Recalculated scores for {len(recalculated)} competitions",
+            "recalculated": recalculated,
+            "errors": errors,
+            "total": len(competitions_with_results)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_csv_row/<int:competition_id>/<int:row_number>")
 def debug_csv_row(competition_id, row_number):
     """Debug specific CSV row for a competition"""
