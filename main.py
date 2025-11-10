@@ -10560,6 +10560,54 @@ def recalculate_all_competition_scores():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.post("/recalculate_buenos_aires_scores")
+def recalculate_buenos_aires_scores():
+    """Recalculate scores for Buenos Aires specifically - emergency recovery"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find Buenos Aires competition
+        buenos_aires = Competition.query.filter(
+            Competition.name.ilike('%buenos%aires%')
+        ).first()
+        
+        if not buenos_aires:
+            return jsonify({"error": "Buenos Aires competition not found"}), 404
+        
+        # Check current state
+        results_count = CompetitionResult.query.filter_by(
+            competition_id=buenos_aires.id
+        ).count()
+        
+        scores_before = CompetitionScore.query.filter_by(
+            competition_id=buenos_aires.id
+        ).count()
+        
+        # Recalculate scores
+        calculate_scores(buenos_aires.id)
+        
+        # Check scores after
+        scores_after = CompetitionScore.query.filter_by(
+            competition_id=buenos_aires.id
+        ).count()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Recalculated scores for {buenos_aires.name}",
+            "competition": {
+                "id": buenos_aires.id,
+                "name": buenos_aires.name
+            },
+            "results_count": results_count,
+            "scores_before": scores_before,
+            "scores_after": scores_after
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/debug_csv_row/<int:competition_id>/<int:row_number>")
 def debug_csv_row(competition_id, row_number):
     """Debug specific CSV row for a competition"""
