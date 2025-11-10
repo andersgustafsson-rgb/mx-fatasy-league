@@ -3757,8 +3757,17 @@ def submit_results():
         flash("Du måste välja tävling.", "error")
         return redirect(url_for("admin_page"))
 
-    CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-    HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+    # Check if this is a "complement" mode (only update/add, don't delete existing)
+    complement_mode = request.form.get("complement_mode", "false").lower() == "true"
+    
+    if not complement_mode:
+        # Normal mode: delete all existing results first
+        CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+        HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+    else:
+        # Complement mode: only update/add, don't delete existing
+        # We'll update or add results as we go
+        pass
 
     hs_450 = request.form.get("holeshot_450", type=int)
     hs_250 = request.form.get("holeshot_250", type=int)
@@ -3798,12 +3807,46 @@ def submit_results():
             rider_points = None
             if is_wsx and i < len(rider_points_450) and rider_points_450[i]:
                 rider_points = rider_points_450[i]
-            db.session.add(CompetitionResult(
-                competition_id=comp_id, 
-                rider_id=rid, 
-                position=pos,
-                rider_points=rider_points
-            ))
+            
+            if complement_mode:
+                # In complement mode: update existing or add new
+                existing = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    position=pos,
+                    rider_id=rid
+                ).first()
+                
+                # Check if there's a result at this position with a different rider
+                existing_at_position = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    position=pos
+                ).first()
+                
+                if existing_at_position and existing_at_position.rider_id != rid:
+                    # Update the existing result at this position
+                    existing_at_position.rider_id = rid
+                    if rider_points is not None:
+                        existing_at_position.rider_points = rider_points
+                elif existing:
+                    # Update existing result
+                    if rider_points is not None:
+                        existing.rider_points = rider_points
+                else:
+                    # Add new result
+                    db.session.add(CompetitionResult(
+                        competition_id=comp_id, 
+                        rider_id=rid, 
+                        position=pos,
+                        rider_points=rider_points
+                    ))
+            else:
+                # Normal mode: just add (we already deleted all existing)
+                db.session.add(CompetitionResult(
+                    competition_id=comp_id, 
+                    rider_id=rid, 
+                    position=pos,
+                    rider_points=rider_points
+                ))
     
     # Save 250cc/SX2 results
     for i, (pos, rid) in enumerate(zip(positions_250, riders_250)):
@@ -3811,12 +3854,46 @@ def submit_results():
             rider_points = None
             if is_wsx and i < len(rider_points_250) and rider_points_250[i]:
                 rider_points = rider_points_250[i]
-            db.session.add(CompetitionResult(
-                competition_id=comp_id, 
-                rider_id=rid, 
-                position=pos,
-                rider_points=rider_points
-            ))
+            
+            if complement_mode:
+                # In complement mode: update existing or add new
+                existing = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    position=pos,
+                    rider_id=rid
+                ).first()
+                
+                # Check if there's a result at this position with a different rider
+                existing_at_position = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    position=pos
+                ).first()
+                
+                if existing_at_position and existing_at_position.rider_id != rid:
+                    # Update the existing result at this position
+                    existing_at_position.rider_id = rid
+                    if rider_points is not None:
+                        existing_at_position.rider_points = rider_points
+                elif existing:
+                    # Update existing result
+                    if rider_points is not None:
+                        existing.rider_points = rider_points
+                else:
+                    # Add new result
+                    db.session.add(CompetitionResult(
+                        competition_id=comp_id, 
+                        rider_id=rid, 
+                        position=pos,
+                        rider_points=rider_points
+                    ))
+            else:
+                # Normal mode: just add (we already deleted all existing)
+                db.session.add(CompetitionResult(
+                    competition_id=comp_id, 
+                    rider_id=rid, 
+                    position=pos,
+                    rider_points=rider_points
+                ))
 
     db.session.commit()
     # Results saved for competition

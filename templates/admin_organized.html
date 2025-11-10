@@ -181,6 +181,13 @@
                         <p class="text-gray-300 mb-4">Lägg in resultat manuellt. <strong>Mata in alla positioner (1-20)</strong> för båda klasser (450cc/SX1 och 250cc/SX2) för att räkna ut förarnas leaderboard-poäng, säsongsteam-poäng och wildcard-poäng. Poängsystem: 25p för 1:a, 22p för 2:a, etc. ned till 1p för 20:e. Holeshot för båda. (Ingen wildcard för WSX)</p>
 
                         <form id="manual-results-form" method="POST" action="/admin/submit_results" class="space-y-4">
+                            <div class="mb-4 p-3 bg-yellow-900/30 border border-yellow-500 rounded-lg">
+                                <label class="flex items-center text-yellow-300 cursor-pointer">
+                                    <input type="checkbox" name="complement_mode" value="true" id="complement-mode-checkbox" class="mr-2 w-4 h-4 text-yellow-600 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500">
+                                    <span class="text-sm font-medium">Komplettera resultat (uppdatera/lägg till utan att radera befintliga)</span>
+                                </label>
+                                <p class="text-yellow-200 text-xs mt-1 ml-6">Aktivera detta om du bara vill lägga till fler positioner (t.ex. 11-20) utan att radera befintliga resultat (t.ex. 1-10).</p>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
