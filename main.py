@@ -3834,25 +3834,39 @@ def submit_results():
             
             if complement_mode:
                 # In complement mode: update existing or add new
+                # Get the rider to check their class
+                rider = Rider.query.get(rid)
+                rider_class = rider.class_name if rider else None
+                
+                # Check if there's already a result for this rider at this position
                 existing = CompetitionResult.query.filter_by(
                     competition_id=comp_id,
                     position=pos,
                     rider_id=rid
                 ).first()
                 
-                # Check if there's a result at this position with a different rider
-                existing_at_position = CompetitionResult.query.filter_by(
-                    competition_id=comp_id,
-                    position=pos
-                ).first()
+                # Check if there's a result at this position for a rider in the same class
+                # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
+                existing_at_position = None
+                if rider_class:
+                    # Find all results at this position and check if any rider has the same class
+                    all_at_position = CompetitionResult.query.filter_by(
+                        competition_id=comp_id,
+                        position=pos
+                    ).all()
+                    for res in all_at_position:
+                        res_rider = Rider.query.get(res.rider_id)
+                        if res_rider and res_rider.class_name == rider_class:
+                            existing_at_position = res
+                            break
                 
                 if existing_at_position and existing_at_position.rider_id != rid:
-                    # Update the existing result at this position
+                    # Update the existing result at this position (same class, different rider)
                     existing_at_position.rider_id = rid
                     if rider_points is not None:
                         existing_at_position.rider_points = rider_points
                 elif existing:
-                    # Update existing result
+                    # Update existing result (same rider, same position)
                     if rider_points is not None:
                         existing.rider_points = rider_points
                 else:
@@ -3881,25 +3895,39 @@ def submit_results():
             
             if complement_mode:
                 # In complement mode: update existing or add new
+                # Get the rider to check their class
+                rider = Rider.query.get(rid)
+                rider_class = rider.class_name if rider else None
+                
+                # Check if there's already a result for this rider at this position
                 existing = CompetitionResult.query.filter_by(
                     competition_id=comp_id,
                     position=pos,
                     rider_id=rid
                 ).first()
                 
-                # Check if there's a result at this position with a different rider
-                existing_at_position = CompetitionResult.query.filter_by(
-                    competition_id=comp_id,
-                    position=pos
-                ).first()
+                # Check if there's a result at this position for a rider in the same class
+                # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
+                existing_at_position = None
+                if rider_class:
+                    # Find all results at this position and check if any rider has the same class
+                    all_at_position = CompetitionResult.query.filter_by(
+                        competition_id=comp_id,
+                        position=pos
+                    ).all()
+                    for res in all_at_position:
+                        res_rider = Rider.query.get(res.rider_id)
+                        if res_rider and res_rider.class_name == rider_class:
+                            existing_at_position = res
+                            break
                 
                 if existing_at_position and existing_at_position.rider_id != rid:
-                    # Update the existing result at this position
+                    # Update the existing result at this position (same class, different rider)
                     existing_at_position.rider_id = rid
                     if rider_points is not None:
                         existing_at_position.rider_points = rider_points
                 elif existing:
-                    # Update existing result
+                    # Update existing result (same rider, same position)
                     if rider_points is not None:
                         existing.rider_points = rider_points
                 else:
