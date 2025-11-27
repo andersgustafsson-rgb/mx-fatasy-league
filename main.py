@@ -12259,6 +12259,14 @@ def race_countdown():
                         from datetime import time as _t
                         next_race_obj.start_time = _t(hour=17, minute=0)
                         needs_commit = True
+                elif 'australian' in (next_race_obj.name or '').lower():
+                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
+                        next_race_obj.timezone = 'Australia/Brisbane'
+                        needs_commit = True
+                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                        from datetime import time as _t
+                        next_race_obj.start_time = _t(hour=18, minute=0)
+                        needs_commit = True
                 if needs_commit:
                     db.session.commit()
             except Exception as _e2:
@@ -12288,7 +12296,8 @@ def race_countdown():
                 'America/Phoenix': -7,      # MST (no DST)
                 'America/Chicago': -6,      # CST
                 'America/New_York': -5,     # EST
-                'America/Argentina/Buenos_Aires': -3  # ART (no DST)
+                'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
+                'Australia/Brisbane': 10  # AEST (no DST)
             }
             
             timezone = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
@@ -12351,6 +12360,14 @@ def race_countdown():
                     if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
                         from datetime import time as _t
                         upcoming_race.start_time = _t(hour=13, minute=0)
+                        needs_commit2 = True
+                elif 'australian' in (upcoming_race.name or '').lower():
+                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
+                        upcoming_race.timezone = 'Australia/Brisbane'
+                        needs_commit2 = True
+                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                        from datetime import time as _t
+                        upcoming_race.start_time = _t(hour=18, minute=0)
                         needs_commit2 = True
                 if needs_commit2:
                     db.session.commit()
