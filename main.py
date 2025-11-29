@@ -737,8 +737,15 @@ def index():
         pass
     
     # Fallback to next race by date if no active race is set
+    # Skip competitions that already have results (completed races)
     if not upcoming_race:
-        upcoming_race = next((c for c in competitions if c.event_date and c.event_date >= today), None)
+        for c in competitions:
+            if c.event_date and c.event_date >= today:
+                # Check if this competition has results (is completed)
+                has_results = CompetitionResult.query.filter_by(competition_id=c.id).first() is not None
+                if not has_results:
+                    upcoming_race = c
+                    break
     
     # Get user-specific data only if logged in
     my_team = None
@@ -9076,9 +9083,17 @@ def view_user_profile(user_id):
         
         try:
             today = get_today()
-            upcoming_race = Competition.query.filter(
+            all_upcoming = Competition.query.filter(
                 Competition.event_date >= today
-            ).order_by(Competition.event_date).first()
+            ).order_by(Competition.event_date).all()
+            
+            upcoming_race = None
+            for comp in all_upcoming:
+                # Check if this competition has results (is completed)
+                has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+                if not has_results:
+                    upcoming_race = comp
+                    break
             
             if upcoming_race:
                 # Check if picks are locked (2 hours before race)
@@ -12219,13 +12234,22 @@ def race_countdown():
                 return jsonify({"error": "No active test simulation"})
         else:
             # Real mode - use actual race dates
+            # Skip competitions that already have results (completed races)
             today = get_today()
-            next_race_obj = (
+            all_upcoming = (
                 Competition.query
                 .filter(Competition.event_date >= today)
                 .order_by(Competition.event_date.asc())
-                .first()
+                .all()
             )
+            
+            next_race_obj = None
+            for comp in all_upcoming:
+                # Check if this competition has results (is completed)
+                has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+                if not has_results:
+                    next_race_obj = comp
+                    break
             
             if not next_race_obj:
                 return jsonify({"error": "No upcoming races"})
@@ -12346,11 +12370,19 @@ def race_countdown():
             }
         
         # Use is_picks_locked for consistency
-        # Find the actual competition for this race
-        upcoming_race = Competition.query.filter(
+        # Find the actual competition for this race (skip completed races)
+        all_upcoming_week = Competition.query.filter(
             Competition.event_date >= today,
             Competition.event_date <= today + timedelta(days=7)
-        ).order_by(Competition.event_date).first()
+        ).order_by(Competition.event_date).all()
+        
+        upcoming_race = None
+        for comp in all_upcoming_week:
+            # Check if this competition has results (is completed)
+            has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+            if not has_results:
+                upcoming_race = comp
+                break
         
         picks_locked = False
         if upcoming_race:
