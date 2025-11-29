@@ -2585,10 +2585,19 @@
       {% if upcoming_race %}
       try {
         const response = await fetch(`/get_other_users_picks/{{ upcoming_race.id }}`);
-        if (!response.ok) throw new Error('Kunde inte hämta andra användares picks');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Okänt fel' }));
+          throw new Error(errorData.error || `HTTP ${response.status}: Kunde inte hämta andra användares picks`);
+        }
         
         const usersPicks = await response.json();
-        // Received users picks data
+        console.log('DEBUG: Received users picks:', usersPicks);
+        
+        // Check if we got an error response
+        if (usersPicks.error) {
+          throw new Error(usersPicks.error);
+        }
         
         // Determine if WSX series (check first user or use upcoming_race series)
         const isWSX = (usersPicks.length > 0 && usersPicks[0].is_wsx) || {% if upcoming_race and upcoming_race.series == 'WSX' %}true{% else %}false{% endif %};
@@ -2605,7 +2614,11 @@
               <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-3xl font-bold bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 flex items-center justify-center transition-colors">&times;</button>
             </div>
             <div class="space-y-4">
-              ${usersPicks.map(user => `
+              ${usersPicks.length === 0 ? `
+                <div class="bg-gray-700 rounded-lg p-4 text-center">
+                  <p class="text-white">Inga andra användare har gjort sina picks ännu.</p>
+                </div>
+              ` : usersPicks.map(user => `
                 <div class="bg-gray-700 rounded-lg p-4">
                   <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">

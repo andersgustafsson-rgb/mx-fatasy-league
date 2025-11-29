@@ -5105,8 +5105,12 @@ def get_other_users_picks(competition_id):
     picks_locked = is_picks_locked(comp)
     has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
     
+    print(f"DEBUG: get_other_users_picks - Competition: {comp.name}, picks_locked: {picks_locked}, has_results: {has_results}")
+    
     if not picks_locked and not has_results:
-        return jsonify({"error": "Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks"}), 403
+        error_msg = f"Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks (picks_locked={picks_locked}, has_results={has_results})"
+        print(f"DEBUG: get_other_users_picks - Access denied: {error_msg}")
+        return jsonify({"error": error_msg}), 403
     
     is_wsx = getattr(comp, 'series', None) == 'WSX'
     
@@ -14013,6 +14017,8 @@ def is_picks_locked(competition):
                     needs_commit = True
             if needs_commit:
                 db.session.commit()
+                # Refresh the object to get updated values
+                db.session.refresh(competition_obj)
         except Exception as _e:
             db.session.rollback()
             print(f"DEBUG: is_picks_locked failed to auto-fix timezone/start_time: {_e}")
@@ -14040,6 +14046,8 @@ def is_picks_locked(competition):
         
         timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
         utc_offset = timezone_offsets.get(timezone, -8)
+        
+        print(f"DEBUG: is_picks_locked - Competition: {competition_obj.name}, timezone: {timezone}, start_time: {competition_obj.start_time}, utc_offset: {utc_offset}")
         race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
         # Check if picks are locked (2 hours before race)
