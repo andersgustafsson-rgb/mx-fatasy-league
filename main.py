@@ -14000,6 +14000,23 @@ def is_picks_locked(competition):
         picks_locked = time_to_deadline.total_seconds() <= 0
     else:
         # Check if picks are locked (2 hours before race)
+        # Self-heal timezone/start_time for known races if missing
+        try:
+            needs_commit = False
+            if 'australian' in (competition_obj.name or '').lower():
+                if hasattr(competition_obj, 'timezone') and not competition_obj.timezone:
+                    competition_obj.timezone = 'Australia/Brisbane'
+                    needs_commit = True
+                if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
+                    from datetime import time as _t
+                    competition_obj.start_time = _t(hour=18, minute=0)
+                    needs_commit = True
+            if needs_commit:
+                db.session.commit()
+        except Exception as _e:
+            db.session.rollback()
+            print(f"DEBUG: is_picks_locked failed to auto-fix timezone/start_time: {_e}")
+        
         race_date = competition_obj.event_date
         
         # Use start_time from database if available, otherwise default to 8 PM
@@ -14017,7 +14034,8 @@ def is_picks_locked(competition):
             'America/Phoenix': -7,      # MST (no DST)
             'America/Chicago': -6,      # CST
             'America/New_York': -5,     # EST
-            'America/Argentina/Buenos_Aires': -3  # ART (no DST)
+            'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
+            'Australia/Brisbane': 10  # AEST (no DST)
         }
         
         timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
