@@ -3974,13 +3974,21 @@ def submit_results():
         else:
             db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
-    positions_450 = request.form.getlist("positions_450[]", type=int)
-    riders_450 = request.form.getlist("riders_450[]", type=int)
-    positions_250 = request.form.getlist("positions_250[]", type=int)
-    riders_250 = request.form.getlist("riders_250[]", type=int)
+    positions_450_raw = request.form.getlist("positions_450[]")
+    riders_450_raw = request.form.getlist("riders_450[]")
+    positions_250_raw = request.form.getlist("positions_250[]")
+    riders_250_raw = request.form.getlist("riders_250[]")
     
-    print(f"🔍 DEBUG submit_results: positions_450={positions_450}, riders_450={riders_450}")
-    print(f"🔍 DEBUG submit_results: positions_250={positions_250}, riders_250={riders_250}")
+    # Convert to int, keeping all positions but converting empty riders to 0
+    positions_450 = [int(p) if p else 0 for p in positions_450_raw]
+    riders_450 = [int(r) if r else 0 for r in riders_450_raw]
+    positions_250 = [int(p) if p else 0 for p in positions_250_raw]
+    riders_250 = [int(r) if r else 0 for r in riders_250_raw]
+    
+    print(f"🔍 DEBUG submit_results: positions_450 length={len(positions_450)}, riders_450 length={len(riders_450)}")
+    print(f"🔍 DEBUG submit_results: Non-zero riders_450: {[r for r in riders_450 if r]}")
+    print(f"🔍 DEBUG submit_results: positions_250 length={len(positions_250)}, riders_250 length={len(riders_250)}")
+    print(f"🔍 DEBUG submit_results: Non-zero riders_250: {[r for r in riders_250 if r]}")
     
     # Get rider points for WSX (if provided)
     rider_points_450 = request.form.getlist("rider_points_450[]", type=int)
@@ -4003,13 +4011,24 @@ def submit_results():
         return redirect(url_for("admin_page"))
 
     # Save 450cc/SX1 results
+    print(f"🔍 DEBUG: Processing 450cc/SX1 results. positions_450 length: {len(positions_450)}, riders_450 length: {len(riders_450)}")
+    if len(positions_450) != len(riders_450):
+        print(f"⚠️ WARNING: Mismatch! positions_450 has {len(positions_450)} elements but riders_450 has {len(riders_450)} elements")
+        # Pad the shorter list with zeros
+        if len(positions_450) < len(riders_450):
+            positions_450.extend([0] * (len(riders_450) - len(positions_450)))
+        else:
+            riders_450.extend([0] * (len(positions_450) - len(riders_450)))
+    
     for i, (pos, rid) in enumerate(zip(positions_450, riders_450)):
         if rid:
+            print(f"🔍 DEBUG: Processing position {pos} with rider {rid}")
             rider_points = None
             if is_wsx and i < len(rider_points_450) and rider_points_450[i]:
                 rider_points = rider_points_450[i]
             
             if complement_mode:
+                print(f"🔍 DEBUG: Complement mode active for position {pos}, rider {rid}")
                 # In complement mode: update existing or add new
                 # Get the rider to check their class
                 rider = Rider.query.get(rid)
@@ -4054,6 +4073,7 @@ def submit_results():
                     else:
                         # No existing result at this position for this class - add new one
                         rider_name = rider.name if rider else "Unknown"
+                        print(f"🔍 DEBUG: No conflict found. Adding new result for {rider_name} at position {pos}")
                         new_result = CompetitionResult(
                             competition_id=comp_id, 
                             rider_id=rid, 
@@ -4148,12 +4168,21 @@ def submit_results():
     print(f"📊 DEBUG: Total results after commit for competition {comp_id}: {total_results}")
     if complement_mode:
         print(f"📊 DEBUG: Complement mode was used - results should have been added/updated")
-        # Show all results for this competition
+        # Show all results for this competition, grouped by class
         all_results = CompetitionResult.query.filter_by(competition_id=comp_id).order_by(CompetitionResult.position.asc()).all()
+        sx1_results = []
+        sx2_results = []
         for res in all_results:
             rider = Rider.query.get(res.rider_id)
             rider_name = rider.name if rider else "Unknown"
-            print(f"  - Position {res.position}: {rider_name} (ID: {res.rider_id}, class: {rider.class_name if rider else '?'}, points: {res.rider_points})")
+            rider_class = rider.class_name if rider else "Unknown"
+            result_info = f"Position {res.position}: {rider_name} (ID: {res.rider_id}, class: {rider_class}, points: {res.rider_points})"
+            if rider_class in ('450cc', 'wsx_sx1'):
+                sx1_results.append(result_info)
+            elif rider_class in ('250cc', 'wsx_sx2'):
+                sx2_results.append(result_info)
+            print(f"  - {result_info}")
+        print(f"📊 DEBUG: SX1/450cc results: {len(sx1_results)}, SX2/250cc results: {len(sx2_results)}")
     
     calculate_scores(comp_id)
 
