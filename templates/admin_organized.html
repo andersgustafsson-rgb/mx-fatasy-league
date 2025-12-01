@@ -1268,19 +1268,24 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if we just submitted results and need to reload them
+            const lastCompId = sessionStorage.getItem('lastSubmittedCompetitionId');
+            
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
             loadPicksStatsCompetitions();
             loadAnnouncement(); // Load existing announcement when page loads
             
-            // Load existing results if a competition is already selected
-            setTimeout(() => {
-                const compId = document.getElementById('manual-competition')?.value;
-                if (compId) {
-                    loadExistingResults(compId);
-                }
-            }, 500);
+            // Load existing results if a competition is already selected (only if not just submitted)
+            if (!lastCompId) {
+                setTimeout(() => {
+                    const compId = document.getElementById('manual-competition')?.value;
+                    if (compId) {
+                        loadExistingResults(compId);
+                    }
+                }, 500);
+            }
             
             const form = document.getElementById('manual-results-form');
             if (form) {
@@ -1293,7 +1298,28 @@
                         alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och SX2.');
                         return false;
                     }
+                    
+                    // Save competition_id to sessionStorage so we can reload results after redirect
+                    const compId = document.getElementById('manual-competition').value;
+                    if (compId) {
+                        sessionStorage.setItem('lastSubmittedCompetitionId', compId);
+                    }
                 };
+            }
+            
+            // If we just submitted results, reload them
+            if (lastCompId) {
+                // Clear it so it doesn't reload on next page load
+                sessionStorage.removeItem('lastSubmittedCompetitionId');
+                // Wait a bit for competitions to load, then set the competition dropdown
+                setTimeout(() => {
+                    const compSelect = document.getElementById('manual-competition');
+                    if (compSelect) {
+                        compSelect.value = lastCompId;
+                        // Trigger change event to load riders and results
+                        compSelect.dispatchEvent(new Event('change'));
+                    }
+                }, 300);
             }
         });
 
