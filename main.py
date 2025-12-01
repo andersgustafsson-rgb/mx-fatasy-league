@@ -3674,7 +3674,10 @@ def admin_get_results(competition_id):
             db.session.query(
                 CompetitionResult.rider_id,
                 CompetitionResult.position,
+                CompetitionResult.rider_points,
                 Rider.class_name.label("class_name"),
+                Rider.name.label("rider_name"),
+                Rider.rider_number.label("rider_number"),
             )
             .join(Rider, Rider.id == CompetitionResult.rider_id)
             .filter(CompetitionResult.competition_id == competition_id)
@@ -3682,18 +3685,41 @@ def admin_get_results(competition_id):
             .all()
         )
 
-        holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
+        holos = (
+            db.session.query(
+                HoleshotResult.rider_id,
+                HoleshotResult.class_name,
+                Rider.name.label("rider_name"),
+                Rider.rider_number.label("rider_number"),
+            )
+            .join(Rider, Rider.id == HoleshotResult.rider_id)
+            .filter(HoleshotResult.competition_id == competition_id)
+            .all()
+        )
 
         # Found results and holeshot results
 
         return jsonify(
             {
                 "top_results": [
-                    {"rider_id": r.rider_id, "position": r.position, "class": r.class_name}
+                    {
+                        "rider_id": r.rider_id,
+                        "position": r.position,
+                        "class": r.class_name,
+                        "rider_name": r.rider_name,
+                        "rider_number": r.rider_number,
+                        "rider_points": r.rider_points
+                    }
                     for r in results
                 ],
                 "holeshot_results": [
-                    {"rider_id": h.rider_id, "class": h.class_name} for h in holos
+                    {
+                        "rider_id": h.rider_id,
+                        "class": h.class_name,
+                        "rider_name": h.rider_name,
+                        "rider_number": h.rider_number
+                    }
+                    for h in holos
                 ],
             }
         )

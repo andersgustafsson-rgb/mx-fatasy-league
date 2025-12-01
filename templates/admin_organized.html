@@ -230,6 +230,19 @@
                         </form>
 
                         <p class="text-xs text-gray-400 mt-3">Notering: För WSX mappas SX1 → 450cc och SX2 → 250cc under huven så att poängberäkningen återanvänder befintliga regler.</p>
+                        
+                        <!-- Existing Results Display -->
+                        <div id="existing-results-section" class="mt-6 hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-lg font-semibold text-white">📊 Befintliga Resultat</h4>
+                                <button onclick="refreshExistingResults()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">🔄 Uppdatera</button>
+                            </div>
+                            <div class="bg-gray-900 rounded-lg p-4">
+                                <div id="existing-results-content" class="text-gray-300">
+                                    <p class="text-sm">Laddar resultat...</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1261,6 +1274,14 @@
             loadPicksStatsCompetitions();
             loadAnnouncement(); // Load existing announcement when page loads
             
+            // Load existing results if a competition is already selected
+            setTimeout(() => {
+                const compId = document.getElementById('manual-competition')?.value;
+                if (compId) {
+                    loadExistingResults(compId);
+                }
+            }, 500);
+            
             const form = document.getElementById('manual-results-form');
             if (form) {
                 form.onsubmit = function(e) {
@@ -1326,6 +1347,9 @@
             const isWSX = competition?.series === 'WSX';
             
             console.log('Manual competition changed:', { compId, compIdNum, competition, isWSX });
+            
+            // Load existing results for this competition
+            loadExistingResults(compId);
             
             // Fetch riders for this competition (admin endpoint returns all riders incl. class)
             const res = await fetch(`/admin/get_out_status/${compId}`);
@@ -1509,6 +1533,102 @@
             } catch (e) {
                 console.error('WSX OUT error', e);
                 alert('❌ Fel vid uppdatering av OUT: ' + e.message);
+            }
+        }
+
+        function refreshExistingResults() {
+            const compId = document.getElementById('manual-competition').value;
+            if (compId) {
+                loadExistingResults(compId);
+            } else {
+                alert('Välj en tävling först');
+            }
+        }
+
+        async function loadExistingResults(compId) {
+            const resultsSection = document.getElementById('existing-results-section');
+            const resultsContent = document.getElementById('existing-results-content');
+            
+            if (!compId) {
+                resultsSection.classList.add('hidden');
+                return;
+            }
+            
+            try {
+                resultsContent.innerHTML = '<p class="text-sm">Laddar resultat...</p>';
+                resultsSection.classList.remove('hidden');
+                
+                const response = await fetch(`/admin/get_results/${compId}`);
+                if (!response.ok) {
+                    throw new Error('Kunde inte hämta resultat');
+                }
+                
+                const data = await response.json();
+                
+                // Group results by class
+                const results450 = data.top_results.filter(r => r.class === '450cc' || r.class === 'wsx_sx1');
+                const results250 = data.top_results.filter(r => r.class === '250cc' || r.class === 'wsx_sx2');
+                
+                // Get holeshot results
+                const holeshot450 = data.holeshot_results.find(h => h.class === '450cc' || h.class === 'wsx_sx1');
+                const holeshot250 = data.holeshot_results.find(h => h.class === '250cc' || h.class === 'wsx_sx2');
+                
+                if (results450.length === 0 && results250.length === 0 && !holeshot450 && !holeshot250) {
+                    resultsContent.innerHTML = '<p class="text-sm text-gray-400">Inga resultat inlagda ännu för denna tävling.</p>';
+                    return;
+                }
+                
+                let html = '<div class="space-y-4">';
+                
+                // Show 450cc/SX1 results
+                if (results450.length > 0) {
+                    html += '<div><h5 class="text-sm font-semibold text-yellow-400 mb-2">450cc/SX1 Resultat (' + results450.length + ' förare)</h5>';
+                    html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
+                    results450.sort((a, b) => a.position - b.position).forEach(r => {
+                        const pointsText = r.rider_points ? ` (${r.rider_points}p)` : '';
+                        html += `<div class="bg-gray-800 p-2 rounded border-l-2 border-yellow-500">`;
+                        html += `<span class="text-gray-400 font-bold">${r.position}.</span> `;
+                        html += `<span class="text-white">#${r.rider_number || '?'} ${r.rider_name || 'Unknown'}</span>`;
+                        if (pointsText) html += `<span class="text-yellow-400">${pointsText}</span>`;
+                        html += `</div>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                // Show 250cc/SX2 results
+                if (results250.length > 0) {
+                    html += '<div><h5 class="text-sm font-semibold text-blue-400 mb-2">250cc/SX2 Resultat (' + results250.length + ' förare)</h5>';
+                    html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
+                    results250.sort((a, b) => a.position - b.position).forEach(r => {
+                        const pointsText = r.rider_points ? ` (${r.rider_points}p)` : '';
+                        html += `<div class="bg-gray-800 p-2 rounded border-l-2 border-blue-500">`;
+                        html += `<span class="text-gray-400 font-bold">${r.position}.</span> `;
+                        html += `<span class="text-white">#${r.rider_number || '?'} ${r.rider_name || 'Unknown'}</span>`;
+                        if (pointsText) html += `<span class="text-blue-400">${pointsText}</span>`;
+                        html += `</div>`;
+                    });
+                    html += '</div></div>';
+                }
+                
+                // Show holeshot results
+                if (holeshot450 || holeshot250) {
+                    html += '<div><h5 class="text-sm font-semibold text-green-400 mb-2">Holeshot</h5>';
+                    html += '<div class="flex gap-4 text-xs">';
+                    if (holeshot450) {
+                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">450cc/SX1: #${holeshot450.rider_number || '?'} ${holeshot450.rider_name || 'Unknown'}</span>`;
+                    }
+                    if (holeshot250) {
+                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">250cc/SX2: #${holeshot250.rider_number || '?'} ${holeshot250.rider_name || 'Unknown'}</span>`;
+                    }
+                    html += '</div></div>';
+                }
+                
+                html += '</div>';
+                resultsContent.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error loading existing results:', error);
+                resultsContent.innerHTML = '<p class="text-sm text-red-400">Fel vid laddning av resultat: ' + error.message + '</p>';
             }
         }
     </script>
