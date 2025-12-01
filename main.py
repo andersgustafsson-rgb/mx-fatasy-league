@@ -2193,21 +2193,21 @@ def delete_league(league_id):
         return redirect(url_for("login"))
     
     try:
-    league = League.query.get_or_404(league_id)
-    if league.creator_id != session["user_id"]:
-        flash("Endast skaparen kan radera ligan.", "error")
-        return redirect(url_for("league_detail_page", league_id=league_id))
+        league = League.query.get_or_404(league_id)
+        if league.creator_id != session["user_id"]:
+            flash("Endast skaparen kan radera ligan.", "error")
+            return redirect(url_for("league_detail_page", league_id=league_id))
         
         # Delete all related data first (same as admin_delete_league)
         LeagueRequest.query.filter_by(league_id=league_id).delete()
-    LeagueMembership.query.filter_by(league_id=league_id).delete()
+        LeagueMembership.query.filter_by(league_id=league_id).delete()
         
         # Delete the league
-    db.session.delete(league)
-    db.session.commit()
+        db.session.delete(league)
+        db.session.commit()
         
-    flash("Ligan är raderad.", "success")
-    return redirect(url_for("leagues_page"))
+        flash("Ligan är raderad.", "success")
+        return redirect(url_for("leagues_page"))
         
     except Exception as e:
         db.session.rollback()
@@ -3936,8 +3936,8 @@ def submit_results():
     
     if not complement_mode:
         # Normal mode: delete all existing results first
-    CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-    HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+        CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+        HoleshotResult.query.filter_by(competition_id=comp_id).delete()
     else:
         # Complement mode: only update/add, don't delete existing
         # We'll update or add results as we go
@@ -3956,7 +3956,7 @@ def submit_results():
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
             else:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
         else:
             db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
     
@@ -3972,7 +3972,7 @@ def submit_results():
             else:
                 db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
         else:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
     positions_450 = request.form.getlist("positions_450[]", type=int)
     riders_450 = request.form.getlist("riders_450[]", type=int)
@@ -5278,10 +5278,10 @@ def get_other_users_picks(competition_id):
                         picks_250.append(pick_data)
                 else:
                     # Regular series: 450cc and 250cc
-                if rider.class_name == '450cc' and len(picks_450) < 6:
-                    picks_450.append(pick_data)
-                elif rider.class_name == '250cc' and len(picks_250) < 6:
-                    picks_250.append(pick_data)
+                    if rider.class_name == '450cc' and len(picks_450) < 6:
+                        picks_450.append(pick_data)
+                    elif rider.class_name == '250cc' and len(picks_250) < 6:
+                        picks_250.append(pick_data)
         
         # Sort by position and take only top 6
         picks_450.sort(key=lambda x: x['position'])
@@ -5300,10 +5300,10 @@ def get_other_users_picks(competition_id):
                 if is_wsx:
                     # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
                     if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
-                holeshot_450 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                        holeshot_450 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
                     elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
                         holeshot_250 = {
                             "rider_number": getattr(rider, 'rider_number', '?') or '?',
@@ -5317,10 +5317,10 @@ def get_other_users_picks(competition_id):
                             "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                         }
                     elif holeshot.class_name == '250cc' and not holeshot_250:
-                holeshot_250 = {
-                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                }
+                        holeshot_250 = {
+                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                        }
         
         # Get wildcard pick (only for non-WSX series)
         wildcard = None
