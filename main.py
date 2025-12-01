@@ -3861,6 +3861,7 @@ def submit_results():
 
     # Check if this is a "complement" mode (only update/add, don't delete existing)
     complement_mode = request.form.get("complement_mode", "false").lower() == "true"
+    print(f"🔍 DEBUG submit_results: competition_id={comp_id}, complement_mode={complement_mode}")
     
     if not complement_mode:
         # Normal mode: delete all existing results first
@@ -3906,6 +3907,9 @@ def submit_results():
     riders_450 = request.form.getlist("riders_450[]", type=int)
     positions_250 = request.form.getlist("positions_250[]", type=int)
     riders_250 = request.form.getlist("riders_250[]", type=int)
+    
+    print(f"🔍 DEBUG submit_results: positions_450={positions_450}, riders_450={riders_450}")
+    print(f"🔍 DEBUG submit_results: positions_250={positions_250}, riders_250={riders_250}")
     
     # Get rider points for WSX (if provided)
     rider_points_450 = request.form.getlist("rider_points_450[]", type=int)
@@ -3972,10 +3976,13 @@ def submit_results():
                     if existing_at_position and existing_at_position.rider_id != rid:
                         # There's already a different rider at this position in the same class
                         # In complement mode, we should NOT overwrite - this is a conflict
-                        print(f"⚠️ WARNING 450: Position {pos} already has rider {existing_at_position.rider_id} (class {rider_class}), "
-                              f"but trying to add rider {rid}. Skipping in complement mode.")
+                        existing_rider = Rider.query.get(existing_at_position.rider_id)
+                        existing_rider_name = existing_rider.name if existing_rider else "Unknown"
+                        print(f"⚠️ WARNING SX1/450: Position {pos} already has {existing_rider_name} (ID: {existing_at_position.rider_id}, class {rider_class}), "
+                              f"but trying to add rider {rid} (class {rider_class}). Skipping in complement mode.")
                     else:
                         # No existing result at this position for this class - add new one
+                        rider_name = rider.name if rider else "Unknown"
                         new_result = CompetitionResult(
                             competition_id=comp_id, 
                             rider_id=rid, 
@@ -3983,7 +3990,7 @@ def submit_results():
                             rider_points=rider_points
                         )
                         db.session.add(new_result)
-                        print(f"✅ COMPLEMENT 450: Added new result - rider {rid} at position {pos} (class: {rider_class}, points: {rider_points})")
+                        print(f"✅ COMPLEMENT SX1/450: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
                 db.session.add(CompetitionResult(
@@ -4038,10 +4045,13 @@ def submit_results():
                     if existing_at_position and existing_at_position.rider_id != rid:
                         # There's already a different rider at this position in the same class
                         # In complement mode, we should NOT overwrite - this is a conflict
-                        print(f"⚠️ WARNING 250: Position {pos} already has rider {existing_at_position.rider_id} (class {rider_class}), "
-                              f"but trying to add rider {rid}. Skipping in complement mode.")
+                        existing_rider = Rider.query.get(existing_at_position.rider_id)
+                        existing_rider_name = existing_rider.name if existing_rider else "Unknown"
+                        print(f"⚠️ WARNING SX2/250: Position {pos} already has {existing_rider_name} (ID: {existing_at_position.rider_id}, class {rider_class}), "
+                              f"but trying to add rider {rid} (class {rider_class}). Skipping in complement mode.")
                     else:
                         # No existing result at this position for this class - add new one
+                        rider_name = rider.name if rider else "Unknown"
                         new_result = CompetitionResult(
                             competition_id=comp_id, 
                             rider_id=rid, 
@@ -4049,7 +4059,7 @@ def submit_results():
                             rider_points=rider_points
                         )
                         db.session.add(new_result)
-                        print(f"✅ COMPLEMENT 250: Added new result - rider {rid} at position {pos} (class: {rider_class}, points: {rider_points})")
+                        print(f"✅ COMPLEMENT SX2/250: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
                 db.session.add(CompetitionResult(
