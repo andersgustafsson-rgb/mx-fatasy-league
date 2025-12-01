@@ -3947,46 +3947,43 @@ def submit_results():
                     rider_id=rid
                 ).first()
                 
-                # Check if there's a result at this position for a rider in the same class
-                # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
-                existing_at_position = None
-                if rider_class:
-                    # Find all results at this position and check if any rider has the same class
-                    all_at_position = CompetitionResult.query.filter_by(
-                        competition_id=comp_id,
-                        position=pos
-                    ).all()
-                    for res in all_at_position:
-                        res_rider = Rider.query.get(res.rider_id)
-                        if res_rider and res_rider.class_name == rider_class:
-                            existing_at_position = res
-                            break
-                
-                # In complement mode, we should only update if:
-                # 1. The exact same rider+position already exists (update rider_points if provided)
-                # 2. OR it's a completely new result (add it)
-                # We should NOT overwrite existing results at the same position with different riders
-                # unless explicitly intended (which would be normal mode, not complement mode)
-                
                 if existing:
                     # Same rider at same position - just update rider_points if provided
                     if rider_points is not None:
                         existing.rider_points = rider_points
+                        print(f"✅ COMPLEMENT 450: Updated rider_points for rider {rid} at position {pos}")
                     # Don't change anything else - keep existing result as is
-                elif existing_at_position and existing_at_position.rider_id != rid:
-                    # There's already a different rider at this position
-                    # In complement mode, we should NOT overwrite - this is a conflict
-                    # Log a warning but don't change the existing result
-                    print(f"⚠️ WARNING: Position {pos} already has rider {existing_at_position.rider_id}, "
-                          f"but trying to add rider {rid}. Skipping in complement mode.")
                 else:
-                    # No existing result at this position - add new one
-                    db.session.add(CompetitionResult(
-                        competition_id=comp_id, 
-                        rider_id=rid, 
-                        position=pos,
-                        rider_points=rider_points
-                    ))
+                    # Check if there's a result at this position for a rider in the same class
+                    # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
+                    existing_at_position = None
+                    if rider_class:
+                        # Find all results at this position and check if any rider has the same class
+                        all_at_position = CompetitionResult.query.filter_by(
+                            competition_id=comp_id,
+                            position=pos
+                        ).all()
+                        for res in all_at_position:
+                            res_rider = Rider.query.get(res.rider_id)
+                            if res_rider and res_rider.class_name == rider_class:
+                                existing_at_position = res
+                                break
+                    
+                    if existing_at_position and existing_at_position.rider_id != rid:
+                        # There's already a different rider at this position in the same class
+                        # In complement mode, we should NOT overwrite - this is a conflict
+                        print(f"⚠️ WARNING 450: Position {pos} already has rider {existing_at_position.rider_id} (class {rider_class}), "
+                              f"but trying to add rider {rid}. Skipping in complement mode.")
+                    else:
+                        # No existing result at this position for this class - add new one
+                        new_result = CompetitionResult(
+                            competition_id=comp_id, 
+                            rider_id=rid, 
+                            position=pos,
+                            rider_points=rider_points
+                        )
+                        db.session.add(new_result)
+                        print(f"✅ COMPLEMENT 450: Added new result - rider {rid} at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
                 db.session.add(CompetitionResult(
@@ -4016,46 +4013,43 @@ def submit_results():
                     rider_id=rid
                 ).first()
                 
-                # Check if there's a result at this position for a rider in the same class
-                # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
-                existing_at_position = None
-                if rider_class:
-                    # Find all results at this position and check if any rider has the same class
-                    all_at_position = CompetitionResult.query.filter_by(
-                        competition_id=comp_id,
-                        position=pos
-                    ).all()
-                    for res in all_at_position:
-                        res_rider = Rider.query.get(res.rider_id)
-                        if res_rider and res_rider.class_name == rider_class:
-                            existing_at_position = res
-                            break
-                
-                # In complement mode, we should only update if:
-                # 1. The exact same rider+position already exists (update rider_points if provided)
-                # 2. OR it's a completely new result (add it)
-                # We should NOT overwrite existing results at the same position with different riders
-                # unless explicitly intended (which would be normal mode, not complement mode)
-                
                 if existing:
                     # Same rider at same position - just update rider_points if provided
                     if rider_points is not None:
                         existing.rider_points = rider_points
+                        print(f"✅ COMPLEMENT 250: Updated rider_points for rider {rid} at position {pos}")
                     # Don't change anything else - keep existing result as is
-                elif existing_at_position and existing_at_position.rider_id != rid:
-                    # There's already a different rider at this position
-                    # In complement mode, we should NOT overwrite - this is a conflict
-                    # Log a warning but don't change the existing result
-                    print(f"⚠️ WARNING: Position {pos} already has rider {existing_at_position.rider_id}, "
-                          f"but trying to add rider {rid}. Skipping in complement mode.")
                 else:
-                    # No existing result at this position - add new one
-                    db.session.add(CompetitionResult(
-                        competition_id=comp_id, 
-                        rider_id=rid, 
-                        position=pos,
-                        rider_points=rider_points
-                    ))
+                    # Check if there's a result at this position for a rider in the same class
+                    # (450cc/SX1 riders can have same position as 250cc/SX2 riders)
+                    existing_at_position = None
+                    if rider_class:
+                        # Find all results at this position and check if any rider has the same class
+                        all_at_position = CompetitionResult.query.filter_by(
+                            competition_id=comp_id,
+                            position=pos
+                        ).all()
+                        for res in all_at_position:
+                            res_rider = Rider.query.get(res.rider_id)
+                            if res_rider and res_rider.class_name == rider_class:
+                                existing_at_position = res
+                                break
+                    
+                    if existing_at_position and existing_at_position.rider_id != rid:
+                        # There's already a different rider at this position in the same class
+                        # In complement mode, we should NOT overwrite - this is a conflict
+                        print(f"⚠️ WARNING 250: Position {pos} already has rider {existing_at_position.rider_id} (class {rider_class}), "
+                              f"but trying to add rider {rid}. Skipping in complement mode.")
+                    else:
+                        # No existing result at this position for this class - add new one
+                        new_result = CompetitionResult(
+                            competition_id=comp_id, 
+                            rider_id=rid, 
+                            position=pos,
+                            rider_points=rider_points
+                        )
+                        db.session.add(new_result)
+                        print(f"✅ COMPLEMENT 250: Added new result - rider {rid} at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
                 db.session.add(CompetitionResult(
@@ -4067,6 +4061,12 @@ def submit_results():
 
     db.session.commit()
     # Results saved for competition
+    
+    # Debug: Count results after commit
+    total_results = CompetitionResult.query.filter_by(competition_id=comp_id).count()
+    print(f"📊 DEBUG: Total results after commit for competition {comp_id}: {total_results}")
+    if complement_mode:
+        print(f"📊 DEBUG: Complement mode was used - results should have been added/updated")
     
     calculate_scores(comp_id)
 
