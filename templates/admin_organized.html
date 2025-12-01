@@ -1597,9 +1597,10 @@
                 if (data.sx1_results.length > 0) {
                     debugHtml += '<div class="grid grid-cols-2 md:grid-cols-4 gap-1">';
                     data.sx1_results.forEach(r => {
+                        const points = r.calculated_points !== undefined ? r.calculated_points : (r.rider_points || 0);
                         debugHtml += `<div class="bg-gray-800 p-1 rounded text-xs">`;
                         debugHtml += `Pos ${r.position}: #${r.rider_number} ${r.rider_name}`;
-                        if (r.rider_points) debugHtml += ` (${r.rider_points}p)`;
+                        if (points > 0) debugHtml += ` (${points}p)`;
                         debugHtml += `</div>`;
                     });
                     debugHtml += '</div>';
@@ -1612,9 +1613,10 @@
                 if (data.sx2_results.length > 0) {
                     debugHtml += '<div class="grid grid-cols-2 md:grid-cols-4 gap-1">';
                     data.sx2_results.forEach(r => {
+                        const points = r.calculated_points !== undefined ? r.calculated_points : (r.rider_points || 0);
                         debugHtml += `<div class="bg-gray-800 p-1 rounded text-xs">`;
                         debugHtml += `Pos ${r.position}: #${r.rider_number} ${r.rider_name}`;
-                        if (r.rider_points) debugHtml += ` (${r.rider_points}p)`;
+                        if (points > 0) debugHtml += ` (${points}p)`;
                         debugHtml += `</div>`;
                     });
                     debugHtml += '</div>';
@@ -1687,7 +1689,9 @@
                     html += '<div><h5 class="text-sm font-semibold text-yellow-400 mb-2">450cc/SX1 Resultat (' + results450.length + ' förare)</h5>';
                     html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
                     results450.sort((a, b) => a.position - b.position).forEach(r => {
-                        const pointsText = r.rider_points ? ` (${r.rider_points}p)` : '';
+                        // Use calculated_points if available, otherwise use rider_points
+                        const points = r.calculated_points !== undefined ? r.calculated_points : (r.rider_points || 0);
+                        const pointsText = points > 0 ? ` (${points}p)` : '';
                         html += `<div class="bg-gray-800 p-2 rounded border-l-2 border-yellow-500">`;
                         html += `<span class="text-gray-400 font-bold">${r.position}.</span> `;
                         html += `<span class="text-white">#${r.rider_number || '?'} ${r.rider_name || 'Unknown'}</span>`;
@@ -1702,7 +1706,9 @@
                     html += '<div><h5 class="text-sm font-semibold text-blue-400 mb-2">250cc/SX2 Resultat (' + results250.length + ' förare)</h5>';
                     html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
                     results250.sort((a, b) => a.position - b.position).forEach(r => {
-                        const pointsText = r.rider_points ? ` (${r.rider_points}p)` : '';
+                        // Use calculated_points if available, otherwise use rider_points
+                        const points = r.calculated_points !== undefined ? r.calculated_points : (r.rider_points || 0);
+                        const pointsText = points > 0 ? ` (${points}p)` : '';
                         html += `<div class="bg-gray-800 p-2 rounded border-l-2 border-blue-500">`;
                         html += `<span class="text-gray-400 font-bold">${r.position}.</span> `;
                         html += `<span class="text-white">#${r.rider_number || '?'} ${r.rider_name || 'Unknown'}</span>`;

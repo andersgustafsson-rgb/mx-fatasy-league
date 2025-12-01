@@ -2193,21 +2193,21 @@ def delete_league(league_id):
         return redirect(url_for("login"))
     
     try:
-        league = League.query.get_or_404(league_id)
-        if league.creator_id != session["user_id"]:
-            flash("Endast skaparen kan radera ligan.", "error")
-            return redirect(url_for("league_detail_page", league_id=league_id))
+    league = League.query.get_or_404(league_id)
+    if league.creator_id != session["user_id"]:
+        flash("Endast skaparen kan radera ligan.", "error")
+        return redirect(url_for("league_detail_page", league_id=league_id))
         
         # Delete all related data first (same as admin_delete_league)
         LeagueRequest.query.filter_by(league_id=league_id).delete()
-        LeagueMembership.query.filter_by(league_id=league_id).delete()
+    LeagueMembership.query.filter_by(league_id=league_id).delete()
         
         # Delete the league
-        db.session.delete(league)
-        db.session.commit()
+    db.session.delete(league)
+    db.session.commit()
         
-        flash("Ligan är raderad.", "success")
-        return redirect(url_for("leagues_page"))
+    flash("Ligan är raderad.", "success")
+    return redirect(url_for("leagues_page"))
         
     except Exception as e:
         db.session.rollback()
@@ -3697,26 +3697,41 @@ def admin_get_results(competition_id):
             .all()
         )
 
+        # Get competition to determine series
+        competition = Competition.query.get(competition_id)
+        is_wsx = competition and competition.series == 'WSX'
+        
         # Debug: Log all results
-        print(f"🔍 DEBUG admin_get_results: Found {len(results)} results for competition {competition_id}")
+        print(f"🔍 DEBUG admin_get_results: Found {len(results)} results for competition {competition_id} (WSX: {is_wsx})")
+        
+        # Calculate points for each result (same logic as race_results_page)
+        top_results_with_points = []
         for r in results:
-            print(f"  - Position {r.position}: {r.rider_name} (ID: {r.rider_id}, class: {r.class_name}, points: {r.rider_points})")
+            # Calculate points: use rider_points if provided (manual entry), otherwise calculate from position
+            if is_wsx:
+                if r.rider_points is not None:
+                    points = r.rider_points
+                else:
+                    points = get_smx_qualification_points(r.position)
+            else:
+                points = get_smx_qualification_points(r.position)
+            
+            top_results_with_points.append({
+                "rider_id": r.rider_id,
+                "position": r.position,
+                "class": r.class_name,
+                "rider_name": r.rider_name,
+                "rider_number": r.rider_number,
+                "rider_points": r.rider_points,  # Keep original (may be None)
+                "calculated_points": points  # Always calculated
+            })
+            print(f"  - Position {r.position}: {r.rider_name} (ID: {r.rider_id}, class: {r.class_name}, rider_points: {r.rider_points}, calculated: {points})")
 
         # Found results and holeshot results
 
         return jsonify(
             {
-                "top_results": [
-                    {
-                        "rider_id": r.rider_id,
-                        "position": r.position,
-                        "class": r.class_name,
-                        "rider_name": r.rider_name,
-                        "rider_number": r.rider_number,
-                        "rider_points": r.rider_points
-                    }
-                    for r in results
-                ],
+                "top_results": top_results_with_points,
                 "holeshot_results": [
                     {
                         "rider_id": h.rider_id,
@@ -3761,9 +3776,35 @@ def admin_debug_results(competition_id):
             .all()
         )
         
-        # Group by class
-        sx1_results = [r for r in results if r.class_name in ('450cc', 'wsx_sx1')]
-        sx2_results = [r for r in results if r.class_name in ('250cc', 'wsx_sx2')]
+        # Group by class and calculate points
+        is_wsx = comp.series == 'WSX'
+        sx1_results = []
+        sx2_results = []
+        
+        for r in results:
+            # Calculate points: use rider_points if provided (manual entry), otherwise calculate from position
+            if is_wsx:
+                if r.rider_points is not None:
+                    points = r.rider_points
+                else:
+                    points = get_smx_qualification_points(r.position)
+            else:
+                points = get_smx_qualification_points(r.position)
+            
+            result_data = {
+                "position": r.position,
+                "rider_id": r.rider_id,
+                "rider_name": r.rider_name,
+                "rider_number": r.rider_number,
+                "rider_points": r.rider_points,
+                "calculated_points": points,
+                "class": r.class_name
+            }
+            
+            if r.class_name in ('450cc', 'wsx_sx1'):
+                sx1_results.append(result_data)
+            elif r.class_name in ('250cc', 'wsx_sx2'):
+                sx2_results.append(result_data)
         
         return jsonify({
             "competition": {
@@ -3772,28 +3813,8 @@ def admin_debug_results(competition_id):
                 "series": comp.series
             },
             "total_results": len(results),
-            "sx1_results": [
-                {
-                    "position": r.position,
-                    "rider_id": r.rider_id,
-                    "rider_name": r.rider_name,
-                    "rider_number": r.rider_number,
-                    "rider_points": r.rider_points,
-                    "class": r.class_name
-                }
-                for r in sx1_results
-            ],
-            "sx2_results": [
-                {
-                    "position": r.position,
-                    "rider_id": r.rider_id,
-                    "rider_name": r.rider_name,
-                    "rider_number": r.rider_number,
-                    "rider_points": r.rider_points,
-                    "class": r.class_name
-                }
-                for r in sx2_results
-            ]
+            "sx1_results": sx1_results,
+            "sx2_results": sx2_results
         })
     except Exception as e:
         import traceback
@@ -3936,8 +3957,8 @@ def submit_results():
     
     if not complement_mode:
         # Normal mode: delete all existing results first
-        CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-        HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+    CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+    HoleshotResult.query.filter_by(competition_id=comp_id).delete()
     else:
         # Complement mode: only update/add, don't delete existing
         # We'll update or add results as we go
@@ -3956,7 +3977,7 @@ def submit_results():
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
         else:
             db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
     
@@ -3972,7 +3993,7 @@ def submit_results():
             else:
                 db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
         else:
-            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
     positions_450_raw = request.form.getlist("positions_450[]")
     riders_450_raw = request.form.getlist("riders_450[]")
@@ -5307,10 +5328,10 @@ def get_other_users_picks(competition_id):
                         picks_250.append(pick_data)
                 else:
                     # Regular series: 450cc and 250cc
-                    if rider.class_name == '450cc' and len(picks_450) < 6:
-                        picks_450.append(pick_data)
-                    elif rider.class_name == '250cc' and len(picks_250) < 6:
-                        picks_250.append(pick_data)
+                if rider.class_name == '450cc' and len(picks_450) < 6:
+                    picks_450.append(pick_data)
+                elif rider.class_name == '250cc' and len(picks_250) < 6:
+                    picks_250.append(pick_data)
         
         # Sort by position and take only top 6
         picks_450.sort(key=lambda x: x['position'])
@@ -5329,10 +5350,10 @@ def get_other_users_picks(competition_id):
                 if is_wsx:
                     # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
                     if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
-                        holeshot_450 = {
-                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                        }
+                holeshot_450 = {
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
                     elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
                         holeshot_250 = {
                             "rider_number": getattr(rider, 'rider_number', '?') or '?',
@@ -5346,10 +5367,10 @@ def get_other_users_picks(competition_id):
                             "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                         }
                     elif holeshot.class_name == '250cc' and not holeshot_250:
-                        holeshot_250 = {
-                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                        }
+                holeshot_250 = {
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
         
         # Get wildcard pick (only for non-WSX series)
         wildcard = None
