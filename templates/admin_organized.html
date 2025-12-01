@@ -235,7 +235,10 @@
                         <div id="existing-results-section" class="mt-6 hidden">
                             <div class="flex justify-between items-center mb-3">
                                 <h4 class="text-lg font-semibold text-white">📊 Befintliga Resultat</h4>
-                                <button onclick="refreshExistingResults()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">🔄 Uppdatera</button>
+                                <div class="flex gap-2">
+                                    <button onclick="refreshExistingResults()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">🔄 Uppdatera</button>
+                                    <button onclick="showDebugResults()" class="text-xs bg-blue-700 hover:bg-blue-600 text-white px-3 py-1 rounded">🐛 Debug</button>
+                                </div>
                             </div>
                             <div class="bg-gray-900 rounded-lg p-4">
                                 <div id="existing-results-content" class="text-gray-300">
@@ -1568,6 +1571,79 @@
                 loadExistingResults(compId);
             } else {
                 alert('Välj en tävling först');
+            }
+        }
+
+        async function showDebugResults() {
+            const compId = document.getElementById('manual-competition').value;
+            if (!compId) {
+                alert('Välj en tävling först');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/debug_results/${compId}`);
+                if (!response.ok) {
+                    throw new Error('Kunde inte hämta debug-data');
+                }
+                
+                const data = await response.json();
+                
+                let debugHtml = '<div class="bg-gray-900 rounded-lg p-4 mt-4 text-xs">';
+                debugHtml += `<h5 class="text-sm font-semibold text-yellow-400 mb-2">Debug Info för ${data.competition.name}</h5>`;
+                debugHtml += `<p class="text-gray-300 mb-2">Totalt antal resultat: ${data.total_results}</p>`;
+                
+                debugHtml += `<div class="mt-3"><h6 class="text-yellow-300 font-semibold mb-1">SX1/450cc (${data.sx1_results.length} resultat):</h6>`;
+                if (data.sx1_results.length > 0) {
+                    debugHtml += '<div class="grid grid-cols-2 md:grid-cols-4 gap-1">';
+                    data.sx1_results.forEach(r => {
+                        debugHtml += `<div class="bg-gray-800 p-1 rounded text-xs">`;
+                        debugHtml += `Pos ${r.position}: #${r.rider_number} ${r.rider_name}`;
+                        if (r.rider_points) debugHtml += ` (${r.rider_points}p)`;
+                        debugHtml += `</div>`;
+                    });
+                    debugHtml += '</div>';
+                } else {
+                    debugHtml += '<p class="text-gray-400">Inga resultat</p>';
+                }
+                debugHtml += '</div>';
+                
+                debugHtml += `<div class="mt-3"><h6 class="text-blue-300 font-semibold mb-1">SX2/250cc (${data.sx2_results.length} resultat):</h6>`;
+                if (data.sx2_results.length > 0) {
+                    debugHtml += '<div class="grid grid-cols-2 md:grid-cols-4 gap-1">';
+                    data.sx2_results.forEach(r => {
+                        debugHtml += `<div class="bg-gray-800 p-1 rounded text-xs">`;
+                        debugHtml += `Pos ${r.position}: #${r.rider_number} ${r.rider_name}`;
+                        if (r.rider_points) debugHtml += ` (${r.rider_points}p)`;
+                        debugHtml += `</div>`;
+                    });
+                    debugHtml += '</div>';
+                } else {
+                    debugHtml += '<p class="text-gray-400">Inga resultat</p>';
+                }
+                debugHtml += '</div>';
+                
+                debugHtml += '</div>';
+                
+                // Show in a modal or alert
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="bg-gray-800 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white">🐛 Debug Resultat</h3>
+                            <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-3xl font-bold bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 flex items-center justify-center transition-colors">&times;</button>
+                        </div>
+                        ${debugHtml}
+                        <div class="mt-6 flex justify-end">
+                            <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg transition-colors">Stäng</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            } catch (error) {
+                console.error('Error loading debug results:', error);
+                alert('Fel vid laddning av debug-data: ' + error.message);
             }
         }
 
