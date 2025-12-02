@@ -161,7 +161,7 @@ def ensure_wsx_series_and_competitions():
             ('Buenos Aires City GP', 'Buenos Aires, Argentina', _date(2025, 11, 8), 'America/Argentina/Buenos_Aires', '13:00'),
             ('Canadian GP', 'Vancouver, Canada', _date(2025, 11, 15), 'America/Los_Angeles', None),
             ('Australian GP', 'Gold Coast, Australia', _date(2025, 11, 29), 'Australia/Brisbane', None),
-            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6), 'Europe/Stockholm', None),
+            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6), 'Europe/Stockholm', '17:00'),
             ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13), 'Africa/Johannesburg', None),
         ]
         from datetime import time as _time
@@ -12458,6 +12458,14 @@ def race_countdown():
                         from datetime import time as _t
                         next_race_obj.start_time = _t(hour=18, minute=0)
                         needs_commit = True
+                elif 'swedish' in (next_race_obj.name or '').lower():
+                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
+                        next_race_obj.timezone = 'Europe/Stockholm'
+                        needs_commit = True
+                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                        from datetime import time as _t
+                        next_race_obj.start_time = _t(hour=17, minute=0)
+                        needs_commit = True
                 if needs_commit:
                     db.session.commit()
             except Exception as _e2:
@@ -12488,7 +12496,8 @@ def race_countdown():
                 'America/Chicago': -6,      # CST
                 'America/New_York': -5,     # EST
                 'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
-                'Australia/Brisbane': 10  # AEST (no DST)
+                'Australia/Brisbane': 10,  # AEST (no DST)
+                'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
             }
             
             timezone = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
@@ -12567,6 +12576,14 @@ def race_countdown():
                     if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
                         from datetime import time as _t
                         upcoming_race.start_time = _t(hour=18, minute=0)
+                        needs_commit2 = True
+                elif 'swedish' in (upcoming_race.name or '').lower():
+                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
+                        upcoming_race.timezone = 'Europe/Stockholm'
+                        needs_commit2 = True
+                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                        from datetime import time as _t
+                        upcoming_race.start_time = _t(hour=17, minute=0)
                         needs_commit2 = True
                 if needs_commit2:
                     db.session.commit()
@@ -14210,6 +14227,14 @@ def is_picks_locked(competition):
                     from datetime import time as _t
                     competition_obj.start_time = _t(hour=18, minute=0)
                     needs_commit = True
+            elif 'swedish' in (competition_obj.name or '').lower():
+                if hasattr(competition_obj, 'timezone') and not competition_obj.timezone:
+                    competition_obj.timezone = 'Europe/Stockholm'
+                    needs_commit = True
+                if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
+                    from datetime import time as _t
+                    competition_obj.start_time = _t(hour=17, minute=0)
+                    needs_commit = True
             if needs_commit:
                 db.session.commit()
                 # Refresh the object to get updated values
@@ -14236,7 +14261,8 @@ def is_picks_locked(competition):
             'America/Chicago': -6,      # CST
             'America/New_York': -5,     # EST
             'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
-            'Australia/Brisbane': 10  # AEST (no DST)
+            'Australia/Brisbane': 10,  # AEST (no DST)
+            'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
         }
         
         timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
