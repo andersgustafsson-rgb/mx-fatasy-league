@@ -5306,8 +5306,8 @@ def get_other_users_picks(competition_id):
             picks_250 = []
             
             for pick in race_picks:
-            rider = riders_dict.get(pick.rider_id)
-            if rider:
+                rider = riders_dict.get(pick.rider_id)
+                if rider:
                 # Ensure we have valid rider data
                 rider_number = getattr(rider, 'rider_number', '?') or '?'
                 rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
