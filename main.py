@@ -5308,31 +5308,31 @@ def get_other_users_picks(competition_id):
             for pick in race_picks:
                 rider = riders_dict.get(pick.rider_id)
                 if rider:
-                # Ensure we have valid rider data
-                rider_number = getattr(rider, 'rider_number', '?') or '?'
-                rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
-                bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
-                
-                pick_data = {
-                    "position": pick.predicted_position,
-                    "class": rider.class_name,
-                    "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
-                }
-                print(f"DEBUG: Created pick_data: {pick_data}")
-                
-                # Handle both regular classes and WSX classes
-                if is_wsx:
-                    # WSX: map wsx_sx1 to picks_450, wsx_sx2 to picks_250
-                    if rider.class_name == 'wsx_sx1' and len(picks_450) < 6:
-                        picks_450.append(pick_data)
-                    elif rider.class_name == 'wsx_sx2' and len(picks_250) < 6:
-                        picks_250.append(pick_data)
-                else:
-                    # Regular series: 450cc and 250cc
-                    if rider.class_name == '450cc' and len(picks_450) < 6:
-                        picks_450.append(pick_data)
-                    elif rider.class_name == '250cc' and len(picks_250) < 6:
-                        picks_250.append(pick_data)
+                    # Ensure we have valid rider data
+                    rider_number = getattr(rider, 'rider_number', '?') or '?'
+                    rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
+                    bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
+                    
+                    pick_data = {
+                        "position": pick.predicted_position,
+                        "class": rider.class_name,
+                        "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
+                    }
+                    print(f"DEBUG: Created pick_data: {pick_data}")
+                    
+                    # Handle both regular classes and WSX classes
+                    if is_wsx:
+                        # WSX: map wsx_sx1 to picks_450, wsx_sx2 to picks_250
+                        if rider.class_name == 'wsx_sx1' and len(picks_450) < 6:
+                            picks_450.append(pick_data)
+                        elif rider.class_name == 'wsx_sx2' and len(picks_250) < 6:
+                            picks_250.append(pick_data)
+                    else:
+                        # Regular series: 450cc and 250cc
+                        if rider.class_name == '450cc' and len(picks_450) < 6:
+                            picks_450.append(pick_data)
+                        elif rider.class_name == '250cc' and len(picks_250) < 6:
+                            picks_250.append(pick_data)
             
             # Sort by position and take only top 6
             picks_450.sort(key=lambda x: x['position'])
