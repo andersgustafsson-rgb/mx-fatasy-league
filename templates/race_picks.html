@@ -1131,7 +1131,7 @@
     // Get currently selected riders in this class (excluding current position)
     // For wildcard and holeshot, we don't need to check for duplicates since they're independent
     let chosenRiderIds = [];
-    if (riderClass === '450cc' || riderClass === '250cc') {
+    if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
       const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
       chosenRiderIds = Array.from(selectors).map(sel => {
         if (sel === selector) return null; // Skip current selector
