@@ -2193,21 +2193,21 @@ def delete_league(league_id):
         return redirect(url_for("login"))
     
     try:
-        league = League.query.get_or_404(league_id)
-        if league.creator_id != session["user_id"]:
-            flash("Endast skaparen kan radera ligan.", "error")
-            return redirect(url_for("league_detail_page", league_id=league_id))
+    league = League.query.get_or_404(league_id)
+    if league.creator_id != session["user_id"]:
+        flash("Endast skaparen kan radera ligan.", "error")
+        return redirect(url_for("league_detail_page", league_id=league_id))
         
         # Delete all related data first (same as admin_delete_league)
         LeagueRequest.query.filter_by(league_id=league_id).delete()
-        LeagueMembership.query.filter_by(league_id=league_id).delete()
+    LeagueMembership.query.filter_by(league_id=league_id).delete()
         
         # Delete the league
-        db.session.delete(league)
-        db.session.commit()
+    db.session.delete(league)
+    db.session.commit()
         
-        flash("Ligan är raderad.", "success")
-        return redirect(url_for("leagues_page"))
+    flash("Ligan är raderad.", "success")
+    return redirect(url_for("leagues_page"))
         
     except Exception as e:
         db.session.rollback()
@@ -4003,8 +4003,8 @@ def submit_results():
     
     if not complement_mode:
         # Normal mode: delete all existing results first
-        CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-        HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+    CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+    HoleshotResult.query.filter_by(competition_id=comp_id).delete()
     else:
         # Complement mode: only update/add, don't delete existing
         # We'll update or add results as we go
@@ -4023,7 +4023,7 @@ def submit_results():
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
         else:
             db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
     
@@ -4039,7 +4039,7 @@ def submit_results():
             else:
                 db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
         else:
-            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
     positions_450_raw = request.form.getlist("positions_450[]")
     riders_450_raw = request.form.getlist("riders_450[]")
@@ -5312,9 +5312,9 @@ def get_my_picks(competition_id):
 @app.route("/get_other_users_picks/<int:competition_id>")
 def get_other_users_picks(competition_id):
     try:
-        if "user_id" not in session:
-            return jsonify({"error": "not_logged_in"}), 401
-        
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
         # Get competition to determine series
         comp = Competition.query.get_or_404(competition_id)
         
@@ -5331,41 +5331,41 @@ def get_other_users_picks(competition_id):
         
         is_wsx = getattr(comp, 'series', None) == 'WSX'
         
-        # Get all riders once as master list
-        all_riders = Rider.query.all()
-        riders_dict = {rider.id: rider for rider in all_riders}
-        
-        # Get all users except current user
-        current_user_id = session["user_id"]
-        other_users = User.query.filter(User.id != current_user_id).all()
-        
-        print(f"DEBUG: Found {len(other_users)} other users")
+    # Get all riders once as master list
+    all_riders = Rider.query.all()
+    riders_dict = {rider.id: rider for rider in all_riders}
+    
+    # Get all users except current user
+    current_user_id = session["user_id"]
+    other_users = User.query.filter(User.id != current_user_id).all()
+    
+    print(f"DEBUG: Found {len(other_users)} other users")
         print(f"DEBUG: Competition {comp.name} is WSX: {is_wsx}")
+    
+    users_picks = []
+    for user in other_users:
+        # Get race picks for this user (only top 6 per class)
+        race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
         
-        users_picks = []
-        for user in other_users:
-            # Get race picks for this user (only top 6 per class)
-            race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
-            
-            picks = []
-            picks_450 = []
-            picks_250 = []
-            
-            for pick in race_picks:
-                rider = riders_dict.get(pick.rider_id)
-                if rider:
-                    # Ensure we have valid rider data
-                    rider_number = getattr(rider, 'rider_number', '?') or '?'
-                    rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
-                    bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
-                    
-                    pick_data = {
-                        "position": pick.predicted_position,
-                        "class": rider.class_name,
-                        "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
-                    }
-                    print(f"DEBUG: Created pick_data: {pick_data}")
-                    
+        picks = []
+        picks_450 = []
+        picks_250 = []
+        
+        for pick in race_picks:
+            rider = riders_dict.get(pick.rider_id)
+            if rider:
+                # Ensure we have valid rider data
+                rider_number = getattr(rider, 'rider_number', '?') or '?'
+                rider_name = getattr(rider, 'name', 'Unknown') or 'Unknown'
+                bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
+                
+                pick_data = {
+                    "position": pick.predicted_position,
+                    "class": rider.class_name,
+                    "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
+                }
+                print(f"DEBUG: Created pick_data: {pick_data}")
+                
                     # Handle both regular classes and WSX classes
                     if is_wsx:
                         # WSX: map wsx_sx1 to picks_450, wsx_sx2 to picks_250
@@ -5375,32 +5375,32 @@ def get_other_users_picks(competition_id):
                             picks_250.append(pick_data)
                     else:
                         # Regular series: 450cc and 250cc
-                        if rider.class_name == '450cc' and len(picks_450) < 6:
-                            picks_450.append(pick_data)
-                        elif rider.class_name == '250cc' and len(picks_250) < 6:
-                            picks_250.append(pick_data)
-            
-            # Sort by position and take only top 6
-            picks_450.sort(key=lambda x: x['position'])
-            picks_250.sort(key=lambda x: x['position'])
-            
-            picks = picks_450 + picks_250
-            
-            # Get holeshot picks
-            holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
-            holeshot_450 = None
-            holeshot_250 = None
-            
-            for holeshot in holeshot_picks:
-                rider = riders_dict.get(holeshot.rider_id)
+                if rider.class_name == '450cc' and len(picks_450) < 6:
+                    picks_450.append(pick_data)
+                elif rider.class_name == '250cc' and len(picks_250) < 6:
+                    picks_250.append(pick_data)
+        
+        # Sort by position and take only top 6
+        picks_450.sort(key=lambda x: x['position'])
+        picks_250.sort(key=lambda x: x['position'])
+        
+        picks = picks_450 + picks_250
+        
+        # Get holeshot picks
+        holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        holeshot_450 = None
+        holeshot_250 = None
+        
+        for holeshot in holeshot_picks:
+            rider = riders_dict.get(holeshot.rider_id)
                 if rider:
                     if is_wsx:
                         # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
                         if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
-                            holeshot_450 = {
-                                "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                                "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                            }
+                holeshot_450 = {
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
                         elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
                             holeshot_250 = {
                                 "rider_number": getattr(rider, 'rider_number', '?') or '?',
@@ -5414,47 +5414,47 @@ def get_other_users_picks(competition_id):
                                 "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                             }
                         elif holeshot.class_name == '250cc' and not holeshot_250:
-                            holeshot_250 = {
-                                "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                                "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                            }
-            
+                holeshot_250 = {
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
+        
             # Get wildcard pick (only for non-WSX series)
-            wildcard = None
+        wildcard = None
             wildcard_pick = None
             if not is_wsx:
                 wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
-                if wildcard_pick:
-                    rider = riders_dict.get(wildcard_pick.rider_id)
-                    if rider:
-                        wildcard = {
-                            "position": wildcard_pick.position,
-                            "rider_number": getattr(rider, 'rider_number', '?') or '?',
-                            "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
-                        }
-            
-            print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
-            
-            if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
-                print(f"DEBUG: Including user {user.username} - picks_450: {picks_450}")
-                print(f"DEBUG: Including user {user.username} - picks_250: {picks_250}")
-                user_data = {
-                    "username": user.username,
-                    "display_name": getattr(user, 'display_name', None) or user.username,
-                    "picks_450": picks_450,
-                    "picks_250": picks_250,
-                    "holeshot_450": holeshot_450,
-                    "holeshot_250": holeshot_250,
+        if wildcard_pick:
+            rider = riders_dict.get(wildcard_pick.rider_id)
+            if rider:
+                wildcard = {
+                    "position": wildcard_pick.position,
+                    "rider_number": getattr(rider, 'rider_number', '?') or '?',
+                    "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
+                }
+        
+        print(f"DEBUG: User {user.username} - picks: {len(picks)}, holeshot_450: {holeshot_450 is not None}, holeshot_250: {holeshot_250 is not None}, wildcard: {wildcard is not None}")
+        
+        if picks or holeshot_450 or holeshot_250 or wildcard:  # Only include users who have made any picks
+            print(f"DEBUG: Including user {user.username} - picks_450: {picks_450}")
+            print(f"DEBUG: Including user {user.username} - picks_250: {picks_250}")
+            user_data = {
+                "username": user.username,
+                "display_name": getattr(user, 'display_name', None) or user.username,
+                "picks_450": picks_450,
+                "picks_250": picks_250,
+                "holeshot_450": holeshot_450,
+                "holeshot_250": holeshot_250,
                     "wildcard": wildcard,
                     "is_wsx": is_wsx  # Include series info for frontend
-                }
-                print(f"DEBUG: Adding user data: {user_data['display_name']} (username: {user_data['username']})")
-                users_picks.append(user_data)
-            else:
-                print(f"DEBUG: Excluding user {user.username} - no picks found")
-        
-        print(f"DEBUG: Returning {len(users_picks)} users with picks")
-        return jsonify(users_picks)
+            }
+            print(f"DEBUG: Adding user data: {user_data['display_name']} (username: {user_data['username']})")
+            users_picks.append(user_data)
+        else:
+            print(f"DEBUG: Excluding user {user.username} - no picks found")
+    
+    print(f"DEBUG: Returning {len(users_picks)} users with picks")
+    return jsonify(users_picks)
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
@@ -12655,6 +12655,11 @@ def race_countdown():
                         upcoming_race.start_time = _t(hour=17, minute=0)
                         needs_commit2 = True
                 elif 'anaheim 1' in (upcoming_race.name or '').lower():
+                    # Fix event_date if wrong (should be 2026-01-10)
+                    from datetime import date as _d
+                    if upcoming_race.event_date != _d(2026, 1, 10):
+                        upcoming_race.event_date = _d(2026, 1, 10)
+                        needs_commit2 = True
                     if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
                         upcoming_race.timezone = 'America/Los_Angeles'
                         needs_commit2 = True
