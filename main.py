@@ -2906,6 +2906,52 @@ def fix_canadian_gp_time():
         print(f"Error fixing Canadian GP time: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/fix_anaheim1', methods=['POST'])
+def fix_anaheim1():
+    """Fix Anaheim 1 event_date to 2026-01-10, timezone to PT, and start_time to 11:00 AM"""
+    if not is_admin_user():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        from datetime import time, date
+        
+        # Find Anaheim 1
+        anaheim1 = Competition.query.filter(
+            Competition.name.ilike('%anaheim 1%')
+        ).first()
+        
+        if not anaheim1:
+            return jsonify({'error': 'Anaheim 1 not found'}), 404
+        
+        # Set event_date to 2026-01-10
+        anaheim1.event_date = date(2026, 1, 10)
+        
+        # Set timezone to PT
+        if hasattr(anaheim1, 'timezone'):
+            anaheim1.timezone = 'America/Los_Angeles'
+        
+        # Set start_time to 11:00 AM (picks deadline will be 9:00 AM PT, 2h before)
+        if hasattr(anaheim1, 'start_time'):
+            anaheim1.start_time = time(11, 0)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=11:00 AM',
+            'competition': {
+                'id': anaheim1.id,
+                'name': anaheim1.name,
+                'event_date': '2026-01-10',
+                'timezone': 'America/Los_Angeles',
+                'start_time': '11:00'
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error fixing Anaheim 1: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
 def update_seasons_to_2026():
     """Update all 2025 series and competitions to 2026"""
