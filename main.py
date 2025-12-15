@@ -4326,6 +4326,140 @@ def submit_results():
     return redirect(url_for("admin_page"))
 
 
+@app.post("/admin/archive_wsx_and_reset_points")
+def archive_wsx_and_reset_points():
+    """Archive WSX user statistics and reset points for SX season"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        from datetime import datetime
+        from collections import defaultdict
+        
+        # Get all WSX competitions
+        wsx_competitions = Competition.query.filter_by(series='WSX').all()
+        
+        if not wsx_competitions:
+            return jsonify({"error": "Inga WSX-tävlingar hittades"}), 400
+        
+        # Get all WSX competition IDs
+        wsx_comp_ids = [comp.id for comp in wsx_competitions]
+        
+        # Get all CompetitionScore entries for WSX competitions
+        wsx_scores = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(wsx_comp_ids)
+        ).all()
+        
+        # Group scores by user and calculate totals
+        user_stats = defaultdict(lambda: {
+            'username': '',
+            'display_name': '',
+            'total_points': 0,
+            'race_points': 0,
+            'holeshot_points': 0,
+            'wildcard_points': 0,
+            'competitions_participated': 0,
+            'competition_details': []
+        })
+        
+        for score in wsx_scores:
+            user = User.query.get(score.user_id)
+            if not user:
+                continue
+            
+            user_stats[score.user_id]['username'] = user.username
+            user_stats[score.user_id]['display_name'] = getattr(user, 'display_name', None) or user.username
+            user_stats[score.user_id]['total_points'] += score.total_points or 0
+            user_stats[score.user_id]['race_points'] += score.race_points or 0
+            user_stats[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+            user_stats[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+            user_stats[score.user_id]['competitions_participated'] += 1
+            
+            # Get competition name
+            comp = Competition.query.get(score.competition_id)
+            comp_name = comp.name if comp else f"Competition {score.competition_id}"
+            user_stats[score.user_id]['competition_details'].append({
+                'competition': comp_name,
+                'total_points': score.total_points or 0,
+                'race_points': score.race_points or 0,
+                'holeshot_points': score.holeshot_points or 0,
+                'wildcard_points': score.wildcard_points or 0
+            })
+        
+        # Convert to list and sort by total points
+        stats_list = []
+        for user_id, stats in user_stats.items():
+            stats_list.append({
+                'user_id': user_id,
+                **stats
+            })
+        
+        stats_list.sort(key=lambda x: x['total_points'], reverse=True)
+        
+        # Create archive summary
+        archive_summary = {
+            'archived_at': datetime.now().isoformat(),
+            'series': 'WSX',
+            'year': 2025,
+            'total_competitions': len(wsx_competitions),
+            'competition_names': [comp.name for comp in wsx_competitions],
+            'total_users': len(stats_list),
+            'users_with_points': len([s for s in stats_list if s['total_points'] > 0]),
+            'top_10': stats_list[:10],
+            'all_users': stats_list
+        }
+        
+        # Print statistics to console/log
+        print("=" * 80)
+        print("WSX 2025 STATISTIK - ARKIVERAD")
+        print("=" * 80)
+        print(f"Arkiverad: {archive_summary['archived_at']}")
+        print(f"Antal tävlingar: {archive_summary['total_competitions']}")
+        print(f"Tävlingar: {', '.join(archive_summary['competition_names'])}")
+        print(f"Totalt antal användare: {archive_summary['total_users']}")
+        print(f"Användare med poäng: {archive_summary['users_with_points']}")
+        print("\n" + "-" * 80)
+        print("TOP 10 ANVÄNDARE:")
+        print("-" * 80)
+        for i, user_stat in enumerate(archive_summary['top_10'], 1):
+            print(f"{i}. {user_stat['display_name']} ({user_stat['username']})")
+            print(f"   Totalt: {user_stat['total_points']} poäng")
+            print(f"   Race: {user_stat['race_points']}, Holeshot: {user_stat['holeshot_points']}, Wildcard: {user_stat['wildcard_points']}")
+            print(f"   Tävlingar deltagit: {user_stat['competitions_participated']}")
+            print()
+        
+        print("-" * 80)
+        print("ALLA ANVÄNDARE:")
+        print("-" * 80)
+        for i, user_stat in enumerate(stats_list, 1):
+            print(f"{i}. {user_stat['display_name']} ({user_stat['username']}) - {user_stat['total_points']} poäng")
+        print("=" * 80)
+        
+        # Delete all CompetitionScore entries for WSX competitions
+        deleted_count = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(wsx_comp_ids)
+        ).delete()
+        
+        db.session.commit()
+        
+        print(f"\n✅ Raderade {deleted_count} CompetitionScore entries för WSX-tävlingar")
+        print("✅ WSX-statistik arkiverad och poäng nollställda för SX-säsongen")
+        
+        return jsonify({
+            "success": True,
+            "message": f"WSX-statistik arkiverad! {deleted_count} poängposter raderade.",
+            "archive_summary": archive_summary
+        })
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in archive_wsx_and_reset_points: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        db.session.rollback()
+        return jsonify({"error": f"Fel vid arkivering: {str(e)}"}), 500
+
+
 @app.post("/admin/simulate_all_users_picks/<int:competition_id>")
 def admin_simulate_all_users_picks(competition_id):
     """Simulate picks for all users to test 'Se Andras Picks' functionality"""
