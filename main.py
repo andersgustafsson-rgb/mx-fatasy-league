@@ -4673,15 +4673,23 @@ def archive_wsx_and_reset_points():
         db.session.flush()  # Flush to ensure archive is saved before deletion
         print(f"✅ Sparade {archived_count} användarstatistik i FinishedSeriesStats")
         
-        # NOW delete all CompetitionScore entries for WSX competitions
+        # IMPORTANT: Only delete CompetitionScore (user picks scores), NOT CompetitionResult (rider race results)
+        # CompetitionResult entries must be kept so that WSX championship leaderboard can still show rider results
         deleted_count = CompetitionScore.query.filter(
             CompetitionScore.competition_id.in_(wsx_comp_ids)
         ).delete()
         
+        # Verify CompetitionResult entries are NOT deleted (they should remain)
+        remaining_results = CompetitionResult.query.filter(
+            CompetitionResult.competition_id.in_(wsx_comp_ids)
+        ).count()
+        print(f"✅ Behöll {remaining_results} CompetitionResult entries (förarnas resultat) för WSX-tävlingar")
+        
         db.session.commit()
         
-        print(f"\n✅ Raderade {deleted_count} CompetitionScore entries för WSX-tävlingar")
-        print("✅ WSX-statistik arkiverad och poäng nollställda för SX-säsongen")
+        print(f"\n✅ Raderade {deleted_count} CompetitionScore entries (användarnas poäng) för WSX-tävlingar")
+        print(f"✅ Behöll {remaining_results} CompetitionResult entries (förarnas resultat) för WSX championship")
+        print("✅ WSX-statistik arkiverad och användarpoäng nollställda för SX-säsongen")
         
         return jsonify({
             "success": True,
