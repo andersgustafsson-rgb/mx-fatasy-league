@@ -12522,6 +12522,11 @@ def race_countdown():
                         next_race_obj.start_time = _t(hour=17, minute=0)
                         needs_commit = True
                 elif 'anaheim 1' in (next_race_obj.name or '').lower():
+                    # Fix event_date if wrong (should be 2026-01-10)
+                    from datetime import date as _d
+                    if next_race_obj.event_date != _d(2026, 1, 10):
+                        next_race_obj.event_date = _d(2026, 1, 10)
+                        needs_commit = True
                     if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
                         next_race_obj.timezone = 'America/Los_Angeles'
                         needs_commit = True
