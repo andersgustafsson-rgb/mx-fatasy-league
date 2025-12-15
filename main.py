@@ -2952,6 +2952,75 @@ def fix_anaheim1():
         print(f"Error fixing Anaheim 1: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/debug_anaheim1_countdown', methods=['GET'])
+def debug_anaheim1_countdown():
+    """Debug Anaheim 1 countdown calculation"""
+    try:
+        from datetime import datetime, date, time, timedelta
+        
+        # Find Anaheim 1
+        anaheim1 = Competition.query.filter(
+            Competition.name.ilike('%anaheim 1%')
+        ).first()
+        
+        if not anaheim1:
+            return jsonify({'error': 'Anaheim 1 not found'}), 404
+        
+        # Get current UTC time
+        now_utc = datetime.utcnow()
+        
+        # Get competition details
+        event_date = anaheim1.event_date
+        timezone = getattr(anaheim1, 'timezone', 'America/Los_Angeles')
+        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(11, 0)
+        
+        # Calculate race datetime in local time
+        race_datetime_local = datetime.combine(event_date, start_time)
+        
+        # Convert to UTC
+        timezone_offsets = {
+            'America/Los_Angeles': -8,  # PST (UTC-8 in winter)
+        }
+        utc_offset = timezone_offsets.get(timezone, -8)
+        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        # Calculate deadline (2 hours before race)
+        deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
+        
+        # Calculate differences
+        race_diff = race_datetime_utc - now_utc
+        deadline_diff = deadline_datetime_utc - now_utc
+        
+        # Format countdown
+        def format_countdown(td):
+            total_seconds = int(td.total_seconds())
+            if total_seconds <= 0:
+                return {"days": 0, "hours": 0, "minutes": 0, "seconds": 0}
+            days = total_seconds // 86400
+            hours = (total_seconds % 86400) // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            return {"days": days, "hours": hours, "minutes": minutes, "seconds": seconds}
+        
+        return jsonify({
+            'competition': {
+                'name': anaheim1.name,
+                'event_date': str(event_date),
+                'timezone': timezone,
+                'start_time': str(start_time),
+            },
+            'current_time_utc': now_utc.isoformat(),
+            'race_datetime_local': race_datetime_local.isoformat(),
+            'race_datetime_utc': race_datetime_utc.isoformat(),
+            'deadline_datetime_utc': deadline_datetime_utc.isoformat(),
+            'utc_offset': utc_offset,
+            'countdown_to_deadline': format_countdown(deadline_diff),
+            'countdown_to_race': format_countdown(race_diff),
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()}), 500
+
 @app.route('/api/competitions/update_seasons_to_2026', methods=['POST'])
 def update_seasons_to_2026():
     """Update all 2025 series and competitions to 2026"""
