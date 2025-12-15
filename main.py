@@ -1715,6 +1715,172 @@ def my_scores():
     return render_template("my_scores.html", scores=scores, total_points=total_points)
 
 
+@app.route("/finished_series")
+def finished_series_page():
+    """Page showing all finished series with their final statistics"""
+    try:
+        current_date = get_today()
+        
+        # Get all finished series (end_date has passed or is_active=False and end_date passed)
+        finished_series = Series.query.filter(
+            db.or_(
+                db.and_(Series.end_date != None, Series.end_date < current_date),
+                db.and_(Series.is_active == False, Series.end_date != None, Series.end_date < current_date)
+            )
+        ).order_by(Series.year.desc(), Series.end_date.desc()).all()
+        
+        series_data = []
+        for series in finished_series:
+            # Get competitions for this series
+            competitions = Competition.query.filter_by(series_id=series.id).order_by(Competition.event_date).all()
+            
+            # Get all user scores for competitions in this series
+            comp_ids = [comp.id for comp in competitions]
+            user_scores = {}
+            
+            if comp_ids:
+                scores = CompetitionScore.query.filter(
+                    CompetitionScore.competition_id.in_(comp_ids)
+                ).all()
+                
+                for score in scores:
+                    if score.user_id not in user_scores:
+                        user_scores[score.user_id] = {
+                            'total_points': 0,
+                            'race_points': 0,
+                            'holeshot_points': 0,
+                            'wildcard_points': 0,
+                            'competitions_participated': 0
+                        }
+                    user_scores[score.user_id]['total_points'] += score.total_points or 0
+                    user_scores[score.user_id]['race_points'] += score.race_points or 0
+                    user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+                    user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+                    user_scores[score.user_id]['competitions_participated'] += 1
+            
+            # Convert to list and sort by total points
+            leaderboard = []
+            for user_id, stats in user_scores.items():
+                user = User.query.get(user_id)
+                if user:
+                    leaderboard.append({
+                        'user_id': user_id,
+                        'username': user.username,
+                        'display_name': getattr(user, 'display_name', None) or user.username,
+                        **stats
+                    })
+            
+            leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
+            
+            series_data.append({
+                'series': series,
+                'competitions': competitions,
+                'total_competitions': len(competitions),
+                'total_users': len(leaderboard),
+                'top_10': leaderboard[:10],
+                'all_users': leaderboard
+            })
+        
+        return render_template("finished_series.html", series_data=series_data)
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in finished_series_page: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        db.session.rollback()
+        flash("Fel vid laddning av färdiga serier.", "error")
+        return redirect(url_for("index"))
+
+
+@app.route("/finished_series/<int:series_id>")
+def finished_series_detail_page(series_id):
+    """Detailed page for a specific finished series"""
+    try:
+        current_date = get_today()
+        
+        # Get series
+        series = Series.query.get_or_404(series_id)
+        
+        # Verify it's finished
+        if series.end_date and series.end_date >= current_date and series.is_active:
+            flash("Denna serie är inte färdig än.", "error")
+            return redirect(url_for("series_page", series_id=series_id))
+        
+        # Get competitions for this series
+        competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        
+        # Get all user scores for competitions in this series
+        comp_ids = [comp.id for comp in competitions]
+        user_scores = {}
+        competition_details = {}
+        
+        if comp_ids:
+            scores = CompetitionScore.query.filter(
+                CompetitionScore.competition_id.in_(comp_ids)
+            ).all()
+            
+            for score in scores:
+                if score.user_id not in user_scores:
+                    user_scores[score.user_id] = {
+                        'total_points': 0,
+                        'race_points': 0,
+                        'holeshot_points': 0,
+                        'wildcard_points': 0,
+                        'competitions_participated': 0,
+                        'competition_scores': {}
+                    }
+                user_scores[score.user_id]['total_points'] += score.total_points or 0
+                user_scores[score.user_id]['race_points'] += score.race_points or 0
+                user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+                user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+                user_scores[score.user_id]['competitions_participated'] += 1
+                user_scores[score.user_id]['competition_scores'][score.competition_id] = {
+                    'total_points': score.total_points or 0,
+                    'race_points': score.race_points or 0,
+                    'holeshot_points': score.holeshot_points or 0,
+                    'wildcard_points': score.wildcard_points or 0
+                }
+            
+            # Get competition details
+            for comp in competitions:
+                competition_details[comp.id] = {
+                    'name': comp.name,
+                    'event_date': comp.event_date,
+                    'location': getattr(comp, 'location', None)
+                }
+        
+        # Convert to list and sort by total points
+        leaderboard = []
+        for user_id, stats in user_scores.items():
+            user = User.query.get(user_id)
+            if user:
+                leaderboard.append({
+                    'user_id': user_id,
+                    'username': user.username,
+                    'display_name': getattr(user, 'display_name', None) or user.username,
+                    **stats
+                })
+        
+        leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
+        
+        return render_template("finished_series_detail.html", 
+                             series=series,
+                             competitions=competitions,
+                             competition_details=competition_details,
+                             leaderboard=leaderboard,
+                             total_users=len(leaderboard))
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in finished_series_detail_page: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        db.session.rollback()
+        flash("Fel vid laddning av seriedetaljer.", "error")
+        return redirect(url_for("finished_series_page"))
+
+
 @app.route("/series/<int:series_id>")
 def series_page(series_id):
     """Simple series page that actually works"""
