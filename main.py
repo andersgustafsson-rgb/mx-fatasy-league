@@ -12475,6 +12475,15 @@ def race_countdown():
                         from datetime import time as _t
                         next_race_obj.start_time = _t(hour=17, minute=0)
                         needs_commit = True
+                elif 'anaheim 1' in (next_race_obj.name or '').lower():
+                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
+                        next_race_obj.timezone = 'America/Los_Angeles'
+                        needs_commit = True
+                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                        from datetime import time as _t
+                        # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
+                        next_race_obj.start_time = _t(hour=11, minute=0)
+                        needs_commit = True
                 if needs_commit:
                     db.session.commit()
             except Exception as _e2:
@@ -12593,6 +12602,15 @@ def race_countdown():
                     if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
                         from datetime import time as _t
                         upcoming_race.start_time = _t(hour=17, minute=0)
+                        needs_commit2 = True
+                elif 'anaheim 1' in (upcoming_race.name or '').lower():
+                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
+                        upcoming_race.timezone = 'America/Los_Angeles'
+                        needs_commit2 = True
+                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                        from datetime import time as _t
+                        # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
+                        upcoming_race.start_time = _t(hour=11, minute=0)
                         needs_commit2 = True
                 if needs_commit2:
                     db.session.commit()
@@ -14243,6 +14261,15 @@ def is_picks_locked(competition):
                 if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
                     from datetime import time as _t
                     competition_obj.start_time = _t(hour=17, minute=0)
+                    needs_commit = True
+            elif 'anaheim 1' in (competition_obj.name or '').lower():
+                if hasattr(competition_obj, 'timezone') and not competition_obj.timezone:
+                    competition_obj.timezone = 'America/Los_Angeles'
+                    needs_commit = True
+                if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
+                    from datetime import time as _t
+                    # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
+                    competition_obj.start_time = _t(hour=11, minute=0)
                     needs_commit = True
             if needs_commit:
                 db.session.commit()
