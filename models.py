@@ -297,3 +297,21 @@ class CrossDinoHighScore(db.Model):
             'score': self.score,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+class FinishedSeriesStats(db.Model):
+    """Archive table for finished series statistics"""
+    __tablename__ = "finished_series_stats"
+    id = db.Column(db.Integer, primary_key=True)
+    series_id = db.Column(db.Integer, db.ForeignKey("series.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    total_points = db.Column(db.Integer, nullable=False, default=0)
+    race_points = db.Column(db.Integer, nullable=False, default=0)
+    holeshot_points = db.Column(db.Integer, nullable=False, default=0)
+    wildcard_points = db.Column(db.Integer, nullable=False, default=0)
+    competitions_participated = db.Column(db.Integer, nullable=False, default=0)
+    archived_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    __table_args__ = (
+        db.UniqueConstraint('series_id', 'user_id', name='uq_finished_series_user'),
+        db.Index('idx_finished_series_stats_series', 'series_id'),
+        db.Index('idx_finished_series_stats_user', 'user_id'),
+    )

@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats
 
 # -------------------------------------------------
 # Flask app & config
@@ -1734,29 +1734,43 @@ def finished_series_page():
             # Get competitions for this series
             competitions = Competition.query.filter_by(series_id=series.id).order_by(Competition.event_date).all()
             
-            # Get all user scores for competitions in this series
-            comp_ids = [comp.id for comp in competitions]
+            # Try to get archived statistics first, fallback to CompetitionScore if not archived
+            archived_stats = FinishedSeriesStats.query.filter_by(series_id=series.id).all()
+            
             user_scores = {}
             
-            if comp_ids:
-                scores = CompetitionScore.query.filter(
-                    CompetitionScore.competition_id.in_(comp_ids)
-                ).all()
-                
-                for score in scores:
-                    if score.user_id not in user_scores:
-                        user_scores[score.user_id] = {
-                            'total_points': 0,
-                            'race_points': 0,
-                            'holeshot_points': 0,
-                            'wildcard_points': 0,
-                            'competitions_participated': 0
-                        }
-                    user_scores[score.user_id]['total_points'] += score.total_points or 0
-                    user_scores[score.user_id]['race_points'] += score.race_points or 0
-                    user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
-                    user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
-                    user_scores[score.user_id]['competitions_participated'] += 1
+            if archived_stats:
+                # Use archived statistics
+                for stat in archived_stats:
+                    user_scores[stat.user_id] = {
+                        'total_points': stat.total_points,
+                        'race_points': stat.race_points,
+                        'holeshot_points': stat.holeshot_points,
+                        'wildcard_points': stat.wildcard_points,
+                        'competitions_participated': stat.competitions_participated
+                    }
+            else:
+                # Fallback to CompetitionScore (for series not yet archived)
+                comp_ids = [comp.id for comp in competitions]
+                if comp_ids:
+                    scores = CompetitionScore.query.filter(
+                        CompetitionScore.competition_id.in_(comp_ids)
+                    ).all()
+                    
+                    for score in scores:
+                        if score.user_id not in user_scores:
+                            user_scores[score.user_id] = {
+                                'total_points': 0,
+                                'race_points': 0,
+                                'holeshot_points': 0,
+                                'wildcard_points': 0,
+                                'competitions_participated': 0
+                            }
+                        user_scores[score.user_id]['total_points'] += score.total_points or 0
+                        user_scores[score.user_id]['race_points'] += score.race_points or 0
+                        user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+                        user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+                        user_scores[score.user_id]['competitions_participated'] += 1
             
             # Convert to list and sort by total points
             leaderboard = []
@@ -1810,45 +1824,60 @@ def finished_series_detail_page(series_id):
         # Get competitions for this series
         competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
         
-        # Get all user scores for competitions in this series
-        comp_ids = [comp.id for comp in competitions]
+        # Try to get archived statistics first, fallback to CompetitionScore if not archived
+        archived_stats = FinishedSeriesStats.query.filter_by(series_id=series_id).all()
+        
         user_scores = {}
         competition_details = {}
         
-        if comp_ids:
-            scores = CompetitionScore.query.filter(
-                CompetitionScore.competition_id.in_(comp_ids)
-            ).all()
-            
-            for score in scores:
-                if score.user_id not in user_scores:
-                    user_scores[score.user_id] = {
-                        'total_points': 0,
-                        'race_points': 0,
-                        'holeshot_points': 0,
-                        'wildcard_points': 0,
-                        'competitions_participated': 0,
-                        'competition_scores': {}
+        # Get competition details
+        for comp in competitions:
+            competition_details[comp.id] = {
+                'name': comp.name,
+                'event_date': comp.event_date,
+                'location': getattr(comp, 'location', None)
+            }
+        
+        if archived_stats:
+            # Use archived statistics
+            for stat in archived_stats:
+                user_scores[stat.user_id] = {
+                    'total_points': stat.total_points,
+                    'race_points': stat.race_points,
+                    'holeshot_points': stat.holeshot_points,
+                    'wildcard_points': stat.wildcard_points,
+                    'competitions_participated': stat.competitions_participated,
+                    'competition_scores': {}  # Archived stats don't have per-competition breakdown
+                }
+        else:
+            # Fallback to CompetitionScore (for series not yet archived)
+            comp_ids = [comp.id for comp in competitions]
+            if comp_ids:
+                scores = CompetitionScore.query.filter(
+                    CompetitionScore.competition_id.in_(comp_ids)
+                ).all()
+                
+                for score in scores:
+                    if score.user_id not in user_scores:
+                        user_scores[score.user_id] = {
+                            'total_points': 0,
+                            'race_points': 0,
+                            'holeshot_points': 0,
+                            'wildcard_points': 0,
+                            'competitions_participated': 0,
+                            'competition_scores': {}
+                        }
+                    user_scores[score.user_id]['total_points'] += score.total_points or 0
+                    user_scores[score.user_id]['race_points'] += score.race_points or 0
+                    user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+                    user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+                    user_scores[score.user_id]['competitions_participated'] += 1
+                    user_scores[score.user_id]['competition_scores'][score.competition_id] = {
+                        'total_points': score.total_points or 0,
+                        'race_points': score.race_points or 0,
+                        'holeshot_points': score.holeshot_points or 0,
+                        'wildcard_points': score.wildcard_points or 0
                     }
-                user_scores[score.user_id]['total_points'] += score.total_points or 0
-                user_scores[score.user_id]['race_points'] += score.race_points or 0
-                user_scores[score.user_id]['holeshot_points'] += score.holeshot_points or 0
-                user_scores[score.user_id]['wildcard_points'] += score.wildcard_points or 0
-                user_scores[score.user_id]['competitions_participated'] += 1
-                user_scores[score.user_id]['competition_scores'][score.competition_id] = {
-                    'total_points': score.total_points or 0,
-                    'race_points': score.race_points or 0,
-                    'holeshot_points': score.holeshot_points or 0,
-                    'wildcard_points': score.wildcard_points or 0
-                }
-            
-            # Get competition details
-            for comp in competitions:
-                competition_details[comp.id] = {
-                    'name': comp.name,
-                    'event_date': comp.event_date,
-                    'location': getattr(comp, 'location', None)
-                }
         
         # Convert to list and sort by total points
         leaderboard = []
@@ -4502,6 +4531,11 @@ def archive_wsx_and_reset_points():
         from datetime import datetime
         from collections import defaultdict
         
+        # Get WSX series
+        wsx_series = Series.query.filter_by(name='WSX', year=2025).first()
+        if not wsx_series:
+            return jsonify({"error": "WSX 2025 serie hittades inte"}), 400
+        
         # Get all WSX competitions
         wsx_competitions = Competition.query.filter_by(series='WSX').all()
         
@@ -4601,7 +4635,30 @@ def archive_wsx_and_reset_points():
             print(f"{i}. {user_stat['display_name']} ({user_stat['username']}) - {user_stat['total_points']} poäng")
         print("=" * 80)
         
-        # Delete all CompetitionScore entries for WSX competitions
+        # IMPORTANT: Save statistics to FinishedSeriesStats BEFORE deleting CompetitionScore
+        print(f"\n💾 Sparar statistik till FinishedSeriesStats för serie_id={wsx_series.id}...")
+        archived_count = 0
+        
+        # Delete any existing archive entries for this series (in case of re-archive)
+        FinishedSeriesStats.query.filter_by(series_id=wsx_series.id).delete()
+        
+        for user_id, stats in user_stats.items():
+            archive_entry = FinishedSeriesStats(
+                series_id=wsx_series.id,
+                user_id=user_id,
+                total_points=stats['total_points'],
+                race_points=stats['race_points'],
+                holeshot_points=stats['holeshot_points'],
+                wildcard_points=stats['wildcard_points'],
+                competitions_participated=stats['competitions_participated']
+            )
+            db.session.add(archive_entry)
+            archived_count += 1
+        
+        db.session.flush()  # Flush to ensure archive is saved before deletion
+        print(f"✅ Sparade {archived_count} användarstatistik i FinishedSeriesStats")
+        
+        # NOW delete all CompetitionScore entries for WSX competitions
         deleted_count = CompetitionScore.query.filter(
             CompetitionScore.competition_id.in_(wsx_comp_ids)
         ).delete()
