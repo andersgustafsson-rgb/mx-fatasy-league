@@ -3751,6 +3751,21 @@ def create_smx_finals_competitions_2025():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/create_finished_series_stats_table', methods=['POST'])
+def create_finished_series_stats_table():
+    """Create FinishedSeriesStats table if it doesn't exist"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Try to create the table
+        FinishedSeriesStats.__table__.create(db.engine, checkfirst=True)
+        db.session.commit()
+        return jsonify({"success": True, "message": "FinishedSeriesStats table created successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/fix_database_tables', methods=['POST'])
 def fix_database_tables():
     """Fix missing database tables and columns"""
