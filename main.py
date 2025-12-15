@@ -4072,8 +4072,8 @@ def submit_results():
     
     if not complement_mode:
         # Normal mode: delete all existing results first
-    CompetitionResult.query.filter_by(competition_id=comp_id).delete()
-    HoleshotResult.query.filter_by(competition_id=comp_id).delete()
+        CompetitionResult.query.filter_by(competition_id=comp_id).delete()
+        HoleshotResult.query.filter_by(competition_id=comp_id).delete()
     else:
         # Complement mode: only update/add, don't delete existing
         # We'll update or add results as we go
