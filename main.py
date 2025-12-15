@@ -4092,7 +4092,7 @@ def submit_results():
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
             else:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
         else:
             db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
     
@@ -4108,7 +4108,7 @@ def submit_results():
             else:
                 db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
         else:
-        db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
 
     positions_450_raw = request.form.getlist("positions_450[]")
     riders_450_raw = request.form.getlist("riders_450[]")
