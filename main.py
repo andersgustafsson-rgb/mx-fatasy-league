@@ -4706,6 +4706,105 @@ def archive_wsx_and_reset_points():
         return jsonify({"error": f"Fel vid arkivering: {str(e)}"}), 500
 
 
+@app.post("/admin/restore_wsx_points")
+def restore_wsx_points():
+    """Restore WSX points by recalculating from picks and results, then archive properly"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        from datetime import datetime
+        from collections import defaultdict
+        
+        # Get WSX series
+        wsx_series = Series.query.filter_by(name='WSX', year=2025).first()
+        if not wsx_series:
+            return jsonify({"error": "WSX 2025 serie hittades inte"}), 400
+        
+        # Get all WSX competitions
+        wsx_competitions = Competition.query.filter_by(series='WSX').all()
+        
+        if not wsx_competitions:
+            return jsonify({"error": "Inga WSX-tävlingar hittades"}), 400
+        
+        # Get all WSX competition IDs
+        wsx_comp_ids = [comp.id for comp in wsx_competitions]
+        
+        print(f"🔄 Återställer WSX-poäng för {len(wsx_competitions)} tävlingar...")
+        
+        # Recalculate scores for each WSX competition
+        restored_count = 0
+        for comp_id in wsx_comp_ids:
+            print(f"🔄 Räknar om poäng för tävling {comp_id}...")
+            try:
+                calculate_scores(comp_id)
+                restored_count += 1
+            except Exception as e:
+                print(f"⚠️ Fel vid räkning för tävling {comp_id}: {e}")
+        
+        db.session.commit()
+        print(f"✅ Återställde poäng för {restored_count} tävlingar")
+        
+        # Now get all restored scores and archive them properly
+        wsx_scores = CompetitionScore.query.filter(
+            CompetitionScore.competition_id.in_(wsx_comp_ids)
+        ).all()
+        
+        # Group scores by user and calculate totals
+        user_stats = defaultdict(lambda: {
+            'total_points': 0,
+            'race_points': 0,
+            'holeshot_points': 0,
+            'wildcard_points': 0,
+            'competitions_participated': 0
+        })
+        
+        for score in wsx_scores:
+            user_stats[score.user_id]['total_points'] += score.total_points or 0
+            user_stats[score.user_id]['race_points'] += score.race_points or 0
+            user_stats[score.user_id]['holeshot_points'] += score.holeshot_points or 0
+            user_stats[score.user_id]['wildcard_points'] += score.wildcard_points or 0
+            user_stats[score.user_id]['competitions_participated'] += 1
+        
+        # Delete any existing archive entries for this series
+        FinishedSeriesStats.query.filter_by(series_id=wsx_series.id).delete()
+        
+        # Save to archive
+        archived_count = 0
+        for user_id, stats in user_stats.items():
+            archive_entry = FinishedSeriesStats(
+                series_id=wsx_series.id,
+                user_id=user_id,
+                total_points=stats['total_points'],
+                race_points=stats['race_points'],
+                holeshot_points=stats['holeshot_points'],
+                wildcard_points=stats['wildcard_points'],
+                competitions_participated=stats['competitions_participated']
+            )
+            db.session.add(archive_entry)
+            archived_count += 1
+        
+        db.session.commit()
+        
+        print(f"✅ Arkiverade {archived_count} användarstatistik i FinishedSeriesStats")
+        print(f"✅ WSX-poäng återställda och arkiverade!")
+        
+        return jsonify({
+            "success": True,
+            "message": f"WSX-poäng återställda! {restored_count} tävlingar räknade om, {archived_count} användarstatistik arkiverade.",
+            "restored_competitions": restored_count,
+            "archived_users": archived_count
+        })
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in restore_wsx_points: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        db.session.rollback()
+        return jsonify({"error": f"Fel vid återställning: {str(e)}"}), 500
+
+
 @app.post("/admin/simulate_all_users_picks/<int:competition_id>")
 def admin_simulate_all_users_picks(competition_id):
     """Simulate picks for all users to test 'Se Andras Picks' functionality"""

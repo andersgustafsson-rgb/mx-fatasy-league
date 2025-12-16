@@ -662,11 +662,17 @@
                                 Statistik skrivs ut i konsolen/loggen.
                             </p>
                         </div>
-                        <button onclick="archiveWsxAndResetPoints()" class="btn-warning px-4 py-2 rounded-lg">
-                            📦 Arkivera WSX & Nollställ Poäng
-                        </button>
+                        <div class="flex gap-2 mb-4">
+                            <button onclick="archiveWsxAndResetPoints()" class="btn-warning px-4 py-2 rounded-lg">
+                                📦 Arkivera WSX & Nollställ Poäng
+                            </button>
+                            <button onclick="restoreWsxPoints()" class="btn-primary px-4 py-2 rounded-lg">
+                                🔄 Återställ WSX Poäng
+                            </button>
+                        </div>
                         <p class="text-gray-400 text-sm mt-2">
-                            Skapar statistik för WSX 2025 och tar bort alla CompetitionScore entries för WSX-tävlingar
+                            <strong>Arkivera:</strong> Skapar statistik för WSX 2025 och tar bort alla CompetitionScore entries för WSX-tävlingar<br>
+                            <strong>Återställ:</strong> Räknar om WSX-poäng från picks och resultat, sedan arkiverar dem korrekt
                         </p>
                     </div>
                 </div>
@@ -845,6 +851,28 @@
                             });
                             message += `\nSe konsolen/loggen för fullständig statistik.`;
                         }
+                        alert(message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
+        async function restoreWsxPoints() {
+            if (confirm('🔄 Detta kommer att:\n\n1. Räknar om WSX-poäng från picks och resultat för alla WSX-tävlingar\n2. Återställer CompetitionScore entries\n3. Arkiverar statistik korrekt i FinishedSeriesStats\n\nDetta används om poängen redan har raderats men picks och resultat finns kvar.\n\nFortsätt?')) {
+                try {
+                    const response = await fetch('/admin/restore_wsx_points', {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        let message = '✅ ' + result.message + '\n\n';
+                        message += `📊 Resultat:\n`;
+                        message += `- Tävlingar räknade om: ${result.restored_competitions}\n`;
+                        message += `- Användarstatistik arkiverade: ${result.archived_users}\n`;
                         alert(message);
                     } else {
                         alert('❌ Error: ' + result.error);
