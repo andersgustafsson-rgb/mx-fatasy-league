@@ -8748,6 +8748,40 @@ def admin_reset_league_points(league_id):
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/admin/leagues/reset_all_points")
+def admin_reset_all_league_points():
+    """Reset all league points to 0 (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all leagues
+        leagues = League.query.all()
+        
+        reset_count = 0
+        for league in leagues:
+            league.total_points = 0
+            reset_count += 1
+        
+        db.session.commit()
+        
+        print(f"✅ Nollställde poäng för {reset_count} ligor")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Nollställde poäng för {reset_count} ligor",
+            "reset_count": reset_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in admin_reset_all_league_points: {e}")
+        print(f"ERROR traceback: {error_trace}")
+        return jsonify({"error": str(e)}), 500
+
+
 def calculate_league_points(league_id, competition_id):
     """Calculate fair league points based on member race pick performance.
     

@@ -642,11 +642,17 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">🏆 League Points</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <button onclick="calculateAllLeaguePoints()" class="btn-primary px-4 py-2 rounded-lg">
-                            🏅 Calculate All League Points
-                        </button>
+                        <div class="flex gap-2 mb-4">
+                            <button onclick="calculateAllLeaguePoints()" class="btn-primary px-4 py-2 rounded-lg">
+                                🏅 Calculate All League Points
+                            </button>
+                            <button onclick="resetAllLeaguePoints()" class="btn-warning px-4 py-2 rounded-lg">
+                                🔄 Nollställ Alla League Points
+                            </button>
+                        </div>
                         <p class="text-gray-400 text-sm mt-2">
-                            Recalculates league points for all competitions
+                            <strong>Calculate:</strong> Räknar om league points för alla tävlingar<br>
+                            <strong>Nollställ:</strong> Sätter alla league points till 0 (inför nya serier)
                         </p>
                     </div>
                 </div>
