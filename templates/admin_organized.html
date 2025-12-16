@@ -836,6 +836,24 @@
             }
         }
 
+        async function resetAllLeaguePoints() {
+            if (confirm('⚠️ Detta kommer att nollställa poäng för ALLA ligor till 0.\n\nDetta används inför nya serier (SX, MX, SMX).\n\nFortsätt?')) {
+                try {
+                    const response = await fetch('/admin/leagues/reset_all_points', {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('✅ ' + result.message);
+                    } else {
+                        alert('❌ Error: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('❌ Error: ' + error.message);
+                }
+            }
+        }
+
         async function archiveWsxAndResetPoints() {
             if (confirm('⚠️ Detta kommer att:\n\n1. Skapa statistik för alla användare från WSX 2025\n2. Radera alla CompetitionScore entries för WSX-tävlingar\n3. Nollställa poängen så att SX-säsongen kan ta vid\n\nStatistik skrivs ut i konsolen/loggen.\n\nFortsätt?')) {
                 try {
