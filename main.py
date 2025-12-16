@@ -5287,9 +5287,11 @@ def admin_set_date():
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
+    # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
     from sqlalchemy import func
     
     # Hämta alla användare med deras totala poäng från CompetitionScore
+    # Exkludera WSX-serien - bara räkna SX, MX, SMX
     user_scores = (
         db.session.query(
             User.id,
@@ -5300,6 +5302,13 @@ def get_season_leaderboard():
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+        .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+        .filter(
+            db.or_(
+                Competition.series == None,  # Include if series is null (backwards compatibility)
+                Competition.series != 'WSX'  # Exclude WSX series
+            )
+        )
         .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
         .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
         .all()
