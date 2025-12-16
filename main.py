@@ -8892,10 +8892,19 @@ def calculate_all_league_points():
         return jsonify({"error": "admin_only"}), 403
     
     try:
-        # Get all competitions that have results
-        competitions_with_results = db.session.query(Competition.id).join(
-            CompetitionScore, Competition.id == CompetitionScore.competition_id
-        ).distinct().all()
+        # Get all competitions that have results, excluding WSX
+        competitions_with_results = (
+            db.session.query(Competition.id)
+            .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
+            .filter(
+                db.or_(
+                    Competition.series == None,  # Include if series is null (backwards compatibility)
+                    Competition.series != 'WSX'  # Exclude WSX series
+                )
+            )
+            .distinct()
+            .all()
+        )
         
         # Get all leagues
         leagues = League.query.all()
@@ -8906,7 +8915,7 @@ def calculate_all_league_points():
         for league in leagues:
             league_total = 0
             
-            # Calculate points for each competition
+            # Calculate points for each competition (WSX already filtered out)
             for comp_id_tuple in competitions_with_results:
                 comp_id = comp_id_tuple[0]
                 points = calculate_league_points(league.id, comp_id)
@@ -8939,14 +8948,23 @@ def calculate_league_points_single(league_id):
     try:
         league = League.query.get_or_404(league_id)
         
-        # Get all competitions that have results
-        competitions_with_results = db.session.query(Competition.id).join(
-            CompetitionScore, Competition.id == CompetitionScore.competition_id
-        ).distinct().all()
+        # Get all competitions that have results, excluding WSX
+        competitions_with_results = (
+            db.session.query(Competition.id)
+            .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
+            .filter(
+                db.or_(
+                    Competition.series == None,  # Include if series is null (backwards compatibility)
+                    Competition.series != 'WSX'  # Exclude WSX series
+                )
+            )
+            .distinct()
+            .all()
+        )
         
         league_total = 0
         
-        # Calculate points for each competition
+        # Calculate points for each competition (WSX already filtered out)
         for comp_id_tuple in competitions_with_results:
             comp_id = comp_id_tuple[0]
             points = calculate_league_points(league.id, comp_id)
