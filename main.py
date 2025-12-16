@@ -6881,8 +6881,21 @@ def get_user_total_points():
     
     user_id = session["user_id"]
     
-    # Calculate total points the same way as in leaderboard (includes penalties)
-    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    # Calculate total points the same way as in leaderboard (excludes WSX)
+    # Join with Competition to filter out WSX series
+    user_scores = (
+        db.session.query(CompetitionScore)
+        .join(Competition, Competition.id == CompetitionScore.competition_id)
+        .filter(CompetitionScore.user_id == user_id)
+        .filter(
+            db.or_(
+                Competition.series == None,  # Include if series is null (backwards compatibility)
+                Competition.series != 'WSX'  # Exclude WSX series
+            )
+        )
+        .all()
+    )
+    
     total_points = sum(score.total_points or 0 for score in user_scores)
     
     # Also calculate individual components for debugging
@@ -6891,9 +6904,10 @@ def get_user_total_points():
     total_wildcard_points = sum(score.wildcard_points or 0 for score in user_scores)
     
     print(f"DEBUG: get_user_total_points for user {user_id}: race={total_race_points}, holeshot={total_holeshot_points}, wildcard={total_wildcard_points}, total={total_points}")
-    print(f"DEBUG: Found {len(user_scores)} CompetitionScore entries for user {user_id}")
+    print(f"DEBUG: Found {len(user_scores)} CompetitionScore entries for user {user_id} (excluding WSX)")
     for score in user_scores:
-        print(f"DEBUG: Score entry - competition_id={score.competition_id}, race_points={score.race_points}, total_points={score.total_points}")
+        comp = Competition.query.get(score.competition_id)
+        print(f"DEBUG: Score entry - competition_id={score.competition_id}, series={comp.series if comp else 'N/A'}, race_points={score.race_points}, total_points={score.total_points}")
     
     return jsonify({
         "total_points": total_points,
