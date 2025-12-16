@@ -1256,6 +1256,7 @@ def league_detail_page(league_id):
     season_leaderboard = []
     if member_user_ids:
         # Calculate individual points from CompetitionScore (race picks) for each member
+        # Exkludera WSX-serien - bara räkna SX, MX, SMX
         user_scores = (
             db.session.query(
                 User.id,
@@ -1264,7 +1265,14 @@ def league_detail_page(league_id):
                 db.func.sum(CompetitionScore.total_points).label('total_points')
             )
             .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
+            .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
             .filter(User.id.in_(member_user_ids))
+            .filter(
+                db.or_(
+                    Competition.series == None,  # Include if series is null (backwards compatibility)
+                    Competition.series != 'WSX'  # Exclude WSX series
+                )
+            )
             .group_by(User.id, User.username, User.display_name)
             .order_by(db.func.sum(CompetitionScore.total_points).desc().nullslast())
             .all()
