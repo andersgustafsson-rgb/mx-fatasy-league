@@ -8805,6 +8805,12 @@ def calculate_league_points(league_id, competition_id):
             return 0
         
         # Get their race pick scores for this competition
+        # Exclude WSX competitions - league points should only count SX, MX, SMX
+        competition = Competition.query.get(competition_id)
+        if competition and competition.series == 'WSX':
+            # Don't count WSX competitions for league points
+            return 0
+        
         member_scores = []
         for member in members:
             score = CompetitionScore.query.filter_by(
