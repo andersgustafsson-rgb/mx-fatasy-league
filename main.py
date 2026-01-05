@@ -13167,11 +13167,15 @@ def race_countdown():
                     if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
                         next_race_obj.timezone = 'America/Los_Angeles'
                         needs_commit = True
-                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
+                    # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                    if hasattr(next_race_obj, 'start_time'):
                         from datetime import time as _t
-                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
-                        next_race_obj.start_time = _t(hour=16, minute=0)
-                        needs_commit = True
+                        correct_time = _t(hour=16, minute=0)
+                        current_time = next_race_obj.start_time
+                        if current_time is None or current_time != correct_time:
+                            # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                            next_race_obj.start_time = correct_time
+                            needs_commit = True
                 if needs_commit:
                     db.session.commit()
             except Exception as _e2:
@@ -13300,11 +13304,15 @@ def race_countdown():
                     if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
                         upcoming_race.timezone = 'America/Los_Angeles'
                         needs_commit2 = True
-                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
+                    # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                    if hasattr(upcoming_race, 'start_time'):
                         from datetime import time as _t
-                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
-                        upcoming_race.start_time = _t(hour=16, minute=0)
-                        needs_commit2 = True
+                        correct_time = _t(hour=16, minute=0)
+                        current_time = upcoming_race.start_time
+                        if current_time is None or current_time != correct_time:
+                            # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                            upcoming_race.start_time = correct_time
+                            needs_commit2 = True
                 if needs_commit2:
                     db.session.commit()
             except Exception as _e3:
@@ -14959,11 +14967,15 @@ def is_picks_locked(competition):
                 if hasattr(competition_obj, 'timezone') and not competition_obj.timezone:
                     competition_obj.timezone = 'America/Los_Angeles'
                     needs_commit = True
-                if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
+                # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                if hasattr(competition_obj, 'start_time'):
                     from datetime import time as _t
-                    # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
-                    competition_obj.start_time = _t(hour=16, minute=0)
-                    needs_commit = True
+                    correct_time = _t(hour=16, minute=0)
+                    current_time = competition_obj.start_time
+                    if current_time is None or current_time != correct_time:
+                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                        competition_obj.start_time = correct_time
+                        needs_commit = True
             if needs_commit:
                 db.session.commit()
                 # Refresh the object to get updated values
