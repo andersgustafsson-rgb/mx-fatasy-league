@@ -3111,7 +3111,7 @@ def fix_canadian_gp_time():
 
 @app.route('/api/competitions/fix_anaheim1', methods=['POST'])
 def fix_anaheim1():
-    """Fix Anaheim 1 event_date to 2026-01-10, timezone to PT, and start_time to 11:00 AM"""
+    """Fix Anaheim 1 event_date to 2026-01-10, timezone to PT, and start_time to 4:00 PM (16:00) = Sunday Jan 11, 1:00 AM GMT+1"""
     if not is_admin_user():
         return jsonify({'error': 'Unauthorized'}), 401
     
@@ -3133,21 +3133,21 @@ def fix_anaheim1():
         if hasattr(anaheim1, 'timezone'):
             anaheim1.timezone = 'America/Los_Angeles'
         
-        # Set start_time to 11:00 AM (picks deadline will be 9:00 AM PT, 2h before)
+        # Set start_time to 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1 (picks deadline will be 2:00 PM PT, 2h before)
         if hasattr(anaheim1, 'start_time'):
-            anaheim1.start_time = time(11, 0)
+            anaheim1.start_time = time(16, 0)
         
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=11:00 AM',
+            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=4:00 PM (16:00)',
             'competition': {
                 'id': anaheim1.id,
                 'name': anaheim1.name,
                 'event_date': '2026-01-10',
                 'timezone': 'America/Los_Angeles',
-                'start_time': '11:00'
+                'start_time': '16:00'
             }
         })
     except Exception as e:
@@ -3175,7 +3175,7 @@ def debug_anaheim1_countdown():
         # Get competition details
         event_date = anaheim1.event_date
         timezone = getattr(anaheim1, 'timezone', 'America/Los_Angeles')
-        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(11, 0)
+        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(16, 0)
         
         # Calculate race datetime in local time
         race_datetime_local = datetime.combine(event_date, start_time)
@@ -13169,8 +13169,8 @@ def race_countdown():
                         needs_commit = True
                     if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
                         from datetime import time as _t
-                        # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
-                        next_race_obj.start_time = _t(hour=11, minute=0)
+                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                        next_race_obj.start_time = _t(hour=16, minute=0)
                         needs_commit = True
                 if needs_commit:
                     db.session.commit()
@@ -13302,8 +13302,8 @@ def race_countdown():
                         needs_commit2 = True
                     if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
                         from datetime import time as _t
-                        # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
-                        upcoming_race.start_time = _t(hour=11, minute=0)
+                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                        upcoming_race.start_time = _t(hour=16, minute=0)
                         needs_commit2 = True
                 if needs_commit2:
                     db.session.commit()
@@ -14961,8 +14961,8 @@ def is_picks_locked(competition):
                     needs_commit = True
                 if hasattr(competition_obj, 'start_time') and not competition_obj.start_time:
                     from datetime import time as _t
-                    # Race start 11:00 AM PT, picks deadline 9:00 AM PT (2h before)
-                    competition_obj.start_time = _t(hour=11, minute=0)
+                    # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                    competition_obj.start_time = _t(hour=16, minute=0)
                     needs_commit = True
             if needs_commit:
                 db.session.commit()
