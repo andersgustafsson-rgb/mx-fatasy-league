@@ -9246,6 +9246,56 @@ def fix_column_public():
             pass
         return jsonify({"error": str(e), "status": "failed"}), 500
 
+@app.get("/update_rider_prices_from_standings")
+def update_rider_prices_from_standings_endpoint():
+    """Update rider prices based on previous year's standings - web endpoint"""
+    if not is_admin_user():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        # Import the update function
+        import pathlib
+        import sys
+        sys.path.insert(0, str(pathlib.Path(__file__).parent))
+        
+        from update_rider_prices_from_standings import (
+            parse_standings_from_txt,
+            update_rider_prices,
+            calculate_price_for_budget
+        )
+        
+        # Parse standings
+        standings = parse_standings_from_txt("point standings 2025.txt")
+        
+        if not any(standings.values()):
+            return jsonify({
+                'error': 'No standings data found',
+                'message': 'Please ensure point standings 2025.txt exists'
+            }), 404
+        
+        # Update prices
+        update_rider_prices(standings, default_price=100000)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated prices: {len(standings["450cc"])} 450cc, {len(standings["250cc"])} 250cc riders',
+            'standings': {
+                '450cc_count': len(standings['450cc']),
+                '250cc_count': len(standings['250cc'])
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        error_msg = str(e)
+        traceback_str = traceback.format_exc()
+        print(f"Error in update_rider_prices_from_standings: {error_msg}")
+        print(traceback_str)
+        return jsonify({
+            'error': error_msg,
+            'traceback': traceback_str
+        }), 500
+
 @app.get("/update_rider_prices")
 def update_rider_prices():
     """Update rider prices based on 2025 point standings"""
@@ -9310,45 +9360,61 @@ def update_rider_prices():
                         except (ValueError, IndexError):
                             continue
         
-        # Calculate prices and update database
+        # Calculate prices and update database using new budget-optimized pricing
         updated_riders = []
+        
+        def calculate_price_for_budget(position: int, points: int, class_name: str):
+            """Calculate price optimized for 1.5M budget (4 riders: 2x450cc + 2x250cc)"""
+            if class_name == '450cc':
+                if position == 1:
+                    return 450000
+                elif position == 2:
+                    return 420000
+                elif position == 3:
+                    return 400000
+                elif position <= 5:
+                    return 380000 - (position - 4) * 10000
+                elif position <= 10:
+                    return 350000 - (position - 6) * 14000
+                elif position <= 15:
+                    return 280000 - (position - 11) * 16000
+                elif position <= 20:
+                    return 200000 - (position - 16) * 10000
+                elif points > 50:
+                    return 150000
+                elif points > 0:
+                    return 100000
+                else:
+                    return 100000  # Default
+            else:  # 250cc
+                if position == 1:
+                    return 400000
+                elif position == 2:
+                    return 380000
+                elif position == 3:
+                    return 360000
+                elif position <= 5:
+                    return 340000 - (position - 4) * 10000
+                elif position <= 10:
+                    return 300000 - (position - 6) * 16000
+                elif position <= 15:
+                    return 220000 - (position - 11) * 14000
+                elif position <= 20:
+                    return 150000 - (position - 16) * 6000
+                elif points > 30:
+                    return 100000
+                elif points > 0:
+                    return 100000
+                else:
+                    return 100000  # Default
         
         for class_name, riders in riders_data.items():
             for name, data in riders.items():
                 position = data['position']
                 points = data['points']
                 
-                # Calculate price based on position and points
-                if class_name == '450cc':
-                    if position <= 5:
-                        price = 500000  # Top 5 riders
-                    elif position <= 10:
-                        price = 400000  # Top 10 riders
-                    elif position <= 15:
-                        price = 300000  # Top 15 riders
-                    elif position <= 20:
-                        price = 200000  # Top 20 riders
-                    elif points > 50:
-                        price = 150000  # Some points
-                    elif points > 0:
-                        price = 100000  # Few points
-                    else:
-                        price = 50000   # No points
-                else:  # 250cc
-                    if position <= 5:
-                        price = 300000  # Top 5 riders
-                    elif position <= 10:
-                        price = 250000  # Top 10 riders
-                    elif position <= 15:
-                        price = 200000  # Top 15 riders
-                    elif position <= 20:
-                        price = 150000  # Top 20 riders
-                    elif points > 30:
-                        price = 100000  # Some points
-                    elif points > 0:
-                        price = 75000   # Few points
-                    else:
-                        price = 50000   # No points
+                # Calculate price using new budget-optimized function
+                price = calculate_price_for_budget(position, points, class_name)
                 
                 # Update rider in database
                 rider = Rider.query.filter_by(name=name, class_name=class_name).first()
