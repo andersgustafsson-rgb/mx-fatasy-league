@@ -1600,11 +1600,21 @@ def season_team_builder():
         
         # Deduplicate riders: keep only the latest version (highest ID) of each rider name+class combination
         # This prevents showing duplicate riders when numbers/brands are updated
+        # Normalize names (strip whitespace) to catch duplicates with different spacing
         riders_by_key = {}
         for rider in all_riders:
-            key = (rider.name, rider.class_name)
+            # Normalize name: strip whitespace and convert to consistent case for comparison
+            normalized_name = rider.name.strip() if rider.name else ""
+            key = (normalized_name, rider.class_name)
+            
+            # If we already have this rider, keep the one with highest ID (most recent)
             if key not in riders_by_key or rider.id > riders_by_key[key].id:
                 riders_by_key[key] = rider
+            else:
+                # Log if we're skipping a duplicate (for debugging)
+                existing = riders_by_key[key]
+                if normalized_name and existing.name.strip() == normalized_name:
+                    print(f"  ⚠️  Skipping duplicate: {rider.name} ({rider.class_name}) - ID {rider.id} (keeping ID {existing.id})")
         
         # Convert to list and sort
         unique_riders = list(riders_by_key.values())
