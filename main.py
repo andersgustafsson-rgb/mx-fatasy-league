@@ -9343,15 +9343,33 @@ def update_rider_prices():
                             name_part = parts[1]
                             points = int(parts[-1]) if parts[-1].isdigit() else 0
                             
-                            # Clean up name (remove duplicates)
-                            name = name_part
-                            if len(name) > 20:  # Likely has duplicate name
-                                # Find the middle point and split
-                                mid = len(name) // 2
-                                for i in range(mid-5, mid+5):
-                                    if i < len(name) and name[i].isupper():
-                                        name = name[:i]
-                                        break
+                            # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan")
+                            name = name_part.strip()
+                            
+                            # Check if name is duplicated
+                            if len(name) > 15:  # Likely has duplicate name
+                                words = name.split()
+                                if len(words) >= 4:
+                                    # Check if first half equals second half
+                                    mid = len(words) // 2
+                                    first_half = words[:mid]
+                                    second_half = words[mid:]
+                                    if first_half == second_half:
+                                        name = ' '.join(first_half)
+                                else:
+                                    # Try character-based approach
+                                    mid = len(name) // 2
+                                    for i in range(mid-5, mid+5):
+                                        if i < len(name) and i > 0:
+                                            if name[i-1] == ' ' and name[i].isupper():
+                                                if i > 5 and name[:i].strip() == name[i:].strip():
+                                                    name = name[:i].strip()
+                                                    break
+                                            elif i == mid and name[:i] == name[i:]:
+                                                name = name[:i]
+                                                break
+                            
+                            name = name.strip()
                             
                             riders_data[current_class][name] = {
                                 'position': position,

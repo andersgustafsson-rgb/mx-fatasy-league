@@ -179,21 +179,55 @@ def parse_standings_from_txt(txt_path: str = "point standings 2025.txt"):
                         name_part = parts[1]
                         points = int(parts[-1]) if parts[-1].isdigit() else 0
                         
-                        # Clean up name (remove duplicates)
-                        name = name_part
-                        if len(name) > 20:  # Likely has duplicate name
-                            mid = len(name) // 2
-                            for i in range(mid-5, mid+5):
-                                if i < len(name) and name[i].isupper():
-                                    name = name[:i]
-                                    break
+                        # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan")
+                        name = name_part.strip()
+                        
+                        # Check if name is duplicated (common pattern: "FirstName LastNameFirstName LastName")
+                        if len(name) > 15:  # Likely has duplicate name
+                            # Try to find where the duplicate starts
+                            words = name.split()
+                            if len(words) >= 4:
+                                # Check if first half equals second half
+                                mid = len(words) // 2
+                                first_half = words[:mid]
+                                second_half = words[mid:]
+                                if first_half == second_half:
+                                    name = ' '.join(first_half)
+                            else:
+                                # Try character-based approach
+                                mid = len(name) // 2
+                                for i in range(mid-5, mid+5):
+                                    if i < len(name) and i > 0:
+                                        # Check if character before is space and current is uppercase
+                                        if name[i-1] == ' ' and name[i].isupper():
+                                            # Check if this looks like the start of a duplicate
+                                            if i > 5 and name[:i].strip() == name[i:].strip():
+                                                name = name[:i].strip()
+                                                break
+                                        # Also check for exact duplicate pattern
+                                        elif i == mid and name[:i] == name[i:]:
+                                            name = name[:i]
+                                            break
                         
                         name = name.strip()
                         if name:
-                            standings[current_class][name] = {
-                                'position': position,
-                                'points': points
-                            }
+                            # For 250cc, if rider already exists (from west/east), keep the better (lower) position
+                            if current_class == '250cc' and name in standings[current_class]:
+                                existing_position = standings[current_class][name]['position']
+                                # Keep the better (lower) position, but sum the points
+                                if position < existing_position:
+                                    standings[current_class][name] = {
+                                        'position': position,
+                                        'points': max(points, standings[current_class][name]['points'])  # Keep higher points
+                                    }
+                                else:
+                                    # Keep existing position but update points if higher
+                                    standings[current_class][name]['points'] = max(points, standings[current_class][name]['points'])
+                            else:
+                                standings[current_class][name] = {
+                                    'position': position,
+                                    'points': points
+                                }
                     except (ValueError, IndexError):
                         continue
     
