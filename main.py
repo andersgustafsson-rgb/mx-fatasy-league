@@ -1595,31 +1595,47 @@ def season_team_builder():
         return redirect(url_for("login"))
 
     try:
-        all_riders = Rider.query.order_by(Rider.rider_number).all()
-        print(f"Found {len(all_riders)} riders for season team builder")
+        # IMPORTANT: Only get SMX riders (450cc and 250cc) for season teams
+        # WSX riders (wsx_sx1, wsx_sx2) should NOT appear in season team builder
+        all_riders = Rider.query.filter(
+            Rider.class_name.in_(['450cc', '250cc'])
+        ).order_by(Rider.rider_number).all()
+        print(f"Found {len(all_riders)} SMX riders for season team builder")
         
         # Deduplicate riders: keep only the latest version (highest ID) of each rider name+class combination
         # This prevents showing duplicate riders when numbers/brands are updated
         # Normalize names (strip whitespace) to catch duplicates with different spacing
         riders_by_key = {}
+        duplicates_found = []
         for rider in all_riders:
             # Normalize name: strip whitespace and convert to consistent case for comparison
             normalized_name = rider.name.strip() if rider.name else ""
             key = (normalized_name, rider.class_name)
             
             # If we already have this rider, keep the one with highest ID (most recent)
-            if key not in riders_by_key or rider.id > riders_by_key[key].id:
+            if key not in riders_by_key:
                 riders_by_key[key] = rider
             else:
-                # Log if we're skipping a duplicate (for debugging)
                 existing = riders_by_key[key]
-                if normalized_name and existing.name.strip() == normalized_name:
-                    print(f"  ⚠️  Skipping duplicate: {rider.name} ({rider.class_name}) - ID {rider.id} (keeping ID {existing.id})")
+                if rider.id > existing.id:
+                    # This one is newer, replace the old one
+                    duplicates_found.append(f"{rider.name} ({rider.class_name}) - Replaced ID {existing.id} with ID {rider.id}")
+                    riders_by_key[key] = rider
+                else:
+                    # Keep the existing one (higher ID)
+                    duplicates_found.append(f"{rider.name} ({rider.class_name}) - Skipped ID {rider.id} (keeping ID {existing.id})")
+        
+        if duplicates_found:
+            print(f"  ⚠️  Found {len(duplicates_found)} duplicates (removed):")
+            for dup in duplicates_found[:10]:  # Show first 10
+                print(f"    - {dup}")
+            if len(duplicates_found) > 10:
+                print(f"    ... and {len(duplicates_found) - 10} more")
         
         # Convert to list and sort
         unique_riders = list(riders_by_key.values())
         unique_riders.sort(key=lambda r: (r.rider_number or 999, r.name))
-        print(f"After deduplication: {len(unique_riders)} unique riders")
+        print(f"After deduplication: {len(unique_riders)} unique SMX riders")
         
         # Check if user already has a team
         existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
