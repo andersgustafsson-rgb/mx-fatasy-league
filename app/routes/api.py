@@ -113,24 +113,58 @@ def add_rider():
 			except Exception as e:
 				print(f"Error saving rider image: {e}")
 
-	# Conflict check
+	# MASTER LIST: Check if rider with same name+class already exists
+	# If exists, UPDATE it instead of creating new (one master per name+class)
 	existing_rider = Rider.query.filter_by(
-		rider_number=data['rider_number'],
-		class_name=data['class_name']
+		name=data['name'],
+		class_name=data.get('class_name', data.get('classes', '250cc').split(',')[0].strip() if data.get('classes') else '250cc')
 	).first()
+	
 	if existing_rider:
+		# Rider exists - UPDATE the master instead of creating duplicate
+		existing_rider.rider_number = data['rider_number']
+		existing_rider.bike_brand = data['bike_brand']
+		if image_url:
+			existing_rider.image_url = image_url
+		if 'price' in data:
+			existing_rider.price = data['price']
+		if 'coast_250' in data:
+			existing_rider.coast_250 = data['coast_250']
+		if 'classes' in data:
+			existing_rider.classes = data['classes']
+		if 'series_participation' in data:
+			existing_rider.series_participation = data['series_participation']
+		
+		# Update all other fields if provided
+		for field in ['nickname','hometown','residence','team','manufacturer','team_manager','mechanic','instagram','twitter','facebook','website','bio','achievements']:
+			if field in data:
+				setattr(existing_rider, field, data[field])
+		
+		db.session.commit()
+		response = {'success': True, 'id': existing_rider.id, 'updated': True, 'message': 'Förare uppdaterad (master-lista)'}
+		if season_warning:
+			response['warning'] = season_warning
+		return jsonify(response)
+	
+	# Check for number conflict (different rider with same number+class)
+	number_conflict = Rider.query.filter_by(
+		rider_number=data['rider_number'],
+		class_name=data.get('class_name', data.get('classes', '250cc').split(',')[0].strip() if data.get('classes') else '250cc')
+	).first()
+	if number_conflict:
 		return jsonify({
 			'error': 'conflict',
-			'message': f"Nummer {data['rider_number']} finns redan för {existing_rider.name} ({existing_rider.class_name})",
+			'message': f"Nummer {data['rider_number']} finns redan för {number_conflict.name} ({number_conflict.class_name})",
 			'existing_rider': {
-				'id': existing_rider.id,
-				'name': existing_rider.name,
-				'class_name': existing_rider.class_name,
-				'rider_number': existing_rider.rider_number,
-				'bike_brand': existing_rider.bike_brand
+				'id': number_conflict.id,
+				'name': number_conflict.name,
+				'class_name': number_conflict.class_name,
+				'rider_number': number_conflict.rider_number,
+				'bike_brand': number_conflict.bike_brand
 			}
 		}), 409
 
+	# New rider - create it
 	price = data.get('price') or (450000 if data['class_name'] == '450cc' else 50000)
 	classes = data.get('classes', data.get('class_name', '250cc'))
 
@@ -147,7 +181,7 @@ def add_rider():
 	)
 	db.session.add(rider)
 	db.session.commit()
-	response = {'success': True, 'id': rider.id}
+	response = {'success': True, 'id': rider.id, 'created': True}
 	if season_warning:
 		response['warning'] = season_warning
 	return jsonify(response)
@@ -224,6 +258,7 @@ def update_rider(rider_id: int):
 					}
 				}), 409
 
+		# Update the master rider (this one)
 		rider.name = data['name']
 		rider.rider_number = rider_number
 		rider.bike_brand = data['bike_brand']
@@ -253,6 +288,29 @@ def update_rider(rider_id: int):
 					setattr(rider, k, int(data[k]) if data[k] else None)
 				except Exception:
 					pass
+		
+		# IMPORTANT: Update ALL other riders with the same name+class to match the master
+		# This ensures there's only one "master" version and all duplicates get updated automatically
+		duplicate_riders = Rider.query.filter_by(
+			name=rider.name,
+			class_name=rider.class_name
+		).filter(Rider.id != rider.id).all()
+		
+		if duplicate_riders:
+			print(f"🔄 Updating {len(duplicate_riders)} duplicate riders for {rider.name} ({rider.class_name})")
+			for dup in duplicate_riders:
+				# Update all fields to match master
+				dup.rider_number = rider.rider_number
+				dup.bike_brand = rider.bike_brand
+				dup.price = rider.price
+				dup.coast_250 = rider.coast_250
+				dup.classes = rider.classes
+				dup.image_url = rider.image_url
+				# Update all other fields too
+				for field in ['nickname','hometown','residence','team','manufacturer','team_manager','mechanic','instagram','twitter','facebook','website','bio','achievements','series_participation','birthdate','height_cm','weight_kg','turned_pro']:
+					if hasattr(rider, field):
+						setattr(dup, field, getattr(rider, field))
+		
 		db.session.commit()
 		response = {'success': True}
 		if season_warning:
