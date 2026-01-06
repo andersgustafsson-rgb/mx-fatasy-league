@@ -286,6 +286,19 @@ def update_rider_prices(standings: dict, default_price: int = 100000):
         print("UPDATING RIDER PRICES")
         print("=" * 60)
         
+        # Debug: Print standings summary
+        print(f"\nStandings summary:")
+        print(f"  450cc: {len(standings.get('450cc', {}))} riders")
+        print(f"  250cc: {len(standings.get('250cc', {}))} riders")
+        if standings.get('450cc'):
+            print(f"\nTop 5 in 450cc standings:")
+            for name, data in sorted(standings['450cc'].items(), key=lambda x: x[1]['position'])[:5]:
+                print(f"    {data['position']}. {name} - {data['points']} pts")
+        if standings.get('250cc'):
+            print(f"\nTop 5 in 250cc standings:")
+            for name, data in sorted(standings['250cc'].items(), key=lambda x: x[1]['position'])[:5]:
+                print(f"    {data['position']}. {name} - {data['points']} pts")
+        
         for rider in all_riders:
             class_name = rider.class_name
             if class_name not in standings:
@@ -293,31 +306,42 @@ def update_rider_prices(standings: dict, default_price: int = 100000):
             
             # Try to find matching rider in standings
             matched = False
+            best_match = None
+            best_match_data = None
+            
             for standings_name, data in standings[class_name].items():
                 if match_rider_name(rider.name, standings_name):
-                    # Calculate price based on position
-                    price = calculate_price_for_budget(
-                        data['position'],
-                        data['points'],
-                        class_name
-                    )
-                    
-                    old_price = rider.price
-                    rider.price = price
-                    
-                    matched_riders.append({
-                        'name': rider.name,
-                        'class': class_name,
-                        'position': data['position'],
-                        'points': data['points'],
-                        'old_price': old_price,
-                        'new_price': price,
-                        'rider_id': rider.id
-                    })
-                    
+                    best_match = standings_name
+                    best_match_data = data
                     matched = True
-                    updated_count += 1
                     break
+            
+            if matched and best_match_data:
+                # Calculate price based on position
+                price = calculate_price_for_budget(
+                    best_match_data['position'],
+                    best_match_data['points'],
+                    class_name
+                )
+                
+                old_price = rider.price
+                rider.price = price
+                
+                matched_riders.append({
+                    'name': rider.name,
+                    'class': class_name,
+                    'position': best_match_data['position'],
+                    'points': best_match_data['points'],
+                    'old_price': old_price,
+                    'new_price': price,
+                    'rider_id': rider.id,
+                    'matched_with': best_match
+                })
+                
+                updated_count += 1
+                # Print important matches for debugging
+                if rider.name in ['Haiden Deegan', 'Cooper Webb', 'Chase Sexton'] or updated_count <= 5:
+                    print(f"  ✅ {rider.name} ({class_name}) matched with '{best_match}' - Pos {best_match_data['position']}, Price: {old_price:,} → {price:,} kr")
             
             if not matched:
                 # No match found - set default price

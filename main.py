@@ -9360,12 +9360,13 @@ def update_rider_prices():
             if not lines:
                 continue
                 
-            # Check if this is a class header
-            if lines[0].lower() in ['250 west', '250 east', '450 point standings']:
-                if '250' in lines[0].lower():
-                    current_class = '250cc'
-                elif '450' in lines[0].lower():
-                    current_class = '450cc'
+            # Check if this is a class header (case-insensitive, flexible matching)
+            header_lower = lines[0].lower()
+            if '250' in header_lower and ('west' in header_lower or 'east' in header_lower):
+                current_class = '250cc'
+                continue
+            elif '450' in header_lower and ('point' in header_lower or 'standings' in header_lower):
+                current_class = '450cc'
                 continue
             
             # Parse rider data
@@ -9525,12 +9526,13 @@ def import_all_2025_riders_fixed():
             if not lines:
                 continue
                 
-            # Check if this is a class header
-            if lines[0].lower() in ['250 west', '250 east', '450 point standings']:
-                if '250' in lines[0].lower():
-                    current_class = '250cc'
-                elif '450' in lines[0].lower():
-                    current_class = '450cc'
+            # Check if this is a class header (case-insensitive, flexible matching)
+            header_lower = lines[0].lower()
+            if '250' in header_lower and ('west' in header_lower or 'east' in header_lower):
+                current_class = '250cc'
+                continue
+            elif '450' in header_lower and ('point' in header_lower or 'standings' in header_lower):
+                current_class = '450cc'
                 continue
             
             # Parse rider data
