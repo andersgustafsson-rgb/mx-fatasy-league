@@ -161,12 +161,15 @@ def parse_standings_from_txt(txt_path: str = "point standings 2025.txt"):
             if not line:
                 continue
             
-            # Check for class header
-            if '450' in line.lower() and 'point' in line.lower():
+            # Check for class header (case-insensitive)
+            line_lower = line.lower()
+            if '450' in line_lower and ('point' in line_lower or 'standings' in line_lower):
                 current_class = '450cc'
+                print(f"  Found 450cc section: {line}")
                 continue
-            elif '250' in line.lower():
+            elif '250' in line_lower:
                 current_class = '250cc'
+                print(f"  Found 250cc section: {line}")
                 continue
             
             # Parse rider line
