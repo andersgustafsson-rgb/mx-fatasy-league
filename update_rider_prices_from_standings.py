@@ -308,7 +308,8 @@ def update_rider_prices(standings: dict, default_price: int = 100000):
                         'position': data['position'],
                         'points': data['points'],
                         'old_price': old_price,
-                        'new_price': price
+                        'new_price': price,
+                        'rider_id': rider.id
                     })
                     
                     matched = True

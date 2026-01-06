@@ -1598,6 +1598,19 @@ def season_team_builder():
         all_riders = Rider.query.order_by(Rider.rider_number).all()
         print(f"Found {len(all_riders)} riders for season team builder")
         
+        # Deduplicate riders: keep only the latest version (highest ID) of each rider name+class combination
+        # This prevents showing duplicate riders when numbers/brands are updated
+        riders_by_key = {}
+        for rider in all_riders:
+            key = (rider.name, rider.class_name)
+            if key not in riders_by_key or rider.id > riders_by_key[key].id:
+                riders_by_key[key] = rider
+        
+        # Convert to list and sort
+        unique_riders = list(riders_by_key.values())
+        unique_riders.sort(key=lambda r: (r.rider_number or 999, r.name))
+        print(f"After deduplication: {len(unique_riders)} unique riders")
+        
         # Check if user already has a team
         existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
         has_existing_team = existing_team is not None
@@ -1610,7 +1623,7 @@ def season_team_builder():
         
         # Convert riders to JSON-serializable format
         riders_data = []
-        for rider in all_riders:
+        for rider in unique_riders:
             riders_data.append({
                 'id': rider.id,
                 'name': rider.name,
@@ -9434,19 +9447,21 @@ def update_rider_prices():
                 # Calculate price using new budget-optimized function
                 price = calculate_price_for_budget(position, points, class_name)
                 
-                # Update rider in database
-                rider = Rider.query.filter_by(name=name, class_name=class_name).first()
-                if rider:
-                    old_price = rider.price
-                    rider.price = price
-                    updated_riders.append({
-                        'name': name,
-                        'class': class_name,
-                        'position': position,
-                        'points': points,
-                        'old_price': old_price,
-                        'new_price': price
-                    })
+                # Update ALL riders with this name and class (in case of duplicates)
+                riders = Rider.query.filter_by(name=name, class_name=class_name).all()
+                if riders:
+                    for rider in riders:
+                        old_price = rider.price
+                        rider.price = price
+                        updated_riders.append({
+                            'name': name,
+                            'class': class_name,
+                            'position': position,
+                            'points': points,
+                            'old_price': old_price,
+                            'new_price': price,
+                            'rider_id': rider.id
+                        })
         
         db.session.commit()
         
