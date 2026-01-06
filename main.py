@@ -9383,11 +9383,22 @@ def update_rider_prices():
                             name_part = parts[1]
                             points = int(parts[-1]) if parts[-1].isdigit() else 0
                             
-                            # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan")
+                            # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan" or "Cooper WebbCooper Webb")
                             name = name_part.strip()
                             
-                            # Check if name is duplicated
-                            if len(name) > 15:  # Likely has duplicate name
+                            # Check if name is duplicated (exact duplicate without space)
+                            name_len = len(name)
+                            if name_len > 15 and name_len % 2 == 0:
+                                # Try splitting in half
+                                mid = name_len // 2
+                                first_half = name[:mid]
+                                second_half = name[mid:]
+                                # Check if they're the same (handles "Haiden DeeganHaiden Deegan")
+                                if first_half == second_half:
+                                    name = first_half
+                            
+                            # Word-based approach for cases with spaces
+                            if len(name) > 15:
                                 words = name.split()
                                 if len(words) >= 4:
                                     # Check if first half equals second half
@@ -9399,15 +9410,12 @@ def update_rider_prices():
                                 else:
                                     # Try character-based approach
                                     mid = len(name) // 2
-                                    for i in range(mid-5, mid+5):
+                                    for i in range(max(5, mid-10), min(len(name)-5, mid+10)):
                                         if i < len(name) and i > 0:
                                             if name[i-1] == ' ' and name[i].isupper():
                                                 if i > 5 and name[:i].strip() == name[i:].strip():
                                                     name = name[:i].strip()
                                                     break
-                                            elif i == mid and name[:i] == name[i:]:
-                                                name = name[:i]
-                                                break
                             
                             name = name.strip()
                             

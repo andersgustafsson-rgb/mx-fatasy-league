@@ -182,12 +182,26 @@ def parse_standings_from_txt(txt_path: str = "point standings 2025.txt"):
                         name_part = parts[1]
                         points = int(parts[-1]) if parts[-1].isdigit() else 0
                         
-                        # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan")
+                        # Clean up name (remove duplicates like "Haiden DeeganHaiden Deegan" or "Cooper WebbCooper Webb")
                         name = name_part.strip()
                         
                         # Check if name is duplicated (common pattern: "FirstName LastNameFirstName LastName")
-                        if len(name) > 15:  # Likely has duplicate name
-                            # Try to find where the duplicate starts
+                        # First try: Check if exact duplicate (no space between)
+                        name_len = len(name)
+                        if name_len > 15 and name_len % 2 == 0:
+                            # Try splitting in half
+                            mid = name_len // 2
+                            first_half = name[:mid]
+                            second_half = name[mid:]
+                            # Check if they're the same (handles "Haiden DeeganHaiden Deegan")
+                            if first_half == second_half:
+                                name = first_half
+                            # Check if first half + space equals second half (handles "Haiden Deegan Haiden Deegan")
+                            elif first_half + ' ' == second_half[:len(first_half)+1]:
+                                name = first_half
+                        
+                        # Second try: Word-based approach for cases like "Haiden Deegan Haiden Deegan"
+                        if len(name) > 15:
                             words = name.split()
                             if len(words) >= 4:
                                 # Check if first half equals second half
@@ -197,9 +211,9 @@ def parse_standings_from_txt(txt_path: str = "point standings 2025.txt"):
                                 if first_half == second_half:
                                     name = ' '.join(first_half)
                             else:
-                                # Try character-based approach
+                                # Try character-based approach to find where duplicate starts
                                 mid = len(name) // 2
-                                for i in range(mid-5, mid+5):
+                                for i in range(max(5, mid-10), min(len(name)-5, mid+10)):
                                     if i < len(name) and i > 0:
                                         # Check if character before is space and current is uppercase
                                         if name[i-1] == ' ' and name[i].isupper():
@@ -207,10 +221,6 @@ def parse_standings_from_txt(txt_path: str = "point standings 2025.txt"):
                                             if i > 5 and name[:i].strip() == name[i:].strip():
                                                 name = name[:i].strip()
                                                 break
-                                        # Also check for exact duplicate pattern
-                                        elif i == mid and name[:i] == name[i:]:
-                                            name = name[:i]
-                                            break
                         
                         name = name.strip()
                         if name:
