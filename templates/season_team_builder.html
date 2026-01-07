@@ -125,7 +125,10 @@
         </p>
         <div class="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
           <p class="text-yellow-800 text-sm font-medium">
-            ⚠️ <strong>Teamändring kostar 50 poäng per byte!</strong> Du har redan ett team: <strong>{{ existing_team.team_name }}</strong>
+            ⚠️ <strong>Att byta förare kostar 50 poäng per byte!</strong> Du har redan ett team: <strong>{{ existing_team.team_name }}</strong>
+          </p>
+          <p class="text-yellow-700 text-xs mt-1">
+            💡 Att ändra teamnamnet kostar inga poäng - bara att byta förare kostar poäng.
           </p>
         </div>
         {% else %}
@@ -943,10 +946,21 @@
         }
         
         let confirmMessage;
+        const originalTeamName = {% if has_existing_team %}"{{ existing_team.team_name }}"{% else %}""{% endif %};
+        const nameChanged = name !== originalTeamName;
+        
         if (ridersChanged === 0) {
-          confirmMessage = "⚠️ Du har redan ett team!\n\nInga förare byts ut, så det kostar inga poäng.\n\nÄr du säker på att du vill fortsätta?";
+          if (nameChanged) {
+            confirmMessage = `💾 Du uppdaterar bara teamnamnet från "${originalTeamName}" till "${name}".\n\nInga förare byts ut, så det kostar inga poäng.\n\nÄr du säker på att du vill fortsätta?`;
+          } else {
+            confirmMessage = "⚠️ Du har redan ett team!\n\nInga ändringar gjorda (varken namn eller förare).\n\nÄr du säker på att du vill fortsätta?";
+          }
         } else {
-          confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare.\nDetta kommer att kosta ${penaltyPoints} poäng.\n\nÄr du säker på att du vill fortsätta?`;
+          if (nameChanged) {
+            confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare och ändrar teamnamnet från "${originalTeamName}" till "${name}".\nDetta kommer att kosta ${penaltyPoints} poäng (bara för förarebytena).\n\nÄr du säker på att du vill fortsätta?`;
+          } else {
+            confirmMessage = `⚠️ Du har redan ett team!\n\nDu byter ut ${ridersChanged} förare.\nDetta kommer att kosta ${penaltyPoints} poäng.\n\nÄr du säker på att du vill fortsätta?`;
+          }
         }
         
         const confirmed = confirm(confirmMessage);
