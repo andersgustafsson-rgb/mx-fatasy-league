@@ -210,12 +210,22 @@
         </h2>
 
         <div class="mb-4">
-          <label for="team-name-input" class="block dark:text-gray-300 mb-2 text-sm font-medium">Teamnamn:</label>
+          <label for="team-name-input" class="block dark:text-gray-300 mb-2 text-sm font-medium">
+            Teamnamn:
+            {% if has_existing_team %}
+            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">(Du kan ändra namnet när som helst)</span>
+            {% endif %}
+          </label>
           <input type="text" id="team-name-input"
                  class="w-full p-3 border-2 border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                  placeholder="T.ex. Team Awesome" 
                  {% if has_existing_team %}value="{{ existing_team.team_name }}"{% endif %}
                  oninput="validateAndRender()" />
+          {% if has_existing_team %}
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            💡 Att ändra teamnamnet kostar inga poäng - bara att byta förare kostar poäng.
+          </p>
+          {% endif %}
         </div>
 
         <div class="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-lg border border-blue-200">

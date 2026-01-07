@@ -2557,7 +2557,12 @@ def save_season_team():
             if penalty_points > 0:
                 return jsonify({"message": f"Team uppdaterat! -{penalty_points} poäng för {riders_changed} bytade förare."}), 200
             else:
-                return jsonify({"message": "Team uppdaterat! Inga poängstraff (inga förare byttes)."}), 200
+                # Check if name changed
+                old_name = SeasonTeam.query.filter_by(user_id=uid).first()
+                if old_name and old_name.team_name != team_name:
+                    return jsonify({"message": f"Teamnamn uppdaterat till '{team_name}'! Inga poängstraff (inga förare byttes)."}), 200
+                else:
+                    return jsonify({"message": "Team uppdaterat! Inga poängstraff (inga ändringar gjorda)."}), 200
         else:
             return jsonify({"message": "Team sparat!"}), 200
             
