@@ -5339,13 +5339,15 @@ def get_season_leaderboard():
     
     # Hämta alla användare med deras totala poäng från CompetitionScore
     # Exkludera WSX-serien - bara räkna SX, MX, SMX
+    # INTEGRERA säsongsteam-poäng i huvudleaderboarden
     user_scores = (
         db.session.query(
             User.id,
             User.username,
             User.display_name,
             SeasonTeam.team_name,
-            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('race_points'),
+            func.coalesce(SeasonTeam.total_points, 0).label('season_team_points')
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
@@ -5356,10 +5358,18 @@ def get_season_leaderboard():
                 Competition.series != 'WSX'  # Exclude WSX series
             )
         )
-        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name, SeasonTeam.total_points)
         .all()
     )
+    
+    # Calculate total points (race points + season team points)
+    user_scores_with_total = []
+    for user_id, username, display_name, team_name, race_points, season_team_points in user_scores:
+        total_points = race_points + season_team_points
+        user_scores_with_total.append((user_id, username, display_name, team_name, race_points, season_team_points, total_points))
+    
+    # Sort by total points (race + season team)
+    user_scores_with_total.sort(key=lambda x: x[6], reverse=True)
     
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
@@ -5381,10 +5391,10 @@ def get_season_leaderboard():
         else:
             print("DEBUG: No previous ranking history found - will create baseline")
             # Create initial baseline ranking (all users start at rank 0)
-            for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
+            for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
                 previous_ranking[str(user_id)] = 0  # All start at rank 0
         
-        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
+        for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
             
@@ -5402,6 +5412,8 @@ def get_season_leaderboard():
                 "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
+                "race_points": int(race_points),
+                "season_team_points": int(season_team_points),
                 "rank": current_rank,
                 "delta": delta
             })
@@ -5428,13 +5440,15 @@ def get_season_leaderboard():
         print(f"DEBUG: Error in leaderboard ranking: {e}")
         db.session.rollback()
         # Fallback to no deltas if database fails
-        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
+        for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
             result.append({
                 "user_id": user_id,
                 "username": username,
                 "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
+                "race_points": int(race_points),
+                "season_team_points": int(season_team_points),
                 "rank": i,
                 "delta": 0
             })
@@ -6665,18 +6679,24 @@ def calculate_rider_points_for_position(position):
     if position is None or position == 0:
         return 0
     
-    # Season team points system (separate from race picks)
+    # Season team points system - higher rewards for top positions
     if position == 1:
-        return 5
+        return 25
     elif position == 2:
-        return 4
+        return 20
     elif position == 3:
-        return 3
+        return 15
     elif position == 4:
-        return 2
+        return 12
     elif position == 5:
-        return 1
+        return 10
+    elif position == 6:
+        return 8
     elif position <= 10:
+        return 5
+    elif position <= 15:
+        return 3
+    elif position <= 20:
         return 1
     else:
         return 0
@@ -6892,10 +6912,44 @@ def update_season_team_points():
                 # Season team always uses position-based points (not WSX rider_points)
                 points = calculate_rider_points_for_position(result.position)
                 total_season_points += points
-                print(f"DEBUG: Rider {rider_id} finished {result.position} in competition {result.competition_id}, got {points} points")
+        
+        # BONUS: Check if all riders in team finished in top 6 per competition
+        riders_by_class = {}
+        for tr in team_riders:
+            rider = Rider.query.get(tr.rider_id)
+            if rider:
+                class_name = rider.class_name
+                if class_name not in riders_by_class:
+                    riders_by_class[class_name] = []
+                riders_by_class[class_name].append(rider.id)
+        
+        # Check for top 6 bonus per competition
+        competition_bonuses = {}
+        for rider_id in rider_ids:
+            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id).all()
+            for result in rider_results:
+                comp_id_key = result.competition_id
+                if comp_id_key not in competition_bonuses:
+                    competition_bonuses[comp_id_key] = {'450cc': [], '250cc': []}
+                
+                rider = Rider.query.get(rider_id)
+                if rider and result.position and result.position <= 6:
+                    competition_bonuses[comp_id_key][rider.class_name].append(rider_id)
+        
+        # Apply bonus if all riders in a class finished top 6
+        bonus_points = 0
+        for comp_id_key, classes in competition_bonuses.items():
+            for class_name in ['450cc', '250cc']:
+                if class_name in riders_by_class:
+                    team_riders_in_class = set(riders_by_class[class_name])
+                    top6_riders_in_class = set(classes[class_name])
+                    # Check if ALL team riders in this class finished top 6
+                    if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
+                        bonus_points += 50  # 50 bonus points per class per competition
+                        print(f"DEBUG: 🎉 BONUS! Team {team.team_name} - All {class_name} riders in top 6 for competition {comp_id_key} (+50p)")
         
         old_points = team.total_points
-        team.total_points = total_season_points
+        team.total_points = total_season_points + bonus_points
         updated_teams.append({
             "team_name": team.team_name,
             "user_id": team.user_id,
