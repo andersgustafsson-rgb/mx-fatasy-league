@@ -6509,8 +6509,42 @@ def calculate_scores(comp_id: int):
                 points = calculate_rider_points_for_position(result.position)
                 total_season_points += points
         
-        team.total_points = total_season_points
-        print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {total_season_points} points based on {len(rider_ids)} riders")
+        # BONUS: Check if all riders in team finished in top 6 for this competition
+        # Get riders by class
+        riders_by_class = {}
+        for tr in team_riders:
+            rider = Rider.query.get(tr.rider_id)
+            if rider:
+                class_name = rider.class_name
+                if class_name not in riders_by_class:
+                    riders_by_class[class_name] = []
+                riders_by_class[class_name].append(rider.id)
+        
+        # Check for top 6 bonus for THIS competition
+        competition_bonuses = {'450cc': [], '250cc': []}
+        for rider_id in rider_ids:
+            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id, competition_id=comp_id).all()
+            for result in rider_results:
+                rider = Rider.query.get(rider_id)
+                if rider and result.position and result.position <= 6:
+                    competition_bonuses[rider.class_name].append(rider_id)
+        
+        # Apply bonus if all riders in a class finished top 6
+        bonus_points = 0
+        for class_name in ['450cc', '250cc']:
+            if class_name in riders_by_class:
+                team_riders_in_class = set(riders_by_class[class_name])
+                top6_riders_in_class = set(competition_bonuses[class_name])
+                # Check if ALL team riders in this class finished top 6
+                if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
+                    bonus_points += 50  # 50 bonus points per class per competition
+                    print(f"DEBUG: 🎉 BONUS! Team {team.team_name} - All {class_name} riders in top 6 for competition {comp_id} (+50p)")
+        
+        team.total_points = total_season_points + bonus_points
+        if bonus_points > 0:
+            print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {team.total_points} points ({total_season_points} base + {bonus_points} bonus) based on {len(rider_ids)} riders")
+        else:
+            print(f"DEBUG: Updated season team {team.team_name} (user {team.user_id}) to {team.total_points} points based on {len(rider_ids)} riders")
 
     db.session.commit()
     print(f"✅ Poängberäkning klar för tävling ID: {comp_id}")
