@@ -533,30 +533,62 @@
                         Du väljer förare från både 450cc och 250cc klasser. 
                         Dessa förare ger dig poäng varje race baserat på deras placering:
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
                         <div class="bg-yellow-900/50 border-2 border-yellow-500/50 p-3 rounded text-center shadow-lg">
                             <div class="text-2xl font-bold text-yellow-300">1:a</div>
-                            <div class="text-sm text-yellow-200 font-semibold">5p</div>
+                            <div class="text-sm text-yellow-200 font-semibold">25p</div>
                         </div>
                         <div class="bg-gray-700/70 border-2 border-gray-600/50 p-3 rounded text-center shadow-lg">
                             <div class="text-2xl font-bold text-gray-300">2:a</div>
-                            <div class="text-sm text-gray-200 font-semibold">4p</div>
+                            <div class="text-sm text-gray-200 font-semibold">20p</div>
                         </div>
                         <div class="bg-orange-900/50 border-2 border-orange-500/50 p-3 rounded text-center shadow-lg">
                             <div class="text-2xl font-bold text-orange-300">3:e</div>
-                            <div class="text-sm text-orange-200 font-semibold">3p</div>
+                            <div class="text-sm text-orange-200 font-semibold">15p</div>
                         </div>
                         <div class="bg-blue-900/50 border-2 border-blue-500/50 p-3 rounded text-center shadow-lg">
                             <div class="text-2xl font-bold text-blue-300">4:e</div>
-                            <div class="text-sm text-blue-200 font-semibold">2p</div>
+                            <div class="text-sm text-blue-200 font-semibold">12p</div>
                         </div>
                         <div class="bg-green-900/50 border-2 border-green-500/50 p-3 rounded text-center shadow-lg">
                             <div class="text-2xl font-bold text-green-300">5:e</div>
-                            <div class="text-sm text-green-200 font-semibold">1p</div>
+                            <div class="text-sm text-green-200 font-semibold">10p</div>
                         </div>
                     </div>
-                    <p class="text-sm text-gray-300">
-                        Förare som hamnar 6-10:a ger också 1 poäng per race.
+                    <div class="bg-gray-700/50 p-4 rounded-lg mb-4">
+                        <p class="text-sm text-gray-300 mb-2"><strong>Övriga placeringar:</strong></p>
+                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
+                            <li>6:e = 8p</li>
+                            <li>7-10:e = 5p</li>
+                            <li>11-15:e = 3p</li>
+                            <li>16-20:e = 1p</li>
+                            <li>21+ = 0p</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-2 border-purple-400 p-6 rounded-lg shadow-lg">
+                    <p class="font-semibold text-purple-300 mb-3 text-xl">🎉 Bonuspoäng!</p>
+                    <p class="text-gray-300 mb-3">
+                        Om <strong>alla</strong> dina förare i samma klass (450cc eller 250cc) hamnar i <strong>top 6</strong> i samma tävling, 
+                        får du <strong>50 bonuspoäng</strong> per klass!
+                    </p>
+                    <div class="bg-gray-800/50 p-4 rounded mt-3">
+                        <p class="text-sm text-gray-300 mb-2"><strong>Exempel:</strong></p>
+                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
+                            <li>Båda dina 450cc-förare i top 6 = <strong>+50p bonus</strong></li>
+                            <li>Båda dina 250cc-förare i top 6 = <strong>+50p bonus</strong></li>
+                            <li>Båda klasserna i top 6 = <strong>+100p bonus</strong> (50p × 2)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-green-900/30 p-6 rounded-lg border-2 border-green-400 mt-4">
+                    <p class="font-semibold text-green-300 mb-3">✅ Integrerat i Leaderboard</p>
+                    <p class="text-gray-300">
+                        Dina säsongsteam-poäng räknas nu <strong>automatiskt in</strong> i huvudleaderboarden! 
+                        Din totalpoäng = Race picks-poäng + Säsongsteam-poäng. 
+                        Detta gör att ditt säsongsteam-val påverkar ditt totalresultat direkt.
                     </p>
                 </div>
 
