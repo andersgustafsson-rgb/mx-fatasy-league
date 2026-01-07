@@ -161,26 +161,37 @@
             </div>
 
             {% if team_riders %}
-              <div class="space-y-2">
-                <h4 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Riders:</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 {% for r in team_riders %}
-                <div class="flex items-center gap-3 bg-gray-100 dark:bg-gray-700 rounded px-3 py-2">
-                  {% if r.image_url %}
-                    <img src="{{ url_for('static', filename=r.image_url) }}"
-                         alt="{{ r.name }} headshot"
-                         class="w-8 h-8 rounded-full object-cover"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center" style="display:none;">
-                      <span class="text-white text-xs font-bold">#{{ r.number }}</span>
+                <div class="flex items-center gap-3 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg px-4 py-3 shadow-md hover:shadow-lg transition-shadow">
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    {% if r.image_url %}
+                      <img src="{{ url_for('static', filename=r.image_url) }}"
+                           alt="{{ r.name }} headshot"
+                           class="w-10 h-10 rounded-full object-cover border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}"
+                           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="w-10 h-10 rounded-full {% if r.class == '450cc' %}bg-orange-600{% else %}bg-yellow-600{% endif %} flex items-center justify-center border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}" style="display:none;">
+                        <span class="text-white text-xs font-bold">#{{ r.number }}</span>
+                      </div>
+                    {% else %}
+                      <div class="w-10 h-10 rounded-full {% if r.class == '450cc' %}bg-orange-600{% else %}bg-yellow-600{% endif %} flex items-center justify-center border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}">
+                        <span class="text-white text-xs font-bold">#{{ r.number }}</span>
+                      </div>
+                    {% endif %}
+                    {% if r.brand %}
+                      <img src="{{ url_for('static', filename='brand_logos/' ~ r.brand ~ '.png') }}"
+                           alt="{{ r.brand }} logo"
+                           class="w-6 h-6 object-contain"
+                           onerror="this.style.display='none';">
+                    {% endif %}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-gray-800 dark:text-gray-200 truncate">#{{ r.number }} {{ r.name }}</div>
+                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                      <span class="inline-block px-2 py-0.5 rounded {% if r.class == '450cc' %}bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200{% else %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200{% endif %}">
+                        {{ r.class }}
+                      </span>
                     </div>
-                  {% else %}
-                    <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
-                      <span class="text-white text-xs font-bold">#{{ r.number }}</span>
-                    </div>
-                  {% endif %}
-                  <div class="flex-1">
-                    <span class="font-medium text-gray-800 dark:text-gray-200">#{{ r.number }} {{ r.name }}</span>
-                    <span class="text-sm text-gray-600 dark:text-gray-400 ml-2">({{ r.class }})</span>
                   </div>
                 </div>
                 {% endfor %}
