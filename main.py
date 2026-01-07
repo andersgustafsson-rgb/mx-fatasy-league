@@ -5335,19 +5335,18 @@ def admin_set_date():
 def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
     # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
+    # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
     from sqlalchemy import func
     
     # Hämta alla användare med deras totala poäng från CompetitionScore
     # Exkludera WSX-serien - bara räkna SX, MX, SMX
-    # INTEGRERA säsongsteam-poäng i huvudleaderboarden
     user_scores = (
         db.session.query(
             User.id,
             User.username,
             User.display_name,
             SeasonTeam.team_name,
-            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('race_points'),
-            func.coalesce(SeasonTeam.total_points, 0).label('season_team_points')
+            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
@@ -5358,18 +5357,10 @@ def get_season_leaderboard():
                 Competition.series != 'WSX'  # Exclude WSX series
             )
         )
-        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name, SeasonTeam.total_points)
+        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+        .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
         .all()
     )
-    
-    # Calculate total points (race points + season team points)
-    user_scores_with_total = []
-    for user_id, username, display_name, team_name, race_points, season_team_points in user_scores:
-        total_points = race_points + season_team_points
-        user_scores_with_total.append((user_id, username, display_name, team_name, race_points, season_team_points, total_points))
-    
-    # Sort by total points (race + season team)
-    user_scores_with_total.sort(key=lambda x: x[6], reverse=True)
     
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
@@ -5391,10 +5382,10 @@ def get_season_leaderboard():
         else:
             print("DEBUG: No previous ranking history found - will create baseline")
             # Create initial baseline ranking (all users start at rank 0)
-            for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
+            for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
                 previous_ranking[str(user_id)] = 0  # All start at rank 0
         
-        for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
+        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
             
@@ -5412,8 +5403,6 @@ def get_season_leaderboard():
                 "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
-                "race_points": int(race_points),
-                "season_team_points": int(season_team_points),
                 "rank": current_rank,
                 "delta": delta
             })
@@ -5440,18 +5429,47 @@ def get_season_leaderboard():
         print(f"DEBUG: Error in leaderboard ranking: {e}")
         db.session.rollback()
         # Fallback to no deltas if database fails
-        for i, (user_id, username, display_name, team_name, race_points, season_team_points, total_points) in enumerate(user_scores_with_total, 1):
+        for i, (user_id, username, display_name, team_name, total_points) in enumerate(user_scores, 1):
             result.append({
                 "user_id": user_id,
                 "username": username,
                 "display_name": display_name or None,
                 "team_name": team_name or None,
                 "total_points": int(total_points),
-                "race_points": int(race_points),
-                "season_team_points": int(season_team_points),
                 "rank": i,
                 "delta": 0
             })
+    
+    return jsonify(result)
+
+@app.get("/get_season_team_leaderboard")
+def get_season_team_leaderboard():
+    """Get leaderboard for season teams only (separate from race picks)"""
+    # Get all season teams ordered by total_points
+    season_teams = (
+        db.session.query(
+            SeasonTeam.id,
+            SeasonTeam.user_id,
+            SeasonTeam.team_name,
+            SeasonTeam.total_points,
+            User.username,
+            User.display_name
+        )
+        .join(User, User.id == SeasonTeam.user_id)
+        .order_by(SeasonTeam.total_points.desc())
+        .all()
+    )
+    
+    result = []
+    for i, (team_id, user_id, team_name, total_points, username, display_name) in enumerate(season_teams, 1):
+        result.append({
+            "user_id": user_id,
+            "username": username,
+            "display_name": display_name or None,
+            "team_name": team_name or None,
+            "total_points": int(total_points or 0),
+            "rank": i
+        })
     
     return jsonify(result)
 
