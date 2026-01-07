@@ -5345,25 +5345,42 @@ def get_season_leaderboard():
     
     # Hämta alla användare med deras totala poäng från CompetitionScore
     # Exkludera WSX-serien - bara räkna SX, MX, SMX
+    # VIKTIGT: Använd subquery för att inkludera alla användare även om de inte har några poäng
     user_scores = (
         db.session.query(
             User.id,
             User.username,
             User.display_name,
             SeasonTeam.team_name,
-            func.coalesce(func.sum(CompetitionScore.total_points), 0).label('total_points')
+            func.coalesce(
+                db.session.query(func.sum(CompetitionScore.total_points))
+                .join(Competition, Competition.id == CompetitionScore.competition_id)
+                .filter(
+                    db.or_(
+                        Competition.series == None,  # Include if series is null (backwards compatibility)
+                        Competition.series != 'WSX'  # Exclude WSX series
+                    )
+                )
+                .filter(CompetitionScore.user_id == User.id)
+                .scalar(),
+                0
+            ).label('total_points')
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-        .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-        .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-        .filter(
-            db.or_(
-                Competition.series == None,  # Include if series is null (backwards compatibility)
-                Competition.series != 'WSX'  # Exclude WSX series
-            )
-        )
         .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .order_by(func.coalesce(func.sum(CompetitionScore.total_points), 0).desc())
+        .order_by(func.coalesce(
+            db.session.query(func.sum(CompetitionScore.total_points))
+            .join(Competition, Competition.id == CompetitionScore.competition_id)
+            .filter(
+                db.or_(
+                    Competition.series == None,
+                    Competition.series != 'WSX'
+                )
+            )
+            .filter(CompetitionScore.user_id == User.id)
+            .scalar(),
+            0
+        ).desc())
         .all()
     )
     
