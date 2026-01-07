@@ -1851,6 +1851,7 @@
           // Load leaderboard data when leaderboard tab is clicked
           if (targetTab === 'leaderboard') {
             fetchSeasonLeaderboard();
+            fetchSeasonTeamLeaderboard();
             fetchLeagueLeaderboard();
             loadSeriesLeaders();
           } else if (targetTab === 'games') {
