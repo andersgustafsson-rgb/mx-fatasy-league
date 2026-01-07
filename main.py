@@ -8620,6 +8620,41 @@ def debug_user_scores(username):
     
     return jsonify(result)
 
+@app.get("/reset_season_team_points")
+def reset_season_team_points():
+    """Reset all season team points to 0 (admin only) - keeps teams and riders"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        print("🔄 Resetting all season team points to 0...")
+        
+        # Get all season teams
+        all_season_teams = SeasonTeam.query.all()
+        reset_count = 0
+        
+        for team in all_season_teams:
+            old_points = team.total_points
+            team.total_points = 0
+            reset_count += 1
+            print(f"  Reset {team.team_name} (user {team.user_id}): {old_points} → 0 poäng")
+        
+        db.session.commit()
+        
+        print(f"✅ Reset season team points for {reset_count} teams")
+        
+        return jsonify({
+            "message": f"Nollställde poäng för {reset_count} säsongsteam. Teamen och förarna behålls.",
+            "reset_count": reset_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error resetting season team points: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.get("/clear_season_teams")
 def clear_season_teams():
     """Clear all season teams (admin only)"""
