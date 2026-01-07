@@ -6563,14 +6563,17 @@ def calculate_scores(comp_id: int):
                     riders_by_class[class_name] = []
                 riders_by_class[class_name].append(rider.id)
         
-        # Check for top 6 bonus for THIS competition
+        # Check for top 6 bonus for THIS competition (only if it's SMX)
         competition_bonuses = {'450cc': [], '250cc': []}
-        for rider_id in rider_ids:
-            rider_results = CompetitionResult.query.filter_by(rider_id=rider_id, competition_id=comp_id).all()
-            for result in rider_results:
-                rider = Rider.query.get(rider_id)
-                if rider and result.position and result.position <= 6:
-                    competition_bonuses[rider.class_name].append(rider_id)
+        current_competition = Competition.query.get(comp_id)
+        # Only calculate bonus for SMX competitions
+        if current_competition and (current_competition.series == 'SMX' or current_competition.series is None):
+            for rider_id in rider_ids:
+                rider_results = CompetitionResult.query.filter_by(rider_id=rider_id, competition_id=comp_id).all()
+                for result in rider_results:
+                    rider = Rider.query.get(rider_id)
+                    if rider and result.position and result.position <= 6:
+                        competition_bonuses[rider.class_name].append(rider_id)
         
         # Apply bonus if all riders in a class finished top 6
         bonus_points = 0
