@@ -913,10 +913,17 @@
         budget -= rider.price;
       });
       
+      // Reset team name to original
+      const originalTeamName = {% if has_existing_team %}"{{ existing_team.team_name }}"{% else %}""{% endif %};
+      const teamNameInput = document.getElementById("team-name-input");
+      if (teamNameInput && originalTeamName) {
+        teamNameInput.value = originalTeamName;
+      }
+      
       // Clear any replacement mode
       window.replacingRiderId = null;
       
-      showToast("Ångrat! Återställt till ursprungligt team.", true);
+      showToast("Ångrat! Återställt till ursprungligt team och namn.", true);
       validateAndRender();
       renderCurrentTeam();
     }
