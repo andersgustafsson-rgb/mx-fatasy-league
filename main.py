@@ -6531,6 +6531,9 @@ def calculate_scores(comp_id: int):
     db.session.commit()
 
     # Update season team points based on rider results (separate from race picks)
+    # NOTE: This recalculates points based on ALL race results in the database
+    # If you want to reset points to 0 for a new season, use /reset_season_team_points first
+    # and make sure to clear old CompetitionResult entries for previous season
     all_season_teams = SeasonTeam.query.all()
     for team in all_season_teams:
         # Get all riders in this season team
@@ -8632,11 +8635,17 @@ def reset_season_team_points():
         # Get all season teams
         all_season_teams = SeasonTeam.query.all()
         reset_count = 0
+        teams_reset = []
         
         for team in all_season_teams:
             old_points = team.total_points
             team.total_points = 0
             reset_count += 1
+            teams_reset.append({
+                "team_name": team.team_name,
+                "user_id": team.user_id,
+                "old_points": old_points
+            })
             print(f"  Reset {team.team_name} (user {team.user_id}): {old_points} → 0 poäng")
         
         db.session.commit()
@@ -8645,7 +8654,8 @@ def reset_season_team_points():
         
         return jsonify({
             "message": f"Nollställde poäng för {reset_count} säsongsteam. Teamen och förarna behålls.",
-            "reset_count": reset_count
+            "reset_count": reset_count,
+            "teams_reset": teams_reset
         })
         
     except Exception as e:
