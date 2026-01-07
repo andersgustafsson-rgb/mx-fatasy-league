@@ -671,6 +671,10 @@
         existingTeamRiders.includes(rider.id.toString())
       );
       
+      // IMPORTANT: Also load them into myTeam so the save button is enabled
+      // This allows saving when only the name is changed
+      myTeam = [...currentTeam];
+      
       // Calculate the cost of the current team and update the budget
       const currentTeamCost = currentTeam.reduce((sum, rider) => sum + rider.price, 0);
       budget = totalBudget - currentTeamCost; // Set initial budget based on current team
@@ -680,6 +684,7 @@
       console.log("💰 currentTeam riders:", currentTeam.map(r => `${r.name}: ${r.price.toLocaleString()} kr`));
       console.log("💰 currentTeamCost:", currentTeamCost.toLocaleString());
       console.log("💰 calculated budget:", budget.toLocaleString());
+      console.log("✅ Loaded existing team into myTeam for editing");
       
       renderCurrentTeam();
     }
