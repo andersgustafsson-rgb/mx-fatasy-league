@@ -142,32 +142,32 @@
                     </div>
                 </div>
 
-                <!-- Rider OUT (WSX) -->
+                <!-- Rider OUT -->
                 <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">🚫 Rider OUT (WSX)</h3>
+                    <h3 class="text-xl font-semibold text-white mb-3">🚫 Rider OUT</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">WSX SX1 (450)</label>
+                                <label class="block text-sm font-medium text-gray-300 mb-2" id="out-class1-label">450cc/SX1</label>
                                 <select id="wsx-out-sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">WSX SX2 (250)</label>
+                                <label class="block text-sm font-medium text-gray-300 mb-2" id="out-class2-label">250cc/SX2</label>
                                 <select id="wsx-out-sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
                             </div>
                             <div class="flex gap-2">
-                                <button type="button" onclick="setWsxOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
-                                <button type="button" onclick="setWsxOut('CLEAR')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
+                                <button type="button" onclick="setRiderOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
+                                <button type="button" onclick="setRiderOut('CLEAR')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
                             </div>
                         </div>
 
                         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <h4 class="text-white font-semibold mb-2">OUT – WSX SX1</h4>
+                                <h4 class="text-white font-semibold mb-2" id="out-list-class1-label">OUT – 450cc/SX1</h4>
                                 <ul id="wsx-out-list-sx1" class="text-gray-300 text-sm list-disc pl-5"></ul>
                             </div>
                             <div>
-                                <h4 class="text-white font-semibold mb-2">OUT – WSX SX2</h4>
+                                <h4 class="text-white font-semibold mb-2" id="out-list-class2-label">OUT – 250cc/SX2</h4>
                                 <ul id="wsx-out-list-sx2" class="text-gray-300 text-sm list-disc pl-5"></ul>
                             </div>
                         </div>
@@ -1497,8 +1497,15 @@
                 alert('Ogiltigt svar från servern när förarlist skulle hämtas.');
                 return;
             }
-            const sx1 = riders.filter(r => r.class === 'wsx_sx1');
-            const sx2 = riders.filter(r => r.class === 'wsx_sx2');
+            // Filter riders based on series type
+            // For WSX: use wsx_sx1/wsx_sx2 classes
+            // For SX/MX/SMX: use 450cc/250cc classes
+            const sx1 = isWSX 
+                ? riders.filter(r => r.class === 'wsx_sx1')
+                : riders.filter(r => r.class === '450cc');
+            const sx2 = isWSX
+                ? riders.filter(r => r.class === 'wsx_sx2')
+                : riders.filter(r => r.class === '250cc');
 
             // Build selects
             const sx1List = document.getElementById('manual-sx1-list');
@@ -1589,6 +1596,25 @@
             const outSx2 = document.getElementById('wsx-out-sx2');
             const outListSx1 = document.getElementById('wsx-out-list-sx1');
             const outListSx2 = document.getElementById('wsx-out-list-sx2');
+            const outClass1Label = document.getElementById('out-class1-label');
+            const outClass2Label = document.getElementById('out-class2-label');
+            const outListClass1Label = document.getElementById('out-list-class1-label');
+            const outListClass2Label = document.getElementById('out-list-class2-label');
+            
+            // Update labels based on series
+            if (outClass1Label) {
+                outClass1Label.textContent = isWSX ? 'WSX SX1 (450)' : '450cc/SX1';
+            }
+            if (outClass2Label) {
+                outClass2Label.textContent = isWSX ? 'WSX SX2 (250)' : '250cc/SX2';
+            }
+            if (outListClass1Label) {
+                outListClass1Label.textContent = isWSX ? 'OUT – WSX SX1' : 'OUT – 450cc/SX1';
+            }
+            if (outListClass2Label) {
+                outListClass2Label.textContent = isWSX ? 'OUT – WSX SX2' : 'OUT – 250cc/SX2';
+            }
+            
             if (outSx1 && outSx2) {
                 outSx1.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
                 outSx2.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
@@ -1635,7 +1661,7 @@
             refresh();
         }
 
-        async function setWsxOut(status) {
+        async function setRiderOut(status) {
             const compId = document.getElementById('manual-competition').value;
             if (!compId) { alert('Välj tävling först'); return; }
             const sx1Sel = document.getElementById('wsx-out-sx1');
@@ -1647,7 +1673,7 @@
             if (!confirm(`Bekräfta att du vill ${verb} ${riderIds.length} förare?`)) return;
 
             try {
-                console.log('WSX OUT action', { status, compId, riderIds });
+                console.log('Rider OUT action', { status, compId, riderIds });
                 for (const rid of riderIds) {
                     const resp = await fetch('/admin/set_out_status', {
                         method: 'POST',
@@ -1655,7 +1681,7 @@
                         body: JSON.stringify({ competition_id: parseInt(compId), rider_id: parseInt(rid), status })
                     });
                     const data = await resp.json().catch(() => ({}));
-                    console.log('WSX OUT response', rid, data);
+                    console.log('Rider OUT response', rid, data);
                 }
                 await manualCompetitionChanged();
                 // Nollställ val
@@ -1663,7 +1689,7 @@
                 if (sx2Sel) sx2Sel.value = '';
                 alert(status === 'OUT' ? '✅ Förare markerade som OUT' : '✅ OUT rensat');
             } catch (e) {
-                console.error('WSX OUT error', e);
+                console.error('Rider OUT error', e);
                 alert('❌ Fel vid uppdatering av OUT: ' + e.message);
             }
         }
