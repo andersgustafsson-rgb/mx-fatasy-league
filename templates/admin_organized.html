@@ -1713,6 +1713,48 @@
             refresh();
         }
 
+        async function removeRiderFromOut(compId, riderId, className) {
+            if (!compId || !riderId) {
+                alert('Fel: Saknar tävling eller förare-ID');
+                return;
+            }
+            
+            // Find rider name from the list
+            const listItem = document.querySelector(`li[onclick*="${riderId}"]`);
+            const riderName = listItem?.querySelector('span')?.textContent?.trim() || 'Föraren';
+            
+            if (!confirm(`Vill du ta bort ${riderName} från OUT?\n\nVill du också ta bort för alla framtida tävlingar i samma serie?`)) {
+                return;
+            }
+            
+            const clearAllFuture = confirm('Ta bort för alla framtida tävlingar också?\n\nOK = Ja, ta bort för alla framtida tävlingar\nAvbryt = Nej, bara för denna tävling');
+            
+            try {
+                const resp = await fetch('/admin/set_out_status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        competition_id: parseInt(compId), 
+                        rider_id: parseInt(riderId), 
+                        status: 'CLEAR',
+                        clear_all_future: clearAllFuture
+                    })
+                });
+                const data = await resp.json().catch(() => ({}));
+                
+                if (resp.ok) {
+                    // Reload the competition data to refresh OUT lists
+                    await manualCompetitionChanged();
+                    alert(`✅ ${riderName} borttagen från OUT${clearAllFuture ? ' för denna tävling och alla framtida tävlingar' : ' för denna tävling'}`);
+                } else {
+                    alert('❌ Fel vid borttagning: ' + (data.error || 'Okänt fel'));
+                }
+            } catch (e) {
+                console.error('Error removing rider from OUT:', e);
+                alert('❌ Fel vid borttagning: ' + e.message);
+            }
+        }
+
         async function setRiderOut(status) {
             const compId = document.getElementById('manual-competition').value;
             if (!compId) { alert('Välj tävling först'); return; }
