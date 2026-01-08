@@ -1669,16 +1669,35 @@
             const riderIds = [sx1Sel?.value, sx2Sel?.value].filter(Boolean);
             if (riderIds.length === 0) { alert('Välj minst en förare att uppdatera.'); return; }
 
-            const verb = status === 'OUT' ? 'sätta OUT på' : 'rensa OUT för';
-            if (!confirm(`Bekräfta att du vill ${verb} ${riderIds.length} förare?`)) return;
+            let clearAllFuture = false;
+            
+            if (status === 'CLEAR') {
+                // Ask if user wants to clear for all future competitions too
+                clearAllFuture = confirm(
+                    'Vill du ta bort OUT-status för alla framtida tävlingar i samma serie också?\n\n' +
+                    'OK = Ta bort för denna tävling OCH alla framtida tävlingar\n' +
+                    'Avbryt = Ta bort bara för denna tävling'
+                );
+            } else {
+                // For OUT: explain that it will apply to all future competitions
+                const verb = 'sätta OUT på';
+                const confirmMsg = `Bekräfta att du vill ${verb} ${riderIds.length} förare?\n\n` +
+                    `⚠️ OBS: Föraren kommer automatiskt vara OUT för alla framtida tävlingar i samma serie tills du manuellt tar bort OUT-statusen.`;
+                if (!confirm(confirmMsg)) return;
+            }
 
             try {
-                console.log('Rider OUT action', { status, compId, riderIds });
+                console.log('Rider OUT action', { status, compId, riderIds, clearAllFuture });
                 for (const rid of riderIds) {
                     const resp = await fetch('/admin/set_out_status', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ competition_id: parseInt(compId), rider_id: parseInt(rid), status })
+                        body: JSON.stringify({ 
+                            competition_id: parseInt(compId), 
+                            rider_id: parseInt(rid), 
+                            status,
+                            clear_all_future: clearAllFuture
+                        })
                     });
                     const data = await resp.json().catch(() => ({}));
                     console.log('Rider OUT response', rid, data);
@@ -1687,7 +1706,15 @@
                 // Nollställ val
                 if (sx1Sel) sx1Sel.value = '';
                 if (sx2Sel) sx2Sel.value = '';
-                alert(status === 'OUT' ? '✅ Förare markerade som OUT' : '✅ OUT rensat');
+                
+                if (status === 'OUT') {
+                    alert('✅ Förare markerade som OUT för denna tävling och alla framtida tävlingar i samma serie');
+                } else {
+                    alert(clearAllFuture 
+                        ? '✅ OUT rensat för denna tävling och alla framtida tävlingar i samma serie'
+                        : '✅ OUT rensat för denna tävling (använd "Clear" igen och välj "OK" för att ta bort för alla framtida tävlingar)'
+                    );
+                }
             } catch (e) {
                 console.error('Rider OUT error', e);
                 alert('❌ Fel vid uppdatering av OUT: ' + e.message);

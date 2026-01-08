@@ -5853,9 +5853,10 @@ def admin_set_out_status():
         print(f"DEBUG: Rider {rider_id} not found")
         return jsonify({"error": "rider_not_found"}), 404
 
-    print(f"DEBUG: Found competition: {comp.name}, rider: {rider.name}")
+    print(f"DEBUG: Found competition: {comp.name}, rider: {rider.name}, series: {comp.series}")
 
     if status == "OUT":
+        # Set OUT for this competition
         row = (
             CompetitionRiderStatus.query.filter_by(
                 competition_id=comp_id, rider_id=rider_id
@@ -5866,21 +5867,96 @@ def admin_set_out_status():
                 competition_id=comp_id, rider_id=rider_id, status="OUT"
             )
             db.session.add(row)
-            print(f"DEBUG: Created new OUT status for {rider.name}")
+            print(f"DEBUG: Created new OUT status for {rider.name} in {comp.name}")
         else:
             row.status = "OUT"
-            print(f"DEBUG: Updated existing OUT status for {rider.name}")
+            print(f"DEBUG: Updated existing OUT status for {rider.name} in {comp.name}")
+        
+        # IMPORTANT: Also set OUT for all FUTURE competitions in the same series
+        # This way, once a rider is OUT, they stay OUT until manually cleared
+        if comp.series:
+            future_comps = (
+                Competition.query
+                .filter(
+                    Competition.series == comp.series,
+                    Competition.event_date >= comp.event_date,
+                    Competition.id != comp_id  # Don't duplicate the current one
+                )
+                .all()
+            )
+            
+            added_count = 0
+            for future_comp in future_comps:
+                existing = CompetitionRiderStatus.query.filter_by(
+                    competition_id=future_comp.id,
+                    rider_id=rider_id
+                ).first()
+                
+                if not existing:
+                    future_row = CompetitionRiderStatus(
+                        competition_id=future_comp.id,
+                        rider_id=rider_id,
+                        status="OUT"
+                    )
+                    db.session.add(future_row)
+                    added_count += 1
+                    print(f"DEBUG: Auto-set OUT for {rider.name} in future competition {future_comp.name}")
+                elif existing.status != "OUT":
+                    existing.status = "OUT"
+                    added_count += 1
+                    print(f"DEBUG: Updated existing status to OUT for {rider.name} in {future_comp.name}")
+            
+            if added_count > 0:
+                print(f"DEBUG: Auto-set OUT for {rider.name} in {added_count} future {comp.series} competitions")
+        
         db.session.commit()
         print(f"DEBUG: Committed OUT status for {rider.name}")
-        return jsonify({"ok": True, "message": "Rider set OUT"}), 200
+        return jsonify({
+            "ok": True,
+            "message": f"Rider set OUT for this competition and all future {comp.series or 'competitions'} in the same series"
+        }), 200
 
-    # CLEAR: rensa alla rader för kombinationen (robust)
-    deleted_count = CompetitionRiderStatus.query.filter_by(
-        competition_id=comp_id, rider_id=rider_id
-    ).delete()
-    db.session.commit()
-    print(f"DEBUG: Cleared OUT status for {rider.name} (deleted {deleted_count} rows)")
-    return jsonify({"ok": True, "message": "Rider cleared"}), 200
+    # CLEAR: Remove OUT status
+    # Option 1: Clear only for this competition (if clear_all_future is False or not provided)
+    # Option 2: Clear for this competition AND all future competitions in the same series (if clear_all_future is True)
+    clear_all_future = data.get("clear_all_future", False)
+    
+    if clear_all_future and comp.series:
+        # Clear for this competition and all future competitions in the same series
+        future_comps = (
+            Competition.query
+            .filter(
+                Competition.series == comp.series,
+                Competition.event_date >= comp.event_date
+            )
+            .all()
+        )
+        future_comp_ids = [c.id for c in future_comps]
+        
+        deleted_count = CompetitionRiderStatus.query.filter(
+            CompetitionRiderStatus.rider_id == rider_id,
+            CompetitionRiderStatus.competition_id.in_(future_comp_ids)
+        ).delete()
+        
+        db.session.commit()
+        print(f"DEBUG: Cleared OUT status for {rider.name} in {deleted_count} competitions (this + all future {comp.series})")
+        return jsonify({
+            "ok": True,
+            "message": f"Cleared OUT status for {rider.name} in this competition and all future {comp.series} competitions",
+            "deleted_count": deleted_count
+        }), 200
+    else:
+        # Clear only for this specific competition
+        deleted_count = CompetitionRiderStatus.query.filter_by(
+            competition_id=comp_id, rider_id=rider_id
+        ).delete()
+        db.session.commit()
+        print(f"DEBUG: Cleared OUT status for {rider.name} in competition {comp.name} only (deleted {deleted_count} rows)")
+        return jsonify({
+            "ok": True,
+            "message": f"Cleared OUT status for {rider.name} in this competition only",
+            "deleted_count": deleted_count
+        }), 200
 
 
 @app.get("/season_team_build")
