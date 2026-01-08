@@ -170,13 +170,16 @@
                         <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <h4 class="text-white font-semibold mb-2" id="out-list-class1-label">OUT – 450cc/SX1</h4>
-                                <ul id="wsx-out-list-sx1" class="text-gray-300 text-sm list-disc pl-5"></ul>
+                                <ul id="wsx-out-list-sx1" class="text-gray-300 text-sm space-y-1"></ul>
                             </div>
                             <div>
                                 <h4 class="text-white font-semibold mb-2" id="out-list-class2-label">OUT – 250cc/SX2</h4>
-                                <ul id="wsx-out-list-sx2" class="text-gray-300 text-sm list-disc pl-5"></ul>
+                                <ul id="wsx-out-list-sx2" class="text-gray-300 text-sm space-y-1"></ul>
                             </div>
                         </div>
+                        <p class="text-xs text-gray-400 mt-2">
+                            💡 Klicka på en förare i listan ovan för att ta bort den från OUT, eller använd "Clear"-knappen för att ta bort från dropdown-menyn.
+                        </p>
                     </div>
                 </div>
 
@@ -1646,11 +1649,30 @@
                 const sx1Out = sx1.filter(r => r.is_out);
                 const sx2Out = sx2.filter(r => r.is_out);
                 console.log('OUT riders:', { sx1Out: sx1Out.length, sx2Out: sx2Out.length, totalSx1: sx1.length, totalSx2: sx2.length });
+                
+                // Create clickable list items with remove button
                 outListSx1.innerHTML = sx1Out.length > 0 
-                    ? sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('')
+                    ? sx1Out.map(r => {
+                        const riderName = `${(r.rider_number? r.rider_number + ' ' : '')}${r.name}`;
+                        return `<li class="flex items-center justify-between group hover:bg-gray-700 rounded px-2 py-1 cursor-pointer" onclick="removeRiderFromOut(${compId}, ${r.id}, '450cc')">
+                            <span>${riderName}</span>
+                            <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-2" onclick="event.stopPropagation(); removeRiderFromOut(${compId}, ${r.id}, '450cc')" title="Ta bort från OUT">
+                                ✕
+                            </button>
+                        </li>`;
+                    }).join('')
                     : '<li class="text-gray-500">Inga OUT</li>';
+                    
                 outListSx2.innerHTML = sx2Out.length > 0
-                    ? sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('')
+                    ? sx2Out.map(r => {
+                        const riderName = `${(r.rider_number? r.rider_number + ' ' : '')}${r.name}`;
+                        return `<li class="flex items-center justify-between group hover:bg-gray-700 rounded px-2 py-1 cursor-pointer" onclick="removeRiderFromOut(${compId}, ${r.id}, '250cc')">
+                            <span>${riderName}</span>
+                            <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-2" onclick="event.stopPropagation(); removeRiderFromOut(${compId}, ${r.id}, '250cc')" title="Ta bort från OUT">
+                                ✕
+                            </button>
+                        </li>`;
+                    }).join('')
                     : '<li class="text-gray-500">Inga OUT</li>';
             } else {
                 console.warn('OUT list elements not found:', { outListSx1, outListSx2 });
