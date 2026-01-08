@@ -1490,6 +1490,7 @@
             loadExistingResults(compId);
             
             // Fetch riders for this competition (admin endpoint returns all riders incl. class)
+            console.log('Fetching riders for competition:', compId);
             const res = await fetch(`/admin/get_out_status/${compId}`);
             if (!res.ok) {
                 console.error('Error fetching riders:', res.status, res.statusText);
@@ -1498,6 +1499,7 @@
                 return;
             }
             const riders = await res.json();
+            console.log('Received riders:', riders.length, 'riders');
             if (!Array.isArray(riders)) {
                 console.error('Invalid riders response:', riders);
                 alert('Ogiltigt svar från servern när förarlist skulle hämtas.');
@@ -1628,8 +1630,15 @@
             if (outListSx1 && outListSx2) {
                 const sx1Out = sx1.filter(r => r.is_out);
                 const sx2Out = sx2.filter(r => r.is_out);
-                outListSx1.innerHTML = sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
-                outListSx2.innerHTML = sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('') || '<li class="text-gray-500">Inga OUT</li>';
+                console.log('OUT riders:', { sx1Out: sx1Out.length, sx2Out: sx2Out.length, totalSx1: sx1.length, totalSx2: sx2.length });
+                outListSx1.innerHTML = sx1Out.length > 0 
+                    ? sx1Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('')
+                    : '<li class="text-gray-500">Inga OUT</li>';
+                outListSx2.innerHTML = sx2Out.length > 0
+                    ? sx2Out.map(r => `<li>${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</li>`).join('')
+                    : '<li class="text-gray-500">Inga OUT</li>';
+            } else {
+                console.warn('OUT list elements not found:', { outListSx1, outListSx2 });
             }
             
             // Enforce unique selections live (disable already chosen riders)
