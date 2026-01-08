@@ -1473,8 +1473,23 @@
         }
 
         async function manualCompetitionChanged() {
-            const compId = document.getElementById('manual-competition').value;
-            if (!compId) return;
+            const compId = document.getElementById('manual-competition')?.value;
+            if (!compId) {
+                console.log('No competition selected - clearing OUT lists');
+                // Clear OUT lists if no competition selected
+                const outListSx1 = document.getElementById('wsx-out-list-sx1');
+                const outListSx2 = document.getElementById('wsx-out-list-sx2');
+                if (outListSx1) outListSx1.innerHTML = '<li class="text-gray-500">Välj tävling först</li>';
+                if (outListSx2) outListSx2.innerHTML = '<li class="text-gray-500">Välj tävling först</li>';
+                // Clear dropdowns too
+                const outSx1 = document.getElementById('wsx-out-sx1');
+                const outSx2 = document.getElementById('wsx-out-sx2');
+                if (outSx1) outSx1.innerHTML = '<option value="">Välj förare</option>';
+                if (outSx2) outSx2.innerHTML = '<option value="">Välj förare</option>';
+                return;
+            }
+            
+            console.log('Manual competition changed:', compId);
             
             // Fetch competition info to check series
             const compRes = await fetch(`/get_competitions_for_import`);
