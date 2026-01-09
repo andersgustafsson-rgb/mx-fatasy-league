@@ -6320,58 +6320,72 @@ def save_picks():
     
     print(f"DEBUG: Saved {saved_picks} picks total")
 
-    # 5) Holeshot 450
+    # 5) Holeshot 450 - KRAVS för alla serier
     hs450 = data.get("holeshot_450")
-    if hs450:
-        try:
-            rid = int(hs450)
-            # (om du vill låsa 450-OUT, lägg samma OUT-koll här)
-            if rid in out_ids:
-                return jsonify({"error": "Förare är OUT för detta race"}), 400
-            
-            # Holeshot och top 6 kan vara samma förare - det är naturligt!
-            db.session.add(
-                HoleshotPick(
-                    user_id=uid,
-                    competition_id=comp_id,
-                    rider_id=rid,
-                    class_name="450cc"
-                )
+    if not hs450:
+        return jsonify({"error": "Du måste välja en holeshot-förare för 450cc/SX1"}), 400
+    
+    try:
+        rid = int(hs450)
+        # (om du vill låsa 450-OUT, lägg samma OUT-koll här)
+        if rid in out_ids:
+            return jsonify({"error": "Förare är OUT för detta race"}), 400
+        
+        # Holeshot och top 6 kan vara samma förare - det är naturligt!
+        db.session.add(
+            HoleshotPick(
+                user_id=uid,
+                competition_id=comp_id,
+                rider_id=rid,
+                class_name="450cc"
             )
-        except Exception:
-            pass
+        )
+    except Exception:
+        return jsonify({"error": "Ogiltig holeshot-förare för 450cc/SX1"}), 400
 
-    # 6) Holeshot 250
+    # 6) Holeshot 250 - KRAVS för alla serier
     hs250 = data.get("holeshot_250")
-    if hs250:
-        try:
-            rid = int(hs250)
-            rider = Rider.query.get(rid)
+    if not hs250:
+        return jsonify({"error": "Du måste välja en holeshot-förare för 250cc/SX2"}), 400
+    
+    try:
+        rid = int(hs250)
+        rider = Rider.query.get(rid)
 
-            # 6a) Blockera OUT
-            if rider and rider.id in out_ids:
-                return jsonify({"error": "Förare är OUT för detta race"}), 400
+        # 6a) Blockera OUT
+        if rider and rider.id in out_ids:
+            return jsonify({"error": "Förare är OUT för detta race"}), 400
 
-            # 6b) Coast‑validering för 250 holeshot
-            if rider and comp.coast_250 in ("east","west"):
-                if rider.coast_250 not in (comp.coast_250, "both"):
-                    return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
-            
-            # Holeshot och top 6 kan vara samma förare - det är naturligt!
+        # 6b) Coast‑validering för 250 holeshot
+        if rider and comp.coast_250 in ("east","west"):
+            if rider.coast_250 not in (comp.coast_250, "both"):
+                return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
+        
+        # Holeshot och top 6 kan vara samma förare - det är naturligt!
 
-            db.session.add(
-                HoleshotPick(
-                    user_id=uid,
-                    competition_id=comp_id,
-                    rider_id=rid,
-                    class_name="250cc"
-                )
+        db.session.add(
+            HoleshotPick(
+                user_id=uid,
+                competition_id=comp_id,
+                rider_id=rid,
+                class_name="250cc"
             )
-        except Exception:
-            pass
+        )
+    except Exception:
+        return jsonify({"error": "Ogiltig holeshot-förare för 250cc/SX2"}), 400
 
-    # 7) Wildcard – spara efter validering (skip for WSX)
-    if wc_pick and wc_pos and comp.series != "WSX":
+    # 7) Wildcard – spara efter validering (skip for WSX, KRAVS för andra serier)
+    if comp.series != "WSX":
+        wc_pick = data.get("wildcard_pick")
+        wc_pos = data.get("wildcard_pos")
+        
+        # Wildcard är obligatoriskt för alla serier utom WSX
+        if not wc_pick:
+            return jsonify({"error": "Du måste välja en wildcard-förare"}), 400
+        
+        if not wc_pos or str(wc_pos).strip() == "":
+            return jsonify({"error": "Du måste välja en wildcard-position (rulla tärningen)"}), 400
+        
         try:
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
@@ -6383,7 +6397,7 @@ def save_picks():
             existing_wc.rider_id = wc_pick_i
             existing_wc.position = wc_pos_i
         except Exception:
-            pass
+            return jsonify({"error": "Ogiltig wildcard-val"}), 400
 
     db.session.commit()
     return jsonify({"message":"Picks sparade"}), 200

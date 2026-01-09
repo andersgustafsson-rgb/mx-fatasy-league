@@ -2230,6 +2230,36 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       return;
     }
 
+    // Validera holeshot (krävs för alla serier)
+    const holeshot450 = document.getElementById("holeshot-450")?.value;
+    const holeshot250 = document.getElementById("holeshot-250")?.value;
+    
+    if (!holeshot450) {
+      alert("Du måste välja en holeshot-förare för 450cc/SX1.");
+      return;
+    }
+    
+    if (!holeshot250) {
+      alert("Du måste välja en holeshot-förare för 250cc/SX2.");
+      return;
+    }
+
+    // Validera wildcard (krävs för alla serier UTAN WSX)
+    if (!isWSXSeries) {
+      const wildcardPick = document.getElementById("wildcard-pick")?.value;
+      const wildcardPos = document.getElementById("wildcard-position")?.value;
+      
+      if (!wildcardPick) {
+        alert("Du måste välja en wildcard-förare.");
+        return;
+      }
+      
+      if (!wildcardPos || wildcardPos.trim() === "") {
+        alert("Du måste välja en wildcard-position (rulla tärningen).");
+        return;
+      }
+    }
+
     // Extra säkerhet: client-side filter bort OUT
     for (const p of picks) {
       if (OUT_IDS.includes(Number(p.rider_id))) {
