@@ -4244,6 +4244,38 @@ def admin_picks_stats(competition_id):
         # Calculate percentage
         percentage = round((total_users_with_picks / total_users * 100) if total_users > 0 else 0, 1)
         
+        # Find users who have race picks but are missing holeshot or wildcard
+        users_missing_holeshot = []
+        users_missing_wildcard = []
+        
+        # Get all user IDs who have race picks
+        users_with_race_pick_ids = {uid for (uid,) in users_with_race_picks}
+        users_with_holeshot_ids = {uid for (uid,) in users_with_holeshot}
+        users_with_wildcard_ids = {uid for (uid,) in users_with_wildcard} if comp and comp.series != "WSX" else set()
+        
+        # Find users missing holeshot (have race picks but no holeshot)
+        for user_id in users_with_race_pick_ids:
+            if user_id not in users_with_holeshot_ids:
+                user = User.query.get(user_id)
+                if user:
+                    users_missing_holeshot.append({
+                        "user_id": user_id,
+                        "username": user.username,
+                        "display_name": user.display_name
+                    })
+        
+        # Find users missing wildcard (have race picks but no wildcard, only for non-WSX)
+        if comp and comp.series != "WSX":
+            for user_id in users_with_race_pick_ids:
+                if user_id not in users_with_wildcard_ids:
+                    user = User.query.get(user_id)
+                    if user:
+                        users_missing_wildcard.append({
+                            "user_id": user_id,
+                            "username": user.username,
+                            "display_name": user.display_name
+                        })
+        
         return jsonify({
             "competition_id": competition_id,
             "competition_name": comp.name if comp else "Unknown",
@@ -4252,7 +4284,9 @@ def admin_picks_stats(competition_id):
             "percentage": percentage,
             "users_with_race_picks": len(users_with_race_picks),
             "users_with_holeshot": len(users_with_holeshot),
-            "users_with_wildcard": len(users_with_wildcard) if comp and comp.series != "WSX" else 0
+            "users_with_wildcard": len(users_with_wildcard) if comp and comp.series != "WSX" else 0,
+            "users_missing_holeshot": users_missing_holeshot,
+            "users_missing_wildcard": users_missing_wildcard
         })
     except Exception as e:
         import traceback

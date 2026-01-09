@@ -372,6 +372,18 @@
                             <div class="mt-3 text-sm text-gray-400">
                                 <span id="picks-stats-total-users">Totalt antal användare: -</span>
                             </div>
+                            
+                            <!-- Users missing holeshot/wildcard -->
+                            <div id="picks-stats-missing" class="mt-4 hidden">
+                                <div id="picks-stats-missing-holeshot" class="mb-3 hidden">
+                                    <h5 class="text-sm font-semibold text-red-400 mb-2">⚠️ Användare som saknar holeshot:</h5>
+                                    <ul id="picks-stats-missing-holeshot-list" class="text-sm text-gray-300 space-y-1"></ul>
+                                </div>
+                                <div id="picks-stats-missing-wildcard" class="mb-3 hidden">
+                                    <h5 class="text-sm font-semibold text-red-400 mb-2">⚠️ Användare som saknar wildcard:</h5>
+                                    <ul id="picks-stats-missing-wildcard-list" class="text-sm text-gray-300 space-y-1"></ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1107,6 +1119,39 @@
                 document.getElementById('picks-stats-race').textContent = data.users_with_race_picks;
                 document.getElementById('picks-stats-holeshot').textContent = data.users_with_holeshot;
                 document.getElementById('picks-stats-total-users').textContent = `Totalt antal användare: ${data.total_users}`;
+                
+                // Show users missing holeshot
+                const missingHoleshotDiv = document.getElementById('picks-stats-missing-holeshot');
+                const missingHoleshotList = document.getElementById('picks-stats-missing-holeshot-list');
+                if (data.users_missing_holeshot && data.users_missing_holeshot.length > 0) {
+                    missingHoleshotList.innerHTML = data.users_missing_holeshot.map(u => 
+                        `<li>• ${u.display_name || u.username} (${u.username})</li>`
+                    ).join('');
+                    missingHoleshotDiv.classList.remove('hidden');
+                } else {
+                    missingHoleshotDiv.classList.add('hidden');
+                }
+                
+                // Show users missing wildcard
+                const missingWildcardDiv = document.getElementById('picks-stats-missing-wildcard');
+                const missingWildcardList = document.getElementById('picks-stats-missing-wildcard-list');
+                if (data.users_missing_wildcard && data.users_missing_wildcard.length > 0) {
+                    missingWildcardList.innerHTML = data.users_missing_wildcard.map(u => 
+                        `<li>• ${u.display_name || u.username} (${u.username})</li>`
+                    ).join('');
+                    missingWildcardDiv.classList.remove('hidden');
+                } else {
+                    missingWildcardDiv.classList.add('hidden');
+                }
+                
+                // Show/hide the missing section
+                const missingSection = document.getElementById('picks-stats-missing');
+                if ((data.users_missing_holeshot && data.users_missing_holeshot.length > 0) ||
+                    (data.users_missing_wildcard && data.users_missing_wildcard.length > 0)) {
+                    missingSection.classList.remove('hidden');
+                } else {
+                    missingSection.classList.add('hidden');
+                }
                 
                 // Show the display
                 document.getElementById('picks-stats-display').classList.remove('hidden');
