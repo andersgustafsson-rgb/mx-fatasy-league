@@ -3219,7 +3219,7 @@ def debug_anaheim1_countdown():
         # Get competition details
         event_date = anaheim1.event_date
         timezone = getattr(anaheim1, 'timezone', 'America/Los_Angeles')
-        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(16, 0)
+        start_time = anaheim1.start_time if hasattr(anaheim1, 'start_time') and anaheim1.start_time else time(11, 30)
         
         # Calculate race datetime in local time
         race_datetime_local = datetime.combine(event_date, start_time)
