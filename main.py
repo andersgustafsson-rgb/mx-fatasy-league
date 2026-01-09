@@ -3177,21 +3177,21 @@ def fix_anaheim1():
         if hasattr(anaheim1, 'timezone'):
             anaheim1.timezone = 'America/Los_Angeles'
         
-        # Set start_time to 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1 (picks deadline will be 2:00 PM PT, 2h before)
+        # Set start_time to 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1 (picks deadline will be 9:30 AM PT, 2h before)
         if hasattr(anaheim1, 'start_time'):
-            anaheim1.start_time = time(16, 0)
+            anaheim1.start_time = time(11, 30)
         
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=4:00 PM (16:00)',
+            'message': f'Updated {anaheim1.name}: event_date=2026-01-10, timezone=America/Los_Angeles, start_time=11:30 AM (11:30)',
             'competition': {
                 'id': anaheim1.id,
                 'name': anaheim1.name,
                 'event_date': '2026-01-10',
                 'timezone': 'America/Los_Angeles',
-                'start_time': '16:00'
+                'start_time': '11:30'
             }
         })
     except Exception as e:
@@ -13602,13 +13602,13 @@ def race_countdown():
                     if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
                         next_race_obj.timezone = 'America/Los_Angeles'
                         needs_commit = True
-                    # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                    # Always set start_time to 11:30 for Anaheim 1 (even if it's already set)
                     if hasattr(next_race_obj, 'start_time'):
                         from datetime import time as _t
-                        correct_time = _t(hour=16, minute=0)
+                        correct_time = _t(hour=11, minute=30)
                         current_time = next_race_obj.start_time
                         if current_time is None or current_time != correct_time:
-                            # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                            # Race start 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1, picks deadline 9:30 AM PT (2h before)
                             next_race_obj.start_time = correct_time
                             needs_commit = True
                 if needs_commit:
@@ -13739,13 +13739,13 @@ def race_countdown():
                     if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
                         upcoming_race.timezone = 'America/Los_Angeles'
                         needs_commit2 = True
-                    # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                    # Always set start_time to 11:30 for Anaheim 1 (even if it's already set)
                     if hasattr(upcoming_race, 'start_time'):
                         from datetime import time as _t
-                        correct_time = _t(hour=16, minute=0)
+                        correct_time = _t(hour=11, minute=30)
                         current_time = upcoming_race.start_time
                         if current_time is None or current_time != correct_time:
-                            # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                            # Race start 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1, picks deadline 9:30 AM PT (2h before)
                             upcoming_race.start_time = correct_time
                             needs_commit2 = True
                 if needs_commit2:
@@ -15402,13 +15402,13 @@ def is_picks_locked(competition):
                 if hasattr(competition_obj, 'timezone') and not competition_obj.timezone:
                     competition_obj.timezone = 'America/Los_Angeles'
                     needs_commit = True
-                # Always set start_time to 16:00 for Anaheim 1 (even if it's already set)
+                # Always set start_time to 11:30 for Anaheim 1 (even if it's already set)
                 if hasattr(competition_obj, 'start_time'):
                     from datetime import time as _t
-                    correct_time = _t(hour=16, minute=0)
+                    correct_time = _t(hour=11, minute=30)
                     current_time = competition_obj.start_time
                     if current_time is None or current_time != correct_time:
-                        # Race start 4:00 PM PT (16:00) = Sunday Jan 11, 1:00 AM GMT+1, picks deadline 2:00 PM PT (2h before)
+                        # Race start 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1, picks deadline 9:30 AM PT (2h before)
                         competition_obj.start_time = correct_time
                         needs_commit = True
             if needs_commit:
