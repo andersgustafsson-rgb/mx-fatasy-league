@@ -5586,15 +5586,15 @@ def get_season_leaderboard():
                     "delta": None
                 })
         
-        # Wrap return in try-except to ensure we always return JSON
-        try:
-            return jsonify(result)
-        except Exception as e:
-            print(f"CRITICAL ERROR returning leaderboard JSON: {e}")
-            import traceback
-            traceback.print_exc()
-            # Return empty list on error
-            return jsonify([])
+            # Wrap return in try-except to ensure we always return JSON
+            try:
+                return jsonify(result)
+            except Exception as e:
+                print(f"CRITICAL ERROR returning leaderboard JSON: {e}")
+                import traceback
+                traceback.print_exc()
+                # Return empty list on error
+                return jsonify([])
     
     except Exception as e:
         # Catch ANY error in the entire function and return JSON
