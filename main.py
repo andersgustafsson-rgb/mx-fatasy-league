@@ -6709,15 +6709,23 @@ def calculate_scores(comp_id: int):
 
         total_points = race_points + holeshot_points + wildcard_points
 
-        score_entry = CompetitionScore.query.filter_by(
+        # Check for duplicates first (in case calculate_scores was called multiple times)
+        all_score_entries = CompetitionScore.query.filter_by(
             user_id=user.id, competition_id=comp_id
-        ).first()
-        if not score_entry:
+        ).all()
+        
+        if len(all_score_entries) > 1:
+            # Found duplicates - keep the first one, delete the rest
+            print(f"⚠️ WARNING: Found {len(all_score_entries)} duplicate score entries for {user.username} in competition {comp_id}. Fixing...")
+            score_entry = all_score_entries[0]
+            for dup in all_score_entries[1:]:
+                db.session.delete(dup)
+        elif len(all_score_entries) == 1:
+            score_entry = all_score_entries[0]
+        else:
             score_entry = CompetitionScore(user_id=user.id, competition_id=comp_id)
             db.session.add(score_entry)
             print(f"DEBUG: Created new score entry for {user.username}")
-        else:
-            print(f"DEBUG: Updated existing score entry for {user.username}")
         
         score_entry.total_points = total_points
         score_entry.race_points = race_points
