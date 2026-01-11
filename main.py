@@ -5614,7 +5614,7 @@ def get_season_leaderboard():
         traceback.print_exc()
         db.session.rollback()
         # Return empty list on any error
-        return jsonify([])
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()})
 
 @app.get("/get_season_team_leaderboard")
 def get_season_team_leaderboard():
