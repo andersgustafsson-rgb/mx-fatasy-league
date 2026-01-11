@@ -5469,7 +5469,7 @@ def get_season_leaderboard():
                     .filter(CompetitionScore.user_id == user_id)
                     .filter(
                         db.or_(
-                            Competition.series == None,  # Include if series is null
+                            Competition.series.is_(None),  # Include if series is null
                             Competition.series != 'WSX'  # Exclude WSX series
                         )
                     )
