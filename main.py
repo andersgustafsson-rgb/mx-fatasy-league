@@ -5513,14 +5513,14 @@ def get_season_leaderboard():
         # Replace user_scores with our list
         user_scores = user_scores_list
         
-        # Ensure team_name is available on each user_row
+        # Ensure team_name is available on each user_row (already done above, but double-check)
         user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
         for user_row in user_scores:
-            if not hasattr(user_row, 'team_name'):
-                user_row.team_name = user_team_map.get(user_row.id)
+            if not user_row.get('team_name'):
+                user_row['team_name'] = user_team_map.get(user_row['id'])
         
         # Sort by total_points descending
-        user_scores.sort(key=lambda x: x.total_points, reverse=True)
+        user_scores.sort(key=lambda x: x['total_points'], reverse=True)
         
         # Lägg till rank och delta (jämför med tidigare ranking)
         result = []
@@ -5543,14 +5543,14 @@ def get_season_leaderboard():
                 print("DEBUG: No previous ranking history found - will create baseline")
                 # Create initial baseline ranking (all users start at rank 0)
                 for user_row in user_scores:
-                    previous_ranking[str(user_row.id)] = 0  # All start at rank 0
+                    previous_ranking[str(user_row['id'])] = 0  # All start at rank 0
             
             for i, user_row in enumerate(user_scores, 1):
-                user_id = user_row.id
-                username = user_row.username
-                display_name = user_row.display_name
-                team_name = getattr(user_row, 'team_name', None)
-                total_points = getattr(user_row, 'total_points', 0) or 0
+                user_id = user_row['id']
+                username = user_row['username']
+                display_name = user_row.get('display_name')
+                team_name = user_row.get('team_name')
+                total_points = user_row.get('total_points', 0) or 0
                 
                 current_rank = i
                 previous_rank = previous_ranking.get(str(user_id))
@@ -5600,11 +5600,11 @@ def get_season_leaderboard():
             result = []
             for i, user_row in enumerate(user_scores, 1):
                 result.append({
-                    "user_id": user_row.id,
-                    "username": user_row.username,
-                    "display_name": user_row.display_name or None,
-                    "team_name": getattr(user_row, 'team_name', None),
-                    "total_points": int(getattr(user_row, 'total_points', 0) or 0),
+                    "user_id": user_row['id'],
+                    "username": user_row['username'],
+                    "display_name": user_row.get('display_name') or None,
+                    "team_name": user_row.get('team_name'),
+                    "total_points": int(user_row.get('total_points', 0) or 0),
                     "rank": i,
                     "delta": None
                 })
