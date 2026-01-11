@@ -9553,9 +9553,10 @@ def fix_profile_columns():
     print("DEBUG: fix_profile_columns called")
     
     try:
-        # Rollback any existing transaction first
-        db.session.rollback()
-         a        # Add missing columns to users table
+          # Rollback any existing transaction first
+          db.session.rollback()
+          
+          # Add missing columns to users table
         columns_to_add = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
