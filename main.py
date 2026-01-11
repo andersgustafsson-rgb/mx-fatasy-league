@@ -5437,41 +5437,15 @@ def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
     # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
     # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
-    from sqlalchemy import func, distinct
+    from sqlalchemy import func
     
-    # Hämta alla användare med deras totala poäng från CompetitionScore
-    # Exkludera WSX-serien - bara räkna SX, MX, SMX
-    # VIKTIGT: Använd DISTINCT för att undvika att räkna dubletter (om samma tävling finns flera gånger)
-    # VIKTIGT: Använd subquery för att inkludera alla användare även om de inte har några poäng
+    # Hämta alla användare med team_name (enklare query, räknar poäng i Python)
     user_scores = (
         db.session.query(
             User.id,
             User.username,
             User.display_name,
-            SeasonTeam.team_name,
-            func.coalesce(
-                db.session.query(
-                    func.sum(
-                        db.session.query(CompetitionScore.total_points)
-                        .filter(CompetitionScore.user_id == User.id)
-                        .filter(CompetitionScore.competition_id == Competition.id)
-                        .order_by(CompetitionScore.score_id.desc())
-                        .limit(1)
-                        .scalar_subquery()
-                    )
-                )
-                .select_from(Competition)
-                .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
-                .filter(
-                    db.or_(
-                        Competition.series == None,  # Include if series is null (backwards compatibility)
-                        Competition.series != 'WSX'  # Exclude WSX series
-                    )
-                )
-                .filter(CompetitionScore.user_id == User.id)
-                .scalar(),
-                0
-            ).label('total_points')
+            SeasonTeam.team_name
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
