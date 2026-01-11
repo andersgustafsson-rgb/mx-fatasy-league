@@ -4596,14 +4596,65 @@ def submit_results():
                         print(f"✅ COMPLEMENT SX2/250: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
-                db.session.add(CompetitionResult(
-                    competition_id=comp_id, 
-                    rider_id=rid, 
-                    position=pos,
-                    rider_points=rider_points
-                ))
+                # But check for duplicates first (in case of race condition or double submit)
+                existing = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    rider_id=rid
+                ).first()
+                if existing:
+                    # Update existing instead of creating duplicate
+                    existing.position = pos
+                    existing.rider_points = rider_points
+                    print(f"⚠️ WARNING: Found existing result for rider {rid} at competition {comp_id}, updating instead of creating duplicate")
+                else:
+                    db.session.add(CompetitionResult(
+                        competition_id=comp_id, 
+                        rider_id=rid, 
+                        position=pos,
+                        rider_points=rider_points
+                    ))
 
-    db.session.commit()
+    try:
+        db.session.commit()
+        print(f"✅ Results saved successfully for competition {comp_id}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error saving results: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Fel vid sparning av resultat: {str(e)}", "error")
+        return redirect(url_for("admin_page"))
+    
+    # Check for duplicates after commit and fix them
+    from sqlalchemy import func
+    duplicates = (
+        db.session.query(
+            CompetitionResult.competition_id,
+            CompetitionResult.rider_id,
+            func.count(CompetitionResult.result_id).label('count')
+        )
+        .filter(CompetitionResult.competition_id == comp_id)
+        .group_by(CompetitionResult.competition_id, CompetitionResult.rider_id)
+        .having(func.count(CompetitionResult.result_id) > 1)
+        .all()
+    )
+    
+    if duplicates:
+        print(f"⚠️ WARNING: Found {len(duplicates)} duplicate result groups after commit. Fixing...")
+        fixed_count = 0
+        for comp_id_dup, rider_id, count in duplicates:
+            results = CompetitionResult.query.filter_by(
+                competition_id=comp_id_dup,
+                rider_id=rider_id
+            ).order_by(CompetitionResult.result_id.desc()).all()
+            # Keep the most recent (highest result_id), delete the rest
+            for result in results[1:]:
+                db.session.delete(result)
+                fixed_count += 1
+        db.session.commit()
+        print(f"✅ Fixed {fixed_count} duplicate results")
+        flash(f"Varning: Hittade och fixade {len(duplicates)} dubletter i resultaten.", "warning")
+    
     # Results saved for competition
     
     # Debug: Count results after commit and show details
