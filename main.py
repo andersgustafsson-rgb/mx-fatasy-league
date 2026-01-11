@@ -13044,6 +13044,8 @@ def fix_duplicate_scores():
         if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
+        from sqlalchemy import func
+        
         # Find duplicate scores (same user_id and competition_id)
         duplicates = (
             db.session.query(
