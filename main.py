@@ -5462,18 +5462,21 @@ def get_season_leaderboard():
             
             try:
                 # Get all scores for this user, excluding WSX
+                # Use outerjoin to ensure we get scores even if Competition info is missing
                 all_scores = (
                     db.session.query(CompetitionScore)
-                    .join(Competition, Competition.id == CompetitionScore.competition_id)
+                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
                     .filter(CompetitionScore.user_id == user_id)
                     .filter(
                         db.or_(
-                            Competition.series == None,
-                            Competition.series != 'WSX'
+                            Competition.series == None,  # Include if series is null
+                            Competition.series != 'WSX'  # Exclude WSX series
                         )
                     )
                     .all()
                 )
+                
+                print(f"DEBUG: User {user_row.username} (ID: {user_id}) has {len(all_scores)} scores (excluding WSX)")
                 
                 # Group by competition_id and keep only the most recent (highest score_id)
                 scores_by_comp = {}
@@ -5481,11 +5484,17 @@ def get_season_leaderboard():
                     comp_id = score.competition_id
                     if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
                         scores_by_comp[comp_id] = score
+                        comp = Competition.query.get(comp_id)
+                        comp_name = comp.name if comp else f"Competition {comp_id}"
+                        print(f"DEBUG: User {user_row.username} - Competition {comp_name} (ID: {comp_id}): {score.total_points} points")
                 
                 # Sum the unique competition scores
                 total = sum(s.total_points or 0 for s in scores_by_comp.values())
+                print(f"DEBUG: User {user_row.username} total: {total} points from {len(scores_by_comp)} unique competitions")
             except Exception as e:
                 print(f"ERROR calculating points for user {user_id}: {e}")
+                import traceback
+                traceback.print_exc()
                 total = 0
             
             user_row.total_points = total
