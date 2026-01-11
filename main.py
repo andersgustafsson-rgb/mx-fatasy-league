@@ -12027,20 +12027,72 @@ def recalculate_scores(competition_id):
         return jsonify({"error": "admin_only"}), 403
     
     try:
+        # Get competition name first
+        competition = Competition.query.get(competition_id)
+        comp_name = competition.name if competition else f"Competition {competition_id}"
+        
+        # Count scores before
+        scores_before = CompetitionScore.query.filter_by(competition_id=competition_id).count()
+        
         # Call the calculate_scores function
         calculate_scores(competition_id)
         
-        # Get competition name
-        competition = Competition.query.get(competition_id)
-        comp_name = competition.name if competition else f"Competition {competition_id}"
+        # Count scores after
+        scores_after = CompetitionScore.query.filter_by(competition_id=competition_id).count()
         
         return jsonify({
             "success": True,
             "message": f"Scores recalculated for {comp_name}",
-            "competition_id": competition_id
+            "competition_id": competition_id,
+            "competition_name": comp_name,
+            "scores_before": scores_before,
+            "scores_after": scores_after
         })
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.get("/recalculate_anaheim1")
+def recalculate_anaheim1():
+    """Recalculate scores specifically for Anaheim 1"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Find Anaheim 1
+        anaheim1 = Competition.query.filter(
+            Competition.name.ilike('%anaheim 1%')
+        ).first()
+        
+        if not anaheim1:
+            return jsonify({"error": "Anaheim 1 competition not found"}), 404
+        
+        comp_id = anaheim1.id
+        comp_name = anaheim1.name
+        
+        # Count scores before
+        scores_before = CompetitionScore.query.filter_by(competition_id=comp_id).count()
+        
+        # Recalculate
+        calculate_scores(comp_id)
+        
+        # Count scores after
+        scores_after = CompetitionScore.query.filter_by(competition_id=comp_id).count()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Scores recalculated for {comp_name}",
+            "competition_id": comp_id,
+            "competition_name": comp_name,
+            "scores_before": scores_before,
+            "scores_after": scores_after
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.post("/recalculate_all_competition_scores")
