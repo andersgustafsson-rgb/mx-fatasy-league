@@ -5518,7 +5518,7 @@ def get_season_leaderboard():
             username = user_row.username
             display_name = user_row.display_name
             team_name = getattr(user_row, 'team_name', None)
-            total_points = user_row.total_points
+            total_points = getattr(user_row, 'total_points', 0) or 0
             
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
