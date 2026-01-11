@@ -5453,57 +5453,57 @@ def get_season_leaderboard():
             .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
             .all()
         )
-    
-    # Calculate total points properly (sum only the most recent score per competition)
-    # This handles duplicates by taking the highest score_id (most recent) for each competition
-    for user_row in user_scores:
-        user_id = user_row.id
-        total = 0  # Default to 0
         
-        try:
-            # Get all scores for this user, excluding WSX
-            all_scores = (
-                db.session.query(CompetitionScore)
-                .join(Competition, Competition.id == CompetitionScore.competition_id)
-                .filter(CompetitionScore.user_id == user_id)
-                .filter(
-                    db.or_(
-                        Competition.series == None,
-                        Competition.series != 'WSX'
+        # Calculate total points properly (sum only the most recent score per competition)
+        # This handles duplicates by taking the highest score_id (most recent) for each competition
+        for user_row in user_scores:
+            user_id = user_row.id
+            total = 0  # Default to 0
+            
+            try:
+                # Get all scores for this user, excluding WSX
+                all_scores = (
+                    db.session.query(CompetitionScore)
+                    .join(Competition, Competition.id == CompetitionScore.competition_id)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(
+                        db.or_(
+                            Competition.series == None,
+                            Competition.series != 'WSX'
+                        )
                     )
+                    .all()
                 )
-                .all()
-            )
+                
+                # Group by competition_id and keep only the most recent (highest score_id)
+                scores_by_comp = {}
+                for score in all_scores:
+                    comp_id = score.competition_id
+                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                
+                # Sum the unique competition scores
+                total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            except Exception as e:
+                print(f"ERROR calculating points for user {user_id}: {e}")
+                total = 0
             
-            # Group by competition_id and keep only the most recent (highest score_id)
-            scores_by_comp = {}
-            for score in all_scores:
-                comp_id = score.competition_id
-                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                    scores_by_comp[comp_id] = score
-            
-            # Sum the unique competition scores
-            total = sum(s.total_points or 0 for s in scores_by_comp.values())
-        except Exception as e:
-            print(f"ERROR calculating points for user {user_id}: {e}")
-            total = 0
+            user_row.total_points = total
         
-        user_row.total_points = total
-    
-    # Ensure team_name is available on each user_row
-    user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
-    for user_row in user_scores:
-        if not hasattr(user_row, 'team_name'):
-            user_row.team_name = user_team_map.get(user_row.id)
-    
-    # Sort by total_points descending
-    user_scores.sort(key=lambda x: x.total_points, reverse=True)
-    
-    # Lägg till rank och delta (jämför med tidigare ranking)
-    result = []
-    
-    # Use database-backed LeaderboardHistory for persistent ranking
-    try:
+        # Ensure team_name is available on each user_row
+        user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
+        for user_row in user_scores:
+            if not hasattr(user_row, 'team_name'):
+                user_row.team_name = user_team_map.get(user_row.id)
+        
+        # Sort by total_points descending
+        user_scores.sort(key=lambda x: x.total_points, reverse=True)
+        
+        # Lägg till rank och delta (jämför med tidigare ranking)
+        result = []
+        
+        # Use database-backed LeaderboardHistory for persistent ranking
+        try:
         # Get the most recent ranking from database
         latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
         
