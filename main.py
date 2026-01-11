@@ -5458,6 +5458,8 @@ def get_season_leaderboard():
         
         # Calculate total points properly (sum only the most recent score per competition)
         # This handles duplicates by taking the highest score_id (most recent) for each competition
+        # Convert to list of dicts to avoid "can't set attribute" error
+        user_scores_list = []
         for user_row in user_scores:
             user_id = user_row.id
             total = 0  # Default to 0
@@ -5499,7 +5501,17 @@ def get_season_leaderboard():
                 traceback.print_exc()
                 total = 0
             
-            user_row.total_points = total
+            # Store as dict instead of trying to set attribute on query result
+            user_scores_list.append({
+                'id': user_id,
+                'username': user_row.username,
+                'display_name': user_row.display_name,
+                'team_name': getattr(user_row, 'team_name', None),
+                'total_points': total
+            })
+        
+        # Replace user_scores with our list
+        user_scores = user_scores_list
         
         # Ensure team_name is available on each user_row
         user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
