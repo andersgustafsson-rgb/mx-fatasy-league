@@ -1449,7 +1449,22 @@
         const leaderboard = await res.json();
         console.log("Leaderboard data:", leaderboard);
         c.innerHTML = "";
-        if (!leaderboard || leaderboard.length === 0) {
+        
+        // Check if response is an error object
+        if (leaderboard.error) {
+          console.error("Leaderboard error:", leaderboard.error);
+          c.innerHTML = '<p class="text-red-400 text-center">Fel i leaderboard: ' + leaderboard.error + '</p>';
+          return;
+        }
+        
+        // Check if it's an array
+        if (!Array.isArray(leaderboard)) {
+          console.error("Leaderboard is not an array:", leaderboard);
+          c.innerHTML = '<p class="text-red-400 text-center">Ogiltigt svar från server</p>';
+          return;
+        }
+        
+        if (leaderboard.length === 0) {
           c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga poäng registrerade ännu.</p>';
         } else {
           leaderboard.forEach((row, i) => {
