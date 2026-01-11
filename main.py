@@ -5528,17 +5528,28 @@ def get_season_leaderboard():
         # Use database-backed LeaderboardHistory for persistent ranking
         try:
             # Get the most recent ranking from database
-            latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
+            from sqlalchemy import func
+            try:
+                latest_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+            except Exception as db_error:
+                print(f"DEBUG: Error querying LeaderboardHistory: {db_error}")
+                # If table doesn't exist or query fails, continue without history
+                latest_timestamp = None
             
             previous_ranking = {}
             if latest_timestamp:
-                latest_history = db.session.query(
-                    LeaderboardHistory.user_id,
-                    LeaderboardHistory.ranking
-                ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
-                
-                previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
-                print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
+                try:
+                    latest_history = db.session.query(
+                        LeaderboardHistory.user_id,
+                        LeaderboardHistory.ranking
+                    ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+                    
+                    previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+                    print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
+                except Exception as db_error:
+                    print(f"DEBUG: Error fetching latest history: {db_error}")
+                    # Continue without previous ranking
+                    previous_ranking = {}
             else:
                 print("DEBUG: No previous ranking history found - will create baseline")
                 # Create initial baseline ranking (all users start at rank 0)
@@ -5576,20 +5587,28 @@ def get_season_leaderboard():
             # Only save new ranking if there are actual changes
             has_changes = any(row["delta"] != 0 for row in result)
             if has_changes:
-                print(f"DEBUG: Saving new ranking to database...")
-                for row in result:
-                    history_entry = LeaderboardHistory(
-                        user_id=row["user_id"],
-                        ranking=row["rank"],
-                        total_points=row["total_points"]
-                    )
-                    db.session.add(history_entry)
-                    print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
-                
-                db.session.commit()
-                print(f"DEBUG: Leaderboard history saved successfully")
+                try:
+                    print(f"DEBUG: Saving new ranking to database...")
+                    for row in result:
+                        history_entry = LeaderboardHistory(
+                            user_id=row["user_id"],
+                            ranking=row["rank"],
+                            total_points=row["total_points"]
+                        )
+                        db.session.add(history_entry)
+                        print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+                    
+                    db.session.commit()
+                    print(f"DEBUG: Leaderboard history saved successfully")
+                except Exception as commit_error:
+                    print(f"DEBUG: Error committing leaderboard history: {commit_error}")
+                    db.session.rollback()
+                    # Continue without saving history - still return the result
             else:
                 print("DEBUG: No ranking changes detected, not saving to database")
+            
+            # Return the result after successful ranking logic
+            return jsonify(result)
                 
         except Exception as e:
             print(f"DEBUG: Error in leaderboard ranking: {e}")

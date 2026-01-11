@@ -1368,6 +1368,15 @@
     
     // Litet klickljud vid navigering till t.ex. "Dina picks"
     (function(){
+      // Suppress audio loading errors (416 range request errors, etc.)
+      const navAudio = document.getElementById('nav-audio');
+      if (navAudio) {
+        navAudio.addEventListener('error', function(e) {
+          // Silently ignore audio loading errors - fallback Web Audio will be used
+          return false;
+        });
+      }
+      
       let ctx = null;
       function getCtx(){
         if (!ctx) {
@@ -1939,6 +1948,10 @@
       const crossJumpScores = getCrossJumpHighscores();
       const container = document.getElementById('cross-jump-highscores');
       
+      if (!container) {
+        return; // Container doesn't exist on this page
+      }
+      
       if (crossJumpScores.length === 0) {
         container.innerHTML = '<div class="text-gray-400 text-sm">Inga highscores ännu</div>';
         return;
@@ -2012,10 +2025,11 @@
         const response = await fetch('/api/cross_dino/highscores');
         const highscores = await response.json();
         
-        const container = document.getElementById('cross-dino-highscores');
+        // Use the existing cross-jump-highscores container
+        const container = document.getElementById('cross-jump-highscores');
         
         if (!container) {
-          console.error('Cross Jump highscores container not found!');
+          // Silently return if container doesn't exist (might not be on this page)
           return;
         }
         
@@ -2054,13 +2068,15 @@
         
       } catch (error) {
         console.error('Error fetching Cross Jump highscores:', error);
-        const container = document.getElementById('cross-dino-highscores');
-        container.innerHTML = `
-          <div class="text-center text-red-400 py-4">
-            <div class="text-4xl mb-2" style="text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);">❌</div>
-            <p class="text-sm" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte ladda highscores</p>
-          </div>
-        `;
+        const container = document.getElementById('cross-jump-highscores');
+        if (container) {
+          container.innerHTML = `
+            <div class="text-center text-red-400 py-4">
+              <div class="text-4xl mb-2" style="text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);">❌</div>
+              <p class="text-sm" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte ladda highscores</p>
+            </div>
+          `;
+        }
       }
     }
 
