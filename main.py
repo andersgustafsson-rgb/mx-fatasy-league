@@ -13001,6 +13001,8 @@ def fix_duplicate_results():
         if not is_admin_user():
             return jsonify({"error": "admin_only"}), 403
         
+        from sqlalchemy import func
+        
         # Find duplicate results (same competition_id and rider_id)
         duplicates = (
             db.session.query(
