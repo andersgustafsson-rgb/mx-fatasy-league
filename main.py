@@ -5454,6 +5454,8 @@ def get_season_leaderboard():
             .all()
         )
         
+        print(f"DEBUG: Found {len(user_scores)} users in leaderboard query")
+        
         # Calculate total points properly (sum only the most recent score per competition)
         # This handles duplicates by taking the highest score_id (most recent) for each competition
         for user_row in user_scores:
