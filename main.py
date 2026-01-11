@@ -12984,9 +12984,9 @@ def fix_duplicate_results():
             results = CompetitionResult.query.filter_by(
                 competition_id=comp_id, 
                 rider_id=rider_id
-            ).order_by(CompetitionResult.result_id).all()
+            ).order_by(CompetitionResult.result_id.desc()).all()
             
-            # Keep the first one, delete the rest
+            # Keep the most recent one (highest result_id), delete the rest
             for result in results[1:]:
                 db.session.delete(result)
                 fixed_count += 1
@@ -12995,6 +12995,49 @@ def fix_duplicate_results():
         
         return jsonify({
             "message": f"Fixed {fixed_count} duplicate results",
+            "duplicates_found": len(duplicates)
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/fix_duplicate_scores")
+def fix_duplicate_scores():
+    """Fix duplicate CompetitionScore entries for the same user and competition"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Find duplicate scores (same user_id and competition_id)
+        duplicates = (
+            db.session.query(
+                CompetitionScore.user_id,
+                CompetitionScore.competition_id,
+                func.count(CompetitionScore.score_id).label('count')
+            )
+            .group_by(CompetitionScore.user_id, CompetitionScore.competition_id)
+            .having(func.count(CompetitionScore.score_id) > 1)
+            .all()
+        )
+        
+        fixed_count = 0
+        for user_id, comp_id, count in duplicates:
+            # Get all scores for this user/competition combination
+            scores = CompetitionScore.query.filter_by(
+                user_id=user_id,
+                competition_id=comp_id
+            ).order_by(CompetitionScore.score_id.desc()).all()
+            
+            # Keep the most recent one (highest score_id), delete the rest
+            for score in scores[1:]:
+                db.session.delete(score)
+                fixed_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": f"Fixed {fixed_count} duplicate scores",
             "duplicates_found": len(duplicates)
         })
         
