@@ -5507,6 +5507,12 @@ def get_season_leaderboard():
         total = sum(s.total_points or 0 for s in scores_by_comp.values())
         user_row.total_points = total
     
+    # Ensure team_name is available on each user_row
+    user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
+    for user_row in user_scores:
+        if not hasattr(user_row, 'team_name'):
+            user_row.team_name = user_team_map.get(user_row.id)
+    
     # Sort by total_points descending
     user_scores.sort(key=lambda x: x.total_points, reverse=True)
     
