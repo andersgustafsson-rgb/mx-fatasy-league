@@ -5434,23 +5434,25 @@ def admin_set_date():
 
 @app.get("/get_season_leaderboard")
 def get_season_leaderboard():
-    # Använd CompetitionScore direkt för att få korrekta poäng
-    # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
-    # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
-    from sqlalchemy import func
-    
-    # Hämta alla användare med team_name (enklare query, räknar poäng i Python)
-    user_scores = (
-        db.session.query(
-            User.id,
-            User.username,
-            User.display_name,
-            SeasonTeam.team_name
+    """Get season leaderboard - always returns JSON"""
+    try:
+        # Använd CompetitionScore direkt för att få korrekta poäng
+        # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
+        # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
+        from sqlalchemy import func
+        
+        # Hämta alla användare med team_name (enklare query, räknar poäng i Python)
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                User.display_name,
+                SeasonTeam.team_name
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+            .all()
         )
-        .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .all()
-    )
     
     # Calculate total points properly (sum only the most recent score per competition)
     # This handles duplicates by taking the highest score_id (most recent) for each competition
