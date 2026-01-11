@@ -6573,7 +6573,22 @@ def calculate_scores(comp_id: int):
 
     print(f"DEBUG: Found {len(users)} users, {len(actual_results)} results, {len(actual_holeshots)} holeshots")
     
-    actual_results_dict = {res.rider_id: res for res in actual_results}
+    # Check for duplicates and handle them (keep the one with highest result_id = most recent)
+    seen_riders = {}
+    duplicate_count = 0
+    for res in actual_results:
+        if res.rider_id in seen_riders:
+            duplicate_count += 1
+            # Keep the one with higher result_id (more recent)
+            if res.result_id > seen_riders[res.rider_id].result_id:
+                seen_riders[res.rider_id] = res
+        else:
+            seen_riders[res.rider_id] = res
+    
+    if duplicate_count > 0:
+        print(f"⚠️ WARNING: Found {duplicate_count} duplicate results for competition {comp_id}. Using most recent entry for each rider.")
+    
+    actual_results_dict = seen_riders
     actual_holeshots_dict = {hs.class_name: hs for hs in actual_holeshots}
 
     for user in users:
@@ -9440,8 +9455,7 @@ def fix_profile_columns():
     try:
         # Rollback any existing transaction first
         db.session.rollback()
-        
-        # Add missing columns to users table
+         a        # Add missing columns to users table
         columns_to_add = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;",
