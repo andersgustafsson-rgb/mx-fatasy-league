@@ -5504,71 +5504,71 @@ def get_season_leaderboard():
         
         # Use database-backed LeaderboardHistory for persistent ranking
         try:
-        # Get the most recent ranking from database
-        latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
-        
-        previous_ranking = {}
-        if latest_timestamp:
-            latest_history = db.session.query(
-                LeaderboardHistory.user_id,
-                LeaderboardHistory.ranking
-            ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+            # Get the most recent ranking from database
+            latest_timestamp = db.session.query(db.func.max(LeaderboardHistory.created_at)).scalar()
             
-            previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
-            print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
-        else:
-            print("DEBUG: No previous ranking history found - will create baseline")
-            # Create initial baseline ranking (all users start at rank 0)
-            for user_row in user_scores:
-                previous_ranking[str(user_row.id)] = 0  # All start at rank 0
-        
-        for i, user_row in enumerate(user_scores, 1):
-            user_id = user_row.id
-            username = user_row.username
-            display_name = user_row.display_name
-            team_name = getattr(user_row, 'team_name', None)
-            total_points = getattr(user_row, 'total_points', 0) or 0
-            
-            current_rank = i
-            previous_rank = previous_ranking.get(str(user_id))
-            
-            if previous_rank is not None and previous_rank > 0:
-                delta = current_rank - previous_rank
-                print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
+            previous_ranking = {}
+            if latest_timestamp:
+                latest_history = db.session.query(
+                    LeaderboardHistory.user_id,
+                    LeaderboardHistory.ranking
+                ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+                
+                previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+                print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
             else:
-                # First time or baseline (rank 0) - no delta to show
-                delta = None
-                print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: None")
+                print("DEBUG: No previous ranking history found - will create baseline")
+                # Create initial baseline ranking (all users start at rank 0)
+                for user_row in user_scores:
+                    previous_ranking[str(user_row.id)] = 0  # All start at rank 0
             
-            result.append({
-                "user_id": user_id,
-                "username": username,
-                "display_name": display_name or None,
-                "team_name": team_name or None,
-                "total_points": int(total_points),
-                "rank": current_rank,
-                "delta": delta
-            })
-        
-        # Only save new ranking if there are actual changes
-        has_changes = any(row["delta"] != 0 for row in result)
-        if has_changes:
-            print(f"DEBUG: Saving new ranking to database...")
-            for row in result:
-                history_entry = LeaderboardHistory(
-                    user_id=row["user_id"],
-                    ranking=row["rank"],
-                    total_points=row["total_points"]
-                )
-                db.session.add(history_entry)
-                print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+            for i, user_row in enumerate(user_scores, 1):
+                user_id = user_row.id
+                username = user_row.username
+                display_name = user_row.display_name
+                team_name = getattr(user_row, 'team_name', None)
+                total_points = getattr(user_row, 'total_points', 0) or 0
+                
+                current_rank = i
+                previous_rank = previous_ranking.get(str(user_id))
+                
+                if previous_rank is not None and previous_rank > 0:
+                    delta = current_rank - previous_rank
+                    print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
+                else:
+                    # First time or baseline (rank 0) - no delta to show
+                    delta = None
+                    print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: None")
+                
+                result.append({
+                    "user_id": user_id,
+                    "username": username,
+                    "display_name": display_name or None,
+                    "team_name": team_name or None,
+                    "total_points": int(total_points),
+                    "rank": current_rank,
+                    "delta": delta
+                })
             
-            db.session.commit()
-            print(f"DEBUG: Leaderboard history saved successfully")
-        else:
-            print("DEBUG: No ranking changes detected, not saving to database")
-            
-    except Exception as e:
+            # Only save new ranking if there are actual changes
+            has_changes = any(row["delta"] != 0 for row in result)
+            if has_changes:
+                print(f"DEBUG: Saving new ranking to database...")
+                for row in result:
+                    history_entry = LeaderboardHistory(
+                        user_id=row["user_id"],
+                        ranking=row["rank"],
+                        total_points=row["total_points"]
+                    )
+                    db.session.add(history_entry)
+                    print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
+                
+                db.session.commit()
+                print(f"DEBUG: Leaderboard history saved successfully")
+            else:
+                print("DEBUG: No ranking changes detected, not saving to database")
+                
+        except Exception as e:
         print(f"DEBUG: Error in leaderboard ranking: {e}")
         import traceback
         traceback.print_exc()
