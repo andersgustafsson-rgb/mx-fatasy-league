@@ -13095,6 +13095,104 @@ def fix_duplicate_scores():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route("/fix_anaheim1_duplicates")
+def fix_anaheim1_duplicates():
+    """Fix duplicate scores and results specifically for Anaheim 1"""
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        from sqlalchemy import func
+        
+        # Find Anaheim 1 competition
+        anaheim1 = Competition.query.filter(
+            Competition.name.ilike('%anaheim 1%')
+        ).first()
+        
+        if not anaheim1:
+            return jsonify({"error": "Anaheim 1 competition not found"}), 404
+        
+        comp_id = anaheim1.id
+        comp_name = anaheim1.name
+        
+        # Fix duplicate scores for Anaheim 1
+        score_duplicates = (
+            db.session.query(
+                CompetitionScore.user_id,
+                func.count(CompetitionScore.score_id).label('count')
+            )
+            .filter(CompetitionScore.competition_id == comp_id)
+            .group_by(CompetitionScore.user_id)
+            .having(func.count(CompetitionScore.score_id) > 1)
+            .all()
+        )
+        
+        fixed_scores = 0
+        for user_id, count in score_duplicates:
+            scores = CompetitionScore.query.filter_by(
+                user_id=user_id,
+                competition_id=comp_id
+            ).order_by(CompetitionScore.score_id.desc()).all()
+            
+            # Keep the most recent one, delete the rest
+            for score in scores[1:]:
+                db.session.delete(score)
+                fixed_scores += 1
+        
+        # Fix duplicate results for Anaheim 1
+        result_duplicates = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                func.count(CompetitionResult.result_id).label('count')
+            )
+            .filter(CompetitionResult.competition_id == comp_id)
+            .group_by(CompetitionResult.rider_id)
+            .having(func.count(CompetitionResult.result_id) > 1)
+            .all()
+        )
+        
+        fixed_results = 0
+        for rider_id, count in result_duplicates:
+            results = CompetitionResult.query.filter_by(
+                rider_id=rider_id,
+                competition_id=comp_id
+            ).order_by(CompetitionResult.result_id.desc()).all()
+            
+            # Keep the most recent one, delete the rest
+            for result in results[1:]:
+                db.session.delete(result)
+                fixed_results += 1
+        
+        db.session.commit()
+        
+        # Recalculate scores for Anaheim 1
+        try:
+            calculate_scores(comp_id)
+            recalculated = True
+        except Exception as e:
+            print(f"Error recalculating scores: {e}")
+            recalculated = False
+        
+        return jsonify({
+            "success": True,
+            "message": f"Fixed duplicates for {comp_name}",
+            "competition": {
+                "id": comp_id,
+                "name": comp_name
+            },
+            "fixed_scores": fixed_scores,
+            "score_duplicates_found": len(score_duplicates),
+            "fixed_results": fixed_results,
+            "result_duplicates_found": len(result_duplicates),
+            "scores_recalculated": recalculated
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/create_hampus_admin")
 def create_hampus_admin():
     """Make Hampus an admin user"""
