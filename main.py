@@ -5611,10 +5611,11 @@ def get_season_leaderboard():
         # Catch ANY error in the entire function and return JSON
         print(f"CRITICAL ERROR in get_season_leaderboard: {e}")
         import traceback
+        error_traceback = traceback.format_exc()
         traceback.print_exc()
         db.session.rollback()
-        # Return empty list on any error
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()})
+        # Return error info for debugging
+        return jsonify({"error": str(e), "traceback": error_traceback})
 
 @app.get("/get_season_team_leaderboard")
 def get_season_team_leaderboard():
