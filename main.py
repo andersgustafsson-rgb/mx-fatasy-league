@@ -5569,22 +5569,22 @@ def get_season_leaderboard():
                 print("DEBUG: No ranking changes detected, not saving to database")
                 
         except Exception as e:
-        print(f"DEBUG: Error in leaderboard ranking: {e}")
-        import traceback
-        traceback.print_exc()
-        db.session.rollback()
-        # Fallback to no deltas if database fails
-        result = []
-        for i, user_row in enumerate(user_scores, 1):
-            result.append({
-                "user_id": user_row.id,
-                "username": user_row.username,
-                "display_name": user_row.display_name or None,
-                "team_name": getattr(user_row, 'team_name', None),
-                "total_points": int(getattr(user_row, 'total_points', 0) or 0),
-                "rank": i,
-                "delta": None
-            })
+            print(f"DEBUG: Error in leaderboard ranking: {e}")
+            import traceback
+            traceback.print_exc()
+            db.session.rollback()
+            # Fallback to no deltas if database fails
+            result = []
+            for i, user_row in enumerate(user_scores, 1):
+                result.append({
+                    "user_id": user_row.id,
+                    "username": user_row.username,
+                    "display_name": user_row.display_name or None,
+                    "team_name": getattr(user_row, 'team_name', None),
+                    "total_points": int(getattr(user_row, 'total_points', 0) or 0),
+                    "rank": i,
+                    "delta": None
+                })
         
         # Wrap return in try-except to ensure we always return JSON
         try:
