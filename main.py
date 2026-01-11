@@ -4516,12 +4516,23 @@ def submit_results():
                         print(f"✅ COMPLEMENT SX1/450: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
             else:
                 # Normal mode: just add (we already deleted all existing)
-                db.session.add(CompetitionResult(
-                    competition_id=comp_id, 
-                    rider_id=rid, 
-                    position=pos,
-                    rider_points=rider_points
-                ))
+                # But check for duplicates first (in case of race condition or double submit)
+                existing = CompetitionResult.query.filter_by(
+                    competition_id=comp_id,
+                    rider_id=rid
+                ).first()
+                if existing:
+                    # Update existing instead of creating duplicate
+                    existing.position = pos
+                    existing.rider_points = rider_points
+                    print(f"⚠️ WARNING: Found existing result for rider {rid} at competition {comp_id}, updating instead of creating duplicate")
+                else:
+                    db.session.add(CompetitionResult(
+                        competition_id=comp_id, 
+                        rider_id=rid, 
+                        position=pos,
+                        rider_points=rider_points
+                    ))
     
     # Save 250cc/SX2 results
     for i, (pos, rid) in enumerate(zip(positions_250, riders_250)):
