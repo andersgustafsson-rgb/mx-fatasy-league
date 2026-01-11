@@ -5585,15 +5585,24 @@ def get_season_leaderboard():
                 "rank": i,
                 "delta": None
             })
+        
+        # Wrap return in try-except to ensure we always return JSON
+        try:
+            return jsonify(result)
+        except Exception as e:
+            print(f"CRITICAL ERROR returning leaderboard JSON: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return empty list on error
+            return jsonify([])
     
-    # Wrap return in try-except to ensure we always return JSON
-    try:
-        return jsonify(result)
     except Exception as e:
-        print(f"CRITICAL ERROR returning leaderboard JSON: {e}")
+        # Catch ANY error in the entire function and return JSON
+        print(f"CRITICAL ERROR in get_season_leaderboard: {e}")
         import traceback
         traceback.print_exc()
-        # Return empty list on error
+        db.session.rollback()
+        # Return empty list on any error
         return jsonify([])
 
 @app.get("/get_season_team_leaderboard")
