@@ -5477,7 +5477,7 @@ def get_season_leaderboard():
             if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
                 scores_by_comp[comp_id] = score
         
-        # Sum the unique competition scores
+        # Sum the unique competition scores (default to 0 if no scores)
         total = sum(s.total_points or 0 for s in scores_by_comp.values())
         user_row.total_points = total
     
