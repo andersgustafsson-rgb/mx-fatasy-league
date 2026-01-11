@@ -1440,10 +1440,17 @@
       c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Laddar...</p>';
       try {
         const res = await fetch(`/get_season_leaderboard`);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Leaderboard fetch failed:", res.status, errorText);
+          c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta leaderboard: ' + res.status + '</p>';
+          return;
+        }
         const leaderboard = await res.json();
+        console.log("Leaderboard data:", leaderboard);
         c.innerHTML = "";
-        if (leaderboard.length === 0) {
-          c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga säsongsteam ännu.</p>';
+        if (!leaderboard || leaderboard.length === 0) {
+          c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga poäng registrerade ännu.</p>';
         } else {
           leaderboard.forEach((row, i) => {
             const el = document.createElement("div");
