@@ -13166,12 +13166,18 @@ def fix_anaheim1_duplicates():
         db.session.commit()
         
         # Recalculate scores for Anaheim 1
+        scores_before = CompetitionScore.query.filter_by(competition_id=comp_id).count()
         try:
             calculate_scores(comp_id)
+            scores_after = CompetitionScore.query.filter_by(competition_id=comp_id).count()
             recalculated = True
+            print(f"✅ Recalculated scores for Anaheim 1: {scores_before} -> {scores_after} score entries")
         except Exception as e:
-            print(f"Error recalculating scores: {e}")
+            print(f"❌ Error recalculating scores: {e}")
+            import traceback
+            traceback.print_exc()
             recalculated = False
+            scores_after = scores_before
         
         return jsonify({
             "success": True,
@@ -13184,7 +13190,9 @@ def fix_anaheim1_duplicates():
             "score_duplicates_found": len(score_duplicates),
             "fixed_results": fixed_results,
             "result_duplicates_found": len(result_duplicates),
-            "scores_recalculated": recalculated
+            "scores_recalculated": recalculated,
+            "scores_before": scores_before,
+            "scores_after": scores_after if recalculated else scores_before
         })
         
     except Exception as e:
