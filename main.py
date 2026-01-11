@@ -5437,10 +5437,11 @@ def get_season_leaderboard():
     # Använd CompetitionScore direkt för att få korrekta poäng
     # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
     # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
-    from sqlalchemy import func
+    from sqlalchemy import func, distinct
     
     # Hämta alla användare med deras totala poäng från CompetitionScore
     # Exkludera WSX-serien - bara räkna SX, MX, SMX
+    # VIKTIGT: Använd DISTINCT för att undvika att räkna dubletter (om samma tävling finns flera gånger)
     # VIKTIGT: Använd subquery för att inkludera alla användare även om de inte har några poäng
     user_scores = (
         db.session.query(
@@ -5449,8 +5450,18 @@ def get_season_leaderboard():
             User.display_name,
             SeasonTeam.team_name,
             func.coalesce(
-                db.session.query(func.sum(CompetitionScore.total_points))
-                .join(Competition, Competition.id == CompetitionScore.competition_id)
+                db.session.query(
+                    func.sum(
+                        db.session.query(CompetitionScore.total_points)
+                        .filter(CompetitionScore.user_id == User.id)
+                        .filter(CompetitionScore.competition_id == Competition.id)
+                        .order_by(CompetitionScore.score_id.desc())
+                        .limit(1)
+                        .scalar_subquery()
+                    )
+                )
+                .select_from(Competition)
+                .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
                 .filter(
                     db.or_(
                         Competition.series == None,  # Include if series is null (backwards compatibility)
@@ -5464,21 +5475,40 @@ def get_season_leaderboard():
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .order_by(func.coalesce(
-            db.session.query(func.sum(CompetitionScore.total_points))
+        .all()
+    )
+    
+    # Calculate total points properly (sum only the most recent score per competition)
+    # This handles duplicates by taking the highest score_id (most recent) for each competition
+    for user_row in user_scores:
+        user_id = user_row.id
+        # Get all scores for this user, excluding WSX
+        all_scores = (
+            db.session.query(CompetitionScore)
             .join(Competition, Competition.id == CompetitionScore.competition_id)
+            .filter(CompetitionScore.user_id == user_id)
             .filter(
                 db.or_(
                     Competition.series == None,
                     Competition.series != 'WSX'
                 )
             )
-            .filter(CompetitionScore.user_id == User.id)
-            .scalar(),
-            0
-        ).desc())
-        .all()
-    )
+            .all()
+        )
+        
+        # Group by competition_id and keep only the most recent (highest score_id)
+        scores_by_comp = {}
+        for score in all_scores:
+            comp_id = score.competition_id
+            if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                scores_by_comp[comp_id] = score
+        
+        # Sum the unique competition scores
+        total = sum(s.total_points or 0 for s in scores_by_comp.values())
+        user_row.total_points = total
+    
+    # Sort by total_points descending
+    user_scores.sort(key=lambda x: x.total_points, reverse=True)
     
     # Lägg till rank och delta (jämför med tidigare ranking)
     result = []
