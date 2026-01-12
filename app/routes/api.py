@@ -446,13 +446,31 @@ def update_competition(competition_id: int):
 		comp.point_multiplier = data.get('point_multiplier', comp.point_multiplier)
 		comp.is_triple_crown = data.get('is_triple_crown', comp.is_triple_crown)
 		comp.timezone = data.get('timezone')
+		
+		# Update start_time using direct SQL to ensure it's committed properly
 		if hasattr(Competition, 'start_time') and data.get('start_time') is not None:
 			try:
 				time_str = data['start_time']
-				comp.start_time = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
+				start_time_obj = datetime.strptime(time_str, '%H:%M').time() if len(time_str.split(':')) == 2 else datetime.strptime(time_str, '%H:%M:%S').time()
+				# Use direct SQL update to ensure it's committed
+				from sqlalchemy import text
+				db.session.execute(
+					text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
+					{'start_time': start_time_obj, 'id': comp.id}
+				)
 			except ValueError:
-				comp.start_time = None
+				# Set to NULL if invalid time
+				from sqlalchemy import text
+				db.session.execute(
+					text("UPDATE competitions SET start_time = NULL WHERE id = :id"),
+					{'id': comp.id}
+				)
+		
 		db.session.commit()
+		
+		# Refresh the object to get updated values from database
+		db.session.refresh(comp)
+		
 		return jsonify({'success': True})
 	except Exception as e:
 		db.session.rollback()
