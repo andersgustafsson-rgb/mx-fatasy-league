@@ -13968,8 +13968,8 @@ def race_countdown():
             if not next_race_obj:
                 return jsonify({"error": "No upcoming races"})
             
-            # Refresh the object to ensure we have latest start_time and timezone from database
-            db.session.refresh(next_race_obj)
+            # Expire the object so properties (like start_time) are re-read from database
+            db.session.expire(next_race_obj)
 
             # Auto-set active_race_id to next race in real mode for rolling operation
             try:

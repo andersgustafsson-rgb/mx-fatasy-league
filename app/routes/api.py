@@ -468,8 +468,8 @@ def update_competition(competition_id: int):
 		
 		db.session.commit()
 		
-		# Refresh the object to get updated values from database
-		db.session.refresh(comp)
+		# Expire the object so properties (like start_time) are re-read from database
+		db.session.expire(comp)
 		
 		return jsonify({'success': True})
 	except Exception as e:
