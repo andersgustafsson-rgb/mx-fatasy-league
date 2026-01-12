@@ -14058,20 +14058,41 @@ def race_countdown():
                 race_datetime_local = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
             
             # Convert local time to UTC for accurate countdown
-            timezone_offsets = {
-                'America/Los_Angeles': -8,  # PST
-                'America/Denver': -7,       # MST  
-                'America/Phoenix': -7,      # MST (no DST)
-                'America/Chicago': -6,      # CST
-                'America/New_York': -5,     # EST
-                'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
-                'Australia/Brisbane': 10,  # AEST (no DST)
-                'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
-            }
-            
+            # Use proper timezone handling with zoneinfo (Python 3.9+) or pytz fallback
             timezone = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
-            utc_offset = timezone_offsets.get(timezone, -8)
-            race_datetime = race_datetime_local - timedelta(hours=utc_offset)
+            
+            try:
+                # Try using zoneinfo (Python 3.9+)
+                from zoneinfo import ZoneInfo
+                tz = ZoneInfo(timezone)
+                # Make race_datetime_local timezone-aware
+                race_datetime_aware = race_datetime_local.replace(tzinfo=tz)
+                # Convert to UTC
+                race_datetime = race_datetime_aware.astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
+            except (ImportError, Exception):
+                # Fallback to pytz if zoneinfo not available
+                try:
+                    import pytz
+                    tz = pytz.timezone(timezone)
+                    # Make race_datetime_local timezone-aware
+                    race_datetime_aware = tz.localize(race_datetime_local)
+                    # Convert to UTC
+                    race_datetime = race_datetime_aware.astimezone(pytz.UTC).replace(tzinfo=None)
+                except ImportError:
+                    # Final fallback: use fixed offsets (not ideal, but works)
+                    timezone_offsets = {
+                        'America/Los_Angeles': -8,  # PST (winter) / -7 PDT (summer)
+                        'America/Denver': -7,       # MST (winter) / -6 MDT (summer)
+                        'America/Phoenix': -7,      # MST (no DST)
+                        'America/Chicago': -6,      # CST (winter) / -5 CDT (summer)
+                        'America/New_York': -5,     # EST (winter) / -4 EDT (summer)
+                        'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
+                        'Australia/Brisbane': 10,  # AEST (no DST)
+                        'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
+                    }
+                    # For January, use winter offsets
+                    utc_offset = timezone_offsets.get(timezone, -8)
+                    race_datetime = race_datetime_local - timedelta(hours=utc_offset)
             
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
             
@@ -15854,22 +15875,43 @@ def is_picks_locked(competition):
             race_datetime_local = datetime.combine(race_date, datetime.min.time().replace(hour=race_hour, minute=race_minute))
         
         # Convert to UTC for countdown calculation
-        timezone_offsets = {
-            'America/Los_Angeles': -8,  # PST
-            'America/Denver': -7,       # MST  
-            'America/Phoenix': -7,      # MST (no DST)
-            'America/Chicago': -6,      # CST
-            'America/New_York': -5,     # EST
-            'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
-            'Australia/Brisbane': 10,  # AEST (no DST)
-            'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
-        }
-        
+        # Use proper timezone handling with zoneinfo (Python 3.9+) or pytz fallback
         timezone = getattr(competition_obj, 'timezone', 'America/Los_Angeles')
-        utc_offset = timezone_offsets.get(timezone, -8)
         
-        print(f"DEBUG: is_picks_locked - Competition: {competition_obj.name}, timezone: {timezone}, start_time: {competition_obj.start_time}, utc_offset: {utc_offset}")
-        race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        try:
+            # Try using zoneinfo (Python 3.9+)
+            from zoneinfo import ZoneInfo
+            tz = ZoneInfo(timezone)
+            # Make race_datetime_local timezone-aware
+            race_datetime_aware = race_datetime_local.replace(tzinfo=tz)
+            # Convert to UTC
+            race_datetime_utc = race_datetime_aware.astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
+        except (ImportError, Exception):
+            # Fallback to pytz if zoneinfo not available
+            try:
+                import pytz
+                tz = pytz.timezone(timezone)
+                # Make race_datetime_local timezone-aware
+                race_datetime_aware = tz.localize(race_datetime_local)
+                # Convert to UTC
+                race_datetime_utc = race_datetime_aware.astimezone(pytz.UTC).replace(tzinfo=None)
+            except ImportError:
+                # Final fallback: use fixed offsets (not ideal, but works)
+                timezone_offsets = {
+                    'America/Los_Angeles': -8,  # PST (winter) / -7 PDT (summer)
+                    'America/Denver': -7,       # MST (winter) / -6 MDT (summer)
+                    'America/Phoenix': -7,      # MST (no DST)
+                    'America/Chicago': -6,      # CST (winter) / -5 CDT (summer)
+                    'America/New_York': -5,     # EST (winter) / -4 EDT (summer)
+                    'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
+                    'Australia/Brisbane': 10,  # AEST (no DST)
+                    'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
+                }
+                # For January, use winter offsets
+                utc_offset = timezone_offsets.get(timezone, -8)
+                race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
+        
+        print(f"DEBUG: is_picks_locked - Competition: {competition_obj.name}, timezone: {timezone}, start_time: {competition_obj.start_time}, race_datetime_utc: {race_datetime_utc}")
         
         # Check if picks are locked (2 hours before race)
         current_time = get_current_time()
