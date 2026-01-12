@@ -78,6 +78,7 @@
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Point Multiplier</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Triple Crown</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Tidszon</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Start Tid</th>
                             <th class="px-4 py-3 text-left text-sm font-medium text-gray-300">Åtgärder</th>
                         </tr>
                     </thead>
@@ -247,6 +248,7 @@
                     <td class="px-4 py-3 text-sm">${comp.point_multiplier}x</td>
                     <td class="px-4 py-3 text-sm">${comp.is_triple_crown ? '🏆' : '-'}</td>
                     <td class="px-4 py-3 text-sm">${comp.timezone || '-'}</td>
+                    <td class="px-4 py-3 text-sm">${comp.start_time || '-'}</td>
                     <td class="px-4 py-3 text-sm">
                         <button onclick="editCompetition(${comp.id})" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button>
                         <button onclick="deleteCompetition(${comp.id})" class="text-red-400 hover:text-red-300">🗑️</button>
@@ -282,6 +284,74 @@
             } catch (error) {
                 currentTimeDisplay.textContent = 'Kunde inte ladda tid';
             }
+            
+            // Also update deadline when timezone changes
+            updateDeadline();
+        }
+        
+        function updateDeadline() {
+            const deadlineDisplay = document.getElementById('deadline-display');
+            const startTimeInput = document.getElementById('competition-start-time');
+            const dateInput = document.getElementById('competition-date');
+            const timezoneSelect = document.getElementById('competition-timezone');
+            
+            if (!deadlineDisplay || !startTimeInput || !timezoneSelect) return;
+            
+            const startTime = startTimeInput.value;
+            const eventDate = dateInput ? dateInput.value : null;
+            const timezone = timezoneSelect.value || 'America/Los_Angeles';
+            
+            if (!startTime) {
+                deadlineDisplay.textContent = 'Välj starttid';
+                return;
+            }
+            
+            try {
+                // Parse start time (HH:MM format)
+                const [hours, minutes] = startTime.split(':').map(Number);
+                
+                // Create deadline time (2 hours before)
+                let deadlineHours = hours - 2;
+                let deadlineMinutes = minutes;
+                let deadlineDate = eventDate;
+                
+                // Handle day rollback if deadline is before midnight
+                if (deadlineHours < 0) {
+                    deadlineHours += 24;
+                    // If we have a date, subtract one day
+                    if (deadlineDate) {
+                        const dateObj = new Date(deadlineDate + 'T00:00:00');
+                        dateObj.setDate(dateObj.getDate() - 1);
+                        deadlineDate = dateObj.toISOString().split('T')[0];
+                    }
+                }
+                
+                // Format deadline time
+                const deadlineTimeStr = `${String(deadlineHours).padStart(2, '0')}:${String(deadlineMinutes).padStart(2, '0')}`;
+                
+                // Format date for display if available
+                let dateStr = '';
+                if (deadlineDate) {
+                    const dateObj = new Date(deadlineDate + 'T00:00:00');
+                    dateStr = dateObj.toLocaleDateString('sv-SE', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                }
+                
+                // Get timezone abbreviation
+                const timezoneAbbr = timezone.split('/').pop().replace('_', ' ');
+                
+                if (dateStr) {
+                    deadlineDisplay.innerHTML = `<span class="text-yellow-300 font-bold">${deadlineTimeStr}</span> <span class="text-yellow-400">${dateStr}</span> <span class="text-yellow-200">(${timezoneAbbr})</span>`;
+                } else {
+                    deadlineDisplay.innerHTML = `<span class="text-yellow-300 font-bold">${deadlineTimeStr}</span> <span class="text-yellow-200">(${timezoneAbbr})</span>`;
+                }
+            } catch (error) {
+                deadlineDisplay.textContent = 'Fel vid beräkning';
+                console.error('Error calculating deadline:', error);
+            }
         }
 
         function showAddCompetitionModal() {
@@ -291,6 +361,7 @@
             document.getElementById('competition-start-time').value = '20:00'; // Set default start time
             document.getElementById('competition-modal').classList.remove('hidden');
             updateCurrentTime();
+            updateDeadline();
         }
 
         function editCompetition(id) {
@@ -310,10 +381,13 @@
             // Handle start time if it exists
             if (comp.start_time) {
                 document.getElementById('competition-start-time').value = comp.start_time;
+            } else {
+                document.getElementById('competition-start-time').value = '20:00';
             }
             
             document.getElementById('competition-modal').classList.remove('hidden');
             updateCurrentTime();
+            updateDeadline();
         }
 
         function closeModal() {
