@@ -14055,14 +14055,19 @@ def race_countdown():
                 event_date = next_race_obj.event_date
             
             # Use start_time from database if available, otherwise default to 8 PM
-            if next_race_obj.start_time:
-                race_datetime_local = datetime.combine(event_date.date(), next_race_obj.start_time)
+            start_time = next_race_obj.start_time
+            timezone_val = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
+            print(f"DEBUG race_countdown: Competition {next_race_obj.name} (ID: {next_race_obj.id})")
+            print(f"DEBUG race_countdown: start_time={start_time}, timezone={timezone_val}")
+            
+            if start_time:
+                race_datetime_local = datetime.combine(event_date.date(), start_time)
             else:
                 race_datetime_local = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
             
             # Convert local time to UTC for accurate countdown
             # Use proper timezone handling with zoneinfo (Python 3.9+) or pytz fallback
-            timezone = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
+            timezone = timezone_val  # Use the value we already got above
             
             try:
                 # Try using zoneinfo (Python 3.9+)
