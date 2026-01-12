@@ -3153,6 +3153,52 @@ def fix_canadian_gp_time():
         print(f"Error fixing Canadian GP time: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/competitions/fix_san_diego_time', methods=['POST'])
+def fix_san_diego_time():
+    """Fix San Diego start_time to 11:30 AM PT (deadline for picks: 9:30 AM PT)"""
+    if not is_admin_user():
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    try:
+        from datetime import time
+        
+        # Find San Diego
+        san_diego = Competition.query.filter(
+            Competition.name.ilike('%san diego%')
+        ).first()
+        
+        if not san_diego:
+            return jsonify({'error': 'San Diego competition not found'}), 404
+        
+        # Set start_time to 11:30 AM (11:30) so deadline for picks is 9:30 AM PT (2 hours before)
+        # Use direct SQL update since start_time setter might not commit
+        db.session.execute(
+            db.text("UPDATE competitions SET start_time = :start_time, timezone = :timezone WHERE id = :id"),
+            {'start_time': time(11, 30), 'timezone': 'America/Los_Angeles', 'id': san_diego.id}
+        )
+        db.session.commit()
+        
+        # Refresh the object to get updated values
+        db.session.refresh(san_diego)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Updated {san_diego.name} start_time to 11:30 AM PT (deadline for picks: 9:30 AM PT)',
+            'competition': {
+                'id': san_diego.id,
+                'name': san_diego.name,
+                'start_time': '11:30',
+                'timezone': san_diego.timezone or 'America/Los_Angeles',
+                'deadline': '09:30'  # 2 hours before race
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error fixing San Diego time: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/competitions/fix_anaheim1', methods=['POST'])
 def fix_anaheim1():
     """Fix Anaheim 1 event_date to 2026-01-10, timezone to PT, and start_time to 4:00 PM (16:00) = Sunday Jan 11, 1:00 AM GMT+1"""
