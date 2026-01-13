@@ -1759,7 +1759,55 @@ def my_scores():
             "has_results": has_results,  # New field to indicate if race is completed
         })
 
-    return render_template("my_scores.html", scores=scores, total_points=total_points)
+    return render_template("my_scores.html", scores=scores, total_points=total_points, viewing_user=None)
+
+@app.route("/user/<string:username>/scores")
+def user_scores_page(username: str):
+    """Show score history for a specific user"""
+    user = User.query.filter_by(username=username).first_or_404()
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
+    # Getting user scores
+    rows = (
+        db.session.query(
+            Competition.id.label("competition_id"),
+            Competition.name,
+            Competition.series,
+            Competition.event_date,
+            CompetitionScore.total_points,
+            CompetitionScore.race_points,
+            CompetitionScore.holeshot_points,
+            CompetitionScore.wildcard_points,
+        )
+        .outerjoin(CompetitionScore, (Competition.id == CompetitionScore.competition_id) & (CompetitionScore.user_id == user.id))
+        .order_by(Competition.event_date.asc().nulls_last())
+        .all()
+    )
+
+    # Calculate total points
+    total_points = sum((r.total_points or 0) for r in rows)
+    
+    # Check which competitions have results (are completed)
+    scores = []
+    for r in rows:
+        # Check if this competition has any results
+        has_results = db.session.query(CompetitionResult).filter_by(competition_id=r.competition_id).first() is not None
+        
+        scores.append({
+            "competition_id": r.competition_id,
+            "name": r.name,
+            "series": r.series,
+            "event_date": r.event_date.strftime("%Y-%m-%d") if r.event_date else "",
+            "total_points": r.total_points or 0,
+            "race_points": r.race_points or 0,
+            "holeshot_points": r.holeshot_points or 0,
+            "wildcard_points": r.wildcard_points or 0,
+            "has_results": has_results,
+        })
+
+    return render_template("my_scores.html", scores=scores, total_points=total_points, viewing_user=username)
 
 
 @app.route("/finished_series")
@@ -6689,6 +6737,104 @@ def get_my_race_results(competition_id):
             total += 25
         elif act.position <= 6:
             breakdown.append(f"⚠️ Top6: {rider_name} var {act.position} (+5)")
+            total += 5
+        else:
+            breakdown.append(f"❌ Miss: {rider_name} var {act.position}")
+
+    holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+    holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
+    holo_by_class = {h.class_name: h for h in holos}
+    
+    # Calculate holeshot points
+    holeshot_450_correct = False
+    holeshot_250_correct = False
+    holeshot_points = 0
+    
+    for hp in holopicks:
+        act = holo_by_class.get(hp.class_name)
+        rider = Rider.query.get(hp.rider_id)
+        rider_name = rider.name if rider else f"rider {hp.rider_id}"
+        
+        if act and act.rider_id == hp.rider_id:
+            if hp.class_name == "450cc":
+                holeshot_450_correct = True
+                holeshot_points += 10
+                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
+            elif hp.class_name == "250cc":
+                holeshot_250_correct = True
+                holeshot_points += 10
+                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
+        else:
+            breakdown.append(f"❌ Holeshot {hp.class_name}: {rider_name} fel")
+    
+    # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
+    if holeshot_450_correct and holeshot_250_correct:
+        holeshot_points = 25
+        # Update breakdown to show bonus
+        breakdown = [b for b in breakdown if not (b.startswith("✅ Holeshot") or b.startswith("❌ Holeshot"))]
+        breakdown.append("✅ Holeshot 450cc: rätt (+10)")
+        breakdown.append("✅ Holeshot 250cc: rätt (+10)")
+        breakdown.append("🎯 Bonus: Båda holeshots rätt! (+5 bonus = 25 totalt)")
+    
+    total += holeshot_points
+
+    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+    if wc:
+        # Wildcard is always 450cc, so filter results to only 450cc
+        actual_450cc = []
+        for r in actual:
+            rider = Rider.query.get(r.rider_id)
+            if rider and rider.class_name == "450cc":
+                actual_450cc.append(r)
+        
+        target = next((r for r in actual_450cc if r.position == wc.position), None)
+        # Get rider name for wildcard display
+        rider = Rider.query.get(wc.rider_id)
+        rider_name = rider.name if rider else f"rider {wc.rider_id}"
+        
+        if target and target.rider_id == wc.rider_id:
+            breakdown.append(f"✅ Wildcard: {rider_name} på pos {wc.position} (+15)")
+            total += 15
+        else:
+            breakdown.append(f"❌ Wildcard: {rider_name} fel")
+
+    return jsonify({"breakdown": breakdown, "total": total})
+
+@app.get("/get_user_race_results/<string:username>/<int:competition_id>")
+def get_user_race_results(username: str, competition_id: int):
+    """Get detailed race results breakdown for a specific user"""
+    user = User.query.filter_by(username=username).first_or_404()
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
+    uid = user.id
+
+    actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+    actual_by_rider = {r.rider_id: r for r in actual}
+    picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+
+    breakdown = []
+    total = 0
+
+    for p in picks:
+        act = actual_by_rider.get(p.rider_id)
+        if not act:
+            # Try to get rider name for better error message
+            rider = Rider.query.get(p.rider_id)
+            rider_name = rider.name if rider else f"rider {p.rider_id}"
+            breakdown.append(f"❌ Pick {rider_name} hittades inte i resultat")
+            continue
+        
+        # Get rider name for display
+        rider = Rider.query.get(p.rider_id)
+        rider_name = rider.name if rider else f"rider {p.rider_id}"
+        
+        if act.position == p.predicted_position:
+            breakdown.append(f"✅ Perfekt: {rider_name} på pos {p.predicted_position} (+25)")
+            total += 25
+        elif act.position <= 6:
+            breakdown.append(f"▲ Top6: {rider_name} var {act.position} (+5)")
             total += 5
         else:
             breakdown.append(f"❌ Miss: {rider_name} var {act.position}")

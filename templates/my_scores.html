@@ -11,8 +11,14 @@
     
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-4xl font-bold text-blue-500">Poänghistorik</h1>
-      <a href="{{ url_for('index') }}" 
+      <h1 class="text-4xl font-bold text-blue-500">
+        {% if viewing_user %}
+          Poänghistorik - {{ viewing_user }}
+        {% else %}
+          Poänghistorik
+        {% endif %}
+      </h1>
+      <a href="{% if viewing_user %}{{ url_for('user_stats_page', username=viewing_user) }}{% else %}{{ url_for('index') }}{% endif %}" 
          class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
         ⬅ Tillbaka
       </a>
@@ -87,9 +93,14 @@
   </div>
 
   <script>
+    const viewingUser = {% if viewing_user %}'{{ viewing_user }}'{% else %}null{% endif %};
+    
     async function showDetails(compId){
       try{
-        const res = await fetch(`/get_my_race_results/${compId}`);
+        const url = viewingUser 
+          ? `/get_user_race_results/${viewingUser}/${compId}`
+          : `/get_my_race_results/${compId}`;
+        const res = await fetch(url);
         const data = await res.json();
         const ul=document.getElementById("detail-list");
         ul.innerHTML="";
