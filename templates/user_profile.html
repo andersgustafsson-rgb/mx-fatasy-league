@@ -282,14 +282,21 @@
       {% if race_results is defined and race_results %}
       <div class="mt-8">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-          <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
-            🏁 Race Resultat
-            <span class="ml-2 text-lg text-gray-600 dark:text-gray-400">({{ total_points }} poäng totalt)</span>
-          </h2>
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
+              🏁 Race Resultat
+              <span class="ml-2 text-lg text-gray-600 dark:text-gray-400">({{ total_points }} poäng totalt)</span>
+            </h2>
+            <a href="{{ url_for('user_scores_page', username=target_user.username) }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
+              📊 Detaljerad poänghistorik
+            </a>
+          </div>
           
           <div class="space-y-4">
             {% for result in race_results %}
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 
+            <div onclick="showDetails({{ result.competition.id }})" 
+                 class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors
                         {% if result.has_results and result.points > 0 %} border-green-500
                         {% elif result.has_results and result.points == 0 %} border-red-500
                         {% else %} border-gray-400 {% endif %}">
@@ -342,6 +349,9 @@
                   </p>
                 </div>
               </div>
+              {% if result.has_results %}
+              <p class="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">Klicka för detaljerad poängfördelning</p>
+              {% endif %}
             </div>
             {% endfor %}
           </div>
@@ -379,7 +389,58 @@
     <source src="{{ url_for('static', filename='sfx/moto.mp3') }}" type="audio/mpeg">
   </audio>
 
+  <!-- Modal för detaljvy -->
+  <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="z-index: 9999;">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded shadow-lg max-w-lg w-full mx-4" style="z-index: 10000;">
+      <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-white">Detaljerad poäng</h3>
+      <ul id="detail-list" class="space-y-1 mb-4 text-sm text-gray-800 dark:text-gray-200 max-h-96 overflow-y-auto"></ul>
+      <button onclick="closeModal()" class="bg-red-600 text-white px-4 py-2 rounded">Stäng</button>
+    </div>
+  </div>
+
   <script>
+    const viewingUser = '{{ target_user.username }}';
+    
+    async function showDetails(compId){
+      try{
+        const url = `/get_user_race_results/${viewingUser}/${compId}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error('Kunde inte hämta detaljer');
+        }
+        const data = await res.json();
+        const ul = document.getElementById("detail-list");
+        ul.innerHTML = "";
+        data.breakdown.forEach(item => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          // färgsättning
+          if(item.startsWith("✅")) li.className = "text-green-600 dark:text-green-400";
+          else if(item.startsWith("❌")) li.className = "text-red-500 dark:text-red-400";
+          else if(item.startsWith("▲") || item.startsWith("⚠")) li.className = "text-orange-500 dark:text-orange-400";
+          else if(item.startsWith("🎯")) li.className = "text-yellow-600 dark:text-yellow-400 font-bold";
+          ul.appendChild(li);
+        });
+        // Visa totalpoäng
+        const total = document.createElement("li");
+        total.className = "font-bold mt-2 text-gray-800 dark:text-white";
+        total.textContent = "Totalt: " + data.total + "p";
+        ul.appendChild(total);
+
+        document.getElementById("detail-modal").classList.remove("hidden");
+        document.getElementById("detail-modal").classList.add("flex");
+      }catch(e){
+        alert("Kunde inte hämta detaljer: " + e.message);
+        console.error(e);
+      }
+    }
+
+    function closeModal(){
+      const m = document.getElementById("detail-modal");
+      m.classList.add("hidden");
+      m.classList.remove("flex");
+    }
+    
     // Navigation sound
     document.addEventListener('DOMContentLoaded', function() {
       const navSound = document.getElementById('navSound');
