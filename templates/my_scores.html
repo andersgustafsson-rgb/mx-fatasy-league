@@ -25,6 +25,13 @@
     </div>
 
     {% if scores %}
+      <!-- Info text -->
+      <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-4">
+        <p class="text-sm text-blue-800 dark:text-blue-200">
+          💡 <strong>Tips:</strong> Klicka på en tävling för att se detaljerad poängfördelning - vilka förare du fick poäng på, förväntad vs faktisk position, och mer.
+        </p>
+      </div>
+      
       <!-- Resultattabell -->
       <div class="overflow-x-auto">
         <table class="w-full border-collapse bg-white dark:bg-gray-800 shadow-lg rounded">
@@ -40,9 +47,16 @@
           <tbody>
             {% for row in scores %}
             <tr onclick="showDetails({{ row['competition_id'] }})"
-                class="cursor-pointer border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                class="cursor-pointer border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group">
               <td class="p-2">{{ row.event_date }}</td>
-              <td class="p-2">{{ row.name }}</td>
+              <td class="p-2">
+                <div class="flex items-center gap-2">
+                  <span>{{ row.name }}</span>
+                  {% if row.has_results %}
+                  <span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">👆 Klicka för detaljer</span>
+                  {% endif %}
+                </div>
+              </td>
               <td class="p-2 text-center">{{ row.series }}</td>
               <td class="p-2 text-center">
                 {% if row.has_results %}
