@@ -6733,13 +6733,13 @@ def get_my_race_results(competition_id):
         rider_name = rider.name if rider else f"rider {p.rider_id}"
         
         if act.position == p.predicted_position:
-            breakdown.append(f"✅ Perfekt: {rider_name} på pos {p.predicted_position} (+25)")
+            breakdown.append(f"✅|PERFEKT|{rider_name}|{p.predicted_position}|{act.position}|+25")
             total += 25
         elif act.position <= 6:
-            breakdown.append(f"⚠️ Top6: {rider_name} var {act.position} (+5)")
+            breakdown.append(f"▲|TOP6|{rider_name}|{p.predicted_position}|{act.position}|+5")
             total += 5
         else:
-            breakdown.append(f"❌ Miss: {rider_name} var {act.position}")
+            breakdown.append(f"❌|MISS|{rider_name}|{p.predicted_position}|{act.position}|0")
 
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
@@ -6831,13 +6831,13 @@ def get_user_race_results(username: str, competition_id: int):
         rider_name = rider.name if rider else f"rider {p.rider_id}"
         
         if act.position == p.predicted_position:
-            breakdown.append(f"✅ Perfekt: {rider_name} på pos {p.predicted_position} (+25)")
+            breakdown.append(f"✅|PERFEKT|{rider_name}|{p.predicted_position}|{act.position}|+25")
             total += 25
         elif act.position <= 6:
-            breakdown.append(f"▲ Top6: {rider_name} var {act.position} (+5)")
+            breakdown.append(f"▲|TOP6|{rider_name}|{p.predicted_position}|{act.position}|+5")
             total += 5
         else:
-            breakdown.append(f"❌ Miss: {rider_name} var {act.position}")
+            breakdown.append(f"❌|MISS|{rider_name}|{p.predicted_position}|{act.position}|0")
 
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()

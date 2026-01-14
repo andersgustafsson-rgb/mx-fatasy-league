@@ -413,12 +413,76 @@
         ul.innerHTML = "";
         data.breakdown.forEach(item => {
           const li = document.createElement("li");
-          li.textContent = item;
-          // färgsättning
-          if(item.startsWith("✅")) li.className = "text-green-600 dark:text-green-400";
-          else if(item.startsWith("❌")) li.className = "text-red-500 dark:text-red-400";
-          else if(item.startsWith("▲") || item.startsWith("⚠")) li.className = "text-orange-500 dark:text-orange-400";
-          else if(item.startsWith("🎯")) li.className = "text-yellow-600 dark:text-yellow-400 font-bold";
+          li.className = "flex items-center gap-2 py-2 border-b border-gray-200 dark:border-gray-700";
+          
+          // Parse structured format: icon|TYPE|rider|predicted|actual|points
+          if (item.includes("|") && item.split("|").length >= 6) {
+            const parts = item.split("|");
+            const icon = parts[0];
+            const type = parts[1];
+            const rider = parts[2];
+            const predicted = parts[3];
+            const actual = parts[4];
+            const points = parts[5];
+            
+            // Icon
+            const iconSpan = document.createElement("span");
+            iconSpan.textContent = icon;
+            iconSpan.className = "text-xl";
+            li.appendChild(iconSpan);
+            
+            // Rider name
+            const riderSpan = document.createElement("span");
+            riderSpan.textContent = rider;
+            riderSpan.className = "font-semibold flex-1 text-gray-800 dark:text-white";
+            li.appendChild(riderSpan);
+            
+            // Position badges
+            const posContainer = document.createElement("div");
+            posContainer.className = "flex items-center gap-2";
+            
+            const predBadge = document.createElement("span");
+            predBadge.textContent = `Förväntad: ${predicted}`;
+            predBadge.className = "px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+            posContainer.appendChild(predBadge);
+            
+            const arrow = document.createElement("span");
+            arrow.textContent = "→";
+            arrow.className = "text-gray-500";
+            posContainer.appendChild(arrow);
+            
+            const actualBadge = document.createElement("span");
+            actualBadge.textContent = `Faktisk: ${actual}`;
+            if (predicted === actual) {
+              actualBadge.className = "px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+            } else {
+              actualBadge.className = "px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+            }
+            posContainer.appendChild(actualBadge);
+            
+            li.appendChild(posContainer);
+            
+            // Points
+            if (points !== "0") {
+              const pointsSpan = document.createElement("span");
+              pointsSpan.textContent = points;
+              pointsSpan.className = "font-bold text-green-600 dark:text-green-400 ml-auto";
+              li.appendChild(pointsSpan);
+            }
+            
+            // Color based on type
+            if (type === "PERFEKT") li.classList.add("bg-green-50", "dark:bg-green-900/20");
+            else if (type === "TOP6") li.classList.add("bg-orange-50", "dark:bg-orange-900/20");
+            else if (type === "MISS") li.classList.add("bg-red-50", "dark:bg-red-900/20");
+          } else {
+            // Fallback for non-structured items (holeshot, wildcard, etc.)
+            li.textContent = item;
+            if(item.startsWith("✅")) li.className += " text-green-600 dark:text-green-400";
+            else if(item.startsWith("❌")) li.className += " text-red-500 dark:text-red-400";
+            else if(item.startsWith("▲") || item.startsWith("⚠")) li.className += " text-orange-500 dark:text-orange-400";
+            else if(item.startsWith("🎯")) li.className += " text-yellow-600 dark:text-yellow-400 font-bold";
+          }
+          
           ul.appendChild(li);
         });
         // Visa totalpoäng
