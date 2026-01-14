@@ -262,7 +262,10 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">📋 Bulk Import (Paste Overall Results)</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Paste overall results directly from the results website. We use only overall positions and rider names.</p>
+                        <p class="text-gray-300 mb-4">
+                            Paste overall results directly from the results website. We use only overall positions and rider names.<br>
+                            <span class="text-yellow-300">💡 Tip:</span> From RacerX (e.g., <a href="https://racerxonline.com/sx/2026/anaheim-1/450sx" target="_blank" class="text-blue-400 underline">racerxonline.com</a>), select the entire results table and copy (Ctrl+C / Cmd+C). The parser will automatically extract positions and rider names.
+                        </p>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                             <div>
@@ -283,7 +286,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Format</label>
                                 <select id="bulk-format" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                                    <option value="motocross">Motocross (Overall)</option>
+                                    <option value="motocross">Motocross/RacerX (Overall)</option>
                                     <option value="supercross">Supercross</option>
                                     <option value="smx">SMX (SuperMotocross)</option>
                                 </select>

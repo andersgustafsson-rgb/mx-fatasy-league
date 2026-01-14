@@ -5227,7 +5227,8 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             # Don't fall back to Motocross parser if format is Supercross
             continue
         
-        # Handle Motocross/SMX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
+        # Handle Motocross/SMX/RacerX format: "1    Jett Lawrence    Australia    Landsborough, Australia    1 - 2    Honda"
+        # Or RacerX HTML table format: "1\tEli Tomac\t22:10.248\t1.470\t1:05.367\tCortez, CO\tKTM 450 SX-F Factory Edition"
         # Accept lines like: 1<TAB>Jett Lawrence... or "1   Jett Lawrence ..."
         cols = re.split(r"\t+|\s{2,}", line)
         if len(cols) >= 2 and cols[0].strip().isdigit():
@@ -5236,15 +5237,37 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             except ValueError:
                 continue
             rider_field = cols[1].strip()
+            
+            # Clean up rider name - remove common suffixes/prefixes that might come from HTML
+            # Remove image flags, links, etc. that might be in the copied text
+            rider_field = re.sub(r'\[.*?\]', '', rider_field)  # Remove [link text]
+            rider_field = re.sub(r'\(.*?\)', '', rider_field)  # Remove (parentheses content) if it's not part of name
+            rider_field = re.sub(r'<.*?>', '', rider_field)  # Remove HTML tags if any
+            rider_field = rider_field.strip()
+            
             if not rider_field:
                 # Fallback: remove leading position from the line
                 m = re.match(r"^(\d+)\s+(.*)$", line)
                 rider_field = m.group(2) if m else ''
+                # Clean up fallback too
+                rider_field = re.sub(r'\[.*?\]', '', rider_field)
+                rider_field = re.sub(r'\(.*?\)', '', rider_field)
+                rider_field = re.sub(r'<.*?>', '', rider_field)
+                rider_field = rider_field.strip()
+            
             rider_name = _dedupe_concatenated_name(rider_field)
-            rider_name = re.sub(r"\s{2,}.*$", "", rider_name).strip()
+            # Remove everything after the name (time, interval, hometown, bike, etc.)
+            # Stop at common patterns that indicate end of name
+            rider_name = re.sub(r'\s+\d{1,2}:\d{2}\.\d+.*$', '', rider_name)  # Remove time like "22:10.248"
+            rider_name = re.sub(r'\s+\d+\.\d+.*$', '', rider_name)  # Remove interval like "1.470"
+            rider_name = re.sub(r'\s+\d+\s+Laps?.*$', '', rider_name)  # Remove "19 Laps"
+            rider_name = re.sub(r'\s+[A-Z][a-z]+,\s+[A-Z]{2}.*$', '', rider_name)  # Remove hometown like "Cortez, CO"
+            rider_name = re.sub(r'\s+(Honda|Yamaha|Kawasaki|KTM|Husqvarna|GasGas|Suzuki|Triumph|Ducati|Beta).*$', '', rider_name, flags=re.IGNORECASE)  # Remove bike brand
+            rider_name = re.sub(r'\s{2,}.*$', "", rider_name).strip()  # Remove everything after double space
+            
             if rider_name:
                 results.append({"position": position, "rider_name": rider_name})
-                print(f"🔍 DEBUG: Motocross/SMX match - Position: {position}, Name: '{rider_name}'")
+                print(f"🔍 DEBUG: Motocross/SMX/RacerX match - Position: {position}, Name: '{rider_name}'")
     
     print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
