@@ -443,7 +443,7 @@
             
             const predBadge = document.createElement("span");
             predBadge.textContent = `Förv: ${predicted}`;
-            predBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 whitespace-nowrap";
+            predBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100 whitespace-nowrap";
             posContainer.appendChild(predBadge);
             
             const arrow = document.createElement("span");
@@ -454,9 +454,14 @@
             const actualBadge = document.createElement("span");
             actualBadge.textContent = `Fakt: ${actual}`;
             if (predicted === actual) {
-              actualBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 whitespace-nowrap";
+              // Perfekt match - skarp grön
+              actualBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-green-400 text-green-900 dark:bg-green-600 dark:text-white whitespace-nowrap font-bold";
+            } else if (parseInt(actual) <= 6) {
+              // Top6 - skarp gul
+              actualBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-400 text-yellow-900 dark:bg-yellow-600 dark:text-white whitespace-nowrap font-bold";
             } else {
-              actualBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200 whitespace-nowrap";
+              // Miss - skarp röd
+              actualBadge.className = "px-1.5 py-0.5 rounded text-xs font-medium bg-red-400 text-red-900 dark:bg-red-600 dark:text-white whitespace-nowrap font-bold";
             }
             posContainer.appendChild(actualBadge);
             
