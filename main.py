@@ -1339,6 +1339,192 @@ def season_team_page():
     
     return render_template("season_team.html", team=team, riders=riders, user_total_points=user_total_points)
 
+@app.get("/get_season_team_competition_points")
+def get_season_team_competition_points():
+    """Get season team points breakdown per competition for current user"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    user_id = session["user_id"]
+    team = SeasonTeam.query.filter_by(user_id=user_id).first()
+    
+    if not team:
+        return jsonify({"error": "no_team"}), 404
+    
+    # Get all team riders
+    team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+    rider_ids = [tr.rider_id for tr in team_riders]
+    
+    # Get all competitions
+    competitions = Competition.query.order_by(Competition.event_date.asc().nulls_last()).all()
+    
+    competition_points = []
+    for comp in competitions:
+        comp_points = 0
+        rider_breakdown = []
+        bonus_points = 0
+        
+        # Get results for each rider in this competition
+        for rider_id in rider_ids:
+            result = CompetitionResult.query.filter_by(
+                rider_id=rider_id,
+                competition_id=comp.id
+            ).first()
+            
+            if result:
+                rider = Rider.query.get(rider_id)
+                points = calculate_rider_points_for_position(result.position)
+                comp_points += points
+                rider_breakdown.append({
+                    "rider_name": rider.name if rider else f"Rider {rider_id}",
+                    "rider_number": rider.rider_number if rider else None,
+                    "class_name": rider.class_name if rider else None,
+                    "position": result.position,
+                    "points": points
+                })
+        
+        # Check for bonus (only SMX)
+        if comp.series == 'SMX' or comp.series is None:
+            riders_by_class = {}
+            for tr in team_riders:
+                rider = Rider.query.get(tr.rider_id)
+                if rider:
+                    class_name = rider.class_name
+                    if class_name not in riders_by_class:
+                        riders_by_class[class_name] = []
+                    riders_by_class[class_name].append(rider.id)
+            
+            competition_bonuses = {'450cc': [], '250cc': []}
+            for rider_id in rider_ids:
+                result = CompetitionResult.query.filter_by(
+                    rider_id=rider_id,
+                    competition_id=comp.id
+                ).first()
+                if result:
+                    rider = Rider.query.get(rider_id)
+                    if rider and result.position and result.position <= 6:
+                        competition_bonuses[rider.class_name].append(rider_id)
+            
+            for class_name in ['450cc', '250cc']:
+                if class_name in riders_by_class:
+                    team_riders_in_class = set(riders_by_class[class_name])
+                    top6_riders_in_class = set(competition_bonuses[class_name])
+                    if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
+                        bonus_points += 50
+        
+        has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+        
+        competition_points.append({
+            "competition_id": comp.id,
+            "name": comp.name,
+            "event_date": comp.event_date.strftime("%Y-%m-%d") if comp.event_date else "",
+            "series": comp.series,
+            "total_points": comp_points + bonus_points,
+            "rider_points": comp_points,
+            "bonus_points": bonus_points,
+            "has_results": has_results,
+            "rider_breakdown": rider_breakdown
+        })
+    
+    return jsonify({"competitions": competition_points})
+
+@app.get("/get_season_team_competition_details/<int:competition_id>")
+def get_season_team_competition_details(competition_id: int):
+    """Get detailed breakdown for a specific competition"""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    
+    user_id = session["user_id"]
+    team = SeasonTeam.query.filter_by(user_id=user_id).first()
+    
+    if not team:
+        return jsonify({"error": "no_team"}), 404
+    
+    comp = Competition.query.get_or_404(competition_id)
+    
+    # Get all team riders
+    team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
+    rider_ids = [tr.rider_id for tr in team_riders]
+    
+    breakdown = []
+    total_points = 0
+    
+    # Get results for each rider
+    for rider_id in rider_ids:
+        result = CompetitionResult.query.filter_by(
+            rider_id=rider_id,
+            competition_id=competition_id
+        ).first()
+        
+        if result:
+            rider = Rider.query.get(rider_id)
+            points = calculate_rider_points_for_position(result.position)
+            total_points += points
+            
+            breakdown.append({
+                "rider_name": rider.name if rider else f"Rider {rider_id}",
+                "rider_number": rider.rider_number if rider else None,
+                "class_name": rider.class_name if rider else None,
+                "position": result.position,
+                "points": points
+            })
+        else:
+            rider = Rider.query.get(rider_id)
+            if rider:
+                breakdown.append({
+                    "rider_name": rider.name,
+                    "rider_number": rider.rider_number,
+                    "class_name": rider.class_name,
+                    "position": None,
+                    "points": 0
+                })
+    
+    # Check for bonus
+    bonus_points = 0
+    bonus_details = []
+    if comp.series == 'SMX' or comp.series is None:
+        riders_by_class = {}
+        for tr in team_riders:
+            rider = Rider.query.get(tr.rider_id)
+            if rider:
+                class_name = rider.class_name
+                if class_name not in riders_by_class:
+                    riders_by_class[class_name] = []
+                riders_by_class[class_name].append(rider.id)
+        
+        competition_bonuses = {'450cc': [], '250cc': []}
+        for rider_id in rider_ids:
+            result = CompetitionResult.query.filter_by(
+                rider_id=rider_id,
+                competition_id=competition_id
+            ).first()
+            if result:
+                rider = Rider.query.get(rider_id)
+                if rider and result.position and result.position <= 6:
+                    competition_bonuses[rider.class_name].append(rider_id)
+        
+        for class_name in ['450cc', '250cc']:
+            if class_name in riders_by_class:
+                team_riders_in_class = set(riders_by_class[class_name])
+                top6_riders_in_class = set(competition_bonuses[class_name])
+                if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
+                    bonus_points += 50
+                    bonus_details.append(f"🎯 Bonus: Alla {class_name} förare i top 6 (+50p)")
+    
+    return jsonify({
+        "competition": {
+            "id": comp.id,
+            "name": comp.name,
+            "event_date": comp.event_date.strftime("%Y-%m-%d") if comp.event_date else "",
+            "series": comp.series
+        },
+        "breakdown": breakdown,
+        "rider_points": total_points,
+        "bonus_points": bonus_points,
+        "bonus_details": bonus_details,
+        "total_points": total_points + bonus_points
+    })
+
 @app.route("/profile")
 def profile_page():
     if "user_id" not in session:
