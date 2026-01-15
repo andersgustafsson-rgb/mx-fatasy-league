@@ -1525,6 +1525,229 @@ def get_season_team_competition_details(competition_id: int):
         "total_points": total_points + bonus_points
     })
 
+@app.get("/get_weekly_fun_stats")
+def get_weekly_fun_stats():
+    """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
+    try:
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        # Get current leaderboard with deltas (reuse same logic as get_season_leaderboard)
+        db.session.rollback()
+        
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                User.display_name,
+                SeasonTeam.team_name
+            )
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+            .all()
+        )
+        
+        user_scores_list = []
+        for user_row in user_scores:
+            user_id = user_row.id
+            total = 0
+            
+            try:
+                all_scores = (
+                    db.session.query(CompetitionScore)
+                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(
+                        db.or_(
+                            Competition.series.is_(None),
+                            Competition.series != 'WSX'
+                        )
+                    )
+                    .all()
+                )
+                
+                scores_by_comp = {}
+                for score in all_scores:
+                    comp_id = score.competition_id
+                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                
+                total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            except Exception as e:
+                print(f"Error calculating points for user {user_row.username}: {e}")
+                total = 0
+            
+            user_scores_list.append({
+                'id': user_id,
+                'username': user_row.username,
+                'display_name': getattr(user_row, 'display_name', None) or user_row.username,
+                'team_name': user_row.team_name,
+                'total_points': total
+            })
+        
+        user_scores_list.sort(key=lambda x: x['total_points'], reverse=True)
+        
+        # Calculate deltas using LeaderboardHistory
+        leaderboard_data = []
+        try:
+            latest_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+            if latest_timestamp:
+                latest_history = db.session.query(
+                    LeaderboardHistory.user_id,
+                    LeaderboardHistory.ranking
+                ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
+                previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+            else:
+                previous_ranking = {}
+        except Exception:
+            previous_ranking = {}
+        
+        for i, user_row in enumerate(user_scores_list, 1):
+            user_id = user_row['id']
+            current_rank = i
+            previous_rank = previous_ranking.get(str(user_id))
+            
+            if previous_rank is not None and previous_rank > 0:
+                delta = current_rank - previous_rank
+            else:
+                delta = None
+            
+            leaderboard_data.append({
+                'user_id': user_id,
+                'username': user_row['username'],
+                'display_name': user_row['display_name'],
+                'rank': current_rank,
+                'delta': delta
+            })
+        
+        # Calculate ranking changes (rocket and anchor)
+        rocket = None  # Biggest negative delta (climbed most)
+        anchor = None  # Biggest positive delta (dropped most)
+        
+        for user in leaderboard_data:
+            delta = user.get('delta')
+            if delta is not None:
+                if delta < 0:  # Climbed (negative delta means better ranking)
+                    if rocket is None or delta < rocket['delta']:
+                        rocket = {
+                            'user_id': user['user_id'],
+                            'username': user['username'],
+                            'display_name': user.get('display_name') or user['username'],
+                            'delta': delta,
+                            'current_rank': user['rank'],
+                            'previous_rank': user['rank'] - delta
+                        }
+                elif delta > 0:  # Dropped (positive delta means worse ranking)
+                    if anchor is None or delta > anchor['delta']:
+                        anchor = {
+                            'user_id': user['user_id'],
+                            'username': user['username'],
+                            'display_name': user.get('display_name') or user['username'],
+                            'delta': delta,
+                            'current_rank': user['rank'],
+                            'previous_rank': user['rank'] - delta
+                        }
+        
+        # Get competitions from last 7 days
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        recent_competitions = Competition.query.filter(
+            Competition.event_date >= week_ago
+        ).all()
+        
+        comp_ids = [c.id for c in recent_competitions]
+        
+        # Perfect picks - count users with most perfect picks (25p) this week
+        perfect_picks_stats = {}
+        if comp_ids:
+            perfect_scores = (
+                db.session.query(
+                    CompetitionScore.user_id,
+                    func.count().label('perfect_count')
+                )
+                .filter(
+                    CompetitionScore.competition_id.in_(comp_ids),
+                    CompetitionScore.race_points >= 25  # At least one perfect pick
+                )
+                .group_by(CompetitionScore.user_id)
+                .all()
+            )
+            
+            for user_id, count in perfect_scores:
+                # Count actual perfect picks (25p each)
+                total_perfect_points = (
+                    db.session.query(func.sum(CompetitionScore.race_points))
+                    .filter(
+                        CompetitionScore.user_id == user_id,
+                        CompetitionScore.competition_id.in_(comp_ids)
+                    )
+                    .scalar() or 0
+                )
+                # Estimate perfect picks (25p each)
+                estimated_perfect = total_perfect_points // 25
+                
+                user = User.query.get(user_id)
+                if user:
+                    perfect_picks_stats[user_id] = {
+                        'user_id': user_id,
+                        'username': user.username,
+                        'display_name': getattr(user, 'display_name', None) or user.username,
+                        'perfect_count': estimated_perfect,
+                        'total_perfect_points': total_perfect_points
+                    }
+        
+        perfect_picks_winner = None
+        if perfect_picks_stats:
+            perfect_picks_winner = max(perfect_picks_stats.values(), key=lambda x: x['perfect_count'])
+        
+        # Holeshot master - count users with most correct holeshot picks this week
+        holeshot_stats = {}
+        if comp_ids:
+            holeshot_scores = (
+                db.session.query(
+                    CompetitionScore.user_id,
+                    func.sum(CompetitionScore.holeshot_points).label('total_holeshot_points')
+                )
+                .filter(
+                    CompetitionScore.competition_id.in_(comp_ids),
+                    CompetitionScore.holeshot_points > 0
+                )
+                .group_by(CompetitionScore.user_id)
+                .all()
+            )
+            
+            for user_id, total_points in holeshot_scores:
+                user = User.query.get(user_id)
+                if user and total_points:
+                    holeshot_stats[user_id] = {
+                        'user_id': user_id,
+                        'username': user.username,
+                        'display_name': getattr(user, 'display_name', None) or user.username,
+                        'total_holeshot_points': int(total_points)
+                    }
+        
+        holeshot_master = None
+        if holeshot_stats:
+            holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
+        
+        return jsonify({
+            'rocket': rocket,
+            'anchor': anchor,
+            'perfect_picks': perfect_picks_winner,
+            'holeshot_master': holeshot_master
+        })
+        
+    except Exception as e:
+        print(f"Error calculating fun stats: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'rocket': None,
+            'anchor': None,
+            'perfect_picks': None,
+            'holeshot_master': None,
+            'error': str(e)
+        })
+
 @app.route("/profile")
 def profile_page():
     if "user_id" not in session:
