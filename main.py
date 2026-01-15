@@ -1657,43 +1657,54 @@ def get_weekly_fun_stats():
         comp_ids = [c.id for c in recent_competitions]
         
         # Perfect picks - count users with most perfect picks (25p) this week
+        # A perfect pick is when predicted_position == actual_position
         perfect_picks_stats = {}
         if comp_ids:
-            perfect_scores = (
+            # Get all race picks for recent competitions
+            race_picks = (
                 db.session.query(
-                    CompetitionScore.user_id,
-                    func.count().label('perfect_count')
+                    RacePick.user_id,
+                    RacePick.competition_id,
+                    RacePick.rider_id,
+                    RacePick.predicted_position
                 )
-                .filter(
-                    CompetitionScore.competition_id.in_(comp_ids),
-                    CompetitionScore.race_points >= 25  # At least one perfect pick
-                )
-                .group_by(CompetitionScore.user_id)
+                .filter(RacePick.competition_id.in_(comp_ids))
                 .all()
             )
             
-            for user_id, count in perfect_scores:
-                # Count actual perfect picks (25p each)
-                total_perfect_points = (
-                    db.session.query(func.sum(CompetitionScore.race_points))
-                    .filter(
-                        CompetitionScore.user_id == user_id,
-                        CompetitionScore.competition_id.in_(comp_ids)
-                    )
-                    .scalar() or 0
+            # Get all actual results for recent competitions
+            actual_results = (
+                db.session.query(
+                    CompetitionResult.competition_id,
+                    CompetitionResult.rider_id,
+                    CompetitionResult.position
                 )
-                # Estimate perfect picks (25p each)
-                estimated_perfect = total_perfect_points // 25
-                
-                user = User.query.get(user_id)
-                if user:
-                    perfect_picks_stats[user_id] = {
-                        'user_id': user_id,
-                        'username': user.username,
-                        'display_name': getattr(user, 'display_name', None) or user.username,
-                        'perfect_count': estimated_perfect,
-                        'total_perfect_points': total_perfect_points
-                    }
+                .filter(CompetitionResult.competition_id.in_(comp_ids))
+                .all()
+            )
+            
+            # Create lookup dict: (competition_id, rider_id) -> position
+            results_lookup = {}
+            for comp_id, rider_id, position in actual_results:
+                results_lookup[(comp_id, rider_id)] = position
+            
+            # Count perfect picks per user
+            for user_id, comp_id, rider_id, predicted_pos in race_picks:
+                actual_pos = results_lookup.get((comp_id, rider_id))
+                if actual_pos is not None and actual_pos == predicted_pos:
+                    if user_id not in perfect_picks_stats:
+                        user = User.query.get(user_id)
+                        if user:
+                            perfect_picks_stats[user_id] = {
+                                'user_id': user_id,
+                                'username': user.username,
+                                'display_name': getattr(user, 'display_name', None) or user.username,
+                                'perfect_count': 0,
+                                'total_perfect_points': 0
+                            }
+                    if user_id in perfect_picks_stats:
+                        perfect_picks_stats[user_id]['perfect_count'] += 1
+                        perfect_picks_stats[user_id]['total_perfect_points'] += 25
         
         perfect_picks_winner = None
         if perfect_picks_stats:
