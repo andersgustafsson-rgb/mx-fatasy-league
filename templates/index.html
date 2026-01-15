@@ -1646,6 +1646,132 @@
       }
     }
 
+    async function fetchWeeklyFunStats() {
+      const container = document.getElementById("weekly-fun-stats");
+      if (!container) return;
+      
+      try {
+        const res = await fetch('/get_weekly_fun_stats');
+        const data = await res.json();
+        
+        if (data.error) {
+          container.innerHTML = '<p class="text-red-400 text-center col-span-full">Fel vid laddning av statistik.</p>';
+          return;
+        }
+        
+        let html = '';
+        
+        // Veckans raket
+        if (data.rocket) {
+          html += `
+            <div class="bg-gradient-to-r from-green-800 to-emerald-800 rounded-lg p-4 border-2 border-green-400 shadow-lg">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🚀</div>
+                <h3 class="text-lg font-bold text-white mb-1">Veckans Raket</h3>
+                <p class="text-green-300 font-semibold">${data.rocket.display_name || data.rocket.username}</p>
+                <p class="text-xs text-green-200 mt-1">Klättrade ${Math.abs(data.rocket.delta)} platser</p>
+                <p class="text-xs text-gray-300">Från #${data.rocket.previous_rank} → #${data.rocket.current_rank}</p>
+                <a href="/profile/${data.rocket.user_id}" class="text-xs text-green-400 hover:underline mt-2 inline-block">Visa profil →</a>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg p-4 border-2 border-gray-600">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🚀</div>
+                <h3 class="text-lg font-bold text-gray-300 mb-1">Veckans Raket</h3>
+                <p class="text-xs text-gray-400">Ingen data ännu</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Veckans ankare
+        if (data.anchor) {
+          html += `
+            <div class="bg-gradient-to-r from-red-800 to-orange-800 rounded-lg p-4 border-2 border-red-400 shadow-lg">
+              <div class="text-center">
+                <div class="text-3xl mb-2">⚓</div>
+                <h3 class="text-lg font-bold text-white mb-1">Veckans Ankare</h3>
+                <p class="text-red-300 font-semibold">${data.anchor.display_name || data.anchor.username}</p>
+                <p class="text-xs text-red-200 mt-1">Sjönk ${data.anchor.delta} platser</p>
+                <p class="text-xs text-gray-300">Från #${data.anchor.previous_rank} → #${data.anchor.current_rank}</p>
+                <a href="/profile/${data.anchor.user_id}" class="text-xs text-red-400 hover:underline mt-2 inline-block">Visa profil →</a>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg p-4 border-2 border-gray-600">
+              <div class="text-center">
+                <div class="text-3xl mb-2">⚓</div>
+                <h3 class="text-lg font-bold text-gray-300 mb-1">Veckans Ankare</h3>
+                <p class="text-xs text-gray-400">Ingen data ännu</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Perfekt gissning
+        if (data.perfect_picks) {
+          html += `
+            <div class="bg-gradient-to-r from-blue-800 to-cyan-800 rounded-lg p-4 border-2 border-blue-400 shadow-lg">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🎯</div>
+                <h3 class="text-lg font-bold text-white mb-1">Perfekt Gissning</h3>
+                <p class="text-blue-300 font-semibold">${data.perfect_picks.display_name || data.perfect_picks.username}</p>
+                <p class="text-xs text-blue-200 mt-1">${data.perfect_picks.perfect_count} perfekta picks</p>
+                <p class="text-xs text-gray-300">${data.perfect_picks.total_perfect_points}p totalt</p>
+                <a href="/profile/${data.perfect_picks.user_id}" class="text-xs text-blue-400 hover:underline mt-2 inline-block">Visa profil →</a>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg p-4 border-2 border-gray-600">
+              <div class="text-center">
+                <div class="text-3xl mb-2">🎯</div>
+                <h3 class="text-lg font-bold text-gray-300 mb-1">Perfekt Gissning</h3>
+                <p class="text-xs text-gray-400">Ingen data ännu</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        // Holeshot-mästare
+        if (data.holeshot_master) {
+          html += `
+            <div class="bg-gradient-to-r from-purple-800 to-pink-800 rounded-lg p-4 border-2 border-purple-400 shadow-lg">
+              <div class="text-center">
+                <div class="text-3xl mb-2">⚡</div>
+                <h3 class="text-lg font-bold text-white mb-1">Holeshot-Mästare</h3>
+                <p class="text-purple-300 font-semibold">${data.holeshot_master.display_name || data.holeshot_master.username}</p>
+                <p class="text-xs text-purple-200 mt-1">${data.holeshot_master.total_holeshot_points}p holeshot</p>
+                <p class="text-xs text-gray-300">Denna vecka</p>
+                <a href="/profile/${data.holeshot_master.user_id}" class="text-xs text-purple-400 hover:underline mt-2 inline-block">Visa profil →</a>
+              </div>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg p-4 border-2 border-gray-600">
+              <div class="text-center">
+                <div class="text-3xl mb-2">⚡</div>
+                <h3 class="text-lg font-bold text-gray-300 mb-1">Holeshot-Mästare</h3>
+                <p class="text-xs text-gray-400">Ingen data ännu</p>
+              </div>
+            </div>
+          `;
+        }
+        
+        container.innerHTML = html;
+      } catch (e) {
+        console.error('Error loading weekly fun stats:', e);
+        container.innerHTML = '<p class="text-red-400 text-center col-span-full">Fel vid laddning av statistik.</p>';
+      }
+    }
+
     async function fetchLeagueLeaderboard() {
       const c = document.getElementById("league-leaderboard-list");
       c.innerHTML = '<p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Laddar...</p>';
@@ -2037,6 +2163,7 @@
             fetchSeasonTeamLeaderboard();
             fetchLeagueLeaderboard();
             loadSeriesLeaders();
+            fetchWeeklyFunStats();
           } else if (targetTab === 'games') {
             loadGameHighscores();
           } else if (targetTab === 'leagues') {
