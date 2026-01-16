@@ -14829,6 +14829,11 @@ def dino_game():
     """Cross Dino game - Chrome Dino clone with motocross theme"""
     return render_template("dino_game.html")
 
+@app.route("/cross_jump_modern")
+def cross_jump_modern():
+    """Cross Jump Modern - Modern version with enhanced graphics and effects"""
+    return render_template("cross_jump_modern.html")
+
 @app.route("/dino_game_dev")
 def dino_game_dev():
     """Cross Dino game development version - Excitebike style"""
