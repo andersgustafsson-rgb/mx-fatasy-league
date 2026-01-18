@@ -1676,11 +1676,23 @@ def get_weekly_fun_stats():
         anchor = None  # Biggest positive delta (dropped most)
         
         users_with_delta = 0
+        users_climbed = []
+        users_dropped = []
+        
         for user in leaderboard_data:
             delta = user.get('delta')
             if delta is not None:
                 users_with_delta += 1
                 if delta < 0:  # Climbed (negative delta means better ranking)
+                    users_climbed.append({
+                        'user_id': user['user_id'],
+                        'username': user['username'],
+                        'display_name': user.get('display_name') or user['username'],
+                        'delta': delta,
+                        'current_rank': user['rank'],
+                        'previous_rank': user['rank'] - delta
+                    })
+                    # Find the user with the most negative delta (biggest climb)
                     if rocket is None or delta < rocket['delta']:
                         rocket = {
                             'user_id': user['user_id'],
@@ -1691,6 +1703,15 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
                 elif delta > 0:  # Dropped (positive delta means worse ranking)
+                    users_dropped.append({
+                        'user_id': user['user_id'],
+                        'username': user['username'],
+                        'display_name': user.get('display_name') or user['username'],
+                        'delta': delta,
+                        'current_rank': user['rank'],
+                        'previous_rank': user['rank'] - delta
+                    })
+                    # Find the user with the biggest positive delta (biggest drop)
                     if anchor is None or delta > anchor['delta']:
                         anchor = {
                             'user_id': user['user_id'],
@@ -1701,7 +1722,18 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
         
-        print(f"DEBUG: Found {users_with_delta} users with ranking changes, rocket: {rocket is not None}, anchor: {anchor is not None}")
+        print(f"DEBUG: Found {users_with_delta} users with ranking changes")
+        print(f"DEBUG: {len(users_climbed)} users climbed, {len(users_dropped)} users dropped")
+        if users_climbed:
+            print(f"DEBUG: Users who climbed: {[(u['username'], u['delta']) for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]}")
+        if rocket:
+            print(f"DEBUG: Rocket winner: {rocket['username']} climbed {abs(rocket['delta'])} places ({rocket['previous_rank']} → {rocket['current_rank']})")
+        else:
+            print(f"DEBUG: No rocket winner found - no users climbed this week")
+        if anchor:
+            print(f"DEBUG: Anchor winner: {anchor['username']} dropped {anchor['delta']} places ({anchor['previous_rank']} → {anchor['current_rank']})")
+        else:
+            print(f"DEBUG: No anchor winner found - no users dropped this week")
         
         # Get competitions from last 7 days
         week_ago = datetime.utcnow() - timedelta(days=7)
