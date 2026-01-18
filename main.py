@@ -1622,175 +1622,77 @@ def get_weekly_fun_stats():
                 'total_points': total
             })
         
-        user_scores_list.sort(key=lambda x: x['total_points'], reverse=True)
+        # Calculate current leaderboard (all competitions)
+        current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
         
-        # Calculate deltas using LeaderboardHistory
-        # Compare with a snapshot from 7 days ago (last week)
-        leaderboard_data = []
-        try:
-            comparison_timestamp = None
-            
-            # First, try to find a snapshot from before the most recent competition
-            recent_comp = (
-                db.session.query(Competition)
-                .join(CompetitionResult)
-                .filter(
-                    db.or_(
-                        Competition.series.is_(None),
-                        Competition.series != 'WSX'
-                    )
+        # Calculate previous leaderboard (only Anaheim 1, before San Diego)
+        # Find Anaheim 1 competition (the first competition before San Diego)
+        anaheim1_comp = (
+            db.session.query(Competition)
+            .filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
                 )
-                .order_by(Competition.date.desc())
-                .first()
             )
+            .order_by(Competition.date.asc())
+            .first()
+        )
+        
+        anaheim1_id = None
+        if anaheim1_comp:
+            anaheim1_id = anaheim1_comp.id
+            print(f"DEBUG: Found Anaheim 1 competition: {anaheim1_comp.name} (ID: {anaheim1_id})")
+        else:
+            print(f"DEBUG: WARNING: Could not find Anaheim 1 competition")
+        
+        previous_leaderboard = []
+        for user_row in user_scores:
+            user_id = user_row.id
+            anaheim_points = 0
             
-            if recent_comp and recent_comp.date:
+            if anaheim1_id:
                 try:
-                    # Find a snapshot from before this competition
-                    comp_date = recent_comp.date
-                    if isinstance(comp_date, str):
-                        try:
-                            from dateutil import parser
-                            comp_date = parser.parse(comp_date)
-                        except ImportError:
-                            # Fallback if dateutil not available
-                            from datetime import datetime as dt
-                            comp_date = dt.strptime(comp_date, '%Y-%m-%d').date()
+                    # Get only Anaheim 1 score
+                    anaheim_scores = (
+                        db.session.query(CompetitionScore)
+                        .filter(CompetitionScore.user_id == user_id)
+                        .filter(CompetitionScore.competition_id == anaheim1_id)
+                        .all()
+                    )
                     
-                    # Convert to datetime if it's a date
-                    if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
-                        comp_datetime = datetime.combine(comp_date, datetime.min.time())
-                    else:
-                        comp_datetime = comp_date
-                    
-                    print(f"DEBUG: Most recent competition: {recent_comp.name} on {comp_datetime}")
-                    
-                    # Get the latest snapshot from before this competition
-                    comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                        LeaderboardHistory.created_at < comp_datetime
-                    ).scalar()
-                    
-                    print(f"DEBUG: Found snapshot from before competition: {comparison_timestamp}")
-                except Exception as date_error:
-                    print(f"DEBUG: Error processing competition date: {date_error}")
-                    import traceback
-                    traceback.print_exc()
-                    comparison_timestamp = None
+                    # Get the most recent score for Anaheim 1
+                    if anaheim_scores:
+                        latest_score = max(anaheim_scores, key=lambda s: s.score_id)
+                        anaheim_points = latest_score.total_points or 0
+                except Exception as e:
+                    print(f"Error calculating Anaheim points for user {user_row.username}: {e}")
+                    anaheim_points = 0
             
-            # Fallback: Get snapshot from 7 days ago (or closest before that)
-            if not comparison_timestamp:
-                week_ago = datetime.utcnow() - timedelta(days=7)
-                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                    LeaderboardHistory.created_at < week_ago
-                ).scalar()
-                print(f"DEBUG: No pre-competition snapshot, trying 7 days ago: {comparison_timestamp}")
-            
-            # If no snapshot from before 7 days ago, try to get any snapshot that's at least 1 day old
-            if not comparison_timestamp:
-                one_day_ago = datetime.utcnow() - timedelta(days=1)
-                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                    LeaderboardHistory.created_at < one_day_ago
-                ).scalar()
-                print(f"DEBUG: No snapshot from 7 days ago, trying 1 day ago: {comparison_timestamp}")
-            
-            # If no snapshot from 7 days ago, try to get the second-to-latest snapshot
-            # (the latest one might be from after competitions this week)
-            if not comparison_timestamp:
-                # Get all unique timestamps, ordered by date
-                all_timestamps = db.session.query(LeaderboardHistory.created_at).distinct().order_by(
-                    LeaderboardHistory.created_at.desc()
-                ).limit(2).all()
-                
-                if len(all_timestamps) >= 2:
-                    # Use the second-to-latest snapshot (skip the most recent one)
-                    comparison_timestamp = all_timestamps[1][0]
-                    print(f"DEBUG: Using second-to-latest snapshot: {comparison_timestamp}")
-                elif len(all_timestamps) == 1:
-                    # Only one snapshot exists - use it but warn
-                    comparison_timestamp = all_timestamps[0][0]
-                    print(f"DEBUG: WARNING: Only one snapshot exists, using it: {comparison_timestamp}")
-                    print(f"DEBUG: This might not give accurate weekly stats")
-                else:
-                    comparison_timestamp = None
-                    print(f"DEBUG: No snapshots found at all")
-            
-            if comparison_timestamp:
-                previous_history = db.session.query(
-                    LeaderboardHistory.user_id,
-                    LeaderboardHistory.ranking
-                ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
-                previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
-                print(f"DEBUG: Using snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
-                
-                # If the snapshot has very few users (less than 10% of current users), try to find a better one
-                if len(previous_ranking) < len(user_scores_list) * 0.1:
-                    print(f"DEBUG: WARNING: Snapshot has only {len(previous_ranking)} users, but current leaderboard has {len(user_scores_list)} users")
-                    print(f"DEBUG: This snapshot might be too old. Trying to find a more recent snapshot...")
-                    
-                    # Try to find a snapshot with more users (at least 50% of current users)
-                    all_snapshots = db.session.query(
-                        LeaderboardHistory.created_at,
-                        func.count(LeaderboardHistory.user_id).label('user_count')
-                    ).group_by(LeaderboardHistory.created_at).order_by(
-                        LeaderboardHistory.created_at.desc()
-                    ).all()
-                    
-                    for snap_time, snap_user_count in all_snapshots:
-                        if snap_user_count >= len(user_scores_list) * 0.5:
-                            try:
-                                # Check if this snapshot is before the most recent competition
-                                if recent_comp and recent_comp.date:
-                                    comp_date = recent_comp.date
-                                    if isinstance(comp_date, str):
-                                        try:
-                                            from dateutil import parser
-                                            comp_date = parser.parse(comp_date)
-                                        except ImportError:
-                                            from datetime import datetime as dt
-                                            comp_date = dt.strptime(comp_date, '%Y-%m-%d').date()
-                                    if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
-                                        comp_datetime = datetime.combine(comp_date, datetime.min.time())
-                                    else:
-                                        comp_datetime = comp_date
-                                    
-                                    if snap_time < comp_datetime:
-                                        comparison_timestamp = snap_time
-                                        previous_history = db.session.query(
-                                            LeaderboardHistory.user_id,
-                                            LeaderboardHistory.ranking
-                                        ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
-                                        previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
-                                        print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
-                                        break
-                                else:
-                                    # No recent competition, use this snapshot if it's at least 1 day old
-                                    if snap_time < datetime.utcnow() - timedelta(days=1):
-                                        comparison_timestamp = snap_time
-                                        previous_history = db.session.query(
-                                            LeaderboardHistory.user_id,
-                                            LeaderboardHistory.ranking
-                                        ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
-                                        previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
-                                        print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
-                                        break
-                            except Exception as snap_error:
-                                print(f"DEBUG: Error processing snapshot date comparison: {snap_error}")
-                                continue
-            else:
-                previous_ranking = {}
-                print("DEBUG: No previous snapshot found - cannot calculate ranking changes")
-        except Exception as e:
-            print(f"DEBUG: Error fetching previous ranking: {e}")
-            import traceback
-            traceback.print_exc()
-            previous_ranking = {}
+            previous_leaderboard.append({
+                'id': user_id,
+                'username': user_row.username,
+                'display_name': getattr(user_row, 'display_name', None) or user_row.username,
+                'total_points': anaheim_points
+            })
         
-        print(f"DEBUG: previous_ranking contains {len(previous_ranking)} users")
-        if previous_ranking:
-            sample_users = list(previous_ranking.items())[:5]
-            print(f"DEBUG: Sample previous_ranking entries: {sample_users}")
+        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
         
-        for i, user_row in enumerate(user_scores_list, 1):
+        # Create ranking maps
+        current_ranking = {}
+        for i, user in enumerate(current_leaderboard, 1):
+            current_ranking[str(user['id'])] = i
+        
+        previous_ranking = {}
+        for i, user in enumerate(previous_leaderboard, 1):
+            previous_ranking[str(user['id'])] = i
+        
+        print(f"DEBUG: Current leaderboard has {len(current_leaderboard)} users")
+        print(f"DEBUG: Previous leaderboard (Anaheim 1 only) has {len(previous_leaderboard)} users")
+        
+        # Calculate deltas
+        leaderboard_data = []
+        for i, user_row in enumerate(current_leaderboard, 1):
             user_id = user_row['id']
             current_rank = i
             previous_rank = previous_ranking.get(str(user_id))
