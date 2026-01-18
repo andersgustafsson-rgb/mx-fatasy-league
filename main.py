@@ -1645,26 +1645,37 @@ def get_weekly_fun_stats():
             )
             
             if recent_comp and recent_comp.date:
-                # Find a snapshot from before this competition
-                comp_date = recent_comp.date
-                if isinstance(comp_date, str):
-                    from dateutil import parser
-                    comp_date = parser.parse(comp_date)
-                
-                # Convert to datetime if it's a date
-                if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
-                    comp_datetime = datetime.combine(comp_date, datetime.min.time())
-                else:
-                    comp_datetime = comp_date
-                
-                print(f"DEBUG: Most recent competition: {recent_comp.name} on {comp_datetime}")
-                
-                # Get the latest snapshot from before this competition
-                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                    LeaderboardHistory.created_at < comp_datetime
-                ).scalar()
-                
-                print(f"DEBUG: Found snapshot from before competition: {comparison_timestamp}")
+                try:
+                    # Find a snapshot from before this competition
+                    comp_date = recent_comp.date
+                    if isinstance(comp_date, str):
+                        try:
+                            from dateutil import parser
+                            comp_date = parser.parse(comp_date)
+                        except ImportError:
+                            # Fallback if dateutil not available
+                            from datetime import datetime as dt
+                            comp_date = dt.strptime(comp_date, '%Y-%m-%d').date()
+                    
+                    # Convert to datetime if it's a date
+                    if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
+                        comp_datetime = datetime.combine(comp_date, datetime.min.time())
+                    else:
+                        comp_datetime = comp_date
+                    
+                    print(f"DEBUG: Most recent competition: {recent_comp.name} on {comp_datetime}")
+                    
+                    # Get the latest snapshot from before this competition
+                    comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
+                        LeaderboardHistory.created_at < comp_datetime
+                    ).scalar()
+                    
+                    print(f"DEBUG: Found snapshot from before competition: {comparison_timestamp}")
+                except Exception as date_error:
+                    print(f"DEBUG: Error processing competition date: {date_error}")
+                    import traceback
+                    traceback.print_exc()
+                    comparison_timestamp = None
             
             # Fallback: Get snapshot from 7 days ago (or closest before that)
             if not comparison_timestamp:
@@ -1726,37 +1737,45 @@ def get_weekly_fun_stats():
                     
                     for snap_time, snap_user_count in all_snapshots:
                         if snap_user_count >= len(user_scores_list) * 0.5:
-                            # Check if this snapshot is before the most recent competition
-                            if recent_comp and recent_comp.date:
-                                comp_date = recent_comp.date
-                                if isinstance(comp_date, str):
-                                    from dateutil import parser
-                                    comp_date = parser.parse(comp_date)
-                                if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
-                                    comp_datetime = datetime.combine(comp_date, datetime.min.time())
+                            try:
+                                # Check if this snapshot is before the most recent competition
+                                if recent_comp and recent_comp.date:
+                                    comp_date = recent_comp.date
+                                    if isinstance(comp_date, str):
+                                        try:
+                                            from dateutil import parser
+                                            comp_date = parser.parse(comp_date)
+                                        except ImportError:
+                                            from datetime import datetime as dt
+                                            comp_date = dt.strptime(comp_date, '%Y-%m-%d').date()
+                                    if hasattr(comp_date, 'date') and not hasattr(comp_date, 'hour'):
+                                        comp_datetime = datetime.combine(comp_date, datetime.min.time())
+                                    else:
+                                        comp_datetime = comp_date
+                                    
+                                    if snap_time < comp_datetime:
+                                        comparison_timestamp = snap_time
+                                        previous_history = db.session.query(
+                                            LeaderboardHistory.user_id,
+                                            LeaderboardHistory.ranking
+                                        ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
+                                        previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
+                                        print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
+                                        break
                                 else:
-                                    comp_datetime = comp_date
-                                
-                                if snap_time < comp_datetime:
-                                    comparison_timestamp = snap_time
-                                    previous_history = db.session.query(
-                                        LeaderboardHistory.user_id,
-                                        LeaderboardHistory.ranking
-                                    ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
-                                    previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
-                                    print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
-                                    break
-                            else:
-                                # No recent competition, use this snapshot if it's at least 1 day old
-                                if snap_time < datetime.utcnow() - timedelta(days=1):
-                                    comparison_timestamp = snap_time
-                                    previous_history = db.session.query(
-                                        LeaderboardHistory.user_id,
-                                        LeaderboardHistory.ranking
-                                    ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
-                                    previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
-                                    print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
-                                    break
+                                    # No recent competition, use this snapshot if it's at least 1 day old
+                                    if snap_time < datetime.utcnow() - timedelta(days=1):
+                                        comparison_timestamp = snap_time
+                                        previous_history = db.session.query(
+                                            LeaderboardHistory.user_id,
+                                            LeaderboardHistory.ranking
+                                        ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
+                                        previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
+                                        print(f"DEBUG: Found better snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
+                                        break
+                            except Exception as snap_error:
+                                print(f"DEBUG: Error processing snapshot date comparison: {snap_error}")
+                                continue
             else:
                 previous_ranking = {}
                 print("DEBUG: No previous snapshot found - cannot calculate ranking changes")
