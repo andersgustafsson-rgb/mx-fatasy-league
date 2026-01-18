@@ -1588,38 +1588,22 @@ def get_weekly_fun_stats():
         user_scores_list.sort(key=lambda x: x['total_points'], reverse=True)
         
         # Calculate deltas using LeaderboardHistory
-        # We need to compare with a snapshot from BEFORE the recent competitions
+        # Compare with a snapshot from 7 days ago (last week)
         leaderboard_data = []
         try:
-            # Get the most recent competition date from the last 7 days
+            # Get snapshot from 7 days ago (or closest before that)
             week_ago = datetime.utcnow() - timedelta(days=7)
-            recent_competitions = Competition.query.filter(
-                Competition.event_date >= week_ago.date() if hasattr(week_ago, 'date') else week_ago
-            ).order_by(Competition.event_date.asc()).all()
             
-            print(f"DEBUG: Found {len(recent_competitions)} recent competitions")
+            # Get the latest snapshot from before 7 days ago
+            comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
+                LeaderboardHistory.created_at <= week_ago
+            ).scalar()
             
-            # Find a snapshot from BEFORE the first recent competition
-            comparison_timestamp = None
-            if recent_competitions:
-                first_recent_date = recent_competitions[0].event_date
-                # Convert date to datetime for comparison (start of day)
-                if isinstance(first_recent_date, date) and not isinstance(first_recent_date, datetime):
-                    first_recent_datetime = datetime.combine(first_recent_date, datetime.min.time())
-                else:
-                    first_recent_datetime = first_recent_date
-                
-                print(f"DEBUG: Looking for snapshot before {first_recent_datetime}")
-                
-                # Get the latest snapshot from BEFORE this competition
-                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                    LeaderboardHistory.created_at < first_recent_datetime
-                ).scalar()
-                
-                print(f"DEBUG: Found pre-competition snapshot: {comparison_timestamp}")
+            print(f"DEBUG: Looking for snapshot from before {week_ago}")
+            print(f"DEBUG: Found snapshot from before 7 days ago: {comparison_timestamp}")
             
-            # If no pre-competition snapshot exists, get the second-to-latest snapshot
-            # (the latest one might be from after the competition)
+            # If no snapshot from 7 days ago, try to get the second-to-latest snapshot
+            # (the latest one might be from after competitions this week)
             if not comparison_timestamp:
                 # Get all unique timestamps, ordered by date
                 all_timestamps = db.session.query(LeaderboardHistory.created_at).distinct().order_by(
@@ -1627,15 +1611,17 @@ def get_weekly_fun_stats():
                 ).limit(2).all()
                 
                 if len(all_timestamps) >= 2:
-                    # Use the second-to-latest snapshot
+                    # Use the second-to-latest snapshot (skip the most recent one)
                     comparison_timestamp = all_timestamps[1][0]
                     print(f"DEBUG: Using second-to-latest snapshot: {comparison_timestamp}")
                 elif len(all_timestamps) == 1:
-                    # Only one snapshot exists - use it (might not be ideal but better than nothing)
+                    # Only one snapshot exists - use it but warn
                     comparison_timestamp = all_timestamps[0][0]
-                    print(f"DEBUG: Only one snapshot exists, using it: {comparison_timestamp}")
+                    print(f"DEBUG: WARNING: Only one snapshot exists, using it: {comparison_timestamp}")
+                    print(f"DEBUG: This might not give accurate weekly stats")
                 else:
                     comparison_timestamp = None
+                    print(f"DEBUG: No snapshots found at all")
             
             if comparison_timestamp:
                 previous_history = db.session.query(
