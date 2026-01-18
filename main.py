@@ -1635,7 +1635,7 @@ def get_weekly_fun_stats():
                     Competition.series != 'WSX'
                 )
             )
-            .order_by(Competition.date.asc())
+            .order_by(Competition.event_date.asc())
             .first()
         )
         
@@ -1647,8 +1647,8 @@ def get_weekly_fun_stats():
             print(f"DEBUG: WARNING: Could not find Anaheim 1 competition")
         
         previous_leaderboard = []
-        for user_row in user_scores:
-            user_id = user_row.id
+        for user_data in user_scores_list:
+            user_id = user_data['id']
             anaheim_points = 0
             
             if anaheim1_id:
@@ -1666,13 +1666,13 @@ def get_weekly_fun_stats():
                         latest_score = max(anaheim_scores, key=lambda s: s.score_id)
                         anaheim_points = latest_score.total_points or 0
                 except Exception as e:
-                    print(f"Error calculating Anaheim points for user {user_row.username}: {e}")
+                    print(f"Error calculating Anaheim points for user {user_data['username']}: {e}")
                     anaheim_points = 0
             
             previous_leaderboard.append({
                 'id': user_id,
-                'username': user_row.username,
-                'display_name': getattr(user_row, 'display_name', None) or user_row.username,
+                'username': user_data['username'],
+                'display_name': user_data['display_name'],
                 'total_points': anaheim_points
             })
         
