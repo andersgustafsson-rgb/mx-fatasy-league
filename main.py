@@ -1588,18 +1588,40 @@ def get_weekly_fun_stats():
         user_scores_list.sort(key=lambda x: x['total_points'], reverse=True)
         
         # Calculate deltas using LeaderboardHistory
+        # We need to compare with a snapshot from BEFORE the recent competitions
         leaderboard_data = []
         try:
-            latest_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
-            if latest_timestamp:
-                latest_history = db.session.query(
+            # Get the most recent competition date from the last 7 days
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            recent_competitions = Competition.query.filter(
+                Competition.event_date >= week_ago
+            ).order_by(Competition.event_date.asc()).all()
+            
+            # Find a snapshot from BEFORE the first recent competition
+            comparison_timestamp = None
+            if recent_competitions:
+                first_recent_date = recent_competitions[0].event_date
+                # Get the latest snapshot from BEFORE this competition
+                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
+                    LeaderboardHistory.created_at < first_recent_date
+                ).scalar()
+            
+            # If no pre-competition snapshot exists, use the latest one
+            if not comparison_timestamp:
+                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+            
+            if comparison_timestamp:
+                previous_history = db.session.query(
                     LeaderboardHistory.user_id,
                     LeaderboardHistory.ranking
-                ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
-                previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
+                ).filter(LeaderboardHistory.created_at == comparison_timestamp).all()
+                previous_ranking = {str(user_id): ranking for user_id, ranking in previous_history}
+                print(f"DEBUG: Using snapshot from {comparison_timestamp} with {len(previous_ranking)} users")
             else:
                 previous_ranking = {}
-        except Exception:
+                print("DEBUG: No previous snapshot found - cannot calculate ranking changes")
+        except Exception as e:
+            print(f"DEBUG: Error fetching previous ranking: {e}")
             previous_ranking = {}
         
         for i, user_row in enumerate(user_scores_list, 1):
