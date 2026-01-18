@@ -1525,6 +1525,41 @@ def get_season_team_competition_details(competition_id: int):
         "total_points": total_points + bonus_points
     })
 
+@app.get("/debug_weekly_stats")
+def debug_weekly_stats():
+    """Debug route to see what's happening with weekly stats"""
+    if not is_admin_user():
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    try:
+        from sqlalchemy import func
+        
+        # Check all snapshots
+        all_snapshots = db.session.query(
+            LeaderboardHistory.created_at,
+            func.count(LeaderboardHistory.id).label('count')
+        ).group_by(LeaderboardHistory.created_at).order_by(LeaderboardHistory.created_at.desc()).limit(10).all()
+        
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        snapshot_before_week = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
+            LeaderboardHistory.created_at <= week_ago
+        ).scalar()
+        
+        latest_snapshot = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+        
+        return jsonify({
+            "week_ago": week_ago.isoformat(),
+            "snapshot_before_week": snapshot_before_week.isoformat() if snapshot_before_week else None,
+            "latest_snapshot": latest_snapshot.isoformat() if latest_snapshot else None,
+            "all_snapshots": [
+                {"timestamp": s[0].isoformat(), "count": s[1]} 
+                for s in all_snapshots
+            ]
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
     """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
