@@ -1715,6 +1715,7 @@ def get_weekly_fun_stats():
             if delta is not None:
                 users_with_delta += 1
                 if delta < 0:  # Climbed (negative delta means better ranking)
+                    print(f"DEBUG: User {user['username']} CLIMBED: delta={delta}, rank {user['rank'] - delta} → {user['rank']}")
                     users_climbed.append({
                         'user_id': user['user_id'],
                         'username': user['username'],
@@ -1725,6 +1726,7 @@ def get_weekly_fun_stats():
                     })
                     # Find the user with the most negative delta (biggest climb)
                     if rocket is None or delta < rocket['delta']:
+                        print(f"DEBUG: Setting rocket to {user['username']} with delta={delta} (previous rocket delta: {rocket['delta'] if rocket else 'None'})")
                         rocket = {
                             'user_id': user['user_id'],
                             'username': user['username'],
@@ -1752,6 +1754,8 @@ def get_weekly_fun_stats():
                             'current_rank': user['rank'],
                             'previous_rank': user['rank'] - delta
                         }
+            else:
+                print(f"DEBUG: User {user['username']} has delta=None (rank {user['rank']})")
         
         print(f"DEBUG: ===== Weekly Stats Summary =====")
         print(f"DEBUG: Found {users_with_delta} users with ranking changes")
@@ -1860,6 +1864,13 @@ def get_weekly_fun_stats():
         holeshot_master = None
         if holeshot_stats:
             holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
+        
+        print(f"DEBUG: ===== FINAL RETURN VALUES =====")
+        print(f"DEBUG: rocket = {rocket}")
+        print(f"DEBUG: anchor = {anchor}")
+        print(f"DEBUG: perfect_picks_winner = {perfect_picks_winner}")
+        print(f"DEBUG: holeshot_master = {holeshot_master}")
+        print(f"DEBUG: ===== END FINAL RETURN VALUES =====")
         
         return jsonify({
             'rocket': rocket,
