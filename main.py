@@ -1646,9 +1646,11 @@ def get_weekly_fun_stats():
         rocket = None  # Biggest negative delta (climbed most)
         anchor = None  # Biggest positive delta (dropped most)
         
+        users_with_delta = 0
         for user in leaderboard_data:
             delta = user.get('delta')
             if delta is not None:
+                users_with_delta += 1
                 if delta < 0:  # Climbed (negative delta means better ranking)
                     if rocket is None or delta < rocket['delta']:
                         rocket = {
@@ -1669,6 +1671,8 @@ def get_weekly_fun_stats():
                             'current_rank': user['rank'],
                             'previous_rank': user['rank'] - delta
                         }
+        
+        print(f"DEBUG: Found {users_with_delta} users with ranking changes, rocket: {rocket is not None}, anchor: {anchor is not None}")
         
         # Get competitions from last 7 days
         week_ago = datetime.utcnow() - timedelta(days=7)
