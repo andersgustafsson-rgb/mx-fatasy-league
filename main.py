@@ -6147,28 +6147,26 @@ def get_season_leaderboard():
                     "delta": delta
                 })
             
-            # Only save new ranking if there are actual changes
-            has_changes = any(row["delta"] != 0 for row in result)
-            if has_changes:
-                try:
-                    print(f"DEBUG: Saving new ranking to database...")
-                    for row in result:
-                        history_entry = LeaderboardHistory(
-                            user_id=row["user_id"],
-                            ranking=row["rank"],
-                            total_points=row["total_points"]
-                        )
-                        db.session.add(history_entry)
+            # Always save new ranking snapshot (even if no changes) so weekly stats can compare
+            # This ensures we have a snapshot to compare against for future competitions
+            try:
+                print(f"DEBUG: Saving new ranking snapshot to database...")
+                for row in result:
+                    history_entry = LeaderboardHistory(
+                        user_id=row["user_id"],
+                        ranking=row["rank"],
+                        total_points=row["total_points"]
+                    )
+                    db.session.add(history_entry)
+                    if row.get("delta") and row["delta"] != 0:
                         print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
-                    
-                    db.session.commit()
-                    print(f"DEBUG: Leaderboard history saved successfully")
-                except Exception as commit_error:
-                    print(f"DEBUG: Error committing leaderboard history: {commit_error}")
-                    db.session.rollback()
-                    # Continue without saving history - still return the result
-            else:
-                print("DEBUG: No ranking changes detected, not saving to database")
+                
+                db.session.commit()
+                print(f"DEBUG: Leaderboard history snapshot saved successfully")
+            except Exception as commit_error:
+                print(f"DEBUG: Error committing leaderboard history: {commit_error}")
+                db.session.rollback()
+                # Continue without saving history - still return the result
             
             # Return the result after successful ranking logic
             return jsonify(result)
