@@ -5224,6 +5224,73 @@ def submit_results():
     return redirect(url_for("admin_page"))
 
 
+@app.post("/admin/update_holeshot")
+def update_holeshot():
+    """Update only holeshot results for a competition"""
+    if not is_admin_user():
+        return redirect(url_for("login"))
+    
+    comp_id = request.form.get("competition_id", type=int)
+    if not comp_id:
+        flash("Du måste välja tävling.", "error")
+        return redirect(url_for("admin_page"))
+    
+    hs_450 = request.form.get("holeshot_450", type=int)
+    hs_250 = request.form.get("holeshot_250", type=int)
+    
+    try:
+        # Update or add 450cc holeshot
+        if hs_450:
+            existing_hs_450 = HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="450cc"
+            ).first()
+            if existing_hs_450:
+                existing_hs_450.rider_id = hs_450
+                print(f"DEBUG: Updated 450cc holeshot to rider {hs_450}")
+            else:
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+                print(f"DEBUG: Added 450cc holeshot for rider {hs_450}")
+        else:
+            # Remove 450cc holeshot if empty
+            HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="450cc"
+            ).delete()
+        
+        # Update or add 250cc holeshot
+        if hs_250:
+            existing_hs_250 = HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="250cc"
+            ).first()
+            if existing_hs_250:
+                existing_hs_250.rider_id = hs_250
+                print(f"DEBUG: Updated 250cc holeshot to rider {hs_250}")
+            else:
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+                print(f"DEBUG: Added 250cc holeshot for rider {hs_250}")
+        else:
+            # Remove 250cc holeshot if empty
+            HoleshotResult.query.filter_by(
+                competition_id=comp_id,
+                class_name="250cc"
+            ).delete()
+        
+        db.session.commit()
+        
+        # Recalculate scores to update points
+        calculate_scores(comp_id)
+        
+        flash("Holeshot-resultat uppdaterade och poäng omräknade!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating holeshot: {e}")
+        flash(f"Fel vid uppdatering av holeshot: {str(e)}", "error")
+    
+    return redirect(url_for("admin_page"))
+
+
 @app.post("/admin/archive_wsx_and_reset_points")
 def archive_wsx_and_reset_points():
     """Archive WSX user statistics and reset points for SX season"""

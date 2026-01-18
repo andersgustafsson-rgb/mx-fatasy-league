@@ -183,6 +183,37 @@
                     </div>
                 </div>
 
+                <!-- Quick Holeshot Update -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">⚡ Snabb Holeshot-uppdatering</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Uppdatera bara holeshot-vinnarna för en tävling utan att ändra andra resultat.</p>
+                        <form method="POST" action="/admin/update_holeshot" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                                    <select id="quick-holeshot-competition" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" required onchange="loadQuickHoleshotRiders()">
+                                        <option value="">Välj tävling...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 450cc/SX1</label>
+                                    <select id="quick-holeshot-450" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                        <option value="">Ingen</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 250cc/SX2</label>
+                                    <select id="quick-holeshot-250" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                        <option value="">Ingen</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-warning px-6 py-2 rounded-lg">⚡ Uppdatera Holeshot</button>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Manual Results -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry (WSX‑stöd)</h3>
@@ -1437,6 +1468,7 @@
             loadSimulationCompetitions();
             loadBulkCompetitions();
             loadManualCompetitions();
+            loadQuickHoleshotCompetitions();
             loadPicksStatsCompetitions();
             loadAnnouncement(); // Load existing announcement when page loads
             
@@ -1485,6 +1517,101 @@
                 }, 300);
             }
         });
+
+        // Quick Holeshot Update helpers
+        async function loadQuickHoleshotCompetitions() {
+            try {
+                const res = await fetch('/get_competitions_for_import');
+                const data = await res.json();
+                const select = document.getElementById('quick-holeshot-competition');
+                if (!select) return;
+                
+                if (data.success) {
+                    select.innerHTML = '<option value="">Välj tävling...</option>';
+                    data.competitions.forEach(comp => {
+                        const opt = document.createElement('option');
+                        opt.value = comp.id;
+                        opt.textContent = comp.name;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            } catch (error) {
+                console.error('Error loading quick holeshot competitions:', error);
+                const select = document.getElementById('quick-holeshot-competition');
+                if (select) {
+                    select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            }
+        }
+
+        async function loadQuickHoleshotRiders() {
+            const compId = document.getElementById('quick-holeshot-competition')?.value;
+            if (!compId) {
+                document.getElementById('quick-holeshot-450').innerHTML = '<option value="">Ingen</option>';
+                document.getElementById('quick-holeshot-250').innerHTML = '<option value="">Ingen</option>';
+                return;
+            }
+            
+            try {
+                // Load existing holeshot results
+                const resultsRes = await fetch(`/admin/get_results/${compId}`);
+                if (resultsRes.ok) {
+                    const resultsData = await resultsRes.json();
+                    const existingHs450 = resultsData.holeshot_results?.find(h => h.class === '450cc' || h.class === 'wsx_sx1');
+                    const existingHs250 = resultsData.holeshot_results?.find(h => h.class === '250cc' || h.class === 'wsx_sx2');
+                    
+                    // Load riders
+                    const ridersRes = await fetch(`/admin/get_out_status/${compId}`);
+                    if (!ridersRes.ok) return;
+                    const riders = await ridersRes.json();
+                    if (!Array.isArray(riders)) return;
+                    
+                    // Get competition info to check series
+                    const compRes = await fetch(`/get_competitions_for_import`);
+                    const compData = await compRes.json();
+                    const compIdNum = parseInt(compId);
+                    const competition = compData.competitions?.find(c => c.id === compIdNum || c.id == compId);
+                    const isWSX = competition?.series === 'WSX';
+                    
+                    const sx1 = isWSX 
+                        ? riders.filter(r => r.class === 'wsx_sx1')
+                        : riders.filter(r => r.class === '450cc');
+                    const sx2 = isWSX
+                        ? riders.filter(r => r.class === 'wsx_sx2')
+                        : riders.filter(r => r.class === '250cc');
+                    
+                    // Populate 450cc dropdown
+                    const hs450 = document.getElementById('quick-holeshot-450');
+                    hs450.innerHTML = '<option value="">Ingen</option>';
+                    sx1.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.id;
+                        opt.textContent = (r.rider_number ? r.rider_number + ' ' : '') + r.name;
+                        if (existingHs450 && existingHs450.rider_id == r.id) {
+                            opt.selected = true;
+                        }
+                        hs450.appendChild(opt);
+                    });
+                    
+                    // Populate 250cc dropdown
+                    const hs250 = document.getElementById('quick-holeshot-250');
+                    hs250.innerHTML = '<option value="">Ingen</option>';
+                    sx2.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r.id;
+                        opt.textContent = (r.rider_number ? r.rider_number + ' ' : '') + r.name;
+                        if (existingHs250 && existingHs250.rider_id == r.id) {
+                            opt.selected = true;
+                        }
+                        hs250.appendChild(opt);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading quick holeshot riders:', error);
+            }
+        }
 
         // Manual Results helpers
         async function loadManualCompetitions() {
