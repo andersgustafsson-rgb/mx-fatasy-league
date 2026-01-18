@@ -1567,7 +1567,7 @@ def get_weekly_fun_stats():
         from sqlalchemy import func
         from datetime import datetime, timedelta
         
-        print(f"DEBUG: get_weekly_fun_stats called at {datetime.utcnow()}")
+        print(f"DEBUG: ===== get_weekly_fun_stats STARTED at {datetime.utcnow()} =====")
         
         # Get current leaderboard with deltas (reuse same logic as get_season_leaderboard)
         db.session.rollback()
@@ -1986,9 +1986,11 @@ def get_weekly_fun_stats():
         })
         
     except Exception as e:
-        print(f"Error calculating fun stats: {e}")
+        print(f"DEBUG: ===== ERROR in get_weekly_fun_stats =====")
+        print(f"DEBUG: Error calculating fun stats: {e}")
         import traceback
         traceback.print_exc()
+        print(f"DEBUG: ===== END ERROR =====")
         return jsonify({
             'rocket': None,
             'anchor': None,
