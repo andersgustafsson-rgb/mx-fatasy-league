@@ -1604,12 +1604,35 @@ def get_weekly_fun_stats():
                 )
                 
                 scores_by_comp = {}
+                duplicate_scores = []
                 for score in all_scores:
                     comp_id = score.competition_id
-                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                    if comp_id not in scores_by_comp:
                         scores_by_comp[comp_id] = score
+                    elif score.score_id > scores_by_comp[comp_id].score_id:
+                        # Found a newer score for this competition - keep the newer one
+                        duplicate_scores.append(scores_by_comp[comp_id])
+                        scores_by_comp[comp_id] = score
+                    else:
+                        # This is an older duplicate - skip it
+                        duplicate_scores.append(score)
+                
+                if duplicate_scores and user_row.username == 'Robban B':
+                    print(f"DEBUG: Found {len(duplicate_scores)} duplicate scores for {user_row.username}:")
+                    for dup in duplicate_scores:
+                        comp = Competition.query.get(dup.competition_id)
+                        comp_name = comp.name if comp else f"ID {dup.competition_id}"
+                        print(f"  - Competition {comp_name}: score_id={dup.score_id}, points={dup.total_points}")
+                    print(f"DEBUG: Using {len(scores_by_comp)} unique competitions for {user_row.username}")
+                    for comp_id, score in scores_by_comp.items():
+                        comp = Competition.query.get(comp_id)
+                        comp_name = comp.name if comp else f"ID {comp_id}"
+                        print(f"  - {comp_name}: score_id={score.score_id}, points={score.total_points}")
                 
                 total = sum(s.total_points or 0 for s in scores_by_comp.values())
+                
+                if user_row.username == 'Robban B':
+                    print(f"DEBUG: {user_row.username} total points: {total} (from {len(scores_by_comp)} competitions)")
             except Exception as e:
                 print(f"Error calculating points for user {user_row.username}: {e}")
                 total = 0
@@ -1653,18 +1676,26 @@ def get_weekly_fun_stats():
             
             if anaheim1_id:
                 try:
-                    # Get only Anaheim 1 score
+                    # Get only Anaheim 1 score - get the most recent one (highest score_id)
                     anaheim_scores = (
                         db.session.query(CompetitionScore)
                         .filter(CompetitionScore.user_id == user_id)
                         .filter(CompetitionScore.competition_id == anaheim1_id)
+                        .order_by(CompetitionScore.score_id.desc())
                         .all()
                     )
                     
-                    # Get the most recent score for Anaheim 1
+                    # Get the most recent score for Anaheim 1 (first one after ordering)
                     if anaheim_scores:
-                        latest_score = max(anaheim_scores, key=lambda s: s.score_id)
+                        latest_score = anaheim_scores[0]
                         anaheim_points = latest_score.total_points or 0
+                        
+                        # Debug: check for duplicates
+                        if len(anaheim_scores) > 1 and user_data['username'] == 'Robban B':
+                            print(f"DEBUG: WARNING: Found {len(anaheim_scores)} duplicate Anaheim 1 scores for {user_data['username']}")
+                            for i, score in enumerate(anaheim_scores):
+                                print(f"  - Score {i+1}: score_id={score.score_id}, points={score.total_points}")
+                            print(f"DEBUG: Using score_id={latest_score.score_id} with {anaheim_points} points")
                 except Exception as e:
                     print(f"Error calculating Anaheim points for user {user_data['username']}: {e}")
                     anaheim_points = 0
