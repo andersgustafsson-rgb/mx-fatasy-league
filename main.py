@@ -1594,21 +1594,48 @@ def get_weekly_fun_stats():
             # Get the most recent competition date from the last 7 days
             week_ago = datetime.utcnow() - timedelta(days=7)
             recent_competitions = Competition.query.filter(
-                Competition.event_date >= week_ago
+                Competition.event_date >= week_ago.date() if hasattr(week_ago, 'date') else week_ago
             ).order_by(Competition.event_date.asc()).all()
+            
+            print(f"DEBUG: Found {len(recent_competitions)} recent competitions")
             
             # Find a snapshot from BEFORE the first recent competition
             comparison_timestamp = None
             if recent_competitions:
                 first_recent_date = recent_competitions[0].event_date
+                # Convert date to datetime for comparison (start of day)
+                if isinstance(first_recent_date, date) and not isinstance(first_recent_date, datetime):
+                    first_recent_datetime = datetime.combine(first_recent_date, datetime.min.time())
+                else:
+                    first_recent_datetime = first_recent_date
+                
+                print(f"DEBUG: Looking for snapshot before {first_recent_datetime}")
+                
                 # Get the latest snapshot from BEFORE this competition
                 comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                    LeaderboardHistory.created_at < first_recent_date
+                    LeaderboardHistory.created_at < first_recent_datetime
                 ).scalar()
+                
+                print(f"DEBUG: Found pre-competition snapshot: {comparison_timestamp}")
             
-            # If no pre-competition snapshot exists, use the latest one
+            # If no pre-competition snapshot exists, get the second-to-latest snapshot
+            # (the latest one might be from after the competition)
             if not comparison_timestamp:
-                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+                # Get all unique timestamps, ordered by date
+                all_timestamps = db.session.query(LeaderboardHistory.created_at).distinct().order_by(
+                    LeaderboardHistory.created_at.desc()
+                ).limit(2).all()
+                
+                if len(all_timestamps) >= 2:
+                    # Use the second-to-latest snapshot
+                    comparison_timestamp = all_timestamps[1][0]
+                    print(f"DEBUG: Using second-to-latest snapshot: {comparison_timestamp}")
+                elif len(all_timestamps) == 1:
+                    # Only one snapshot exists - use it (might not be ideal but better than nothing)
+                    comparison_timestamp = all_timestamps[0][0]
+                    print(f"DEBUG: Only one snapshot exists, using it: {comparison_timestamp}")
+                else:
+                    comparison_timestamp = None
             
             if comparison_timestamp:
                 previous_history = db.session.query(
@@ -1622,6 +1649,8 @@ def get_weekly_fun_stats():
                 print("DEBUG: No previous snapshot found - cannot calculate ranking changes")
         except Exception as e:
             print(f"DEBUG: Error fetching previous ranking: {e}")
+            import traceback
+            traceback.print_exc()
             previous_ranking = {}
         
         for i, user_row in enumerate(user_scores_list, 1):
