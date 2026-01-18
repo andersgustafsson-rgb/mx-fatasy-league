@@ -1757,7 +1757,8 @@ def get_weekly_fun_stats():
         print(f"DEBUG: Found {users_with_delta} users with ranking changes")
         print(f"DEBUG: {len(users_climbed)} users climbed, {len(users_dropped)} users dropped")
         if users_climbed:
-            print(f"DEBUG: Top 5 users who climbed: {[(u['username'], u['delta'], f'{u['previous_rank']}→{u['current_rank']}') for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]}")
+            top_climbers = [(u['username'], u['delta'], f"{u['previous_rank']}→{u['current_rank']}") for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]
+            print(f"DEBUG: Top 5 users who climbed: {top_climbers}")
         if rocket:
             print(f"DEBUG: ✅ Rocket winner: {rocket['username']} climbed {abs(rocket['delta'])} places ({rocket['previous_rank']} → {rocket['current_rank']})")
         else:
