@@ -1567,6 +1567,8 @@ def get_weekly_fun_stats():
         from sqlalchemy import func
         from datetime import datetime, timedelta
         
+        print(f"DEBUG: get_weekly_fun_stats called at {datetime.utcnow()}")
+        
         # Get current leaderboard with deltas (reuse same logic as get_season_leaderboard)
         db.session.rollback()
         
@@ -1629,13 +1631,21 @@ def get_weekly_fun_stats():
             # Get snapshot from 7 days ago (or closest before that)
             week_ago = datetime.utcnow() - timedelta(days=7)
             
-            # Get the latest snapshot from before 7 days ago
+            # Get the latest snapshot from before 7 days ago (use < to avoid snapshots from exactly 7 days ago that might be after competition)
             comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
-                LeaderboardHistory.created_at <= week_ago
+                LeaderboardHistory.created_at < week_ago
             ).scalar()
             
             print(f"DEBUG: Looking for snapshot from before {week_ago}")
             print(f"DEBUG: Found snapshot from before 7 days ago: {comparison_timestamp}")
+            
+            # If no snapshot from before 7 days ago, try to get any snapshot that's at least 1 day old
+            if not comparison_timestamp:
+                one_day_ago = datetime.utcnow() - timedelta(days=1)
+                comparison_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).filter(
+                    LeaderboardHistory.created_at < one_day_ago
+                ).scalar()
+                print(f"DEBUG: No snapshot from 7 days ago, trying 1 day ago: {comparison_timestamp}")
             
             # If no snapshot from 7 days ago, try to get the second-to-latest snapshot
             # (the latest one might be from after competitions this week)
