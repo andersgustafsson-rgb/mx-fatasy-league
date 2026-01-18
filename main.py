@@ -1684,6 +1684,11 @@ def get_weekly_fun_stats():
             traceback.print_exc()
             previous_ranking = {}
         
+        print(f"DEBUG: previous_ranking contains {len(previous_ranking)} users")
+        if previous_ranking:
+            sample_users = list(previous_ranking.items())[:5]
+            print(f"DEBUG: Sample previous_ranking entries: {sample_users}")
+        
         for i, user_row in enumerate(user_scores_list, 1):
             user_id = user_row['id']
             current_rank = i
