@@ -1753,18 +1753,20 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
         
+        print(f"DEBUG: ===== Weekly Stats Summary =====")
         print(f"DEBUG: Found {users_with_delta} users with ranking changes")
         print(f"DEBUG: {len(users_climbed)} users climbed, {len(users_dropped)} users dropped")
         if users_climbed:
-            print(f"DEBUG: Users who climbed: {[(u['username'], u['delta']) for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]}")
+            print(f"DEBUG: Top 5 users who climbed: {[(u['username'], u['delta'], f'{u['previous_rank']}→{u['current_rank']}') for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]}")
         if rocket:
-            print(f"DEBUG: Rocket winner: {rocket['username']} climbed {abs(rocket['delta'])} places ({rocket['previous_rank']} → {rocket['current_rank']})")
+            print(f"DEBUG: ✅ Rocket winner: {rocket['username']} climbed {abs(rocket['delta'])} places ({rocket['previous_rank']} → {rocket['current_rank']})")
         else:
-            print(f"DEBUG: No rocket winner found - no users climbed this week")
+            print(f"DEBUG: ❌ No rocket winner found - no users climbed this week (or no comparison snapshot)")
         if anchor:
-            print(f"DEBUG: Anchor winner: {anchor['username']} dropped {anchor['delta']} places ({anchor['previous_rank']} → {anchor['current_rank']})")
+            print(f"DEBUG: ✅ Anchor winner: {anchor['username']} dropped {anchor['delta']} places ({anchor['previous_rank']} → {anchor['current_rank']})")
         else:
-            print(f"DEBUG: No anchor winner found - no users dropped this week")
+            print(f"DEBUG: ❌ No anchor winner found - no users dropped this week (or no comparison snapshot)")
+        print(f"DEBUG: ===== End Weekly Stats Summary =====")
         
         # Get competitions from last 7 days
         week_ago = datetime.utcnow() - timedelta(days=7)
