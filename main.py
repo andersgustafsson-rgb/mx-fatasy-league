@@ -1617,22 +1617,26 @@ def get_weekly_fun_stats():
                         # This is an older duplicate - skip it
                         duplicate_scores.append(score)
                 
-                if duplicate_scores and user_row.username == 'Robban B':
-                    print(f"DEBUG: Found {len(duplicate_scores)} duplicate scores for {user_row.username}:")
-                    for dup in duplicate_scores:
-                        comp = Competition.query.get(dup.competition_id)
-                        comp_name = comp.name if comp else f"ID {dup.competition_id}"
-                        print(f"  - Competition {comp_name}: score_id={dup.score_id}, points={dup.total_points}")
-                    print(f"DEBUG: Using {len(scores_by_comp)} unique competitions for {user_row.username}")
+                if user_row.username == 'Robban B':
+                    print(f"DEBUG: ===== Robban B Score Analysis =====")
+                    print(f"DEBUG: Found {len(all_scores)} total score entries")
+                    if duplicate_scores:
+                        print(f"DEBUG: Found {len(duplicate_scores)} duplicate scores:")
+                        for dup in duplicate_scores:
+                            comp = Competition.query.get(dup.competition_id)
+                            comp_name = comp.name if comp else f"ID {dup.competition_id}"
+                            print(f"  - DUPLICATE: Competition {comp_name}: score_id={dup.score_id}, total_points={dup.total_points}, race_points={dup.race_points}, holeshot_points={dup.holeshot_points}, wildcard_points={dup.wildcard_points}")
+                    print(f"DEBUG: Using {len(scores_by_comp)} unique competitions:")
                     for comp_id, score in scores_by_comp.items():
                         comp = Competition.query.get(comp_id)
                         comp_name = comp.name if comp else f"ID {comp_id}"
-                        print(f"  - {comp_name}: score_id={score.score_id}, points={score.total_points}")
+                        print(f"  - Competition {comp_name} (ID: {comp_id}): score_id={score.score_id}, total_points={score.total_points}, race_points={score.race_points}, holeshot_points={score.holeshot_points}, wildcard_points={score.wildcard_points}")
                 
                 total = sum(s.total_points or 0 for s in scores_by_comp.values())
                 
                 if user_row.username == 'Robban B':
-                    print(f"DEBUG: {user_row.username} total points: {total} (from {len(scores_by_comp)} competitions)")
+                    print(f"DEBUG: {user_row.username} TOTAL: {total} points (sum of {len(scores_by_comp)} competitions)")
+                    print(f"DEBUG: ===== End Robban B Analysis =====")
             except Exception as e:
                 print(f"Error calculating points for user {user_row.username}: {e}")
                 total = 0
