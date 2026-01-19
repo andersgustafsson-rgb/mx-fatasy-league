@@ -7206,9 +7206,11 @@ def save_picks():
     
     # 4) Rensa tidigare picks/holeshot för användaren i denna tävling FÖRST
     # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
+    # VIKTIGT: Committa direkt efter delete för att undvika race conditions om användaren klickar "Spara" flera gånger
     deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
     deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    db.session.commit()  # Commit deletions immediately to prevent race conditions
     print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
 
     # 5) Validera wildcard EFTER att gamla picks rensats
