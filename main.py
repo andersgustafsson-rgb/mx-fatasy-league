@@ -9999,6 +9999,64 @@ def admin_get_all_users():
         print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
+@app.post("/admin/recalculate_all_rider_points")
+def admin_recalculate_all_rider_points():
+    """Admin route to recalculate rider_points for all competitions based on correct point system"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        # Get all competitions with results
+        competitions = Competition.query.all()
+        updated_count = 0
+        total_results_updated = 0
+        
+        for comp in competitions:
+            results = CompetitionResult.query.filter_by(competition_id=comp.id).all()
+            
+            if not results:
+                continue
+            
+            for result in results:
+                # Calculate correct points based on position
+                if comp.series == "WSX":
+                    # For WSX, keep rider_points if manually set, otherwise recalculate
+                    if result.rider_points is None:
+                        points = get_smx_qualification_points(result.position)
+                        result.rider_points = points
+                        total_results_updated += 1
+                elif comp.series == "SMX":
+                    # SMX Finals with multiplier
+                    points = get_smx_qualification_points(result.position) * (comp.point_multiplier or 1)
+                    result.rider_points = points
+                    total_results_updated += 1
+                else:
+                    # SX, MX, or default - use standard SMX points
+                    points = get_smx_qualification_points(result.position)
+                    result.rider_points = points
+                    total_results_updated += 1
+            
+            if results:
+                updated_count += 1
+        
+        db.session.commit()
+        
+        print(f"Recalculated rider_points for {total_results_updated} results across {updated_count} competitions")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Räknade om poäng för {total_results_updated} resultat i {updated_count} tävlingar",
+            "competitions_updated": updated_count,
+            "results_updated": total_results_updated
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"ERROR in admin_recalculate_all_rider_points: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 @app.post("/admin/set_user_score")
 def admin_set_user_score():
     """Admin route to manually set a user's score for a competition"""
@@ -16970,10 +17028,10 @@ def get_wsx_leaders():
     return leaders
 
 def get_smx_qualification_points(position):
-    """Get SMX qualification points based on position (1st = 25 points, 2nd = 22, etc.)"""
+    """Get SMX qualification points based on position (AMA Supercross official point system)"""
     points_map = {
-        1: 25, 2: 22, 3: 20, 4: 18, 5: 16, 6: 15, 7: 14, 8: 13, 9: 12, 10: 11,
-        11: 10, 12: 9, 13: 8, 14: 7, 15: 6, 16: 5, 17: 4, 18: 3, 19: 2, 20: 1
+        1: 25, 2: 22, 3: 20, 4: 18, 5: 17, 6: 16, 7: 15, 8: 14, 9: 13, 10: 12,
+        11: 11, 12: 10, 13: 9, 14: 8, 15: 7, 16: 6, 17: 5, 18: 4, 19: 3, 20: 2, 21: 1
     }
     return points_map.get(position, 0)
 
