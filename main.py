@@ -7538,7 +7538,19 @@ def get_user_race_results(username: str, competition_id: int):
         else:
             breakdown.append(f"❌|MISS|{rider_name}|{p.predicted_position}|{act.position}|0")
 
-    holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+    all_holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+    
+    # Remove duplicate holeshot picks (same user, competition, class) - keep only the most recent one
+    seen_holeshots = {}
+    for hp in all_holopicks:
+        key = (hp.user_id, hp.competition_id, hp.class_name)
+        if key not in seen_holeshots:
+            seen_holeshots[key] = hp
+        elif hp.pick_id > seen_holeshots[key].pick_id:
+            # Keep the more recent one (higher pick_id)
+            seen_holeshots[key] = hp
+    
+    holopicks = list(seen_holeshots.values())
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
     holo_by_class = {h.class_name: h for h in holos}
     
