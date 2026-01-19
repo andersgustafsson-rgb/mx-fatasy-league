@@ -9975,6 +9975,30 @@ def admin_get_competition_results(competition_id: int):
         print(traceback.format_exc())
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+@app.get("/admin/get_all_users")
+def admin_get_all_users():
+    """Admin route to get all users for dropdown"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        users = User.query.order_by(User.username).all()
+        return jsonify({
+            "success": True,
+            "users": [
+                {
+                    "id": user.id,
+                    "username": user.username
+                }
+                for user in users
+            ]
+        })
+    except Exception as e:
+        import traceback
+        print(f"ERROR in admin_get_all_users: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
 @app.post("/admin/set_user_score")
 def admin_set_user_score():
     """Admin route to manually set a user's score for a competition"""

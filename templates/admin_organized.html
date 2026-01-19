@@ -211,7 +211,9 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Användarnamn</label>
-                                <input type="text" id="set-score-username" placeholder="t.ex. Robban B" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                <select id="set-score-username" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Välj användare...</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
@@ -239,7 +241,9 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Användarnamn</label>
-                                <input type="text" id="restore-username" placeholder="t.ex. Robban B" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                <select id="restore-username" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Välj användare...</option>
+                                </select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
@@ -1683,13 +1687,50 @@
             }
         }
 
+        async function loadAllUsers() {
+            try {
+                const res = await fetch('/admin/get_all_users');
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Load users into set-score dropdown
+                    const setScoreSelect = document.getElementById('set-score-username');
+                    if (setScoreSelect) {
+                        setScoreSelect.innerHTML = '<option value="">Välj användare...</option>';
+                        data.users.forEach(user => {
+                            const opt = document.createElement('option');
+                            opt.value = user.username;
+                            opt.textContent = user.username;
+                            setScoreSelect.appendChild(opt);
+                        });
+                    }
+                    
+                    // Load users into restore dropdown
+                    const restoreSelect = document.getElementById('restore-username');
+                    if (restoreSelect) {
+                        restoreSelect.innerHTML = '<option value="">Välj användare...</option>';
+                        data.users.forEach(user => {
+                            const opt = document.createElement('option');
+                            opt.value = user.username;
+                            opt.textContent = user.username;
+                            restoreSelect.appendChild(opt);
+                        });
+                    }
+                } else {
+                    console.error('Failed to load users:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
         async function setUserScore() {
-            const username = document.getElementById('set-score-username')?.value.trim();
+            const username = document.getElementById('set-score-username')?.value;
             const compId = document.getElementById('set-score-competition')?.value;
             const totalPoints = parseInt(document.getElementById('set-score-total')?.value || '0');
             
             if (!username) {
-                alert('Ange ett användarnamn');
+                alert('Välj en användare');
                 return;
             }
             
@@ -1774,11 +1815,11 @@
         }
 
         async function restorePicksFromResults() {
-            const username = document.getElementById('restore-username')?.value.trim();
+            const username = document.getElementById('restore-username')?.value;
             const compId = document.getElementById('restore-competition')?.value;
             
             if (!username) {
-                alert('Ange ett användarnamn');
+                alert('Välj en användare');
                 return;
             }
             
