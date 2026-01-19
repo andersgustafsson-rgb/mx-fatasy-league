@@ -7678,6 +7678,16 @@ def calculate_scores(comp_id: int):
         # Use only unique picks for scoring
         unique_picks = list(seen_picks.values())
         
+        if user.username == 'Robban B':
+            print(f"DEBUG: ===== Robban B Score Calculation =====")
+            print(f"DEBUG: Found {len(picks)} total picks in database")
+            print(f"DEBUG: Found {len(duplicate_picks)} duplicate picks")
+            print(f"DEBUG: Kept {len(unique_picks)} unique picks after deduplication")
+            for pick in unique_picks:
+                rider = Rider.query.get(pick.rider_id)
+                rider_name = rider.name if rider else f"rider {pick.rider_id}"
+                print(f"  - Pick: {rider_name} at position {pick.predicted_position} (pick_id={pick.pick_id})")
+        
         for pick in unique_picks:
             actual_pos_for_pick = (
                 actual_results_dict.get(pick.rider_id).position
@@ -7778,6 +7788,15 @@ def calculate_scores(comp_id: int):
         score_entry.race_points = race_points
         score_entry.holeshot_points = holeshot_points
         score_entry.wildcard_points = wildcard_points
+        
+        if user.username == 'Robban B':
+            print(f"DEBUG: Robban B FINAL SCORES:")
+            print(f"  - Race points: {race_points}")
+            print(f"  - Holeshot points: {holeshot_points}")
+            print(f"  - Wildcard points: {wildcard_points}")
+            print(f"  - TOTAL: {total_points}")
+            print(f"DEBUG: ===== End Robban B Calculation =====")
+        
         print(f"DEBUG: {user.username} - Race: {race_points}, Holeshot: {holeshot_points}, Wildcard: {wildcard_points}, Total: {total_points}")
         
         # Debug: Check if user has any picks at all
