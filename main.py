@@ -9849,44 +9849,56 @@ def debug_my_points():
 @app.get("/debug_user_picks/<string:username>/<int:competition_id>")
 def debug_user_picks(username: str, competition_id: int):
     """Debug endpoint to check what picks a user has in database"""
-    if not is_admin_user():
-        return jsonify({"error": "admin_only"}), 403
-    
-    user = User.query.filter_by(username=username).first_or_404()
-    
-    # Get all picks (including duplicates)
-    all_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
-    all_holeshots = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
-    
-    picks_info = []
-    for pick in all_picks:
-        rider = Rider.query.get(pick.rider_id)
-        picks_info.append({
-            "pick_id": pick.pick_id,
-            "rider_id": pick.rider_id,
-            "rider_name": rider.name if rider else f"Rider {pick.rider_id}",
-            "predicted_position": pick.predicted_position
+    try:
+        if not is_admin_user():
+            return jsonify({"error": "admin_only"}), 403
+        
+        # Decode URL-encoded username
+        from urllib.parse import unquote
+        username = unquote(username)
+        
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": f"User '{username}' not found"}), 404
+        
+        # Get all picks (including duplicates)
+        all_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        all_holeshots = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+        
+        picks_info = []
+        for pick in all_picks:
+            rider = Rider.query.get(pick.rider_id)
+            picks_info.append({
+                "pick_id": pick.pick_id,
+                "rider_id": pick.rider_id,
+                "rider_name": rider.name if rider else f"Rider {pick.rider_id}",
+                "predicted_position": pick.predicted_position
+            })
+        
+        holeshots_info = []
+        for hp in all_holeshots:
+            rider = Rider.query.get(hp.rider_id)
+            holeshots_info.append({
+                "pick_id": hp.pick_id,
+                "rider_id": hp.rider_id,
+                "rider_name": rider.name if rider else f"Rider {hp.rider_id}",
+                "class_name": hp.class_name
+            })
+        
+        return jsonify({
+            "username": username,
+            "user_id": user.id,
+            "competition_id": competition_id,
+            "total_picks": len(all_picks),
+            "total_holeshots": len(all_holeshots),
+            "picks": picks_info,
+            "holeshots": holeshots_info
         })
-    
-    holeshots_info = []
-    for hp in all_holeshots:
-        rider = Rider.query.get(hp.rider_id)
-        holeshots_info.append({
-            "pick_id": hp.pick_id,
-            "rider_id": hp.rider_id,
-            "rider_name": rider.name if rider else f"Rider {hp.rider_id}",
-            "class_name": hp.class_name
-        })
-    
-    return jsonify({
-        "username": username,
-        "user_id": user.id,
-        "competition_id": competition_id,
-        "total_picks": len(all_picks),
-        "total_holeshots": len(all_holeshots),
-        "picks": picks_info,
-        "holeshots": holeshots_info
-    })
+    except Exception as e:
+        import traceback
+        print(f"ERROR in debug_user_picks: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
 @app.get("/debug_user_scores/<string:username>")
 def debug_user_scores(username):
