@@ -1627,6 +1627,87 @@
             }
         }
 
+        async function loadRestoreCompetitions() {
+            try {
+                const res = await fetch('/get_competitions_for_import');
+                const data = await res.json();
+                const select = document.getElementById('restore-competition');
+                if (!select) return;
+                
+                if (data.success) {
+                    select.innerHTML = '<option value="">Välj tävling...</option>';
+                    data.competitions.forEach(comp => {
+                        const opt = document.createElement('option');
+                        opt.value = comp.id;
+                        opt.textContent = comp.name;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            } catch (error) {
+                console.error('Error loading restore competitions:', error);
+                const select = document.getElementById('restore-competition');
+                if (select) {
+                    select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                }
+            }
+        }
+
+        async function restorePicksFromResults() {
+            const username = document.getElementById('restore-username')?.value.trim();
+            const compId = document.getElementById('restore-competition')?.value;
+            
+            if (!username) {
+                alert('Ange ett användarnamn');
+                return;
+            }
+            
+            if (!compId) {
+                alert('Välj en tävling');
+                return;
+            }
+            
+            if (!confirm(`Är du säker på att du vill återställa picks för "${username}" i tävling ${compId}?\n\nDetta kommer att ta bort alla befintliga picks och ersätta dem med picks baserat på tävlingsresultatet.`)) {
+                return;
+            }
+            
+            const resultDiv = document.getElementById('restore-result');
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = '<p class="text-yellow-400">🔄 Återställer picks...</p>';
+            
+            try {
+                const response = await fetch('/admin/restore_picks_from_results', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username: username,
+                        competition_id: parseInt(compId)
+                    })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
+                        <p class="text-green-400 font-semibold">✅ Picks återställda!</p>
+                        <p class="text-gray-300 text-sm mt-2">${data.message}</p>
+                        <p class="text-gray-300 text-sm">Antal picks: ${data.restored_count}</p>
+                    </div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                        <p class="text-red-400 font-semibold">❌ Fel</p>
+                        <p class="text-gray-300 text-sm mt-2">${data.error || 'Okänt fel'}</p>
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error restoring picks:', error);
+                resultDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
+                    <p class="text-red-400 font-semibold">❌ Ett fel uppstod</p>
+                    <p class="text-gray-300 text-sm mt-2">${error.message}</p>
+                </div>`;
+            }
+        }
+
         // Quick Holeshot Update helpers
         async function loadQuickHoleshotCompetitions() {
             try {
