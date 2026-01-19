@@ -203,6 +203,30 @@
                     </div>
                 </div>
 
+                <!-- Restore User Picks -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🔧 Återställ användarpicks</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">Återställ picks för en användare baserat på tävlingsresultatet. Använd detta om picks har försvunnit.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Användarnamn</label>
+                                <input type="text" id="restore-username" placeholder="t.ex. Robban B" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                                <select id="restore-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Välj tävling...</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="button" onclick="restorePicksFromResults()" class="btn-primary px-6 py-2 rounded-lg w-full">🔧 Återställ picks från resultat</button>
+                            </div>
+                        </div>
+                        <div id="restore-result" class="mt-4 hidden"></div>
+                    </div>
+                </div>
+
                 <!-- Quick Holeshot Update -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">⚡ Snabb Holeshot-uppdatering</h3>
