@@ -7499,7 +7499,19 @@ def get_user_race_results(username: str, competition_id: int):
 
     actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
     actual_by_rider = {r.rider_id: r for r in actual}
-    picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+    all_picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+    
+    # Remove duplicate picks (same user, competition, rider) - keep only the most recent one
+    seen_picks = {}
+    for pick in all_picks:
+        key = (pick.user_id, pick.competition_id, pick.rider_id)
+        if key not in seen_picks:
+            seen_picks[key] = pick
+        elif pick.pick_id > seen_picks[key].pick_id:
+            # Keep the more recent one (higher pick_id)
+            seen_picks[key] = pick
+    
+    picks = list(seen_picks.values())
 
     breakdown = []
     total = 0
