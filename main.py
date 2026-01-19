@@ -7546,7 +7546,7 @@ def get_user_race_results(username: str, competition_id: int):
         key = (hp.user_id, hp.competition_id, hp.class_name)
         if key not in seen_holeshots:
             seen_holeshots[key] = hp
-        elif hp.pick_id > seen_holeshots[key].pick_id:
+        elif hp.id > seen_holeshots[key].id:
             # Keep the more recent one (higher pick_id)
             seen_holeshots[key] = hp
     
@@ -7704,15 +7704,15 @@ def calculate_scores(comp_id: int):
         ).all()
         
         # Check for duplicate HoleshotPick entries (same user, competition, class)
-        # Keep only the most recent one (highest pick_id)
+        # Keep only the most recent one (highest id)
         seen_holeshots = {}
         duplicate_holeshots = []
         for hp in holeshot_picks:
             key = (hp.user_id, hp.competition_id, hp.class_name)
             if key in seen_holeshots:
                 duplicate_holeshots.append(hp)
-                # Keep the one with higher pick_id (more recent)
-                if hp.pick_id > seen_holeshots[key].pick_id:
+                # Keep the one with higher id (more recent)
+                if hp.id > seen_holeshots[key].id:
                     duplicate_holeshots.append(seen_holeshots[key])
                     seen_holeshots[key] = hp
             else:
@@ -7721,7 +7721,7 @@ def calculate_scores(comp_id: int):
         if duplicate_holeshots:
             print(f"⚠️ WARNING: Found {len(duplicate_holeshots)} duplicate HoleshotPick entries for {user.username} in competition {comp_id}. Removing duplicates...")
             for dup in duplicate_holeshots:
-                print(f"  - Deleting duplicate holeshot pick_id={dup.pick_id} for class={dup.class_name}, rider_id={dup.rider_id}")
+                print(f"  - Deleting duplicate holeshot id={dup.id} for class={dup.class_name}, rider_id={dup.rider_id}")
                 db.session.delete(dup)
             # Commit deletions immediately to avoid issues
             db.session.commit()
@@ -9879,7 +9879,7 @@ def debug_user_picks(username: str, competition_id: int):
         for hp in all_holeshots:
             rider = Rider.query.get(hp.rider_id)
             holeshots_info.append({
-                "pick_id": hp.pick_id,
+                "id": hp.id,
                 "rider_id": hp.rider_id,
                 "rider_name": rider.name if rider else f"Rider {hp.rider_id}",
                 "class_name": hp.class_name
