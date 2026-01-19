@@ -9900,6 +9900,71 @@ def debug_user_picks(username: str, competition_id: int):
         print(traceback.format_exc())
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+@app.post("/admin/restore_picks")
+def admin_restore_picks():
+    """Admin route to manually restore race picks for a user"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json(force=True)
+        username = data.get("username")
+        competition_id = int(data.get("competition_id"))
+        picks_data = data.get("picks", [])  # List of {rider_id, predicted_position}
+        
+        if not username or not competition_id:
+            return jsonify({"error": "username and competition_id are required"}), 400
+        
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": f"User '{username}' not found"}), 404
+        
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": f"Competition {competition_id} not found"}), 404
+        
+        # Delete existing picks for this user/competition first
+        RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        db.session.commit()
+        
+        # Add new picks
+        restored_count = 0
+        for pick_data in picks_data:
+            rider_id = int(pick_data.get("rider_id"))
+            predicted_position = int(pick_data.get("predicted_position"))
+            
+            rider = Rider.query.get(rider_id)
+            if not rider:
+                print(f"WARNING: Rider {rider_id} not found, skipping")
+                continue
+            
+            db.session.add(RacePick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=rider_id,
+                predicted_position=predicted_position
+            ))
+            restored_count += 1
+            print(f"Restored pick: {rider.name} at position {predicted_position} for {username}")
+        
+        db.session.commit()
+        
+        # Recalculate scores
+        calculate_scores(competition_id)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Restored {restored_count} picks for {username} in {comp.name}",
+            "restored_count": restored_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"ERROR in admin_restore_picks: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 @app.get("/debug_user_scores/<string:username>")
 def debug_user_scores(username):
     """Debug endpoint to check where a user's points come from"""
