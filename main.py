@@ -9975,6 +9975,67 @@ def admin_get_competition_results(competition_id: int):
         print(traceback.format_exc())
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+@app.post("/admin/set_user_score")
+def admin_set_user_score():
+    """Admin route to manually set a user's score for a competition"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json(force=True)
+        username = data.get("username")
+        competition_id = int(data.get("competition_id"))
+        total_points = int(data.get("total_points", 0))
+        race_points = int(data.get("race_points", 0))
+        holeshot_points = int(data.get("holeshot_points", 0))
+        wildcard_points = int(data.get("wildcard_points", 0))
+        
+        if not username or not competition_id:
+            return jsonify({"error": "username and competition_id are required"}), 400
+        
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": f"User '{username}' not found"}), 404
+        
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": f"Competition {competition_id} not found"}), 404
+        
+        # Delete existing score
+        CompetitionScore.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        
+        # Create new score
+        score = CompetitionScore(
+            user_id=user.id,
+            competition_id=competition_id,
+            race_points=race_points,
+            holeshot_points=holeshot_points,
+            wildcard_points=wildcard_points,
+            total_points=total_points
+        )
+        db.session.add(score)
+        db.session.commit()
+        
+        print(f"Set score for {username} in {comp.name}: {total_points} points (Race: {race_points}, Holeshot: {holeshot_points}, Wildcard: {wildcard_points})")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Set {total_points} points for {username} in {comp.name}",
+            "score": {
+                "total_points": total_points,
+                "race_points": race_points,
+                "holeshot_points": holeshot_points,
+                "wildcard_points": wildcard_points
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"ERROR in admin_set_user_score: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 @app.post("/admin/restore_picks_from_results")
 def admin_restore_picks_from_results():
     """Admin route to restore race picks for a user based on actual results (for users who picked exactly as results)"""
