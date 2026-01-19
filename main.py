@@ -832,45 +832,82 @@ def index():
                     competition_id=competition_id_for_picks
                 ).first()
                 
-                if race_picks or holeshot_picks or wildcard_pick:
+                # Check if picks are complete (all required picks must be filled)
+                is_wsx = upcoming_race.series == "WSX"
+                
+                # Count race picks by class
+                race_picks_450_count = 0
+                race_picks_250_count = 0
+                for pick in race_picks:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            race_picks_450_count += 1
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            race_picks_250_count += 1
+                
+                # Count holeshot picks by class
+                holeshot_450 = False
+                holeshot_250 = False
+                for holeshot in holeshot_picks:
+                    rider = Rider.query.get(holeshot.rider_id)
+                    if rider:
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            holeshot_450 = True
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            holeshot_250 = True
+                
+                # Check if wildcard is complete (only for non-WSX series)
+                wildcard_complete = False
+                if is_wsx:
+                    wildcard_complete = True  # Not required for WSX
+                else:
+                    wildcard_complete = wildcard_pick and wildcard_pick.rider_id and wildcard_pick.position is not None
+                
+                # Required: 6 race picks for 450cc, 6 for 250cc, 2 holeshot picks, 1 wildcard (if not WSX)
+                race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
+                holeshot_complete = holeshot_450 and holeshot_250
+                
+                # Only mark as "has_picks" if ALL required picks are complete
+                if race_picks_complete and holeshot_complete and wildcard_complete:
                     picks_status = "has_picks"
                 
-                    # Always show user's own picks (they can see their own choices)
-                    for pick in race_picks:
-                        rider = Rider.query.get(pick.rider_id)
-                        if rider:
-                            pick_data = {
-                                "position": pick.predicted_position,
+                # Always show user's own picks (they can see their own choices)
+                for pick in race_picks:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        pick_data = {
+                            "position": pick.predicted_position,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name
+                        }
+                        
+                        # Separate by class (map WSX classes to display classes)
+                        # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
+                        # For other series: use class_name directly
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            current_picks_450.append(pick_data)
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            current_picks_250.append(pick_data)
+                    
+                # Process holeshot picks
+                current_holeshot_450 = None
+                current_holeshot_250 = None
+                for holeshot in holeshot_picks:
+                    rider = Rider.query.get(holeshot.rider_id)
+                    if rider:
+                        # Map WSX classes to display classes
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            current_holeshot_450 = {
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
-                            
-                            # Separate by class (map WSX classes to display classes)
-                            # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
-                            # For other series: use class_name directly
-                            if rider.class_name in ("450cc", "wsx_sx1"):
-                                current_picks_450.append(pick_data)
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
-                                current_picks_250.append(pick_data)
-                        
-                    # Process holeshot picks
-                    current_holeshot_450 = None
-                    current_holeshot_250 = None
-                    for holeshot in holeshot_picks:
-                        rider = Rider.query.get(holeshot.rider_id)
-                        if rider:
-                            # Map WSX classes to display classes
-                            if rider.class_name in ("450cc", "wsx_sx1"):
-                                current_holeshot_450 = {
-                                    "rider_name": rider.name,
-                                    "rider_number": rider.rider_number,
-                                    "class": rider.class_name
-                                }
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
-                                current_holeshot_250 = {
-                                    "rider_name": rider.name,
-                                    "rider_number": rider.rider_number,
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            current_holeshot_250 = {
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
                     
@@ -2705,16 +2742,52 @@ def series_page(series_id):
             
             # Check if current user has made picks for this competition
             if "user_id" in session:
-                race_count = len(race_picks_by_comp.get(comp.id, []))
-                holeshot_count = len(holeshot_picks_by_comp.get(comp.id, []))
-                has_wildcard = comp.id in wildcard_picks_by_comp
+                race_picks_list = race_picks_by_comp.get(comp.id, [])
+                holeshot_picks_list = holeshot_picks_by_comp.get(comp.id, [])
+                wildcard_pick = wildcard_picks_by_comp.get(comp.id)
                 
-                has_picks = race_count > 0 or holeshot_count > 0 or has_wildcard
+                # Count race picks by class
+                race_picks_450_count = 0
+                race_picks_250_count = 0
+                for pick in race_picks_list:
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            race_picks_450_count += 1
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            race_picks_250_count += 1
+                
+                # Count holeshot picks by class
+                holeshot_450 = False
+                holeshot_250 = False
+                for holeshot in holeshot_picks_list:
+                    rider = Rider.query.get(holeshot.rider_id)
+                    if rider:
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            holeshot_450 = True
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            holeshot_250 = True
+                
+                # Check if wildcard is complete (only for non-WSX series)
+                is_wsx = comp.series == "WSX"
+                wildcard_complete = False
+                if is_wsx:
+                    wildcard_complete = True  # Not required for WSX
+                else:
+                    wildcard_complete = wildcard_pick and wildcard_pick.rider_id and wildcard_pick.position is not None
+                
+                # Required: 6 race picks for 450cc, 6 for 250cc, 2 holeshot picks, 1 wildcard (if not WSX)
+                race_picks_complete = race_picks_450_count == 6 and race_picks_250_count == 6
+                holeshot_complete = holeshot_450 and holeshot_250
+                
+                # Only mark as "has_picks" if ALL required picks are complete
+                has_picks = race_picks_complete and holeshot_complete and wildcard_complete
+                
                 user_picks_status[comp.id] = {
                     'has_picks': has_picks,
-                    'race_picks_count': race_count,
-                    'holeshot_picks_count': holeshot_count,
-                    'has_wildcard': has_wildcard
+                    'race_picks_count': len(race_picks_list),
+                    'holeshot_picks_count': len(holeshot_picks_list),
+                    'has_wildcard': wildcard_pick is not None
                 }
             else:
                 user_picks_status[comp.id] = {'has_picks': False}
