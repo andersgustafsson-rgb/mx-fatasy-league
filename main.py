@@ -9900,6 +9900,183 @@ def debug_user_picks(username: str, competition_id: int):
         print(traceback.format_exc())
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+@app.get("/admin/get_competition_results/<int:competition_id>")
+def admin_get_competition_results(competition_id: int):
+    """Admin route to get race results for a competition (to help restore picks)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": f"Competition {competition_id} not found"}), 404
+        
+        # Get top 6 results for each class
+        results_450 = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.name.label('rider_name'),
+                Rider.rider_number
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(
+                CompetitionResult.competition_id == competition_id,
+                Rider.class_name == "450cc"
+            )
+            .order_by(CompetitionResult.position.asc())
+            .limit(6)
+            .all()
+        )
+        
+        results_250 = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.name.label('rider_name'),
+                Rider.rider_number
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(
+                CompetitionResult.competition_id == competition_id,
+                Rider.class_name == "250cc"
+            )
+            .order_by(CompetitionResult.position.asc())
+            .limit(6)
+            .all()
+        )
+        
+        return jsonify({
+            "competition_id": competition_id,
+            "competition_name": comp.name,
+            "results_450": [
+                {
+                    "rider_id": r.rider_id,
+                    "position": r.position,
+                    "rider_name": r.rider_name,
+                    "rider_number": r.rider_number
+                }
+                for r in results_450
+            ],
+            "results_250": [
+                {
+                    "rider_id": r.rider_id,
+                    "position": r.position,
+                    "rider_name": r.rider_name,
+                    "rider_number": r.rider_number
+                }
+                for r in results_250
+            ]
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"ERROR in admin_get_competition_results: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+@app.post("/admin/restore_picks_from_results")
+def admin_restore_picks_from_results():
+    """Admin route to restore race picks for a user based on actual results (for users who picked exactly as results)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    
+    try:
+        data = request.get_json(force=True)
+        username = data.get("username")
+        competition_id = int(data.get("competition_id"))
+        
+        if not username or not competition_id:
+            return jsonify({"error": "username and competition_id are required"}), 400
+        
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": f"User '{username}' not found"}), 404
+        
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": f"Competition {competition_id} not found"}), 404
+        
+        # Get top 6 results for each class
+        results_450 = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.name.label('rider_name')
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(
+                CompetitionResult.competition_id == competition_id,
+                Rider.class_name == "450cc"
+            )
+            .order_by(CompetitionResult.position.asc())
+            .limit(6)
+            .all()
+        )
+        
+        results_250 = (
+            db.session.query(
+                CompetitionResult.rider_id,
+                CompetitionResult.position,
+                Rider.name.label('rider_name')
+            )
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(
+                CompetitionResult.competition_id == competition_id,
+                Rider.class_name == "250cc"
+            )
+            .order_by(CompetitionResult.position.asc())
+            .limit(6)
+            .all()
+        )
+        
+        if not results_450 and not results_250:
+            return jsonify({"error": "No results found for this competition"}), 404
+        
+        # Delete existing picks for this user/competition first
+        RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        db.session.commit()
+        
+        # Add picks based on results
+        restored_count = 0
+        for result in results_450:
+            db.session.add(RacePick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=result.rider_id,
+                predicted_position=result.position
+            ))
+            restored_count += 1
+            print(f"Restored pick: {result.rider_name} at position {result.position} (450cc) for {username}")
+        
+        for result in results_250:
+            db.session.add(RacePick(
+                user_id=user.id,
+                competition_id=competition_id,
+                rider_id=result.rider_id,
+                predicted_position=result.position
+            ))
+            restored_count += 1
+            print(f"Restored pick: {result.rider_name} at position {result.position} (250cc) for {username}")
+        
+        db.session.commit()
+        
+        # Recalculate scores
+        calculate_scores(competition_id)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Restored {restored_count} picks for {username} in {comp.name} based on actual results",
+            "restored_count": restored_count
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"ERROR in admin_restore_picks_from_results: {e}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
 @app.post("/admin/restore_picks")
 def admin_restore_picks():
     """Admin route to manually restore race picks for a user"""
