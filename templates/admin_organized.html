@@ -1662,10 +1662,15 @@
 
         async function loadSetScoreCompetitions() {
             try {
+                console.log('Loading competitions for set score...');
                 const res = await fetch('/get_competitions_for_import');
                 const data = await res.json();
+                console.log('Competitions response:', data);
                 const select = document.getElementById('set-score-competition');
-                if (!select) return;
+                if (!select) {
+                    console.error('set-score-competition select not found!');
+                    return;
+                }
                 
                 if (data.success) {
                     select.innerHTML = '<option value="">Välj tävling...</option>';
@@ -1675,8 +1680,10 @@
                         opt.textContent = comp.name;
                         select.appendChild(opt);
                     });
+                    console.log(`Loaded ${data.competitions.length} competitions into set-score dropdown`);
                 } else {
                     select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                    console.error('Failed to load competitions:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading set score competitions:', error);
@@ -1689,8 +1696,10 @@
 
         async function loadAllUsers() {
             try {
+                console.log('Loading users...');
                 const res = await fetch('/admin/get_all_users');
                 const data = await res.json();
+                console.log('Users response:', data);
                 
                 if (data.success) {
                     // Load users into set-score dropdown
@@ -1703,6 +1712,9 @@
                             opt.textContent = user.username;
                             setScoreSelect.appendChild(opt);
                         });
+                        console.log(`Loaded ${data.users.length} users into set-score dropdown`);
+                    } else {
+                        console.error('set-score-username select not found!');
                     }
                     
                     // Load users into restore dropdown
@@ -1715,12 +1727,16 @@
                             opt.textContent = user.username;
                             restoreSelect.appendChild(opt);
                         });
+                        console.log(`Loaded ${data.users.length} users into restore dropdown`);
+                    } else {
+                        console.error('restore-username select not found!');
                     }
                 } else {
                     console.error('Failed to load users:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading users:', error);
+                console.error('Error details:', error.message, error.stack);
             }
         }
 
@@ -1789,10 +1805,15 @@
 
         async function loadRestoreCompetitions() {
             try {
+                console.log('Loading competitions for restore...');
                 const res = await fetch('/get_competitions_for_import');
                 const data = await res.json();
+                console.log('Competitions response:', data);
                 const select = document.getElementById('restore-competition');
-                if (!select) return;
+                if (!select) {
+                    console.error('restore-competition select not found!');
+                    return;
+                }
                 
                 if (data.success) {
                     select.innerHTML = '<option value="">Välj tävling...</option>';
@@ -1802,8 +1823,10 @@
                         opt.textContent = comp.name;
                         select.appendChild(opt);
                     });
+                    console.log(`Loaded ${data.competitions.length} competitions into restore dropdown`);
                 } else {
                     select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                    console.error('Failed to load competitions:', data.error);
                 }
             } catch (error) {
                 console.error('Error loading restore competitions:', error);
