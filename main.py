@@ -7624,7 +7624,35 @@ def calculate_scores(comp_id: int):
         wildcard_points = 0
         picks = RacePick.query.filter_by(user_id=user.id, competition_id=comp_id).all()
         
+        # Check for duplicate RacePick entries (same user, competition, rider)
+        # Keep only the most recent one (highest pick_id)
+        seen_picks = {}
+        duplicate_picks = []
         for pick in picks:
+            key = (pick.user_id, pick.competition_id, pick.rider_id)
+            if key in seen_picks:
+                duplicate_picks.append(pick)
+                # Keep the one with higher pick_id (more recent)
+                if pick.pick_id > seen_picks[key].pick_id:
+                    duplicate_picks.append(seen_picks[key])
+                    seen_picks[key] = pick
+                # else: keep the existing one, skip this duplicate
+            else:
+                seen_picks[key] = pick
+        
+        if duplicate_picks:
+            print(f"⚠️ WARNING: Found {len(duplicate_picks)} duplicate RacePick entries for {user.username} in competition {comp_id}. Removing duplicates...")
+            for dup in duplicate_picks:
+                print(f"  - Deleting duplicate pick_id={dup.pick_id} for rider_id={dup.rider_id}, position={dup.predicted_position}")
+                db.session.delete(dup)
+            # Commit deletions immediately to avoid issues
+            db.session.commit()
+            print(f"DEBUG: Kept {len(seen_picks)} unique picks for {user.username}")
+        
+        # Use only unique picks for scoring
+        unique_picks = list(seen_picks.values())
+        
+        for pick in unique_picks:
             actual_pos_for_pick = (
                 actual_results_dict.get(pick.rider_id).position
                 if pick.rider_id in actual_results_dict
@@ -7638,9 +7666,37 @@ def calculate_scores(comp_id: int):
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
         ).all()
+        
+        # Check for duplicate HoleshotPick entries (same user, competition, class)
+        # Keep only the most recent one (highest pick_id)
+        seen_holeshots = {}
+        duplicate_holeshots = []
+        for hp in holeshot_picks:
+            key = (hp.user_id, hp.competition_id, hp.class_name)
+            if key in seen_holeshots:
+                duplicate_holeshots.append(hp)
+                # Keep the one with higher pick_id (more recent)
+                if hp.pick_id > seen_holeshots[key].pick_id:
+                    duplicate_holeshots.append(seen_holeshots[key])
+                    seen_holeshots[key] = hp
+            else:
+                seen_holeshots[key] = hp
+        
+        if duplicate_holeshots:
+            print(f"⚠️ WARNING: Found {len(duplicate_holeshots)} duplicate HoleshotPick entries for {user.username} in competition {comp_id}. Removing duplicates...")
+            for dup in duplicate_holeshots:
+                print(f"  - Deleting duplicate holeshot pick_id={dup.pick_id} for class={dup.class_name}, rider_id={dup.rider_id}")
+                db.session.delete(dup)
+            # Commit deletions immediately to avoid issues
+            db.session.commit()
+            print(f"DEBUG: Kept {len(seen_holeshots)} unique holeshot picks for {user.username}")
+        
+        # Use only unique holeshot picks for scoring
+        unique_holeshot_picks = list(seen_holeshots.values())
+        
         holeshot_450_correct = False
         holeshot_250_correct = False
-        for hp in holeshot_picks:
+        for hp in unique_holeshot_picks:
             actual_hs = actual_holeshots_dict.get(hp.class_name)
             if actual_hs and actual_hs.rider_id == hp.rider_id:
                 if hp.class_name == "450cc":
