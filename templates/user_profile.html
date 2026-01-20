@@ -296,7 +296,8 @@
           <div class="space-y-4">
             {% for result in race_results %}
             <div onclick="showDetails({{ result.competition.id }})" 
-                 class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors
+                 class="race-result-item bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-l-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors
+                        {% if loop.index > 15 %}hidden{% endif %}
                         {% if result.has_results and result.points > 0 %} border-green-500
                         {% elif result.has_results and result.points == 0 %} border-red-500
                         {% else %} border-gray-400 {% endif %}">
@@ -355,6 +356,16 @@
             </div>
             {% endfor %}
           </div>
+          
+          {% if race_results|length > 15 %}
+          <div class="mt-4 text-center">
+            <button id="expand-race-results-btn" 
+                    onclick="toggleRaceResults()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors">
+              📋 Visa fler ({{ race_results|length - 15 }} till)
+            </button>
+          </div>
+          {% endif %}
           
           <!-- Sammanfattning -->
           <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
@@ -508,6 +519,30 @@
       const m = document.getElementById("detail-modal");
       m.classList.add("hidden");
       m.classList.remove("flex");
+    }
+    
+    // Expand/collapse race results
+    let raceResultsExpanded = false;
+    function toggleRaceResults() {
+      const items = document.querySelectorAll('.race-result-item');
+      const btn = document.getElementById('expand-race-results-btn');
+      const totalHidden = items.length - 15;
+      
+      if (!raceResultsExpanded) {
+        // Show all
+        items.forEach(item => item.classList.remove('hidden'));
+        btn.textContent = `📋 Visa färre (visar alla ${items.length})`;
+        raceResultsExpanded = true;
+      } else {
+        // Show only first 15
+        items.forEach((item, index) => {
+          if (index >= 15) {
+            item.classList.add('hidden');
+          }
+        });
+        btn.textContent = `📋 Visa fler (${totalHidden} till)`;
+        raceResultsExpanded = false;
+      }
     }
     
     // Navigation sound

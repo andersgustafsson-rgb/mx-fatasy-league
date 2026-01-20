@@ -1035,7 +1035,7 @@
               <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2 class="text-xl sm:text-2xl font-bold text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 Säsong Leaderboard</h2>
+                  <h2 class="text-xl sm:text-2xl font-bold text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 SMX Leaderboard</h2>
         </div>
       </div>
               <div class="p-4 sm:p-6 bg-gray-900">
@@ -1503,13 +1503,23 @@
         if (leaderboard.length === 0) {
           c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga poäng registrerade ännu.</p>';
         } else {
+          // Store leaderboard data globally for expand/collapse
+          window.seasonLeaderboardData = leaderboard;
+          
+          // Show first 15 entries
+          const initialCount = Math.min(15, leaderboard.length);
+          const remainingCount = leaderboard.length - initialCount;
+          
           leaderboard.forEach((row, i) => {
             const el = document.createElement("div");
             const neonColor = i === 0 ? 'border-yellow-400' : i === 1 ? 'border-cyan-400' : i === 2 ? 'border-orange-400' : 'border-gray-600';
             const glowColor = i === 0 ? 'rgba(250, 204, 21, 0.2)' : i === 1 ? 'rgba(34, 211, 238, 0.2)' : i === 2 ? 'rgba(251, 146, 60, 0.2)' : 'rgba(75, 85, 99, 0.2)';
             const textColor = i === 0 ? 'text-yellow-300' : i === 1 ? 'text-cyan-300' : i === 2 ? 'text-orange-300' : 'text-gray-300';
             
-            el.className = `flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-gray-700 gap-1 sm:gap-0 shadow-lg`;
+            // Hide entries after first 15
+            const isHidden = i >= 15;
+            
+            el.className = `leaderboard-entry flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-gray-700 gap-1 sm:gap-0 shadow-lg ${isHidden ? 'hidden' : ''}`;
             el.style.boxShadow = `0 0 10px ${glowColor}`;
             el.innerHTML = `
               <a class="flex-1 flex items-center gap-2" href="/profile/${row.user_id}" title="Visa ${row.display_name || row.username}'s profil">
@@ -1522,10 +1532,50 @@
               </span>`;
             c.appendChild(el);
           });
+          
+          // Add expand/collapse button if there are more than 15 entries
+          if (leaderboard.length > 15) {
+            const expandBtn = document.createElement("div");
+            expandBtn.className = "mt-4 text-center";
+            expandBtn.id = "expand-leaderboard-btn-container";
+            expandBtn.innerHTML = `
+              <button id="expand-leaderboard-btn" 
+                      onclick="toggleSeasonLeaderboard()"
+                      class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors">
+                📋 Visa fler (${remainingCount} till)
+              </button>
+            `;
+            c.appendChild(expandBtn);
+          }
         }
       } catch (e) {
         console.error("Leaderboard error:", e);
         c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta leaderboard: ' + e.message + '</p>';
+      }
+    }
+
+    // Expand/collapse season leaderboard
+    let seasonLeaderboardExpanded = false;
+    function toggleSeasonLeaderboard() {
+      const entries = document.querySelectorAll('.leaderboard-entry');
+      const btn = document.getElementById('expand-leaderboard-btn');
+      const totalCount = entries.length;
+      const hiddenCount = totalCount - 15;
+      
+      if (!seasonLeaderboardExpanded) {
+        // Show all entries
+        entries.forEach(entry => entry.classList.remove('hidden'));
+        btn.textContent = `📋 Visa färre (visar alla ${totalCount})`;
+        seasonLeaderboardExpanded = true;
+      } else {
+        // Show only first 15
+        entries.forEach((entry, index) => {
+          if (index >= 15) {
+            entry.classList.add('hidden');
+          }
+        });
+        btn.textContent = `📋 Visa fler (${hiddenCount} till)`;
+        seasonLeaderboardExpanded = false;
       }
     }
 

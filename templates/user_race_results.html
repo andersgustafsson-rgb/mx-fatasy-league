@@ -125,7 +125,7 @@
       {% if race_results %}
         <div class="space-y-4">
           {% for result in race_results %}
-            <div class="race-result-card p-5 rounded-lg">
+            <div class="race-result-item race-result-card p-5 rounded-lg {% if loop.index > 15 %}hidden{% endif %}">
               <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div class="flex-1">
                   <div class="flex items-center gap-3 mb-2">
@@ -184,6 +184,16 @@
             </div>
           {% endfor %}
         </div>
+        
+        {% if race_results|length > 15 %}
+        <div class="mt-6 text-center">
+          <button id="expand-race-results-btn" 
+                  onclick="toggleRaceResults()"
+                  class="cyberpunk-button text-white font-bold py-3 px-8 rounded-lg text-lg">
+            📋 Visa fler ({{ race_results|length - 15 }} till)
+          </button>
+        </div>
+        {% endif %}
       {% else %}
         <div class="text-center py-12">
           <div class="text-6xl mb-4 floating-animation">🏁</div>
@@ -231,5 +241,31 @@
     </div>
     {% endif %}
   </div>
+  
+  <script>
+    // Expand/collapse race results
+    let raceResultsExpanded = false;
+    function toggleRaceResults() {
+      const items = document.querySelectorAll('.race-result-item');
+      const btn = document.getElementById('expand-race-results-btn');
+      const totalHidden = items.length - 15;
+      
+      if (!raceResultsExpanded) {
+        // Show all
+        items.forEach(item => item.classList.remove('hidden'));
+        btn.textContent = `📋 Visa färre (visar alla ${items.length})`;
+        raceResultsExpanded = true;
+      } else {
+        // Show only first 15
+        items.forEach((item, index) => {
+          if (index >= 15) {
+            item.classList.add('hidden');
+          }
+        });
+        btn.textContent = `📋 Visa fler (${totalHidden} till)`;
+        raceResultsExpanded = false;
+      }
+    }
+  </script>
 </body>
 </html>
