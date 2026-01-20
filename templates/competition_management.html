@@ -373,14 +373,25 @@
             document.getElementById('competition-name').value = comp.name;
             document.getElementById('competition-date').value = comp.event_date;
             document.getElementById('competition-series').value = comp.series;
-            document.getElementById('competition-coast').value = comp.coast_250 || '';
+            
+            // Handle coast_250 - normalize "showdown" to "both" for the form
+            let coastValue = comp.coast_250 || '';
+            if (coastValue === 'showdown') {
+                coastValue = 'both';
+            }
+            document.getElementById('competition-coast').value = coastValue;
+            
             document.getElementById('competition-multiplier').value = comp.point_multiplier;
             document.getElementById('competition-timezone').value = comp.timezone || 'America/New_York';
-            document.getElementById('competition-triple-crown').checked = comp.is_triple_crown;
+            
+            // Handle is_triple_crown - convert integer to boolean
+            document.getElementById('competition-triple-crown').checked = Boolean(comp.is_triple_crown);
             
             // Handle start time if it exists
             if (comp.start_time) {
-                document.getElementById('competition-start-time').value = comp.start_time;
+                // Extract time part if it's a full datetime string
+                const timeStr = comp.start_time.includes('T') ? comp.start_time.split('T')[1].substring(0, 5) : comp.start_time;
+                document.getElementById('competition-start-time').value = timeStr;
             } else {
                 document.getElementById('competition-start-time').value = '20:00';
             }
@@ -397,14 +408,20 @@
         async function saveCompetition(event) {
             event.preventDefault();
             
+            // Get coast value and normalize "both" to "showdown" for database consistency
+            let coastValue = document.getElementById('competition-coast').value || null;
+            if (coastValue === 'both') {
+                coastValue = 'showdown';  // Normalize to "showdown" for database
+            }
+            
             const formData = {
                 id: document.getElementById('competition-id').value || null,
                 name: document.getElementById('competition-name').value,
                 event_date: document.getElementById('competition-date').value,
                 series: document.getElementById('competition-series').value,
-                coast_250: document.getElementById('competition-coast').value || null,
+                coast_250: coastValue,
                 point_multiplier: parseFloat(document.getElementById('competition-multiplier').value),
-                is_triple_crown: document.getElementById('competition-triple-crown').checked,
+                is_triple_crown: document.getElementById('competition-triple-crown').checked ? 1 : 0,  // Convert boolean to integer
                 timezone: document.getElementById('competition-timezone').value,
                 start_time: document.getElementById('competition-start-time').value || null
             };

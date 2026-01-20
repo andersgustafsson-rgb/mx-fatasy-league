@@ -381,12 +381,17 @@ def list_competitions():
 		competitions = Competition.query.order_by(Competition.event_date).all()
 		result = []
 		for comp in competitions:
+			# Normalize coast_250: convert "showdown" to "both" for frontend consistency
+			coast_250 = comp.coast_250
+			if coast_250 == 'showdown':
+				coast_250 = 'both'
+			
 			comp_data = {
 				'id': comp.id,
 				'name': comp.name,
 				'event_date': comp.event_date.isoformat() if comp.event_date else None,
 				'series': comp.series,
-				'coast_250': comp.coast_250,
+				'coast_250': coast_250,
 				'point_multiplier': comp.point_multiplier,
 				'is_triple_crown': comp.is_triple_crown,
 				'timezone': comp.timezone,
@@ -408,13 +413,25 @@ def create_competition():
 		return jsonify({'error': 'Unauthorized'}), 401
 	data = request.get_json()
 	try:
+		# Normalize coast_250: accept both "both" and "showdown", store as "showdown"
+		coast_250 = data.get('coast_250')
+		if coast_250 == 'both':
+			coast_250 = 'showdown'
+		
+		# Handle is_triple_crown: accept both boolean and integer
+		is_triple_crown = data.get('is_triple_crown', False)
+		if isinstance(is_triple_crown, bool):
+			is_triple_crown = 1 if is_triple_crown else 0
+		elif isinstance(is_triple_crown, (int, str)):
+			is_triple_crown = int(is_triple_crown)
+		
 		competition_data = {
 			'name': data['name'],
 			'event_date': datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data['event_date'] else None,
 			'series': data['series'],
-			'coast_250': data.get('coast_250'),
+			'coast_250': coast_250,
 			'point_multiplier': data.get('point_multiplier', 1.0),
-			'is_triple_crown': data.get('is_triple_crown', False),
+			'is_triple_crown': is_triple_crown,
 			'timezone': data.get('timezone')
 		}
 		if hasattr(Competition, 'start_time') and data.get('start_time'):
@@ -442,9 +459,23 @@ def update_competition(competition_id: int):
 		comp.name = data['name']
 		comp.event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date() if data.get('event_date') else None
 		comp.series = data.get('series', comp.series)
-		comp.coast_250 = data.get('coast_250')
+		
+		# Normalize coast_250: accept both "both" and "showdown", store as "showdown"
+		coast_250 = data.get('coast_250')
+		if coast_250 == 'both':
+			coast_250 = 'showdown'
+		comp.coast_250 = coast_250
+		
 		comp.point_multiplier = data.get('point_multiplier', comp.point_multiplier)
-		comp.is_triple_crown = data.get('is_triple_crown', comp.is_triple_crown)
+		
+		# Handle is_triple_crown: accept both boolean and integer
+		is_triple_crown = data.get('is_triple_crown', comp.is_triple_crown)
+		if isinstance(is_triple_crown, bool):
+			is_triple_crown = 1 if is_triple_crown else 0
+		elif isinstance(is_triple_crown, (int, str)):
+			is_triple_crown = int(is_triple_crown)
+		comp.is_triple_crown = is_triple_crown
+		
 		comp.timezone = data.get('timezone')
 		
 		# Update start_time using direct SQL to ensure it's committed properly
