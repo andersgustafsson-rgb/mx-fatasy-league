@@ -1273,14 +1273,16 @@ def get_my_race_results(competition_id):
         if not act:
             breakdown.append(f"❌ Pick rider_id={p.rider_id} hittades inte i resultat")
             continue
-        if act.position == p.predicted_position:
-            breakdown.append(f"✅ Perfekt: rider {p.rider_id} på pos {p.predicted_position} (+25)")
-            total += 25
-        elif act.position <= 6:
-            breakdown.append(f"⚠️ Top6: rider {p.rider_id} var {act.position} (+5)")
-            total += 5
+        # Use new scoring system based on position difference
+        points = calculate_race_pick_points(p.predicted_position, act.position)
+        if points == 25:
+            breakdown.append(f"✅ Perfekt: rider {p.rider_id} på pos {p.predicted_position} (+{points})")
+        elif points > 0:
+            diff = abs(p.predicted_position - act.position)
+            breakdown.append(f"⚠️ {diff} platser fel: rider {p.rider_id} var {act.position} (+{points})")
         else:
             breakdown.append(f"❌ Miss: rider {p.rider_id} var {act.position}")
+        total += points
 
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
@@ -1307,6 +1309,37 @@ def get_my_race_results(competition_id):
 # -------------------------------------------------
 # Poängberäkning
 # -------------------------------------------------
+def calculate_race_pick_points(predicted_position, actual_position):
+    """
+    Calculate points for a race pick based on how close the prediction was.
+    Uses the new scoring system (Förslag 3):
+    - Rätt plats: 25 poäng
+    - 1 plats fel: 18 poäng
+    - 2 platser fel: 13 poäng
+    - 3 platser fel: 9 poäng
+    - 4 platser fel: 6 poäng
+    - 5+ platser fel: 3 poäng
+    """
+    if actual_position is None:
+        return 0
+    
+    if predicted_position == actual_position:
+        return 25
+    
+    # Calculate the difference (absolute value)
+    diff = abs(predicted_position - actual_position)
+    
+    if diff == 1:
+        return 18
+    elif diff == 2:
+        return 13
+    elif diff == 3:
+        return 9
+    elif diff == 4:
+        return 6
+    else:  # 5 or more positions off
+        return 3
+
 def calculate_scores(comp_id: int):
     users = User.query.all()
     actual_results = CompetitionResult.query.filter_by(competition_id=comp_id).all()
@@ -1325,10 +1358,8 @@ def calculate_scores(comp_id: int):
                 if pick.rider_id in actual_results_dict
                 else None
             )
-            if actual_pos_for_pick == pick.predicted_position:
-                total_points += 25
-            elif actual_pos_for_pick is not None and actual_pos_for_pick <= 6:
-                total_points += 5
+            # Use new scoring system based on position difference
+            total_points += calculate_race_pick_points(pick.predicted_position, actual_pos_for_pick)
 
         holeshot_picks = HoleshotPick.query.filter_by(
             user_id=user.id, competition_id=comp_id
