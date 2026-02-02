@@ -1689,63 +1689,65 @@ def get_weekly_fun_stats():
         # Calculate current leaderboard (all competitions)
         current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
         
-        # Calculate previous leaderboard (only Anaheim 1, before San Diego)
-        # Find Anaheim 1 competition (the first competition before San Diego)
-        anaheim1_comp = (
+        # Calculate previous leaderboard - compare with competitions from before the last 7 days
+        # This gives us a "last week" comparison
+        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+        
+        # Get all competitions before last week (for comparison)
+        previous_competitions = (
             db.session.query(Competition)
             .filter(
                 db.or_(
                     Competition.series.is_(None),
                     Competition.series != 'WSX'
-                )
+                ),
+                Competition.event_date < week_ago_date
             )
             .order_by(Competition.event_date.asc())
-            .first()
+            .all()
         )
         
-        anaheim1_id = None
-        if anaheim1_comp:
-            anaheim1_id = anaheim1_comp.id
-            print(f"DEBUG: Found Anaheim 1 competition: {anaheim1_comp.name} (ID: {anaheim1_id})")
-        else:
-            print(f"DEBUG: WARNING: Could not find Anaheim 1 competition")
+        print(f"DEBUG: Found {len(previous_competitions)} competitions before last week for comparison")
+        if previous_competitions:
+            for comp in previous_competitions[:5]:  # Show first 5
+                print(f"DEBUG:   - {comp.name} ({comp.event_date})")
         
         previous_leaderboard = []
         for user_data in user_scores_list:
             user_id = user_data['id']
-            anaheim_points = 0
+            previous_points = 0
             
-            if anaheim1_id:
+            if previous_competitions:
                 try:
-                    # Get only Anaheim 1 score - get the most recent one (highest score_id)
-                    anaheim_scores = (
+                    # Get all scores for competitions before last week
+                    previous_comp_ids = [c.id for c in previous_competitions]
+                    previous_scores = (
                         db.session.query(CompetitionScore)
                         .filter(CompetitionScore.user_id == user_id)
-                        .filter(CompetitionScore.competition_id == anaheim1_id)
-                        .order_by(CompetitionScore.score_id.desc())
+                        .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
                         .all()
                     )
                     
-                    # Get the most recent score for Anaheim 1 (first one after ordering)
-                    if anaheim_scores:
-                        latest_score = anaheim_scores[0]
-                        anaheim_points = latest_score.total_points or 0
-                        
-                        # Debug: check for duplicates
-                        if len(anaheim_scores) > 1 and user_data['username'] == 'Robban B':
-                            print(f"DEBUG: WARNING: Found {len(anaheim_scores)} duplicate Anaheim 1 scores for {user_data['username']}")
-                            for i, score in enumerate(anaheim_scores):
-                                print(f"  - Score {i+1}: score_id={score.score_id}, points={score.total_points}")
-                            print(f"DEBUG: Using score_id={latest_score.score_id} with {anaheim_points} points")
+                    # Handle duplicates - keep only most recent score per competition
+                    scores_by_comp = {}
+                    for score in previous_scores:
+                        comp_id = score.competition_id
+                        if comp_id not in scores_by_comp:
+                            scores_by_comp[comp_id] = score
+                        elif score.score_id > scores_by_comp[comp_id].score_id:
+                            scores_by_comp[comp_id] = score
+                    
+                    previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
+                    
                 except Exception as e:
-                    print(f"Error calculating Anaheim points for user {user_data['username']}: {e}")
-                    anaheim_points = 0
+                    print(f"Error calculating previous week points for user {user_data['username']}: {e}")
+                    previous_points = 0
             
             previous_leaderboard.append({
                 'id': user_id,
                 'username': user_data['username'],
                 'display_name': user_data['display_name'],
-                'total_points': anaheim_points
+                'total_points': previous_points
             })
         
         previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
@@ -1853,10 +1855,10 @@ def get_weekly_fun_stats():
             print(f"DEBUG: ❌ No anchor winner found - no users dropped this week (or no comparison snapshot)")
         print(f"DEBUG: ===== End Weekly Stats Summary =====")
         
-        # Get competitions from last 7 days
-        week_ago = datetime.utcnow() - timedelta(days=7)
+        # Get competitions from last 7 days (for perfect picks and holeshot master)
+        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
         recent_competitions = Competition.query.filter(
-            Competition.event_date >= week_ago
+            Competition.event_date >= week_ago_date
         ).all()
         
         comp_ids = [c.id for c in recent_competitions]
