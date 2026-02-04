@@ -815,10 +815,26 @@ def index():
                 competition_id_for_picks = upcoming_race.id
                 
                 # Get race picks for both classes
-                race_picks = RacePick.query.filter_by(
+                all_race_picks = RacePick.query.filter_by(
                     user_id=uid, 
                     competition_id=competition_id_for_picks
                 ).order_by(RacePick.predicted_position).all()
+                
+                # Remove duplicates - keep only the most recent pick for each rider (highest id)
+                seen_rider_ids = {}
+                race_picks = []
+                for pick in all_race_picks:
+                    if pick.rider_id not in seen_rider_ids:
+                        seen_rider_ids[pick.rider_id] = pick
+                        race_picks.append(pick)
+                    elif pick.id > seen_rider_ids[pick.rider_id].id:
+                        # Replace with more recent pick
+                        race_picks.remove(seen_rider_ids[pick.rider_id])
+                        seen_rider_ids[pick.rider_id] = pick
+                        race_picks.append(pick)
+                
+                # Sort again after deduplication
+                race_picks.sort(key=lambda p: p.predicted_position)
                 
                 # Get holeshot picks
                 holeshot_picks = HoleshotPick.query.filter_by(
