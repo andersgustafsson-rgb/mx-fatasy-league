@@ -943,7 +943,7 @@
                           {% endfor %}
                         </div>
                       </div>
-          {% endif %}
+                      {% endif %}
 
                       <!-- Holeshot picks -->
                       {% if current_holeshot_450 or current_holeshot_250 %}
@@ -966,7 +966,7 @@
                           {% endif %}
                         </div>
                       </div>
-          {% endif %}
+                      {% endif %}
 
                       <!-- Wildcard pick (only for non-WSX series) -->
                       {% if current_wildcard and upcoming_race and upcoming_race.series != 'WSX' %}
@@ -1006,10 +1006,10 @@
                     </div>
                   </div>
                 {% endif %}
-          {% else %}
+            {% else %}
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-2">Inget kommande race</h2>
                 <p class="text-gray-600 dark:text-gray-400">Inga races planerade just nu.</p>
-          {% endif %}
+            {% endif %}
             </div>
           </div>
 
