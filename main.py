@@ -837,7 +837,9 @@ def index():
                 
                 # First, populate the picks lists (needed for display)
                 # Always show user's own picks (they can see their own choices)
-                for pick in race_picks:
+                # Sort picks by predicted_position to ensure correct order
+                sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
+                for pick in sorted_race_picks:
                     rider = Rider.query.get(pick.rider_id)
                     if rider:
                         pick_data = {
@@ -854,6 +856,10 @@ def index():
                             current_picks_450.append(pick_data)
                         elif rider.class_name in ("250cc", "wsx_sx2"):
                             current_picks_250.append(pick_data)
+                
+                # Sort the lists by position after populating
+                current_picks_450.sort(key=lambda x: x["position"])
+                current_picks_250.sort(key=lambda x: x["position"])
                 
                 # Count race picks by class (after populating lists)
                 race_picks_450_count = len(current_picks_450)
@@ -900,9 +906,13 @@ def index():
                     print(f"  - Race picks: 450cc={race_picks_450_count}/6, 250cc={race_picks_250_count}/6")
                     print(f"  - Holeshot: 450cc={holeshot_450}, 250cc={holeshot_250}")
                     print(f"  - Wildcard complete: {wildcard_complete} (is_wsx={is_wsx})")
+                    print(f"  - race_picks_complete: {race_picks_complete}, holeshot_complete: {holeshot_complete}")
                     if wildcard_pick:
                         print(f"  - Wildcard pick exists: rider_id={wildcard_pick.rider_id}, position={wildcard_pick.position}")
                     print(f"  - Total picks in lists: 450cc={len(current_picks_450)}, 250cc={len(current_picks_250)}")
+                    print(f"  - Total race_picks from DB: {len(race_picks)}")
+                    print(f"  - Total holeshot_picks from DB: {len(holeshot_picks)}")
+                    picks_status = "no_picks"  # Explicitly set to no_picks
                 
                 # Process holeshot picks for display
                 current_holeshot_450 = None
@@ -1048,6 +1058,9 @@ def index():
         print(f"  - picks_status: {picks_status}")
         print(f"  - current_picks_450 count: {len(current_picks_450) if 'current_picks_450' in locals() else 0}")
         print(f"  - current_picks_250 count: {len(current_picks_250) if 'current_picks_250' in locals() else 0}")
+        print(f"  - current_holeshot_450: {current_holeshot_450 is not None if 'current_holeshot_450' in locals() else False}")
+        print(f"  - current_holeshot_250: {current_holeshot_250 is not None if 'current_holeshot_250' in locals() else False}")
+        print(f"  - current_wildcard: {current_wildcard is not None if 'current_wildcard' in locals() else False}")
         print(f"  - upcoming_race: {upcoming_race.name if upcoming_race else 'None'}")
     
     return render_template(
