@@ -901,6 +901,10 @@
                     <div class="space-y-3 mb-3">
                       <!-- 450cc picks / SX1 for WSX -->
                       {% if current_picks_450 %}
+                    <!-- Show picks for both classes (user can always see their own picks) -->
+                    <div class="space-y-3 mb-3">
+                      <!-- 450cc picks / SX1 for WSX -->
+                      {% if current_picks_450 %}
                       <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg p-3">
                         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏆 Dina topp 6 {% if upcoming_race and upcoming_race.series == 'WSX' %}(SX1){% else %}(450cc){% endif %}:</h4>
                         <div class="space-y-1">

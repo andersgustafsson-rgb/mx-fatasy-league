@@ -835,16 +835,29 @@ def index():
                 # Check if picks are complete (all required picks must be filled)
                 is_wsx = upcoming_race.series == "WSX"
                 
-                # Count race picks by class
-                race_picks_450_count = 0
-                race_picks_250_count = 0
+                # First, populate the picks lists (needed for display)
+                # Always show user's own picks (they can see their own choices)
                 for pick in race_picks:
                     rider = Rider.query.get(pick.rider_id)
                     if rider:
+                        pick_data = {
+                            "position": pick.predicted_position,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name
+                        }
+                        
+                        # Separate by class (map WSX classes to display classes)
+                        # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
+                        # For other series: use class_name directly
                         if rider.class_name in ("450cc", "wsx_sx1"):
-                            race_picks_450_count += 1
+                            current_picks_450.append(pick_data)
                         elif rider.class_name in ("250cc", "wsx_sx2"):
-                            race_picks_250_count += 1
+                            current_picks_250.append(pick_data)
+                
+                # Count race picks by class (after populating lists)
+                race_picks_450_count = len(current_picks_450)
+                race_picks_250_count = len(current_picks_250)
                 
                 # Count holeshot picks by class
                 holeshot_450 = False
@@ -871,27 +884,27 @@ def index():
                 # Only mark as "has_picks" if ALL required picks are complete
                 if race_picks_complete and holeshot_complete and wildcard_complete:
                     picks_status = "has_picks"
+                    # Debug logging
+                    user = User.query.get(uid)
+                    username = user.username if user else f"user_{uid}"
+                    print(f"DEBUG: User {username} - picks_status set to 'has_picks'")
+                    print(f"  - Race picks: 450cc={race_picks_450_count}/6, 250cc={race_picks_250_count}/6")
+                    print(f"  - Holeshot: 450cc={holeshot_450}, 250cc={holeshot_250}")
+                    print(f"  - Wildcard complete: {wildcard_complete} (is_wsx={is_wsx})")
+                    print(f"  - Total picks in lists: 450cc={len(current_picks_450)}, 250cc={len(current_picks_250)}")
+                else:
+                    # Debug logging for incomplete picks
+                    user = User.query.get(uid)
+                    username = user.username if user else f"user_{uid}"
+                    print(f"DEBUG: User {username} picks incomplete:")
+                    print(f"  - Race picks: 450cc={race_picks_450_count}/6, 250cc={race_picks_250_count}/6")
+                    print(f"  - Holeshot: 450cc={holeshot_450}, 250cc={holeshot_250}")
+                    print(f"  - Wildcard complete: {wildcard_complete} (is_wsx={is_wsx})")
+                    if wildcard_pick:
+                        print(f"  - Wildcard pick exists: rider_id={wildcard_pick.rider_id}, position={wildcard_pick.position}")
+                    print(f"  - Total picks in lists: 450cc={len(current_picks_450)}, 250cc={len(current_picks_250)}")
                 
-                # Always show user's own picks (they can see their own choices)
-                for pick in race_picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        pick_data = {
-                            "position": pick.predicted_position,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name
-                        }
-                        
-                        # Separate by class (map WSX classes to display classes)
-                        # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
-                        # For other series: use class_name directly
-                        if rider.class_name in ("450cc", "wsx_sx1"):
-                            current_picks_450.append(pick_data)
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
-                            current_picks_250.append(pick_data)
-                    
-                # Process holeshot picks
+                # Process holeshot picks for display
                 current_holeshot_450 = None
                 current_holeshot_250 = None
                 for holeshot in holeshot_picks:
@@ -910,18 +923,18 @@ def index():
                                 "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
-                    
-                    # Process wildcard pick (only for non-WSX series)
-                    current_wildcard = None
-                    if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
-                        rider = Rider.query.get(wildcard_pick.rider_id)
-                        if rider:
-                            current_wildcard = {
-                                "rider_name": rider.name,
-                                "rider_number": rider.rider_number,
-                                "class": rider.class_name,
-                                "position": wildcard_pick.position
-                            }
+                
+                # Process wildcard pick (only for non-WSX series)
+                current_wildcard = None
+                if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
+                    rider = Rider.query.get(wildcard_pick.rider_id)
+                    if rider:
+                        current_wildcard = {
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name,
+                            "position": wildcard_pick.position
+                        }
             except Exception as e:
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
@@ -1027,6 +1040,16 @@ def index():
             races_participated = 0
             best_position = None
 
+    # Debug: Check what we're sending to template
+    if is_logged_in and upcoming_race:
+        user = User.query.get(uid) if 'uid' in locals() else None
+        username = user.username if user else "unknown"
+        print(f"DEBUG: Rendering index for {username}")
+        print(f"  - picks_status: {picks_status}")
+        print(f"  - current_picks_450 count: {len(current_picks_450) if 'current_picks_450' in locals() else 0}")
+        print(f"  - current_picks_250 count: {len(current_picks_250) if 'current_picks_250' in locals() else 0}")
+        print(f"  - upcoming_race: {upcoming_race.name if upcoming_race else 'None'}")
+    
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
