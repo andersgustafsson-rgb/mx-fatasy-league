@@ -837,6 +837,10 @@ def index():
                 
                 # First, populate the picks lists (needed for display)
                 # Always show user's own picks (they can see their own choices)
+                # Remove duplicates based on rider_id first
+                seen_rider_ids_450 = set()
+                seen_rider_ids_250 = set()
+                
                 # Sort picks by predicted_position to ensure correct order
                 sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
                 for pick in sorted_race_picks:
@@ -853,15 +857,21 @@ def index():
                         # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
                         # For other series: use class_name directly
                         if rider.class_name in ("450cc", "wsx_sx1"):
-                            current_picks_450.append(pick_data)
+                            # Only add if we haven't seen this rider_id before
+                            if pick.rider_id not in seen_rider_ids_450:
+                                current_picks_450.append(pick_data)
+                                seen_rider_ids_450.add(pick.rider_id)
                         elif rider.class_name in ("250cc", "wsx_sx2"):
-                            current_picks_250.append(pick_data)
+                            # Only add if we haven't seen this rider_id before
+                            if pick.rider_id not in seen_rider_ids_250:
+                                current_picks_250.append(pick_data)
+                                seen_rider_ids_250.add(pick.rider_id)
                 
                 # Sort the lists by position after populating
                 current_picks_450.sort(key=lambda x: x["position"])
                 current_picks_250.sort(key=lambda x: x["position"])
                 
-                # Count race picks by class (after populating lists)
+                # Count race picks by class (after populating lists and removing duplicates)
                 race_picks_450_count = len(current_picks_450)
                 race_picks_250_count = len(current_picks_250)
                 
