@@ -660,7 +660,7 @@
     {% endif %}
 
     <div class="mt-4 sm:mt-6 flex gap-3">
-      <button onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
+      <button id="save-picks-btn" onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
       {% if picks_locked %}
       <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
       {% endif %}
@@ -2285,7 +2285,14 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         body: JSON.stringify(payload),
       });
       const data = await resp.json();
-      alert(data.message || data.error || "Ok");
+      
+      if (resp.ok && !data.error) {
+        // Mark picks as saved and hide save button
+        markPicksAsSaved();
+        alert(data.message || "Dina val har sparats!");
+      } else {
+        alert(data.error || "Ett fel uppstod vid sparning.");
+      }
       
       // Clear localStorage since picks are now saved to server
       localStorage.removeItem(`race_picks_${competitionId}`);
@@ -2312,6 +2319,70 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
   
 
 
+    // Track saved picks state
+    let savedPicksState = null;
+    
+    // Function to get current picks state
+    function getCurrentPicksState() {
+      const state = {
+        racePicks: [],
+        holeshot450: document.getElementById("holeshot-450")?.value || "",
+        holeshot250: document.getElementById("holeshot-250")?.value || "",
+        wildcardPick: document.getElementById("wildcard-pick")?.value || "",
+        wildcardPos: document.getElementById("wildcard-position")?.value || ""
+      };
+      
+      // Get race picks
+      const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
+      const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
+      
+      for (let i = 1; i <= 6; i++) {
+        const selector450 = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
+        const selector250 = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
+        
+        if (selector450) {
+          const riderId = getRiderIdFromSelector(selector450);
+          if (riderId) {
+            state.racePicks.push({ position: i, rider_id: riderId, class: class450 });
+          }
+        }
+        if (selector250) {
+          const riderId = getRiderIdFromSelector(selector250);
+          if (riderId) {
+            state.racePicks.push({ position: i, rider_id: riderId, class: class250 });
+          }
+        }
+      }
+      
+      return JSON.stringify(state);
+    }
+    
+    // Function to check if picks have changed
+    function hasPicksChanged() {
+      if (!savedPicksState) return true; // If no saved state, show button
+      return getCurrentPicksState() !== savedPicksState;
+    }
+    
+    // Function to update save button visibility
+    function updateSaveButtonVisibility() {
+      const saveBtn = document.getElementById("save-picks-btn");
+      if (!saveBtn) return;
+      
+      if (hasPicksChanged()) {
+        saveBtn.style.display = "flex";
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      } else {
+        saveBtn.style.display = "none";
+      }
+    }
+    
+    // Function to mark picks as saved
+    function markPicksAsSaved() {
+      savedPicksState = getCurrentPicksState();
+      updateSaveButtonVisibility();
+    }
+    
     document.addEventListener("DOMContentLoaded", async () => {
       // Initialize rider selectors with coast filtering
       const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
@@ -2322,13 +2393,32 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       initializePreviewImages();
       
       // Load user picks (don't clear them automatically)
-      fetchAndDisplayMyPicks();
+      await fetchAndDisplayMyPicks();
       
-  // Re-apply coast filtering after picks are loaded
-  setTimeout(() => {
-    riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
-    removeWrongCoastSelections();
-  }, 100);
+      // Mark picks as saved after loading
+      setTimeout(() => {
+        markPicksAsSaved();
+        riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
+        removeWrongCoastSelections();
+      }, 500);
+      
+      // Listen for changes in picks
+      document.addEventListener("click", (e) => {
+        if (e.target.closest(".rider-selector") || e.target.closest(".rider-option")) {
+          setTimeout(updateSaveButtonVisibility, 100);
+        }
+      });
+      
+      // Listen for changes in holeshot and wildcard selects
+      const holeshot450 = document.getElementById("holeshot-450");
+      const holeshot250 = document.getElementById("holeshot-250");
+      const wildcardPick = document.getElementById("wildcard-pick");
+      const wildcardPos = document.getElementById("wildcard-position");
+      
+      if (holeshot450) holeshot450.addEventListener("change", updateSaveButtonVisibility);
+      if (holeshot250) holeshot250.addEventListener("change", updateSaveButtonVisibility);
+      if (wildcardPick) wildcardPick.addEventListener("change", updateSaveButtonVisibility);
+      if (wildcardPos) wildcardPos.addEventListener("change", updateSaveButtonVisibility);
     });
 
 window.addEventListener("focus", () => {
