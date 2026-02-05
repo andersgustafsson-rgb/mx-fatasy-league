@@ -6483,44 +6483,15 @@ def get_season_leaderboard():
         
         # Return the result after successful ranking logic
         return jsonify(result)
-                
-        except Exception as e:
-            print(f"DEBUG: Error in leaderboard ranking: {e}")
-            import traceback
-            traceback.print_exc()
-            db.session.rollback()
-            # Fallback to no deltas if database fails
-            result = []
-            for i, user_row in enumerate(user_scores, 1):
-                result.append({
-                    "user_id": user_row['id'],
-                    "username": user_row['username'],
-                    "display_name": user_row.get('display_name') or None,
-                    "team_name": user_row.get('team_name'),
-                    "total_points": int(user_row.get('total_points', 0) or 0),
-                    "rank": i,
-                    "delta": None
-                })
-        
-            # Wrap return in try-except to ensure we always return JSON
-            try:
-                return jsonify(result)
-            except Exception as e:
-                print(f"CRITICAL ERROR returning leaderboard JSON: {e}")
-                import traceback
-                traceback.print_exc()
-                # Return empty list on error
-                return jsonify([])
     
     except Exception as e:
         # Catch ANY error in the entire function and return JSON
-        print(f"CRITICAL ERROR in get_season_leaderboard: {e}")
+        print(f"ERROR in get_season_leaderboard: {e}")
         import traceback
-        error_traceback = traceback.format_exc()
         traceback.print_exc()
         db.session.rollback()
         # Return error info for debugging
-        return jsonify({"error": str(e), "traceback": error_traceback})
+        return jsonify({"error": str(e)})
 
 @app.get("/get_season_team_leaderboard")
 def get_season_team_leaderboard():
