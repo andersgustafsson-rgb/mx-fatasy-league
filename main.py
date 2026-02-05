@@ -1863,8 +1863,6 @@ def get_weekly_fun_stats():
                             'current_rank': user['rank'],
                             'previous_rank': user['rank'] - delta
                         }
-            else:
-        
         
         # Get competitions from last 7 days (for perfect picks and holeshot master)
         week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
