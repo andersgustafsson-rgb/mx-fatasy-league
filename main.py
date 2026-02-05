@@ -532,7 +532,6 @@ def logout():
 def series_status():
     """Get status of all series for user interface"""
     try:
-        print(f"🔍 DEBUG: series_status called")
         from sqlalchemy import or_, and_
         
         # Include all 2026 series + ongoing 2025 series (e.g., WSX 2025)
@@ -543,7 +542,6 @@ def series_status():
                 and_(Series.year == 2025, Series.end_date != None, Series.end_date >= current_date)
             )
         ).all()
-        print(f"🔍 DEBUG: Found {len(all_series)} series (2026 + ongoing 2025)")
         
         # Custom sort order - WSX first (active series), then others
         series_order = {'WSX': 1, 'Supercross': 2, 'Motocross': 3, 'SMX Finals': 4}
@@ -551,7 +549,6 @@ def series_status():
         
         series_data = []
         for s in all_series:
-            print(f"🔍 DEBUG: Processing series: {s.name}")
             
             # Use is_active from database (set by simulation) or fallback to date-based logic
             is_currently_active = s.is_active
@@ -567,7 +564,6 @@ def series_status():
                     elif s.start_date:
                         is_currently_active = current_date >= s.start_date
             except Exception as sim_error:
-                print(f"🔍 DEBUG: Simulation query error: {sim_error}")
                 # Fallback to date-based logic
                 if s.start_date and s.end_date:
                     is_currently_active = s.start_date <= current_date <= s.end_date
@@ -585,17 +581,14 @@ def series_status():
                     active_comp = Competition.query.get(active_simulation.active_race_id)
                     if active_comp and active_comp.series_id == s.id:
                         next_race = active_comp
-                        print(f"🔍 DEBUG: Using active competition: {next_race.name}")
             except Exception as active_error:
-                print(f"🔍 DEBUG: Active simulation query error: {active_error}")
+                pass
 
             # Fallback to the chronologically next upcoming race if no active one applies
             if not next_race:
                 next_race = Competition.query.filter_by(series_id=s.id).filter(
                     Competition.event_date >= current_date
                 ).order_by(Competition.event_date).first()
-                if next_race:
-                    print(f"🔍 DEBUG: Using next upcoming race: {next_race.name}")
                 
             series_data.append({
                 'id': s.id,
@@ -609,10 +602,8 @@ def series_status():
                 } if next_race else None
             })
         
-        print(f"🔍 DEBUG: Returning {len(series_data)} series")
         return jsonify(series_data)
     except Exception as e:
-        print(f"🔍 DEBUG: series_status error: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
@@ -6837,7 +6828,6 @@ def get_my_picks(competition_id):
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     uid = session["user_id"]
-    print(f"DEBUG: get_my_picks called for user {uid}, competition {competition_id}")
     
     # Force session refresh to ensure we see latest data
     db.session.expire_all()
@@ -6853,11 +6843,6 @@ def get_my_picks(competition_id):
     # Check if this is a WSX competition
     comp = Competition.query.get(competition_id)
     is_wsx = comp and getattr(comp, 'series', None) == 'WSX'
-
-    print(f"DEBUG: Found {len(picks)} picks, {len(holos)} holeshots, wildcard: {wc is not None}, is_wsx: {is_wsx}")
-    for p in picks:
-        rider = Rider.query.get(p.rider_id)
-        print(f"DEBUG: Pick - position {p.predicted_position}: {rider.name if rider else 'Unknown'} (ID: {p.rider_id}, class: {rider.class_name if rider else 'Unknown'})")
 
     result = {
         "top6_picks": [
@@ -6880,7 +6865,6 @@ def get_my_picks(competition_id):
         "wildcard_pos": wc.position if wc else None,
     }
     
-    print(f"DEBUG: Returning picks data: {result}")
     return jsonify(result)
 
 @app.route("/get_other_users_picks/<int:competition_id>")
@@ -15689,8 +15673,6 @@ def get_series_leaders():
         smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '450cc']
         smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '250cc']
         
-        print(f"DEBUG: SMX qualification - Total: {len(smx_qualification)}, 450cc: {len(smx_450cc)}, 250cc: {len(smx_250cc)}")
-        
         smx_overview = {
             'total_qualified': len(smx_qualification),
             '450cc_top_5': [],
@@ -16174,7 +16156,6 @@ def race_picks_active():
         
         if result and result[0]:
             active_race_id = result[0]
-            print(f"DEBUG: Redirecting to active race picks for competition ID: {active_race_id}")
             return redirect(url_for("race_picks_page", competition_id=active_race_id))
         else:
             flash("Inget aktivt race satt för simulering", "error")
@@ -16919,13 +16900,6 @@ def get_wsx_leaders():
     for series in leaders:
         leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
         leaders[series]['top_5'] = leaders[series]['top_5'][:5]
-    
-    print(f"DEBUG: WSX leaders calculated:")
-    for series, data in leaders.items():
-        if data['leader']:
-            print(f"  {series}: {data['leader'].name} - {data['points']} points")
-        else:
-            print(f"  {series}: No leader yet")
     
     return leaders
 
