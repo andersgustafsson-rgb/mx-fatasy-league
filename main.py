@@ -6389,7 +6389,7 @@ def get_season_leaderboard():
         
         # Calculate previous leaderboard points (only from competitions before last week)
         previous_leaderboard = []
-        for user_data in user_scores:
+        for user_data in user_scores_list:
             user_id = user_data['id']
             previous_points = 0
             
