@@ -916,29 +916,8 @@ def index():
                 # Only mark as "has_picks" if ALL required picks are complete
                 if race_picks_complete and holeshot_complete and wildcard_complete:
                     picks_status = "has_picks"
-                    # Debug logging
-                    user = User.query.get(uid)
-                    username = user.username if user else f"user_{uid}"
-                    print(f"DEBUG: User {username} - picks_status set to 'has_picks'")
-                    print(f"  - Race picks: 450cc={race_picks_450_count}/6, 250cc={race_picks_250_count}/6")
-                    print(f"  - Holeshot: 450cc={holeshot_450}, 250cc={holeshot_250}")
-                    print(f"  - Wildcard complete: {wildcard_complete} (is_wsx={is_wsx})")
-                    print(f"  - Total picks in lists: 450cc={len(current_picks_450)}, 250cc={len(current_picks_250)}")
                 else:
-                    # Debug logging for incomplete picks
-                    user = User.query.get(uid)
-                    username = user.username if user else f"user_{uid}"
-                    print(f"DEBUG: User {username} picks incomplete:")
-                    print(f"  - Race picks: 450cc={race_picks_450_count}/6, 250cc={race_picks_250_count}/6")
-                    print(f"  - Holeshot: 450cc={holeshot_450}, 250cc={holeshot_250}")
-                    print(f"  - Wildcard complete: {wildcard_complete} (is_wsx={is_wsx})")
-                    print(f"  - race_picks_complete: {race_picks_complete}, holeshot_complete: {holeshot_complete}")
-                    if wildcard_pick:
-                        print(f"  - Wildcard pick exists: rider_id={wildcard_pick.rider_id}, position={wildcard_pick.position}")
-                    print(f"  - Total picks in lists: 450cc={len(current_picks_450)}, 250cc={len(current_picks_250)}")
-                    print(f"  - Total race_picks from DB: {len(race_picks)}")
-                    print(f"  - Total holeshot_picks from DB: {len(holeshot_picks)}")
-                    picks_status = "no_picks"  # Explicitly set to no_picks
+                    picks_status = "no_picks"
                 
                 # Process holeshot picks for display
                 current_holeshot_450 = None
@@ -1899,7 +1878,6 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
             else:
-                print(f"DEBUG: User {user['username']} has delta=None (rank {user['rank']})")
         
         print(f"DEBUG: ===== Weekly Stats Summary =====")
         print(f"DEBUG: Found {users_with_delta} users with ranking changes")
@@ -2009,12 +1987,6 @@ def get_weekly_fun_stats():
         if holeshot_stats:
             holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
         
-        print(f"DEBUG: ===== FINAL RETURN VALUES =====")
-        print(f"DEBUG: rocket = {rocket}")
-        print(f"DEBUG: anchor = {anchor}")
-        print(f"DEBUG: perfect_picks_winner = {perfect_picks_winner}")
-        print(f"DEBUG: holeshot_master = {holeshot_master}")
-        print(f"DEBUG: ===== END FINAL RETURN VALUES =====")
         
         return jsonify({
             'rocket': rocket,
