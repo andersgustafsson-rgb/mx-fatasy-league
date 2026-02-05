@@ -1633,7 +1633,6 @@ def get_weekly_fun_stats():
         from sqlalchemy import func
         from datetime import datetime, timedelta
         
-        print(f"DEBUG: ===== get_weekly_fun_stats STARTED at {datetime.utcnow()} =====")
         
         # Get current leaderboard with deltas (reuse same logic as get_season_leaderboard)
         db.session.rollback()
@@ -1701,7 +1700,6 @@ def get_weekly_fun_stats():
                 total = sum(s.total_points or 0 for s in scores_by_comp.values())
                 
                 if user_row.username == 'Robban B':
-                    print(f"DEBUG: {user_row.username} TOTAL: {total} points (sum of {len(scores_by_comp)} competitions)")
                     print(f"DEBUG: ===== End Robban B Analysis =====")
             except Exception as e:
                 print(f"Error calculating points for user {user_row.username}: {e}")
@@ -1790,8 +1788,6 @@ def get_weekly_fun_stats():
         for i, user in enumerate(previous_leaderboard, 1):
             previous_ranking[str(user['id'])] = i
         
-        print(f"DEBUG: Current leaderboard has {len(current_leaderboard)} users")
-        print(f"DEBUG: Previous leaderboard (Anaheim 1 only) has {len(previous_leaderboard)} users")
         
         # Calculate deltas
         leaderboard_data = []
@@ -6334,21 +6330,15 @@ def get_season_leaderboard():
                     .all()
                 )
                 
-                print(f"DEBUG: User {user_row.username} (ID: {user_id}) has {len(all_scores)} scores (excluding WSX)")
-                
                 # Group by competition_id and keep only the most recent (highest score_id)
                 scores_by_comp = {}
                 for score in all_scores:
                     comp_id = score.competition_id
                     if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
                         scores_by_comp[comp_id] = score
-                        comp = Competition.query.get(comp_id)
-                        comp_name = comp.name if comp else f"Competition {comp_id}"
-                        print(f"DEBUG: User {user_row.username} - Competition {comp_name} (ID: {comp_id}): {score.total_points} points")
                 
                 # Sum the unique competition scores
                 total = sum(s.total_points or 0 for s in scores_by_comp.values())
-                print(f"DEBUG: User {user_row.username} total: {total} points from {len(scores_by_comp)} unique competitions")
             except Exception as e:
                 print(f"ERROR calculating points for user {user_id}: {e}")
                 import traceback
@@ -6399,13 +6389,10 @@ def get_season_leaderboard():
                     ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
                     
                     previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
-                    print(f"DEBUG: Found previous ranking for {len(previous_ranking)} users from {latest_timestamp}")
                 except Exception as db_error:
-                    print(f"DEBUG: Error fetching latest history: {db_error}")
                     # Continue without previous ranking
                     previous_ranking = {}
             else:
-                print("DEBUG: No previous ranking history found - will create baseline")
                 # Create initial baseline ranking (all users start at rank 0)
                 for user_row in user_scores:
                     previous_ranking[str(user_row['id'])] = 0  # All start at rank 0
@@ -6422,11 +6409,9 @@ def get_season_leaderboard():
                 
                 if previous_rank is not None and previous_rank > 0:
                     delta = current_rank - previous_rank
-                    print(f"DEBUG: User {username} - Previous rank: {previous_rank}, Current rank: {current_rank}, Delta: {delta}")
                 else:
                     # First time or baseline (rank 0) - no delta to show
                     delta = None
-                    print(f"DEBUG: User {username} - First time/baseline, Current rank: {current_rank}, Delta: None")
                 
                 result.append({
                     "user_id": user_id,
@@ -6441,7 +6426,6 @@ def get_season_leaderboard():
             # Always save new ranking snapshot (even if no changes) so weekly stats can compare
             # This ensures we have a snapshot to compare against for future competitions
             try:
-                print(f"DEBUG: Saving new ranking snapshot to database...")
                 for row in result:
                     history_entry = LeaderboardHistory(
                         user_id=row["user_id"],
@@ -6449,13 +6433,9 @@ def get_season_leaderboard():
                         total_points=row["total_points"]
                     )
                     db.session.add(history_entry)
-                    if row.get("delta") and row["delta"] != 0:
-                        print(f"DEBUG: Saved ranking - User {row['username']}: rank {row['rank']}, points {row['total_points']}, delta {row['delta']}")
                 
                 db.session.commit()
-                print(f"DEBUG: Leaderboard history snapshot saved successfully")
             except Exception as commit_error:
-                print(f"DEBUG: Error committing leaderboard history: {commit_error}")
                 db.session.rollback()
                 # Continue without saving history - still return the result
             
@@ -15534,8 +15514,6 @@ def race_countdown():
             # Use start_time from database if available, otherwise default to 8 PM
             start_time = next_race_obj.start_time
             timezone_val = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
-            print(f"DEBUG race_countdown: Competition {next_race_obj.name} (ID: {next_race_obj.id})")
-            print(f"DEBUG race_countdown: start_time={start_time}, timezone={timezone_val}")
             
             if start_time:
                 race_datetime_local = datetime.combine(event_date.date(), start_time)
@@ -17048,12 +17026,6 @@ def get_series_leaders():
         leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
         leaders[series]['top_5'] = leaders[series]['top_5'][:5]
     
-    print(f"DEBUG: Series leaders calculated:")
-    for series, data in leaders.items():
-        if data['leader']:
-            print(f"  {series}: {data['leader'].name} - {data['points']} points")
-        else:
-            print(f"  {series}: No leader yet")
     
     return leaders
 
@@ -17401,7 +17373,6 @@ def is_picks_locked(competition):
                 utc_offset = timezone_offsets.get(timezone, -8)
                 race_datetime_utc = race_datetime_local - timedelta(hours=utc_offset)
         
-        print(f"DEBUG: is_picks_locked - Competition: {competition_obj.name}, timezone: {timezone}, start_time: {competition_obj.start_time}, race_datetime_utc: {race_datetime_utc}")
         
         # Check if picks are locked (2 hours before race)
         current_time = get_current_time()
