@@ -6375,15 +6375,17 @@ def get_season_leaderboard():
         week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
         
         # Get all competitions before last week (for comparison)
+        # Use same filter order as get_weekly_fun_stats for consistency
         previous_competitions = (
             db.session.query(Competition)
             .filter(
-                Competition.event_date < week_ago_date,
                 db.or_(
                     Competition.series.is_(None),
                     Competition.series != 'WSX'
-                )
+                ),
+                Competition.event_date < week_ago_date
             )
+            .order_by(Competition.event_date.asc())
             .all()
         )
         
