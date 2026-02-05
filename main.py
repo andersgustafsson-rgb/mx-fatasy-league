@@ -1055,18 +1055,6 @@ def index():
             races_participated = 0
             best_position = None
 
-    # Debug: Check what we're sending to template
-    if is_logged_in and upcoming_race:
-        user = User.query.get(uid) if 'uid' in locals() else None
-        username = user.username if user else "unknown"
-        print(f"DEBUG: Rendering index for {username}")
-        print(f"  - picks_status: {picks_status}")
-        print(f"  - current_picks_450 count: {len(current_picks_450) if 'current_picks_450' in locals() else 0}")
-        print(f"  - current_picks_250 count: {len(current_picks_250) if 'current_picks_250' in locals() else 0}")
-        print(f"  - current_holeshot_450: {current_holeshot_450 is not None if 'current_holeshot_450' in locals() else False}")
-        print(f"  - current_holeshot_250: {current_holeshot_250 is not None if 'current_holeshot_250' in locals() else False}")
-        print(f"  - current_wildcard: {current_wildcard is not None if 'current_wildcard' in locals() else False}")
-        print(f"  - upcoming_race: {upcoming_race.name if upcoming_race else 'None'}")
     
     return render_template(
         "index.html",
@@ -1838,7 +1826,6 @@ def get_weekly_fun_stats():
             if delta is not None:
                 users_with_delta += 1
                 if delta < 0:  # Climbed (negative delta means better ranking)
-                    print(f"DEBUG: User {user['username']} CLIMBED: delta={delta}, rank {user['rank'] - delta} → {user['rank']}")
                     users_climbed.append({
                         'user_id': user['user_id'],
                         'username': user['username'],
@@ -1849,7 +1836,6 @@ def get_weekly_fun_stats():
                     })
                     # Find the user with the most negative delta (biggest climb)
                     if rocket is None or delta < rocket['delta']:
-                        print(f"DEBUG: Setting rocket to {user['username']} with delta={delta} (previous rocket delta: {rocket['delta'] if rocket else 'None'})")
                         rocket = {
                             'user_id': user['user_id'],
                             'username': user['username'],
@@ -1879,21 +1865,6 @@ def get_weekly_fun_stats():
                         }
             else:
         
-        print(f"DEBUG: ===== Weekly Stats Summary =====")
-        print(f"DEBUG: Found {users_with_delta} users with ranking changes")
-        print(f"DEBUG: {len(users_climbed)} users climbed, {len(users_dropped)} users dropped")
-        if users_climbed:
-            top_climbers = [(u['username'], u['delta'], f"{u['previous_rank']}→{u['current_rank']}") for u in sorted(users_climbed, key=lambda x: x['delta'])[:5]]
-            print(f"DEBUG: Top 5 users who climbed: {top_climbers}")
-        if rocket:
-            print(f"DEBUG: ✅ Rocket winner: {rocket['username']} climbed {abs(rocket['delta'])} places ({rocket['previous_rank']} → {rocket['current_rank']})")
-        else:
-            print(f"DEBUG: ❌ No rocket winner found - no users climbed this week (or no comparison snapshot)")
-        if anchor:
-            print(f"DEBUG: ✅ Anchor winner: {anchor['username']} dropped {anchor['delta']} places ({anchor['previous_rank']} → {anchor['current_rank']})")
-        else:
-            print(f"DEBUG: ❌ No anchor winner found - no users dropped this week (or no comparison snapshot)")
-        print(f"DEBUG: ===== End Weekly Stats Summary =====")
         
         # Get competitions from last 7 days (for perfect picks and holeshot master)
         week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
@@ -1996,11 +1967,6 @@ def get_weekly_fun_stats():
         })
         
     except Exception as e:
-        print(f"DEBUG: ===== ERROR in get_weekly_fun_stats =====")
-        print(f"DEBUG: Error calculating fun stats: {e}")
-        import traceback
-        traceback.print_exc()
-        print(f"DEBUG: ===== END ERROR =====")
         return jsonify({
             'rocket': None,
             'anchor': None,
