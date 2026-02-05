@@ -6366,81 +6366,123 @@ def get_season_leaderboard():
         # Sort by total_points descending
         user_scores.sort(key=lambda x: x['total_points'], reverse=True)
         
-        # Lägg till rank och delta (jämför med tidigare ranking)
-        result = []
+        # Calculate current leaderboard (all competitions)
+        current_leaderboard = user_scores
         
-        # Use database-backed LeaderboardHistory for persistent ranking
-        try:
-            # Get the most recent ranking from database
-            from sqlalchemy import func
-            try:
-                latest_timestamp = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
-            except Exception as db_error:
-                print(f"DEBUG: Error querying LeaderboardHistory: {db_error}")
-                # If table doesn't exist or query fails, continue without history
-                latest_timestamp = None
+        # Calculate previous leaderboard - compare with competitions from before the last 7 days
+        # This gives us a "last week" comparison (same logic as get_weekly_fun_stats)
+        from datetime import datetime, timedelta
+        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+        
+        # Get all competitions before last week (for comparison)
+        previous_competitions = (
+            db.session.query(Competition)
+            .filter(
+                Competition.event_date < week_ago_date,
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
+                )
+            )
+            .all()
+        )
+        
+        # Calculate previous leaderboard points (only from competitions before last week)
+        previous_leaderboard = []
+        for user_data in user_scores:
+            user_id = user_data['id']
+            previous_points = 0
             
-            previous_ranking = {}
-            if latest_timestamp:
+            if previous_competitions:
                 try:
-                    latest_history = db.session.query(
-                        LeaderboardHistory.user_id,
-                        LeaderboardHistory.ranking
-                    ).filter(LeaderboardHistory.created_at == latest_timestamp).all()
-                    
-                    previous_ranking = {str(user_id): ranking for user_id, ranking in latest_history}
-                except Exception as db_error:
-                    # Continue without previous ranking
-                    previous_ranking = {}
-            else:
-                # Create initial baseline ranking (all users start at rank 0)
-                for user_row in user_scores:
-                    previous_ranking[str(user_row['id'])] = 0  # All start at rank 0
-            
-            for i, user_row in enumerate(user_scores, 1):
-                user_id = user_row['id']
-                username = user_row['username']
-                display_name = user_row.get('display_name')
-                team_name = user_row.get('team_name')
-                total_points = user_row.get('total_points', 0) or 0
-                
-                current_rank = i
-                previous_rank = previous_ranking.get(str(user_id))
-                
-                if previous_rank is not None and previous_rank > 0:
-                    delta = current_rank - previous_rank
-                else:
-                    # First time or baseline (rank 0) - no delta to show
-                    delta = None
-                
-                result.append({
-                    "user_id": user_id,
-                    "username": username,
-                    "display_name": display_name or None,
-                    "team_name": team_name or None,
-                    "total_points": int(total_points),
-                    "rank": current_rank,
-                    "delta": delta
-                })
-            
-            # Always save new ranking snapshot (even if no changes) so weekly stats can compare
-            # This ensures we have a snapshot to compare against for future competitions
-            try:
-                for row in result:
-                    history_entry = LeaderboardHistory(
-                        user_id=row["user_id"],
-                        ranking=row["rank"],
-                        total_points=row["total_points"]
+                    # Get all scores for competitions before last week
+                    previous_comp_ids = [c.id for c in previous_competitions]
+                    previous_scores = (
+                        db.session.query(CompetitionScore)
+                        .filter(CompetitionScore.user_id == user_id)
+                        .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
+                        .all()
                     )
-                    db.session.add(history_entry)
-                
-                db.session.commit()
-            except Exception as commit_error:
-                db.session.rollback()
-                # Continue without saving history - still return the result
+                    
+                    # Handle duplicates - keep only most recent score per competition
+                    scores_by_comp = {}
+                    for score in previous_scores:
+                        comp_id = score.competition_id
+                        if comp_id not in scores_by_comp:
+                            scores_by_comp[comp_id] = score
+                        elif score.score_id > scores_by_comp[comp_id].score_id:
+                            scores_by_comp[comp_id] = score
+                    
+                    previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
+                    
+                except Exception as e:
+                    previous_points = 0
             
-            # Return the result after successful ranking logic
-            return jsonify(result)
+            previous_leaderboard.append({
+                'id': user_id,
+                'username': user_data['username'],
+                'display_name': user_data['display_name'],
+                'total_points': previous_points
+            })
+        
+        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
+        
+        # Create ranking maps (same logic as get_weekly_fun_stats)
+        current_ranking = {}
+        for i, user in enumerate(current_leaderboard, 1):
+            current_ranking[str(user['id'])] = i
+        
+        previous_ranking = {}
+        for i, user in enumerate(previous_leaderboard, 1):
+            previous_ranking[str(user['id'])] = i
+        
+        # Calculate deltas and build result
+        result = []
+        for i, user_row in enumerate(current_leaderboard, 1):
+            user_id = user_row['id']
+            username = user_row['username']
+            display_name = user_row.get('display_name')
+            team_name = user_row.get('team_name')
+            total_points = user_row.get('total_points', 0) or 0
+            
+            current_rank = i
+            previous_rank = previous_ranking.get(str(user_id))
+            
+            # Calculate delta (same logic as get_weekly_fun_stats)
+            if previous_rank is not None and previous_rank > 0:
+                delta = current_rank - previous_rank
+            else:
+                # First time or no previous ranking - no delta to show
+                delta = None
+            
+            result.append({
+                "user_id": user_id,
+                "username": username,
+                "display_name": display_name or None,
+                "team_name": team_name or None,
+                "total_points": int(total_points),
+                "rank": current_rank,
+                "delta": delta
+            })
+        
+        # Always save new ranking snapshot (even if no changes) so weekly stats can compare
+        # This ensures we have a snapshot to compare against for future competitions
+        try:
+            for row in result:
+                history_entry = LeaderboardHistory(
+                    user_id=row["user_id"],
+                    ranking=row["rank"],
+                    total_points=row["total_points"]
+                )
+                db.session.add(history_entry)
+            
+            db.session.commit()
+        except Exception as commit_error:
+            db.session.rollback()
+            # Continue without saving history - still return the result
+        
+        # Return the result after successful ranking logic
+        return jsonify(result)
                 
         except Exception as e:
             print(f"DEBUG: Error in leaderboard ranking: {e}")
