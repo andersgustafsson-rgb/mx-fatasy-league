@@ -1626,6 +1626,153 @@ def debug_weekly_stats():
         import traceback
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+def calculate_leaderboard_deltas():
+    """Shared function to calculate leaderboard deltas - ensures consistency between get_weekly_fun_stats and get_season_leaderboard"""
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    
+    db.session.rollback()
+    
+    # Get all users
+    user_scores = (
+        db.session.query(
+            User.id,
+            User.username,
+            User.display_name,
+            SeasonTeam.team_name
+        )
+        .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+        .all()
+    )
+    
+    # Calculate current total points for each user
+    user_scores_list = []
+    for user_row in user_scores:
+        user_id = user_row.id
+        total = 0
+        
+        try:
+            all_scores = (
+                db.session.query(CompetitionScore)
+                .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+                .filter(CompetitionScore.user_id == user_id)
+                .filter(
+                    db.or_(
+                        Competition.series.is_(None),
+                        Competition.series != 'WSX'
+                    )
+                )
+                .all()
+            )
+            
+            # Handle duplicates - keep only most recent score per competition
+            scores_by_comp = {}
+            for score in all_scores:
+                comp_id = score.competition_id
+                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                    scores_by_comp[comp_id] = score
+            
+            total = sum(s.total_points or 0 for s in scores_by_comp.values())
+        except Exception as e:
+            print(f"Error calculating points for user {user_row.username}: {e}")
+            total = 0
+        
+        user_scores_list.append({
+            'id': user_id,
+            'username': user_row.username,
+            'display_name': getattr(user_row, 'display_name', None) or user_row.username,
+            'team_name': user_row.team_name,
+            'total_points': total
+        })
+    
+    # Calculate current leaderboard
+    current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
+    
+    # Calculate previous leaderboard - compare with competitions from before the last 7 days
+    week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+    
+    previous_competitions = (
+        db.session.query(Competition)
+        .filter(
+            db.or_(
+                Competition.series.is_(None),
+                Competition.series != 'WSX'
+            ),
+            Competition.event_date < week_ago_date
+        )
+        .order_by(Competition.event_date.asc())
+        .all()
+    )
+    
+    previous_leaderboard = []
+    for user_data in user_scores_list:
+        user_id = user_data['id']
+        previous_points = 0
+        
+        if previous_competitions:
+            try:
+                previous_comp_ids = [c.id for c in previous_competitions]
+                previous_scores = (
+                    db.session.query(CompetitionScore)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
+                    .all()
+                )
+                
+                # Handle duplicates - keep only most recent score per competition
+                scores_by_comp = {}
+                for score in previous_scores:
+                    comp_id = score.competition_id
+                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                
+                previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
+            except Exception as e:
+                previous_points = 0
+        
+        previous_leaderboard.append({
+            'id': user_id,
+            'username': user_data['username'],
+            'display_name': user_data['display_name'],
+            'total_points': previous_points
+        })
+    
+    previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
+    
+    # Create ranking maps
+    current_ranking = {}
+    for i, user in enumerate(current_leaderboard, 1):
+        current_ranking[str(user['id'])] = i
+    
+    previous_ranking = {}
+    for i, user in enumerate(previous_leaderboard, 1):
+        previous_ranking[str(user['id'])] = i
+    
+    # Calculate deltas
+    leaderboard_data = []
+    for i, user_row in enumerate(current_leaderboard, 1):
+        user_id = user_row['id']
+        current_rank = i
+        previous_rank = previous_ranking.get(str(user_id))
+        
+        if previous_rank is not None and previous_rank > 0:
+            delta = current_rank - previous_rank
+        else:
+            delta = None
+        
+        leaderboard_data.append({
+            'user_id': user_id,
+            'username': user_row['username'],
+            'display_name': user_row['display_name'],
+            'team_name': user_row.get('team_name'),
+            'rank': current_rank,
+            'delta': delta,
+            'total_points': user_row['total_points']
+        })
+    
+    return leaderboard_data
+
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
     """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
@@ -1633,181 +1780,8 @@ def get_weekly_fun_stats():
         from sqlalchemy import func
         from datetime import datetime, timedelta
         
-        
-        # Get current leaderboard with deltas (reuse same logic as get_season_leaderboard)
-        db.session.rollback()
-        
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                User.display_name,
-                SeasonTeam.team_name
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-            .all()
-        )
-        
-        user_scores_list = []
-        for user_row in user_scores:
-            user_id = user_row.id
-            total = 0
-            
-            try:
-                all_scores = (
-                    db.session.query(CompetitionScore)
-                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-                    .filter(CompetitionScore.user_id == user_id)
-                    .filter(
-                        db.or_(
-                            Competition.series.is_(None),
-                            Competition.series != 'WSX'
-                        )
-                    )
-                    .all()
-                )
-                
-                scores_by_comp = {}
-                duplicate_scores = []
-                for score in all_scores:
-                    comp_id = score.competition_id
-                    if comp_id not in scores_by_comp:
-                        scores_by_comp[comp_id] = score
-                    elif score.score_id > scores_by_comp[comp_id].score_id:
-                        # Found a newer score for this competition - keep the newer one
-                        duplicate_scores.append(scores_by_comp[comp_id])
-                        scores_by_comp[comp_id] = score
-                    else:
-                        # This is an older duplicate - skip it
-                        duplicate_scores.append(score)
-                
-                if user_row.username == 'Robban B':
-                    print(f"DEBUG: ===== Robban B Score Analysis =====")
-                    print(f"DEBUG: Found {len(all_scores)} total score entries")
-                    if duplicate_scores:
-                        print(f"DEBUG: Found {len(duplicate_scores)} duplicate scores:")
-                        for dup in duplicate_scores:
-                            comp = Competition.query.get(dup.competition_id)
-                            comp_name = comp.name if comp else f"ID {dup.competition_id}"
-                            print(f"  - DUPLICATE: Competition {comp_name}: score_id={dup.score_id}, total_points={dup.total_points}, race_points={dup.race_points}, holeshot_points={dup.holeshot_points}, wildcard_points={dup.wildcard_points}")
-                    print(f"DEBUG: Using {len(scores_by_comp)} unique competitions:")
-                    for comp_id, score in scores_by_comp.items():
-                        comp = Competition.query.get(comp_id)
-                        comp_name = comp.name if comp else f"ID {comp_id}"
-                        print(f"  - Competition {comp_name} (ID: {comp_id}): score_id={score.score_id}, total_points={score.total_points}, race_points={score.race_points}, holeshot_points={score.holeshot_points}, wildcard_points={score.wildcard_points}")
-                
-                total = sum(s.total_points or 0 for s in scores_by_comp.values())
-                
-                if user_row.username == 'Robban B':
-                    print(f"DEBUG: ===== End Robban B Analysis =====")
-            except Exception as e:
-                print(f"Error calculating points for user {user_row.username}: {e}")
-                total = 0
-            
-            user_scores_list.append({
-                'id': user_id,
-                'username': user_row.username,
-                'display_name': getattr(user_row, 'display_name', None) or user_row.username,
-                'team_name': user_row.team_name,
-                'total_points': total
-            })
-        
-        # Calculate current leaderboard (all competitions)
-        current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
-        
-        # Calculate previous leaderboard - compare with competitions from before the last 7 days
-        # This gives us a "last week" comparison
-        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
-        
-        # Get all competitions before last week (for comparison)
-        previous_competitions = (
-            db.session.query(Competition)
-            .filter(
-                db.or_(
-                    Competition.series.is_(None),
-                    Competition.series != 'WSX'
-                ),
-                Competition.event_date < week_ago_date
-            )
-            .order_by(Competition.event_date.asc())
-            .all()
-        )
-        
-        print(f"DEBUG: Found {len(previous_competitions)} competitions before last week for comparison")
-        if previous_competitions:
-            for comp in previous_competitions[:5]:  # Show first 5
-                print(f"DEBUG:   - {comp.name} ({comp.event_date})")
-        
-        previous_leaderboard = []
-        for user_data in user_scores_list:
-            user_id = user_data['id']
-            previous_points = 0
-            
-            if previous_competitions:
-                try:
-                    # Get all scores for competitions before last week
-                    previous_comp_ids = [c.id for c in previous_competitions]
-                    previous_scores = (
-                        db.session.query(CompetitionScore)
-                        .filter(CompetitionScore.user_id == user_id)
-                        .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
-                        .all()
-                    )
-                    
-                    # Handle duplicates - keep only most recent score per competition
-                    scores_by_comp = {}
-                    for score in previous_scores:
-                        comp_id = score.competition_id
-                        if comp_id not in scores_by_comp:
-                            scores_by_comp[comp_id] = score
-                        elif score.score_id > scores_by_comp[comp_id].score_id:
-                            scores_by_comp[comp_id] = score
-                    
-                    previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
-                    
-                except Exception as e:
-                    print(f"Error calculating previous week points for user {user_data['username']}: {e}")
-                    previous_points = 0
-            
-            previous_leaderboard.append({
-                'id': user_id,
-                'username': user_data['username'],
-                'display_name': user_data['display_name'],
-                'total_points': previous_points
-            })
-        
-        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-        
-        # Create ranking maps
-        current_ranking = {}
-        for i, user in enumerate(current_leaderboard, 1):
-            current_ranking[str(user['id'])] = i
-        
-        previous_ranking = {}
-        for i, user in enumerate(previous_leaderboard, 1):
-            previous_ranking[str(user['id'])] = i
-        
-        
-        # Calculate deltas
-        leaderboard_data = []
-        for i, user_row in enumerate(current_leaderboard, 1):
-            user_id = user_row['id']
-            current_rank = i
-            previous_rank = previous_ranking.get(str(user_id))
-            
-            if previous_rank is not None and previous_rank > 0:
-                delta = current_rank - previous_rank
-            else:
-                delta = None
-            
-            leaderboard_data.append({
-                'user_id': user_id,
-                'username': user_row['username'],
-                'display_name': user_row['display_name'],
-                'rank': current_rank,
-                'delta': delta
-            })
+        # Use shared function to calculate deltas - ensures consistency
+        leaderboard_data = calculate_leaderboard_deltas()
         
         # Calculate ranking changes (rocket and anchor)
         rocket = None  # Biggest negative delta (climbed most)
@@ -6286,185 +6260,20 @@ def admin_set_date():
 def get_season_leaderboard():
     """Get season leaderboard - always returns JSON"""
     try:
-        # Använd CompetitionScore direkt för att få korrekta poäng
-        # Men filtrera bort WSX-poäng - leaderboard ska bara visa aktiva serier (SX, MX, SMX)
-        # Säsongsteam-poäng räknas INTE in här - de har sin egen leaderboard
-        from sqlalchemy import func
+        # Use shared function to calculate deltas - ensures consistency with get_weekly_fun_stats
+        leaderboard_data = calculate_leaderboard_deltas()
         
-        # Hämta alla användare med team_name (enklare query, räknar poäng i Python)
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                User.display_name,
-                SeasonTeam.team_name
-            )
-            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-            .all()
-        )
-        
-        print(f"DEBUG: Found {len(user_scores)} users in leaderboard query")
-        
-        # Calculate total points properly (sum only the most recent score per competition)
-        # This handles duplicates by taking the highest score_id (most recent) for each competition
-        # Convert to list of dicts to avoid "can't set attribute" error
-        user_scores_list = []
-        for user_row in user_scores:
-            user_id = user_row.id
-            total = 0  # Default to 0
-            
-            try:
-                # Get all scores for this user, excluding WSX
-                # Use outerjoin to ensure we get scores even if Competition info is missing
-                all_scores = (
-                    db.session.query(CompetitionScore)
-                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-                    .filter(CompetitionScore.user_id == user_id)
-                    .filter(
-                        db.or_(
-                            Competition.series.is_(None),  # Include if series is null
-                            Competition.series != 'WSX'  # Exclude WSX series
-                        )
-                    )
-                    .all()
-                )
-                
-                # Group by competition_id and keep only the most recent (highest score_id)
-                scores_by_comp = {}
-                for score in all_scores:
-                    comp_id = score.competition_id
-                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                        scores_by_comp[comp_id] = score
-                
-                # Sum the unique competition scores
-                total = sum(s.total_points or 0 for s in scores_by_comp.values())
-            except Exception as e:
-                print(f"ERROR calculating points for user {user_id}: {e}")
-                import traceback
-                traceback.print_exc()
-                total = 0
-            
-            # Store as dict instead of trying to set attribute on query result
-            user_scores_list.append({
-                'id': user_id,
-                'username': user_row.username,
-                'display_name': user_row.display_name,
-                'team_name': getattr(user_row, 'team_name', None),
-                'total_points': total
-            })
-        
-        # Replace user_scores with our list
-        user_scores = user_scores_list
-        
-        # Ensure team_name is available on each user_row (already done above, but double-check)
-        user_team_map = {team.user_id: team.team_name for team in SeasonTeam.query.all()}
-        for user_row in user_scores:
-            if not user_row.get('team_name'):
-                user_row['team_name'] = user_team_map.get(user_row['id'])
-        
-        # Sort by total_points descending
-        user_scores.sort(key=lambda x: x['total_points'], reverse=True)
-        
-        # Calculate current leaderboard (all competitions)
-        current_leaderboard = user_scores
-        
-        # Calculate previous leaderboard - compare with competitions from before the last 7 days
-        # This gives us a "last week" comparison (same logic as get_weekly_fun_stats)
-        from datetime import datetime, timedelta
-        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
-        
-        # Get all competitions before last week (for comparison)
-        # Use same filter order as get_weekly_fun_stats for consistency
-        previous_competitions = (
-            db.session.query(Competition)
-            .filter(
-                db.or_(
-                    Competition.series.is_(None),
-                    Competition.series != 'WSX'
-                ),
-                Competition.event_date < week_ago_date
-            )
-            .order_by(Competition.event_date.asc())
-            .all()
-        )
-        
-        # Calculate previous leaderboard points (only from competitions before last week)
-        previous_leaderboard = []
-        for user_data in user_scores_list:
-            user_id = user_data['id']
-            previous_points = 0
-            
-            if previous_competitions:
-                try:
-                    # Get all scores for competitions before last week
-                    previous_comp_ids = [c.id for c in previous_competitions]
-                    previous_scores = (
-                        db.session.query(CompetitionScore)
-                        .filter(CompetitionScore.user_id == user_id)
-                        .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
-                        .all()
-                    )
-                    
-                    # Handle duplicates - keep only most recent score per competition
-                    scores_by_comp = {}
-                    for score in previous_scores:
-                        comp_id = score.competition_id
-                        if comp_id not in scores_by_comp:
-                            scores_by_comp[comp_id] = score
-                        elif score.score_id > scores_by_comp[comp_id].score_id:
-                            scores_by_comp[comp_id] = score
-                    
-                    previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
-                    
-                except Exception as e:
-                    previous_points = 0
-            
-            previous_leaderboard.append({
-                'id': user_id,
-                'username': user_data['username'],
-                'display_name': user_data['display_name'],
-                'total_points': previous_points
-            })
-        
-        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-        
-        # Create ranking maps (same logic as get_weekly_fun_stats)
-        current_ranking = {}
-        for i, user in enumerate(current_leaderboard, 1):
-            current_ranking[str(user['id'])] = i
-        
-        previous_ranking = {}
-        for i, user in enumerate(previous_leaderboard, 1):
-            previous_ranking[str(user['id'])] = i
-        
-        # Calculate deltas and build result
+        # Build result - team_name is already included in leaderboard_data
         result = []
-        for i, user_row in enumerate(current_leaderboard, 1):
-            user_id = user_row['id']
-            username = user_row['username']
-            display_name = user_row.get('display_name')
-            team_name = user_row.get('team_name')
-            total_points = user_row.get('total_points', 0) or 0
-            
-            current_rank = i
-            previous_rank = previous_ranking.get(str(user_id))
-            
-            # Calculate delta (same logic as get_weekly_fun_stats)
-            if previous_rank is not None and previous_rank > 0:
-                delta = current_rank - previous_rank
-            else:
-                # First time or no previous ranking - no delta to show
-                delta = None
-            
+        for user_data in leaderboard_data:
             result.append({
-                "user_id": user_id,
-                "username": username,
-                "display_name": display_name or None,
-                "team_name": team_name or None,
-                "total_points": int(total_points),
-                "rank": current_rank,
-                "delta": delta
+                "user_id": user_data['user_id'],
+                "username": user_data['username'],
+                "display_name": user_data['display_name'] or None,
+                "team_name": user_data.get('team_name') or None,
+                "total_points": int(user_data['total_points']),
+                "rank": user_data['rank'],
+                "delta": user_data['delta']
             })
         
         # Always save new ranking snapshot (even if no changes) so weekly stats can compare
