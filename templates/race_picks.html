@@ -711,16 +711,6 @@
 
   // Load saved picks from localStorage on page load
   loadSavedPicksFromStorage();
-  
-  // Function to clear localStorage picks (for debugging)
-  function clearLocalStoragePicks() {
-    localStorage.removeItem(`race_picks_${competitionId}`);
-    // Reload the page to see empty picks
-    location.reload();
-  }
-  
-  // Make it available globally for debugging
-  window.clearLocalStoragePicks = clearLocalStoragePicks;
 
   // Save picks to localStorage
   function savePicksToStorage() {
@@ -1426,7 +1416,6 @@ function wsxSlug(name) {
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
-    console.log(`DEBUG imgSrcFor: Rider ${riderId} not found in allRiders`);
     return '/static/brand_logos/honda.png'; // Default fallback
   }
   
@@ -1435,7 +1424,6 @@ function imgSrcFor(riderId) {
     // Remove 'riders/' prefix if it exists to avoid double path
     const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
     const url = `/static/${imagePath}`;
-    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Using image_url: ${url}`);
     return url;
   }
   
@@ -1450,7 +1438,6 @@ function imgSrcFor(riderId) {
     const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
     const imagePath = `riders/wsx/${fileSlugNoSpaces} (1).jpg`;
     const url = `/static/${imagePath}`;
-    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - WSX rider, trying: ${url}`);
     return url;
   }
   
@@ -1461,7 +1448,6 @@ function imgSrcFor(riderId) {
     // Try PNG first
     const pngPath = `riders/${r.rider_number}_${nameSlug}.png`;
     const url = `/static/${pngPath}`;
-    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Constructed filename: ${url}`);
     return url;
   }
 
@@ -1475,12 +1461,10 @@ function imgSrcFor(riderId) {
     };
     const logoName = brandMap[brandName] || brandName;
     const url = `/static/brand_logos/${logoName}.png`;
-    console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - Using brand logo: ${url}`);
     return url;
   }
   
   // 5. Final fallback to Honda logo
-  console.log(`DEBUG imgSrcFor: ${r.name} (${riderId}) - No image found, using Honda logo`);
   return '/static/brand_logos/honda.png';
 }
 
@@ -1489,8 +1473,6 @@ function handleImageError(img) {
   const src = img.getAttribute('src') || '';
   const riderId = img.getAttribute('data-rider-id');
   const rider = riderId ? allRiders.find((x) => Number(x.id) === Number(riderId)) : null;
-  
-  console.log(`DEBUG handleImageError: Failed to load ${src}, riderId: ${riderId}, rider: ${rider ? rider.name : 'not found'}`);
   
   // Always have a fallback to brand logo
   const fallbackToBrandLogo = function() {
@@ -1691,7 +1673,6 @@ function onPickChange(cls, pos, riderId = null) {
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
       img.onerror = function() { 
-        console.log(`DEBUG onPickChange: Image failed to load ${src} for rider ${val}`);
         handleImageError(this); 
       };
     } else {
@@ -1815,24 +1796,19 @@ function onPickChange(cls, pos, riderId = null) {
           const rider = allRiders.find(r => Number(r.id) === Number(p.rider_id));
           
           if (!rider) {
-            console.log(`DEBUG: Rider not found for ID ${p.rider_id}, class ${p.class}. Available rider IDs:`, allRiders.map(r => r.id));
             return;
           }
-          
-          console.log(`DEBUG: Found rider for pick: ${rider.name} (ID: ${p.rider_id}, class: ${p.class}), position: ${p.predicted_position}`);
           
           const selector = document.querySelector(
             `.rider-selector[data-class="${dataClass}"][data-position="${p.predicted_position}"]`
           );
           
           if (!selector) {
-            console.log(`DEBUG: Selector not found for class ${dataClass}, position ${p.predicted_position}`);
             return;
           }
           
           const selectedRiderSpan = selector.querySelector('.selected-rider');
           if (!selectedRiderSpan) {
-            console.log(`DEBUG: Selected rider span not found`);
             return;
           }
           
@@ -1851,8 +1827,6 @@ function onPickChange(cls, pos, riderId = null) {
           const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
           if (hiddenSelect) {
             hiddenSelect.value = p.rider_id;
-          } else {
-            console.log(`DEBUG: Hidden select not found: pick_${hiddenSelectClass}_${p.predicted_position}`);
           }
           
           // Update preview image
@@ -1868,7 +1842,6 @@ function onPickChange(cls, pos, riderId = null) {
               img.src = src;
               img.style.background = "transparent";
               img.onerror = function() {
-                console.log(`DEBUG fetchAndDisplayMyPicks: Preview image failed to load ${src} for rider ${p.rider_id}`);
                 handleImageError(this);
               };
             }
@@ -2064,9 +2037,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       if (!response.ok) throw new Error('Kunde inte hämta andra användares picks');
       
       const usersPicks = await response.json();
-      console.log('DEBUG: usersPicks received:', usersPicks);
-      console.log('DEBUG: First user picks_450:', usersPicks[0]?.picks_450);
-      console.log('DEBUG: First user picks_250:', usersPicks[0]?.picks_250);
       
       // Create modal to display picks
       const modal = document.createElement('div');
