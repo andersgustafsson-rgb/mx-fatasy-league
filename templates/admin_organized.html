@@ -1875,7 +1875,19 @@
         }
         
         async function sendPickReminders() {
-            if (!confirm('Skicka picks-påminnelser till alla användare som inte har gjort sina picks för nästa tävling?\n\nDetta skickar bara till användare med registrerad e-postadress.')) {
+            const selectedUsers = getSelectedUsers();
+            console.log('DEBUG: Selected users for pick reminders:', selectedUsers);
+            
+            if (selectedUsers.length === 0) {
+                alert('❌ Välj minst en mottagare!');
+                return;
+            }
+            
+            const userText = selectedUsers.length === 1 
+                ? `1 vald användare` 
+                : `${selectedUsers.length} valda användare`;
+            
+            if (!confirm(`Skicka picks-påminnelser till ${userText} som inte har gjort sina picks för nästa tävling?\n\nDetta skickar bara till användare med registrerad e-postadress.`)) {
                 return;
             }
             
@@ -1884,9 +1896,18 @@
             statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
             statusDiv.textContent = '⏰ Skickar picks-påminnelser...';
             
+            const emailList = selectedUsers.map(u => u.email);
+            console.log('DEBUG: Sending pick reminders to:', emailList);
+            
             try {
                 const response = await fetch('/admin/send_pick_reminders', {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_emails: emailList
+                    })
                 });
                 
                 const result = await response.json();

@@ -5318,6 +5318,11 @@ def send_pick_reminders():
         from email_utils import send_pick_reminder
         from datetime import datetime, timedelta
         
+        data = request.get_json() or {}
+        selected_emails = data.get('user_emails', [])
+        
+        print(f"DEBUG: send_pick_reminders - Received user_emails: {selected_emails}")
+        
         # Get next upcoming competition
         today = get_today()
         next_comp = (
@@ -5336,8 +5341,17 @@ def send_pick_reminders():
         if not next_comp:
             return jsonify({"error": "No upcoming competition found"}), 404
         
-        # Get all users with email addresses
-        users = User.query.filter(User.email.isnot(None), User.email != '').all()
+        # Get users - either selected ones or all users with email addresses
+        if selected_emails and len(selected_emails) > 0:
+            print(f"DEBUG: send_pick_reminders - Sending to SELECTED users: {selected_emails}")
+            users = []
+            for email in selected_emails:
+                user = User.query.filter_by(email=email.strip()).first()
+                if user and user.email:
+                    users.append(user)
+        else:
+            print(f"DEBUG: send_pick_reminders - No selected users, sending to ALL users with email")
+            users = User.query.filter(User.email.isnot(None), User.email != '').all()
         
         sent = 0
         failed = 0
