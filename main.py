@@ -5162,6 +5162,58 @@ def send_bulk_email():
         print(f"ERROR in send_bulk_email: {e}\n{error_details}")
         return jsonify({"error": str(e), "details": error_details}), 500
 
+@app.get("/admin/list_users_with_email")
+def list_users_with_email():
+    """List all users with email addresses - for debugging"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        
+        all_users = User.query.all()
+        users_with_valid_email = []
+        users_with_invalid_email = []
+        users_without_email = []
+        
+        for user in all_users:
+            if user.email:
+                email = user.email.strip()
+                if email and re.match(email_pattern, email):
+                    users_with_valid_email.append({
+                        "username": user.username,
+                        "display_name": user.display_name,
+                        "email": email
+                    })
+                else:
+                    users_with_invalid_email.append({
+                        "username": user.username,
+                        "display_name": user.display_name,
+                        "email": email
+                    })
+            else:
+                users_without_email.append({
+                    "username": user.username,
+                    "display_name": user.display_name
+                })
+        
+        return jsonify({
+            "success": True,
+            "total_users": len(all_users),
+            "users_with_valid_email": users_with_valid_email,
+            "users_with_invalid_email": users_with_invalid_email,
+            "users_without_email": users_without_email,
+            "counts": {
+                "valid_email": len(users_with_valid_email),
+                "invalid_email": len(users_with_invalid_email),
+                "no_email": len(users_without_email)
+            }
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "details": traceback.format_exc()}), 500
+
 @app.post("/admin/send_pick_reminders")
 def send_pick_reminders():
     """Send pick reminders to users who haven't made picks for next competition"""
