@@ -5138,6 +5138,18 @@ def send_bulk_email():
         failed = 0
         failed_emails = []
         
+        # Check SendGrid API key first
+        import os
+        api_key = os.getenv('SENDGRID_API_KEY')
+        if not api_key:
+            return jsonify({
+                "error": "SENDGRID_API_KEY not configured in environment variables",
+                "hint": "Add SENDGRID_API_KEY to Render environment variables"
+            }), 500
+        
+        print(f"DEBUG: SendGrid API key configured: {'Yes' if api_key else 'No'} (length: {len(api_key) if api_key else 0})")
+        print(f"DEBUG: From email: {os.getenv('SENDGRID_FROM_EMAIL', 'spliffan78@gmail.com')}")
+        
         for user in users_with_email:
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")

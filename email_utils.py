@@ -45,7 +45,13 @@ def send_email(
     try:
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
+        
+        # Log response details for debugging
+        print(f"DEBUG: SendGrid response status: {response.status_code}")
+        print(f"DEBUG: SendGrid response headers: {dict(response.headers) if hasattr(response, 'headers') else 'N/A'}")
+        
         if response.status_code in [200, 201, 202]:
+            print(f"DEBUG: ✅ Email sent successfully to {to_email}")
             return True
         else:
             # Try to get error details from response
