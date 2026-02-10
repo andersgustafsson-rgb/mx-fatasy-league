@@ -5440,13 +5440,28 @@ def send_pick_reminders():
         
         print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}")
         
+        # Build a more informative message
+        message_parts = []
+        if sent > 0:
+            message_parts.append(f"Skickat till: {sent} användare")
+        if failed > 0:
+            message_parts.append(f"Misslyckades: {failed} användare")
+        if no_email > 0:
+            message_parts.append(f"Ingen e-post: {no_email} användare")
+        if no_picks > 0:
+            message_parts.append(f"Redan gjort picks: {no_picks} användare")
+        
+        if sent == 0 and failed == 0 and no_email == 0 and no_picks == 0:
+            message_parts.append("Inga användare bearbetades")
+        
         return jsonify({
             "success": True,
             "sent": sent,
             "failed": failed,
             "no_email": no_email,
             "no_picks": no_picks,
-            "competition": next_comp.name
+            "competition": next_comp.name,
+            "message": ", ".join(message_parts) if message_parts else "Ingen aktivitet"
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

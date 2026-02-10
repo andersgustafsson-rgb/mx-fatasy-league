@@ -1914,7 +1914,23 @@
                 
                 if (response.ok && result.success) {
                     statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
-                    statusDiv.innerHTML = `✅ Påminnelser skickade!<br>Skickat till: ${result.sent} användare<br>Misslyckades: ${result.failed} användare<br>Ingen e-post: ${result.no_email} användare`;
+                    let statusHtml = `✅ Påminnelser bearbetade!<br>`;
+                    if (result.sent > 0) {
+                        statusHtml += `Skickat till: ${result.sent} användare<br>`;
+                    }
+                    if (result.failed > 0) {
+                        statusHtml += `Misslyckades: ${result.failed} användare<br>`;
+                    }
+                    if (result.no_email > 0) {
+                        statusHtml += `Ingen e-post: ${result.no_email} användare<br>`;
+                    }
+                    if (result.no_picks > 0) {
+                        statusHtml += `Redan gjort picks: ${result.no_picks} användare<br>`;
+                    }
+                    if (result.sent === 0 && result.failed === 0 && result.no_email === 0 && result.no_picks === 0) {
+                        statusHtml += `Inga användare bearbetades`;
+                    }
+                    statusDiv.innerHTML = statusHtml;
                 } else {
                     statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
                     statusDiv.textContent = '❌ Fel: ' + (result.error || 'Okänt fel');
