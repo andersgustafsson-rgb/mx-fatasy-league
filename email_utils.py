@@ -68,7 +68,21 @@ def send_email(
     except Exception as e:
         print(f"ERROR sending email to {to_email}: {e}")
         print(f"ERROR: From email: {from_email}")
-        # Try to get more details from the exception
+        
+        # Try to extract SendGrid error message
+        error_message = str(e)
+        if hasattr(e, 'body'):
+            try:
+                import json
+                error_body = e.body.decode('utf-8') if e.body else '{}'
+                error_data = json.loads(error_body) if error_body else {}
+                if 'errors' in error_data and len(error_data['errors']) > 0:
+                    error_message = error_data['errors'][0].get('message', str(e))
+                    print(f"ERROR: SendGrid error message: {error_message}")
+            except:
+                pass
+        
+        # Store error message for better user feedback
         if hasattr(e, 'body'):
             try:
                 error_body = e.body.decode('utf-8') if e.body else 'No error details'

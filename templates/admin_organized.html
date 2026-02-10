@@ -1913,24 +1913,30 @@
                 const result = await response.json();
                 
                 if (response.ok && result.success) {
-                    statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
-                    let statusHtml = `✅ Påminnelser bearbetade!<br>`;
-                    if (result.sent > 0) {
-                        statusHtml += `Skickat till: ${result.sent} användare<br>`;
+                    // Check if SendGrid limit was reached
+                    if (result.sendgrid_limit_reached) {
+                        statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
+                        statusDiv.innerHTML = `⚠️ SendGrid-gräns nådd!<br>Du har överskridit din dagliga e-postgräns i SendGrid.<br>Gränsen återställs vanligtvis vid midnatt UTC.<br><br>Misslyckades: ${result.failed} användare`;
+                    } else {
+                        statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
+                        let statusHtml = `✅ Påminnelser bearbetade!<br>`;
+                        if (result.sent > 0) {
+                            statusHtml += `Skickat till: ${result.sent} användare<br>`;
+                        }
+                        if (result.failed > 0) {
+                            statusHtml += `Misslyckades: ${result.failed} användare<br>`;
+                        }
+                        if (result.no_email > 0) {
+                            statusHtml += `Ingen e-post: ${result.no_email} användare<br>`;
+                        }
+                        if (result.no_picks > 0) {
+                            statusHtml += `Redan gjort picks: ${result.no_picks} användare<br>`;
+                        }
+                        if (result.sent === 0 && result.failed === 0 && result.no_email === 0 && result.no_picks === 0) {
+                            statusHtml += `Inga användare bearbetades`;
+                        }
+                        statusDiv.innerHTML = statusHtml;
                     }
-                    if (result.failed > 0) {
-                        statusHtml += `Misslyckades: ${result.failed} användare<br>`;
-                    }
-                    if (result.no_email > 0) {
-                        statusHtml += `Ingen e-post: ${result.no_email} användare<br>`;
-                    }
-                    if (result.no_picks > 0) {
-                        statusHtml += `Redan gjort picks: ${result.no_picks} användare<br>`;
-                    }
-                    if (result.sent === 0 && result.failed === 0 && result.no_email === 0 && result.no_picks === 0) {
-                        statusHtml += `Inga användare bearbetades`;
-                    }
-                    statusDiv.innerHTML = statusHtml;
                 } else {
                     statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
                     statusDiv.textContent = '❌ Fel: ' + (result.error || 'Okänt fel');

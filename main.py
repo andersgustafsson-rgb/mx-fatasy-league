@@ -5428,12 +5428,20 @@ def send_pick_reminders():
                 print(f"DEBUG: User {user.username} needs reminder - sending email")
                 # Send reminder
                 user_name = user.display_name or user.username
-                if send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url):
-                    sent += 1
-                    print(f"DEBUG: ✅ Reminder sent to {user.username}")
-                else:
+                try:
+                    if send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url):
+                        sent += 1
+                        print(f"DEBUG: ✅ Reminder sent to {user.username}")
+                    else:
+                        failed += 1
+                        print(f"DEBUG: ❌ Failed to send reminder to {user.username}")
+                except Exception as e:
                     failed += 1
-                    print(f"DEBUG: ❌ Failed to send reminder to {user.username}")
+                    error_msg = str(e)
+                    # Check if it's a SendGrid limit error
+                    if "exceeded your messaging limits" in error_msg or "403" in error_msg:
+                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}")
+                    print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
             else:
                 no_picks += 1
                 print(f"DEBUG: User {user.username} already has complete picks - skipping")
