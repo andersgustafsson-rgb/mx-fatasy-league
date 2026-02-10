@@ -843,7 +843,7 @@ def index():
                 is_wsx = upcoming_race.series == "WSX"
                 
                 # First, populate the picks lists (needed for display)
-                # Always show user's own picks (they can see their own choices)
+                    # Always show user's own picks (they can see their own choices)
                 # Remove duplicates based on rider_id first
                 seen_rider_ids_450 = set()
                 seen_rider_ids_250 = set()
@@ -851,24 +851,24 @@ def index():
                 # Sort picks by predicted_position to ensure correct order
                 sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
                 for pick in sorted_race_picks:
-                    rider = Rider.query.get(pick.rider_id)
-                    if rider:
-                        pick_data = {
-                            "position": pick.predicted_position,
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name
-                        }
-                        
-                        # Separate by class (map WSX classes to display classes)
-                        # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
-                        # For other series: use class_name directly
-                        if rider.class_name in ("450cc", "wsx_sx1"):
+                        rider = Rider.query.get(pick.rider_id)
+                        if rider:
+                            pick_data = {
+                                "position": pick.predicted_position,
+                                "rider_name": rider.name,
+                                "rider_number": rider.rider_number,
+                                "class": rider.class_name
+                            }
+                            
+                            # Separate by class (map WSX classes to display classes)
+                            # For WSX: wsx_sx1 -> 450cc display, wsx_sx2 -> 250cc display
+                            # For other series: use class_name directly
+                            if rider.class_name in ("450cc", "wsx_sx1"):
                             # Only add if we haven't seen this rider_id before
                             if pick.rider_id not in seen_rider_ids_450:
                                 current_picks_450.append(pick_data)
                                 seen_rider_ids_450.add(pick.rider_id)
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
                             # Only add if we haven't seen this rider_id before
                             if pick.rider_id not in seen_rider_ids_250:
                                 current_picks_250.append(pick_data)
@@ -911,36 +911,36 @@ def index():
                     picks_status = "no_picks"
                 
                 # Process holeshot picks for display
-                current_holeshot_450 = None
-                current_holeshot_250 = None
-                for holeshot in holeshot_picks:
-                    rider = Rider.query.get(holeshot.rider_id)
-                    if rider:
-                        # Map WSX classes to display classes
-                        if rider.class_name in ("450cc", "wsx_sx1"):
-                            current_holeshot_450 = {
-                                "rider_name": rider.name,
-                                "rider_number": rider.rider_number,
+                    current_holeshot_450 = None
+                    current_holeshot_250 = None
+                    for holeshot in holeshot_picks:
+                        rider = Rider.query.get(holeshot.rider_id)
+                        if rider:
+                            # Map WSX classes to display classes
+                            if rider.class_name in ("450cc", "wsx_sx1"):
+                                current_holeshot_450 = {
+                                    "rider_name": rider.name,
+                                    "rider_number": rider.rider_number,
+                                    "class": rider.class_name
+                                }
+                            elif rider.class_name in ("250cc", "wsx_sx2"):
+                                current_holeshot_250 = {
+                                    "rider_name": rider.name,
+                                    "rider_number": rider.rider_number,
                                 "class": rider.class_name
                             }
-                        elif rider.class_name in ("250cc", "wsx_sx2"):
-                            current_holeshot_250 = {
+                    
+                    # Process wildcard pick (only for non-WSX series)
+                    current_wildcard = None
+                    if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
+                        rider = Rider.query.get(wildcard_pick.rider_id)
+                        if rider:
+                            current_wildcard = {
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
-                                "class": rider.class_name
+                                "class": rider.class_name,
+                                "position": wildcard_pick.position
                             }
-                
-                # Process wildcard pick (only for non-WSX series)
-                current_wildcard = None
-                if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
-                    rider = Rider.query.get(wildcard_pick.rider_id)
-                    if rider:
-                        current_wildcard = {
-                            "rider_name": rider.name,
-                            "rider_number": rider.rider_number,
-                            "class": rider.class_name,
-                            "position": wildcard_pick.position
-                        }
             except Exception as e:
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
@@ -1046,7 +1046,7 @@ def index():
             races_participated = 0
             best_position = None
 
-    
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -1619,98 +1619,98 @@ def debug_weekly_stats():
 
 def calculate_leaderboard_deltas():
     """Shared function to calculate leaderboard deltas - ensures consistency between get_weekly_fun_stats and get_season_leaderboard"""
-    from sqlalchemy import func
-    from datetime import datetime, timedelta
-    
-    db.session.rollback()
-    
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        db.session.rollback()
+        
     # Get all users
-    user_scores = (
-        db.session.query(
-            User.id,
-            User.username,
-            User.display_name,
-            SeasonTeam.team_name
-        )
-        .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .all()
-    )
-    
-    # Calculate current total points for each user
-    user_scores_list = []
-    for user_row in user_scores:
-        user_id = user_row.id
-        total = 0
-        
-        try:
-            all_scores = (
-                db.session.query(CompetitionScore)
-                .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-                .filter(CompetitionScore.user_id == user_id)
-                .filter(
-                    db.or_(
-                        Competition.series.is_(None),
-                        Competition.series != 'WSX'
-                    )
-                )
-                .all()
+        user_scores = (
+            db.session.query(
+                User.id,
+                User.username,
+                User.display_name,
+                SeasonTeam.team_name
             )
-            
-            # Handle duplicates - keep only most recent score per competition
-            scores_by_comp = {}
-            for score in all_scores:
-                comp_id = score.competition_id
-                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                    scores_by_comp[comp_id] = score
-            
-            total = sum(s.total_points or 0 for s in scores_by_comp.values())
-        except Exception as e:
-            print(f"Error calculating points for user {user_row.username}: {e}")
-            total = 0
+            .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
+            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+            .all()
+        )
         
-        user_scores_list.append({
-            'id': user_id,
-            'username': user_row.username,
-            'display_name': getattr(user_row, 'display_name', None) or user_row.username,
-            'team_name': user_row.team_name,
-            'total_points': total
-        })
-    
+    # Calculate current total points for each user
+        user_scores_list = []
+        for user_row in user_scores:
+            user_id = user_row.id
+            total = 0
+            
+            try:
+                all_scores = (
+                    db.session.query(CompetitionScore)
+                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(
+                        db.or_(
+                            Competition.series.is_(None),
+                            Competition.series != 'WSX'
+                        )
+                    )
+                    .all()
+                )
+                
+            # Handle duplicates - keep only most recent score per competition
+                scores_by_comp = {}
+                for score in all_scores:
+                    comp_id = score.competition_id
+                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                
+                total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            except Exception as e:
+                print(f"Error calculating points for user {user_row.username}: {e}")
+                total = 0
+            
+            user_scores_list.append({
+                'id': user_id,
+                'username': user_row.username,
+                'display_name': getattr(user_row, 'display_name', None) or user_row.username,
+                'team_name': user_row.team_name,
+                'total_points': total
+            })
+        
     # Calculate current leaderboard
-    current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
-    
+        current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
+        
     # Calculate previous leaderboard - compare with competitions from before the last 7 days
     week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
     
     previous_competitions = (
-        db.session.query(Competition)
-        .filter(
-            db.or_(
-                Competition.series.is_(None),
-                Competition.series != 'WSX'
+            db.session.query(Competition)
+            .filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
             ),
             Competition.event_date < week_ago_date
-        )
-        .order_by(Competition.event_date.asc())
+            )
+            .order_by(Competition.event_date.asc())
         .all()
     )
     
-    previous_leaderboard = []
-    for user_data in user_scores_list:
-        user_id = user_data['id']
+        previous_leaderboard = []
+        for user_data in user_scores_list:
+            user_id = user_data['id']
         previous_points = 0
-        
+            
         if previous_competitions:
-            try:
+                try:
                 previous_comp_ids = [c.id for c in previous_competitions]
                 previous_scores = (
-                    db.session.query(CompetitionScore)
-                    .filter(CompetitionScore.user_id == user_id)
+                        db.session.query(CompetitionScore)
+                        .filter(CompetitionScore.user_id == user_id)
                     .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
-                    .all()
-                )
-                
+                        .all()
+                    )
+                    
                 # Handle duplicates - keep only most recent score per competition
                 scores_by_comp = {}
                 for score in previous_scores:
@@ -1719,45 +1719,45 @@ def calculate_leaderboard_deltas():
                         scores_by_comp[comp_id] = score
                 
                 previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
-            except Exception as e:
+                except Exception as e:
                 previous_points = 0
-        
-        previous_leaderboard.append({
-            'id': user_id,
-            'username': user_data['username'],
-            'display_name': user_data['display_name'],
+            
+            previous_leaderboard.append({
+                'id': user_id,
+                'username': user_data['username'],
+                'display_name': user_data['display_name'],
             'total_points': previous_points
-        })
-    
-    previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-    
-    # Create ranking maps
-    current_ranking = {}
-    for i, user in enumerate(current_leaderboard, 1):
-        current_ranking[str(user['id'])] = i
-    
-    previous_ranking = {}
-    for i, user in enumerate(previous_leaderboard, 1):
-        previous_ranking[str(user['id'])] = i
-    
-    # Calculate deltas
-    leaderboard_data = []
-    for i, user_row in enumerate(current_leaderboard, 1):
-        user_id = user_row['id']
-        current_rank = i
-        previous_rank = previous_ranking.get(str(user_id))
+            })
         
-        if previous_rank is not None and previous_rank > 0:
-            delta = current_rank - previous_rank
-        else:
-            delta = None
+        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
         
-        leaderboard_data.append({
-            'user_id': user_id,
-            'username': user_row['username'],
-            'display_name': user_row['display_name'],
+        # Create ranking maps
+        current_ranking = {}
+        for i, user in enumerate(current_leaderboard, 1):
+            current_ranking[str(user['id'])] = i
+        
+        previous_ranking = {}
+        for i, user in enumerate(previous_leaderboard, 1):
+            previous_ranking[str(user['id'])] = i
+        
+        # Calculate deltas
+        leaderboard_data = []
+        for i, user_row in enumerate(current_leaderboard, 1):
+            user_id = user_row['id']
+            current_rank = i
+            previous_rank = previous_ranking.get(str(user_id))
+            
+            if previous_rank is not None and previous_rank > 0:
+                delta = current_rank - previous_rank
+            else:
+                delta = None
+            
+            leaderboard_data.append({
+                'user_id': user_id,
+                'username': user_row['username'],
+                'display_name': user_row['display_name'],
             'team_name': user_row.get('team_name'),
-            'rank': current_rank,
+                'rank': current_rank,
             'delta': delta,
             'total_points': user_row['total_points']
         })
@@ -5448,19 +5448,35 @@ def send_pick_reminders():
                     else:
                         failed += 1
                         # Check if it's a SendGrid limit error
-                        if error_msg and ("exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower()):
-                            sendgrid_limit_detected = True
-                            print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
+                        print(f"DEBUG: Checking error_msg for SendGrid limit: {error_msg}")
+                        if error_msg:
+                            error_lower = error_msg.lower()
+                            print(f"DEBUG: error_msg: {error_msg}")
+                            print(f"DEBUG: error_msg.lower(): {error_lower}")
+                            # Check for various forms of the SendGrid limit error message
+                            if ("exceeded your messaging limits" in error_lower or 
+                                "messaging limits" in error_lower or
+                                "you have exceeded" in error_lower):
+                                sendgrid_limit_detected = True
+                                print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
+                            else:
+                                print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg}")
                         else:
-                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg or 'Unknown error'}")
+                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: No error message")
                 except Exception as e:
                     failed += 1
                     error_msg = str(e)
-                    # Check if it's a SendGrid limit error
-                    if "exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower():
+                    print(f"DEBUG: Exception type: {type(e)}")
+                    print(f"DEBUG: Exception error_msg: {error_msg}")
+                    # Check if it's a SendGrid limit error - check multiple variations
+                    error_lower = error_msg.lower()
+                    if ("exceeded your messaging limits" in error_lower or 
+                        "messaging limits" in error_lower or
+                        "you have exceeded" in error_lower):
                         sendgrid_limit_detected = True
                         print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
-                    print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
+                    else:
+                        print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
             else:
                 no_picks += 1
                 print(f"DEBUG: User {user.username} already has complete picks - skipping")
@@ -6674,7 +6690,7 @@ def get_season_leaderboard():
         # Build result - team_name is already included in leaderboard_data
         result = []
         for user_data in leaderboard_data:
-            result.append({
+                result.append({
                 "user_id": user_data['user_id'],
                 "username": user_data['username'],
                 "display_name": user_data['display_name'] or None,
@@ -6682,26 +6698,26 @@ def get_season_leaderboard():
                 "total_points": int(user_data['total_points']),
                 "rank": user_data['rank'],
                 "delta": user_data['delta']
-            })
-        
-        # Always save new ranking snapshot (even if no changes) so weekly stats can compare
-        # This ensures we have a snapshot to compare against for future competitions
-        try:
-            for row in result:
-                history_entry = LeaderboardHistory(
-                    user_id=row["user_id"],
-                    ranking=row["rank"],
-                    total_points=row["total_points"]
-                )
-                db.session.add(history_entry)
+                })
             
-            db.session.commit()
-        except Exception as commit_error:
-            db.session.rollback()
-            # Continue without saving history - still return the result
-        
-        # Return the result after successful ranking logic
-        return jsonify(result)
+            # Always save new ranking snapshot (even if no changes) so weekly stats can compare
+            # This ensures we have a snapshot to compare against for future competitions
+            try:
+                for row in result:
+                    history_entry = LeaderboardHistory(
+                        user_id=row["user_id"],
+                        ranking=row["rank"],
+                        total_points=row["total_points"]
+                    )
+                    db.session.add(history_entry)
+                
+                db.session.commit()
+            except Exception as commit_error:
+                db.session.rollback()
+                # Continue without saving history - still return the result
+            
+            # Return the result after successful ranking logic
+            return jsonify(result)
     
     except Exception as e:
         # Catch ANY error in the entire function and return JSON
