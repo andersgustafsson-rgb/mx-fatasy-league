@@ -5115,7 +5115,33 @@ def send_bulk_email():
         print(f"DEBUG: Received user_emails: {selected_emails}")
         print(f"DEBUG: user_emails type: {type(selected_emails)}, length: {len(selected_emails) if selected_emails else 0}")
         
-        if selected_emails and len(selected_emails) > 0:
+        # IMPORTANT: Only send to selected users if user_emails is provided and not empty
+        # If user_emails is explicitly provided (even if empty), don't send to all users
+        if 'user_emails' in data:
+            # user_emails was explicitly provided in the request
+            if not selected_emails or len(selected_emails) == 0:
+                return jsonify({
+                    "error": "No recipients selected",
+                    "message": "Du måste välja minst en mottagare"
+                }), 400
+            
+            # Send to selected users only
+            print(f"DEBUG: Sending to SELECTED users only: {selected_emails}")
+            users_to_send = []
+            for email in selected_emails:
+                email_clean = email.strip() if email else ""
+                print(f"DEBUG: Looking up user with email: '{email_clean}'")
+                user = User.query.filter_by(email=email_clean).first()
+                if user:
+                    print(f"DEBUG: Found user: {user.username} ({user.email})")
+                    if user.email and re.match(email_pattern, user.email.strip()):
+                        users_to_send.append(user)
+                        print(f"DEBUG: Added user {user.username} to send list")
+                    else:
+                        print(f"DEBUG: User {user.username} email '{user.email}' failed validation")
+                else:
+                    print(f"DEBUG: No user found with email: '{email_clean}'")
+        elif selected_emails and len(selected_emails) > 0:
             # Send to selected users only
             print(f"DEBUG: Sending to SELECTED users only: {selected_emails}")
             users_to_send = []
