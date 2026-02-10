@@ -5487,7 +5487,8 @@ def send_pick_reminders():
             "no_email": no_email,
             "no_picks": no_picks,
             "competition": next_comp.name,
-            "message": ", ".join(message_parts) if message_parts else "Ingen aktivitet"
+            "message": ", ".join(message_parts) if message_parts else "Ingen aktivitet",
+            "sendgrid_limit_reached": sendgrid_limit_detected
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
