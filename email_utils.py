@@ -111,6 +111,12 @@ def send_email(
             print(f"ERROR: Found messaging limits error in exception string")
         
         print(f"ERROR: Final error_message: {error_message}")
+        
+        # Make sure we return a standardized message if it's a limit error
+        if "exceeded your messaging limits" in error_message.lower() or "messaging limits" in error_message.lower() or "you have exceeded" in error_message.lower():
+            error_message = "You have exceeded your messaging limits"
+            print(f"ERROR: Standardized to SendGrid limit error message")
+        
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return False, error_message
