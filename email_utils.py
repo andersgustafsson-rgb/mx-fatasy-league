@@ -72,9 +72,13 @@ def send_email(
                         print(f"ERROR: Extracted error message from JSON: {error_message}")
                 except:
                     # If not JSON, check if error message is in the body string
-                    if "exceeded your messaging limits" in error_body.lower() or "messaging limits" in error_body.lower():
+                    error_body_lower = error_body.lower()
+                    if ("exceeded your messaging limits" in error_body_lower or 
+                        "messaging limits" in error_body_lower or
+                        "maximum credits exceeded" in error_body_lower or
+                        "credits exceeded" in error_body_lower):
                         error_message = "You have exceeded your messaging limits"
-                        print(f"ERROR: Found messaging limits error in body string")
+                        print(f"ERROR: Found messaging limits/credits error in body string")
                     else:
                         error_message = error_body[:200]  # Limit length
             except Exception as decode_error:
@@ -82,11 +86,15 @@ def send_email(
                 print(f"ERROR: Could not decode error body: {decode_error}")
             
             # Standardize SendGrid limit error message
-            if error_message and ("exceeded your messaging limits" in error_message.lower() or 
-                                  "messaging limits" in error_message.lower() or 
-                                  "you have exceeded" in error_message.lower()):
-                error_message = "You have exceeded your messaging limits"
-                print(f"ERROR: Standardized to SendGrid limit error message")
+            if error_message:
+                error_lower = error_message.lower()
+                if ("exceeded your messaging limits" in error_lower or 
+                    "messaging limits" in error_lower or 
+                    "you have exceeded" in error_lower or
+                    "maximum credits exceeded" in error_lower or
+                    "credits exceeded" in error_lower):
+                    error_message = "You have exceeded your messaging limits"
+                    print(f"ERROR: Standardized to SendGrid limit error message")
             
             return False, error_message
     except Exception as e:
@@ -120,14 +128,22 @@ def send_email(
         
         # Also check the exception string itself
         error_str = str(e).lower()
-        if "exceeded your messaging limits" in error_str or "messaging limits" in error_str:
+        if ("exceeded your messaging limits" in error_str or 
+            "messaging limits" in error_str or
+            "maximum credits exceeded" in error_str or
+            "credits exceeded" in error_str):
             error_message = "You have exceeded your messaging limits"
-            print(f"ERROR: Found messaging limits error in exception string")
+            print(f"ERROR: Found messaging limits/credits error in exception string")
         
         print(f"ERROR: Final error_message: {error_message}")
         
         # Make sure we return a standardized message if it's a limit error
-        if "exceeded your messaging limits" in error_message.lower() or "messaging limits" in error_message.lower() or "you have exceeded" in error_message.lower():
+        error_lower = error_message.lower() if error_message else ""
+        if ("exceeded your messaging limits" in error_lower or 
+            "messaging limits" in error_lower or 
+            "you have exceeded" in error_lower or
+            "maximum credits exceeded" in error_lower or
+            "credits exceeded" in error_lower):
             error_message = "You have exceeded your messaging limits"
             print(f"ERROR: Standardized to SendGrid limit error message")
         

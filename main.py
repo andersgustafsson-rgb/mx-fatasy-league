@@ -5206,9 +5206,15 @@ def send_bulk_email():
                 failed += 1
                 failed_emails.append(user.email)
                 # Check if it's a SendGrid limit error
-                if error_msg and ("exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower()):
-                    sendgrid_limit_detected_bulk = True
-                    print(f"DEBUG: ⚠️ SendGrid limit reached for {user.email}: {error_msg}")
+                if error_msg:
+                    error_lower = error_msg.lower()
+                    if ("exceeded your messaging limits" in error_lower or 
+                        "messaging limits" in error_lower or
+                        "maximum credits exceeded" in error_lower or
+                        "credits exceeded" in error_lower or
+                        ("credits" in error_lower and "exceeded" in error_lower)):
+                        sendgrid_limit_detected_bulk = True
+                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.email}: {error_msg}")
                 else:
                     print(f"DEBUG: ❌ Failed to send to {user.email}: {error_msg or 'Unknown error'}")
         
@@ -5460,7 +5466,10 @@ def send_pick_reminders():
                             if ("exceeded your messaging limits" in error_lower or 
                                 "messaging limits" in error_lower or
                                 "you have exceeded" in error_lower or
-                                "exceeded" in error_lower and "limit" in error_lower):
+                                "maximum credits exceeded" in error_lower or
+                                "credits exceeded" in error_lower or
+                                ("exceeded" in error_lower and "limit" in error_lower) or
+                                ("credits" in error_lower and "exceeded" in error_lower)):
                                 sendgrid_limit_detected = True
                                 print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
                             else:
@@ -5482,9 +5491,14 @@ def send_pick_reminders():
                     if ("exceeded your messaging limits" in error_lower or 
                         "messaging limits" in error_lower or
                         "you have exceeded" in error_lower or
-                        "exceeded" in error_lower and "limit" in error_lower or
+                        "maximum credits exceeded" in error_lower or
+                        "credits exceeded" in error_lower or
+                        ("exceeded" in error_lower and "limit" in error_lower) or
+                        ("credits" in error_lower and "exceeded" in error_lower) or
                         "exceeded your messaging limits" in exception_str or
-                        "messaging limits" in exception_str):
+                        "messaging limits" in exception_str or
+                        "maximum credits exceeded" in exception_str or
+                        "credits exceeded" in exception_str):
                         sendgrid_limit_detected = True
                         print(f"DEBUG: ⚠️ SendGrid limit reached (exception) for {user.username}: {error_msg}")
                     else:
