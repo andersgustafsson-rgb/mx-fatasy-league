@@ -5449,14 +5449,18 @@ def send_pick_reminders():
                         failed += 1
                         # Check if it's a SendGrid limit error
                         print(f"DEBUG: Checking error_msg for SendGrid limit: {error_msg}")
+                        print(f"DEBUG: error_msg type: {type(error_msg)}")
+                        print(f"DEBUG: error_msg value: {repr(error_msg)}")
+                        
+                        # Check error_msg if it exists
                         if error_msg:
-                            error_lower = error_msg.lower()
-                            print(f"DEBUG: error_msg: {error_msg}")
+                            error_lower = str(error_msg).lower()
                             print(f"DEBUG: error_msg.lower(): {error_lower}")
                             # Check for various forms of the SendGrid limit error message
                             if ("exceeded your messaging limits" in error_lower or 
                                 "messaging limits" in error_lower or
-                                "you have exceeded" in error_lower):
+                                "you have exceeded" in error_lower or
+                                "exceeded" in error_lower and "limit" in error_lower):
                                 sendgrid_limit_detected = True
                                 print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
                             else:
@@ -5468,13 +5472,21 @@ def send_pick_reminders():
                     error_msg = str(e)
                     print(f"DEBUG: Exception type: {type(e)}")
                     print(f"DEBUG: Exception error_msg: {error_msg}")
+                    print(f"DEBUG: Exception repr: {repr(e)}")
+                    
                     # Check if it's a SendGrid limit error - check multiple variations
                     error_lower = error_msg.lower()
+                    exception_str = repr(e).lower()
+                    
+                    # Check both error_msg and exception string
                     if ("exceeded your messaging limits" in error_lower or 
                         "messaging limits" in error_lower or
-                        "you have exceeded" in error_lower):
+                        "you have exceeded" in error_lower or
+                        "exceeded" in error_lower and "limit" in error_lower or
+                        "exceeded your messaging limits" in exception_str or
+                        "messaging limits" in exception_str):
                         sendgrid_limit_detected = True
-                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
+                        print(f"DEBUG: ⚠️ SendGrid limit reached (exception) for {user.username}: {error_msg}")
                     else:
                         print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
             else:
