@@ -57,12 +57,26 @@ def send_email(
             # Try to get error details from response
             try:
                 error_body = response.body.decode('utf-8') if response.body else 'No error details'
-                print(f"ERROR: SendGrid returned status code {response.status_code}: {error_body}")
-            except:
                 print(f"ERROR: SendGrid returned status code {response.status_code}")
+                print(f"ERROR: SendGrid error body: {error_body}")
+                print(f"ERROR: From email used: {from_email}")
+                print(f"ERROR: To email: {to_email}")
+            except Exception as decode_error:
+                print(f"ERROR: SendGrid returned status code {response.status_code}")
+                print(f"ERROR: Could not decode error body: {decode_error}")
             return False
     except Exception as e:
         print(f"ERROR sending email to {to_email}: {e}")
+        print(f"ERROR: From email: {from_email}")
+        # Try to get more details from the exception
+        if hasattr(e, 'body'):
+            try:
+                error_body = e.body.decode('utf-8') if e.body else 'No error details'
+                print(f"ERROR: Exception body: {error_body}")
+            except:
+                pass
+        if hasattr(e, 'headers'):
+            print(f"ERROR: Exception headers: {dict(e.headers) if e.headers else 'N/A'}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return False
