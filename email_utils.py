@@ -78,37 +78,39 @@ def send_email(
     except Exception as e:
         print(f"ERROR sending email to {to_email}: {e}")
         print(f"ERROR: From email: {from_email}")
+        print(f"ERROR: Exception type: {type(e)}")
         
-        # Try to extract SendGrid error message
+        # Try to extract SendGrid error message from exception
         error_message = str(e)
-        if hasattr(e, 'body'):
-            try:
-                import json
-                error_body = e.body.decode('utf-8') if e.body else '{}'
-                error_data = json.loads(error_body) if error_body else {}
-                if 'errors' in error_data and len(error_data['errors']) > 0:
-                    error_message = error_data['errors'][0].get('message', str(e))
-                    print(f"ERROR: SendGrid error message: {error_message}")
-            except:
-                pass
         
-        # Store error message for better user feedback
+        # Check if exception has body attribute (SendGrid python-http-client exceptions)
         if hasattr(e, 'body'):
             try:
-                error_body = e.body.decode('utf-8') if e.body else 'No error details'
-                print(f"ERROR: Exception body: {error_body}")
-                # Try to parse JSON error
                 import json
+                error_body = e.body.decode('utf-8') if isinstance(e.body, bytes) else str(e.body) if e.body else '{}'
+                print(f"ERROR: Exception body (raw): {error_body}")
+                
+                # Try to parse JSON error
                 try:
-                    error_data = json.loads(error_body)
+                    error_data = json.loads(error_body) if error_body and error_body != '{}' else {}
                     if 'errors' in error_data and len(error_data['errors']) > 0:
                         error_message = error_data['errors'][0].get('message', str(e))
-                except:
-                    pass
-            except:
-                pass
-        if hasattr(e, 'headers'):
-            print(f"ERROR: Exception headers: {dict(e.headers) if e.headers else 'N/A'}")
+                        print(f"ERROR: Extracted SendGrid error message: {error_message}")
+                except json.JSONDecodeError:
+                    # If not JSON, check if error message is in the body string
+                    if "exceeded your messaging limits" in error_body.lower() or "messaging limits" in error_body.lower():
+                        error_message = "You have exceeded your messaging limits"
+                        print(f"ERROR: Found messaging limits error in body string")
+            except Exception as parse_error:
+                print(f"ERROR: Failed to parse exception body: {parse_error}")
+        
+        # Also check the exception string itself
+        error_str = str(e).lower()
+        if "exceeded your messaging limits" in error_str or "messaging limits" in error_str:
+            error_message = "You have exceeded your messaging limits"
+            print(f"ERROR: Found messaging limits error in exception string")
+        
+        print(f"ERROR: Final error_message: {error_message}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return False, error_message
