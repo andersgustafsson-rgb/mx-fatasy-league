@@ -5358,6 +5358,8 @@ def send_pick_reminders():
         no_email = 0
         no_picks = 0
         
+        print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
+        
         # Format deadline time
         if next_comp.start_time:
             deadline_time = f"{next_comp.event_date} kl. {next_comp.start_time}"
@@ -5367,11 +5369,14 @@ def send_pick_reminders():
         competition_url = f"{request.host_url}race_picks/{next_comp.id}"
         
         for user in users:
+            print(f"DEBUG: Processing user: {user.username} ({user.email})")
             # Check if user has made picks for this competition
             picks = RacePick.query.filter_by(
                 user_id=user.id,
                 competition_id=next_comp.id
             ).all()
+            
+            print(f"DEBUG: User {user.username} has {len(picks)} picks for competition {next_comp.id}")
             
             # Check if picks are complete (12 race picks, 2 holeshot, 1 wildcard for non-WSX)
             has_complete_picks = False
@@ -5420,14 +5425,20 @@ def send_pick_reminders():
                                 has_complete_picks = True
             
             if not has_complete_picks:
+                print(f"DEBUG: User {user.username} needs reminder - sending email")
                 # Send reminder
                 user_name = user.display_name or user.username
                 if send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url):
                     sent += 1
+                    print(f"DEBUG: ✅ Reminder sent to {user.username}")
                 else:
                     failed += 1
+                    print(f"DEBUG: ❌ Failed to send reminder to {user.username}")
             else:
                 no_picks += 1
+                print(f"DEBUG: User {user.username} already has complete picks - skipping")
+        
+        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}")
         
         return jsonify({
             "success": True,
