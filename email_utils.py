@@ -13,7 +13,7 @@ def send_email(
     html_content: str,
     from_email: Optional[str] = None,
     from_name: Optional[str] = None
-) -> bool:
+) -> tuple[bool, Optional[str]]:
     """
     Send an email via SendGrid
     
@@ -30,7 +30,7 @@ def send_email(
     api_key = os.getenv('SENDGRID_API_KEY')
     if not api_key:
         print("ERROR: SENDGRID_API_KEY not set in environment variables")
-        return False
+        return False, "SENDGRID_API_KEY not configured"
     
     from_email = from_email or os.getenv('SENDGRID_FROM_EMAIL', 'spliffan78@gmail.com')
     from_name = from_name or os.getenv('SENDGRID_FROM_NAME', 'MX Fantasy League')
@@ -52,19 +52,29 @@ def send_email(
         
         if response.status_code in [200, 201, 202]:
             print(f"DEBUG: ✅ Email sent successfully to {to_email}")
-            return True
+            return True, None
         else:
             # Try to get error details from response
+            error_message = None
             try:
                 error_body = response.body.decode('utf-8') if response.body else 'No error details'
                 print(f"ERROR: SendGrid returned status code {response.status_code}")
                 print(f"ERROR: SendGrid error body: {error_body}")
                 print(f"ERROR: From email used: {from_email}")
                 print(f"ERROR: To email: {to_email}")
+                
+                # Try to parse JSON error
+                import json
+                try:
+                    error_data = json.loads(error_body)
+                    if 'errors' in error_data and len(error_data['errors']) > 0:
+                        error_message = error_data['errors'][0].get('message', '')
+                except:
+                    pass
             except Exception as decode_error:
                 print(f"ERROR: SendGrid returned status code {response.status_code}")
                 print(f"ERROR: Could not decode error body: {decode_error}")
-            return False
+            return False, error_message
     except Exception as e:
         print(f"ERROR sending email to {to_email}: {e}")
         print(f"ERROR: From email: {from_email}")
@@ -87,16 +97,24 @@ def send_email(
             try:
                 error_body = e.body.decode('utf-8') if e.body else 'No error details'
                 print(f"ERROR: Exception body: {error_body}")
+                # Try to parse JSON error
+                import json
+                try:
+                    error_data = json.loads(error_body)
+                    if 'errors' in error_data and len(error_data['errors']) > 0:
+                        error_message = error_data['errors'][0].get('message', str(e))
+                except:
+                    pass
             except:
                 pass
         if hasattr(e, 'headers'):
             print(f"ERROR: Exception headers: {dict(e.headers) if e.headers else 'N/A'}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
-        return False
+        return False, error_message
 
 
-def send_pick_reminder(user_email: str, user_name: str, competition_name: str, deadline_time: str, competition_url: str) -> bool:
+def send_pick_reminder(user_email: str, user_name: str, competition_name: str, deadline_time: str, competition_url: str) -> tuple[bool, Optional[str]]:
     """
     Send a reminder email to a user about upcoming picks deadline
     
@@ -152,10 +170,11 @@ def send_pick_reminder(user_email: str, user_name: str, competition_name: str, d
     </html>
     """
     
-    return send_email(user_email, subject, html_content)
+    success, error_msg = send_email(user_email, subject, html_content)
+    return success, error_msg
 
 
-def send_admin_announcement(user_email: str, user_name: str, subject: str, message: str) -> bool:
+def send_admin_announcement(user_email: str, user_name: str, subject: str, message: str) -> tuple[bool, Optional[str]]:
     """
     Send an admin announcement/update to a user
     

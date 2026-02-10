@@ -5196,13 +5196,18 @@ def send_bulk_email():
         for user in users_to_send:
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
-            if send_admin_announcement(user.email, user_name, subject, message):
+            success, error_msg = send_admin_announcement(user.email, user_name, subject, message)
+            if success:
                 sent += 1
                 print(f"DEBUG: ✅ Successfully sent to {user.email}")
             else:
                 failed += 1
                 failed_emails.append(user.email)
-                print(f"DEBUG: ❌ Failed to send to {user.email}")
+                # Check if it's a SendGrid limit error
+                if error_msg and ("exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower()):
+                    print(f"DEBUG: ⚠️ SendGrid limit reached for {user.email}: {error_msg}")
+                else:
+                    print(f"DEBUG: ❌ Failed to send to {user.email}: {error_msg or 'Unknown error'}")
         
         return jsonify({
             "success": True,
@@ -5429,17 +5434,23 @@ def send_pick_reminders():
                 # Send reminder
                 user_name = user.display_name or user.username
                 try:
-                    if send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url):
+                    success, error_msg = send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url)
+                    if success:
                         sent += 1
                         print(f"DEBUG: ✅ Reminder sent to {user.username}")
                     else:
                         failed += 1
-                        print(f"DEBUG: ❌ Failed to send reminder to {user.username}")
+                        # Check if it's a SendGrid limit error
+                        if error_msg and ("exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower()):
+                            sendgrid_limit_detected = True
+                            print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
+                        else:
+                            print(f"DEBUG: ❌ Failed to send reminder to {user.username}: {error_msg or 'Unknown error'}")
                 except Exception as e:
                     failed += 1
                     error_msg = str(e)
                     # Check if it's a SendGrid limit error
-                    if "exceeded your messaging limits" in error_msg or "403" in error_msg:
+                    if "exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower():
                         print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}")
                     print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
             else:
