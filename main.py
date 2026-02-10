@@ -5106,33 +5106,55 @@ def send_bulk_email():
         if not message:
             return jsonify({"error": "Message is required"}), 400
         
-        # Get all users with email addresses
-        users = User.query.filter(User.email.isnot(None), User.email != '').all()
+        # Get all users with valid email addresses
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         
-        if not users:
-            return jsonify({"error": "No users with email addresses found"}), 400
+        all_users = User.query.all()
+        users_with_email = []
+        invalid_emails = []
+        
+        for user in all_users:
+            if user.email:
+                email = user.email.strip()
+                if email and re.match(email_pattern, email):
+                    users_with_email.append(user)
+                else:
+                    invalid_emails.append(f"{user.username}: {email}")
+        
+        print(f"DEBUG: Found {len(users_with_email)} users with valid email addresses")
+        print(f"DEBUG: Found {len(invalid_emails)} users with invalid emails: {invalid_emails[:5]}")
+        
+        if not users_with_email:
+            return jsonify({
+                "error": "No users with valid email addresses found",
+                "total_users": len(all_users),
+                "invalid_emails": invalid_emails[:10]
+            }), 400
         
         # Send emails - wrap message in HTML template
-        emails = [user.email for user in users if user.email]
-        
-        # Wrap message in HTML template for better formatting
         from email_utils import send_admin_announcement
         sent = 0
         failed = 0
+        failed_emails = []
         
-        for user in users:
-            if user.email:
-                user_name = user.display_name or user.username
-                if send_admin_announcement(user.email, user_name, subject, message):
-                    sent += 1
-                else:
-                    failed += 1
+        for user in users_with_email:
+            user_name = user.display_name or user.username
+            print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
+            if send_admin_announcement(user.email, user_name, subject, message):
+                sent += 1
+                print(f"DEBUG: ✅ Successfully sent to {user.email}")
+            else:
+                failed += 1
+                failed_emails.append(user.email)
+                print(f"DEBUG: ❌ Failed to send to {user.email}")
         
         return jsonify({
             "success": True,
             "sent": sent,
             "failed": failed,
-            "total": len(emails)
+            "total": len(users_with_email),
+            "failed_emails": failed_emails[:5] if failed > 0 else []
         })
     except Exception as e:
         import traceback
