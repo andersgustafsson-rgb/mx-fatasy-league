@@ -5077,6 +5077,151 @@ def get_admin_announcement():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.post("/admin/send_bulk_email")
+def send_bulk_email():
+    """Send email to all users"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        from email_utils import send_admin_announcement, send_bulk_emails
+        
+        data = request.get_json()
+        subject = data.get('subject', '').strip()
+        message = data.get('message', '').strip()
+        
+        if not subject:
+            return jsonify({"error": "Subject is required"}), 400
+        
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
+        
+        # Get all users with email addresses
+        users = User.query.filter(User.email.isnot(None), User.email != '').all()
+        
+        if not users:
+            return jsonify({"error": "No users with email addresses found"}), 400
+        
+        # Send emails
+        emails = [user.email for user in users if user.email]
+        results = send_bulk_emails(emails, subject, message)
+        
+        return jsonify({
+            "success": True,
+            "sent": results['success'],
+            "failed": results['failed'],
+            "total": len(emails)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.post("/admin/send_pick_reminders")
+def send_pick_reminders():
+    """Send pick reminders to users who haven't made picks for next competition"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        from email_utils import send_pick_reminder
+        from datetime import datetime, timedelta
+        
+        # Get next upcoming competition
+        today = get_today()
+        next_comp = (
+            Competition.query
+            .filter(Competition.event_date >= today)
+            .filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
+                )
+            )
+            .order_by(Competition.event_date)
+            .first()
+        )
+        
+        if not next_comp:
+            return jsonify({"error": "No upcoming competition found"}), 404
+        
+        # Get all users with email addresses
+        users = User.query.filter(User.email.isnot(None), User.email != '').all()
+        
+        sent = 0
+        failed = 0
+        no_email = 0
+        no_picks = 0
+        
+        # Format deadline time
+        if next_comp.start_time:
+            deadline_time = f"{next_comp.event_date} kl. {next_comp.start_time}"
+        else:
+            deadline_time = f"{next_comp.event_date}"
+        
+        competition_url = f"{request.host_url}race_picks/{next_comp.id}"
+        
+        for user in users:
+            # Check if user has made picks for this competition
+            picks = RacePick.query.filter_by(
+                user_id=user.id,
+                competition_id=next_comp.id
+            ).all()
+            
+            # Check if picks are complete (12 race picks, 2 holeshot, 1 wildcard for non-WSX)
+            has_complete_picks = False
+            if picks:
+                # Deduplicate picks
+                unique_picks = {}
+                for pick in picks:
+                    key = (pick.rider_id, pick.class_name, pick.predicted_position)
+                    if key not in unique_picks:
+                        unique_picks[key] = pick
+                
+                race_picks_450 = [p for p in unique_picks.values() if p.class_name in ['450cc', 'wsx_sx1']]
+                race_picks_250 = [p for p in unique_picks.values() if p.class_name in ['250cc', 'wsx_sx2']]
+                
+                is_wsx = next_comp.series == 'WSX'
+                required_race_picks = 6 if is_wsx else 6  # 6 per class
+                
+                if len(race_picks_450) >= required_race_picks and len(race_picks_250) >= required_race_picks:
+                    # Check holeshot picks
+                    holeshot_picks = HoleshotPick.query.filter_by(
+                        user_id=user.id,
+                        competition_id=next_comp.id
+                    ).count()
+                    
+                    if holeshot_picks >= 2:
+                        # Check wildcard for non-WSX
+                        if is_wsx:
+                            has_complete_picks = True
+                        else:
+                            wildcard_pick = WildcardPick.query.filter_by(
+                                user_id=user.id,
+                                competition_id=next_comp.id
+                            ).first()
+                            if wildcard_pick:
+                                has_complete_picks = True
+            
+            if not has_complete_picks:
+                # Send reminder
+                user_name = user.display_name or user.username
+                if send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url):
+                    sent += 1
+                else:
+                    failed += 1
+            else:
+                no_picks += 1
+        
+        return jsonify({
+            "success": True,
+            "sent": sent,
+            "failed": failed,
+            "no_email": no_email,
+            "no_picks": no_picks,
+            "competition": next_comp.name
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.post("/admin/submit_results")
 def submit_results():
     if not is_admin_user():

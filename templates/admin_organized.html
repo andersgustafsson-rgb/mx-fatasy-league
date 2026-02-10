@@ -732,6 +732,57 @@
                     
                     <div id="announcement-status" class="mt-4 hidden"></div>
                 </div>
+                
+                <!-- Email Section -->
+                <div class="mt-8 bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-xl font-semibold text-white mb-4">📧 Skicka E-post</h3>
+                    
+                    <!-- Send Update/Announcement Email -->
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-cyan-400 mb-3">Skicka uppdatering till alla användare</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Ämne:</label>
+                                <input 
+                                    type="text" 
+                                    id="email-subject" 
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                                    placeholder="T.ex: Ny tävling tillagd!"
+                                />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Meddelande (HTML):</label>
+                                <textarea 
+                                    id="email-message" 
+                                    rows="6" 
+                                    class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                                    placeholder="Skriv ditt meddelande här... Du kan använda HTML för formatering."
+                                ></textarea>
+                            </div>
+                            <div class="flex gap-3">
+                                <button 
+                                    onclick="sendBulkEmail()" 
+                                    class="btn-primary px-6 py-2 rounded-lg">
+                                    📧 Skicka till alla användare
+                                </button>
+                                <button 
+                                    onclick="sendPickReminders()" 
+                                    class="btn-warning px-6 py-2 rounded-lg">
+                                    ⏰ Skicka picks-påminnelser
+                                </button>
+                            </div>
+                            <div id="email-status" class="mt-4 hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pick Reminders Info -->
+                    <div class="mb-6 p-3 bg-blue-900/30 border border-blue-500 rounded-lg">
+                        <p class="text-blue-300 text-sm">
+                            💡 <strong>Picks-påminnelser:</strong> Skickar automatiskt påminnelser till alla användare som inte har gjort sina picks för nästa tävling. 
+                            E-posten skickas bara till användare med registrerad e-postadress.
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1503,6 +1554,91 @@
                 }
             } catch (error) {
                 console.error('Error loading announcement:', error);
+            }
+        }
+        
+        // Email functions
+        async function sendBulkEmail() {
+            const subject = document.getElementById('email-subject').value.trim();
+            const message = document.getElementById('email-message').value.trim();
+            
+            if (!subject) {
+                alert('❌ Du måste ange ett ämne!');
+                return;
+            }
+            
+            if (!message) {
+                alert('❌ Du måste skriva ett meddelande!');
+                return;
+            }
+            
+            if (!confirm(`Är du säker på att du vill skicka detta e-post till alla användare?\n\nÄmne: ${subject}\n\nDetta kan ta en stund om det finns många användare.`)) {
+                return;
+            }
+            
+            const statusDiv = document.getElementById('email-status');
+            statusDiv.classList.remove('hidden');
+            statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
+            statusDiv.textContent = '📧 Skickar e-post...';
+            
+            try {
+                const response = await fetch('/admin/send_bulk_email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        subject: subject,
+                        message: message
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
+                    statusDiv.innerHTML = `✅ E-post skickat!<br>Skickat till: ${result.sent} användare<br>Misslyckades: ${result.failed} användare`;
+                    
+                    // Clear form
+                    document.getElementById('email-subject').value = '';
+                    document.getElementById('email-message').value = '';
+                } else {
+                    statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                    statusDiv.textContent = '❌ Fel: ' + (result.error || 'Okänt fel');
+                }
+            } catch (error) {
+                statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                statusDiv.textContent = '❌ Fel vid skickande: ' + error.message;
+            }
+        }
+        
+        async function sendPickReminders() {
+            if (!confirm('Skicka picks-påminnelser till alla användare som inte har gjort sina picks för nästa tävling?\n\nDetta skickar bara till användare med registrerad e-postadress.')) {
+                return;
+            }
+            
+            const statusDiv = document.getElementById('email-status');
+            statusDiv.classList.remove('hidden');
+            statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
+            statusDiv.textContent = '⏰ Skickar picks-påminnelser...';
+            
+            try {
+                const response = await fetch('/admin/send_pick_reminders', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    statusDiv.className = 'mt-4 p-3 bg-green-900/40 border border-green-500 rounded text-green-300';
+                    statusDiv.innerHTML = `✅ Påminnelser skickade!<br>Skickat till: ${result.sent} användare<br>Misslyckades: ${result.failed} användare<br>Ingen e-post: ${result.no_email} användare`;
+                } else {
+                    statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                    statusDiv.textContent = '❌ Fel: ' + (result.error || 'Okänt fel');
+                }
+            } catch (error) {
+                statusDiv.className = 'mt-4 p-3 bg-red-900/40 border border-red-500 rounded text-red-300';
+                statusDiv.textContent = '❌ Fel vid skickande: ' + error.message;
             }
         }
         
