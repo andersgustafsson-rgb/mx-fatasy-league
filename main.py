@@ -5112,18 +5112,33 @@ def send_bulk_email():
         if not users:
             return jsonify({"error": "No users with email addresses found"}), 400
         
-        # Send emails
+        # Send emails - wrap message in HTML template
         emails = [user.email for user in users if user.email]
-        results = send_bulk_emails(emails, subject, message)
+        
+        # Wrap message in HTML template for better formatting
+        from email_utils import send_admin_announcement
+        sent = 0
+        failed = 0
+        
+        for user in users:
+            if user.email:
+                user_name = user.display_name or user.username
+                if send_admin_announcement(user.email, user_name, subject, message):
+                    sent += 1
+                else:
+                    failed += 1
         
         return jsonify({
             "success": True,
-            "sent": results['success'],
-            "failed": results['failed'],
+            "sent": sent,
+            "failed": failed,
             "total": len(emails)
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR in send_bulk_email: {e}\n{error_details}")
+        return jsonify({"error": str(e), "details": error_details}), 500
 
 @app.post("/admin/send_pick_reminders")
 def send_pick_reminders():

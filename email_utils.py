@@ -48,10 +48,17 @@ def send_email(
         if response.status_code in [200, 201, 202]:
             return True
         else:
-            print(f"ERROR: SendGrid returned status code {response.status_code}")
+            # Try to get error details from response
+            try:
+                error_body = response.body.decode('utf-8') if response.body else 'No error details'
+                print(f"ERROR: SendGrid returned status code {response.status_code}: {error_body}")
+            except:
+                print(f"ERROR: SendGrid returned status code {response.status_code}")
             return False
     except Exception as e:
-        print(f"ERROR sending email: {e}")
+        print(f"ERROR sending email to {to_email}: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return False
 
 
