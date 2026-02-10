@@ -5368,6 +5368,7 @@ def send_pick_reminders():
         failed = 0
         no_email = 0
         no_picks = 0
+        sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
         
         print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
         
