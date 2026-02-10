@@ -69,11 +69,25 @@ def send_email(
                     error_data = json.loads(error_body)
                     if 'errors' in error_data and len(error_data['errors']) > 0:
                         error_message = error_data['errors'][0].get('message', '')
+                        print(f"ERROR: Extracted error message from JSON: {error_message}")
                 except:
-                    pass
+                    # If not JSON, check if error message is in the body string
+                    if "exceeded your messaging limits" in error_body.lower() or "messaging limits" in error_body.lower():
+                        error_message = "You have exceeded your messaging limits"
+                        print(f"ERROR: Found messaging limits error in body string")
+                    else:
+                        error_message = error_body[:200]  # Limit length
             except Exception as decode_error:
                 print(f"ERROR: SendGrid returned status code {response.status_code}")
                 print(f"ERROR: Could not decode error body: {decode_error}")
+            
+            # Standardize SendGrid limit error message
+            if error_message and ("exceeded your messaging limits" in error_message.lower() or 
+                                  "messaging limits" in error_message.lower() or 
+                                  "you have exceeded" in error_message.lower()):
+                error_message = "You have exceeded your messaging limits"
+                print(f"ERROR: Standardized to SendGrid limit error message")
+            
             return False, error_message
     except Exception as e:
         print(f"ERROR sending email to {to_email}: {e}")
