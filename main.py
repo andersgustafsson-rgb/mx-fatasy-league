@@ -5112,15 +5112,29 @@ def send_bulk_email():
         
         selected_emails = data.get('user_emails', [])  # Optional: list of specific emails to send to
         
-        if selected_emails:
+        print(f"DEBUG: Received user_emails: {selected_emails}")
+        print(f"DEBUG: user_emails type: {type(selected_emails)}, length: {len(selected_emails) if selected_emails else 0}")
+        
+        if selected_emails and len(selected_emails) > 0:
             # Send to selected users only
+            print(f"DEBUG: Sending to SELECTED users only: {selected_emails}")
             users_to_send = []
             for email in selected_emails:
-                user = User.query.filter_by(email=email.strip()).first()
-                if user and user.email and re.match(email_pattern, user.email.strip()):
-                    users_to_send.append(user)
+                email_clean = email.strip() if email else ""
+                print(f"DEBUG: Looking up user with email: '{email_clean}'")
+                user = User.query.filter_by(email=email_clean).first()
+                if user:
+                    print(f"DEBUG: Found user: {user.username} ({user.email})")
+                    if user.email and re.match(email_pattern, user.email.strip()):
+                        users_to_send.append(user)
+                        print(f"DEBUG: Added user {user.username} to send list")
+                    else:
+                        print(f"DEBUG: User {user.username} email '{user.email}' failed validation")
+                else:
+                    print(f"DEBUG: No user found with email: '{email_clean}'")
         else:
             # Send to all users with valid email addresses
+            print(f"DEBUG: No selected emails provided, sending to ALL users with email addresses")
             all_users = User.query.all()
             users_to_send = []
             for user in all_users:
