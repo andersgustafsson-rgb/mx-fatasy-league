@@ -2104,13 +2104,23 @@ def update_profile():
     
     try:
         # Uppdatera grundläggande information (only if columns exist)
+        email = request.form.get("email", "").strip() or None
         display_name = request.form.get("display_name", "").strip() or None
         bio = request.form.get("bio", "").strip() or None
         favorite_rider = request.form.get("favorite_rider", "").strip() or None
         favorite_team = request.form.get("favorite_team", "").strip() or None
         
+        # Validate email format if provided
+        if email:
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                flash("Ogiltig e-postadress. Vänligen ange en korrekt e-postadress.", "error")
+                return redirect(url_for("profile_page"))
+        
         # Try to update profile fields
         try:
+            user.email = email
             user.display_name = display_name
             user.bio = bio
             user.favorite_rider = favorite_rider
