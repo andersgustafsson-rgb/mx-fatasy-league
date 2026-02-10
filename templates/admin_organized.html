@@ -1822,6 +1822,9 @@
             }
             
             const selectedUsers = getSelectedUsers();
+            console.log('DEBUG: Selected users:', selectedUsers);
+            console.log('DEBUG: Selected emails:', selectedUsers.map(u => u.email));
+            
             if (selectedUsers.length === 0) {
                 alert('❌ Välj minst en mottagare!');
                 return;
@@ -1836,6 +1839,9 @@
             statusDiv.className = 'mt-4 p-3 bg-yellow-900/40 border border-yellow-500 rounded text-yellow-300';
             statusDiv.textContent = '📧 Skickar e-post...';
             
+            const emailList = selectedUsers.map(u => u.email);
+            console.log('DEBUG: Sending request with user_emails:', emailList);
+            
             try {
                 const response = await fetch('/admin/send_bulk_email', {
                     method: 'POST',
@@ -1845,7 +1851,7 @@
                     body: JSON.stringify({
                         subject: subject,
                         message: message,
-                        user_emails: selectedUsers.map(u => u.email)
+                        user_emails: emailList
                     })
                 });
                 
