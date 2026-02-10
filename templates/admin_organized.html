@@ -739,7 +739,7 @@
                     
                     <!-- Send Update/Announcement Email -->
                     <div class="mb-6">
-                        <h4 class="text-lg font-semibold text-cyan-400 mb-3">Skicka uppdatering till alla användare</h4>
+                        <h4 class="text-lg font-semibold text-cyan-400 mb-3">Skicka uppdatering till användare</h4>
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2">Ämne:</label>
@@ -748,6 +748,7 @@
                                     id="email-subject" 
                                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
                                     placeholder="T.ex: Ny tävling tillagd!"
+                                    oninput="updateEmailPreview()"
                                 />
                             </div>
                             <div>
@@ -757,13 +758,53 @@
                                     rows="6" 
                                     class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
                                     placeholder="Skriv ditt meddelande här... Du kan använda HTML för formatering."
+                                    oninput="updateEmailPreview()"
                                 ></textarea>
                             </div>
+                            
+                            <!-- User Selection -->
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label class="block text-sm font-medium text-gray-300">Välj mottagare:</label>
+                                    <div class="flex gap-2">
+                                        <button 
+                                            onclick="selectAllUsers()" 
+                                            class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white">
+                                            Välj alla
+                                        </button>
+                                        <button 
+                                            onclick="deselectAllUsers()" 
+                                            class="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white">
+                                            Avmarkera alla
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="user-selection-list" class="max-h-48 overflow-y-auto bg-gray-700 rounded-lg p-3 border border-gray-600">
+                                    <p class="text-gray-400 text-sm">Laddar användare...</p>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1" id="selected-users-count">0 användare valda</p>
+                            </div>
+                            
+                            <!-- Preview Button -->
+                            <div class="flex gap-3">
+                                <button 
+                                    onclick="showEmailPreview()" 
+                                    class="btn-warning px-6 py-2 rounded-lg">
+                                    👁️ Förhandsgranska e-post
+                                </button>
+                                <button 
+                                    onclick="showPickReminderPreview()" 
+                                    class="btn-warning px-6 py-2 rounded-lg">
+                                    👁️ Förhandsgranska picks-påminnelse
+                                </button>
+                            </div>
+                            
+                            <!-- Action Buttons -->
                             <div class="flex gap-3">
                                 <button 
                                     onclick="sendBulkEmail()" 
                                     class="btn-primary px-6 py-2 rounded-lg">
-                                    📧 Skicka till alla användare
+                                    📧 Skicka till valda användare
                                 </button>
                                 <button 
                                     onclick="sendPickReminders()" 
@@ -1558,6 +1599,214 @@
         }
         
         // Email functions
+        let usersWithEmail = [];
+        
+        async function loadUsersWithEmail() {
+            try {
+                const response = await fetch('/admin/list_users_with_email');
+                const result = await response.json();
+                
+                if (result.success) {
+                    usersWithEmail = result.users_with_valid_email || [];
+                    renderUserSelection();
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('user-selection-list').innerHTML = '<p class="text-red-400 text-sm">Fel vid laddning av användare</p>';
+            }
+        }
+        
+        function renderUserSelection() {
+            const container = document.getElementById('user-selection-list');
+            if (usersWithEmail.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm">Inga användare med e-postadresser hittades</p>';
+                return;
+            }
+            
+            container.innerHTML = usersWithEmail.map(user => `
+                <label class="flex items-center gap-2 p-2 hover:bg-gray-600 rounded cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        class="user-email-checkbox w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500"
+                        value="${user.email}"
+                        data-username="${user.username}"
+                        data-display-name="${user.display_name || user.username}"
+                        checked
+                        onchange="updateSelectedUsersCount()"
+                    />
+                    <span class="text-white text-sm">
+                        ${user.display_name || user.username} 
+                        <span class="text-gray-400 text-xs">(${user.email})</span>
+                    </span>
+                </label>
+            `).join('');
+            
+            updateSelectedUsersCount();
+        }
+        
+        function selectAllUsers() {
+            document.querySelectorAll('.user-email-checkbox').forEach(cb => cb.checked = true);
+            updateSelectedUsersCount();
+        }
+        
+        function deselectAllUsers() {
+            document.querySelectorAll('.user-email-checkbox').forEach(cb => cb.checked = false);
+            updateSelectedUsersCount();
+        }
+        
+        function updateSelectedUsersCount() {
+            const selected = document.querySelectorAll('.user-email-checkbox:checked').length;
+            document.getElementById('selected-users-count').textContent = `${selected} användare valda`;
+        }
+        
+        function getSelectedUsers() {
+            const checkboxes = document.querySelectorAll('.user-email-checkbox:checked');
+            return Array.from(checkboxes).map(cb => ({
+                email: cb.value,
+                username: cb.dataset.username,
+                display_name: cb.dataset.displayName
+            }));
+        }
+        
+        function showEmailPreview() {
+            const subject = document.getElementById('email-subject').value.trim();
+            const message = document.getElementById('email-message').value.trim();
+            
+            if (!subject && !message) {
+                alert('❌ Skriv ett ämne och meddelande först!');
+                return;
+            }
+            
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                alert('❌ Välj minst en mottagare!');
+                return;
+            }
+            
+            // Create preview HTML
+            const previewHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background-color: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                        .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 5px 5px; }
+                        .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>🏁 MX Fantasy League</h1>
+                        </div>
+                        <div class="content">
+                            <h2>Hej [Användarnamn]!</h2>
+                            <div style="margin-top: 20px;">
+                                ${message || '<em>Inget meddelande skrivet ännu</em>'}
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>Detta är ett meddelande från MX Fantasy League.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            showPreviewModal('E-post Förhandsvisning', previewHTML, subject || 'Inget ämne');
+        }
+        
+        async function showPickReminderPreview() {
+            try {
+                // Get next competition info
+                const response = await fetch('/admin/get_next_competition');
+                const compData = await response.json();
+                
+                if (!compData.success || !compData.competition) {
+                    alert('❌ Kunde inte hämta nästa tävling. Förhandsvisning visar exempel.');
+                }
+                
+                const comp = compData.competition || { name: 'Exempel Tävling', event_date: '2026-01-15', start_time: '20:00' };
+                const deadlineTime = comp.start_time ? `${comp.event_date} kl. ${comp.start_time}` : comp.event_date;
+                const competitionUrl = `${window.location.origin}/race_picks/${comp.id || 1}`;
+                
+                const previewHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                            .header { background-color: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                            .content { background-color: #f9fafb; padding: 30px; border-radius: 0 0 5px 5px; }
+                            .button { display: inline-block; background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 20px; }
+                            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="container">
+                            <div class="header">
+                                <h1>🏁 MX Fantasy League</h1>
+                            </div>
+                            <div class="content">
+                                <h2>Hej [Användarnamn]!</h2>
+                                <p>Det är dags att sätta dina picks för <strong>${comp.name}</strong>!</p>
+                                <p>⏰ <strong>Deadline:</strong> ${deadlineTime}</p>
+                                <p>Glöm inte att göra dina val innan tävlingen börjar!</p>
+                                <p style="text-align: center;">
+                                    <a href="${competitionUrl}" class="button">Gör dina picks nu →</a>
+                                </p>
+                                <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+                                    Om knappen inte fungerar, kopiera denna länk: ${competitionUrl}
+                                </p>
+                            </div>
+                            <div class="footer">
+                                <p>Detta är ett automatiskt meddelande från MX Fantasy League.</p>
+                                <p>Du får detta e-post eftersom du är registrerad i spelet.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                `;
+                
+                showPreviewModal('Picks-påminnelse Förhandsvisning', previewHTML, `⏰ Påminnelse: Sätt dina picks för ${comp.name}`);
+            } catch (error) {
+                console.error('Error loading preview:', error);
+                alert('❌ Kunde inte ladda förhandsvisning: ' + error.message);
+            }
+        }
+        
+        function showPreviewModal(title, htmlContent, subject) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-gray-800 border border-cyan-400 rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-white">${title}</h3>
+                        <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-3xl font-bold bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 flex items-center justify-center transition-colors">&times;</button>
+                    </div>
+                    <div class="mb-4 p-3 bg-gray-700 rounded">
+                        <p class="text-sm text-gray-300"><strong>Ämne:</strong> ${subject}</p>
+                    </div>
+                    <div class="bg-white rounded p-4 mb-4" style="max-height: 60vh; overflow-y: auto;">
+                        <iframe srcdoc='${htmlContent.replace(/'/g, "&#39;")}' style="width: 100%; min-height: 400px; border: none;"></iframe>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg transition-colors">Stäng</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        function updateEmailPreview() {
+            // This function is called on input - can be used for live preview if needed
+        }
+        
         async function sendBulkEmail() {
             const subject = document.getElementById('email-subject').value.trim();
             const message = document.getElementById('email-message').value.trim();
@@ -1572,7 +1821,13 @@
                 return;
             }
             
-            if (!confirm(`Är du säker på att du vill skicka detta e-post till alla användare?\n\nÄmne: ${subject}\n\nDetta kan ta en stund om det finns många användare.`)) {
+            const selectedUsers = getSelectedUsers();
+            if (selectedUsers.length === 0) {
+                alert('❌ Välj minst en mottagare!');
+                return;
+            }
+            
+            if (!confirm(`Är du säker på att du vill skicka detta e-post till ${selectedUsers.length} användare?\n\nÄmne: ${subject}\n\nDetta kan ta en stund.`)) {
                 return;
             }
             
@@ -1589,7 +1844,8 @@
                     },
                     body: JSON.stringify({
                         subject: subject,
-                        message: message
+                        message: message,
+                        user_emails: selectedUsers.map(u => u.email)
                     })
                 });
                 
@@ -1697,6 +1953,7 @@
             loadAllUsers();
             loadPicksStatsCompetitions();
             loadAnnouncement(); // Load existing announcement when page loads
+            loadUsersWithEmail(); // Load users with email for email sending
             
             // Load existing results if a competition is already selected (only if not just submitted)
             if (!lastCompId) {

@@ -5106,30 +5106,33 @@ def send_bulk_email():
         if not message:
             return jsonify({"error": "Message is required"}), 400
         
-        # Get all users with valid email addresses
+        # Get selected user emails or all users with valid email addresses
         import re
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         
-        all_users = User.query.all()
-        users_with_email = []
-        invalid_emails = []
+        selected_emails = data.get('user_emails', [])  # Optional: list of specific emails to send to
         
-        for user in all_users:
-            if user.email:
-                email = user.email.strip()
-                if email and re.match(email_pattern, email):
-                    users_with_email.append(user)
-                else:
-                    invalid_emails.append(f"{user.username}: {email}")
+        if selected_emails:
+            # Send to selected users only
+            users_to_send = []
+            for email in selected_emails:
+                user = User.query.filter_by(email=email.strip()).first()
+                if user and user.email and re.match(email_pattern, user.email.strip()):
+                    users_to_send.append(user)
+        else:
+            # Send to all users with valid email addresses
+            all_users = User.query.all()
+            users_to_send = []
+            for user in all_users:
+                if user.email:
+                    email = user.email.strip()
+                    if email and re.match(email_pattern, email):
+                        users_to_send.append(user)
         
-        print(f"DEBUG: Found {len(users_with_email)} users with valid email addresses")
-        print(f"DEBUG: Found {len(invalid_emails)} users with invalid emails: {invalid_emails[:5]}")
-        
-        if not users_with_email:
+        if not users_to_send:
             return jsonify({
-                "error": "No users with valid email addresses found",
-                "total_users": len(all_users),
-                "invalid_emails": invalid_emails[:10]
+                "error": "No valid recipients found",
+                "selected_emails": selected_emails
             }), 400
         
         # Send emails - wrap message in HTML template
@@ -5147,10 +5150,10 @@ def send_bulk_email():
                 "hint": "Add SENDGRID_API_KEY to Render environment variables"
             }), 500
         
-        print(f"DEBUG: SendGrid API key configured: {'Yes' if api_key else 'No'} (length: {len(api_key) if api_key else 0})")
-        print(f"DEBUG: From email: {os.getenv('SENDGRID_FROM_EMAIL', 'spliffan78@gmail.com')}")
+        print(f"DEBUG: Sending to {len(users_to_send)} users")
+        print(f"DEBUG: SendGrid API key configured: {'Yes' if api_key else 'No'}")
         
-        for user in users_with_email:
+        for user in users_to_send:
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
             if send_admin_announcement(user.email, user_name, subject, message):
@@ -5165,7 +5168,7 @@ def send_bulk_email():
             "success": True,
             "sent": sent,
             "failed": failed,
-            "total": len(users_with_email),
+            "total": len(users_to_send),
             "failed_emails": failed_emails[:5] if failed > 0 else []
         })
     except Exception as e:
@@ -5225,6 +5228,45 @@ def list_users_with_email():
     except Exception as e:
         import traceback
         return jsonify({"error": str(e), "details": traceback.format_exc()}), 500
+
+@app.get("/admin/get_next_competition")
+def get_next_competition():
+    """Get next upcoming competition for preview"""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    
+    try:
+        today = get_today()
+        next_comp = (
+            Competition.query
+            .filter(Competition.event_date >= today)
+            .filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
+                )
+            )
+            .order_by(Competition.event_date)
+            .first()
+        )
+        
+        if not next_comp:
+            return jsonify({
+                "success": False,
+                "error": "No upcoming competition found"
+            })
+        
+        return jsonify({
+            "success": True,
+            "competition": {
+                "id": next_comp.id,
+                "name": next_comp.name,
+                "event_date": str(next_comp.event_date) if next_comp.event_date else None,
+                "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.post("/admin/send_pick_reminders")
 def send_pick_reminders():
