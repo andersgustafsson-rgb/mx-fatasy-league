@@ -5322,15 +5322,26 @@ def send_pick_reminders():
             # Check if picks are complete (12 race picks, 2 holeshot, 1 wildcard for non-WSX)
             has_complete_picks = False
             if picks:
-                # Deduplicate picks
+                # Deduplicate picks - need to get rider class_name from Rider model
                 unique_picks = {}
                 for pick in picks:
-                    key = (pick.rider_id, pick.class_name, pick.predicted_position)
-                    if key not in unique_picks:
-                        unique_picks[key] = pick
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        rider_class = rider.class_name
+                        key = (pick.rider_id, rider_class, pick.predicted_position)
+                        if key not in unique_picks:
+                            unique_picks[key] = pick
                 
-                race_picks_450 = [p for p in unique_picks.values() if p.class_name in ['450cc', 'wsx_sx1']]
-                race_picks_250 = [p for p in unique_picks.values() if p.class_name in ['250cc', 'wsx_sx2']]
+                # Filter by class using rider's class_name
+                race_picks_450 = []
+                race_picks_250 = []
+                for pick in unique_picks.values():
+                    rider = Rider.query.get(pick.rider_id)
+                    if rider:
+                        if rider.class_name in ['450cc', 'wsx_sx1']:
+                            race_picks_450.append(pick)
+                        elif rider.class_name in ['250cc', 'wsx_sx2']:
+                            race_picks_250.append(pick)
                 
                 is_wsx = next_comp.series == 'WSX'
                 required_race_picks = 6 if is_wsx else 6  # 6 per class
