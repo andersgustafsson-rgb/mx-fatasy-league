@@ -5193,6 +5193,8 @@ def send_bulk_email():
         print(f"DEBUG: Sending to {len(users_to_send)} users")
         print(f"DEBUG: SendGrid API key configured: {'Yes' if api_key else 'No'}")
         
+        sendgrid_limit_detected_bulk = False
+        
         for user in users_to_send:
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
@@ -5205,16 +5207,20 @@ def send_bulk_email():
                 failed_emails.append(user.email)
                 # Check if it's a SendGrid limit error
                 if error_msg and ("exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower()):
+                    sendgrid_limit_detected_bulk = True
                     print(f"DEBUG: ⚠️ SendGrid limit reached for {user.email}: {error_msg}")
                 else:
                     print(f"DEBUG: ❌ Failed to send to {user.email}: {error_msg or 'Unknown error'}")
+        
+        print(f"DEBUG: send_bulk_email - SendGrid limit detected: {sendgrid_limit_detected_bulk}")
         
         return jsonify({
             "success": True,
             "sent": sent,
             "failed": failed,
             "total": len(users_to_send),
-            "failed_emails": failed_emails[:5] if failed > 0 else []
+            "failed_emails": failed_emails[:5] if failed > 0 else [],
+            "sendgrid_limit_reached": sendgrid_limit_detected_bulk
         })
     except Exception as e:
         import traceback
@@ -5451,7 +5457,8 @@ def send_pick_reminders():
                     error_msg = str(e)
                     # Check if it's a SendGrid limit error
                     if "exceeded your messaging limits" in error_msg.lower() or "messaging limits" in error_msg.lower():
-                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}")
+                        sendgrid_limit_detected = True
+                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.username}: {error_msg}")
                     print(f"DEBUG: ❌ Exception sending reminder to {user.username}: {error_msg}")
             else:
                 no_picks += 1
