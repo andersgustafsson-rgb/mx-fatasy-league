@@ -6712,7 +6712,7 @@ def get_season_leaderboard():
         # Build result - team_name is already included in leaderboard_data
         result = []
         for user_data in leaderboard_data:
-                result.append({
+            result.append({
                 "user_id": user_data['user_id'],
                 "username": user_data['username'],
                 "display_name": user_data['display_name'] or None,
@@ -6720,26 +6720,28 @@ def get_season_leaderboard():
                 "total_points": int(user_data['total_points']),
                 "rank": user_data['rank'],
                 "delta": user_data['delta']
-                })
+            })
             
             # Always save new ranking snapshot (even if no changes) so weekly stats can compare
             # This ensures we have a snapshot to compare against for future competitions
-            try:
-                for row in result:
-                    history_entry = LeaderboardHistory(
-                        user_id=row["user_id"],
-                        ranking=row["rank"],
-                        total_points=row["total_points"]
-                    )
-                    db.session.add(history_entry)
-                
-                db.session.commit()
-            except Exception as commit_error:
-                db.session.rollback()
-                # Continue without saving history - still return the result
+        # Always save new ranking snapshot (even if no changes) so weekly stats can compare
+        # This ensures we have a snapshot to compare against for future competitions
+        try:
+            for row in result:
+                history_entry = LeaderboardHistory(
+                    user_id=row["user_id"],
+                    ranking=row["rank"],
+                    total_points=row["total_points"]
+                )
+                db.session.add(history_entry)
             
-            # Return the result after successful ranking logic
-            return jsonify(result)
+            db.session.commit()
+        except Exception as commit_error:
+            db.session.rollback()
+            # Continue without saving history - still return the result
+        
+        # Return the result after successful ranking logic
+        return jsonify(result)
     
     except Exception as e:
         # Catch ANY error in the entire function and return JSON
