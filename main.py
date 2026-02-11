@@ -424,8 +424,8 @@ def login():
 @app.route("/forgot_password", methods=["GET", "POST"])
 def forgot_password():
     """Request password reset: user enters email, we send reset link if account exists."""
-    if "user_id" in session:
-        return redirect(url_for("index"))
+    # Rensa session så att användaren alltid får återställningssidan (inte redirect till index)
+    session.clear()
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         if not email:
@@ -455,8 +455,7 @@ def forgot_password():
 @app.route("/reset_password", methods=["GET", "POST"])
 def reset_password():
     """Set new password using token from email."""
-    if "user_id" in session:
-        return redirect(url_for("index"))
+    session.clear()
     token = request.args.get("token", "").strip()
     if not token:
         flash("Ogiltig eller saknad återställningslänk.", "error")
