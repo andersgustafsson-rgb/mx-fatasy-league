@@ -20,10 +20,17 @@
     }
     
     /* Readonly mode for non-logged users */
-    .readonly-mode a:not([href*="login"]):not([href*="register"]) {
+    .readonly-mode a:not([href*="login"]):not([href*="register"]):not([href*="forgot_password"]) {
       opacity: 0.5;
       pointer-events: none;
       cursor: not-allowed;
+    }
+    
+    /* Glömt lösenord-länken ska alltid vara klickbar i modalen */
+    .readonly-mode a[href*="forgot_password"] {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+      opacity: 1 !important;
     }
     
     /* Disable interactive buttons in readonly mode, but allow login buttons, settings tab and manual link */
