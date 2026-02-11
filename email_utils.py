@@ -216,7 +216,8 @@ def send_bulk_emails(emails: List[str], subject: str, html_content: str) -> dict
     results = {'success': 0, 'failed': 0}
     
     for email in emails:
-        if send_email(email, subject, html_content):
+        success, _error_msg = send_email(email, subject, html_content)
+        if success:
             results['success'] += 1
         else:
             results['failed'] += 1

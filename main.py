@@ -866,12 +866,12 @@ def index():
                             if rider.class_name in ("450cc", "wsx_sx1"):
                                 # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_450:
-                                    current_picks_450.append(pick_data)
+                                current_picks_450.append(pick_data)
                                     seen_rider_ids_450.add(pick.rider_id)
                             elif rider.class_name in ("250cc", "wsx_sx2"):
                                 # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_250:
-                                    current_picks_250.append(pick_data)
+                                current_picks_250.append(pick_data)
                                     seen_rider_ids_250.add(pick.rider_id)
                 
                 # Sort the lists by position after populating
@@ -1619,13 +1619,13 @@ def debug_weekly_stats():
 
 def calculate_leaderboard_deltas():
     """Shared function to calculate leaderboard deltas - ensures consistency between get_weekly_fun_stats and get_season_leaderboard"""
-    from sqlalchemy import func
-    from datetime import datetime, timedelta
-    
-    db.session.rollback()
-    
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        db.session.rollback()
+        
     # Get all users
-    user_scores = (
+        user_scores = (
             db.session.query(
                 User.id,
                 User.username,
@@ -1633,84 +1633,84 @@ def calculate_leaderboard_deltas():
                 SeasonTeam.team_name
             )
             .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
-        .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
-        .all()
-    )
-    
+            .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
+            .all()
+        )
+        
     # Calculate current total points for each user
-    user_scores_list = []
-    for user_row in user_scores:
-        user_id = user_row.id
-        total = 0
-        
-        try:
-            all_scores = (
-                db.session.query(CompetitionScore)
-                .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-                .filter(CompetitionScore.user_id == user_id)
-                .filter(
-                    db.or_(
-                        Competition.series.is_(None),
-                        Competition.series != 'WSX'
-                    )
-                )
-                .all()
-            )
-            
-            # Handle duplicates - keep only most recent score per competition
-            scores_by_comp = {}
-            for score in all_scores:
-                comp_id = score.competition_id
-                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                    scores_by_comp[comp_id] = score
-            
-            total = sum(s.total_points or 0 for s in scores_by_comp.values())
-        except Exception as e:
-            print(f"Error calculating points for user {user_row.username}: {e}")
+        user_scores_list = []
+        for user_row in user_scores:
+            user_id = user_row.id
             total = 0
-        
-        user_scores_list.append({
+            
+            try:
+                all_scores = (
+                    db.session.query(CompetitionScore)
+                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(
+                        db.or_(
+                            Competition.series.is_(None),
+                            Competition.series != 'WSX'
+                        )
+                    )
+                    .all()
+                )
+                
+            # Handle duplicates - keep only most recent score per competition
+                scores_by_comp = {}
+                for score in all_scores:
+                    comp_id = score.competition_id
+                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                
+                total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            except Exception as e:
+                print(f"Error calculating points for user {user_row.username}: {e}")
+                total = 0
+            
+            user_scores_list.append({
                 'id': user_id,
                 'username': user_row.username,
                 'display_name': getattr(user_row, 'display_name', None) or user_row.username,
-            'team_name': user_row.team_name,
-            'total_points': total
-        })
-    
+                'team_name': user_row.team_name,
+                'total_points': total
+            })
+        
     # Calculate current leaderboard
-    current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
-    
+        current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
+        
     # Calculate previous leaderboard - compare with competitions from before the last 7 days
     week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
     
     previous_competitions = (
-        db.session.query(Competition)
-        .filter(
-            db.or_(
-                Competition.series.is_(None),
-                Competition.series != 'WSX'
+            db.session.query(Competition)
+            .filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != 'WSX'
             ),
             Competition.event_date < week_ago_date
-        )
-        .order_by(Competition.event_date.asc())
+            )
+            .order_by(Competition.event_date.asc())
         .all()
     )
     
-    previous_leaderboard = []
-    for user_data in user_scores_list:
-        user_id = user_data['id']
+        previous_leaderboard = []
+        for user_data in user_scores_list:
+            user_id = user_data['id']
         previous_points = 0
-        
+            
         if previous_competitions:
-            try:
+                try:
                 previous_comp_ids = [c.id for c in previous_competitions]
                 previous_scores = (
-                    db.session.query(CompetitionScore)
-                    .filter(CompetitionScore.user_id == user_id)
+                        db.session.query(CompetitionScore)
+                        .filter(CompetitionScore.user_id == user_id)
                     .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
-                    .all()
-                )
-                
+                        .all()
+                    )
+                    
                 # Handle duplicates - keep only most recent score per competition
                 scores_by_comp = {}
                 for score in previous_scores:
@@ -1719,45 +1719,45 @@ def calculate_leaderboard_deltas():
                         scores_by_comp[comp_id] = score
                 
                 previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
-            except Exception as e:
+                except Exception as e:
                 previous_points = 0
-        
-        previous_leaderboard.append({
-            'id': user_id,
-            'username': user_data['username'],
-            'display_name': user_data['display_name'],
+            
+            previous_leaderboard.append({
+                'id': user_id,
+                'username': user_data['username'],
+                'display_name': user_data['display_name'],
             'total_points': previous_points
-        })
-    
-    previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-    
-    # Create ranking maps
-    current_ranking = {}
-    for i, user in enumerate(current_leaderboard, 1):
-        current_ranking[str(user['id'])] = i
-    
-    previous_ranking = {}
-    for i, user in enumerate(previous_leaderboard, 1):
-        previous_ranking[str(user['id'])] = i
-    
-    # Calculate deltas
-    leaderboard_data = []
-    for i, user_row in enumerate(current_leaderboard, 1):
-        user_id = user_row['id']
-        current_rank = i
-        previous_rank = previous_ranking.get(str(user_id))
+            })
         
-        if previous_rank is not None and previous_rank > 0:
-            delta = current_rank - previous_rank
-        else:
-            delta = None
+        previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
         
-        leaderboard_data.append({
-            'user_id': user_id,
-            'username': user_row['username'],
-            'display_name': user_row['display_name'],
+        # Create ranking maps
+        current_ranking = {}
+        for i, user in enumerate(current_leaderboard, 1):
+            current_ranking[str(user['id'])] = i
+        
+        previous_ranking = {}
+        for i, user in enumerate(previous_leaderboard, 1):
+            previous_ranking[str(user['id'])] = i
+        
+        # Calculate deltas
+        leaderboard_data = []
+        for i, user_row in enumerate(current_leaderboard, 1):
+            user_id = user_row['id']
+            current_rank = i
+            previous_rank = previous_ranking.get(str(user_id))
+            
+            if previous_rank is not None and previous_rank > 0:
+                delta = current_rank - previous_rank
+            else:
+                delta = None
+            
+            leaderboard_data.append({
+                'user_id': user_id,
+                'username': user_row['username'],
+                'display_name': user_row['display_name'],
             'team_name': user_row.get('team_name'),
-            'rank': current_rank,
+                'rank': current_rank,
             'delta': delta,
             'total_points': user_row['total_points']
         })
@@ -5180,20 +5180,10 @@ def send_bulk_email():
         sent = 0
         failed = 0
         failed_emails = []
-        
-        # Check SendGrid API key first
-        import os
-        api_key = os.getenv('SENDGRID_API_KEY')
-        if not api_key:
-            return jsonify({
-                "error": "SENDGRID_API_KEY not configured in environment variables",
-                "hint": "Add SENDGRID_API_KEY to Render environment variables"
-            }), 500
-        
         print(f"DEBUG: Sending to {len(users_to_send)} users")
-        print(f"DEBUG: SendGrid API key configured: {'Yes' if api_key else 'No'}")
         
-        sendgrid_limit_detected_bulk = False
+        # Keep response key name for backwards compatibility with frontend
+        email_limit_detected_bulk = False
         
         for user in users_to_send:
             user_name = user.display_name or user.username
@@ -5205,20 +5195,26 @@ def send_bulk_email():
             else:
                 failed += 1
                 failed_emails.append(user.email)
-                # Check if it's a SendGrid limit error
+                # Check if it's an email quota/limit error (Gmail/SendGrid/etc.)
                 if error_msg:
                     error_lower = error_msg.lower()
-                    if ("exceeded your messaging limits" in error_lower or 
-                        "messaging limits" in error_lower or
-                        "maximum credits exceeded" in error_lower or
-                        "credits exceeded" in error_lower or
-                        ("credits" in error_lower and "exceeded" in error_lower)):
-                        sendgrid_limit_detected_bulk = True
-                        print(f"DEBUG: ⚠️ SendGrid limit reached for {user.email}: {error_msg}")
+                    if (
+                        "you have exceeded your messaging limits" in error_lower
+                        or "messaging limits" in error_lower
+                        or "maximum credits exceeded" in error_lower
+                        or "credits exceeded" in error_lower
+                        or ("credits" in error_lower and "exceeded" in error_lower)
+                        or "daily limit" in error_lower
+                        or "quota" in error_lower
+                        or "rate limit" in error_lower
+                        or ("too many" in error_lower and "request" in error_lower)
+                    ):
+                        email_limit_detected_bulk = True
+                        print(f"DEBUG: ⚠️ Email limit/quota reached for {user.email}: {error_msg}")
                 else:
                     print(f"DEBUG: ❌ Failed to send to {user.email}: {error_msg or 'Unknown error'}")
         
-        print(f"DEBUG: send_bulk_email - SendGrid limit detected: {sendgrid_limit_detected_bulk}")
+        print(f"DEBUG: send_bulk_email - Email limit detected: {email_limit_detected_bulk}")
         
         return jsonify({
             "success": True,
@@ -5226,7 +5222,7 @@ def send_bulk_email():
             "failed": failed,
             "total": len(users_to_send),
             "failed_emails": failed_emails[:5] if failed > 0 else [],
-            "sendgrid_limit_reached": sendgrid_limit_detected_bulk
+            "sendgrid_limit_reached": email_limit_detected_bulk
         })
     except Exception as e:
         import traceback
@@ -6716,7 +6712,7 @@ def get_season_leaderboard():
         # Build result - team_name is already included in leaderboard_data
         result = []
         for user_data in leaderboard_data:
-            result.append({
+                result.append({
                 "user_id": user_data['user_id'],
                 "username": user_data['username'],
                 "display_name": user_data['display_name'] or None,
@@ -6724,26 +6720,26 @@ def get_season_leaderboard():
                 "total_points": int(user_data['total_points']),
                 "rank": user_data['rank'],
                 "delta": user_data['delta']
-            })
-        
-        # Always save new ranking snapshot (even if no changes) so weekly stats can compare
-        # This ensures we have a snapshot to compare against for future competitions
-        try:
-            for row in result:
-                history_entry = LeaderboardHistory(
-                    user_id=row["user_id"],
-                    ranking=row["rank"],
-                    total_points=row["total_points"]
-                )
-                db.session.add(history_entry)
+                })
             
-            db.session.commit()
-        except Exception as commit_error:
-            db.session.rollback()
-            # Continue without saving history - still return the result
-        
-        # Return the result after successful ranking logic
-        return jsonify(result)
+            # Always save new ranking snapshot (even if no changes) so weekly stats can compare
+            # This ensures we have a snapshot to compare against for future competitions
+            try:
+                for row in result:
+                    history_entry = LeaderboardHistory(
+                        user_id=row["user_id"],
+                        ranking=row["rank"],
+                        total_points=row["total_points"]
+                    )
+                    db.session.add(history_entry)
+                
+                db.session.commit()
+            except Exception as commit_error:
+                db.session.rollback()
+                # Continue without saving history - still return the result
+            
+            # Return the result after successful ranking logic
+            return jsonify(result)
     
     except Exception as e:
         # Catch ANY error in the entire function and return JSON
