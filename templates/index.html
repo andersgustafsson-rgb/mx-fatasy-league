@@ -3193,14 +3193,17 @@
           <label for="modal_password" class="block text-gray-700 dark:text-gray-300 mb-2">Lösenord</label>
           <input type="password" id="modal_password" name="password" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
-        <p class="text-right text-sm mb-6">
-          <a href="{{ url_for('forgot_password') }}" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium" onclick="closeLoginModal()">Glömt lösenord?</a>
-        </p>
         <div id="loginError" class="mb-4 hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
         <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
           Logga in
         </button>
       </form>
+      
+      <p class="text-right text-sm mt-4 mb-2">
+        <button type="button" onclick="closeLoginModal(); window.location.href='{{ url_for('forgot_password') }}';" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium bg-transparent border-none p-0">
+          Glömt lösenord?
+        </button>
+      </p>
       
       <div class="mt-4 text-center">
         <p class="text-sm text-gray-600 dark:text-gray-400">
