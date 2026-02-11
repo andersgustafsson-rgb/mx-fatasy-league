@@ -866,12 +866,12 @@ def index():
                             if rider.class_name in ("450cc", "wsx_sx1"):
                                 # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_450:
-                                current_picks_450.append(pick_data)
+                                    current_picks_450.append(pick_data)
                                     seen_rider_ids_450.add(pick.rider_id)
                             elif rider.class_name in ("250cc", "wsx_sx2"):
                                 # Only add if we haven't seen this rider_id before
                                 if pick.rider_id not in seen_rider_ids_250:
-                                current_picks_250.append(pick_data)
+                                    current_picks_250.append(pick_data)
                                     seen_rider_ids_250.add(pick.rider_id)
                 
                 # Sort the lists by position after populating

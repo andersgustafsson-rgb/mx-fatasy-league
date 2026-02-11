@@ -11,5 +11,5 @@ python-dotenv==1.0.0
 gunicorn==21.2.0
 psycopg2-binary==2.9.9
 Pillow==10.1.0
-sendgrid==6.11.0
 # Updated to fix Docker cache issue
+# Note: Using Gmail SMTP (smtplib is part of Python standard library, no package needed)
