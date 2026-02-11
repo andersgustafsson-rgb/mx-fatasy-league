@@ -3163,11 +3163,28 @@
       }
     }
     
+    // Glömt lösenord – klick ska alltid gå till återställningssidan
+    function setupForgotPasswordLink() {
+      var el = document.getElementById('forgotPasswordLink');
+      if (!el) return;
+      var url = el.getAttribute('href');
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeLoginModal();
+        window.location.href = url;
+      });
+    }
+    
     // Setup login form when DOM is ready
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setupLoginForm);
+      document.addEventListener('DOMContentLoaded', function() {
+        setupLoginForm();
+        setupForgotPasswordLink();
+      });
     } else {
       setupLoginForm();
+      setupForgotPasswordLink();
     }
   </script>
 
@@ -3200,9 +3217,7 @@
       </form>
       
       <p class="text-right text-sm mt-4 mb-2">
-        <button type="button" onclick="closeLoginModal(); window.location.href='{{ url_for('forgot_password') }}';" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium bg-transparent border-none p-0">
-          Glömt lösenord?
-        </button>
+        <a id="forgotPasswordLink" href="{{ url_for('forgot_password') }}" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer font-medium">Glömt lösenord?</a>
       </p>
       
       <div class="mt-4 text-center">
