@@ -114,35 +114,47 @@ def send_pick_reminder(user_email: str, user_name: str, competition_name: str, d
     <html>
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ background-color: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
-            .content {{ background-color: #f9fafb; padding: 30px; border-radius: 0 0 5px 5px; }}
-            .button {{ display: inline-block; background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin-top: 20px; }}
-            .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }}
+            body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
+            .wrapper {{ background: #0f172a; padding: 24px; min-height: 100vh; }}
+            .card {{ max-width: 520px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
+            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 28px 24px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }}
+            .header .logo {{ font-size: 28px; margin-bottom: 4px; }}
+            .content {{ background: #1e293b; color: #e2e8f0; padding: 32px 28px; line-height: 1.65; }}
+            .content h2 {{ margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #fff; }}
+            .content p {{ margin: 0 0 16px; font-size: 15px; color: #cbd5e1; }}
+            .content p:last-of-type {{ margin-bottom: 0; }}
+            .deadline-box {{ display: inline-block; background: rgba(251, 191, 36, 0.15); color: #fcd34d; padding: 10px 16px; border-radius: 10px; margin: 8px 0 20px; font-size: 14px; font-weight: 600; border: 1px solid rgba(251, 191, 36, 0.3); }}
+            .cta-wrap {{ text-align: center; margin: 28px 0 24px; }}
+            .cta {{ display: inline-block; background: linear-gradient(180deg, #34d399 0%, #10b981 100%); color: #fff !important; padding: 14px 28px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }}
+            .fallback {{ margin-top: 24px; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
+            .footer {{ background: #0f172a; color: #64748b; padding: 20px 28px; text-align: center; font-size: 12px; border-top: 1px solid #1e293b; }}
+            .footer p {{ margin: 4px 0; color: #64748b; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>🏁 MX Fantasy League</h1>
-            </div>
-            <div class="content">
-                <h2>Hej {user_name}!</h2>
-                <p>Det är dags att sätta dina picks för <strong>{competition_name}</strong>!</p>
-                <p>⏰ <strong>Deadline:</strong> {deadline_time}</p>
-                <p>Glöm inte att göra dina val innan tävlingen börjar!</p>
-                <p style="text-align: center;">
-                    <a href="{competition_url}" class="button">Gör dina picks nu →</a>
-                </p>
-                <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
-                    Om knappen inte fungerar, kopiera denna länk: {competition_url}
-                </p>
-            </div>
-            <div class="footer">
-                <p>Detta är ett automatiskt meddelande från MX Fantasy League.</p>
-                <p>Du får detta e-post eftersom du är registrerad i spelet.</p>
+        <div class="wrapper">
+            <div class="card">
+                <div class="header">
+                    <div class="logo">🏁</div>
+                    <h1>MX Fantasy League</h1>
+                </div>
+                <div class="content">
+                    <h2>Hej {user_name}!</h2>
+                    <p>Det är dags att sätta dina picks för <strong style="color:#fff;">{competition_name}</strong>!</p>
+                    <div class="deadline-box">⏰ Deadline: {deadline_time}</div>
+                    <p>Glöm inte att göra dina val innan tävlingen börjar!</p>
+                    <div class="cta-wrap">
+                        <a href="{competition_url}" class="cta">Gör dina picks nu →</a>
+                    </div>
+                    <p class="fallback">Om knappen inte fungerar, kopiera denna länk:<br>{competition_url}</p>
+                </div>
+                <div class="footer">
+                    <p>Detta är ett automatiskt meddelande från MX Fantasy League.</p>
+                    <p>Du får detta e-post eftersom du är registrerad i spelet.</p>
+                </div>
             </div>
         </div>
     </body>
@@ -171,27 +183,38 @@ def send_admin_announcement(user_email: str, user_name: str, subject: str, messa
     <html>
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ background-color: #1e40af; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
-            .content {{ background-color: #f9fafb; padding: 30px; border-radius: 0 0 5px 5px; }}
-            .footer {{ text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }}
+            body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
+            .wrapper {{ background: #0f172a; padding: 24px; min-height: 100vh; }}
+            .card {{ max-width: 520px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
+            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 28px 24px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }}
+            .header .logo {{ font-size: 28px; margin-bottom: 4px; }}
+            .content {{ background: #1e293b; color: #e2e8f0; padding: 32px 28px; line-height: 1.65; }}
+            .content h2 {{ margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #fff; }}
+            .content p {{ margin: 0 0 16px; font-size: 15px; color: #cbd5e1; }}
+            .content .message {{ margin-top: 20px; }}
+            .footer {{ background: #0f172a; color: #64748b; padding: 20px 28px; text-align: center; font-size: 12px; border-top: 1px solid #1e293b; }}
+            .footer p {{ margin: 4px 0; color: #64748b; }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>🏁 MX Fantasy League</h1>
-            </div>
-            <div class="content">
-                <h2>Hej {user_name}!</h2>
-                <div style="margin-top: 20px;">
-                    {message}
+        <div class="wrapper">
+            <div class="card">
+                <div class="header">
+                    <div class="logo">🏁</div>
+                    <h1>MX Fantasy League</h1>
                 </div>
-            </div>
-            <div class="footer">
-                <p>Detta är ett meddelande från MX Fantasy League.</p>
+                <div class="content">
+                    <h2>Hej {user_name}!</h2>
+                    <div class="message">
+                        {message}
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Detta är ett meddelande från MX Fantasy League.</p>
+                </div>
             </div>
         </div>
     </body>
