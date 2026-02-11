@@ -149,7 +149,7 @@ def send_pick_reminder(
             .trackmap-label {{ font-size: 14px; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }}
             .trackmap-img {{ max-width: 100%; height: auto; border-radius: 12px; border: 1px solid #334155; display: block; margin: 0 auto; }}
             .cta-wrap {{ text-align: center; margin: 36px 0 28px; }}
-            .cta {{ display: inline-block; background: linear-gradient(180deg, #34d399 0%, #10b981 100%); color: #fff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 16px; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }}
+            .cta {{ display: inline-block; background-color: #22c55e; background-image: linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color: #0b1120 !important; padding: 16px 38px; text-decoration: none; border-radius: 9999px; font-weight: 800; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 0 24px rgba(34, 197, 94, 0.75); border: 1px solid rgba(34, 197, 94, 0.9); }}
             .fallback {{ margin-top: 28px; padding-top: 24px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
             .footer {{ background: #0f172a; color: #64748b; padding: 28px 36px; text-align: center; font-size: 13px; border-top: 1px solid #1e293b; }}
             .footer p {{ margin: 8px 0; color: #64748b; }}
@@ -239,6 +239,10 @@ def send_admin_announcement(
                     <div class="message">
                         {message}
                     </div>
+                    <p style="margin-top: 28px; font-size: 15px; color: #cbd5e1;">
+                        Hälsningar,<br>
+                        MX Fantasy teamet
+                    </p>
                 </div>
                 <div class="footer">
                     <p>Hälsning från oss på MX Fantasy teamet</p>
