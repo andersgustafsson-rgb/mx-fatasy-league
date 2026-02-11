@@ -1,5 +1,6 @@
 import os
 import random
+import secrets
 import string
 from datetime import date, datetime, timedelta
 from flask import (
@@ -418,6 +419,68 @@ def login():
     
     # Handle GET request (show login page)
     return render_template("login.html")
+
+
+@app.route("/forgot_password", methods=["GET", "POST"])
+def forgot_password():
+    """Request password reset: user enters email, we send reset link if account exists."""
+    if "user_id" in session:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        if not email:
+            flash("Ange din e-postadress.", "error")
+            return render_template("forgot_password.html")
+        user = User.query.filter_by(email=email).first()
+        if user and user.email:
+            token = secrets.token_urlsafe(32)
+            user.password_reset_token = token
+            user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+            db.session.commit()
+            base_url = request.host_url.rstrip("/")
+            reset_url = f"{base_url}/reset_password?token={token}"
+            from email_utils import send_password_reset_email
+            success, _ = send_password_reset_email(
+                user.email,
+                user.display_name or user.username,
+                reset_url,
+                base_url=base_url,
+            )
+        # Always show same message (don't reveal if email exists)
+        flash("Om adressen finns i systemet har du fått ett mail med en länk för att återställa lösenordet. Kontrollera även skräppost.", "success")
+        return redirect(url_for("login"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset_password", methods=["GET", "POST"])
+def reset_password():
+    """Set new password using token from email."""
+    if "user_id" in session:
+        return redirect(url_for("index"))
+    token = request.args.get("token", "").strip()
+    if not token:
+        flash("Ogiltig eller saknad återställningslänk.", "error")
+        return redirect(url_for("login"))
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or not user.password_reset_expires or user.password_reset_expires < datetime.utcnow():
+        flash("Länken har gått ut eller är ogiltig. Begär en ny återställning.", "error")
+        return redirect(url_for("login"))
+    if request.method == "POST":
+        new_password = request.form.get("password", "")
+        if not new_password:
+            flash("Ange ett nytt lösenord.", "error")
+            return render_template("reset_password.html", token=token)
+        if len(new_password) < 4:
+            flash("Lösenordet måste vara minst 4 tecken.", "error")
+            return render_template("reset_password.html", token=token)
+        user.password_hash = generate_password_hash(new_password)
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        db.session.commit()
+        flash("Lösenordet är uppdaterat. Logga in med ditt nya lösenord.", "success")
+        return redirect(url_for("login"))
+    return render_template("reset_password.html", token=token)
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():

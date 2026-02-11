@@ -256,6 +256,75 @@ def send_admin_announcement(
     return send_email(user_email, subject, html_content)
 
 
+def send_password_reset_email(
+    user_email: str,
+    user_name: str,
+    reset_url: str,
+    base_url: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
+    """
+    Send password reset link to user.
+
+    Args:
+        user_email: User's email address
+        user_name: User's display name or username
+        reset_url: Full URL to the reset page (with token)
+        base_url: Site base URL for logo image
+    """
+    subject = "Återställ ditt lösenord – MX Fantasy League"
+    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
+    logo_html = f'<img src="{logo_url}" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />' if logo_url else '<div class="logo">🏁</div>'
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
+            .wrapper {{ background: #0f172a; padding: 40px 24px; min-height: 100vh; }}
+            .card {{ max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
+            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 40px 32px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }}
+            .header .logo {{ font-size: 32px; margin-bottom: 8px; }}
+            .content {{ background: #1e293b; color: #e2e8f0; padding: 40px 36px; line-height: 1.7; }}
+            .content h2 {{ margin: 0 0 28px; font-size: 22px; font-weight: 600; color: #fff; }}
+            .content p {{ margin: 0 0 20px; font-size: 16px; color: #cbd5e1; }}
+            .cta-wrap {{ text-align: center; margin: 36px 0 28px; }}
+            .cta {{ display: inline-block; background-color: #22c55e; background-image: linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color: #0b1120 !important; padding: 16px 38px; text-decoration: none; border-radius: 9999px; font-weight: 800; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 0 24px rgba(34, 197, 94, 0.75); border: 1px solid rgba(34, 197, 94, 0.9); }}
+            .fallback {{ margin-top: 28px; padding-top: 24px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
+            .footer {{ background: #0f172a; color: #64748b; padding: 28px 36px; text-align: center; font-size: 13px; border-top: 1px solid #1e293b; }}
+            .footer p {{ margin: 8px 0; color: #64748b; }}
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <div class="card">
+                <div class="header">
+                    {logo_html}
+                    <h1>MX Fantasy League</h1>
+                </div>
+                <div class="content">
+                    <h2>Hej {user_name}!</h2>
+                    <p>Du har begärt att återställa ditt lösenord. Klicka på knappen nedan för att välja ett nytt lösenord.</p>
+                    <p><strong style="color:#94a3b8;">Länken gäller i 1 timme.</strong></p>
+                    <div class="cta-wrap">
+                        <a href="{reset_url}" class="cta">Återställ lösenord</a>
+                    </div>
+                    <p class="fallback">Om knappen inte fungerar, kopiera denna länk:<br>{reset_url}</p>
+                </div>
+                <div class="footer">
+                    <p>Hälsning från oss på MX Fantasy teamet</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return send_email(user_email, subject, html_content)
+
+
 def send_bulk_emails(emails: List[str], subject: str, html_content: str) -> dict:
     """
     Send emails to multiple recipients

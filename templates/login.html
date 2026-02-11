@@ -94,10 +94,13 @@
                 <label for="username" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Användarnamn</label>
                 <input type="text" id="username" name="username" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
             </div>
-            <div class="mb-6">
+            <div class="mb-4">
                 <label for="password" class="block text-gray-700 dark:text-gray-300 mb-2 login-label">Lösenord</label>
                 <input type="password" id="password" name="password" class="w-full p-2 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
             </div>
+            <p class="text-right text-sm mb-6">
+                <a href="{{ url_for('forgot_password') }}" class="text-blue-500 dark:text-blue-400 hover:underline login-link">Glömt lösenord?</a>
+            </p>
             <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors login-button">
                 Logga in
             </button>

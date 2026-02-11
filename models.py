@@ -9,6 +9,8 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=True)  # E-post för lösenordsåterställning
+    password_reset_token = db.Column(db.String(64), nullable=True)  # Engångstoken för återställning
+    password_reset_expires = db.Column(db.DateTime, nullable=True)  # När token går ut
     display_name = db.Column(db.String(100), nullable=True)  # Användarens riktiga namn
     profile_picture_url = db.Column(db.Text, nullable=True)  # Profilbild (base64 data)
     bio = db.Column(db.Text, nullable=True)  # Kort beskrivning om sig själv
