@@ -5177,6 +5177,7 @@ def send_bulk_email():
         
         # Send emails - wrap message in HTML template
         from email_utils import send_admin_announcement
+        base_url = request.host_url.rstrip('/')
         sent = 0
         failed = 0
         failed_emails = []
@@ -5188,7 +5189,7 @@ def send_bulk_email():
         for user in users_to_send:
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
-            success, error_msg = send_admin_announcement(user.email, user_name, subject, message)
+            success, error_msg = send_admin_announcement(user.email, user_name, subject, message, base_url=base_url)
             if success:
                 sent += 1
                 print(f"DEBUG: ✅ Successfully sent to {user.email}")
@@ -5309,13 +5310,19 @@ def get_next_competition():
                 "error": "No upcoming competition found"
             })
         
+        first_trackmap = next_comp.images.order_by(CompetitionImage.sort_order).first()
+        trackmap_url = None
+        if first_trackmap and first_trackmap.image_url:
+            trackmap_url = f"/static/{first_trackmap.image_url}"
+
         return jsonify({
             "success": True,
             "competition": {
                 "id": next_comp.id,
                 "name": next_comp.name,
                 "event_date": str(next_comp.event_date) if next_comp.event_date else None,
-                "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None
+                "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None,
+                "trackmap_url": trackmap_url
             }
         })
     except Exception as e:
@@ -5381,7 +5388,10 @@ def send_pick_reminders():
             deadline_time = f"{next_comp.event_date}"
         
         competition_url = f"{request.host_url}race_picks/{next_comp.id}"
-        
+        base_url = request.host_url.rstrip('/')
+        first_trackmap = next_comp.images.order_by(CompetitionImage.sort_order).first()
+        trackmap_url = f"{base_url}/static/{first_trackmap.image_url}" if first_trackmap and first_trackmap.image_url else None
+
         for user in users:
             print(f"DEBUG: Processing user: {user.username} ({user.email})")
             # Check if user has made picks for this competition
@@ -5443,7 +5453,10 @@ def send_pick_reminders():
                 # Send reminder
                 user_name = user.display_name or user.username
                 try:
-                    success, error_msg = send_pick_reminder(user.email, user_name, next_comp.name, deadline_time, competition_url)
+                    success, error_msg = send_pick_reminder(
+                        user.email, user_name, next_comp.name, deadline_time, competition_url,
+                        base_url=base_url, trackmap_url=trackmap_url
+                    )
                     if success:
                         sent += 1
                         print(f"DEBUG: ✅ Reminder sent to {user.username}")

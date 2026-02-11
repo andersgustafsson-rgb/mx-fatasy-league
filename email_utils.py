@@ -93,22 +93,40 @@ def send_email(
         return False, error_msg
 
 
-def send_pick_reminder(user_email: str, user_name: str, competition_name: str, deadline_time: str, competition_url: str) -> tuple[bool, Optional[str]]:
+def send_pick_reminder(
+    user_email: str,
+    user_name: str,
+    competition_name: str,
+    deadline_time: str,
+    competition_url: str,
+    base_url: Optional[str] = None,
+    trackmap_url: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
     """
-    Send a reminder email to a user about upcoming picks deadline
-    
+    Send a reminder email to a user about upcoming picks deadline.
+
     Args:
         user_email: User's email address
         user_name: User's display name or username
         competition_name: Name of the competition
         deadline_time: When picks deadline is (formatted string)
         competition_url: URL to the picks page
-    
-    Returns:
-        True if email was sent successfully, False otherwise
+        base_url: Site base URL for logo/trackmap images (e.g. https://example.com)
+        trackmap_url: Full URL to current competition trackmap image (optional)
     """
     subject = f"⏰ Påminnelse: Sätt dina picks för {competition_name}"
-    
+    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
+    logo_html = f'<img src="{logo_url}" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />' if logo_url else '<div class="logo">🏁</div>'
+
+    trackmap_html = ""
+    if trackmap_url:
+        trackmap_html = f"""
+                    <div class="trackmap-section">
+                        <p class="trackmap-label">Banan för denna tävling</p>
+                        <img src="{trackmap_url}" alt="Trackmap {competition_name}" class="trackmap-img" />
+                    </div>
+        """
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -117,28 +135,31 @@ def send_pick_reminder(user_email: str, user_name: str, competition_name: str, d
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
-            .wrapper {{ background: #0f172a; padding: 24px; min-height: 100vh; }}
-            .card {{ max-width: 520px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
-            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 28px 24px; text-align: center; }}
-            .header h1 {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }}
-            .header .logo {{ font-size: 28px; margin-bottom: 4px; }}
-            .content {{ background: #1e293b; color: #e2e8f0; padding: 32px 28px; line-height: 1.65; }}
-            .content h2 {{ margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #fff; }}
-            .content p {{ margin: 0 0 16px; font-size: 15px; color: #cbd5e1; }}
+            .wrapper {{ background: #0f172a; padding: 40px 24px; min-height: 100vh; }}
+            .card {{ max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
+            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 40px 32px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }}
+            .header .logo {{ font-size: 32px; margin-bottom: 8px; }}
+            .content {{ background: #1e293b; color: #e2e8f0; padding: 40px 36px; line-height: 1.7; }}
+            .content h2 {{ margin: 0 0 28px; font-size: 22px; font-weight: 600; color: #fff; }}
+            .content p {{ margin: 0 0 20px; font-size: 16px; color: #cbd5e1; }}
             .content p:last-of-type {{ margin-bottom: 0; }}
-            .deadline-box {{ display: inline-block; background: rgba(251, 191, 36, 0.15); color: #fcd34d; padding: 10px 16px; border-radius: 10px; margin: 8px 0 20px; font-size: 14px; font-weight: 600; border: 1px solid rgba(251, 191, 36, 0.3); }}
-            .cta-wrap {{ text-align: center; margin: 28px 0 24px; }}
-            .cta {{ display: inline-block; background: linear-gradient(180deg, #34d399 0%, #10b981 100%); color: #fff !important; padding: 14px 28px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 15px; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }}
-            .fallback {{ margin-top: 24px; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
-            .footer {{ background: #0f172a; color: #64748b; padding: 20px 28px; text-align: center; font-size: 12px; border-top: 1px solid #1e293b; }}
-            .footer p {{ margin: 4px 0; color: #64748b; }}
+            .deadline-box {{ display: inline-block; background: rgba(251, 191, 36, 0.15); color: #fcd34d; padding: 12px 20px; border-radius: 12px; margin: 12px 0 28px; font-size: 15px; font-weight: 600; border: 1px solid rgba(251, 191, 36, 0.3); }}
+            .trackmap-section {{ margin: 32px 0 36px; text-align: center; }}
+            .trackmap-label {{ font-size: 14px; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }}
+            .trackmap-img {{ max-width: 100%; height: auto; border-radius: 12px; border: 1px solid #334155; display: block; margin: 0 auto; }}
+            .cta-wrap {{ text-align: center; margin: 36px 0 28px; }}
+            .cta {{ display: inline-block; background: linear-gradient(180deg, #34d399 0%, #10b981 100%); color: #fff !important; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 16px; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4); }}
+            .fallback {{ margin-top: 28px; padding-top: 24px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
+            .footer {{ background: #0f172a; color: #64748b; padding: 28px 36px; text-align: center; font-size: 13px; border-top: 1px solid #1e293b; }}
+            .footer p {{ margin: 8px 0; color: #64748b; }}
         </style>
     </head>
     <body>
         <div class="wrapper">
             <div class="card">
                 <div class="header">
-                    <div class="logo">🏁</div>
+                    {logo_html}
                     <h1>MX Fantasy League</h1>
                 </div>
                 <div class="content">
@@ -146,38 +167,45 @@ def send_pick_reminder(user_email: str, user_name: str, competition_name: str, d
                     <p>Det är dags att sätta dina picks för <strong style="color:#fff;">{competition_name}</strong>!</p>
                     <div class="deadline-box">⏰ Deadline: {deadline_time}</div>
                     <p>Glöm inte att göra dina val innan tävlingen börjar!</p>
+                    {trackmap_html}
                     <div class="cta-wrap">
                         <a href="{competition_url}" class="cta">Gör dina picks nu →</a>
                     </div>
                     <p class="fallback">Om knappen inte fungerar, kopiera denna länk:<br>{competition_url}</p>
                 </div>
                 <div class="footer">
-                    <p>Detta är ett automatiskt meddelande från MX Fantasy League.</p>
-                    <p>Du får detta e-post eftersom du är registrerad i spelet.</p>
+                    <p>Hälsning från oss på MX Fantasy teamet</p>
                 </div>
             </div>
         </div>
     </body>
     </html>
     """
-    
+
     success, error_msg = send_email(user_email, subject, html_content)
     return success, error_msg
 
 
-def send_admin_announcement(user_email: str, user_name: str, subject: str, message: str) -> tuple[bool, Optional[str]]:
+def send_admin_announcement(
+    user_email: str,
+    user_name: str,
+    subject: str,
+    message: str,
+    base_url: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
     """
-    Send an admin announcement/update to a user
-    
+    Send an admin announcement/update to a user.
+
     Args:
         user_email: User's email address
         user_name: User's display name or username
         subject: Email subject
         message: HTML message content
-    
-    Returns:
-        True if email was sent successfully, False otherwise
+        base_url: Site base URL for logo image (e.g. https://example.com)
     """
+    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
+    logo_html = f'<img src="{logo_url}" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />' if logo_url else '<div class="logo">🏁</div>'
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -186,24 +214,24 @@ def send_admin_announcement(user_email: str, user_name: str, subject: str, messa
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
-            .wrapper {{ background: #0f172a; padding: 24px; min-height: 100vh; }}
-            .card {{ max-width: 520px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
-            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 28px 24px; text-align: center; }}
-            .header h1 {{ margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.02em; }}
-            .header .logo {{ font-size: 28px; margin-bottom: 4px; }}
-            .content {{ background: #1e293b; color: #e2e8f0; padding: 32px 28px; line-height: 1.65; }}
-            .content h2 {{ margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #fff; }}
-            .content p {{ margin: 0 0 16px; font-size: 15px; color: #cbd5e1; }}
-            .content .message {{ margin-top: 20px; }}
-            .footer {{ background: #0f172a; color: #64748b; padding: 20px 28px; text-align: center; font-size: 12px; border-top: 1px solid #1e293b; }}
-            .footer p {{ margin: 4px 0; color: #64748b; }}
+            .wrapper {{ background: #0f172a; padding: 40px 24px; min-height: 100vh; }}
+            .card {{ max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
+            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 40px 32px; text-align: center; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }}
+            .header .logo {{ font-size: 32px; margin-bottom: 8px; }}
+            .content {{ background: #1e293b; color: #e2e8f0; padding: 40px 36px; line-height: 1.7; }}
+            .content h2 {{ margin: 0 0 28px; font-size: 22px; font-weight: 600; color: #fff; }}
+            .content p {{ margin: 0 0 20px; font-size: 16px; color: #cbd5e1; }}
+            .content .message {{ margin-top: 24px; }}
+            .footer {{ background: #0f172a; color: #64748b; padding: 28px 36px; text-align: center; font-size: 13px; border-top: 1px solid #1e293b; }}
+            .footer p {{ margin: 8px 0; color: #64748b; }}
         </style>
     </head>
     <body>
         <div class="wrapper">
             <div class="card">
                 <div class="header">
-                    <div class="logo">🏁</div>
+                    {logo_html}
                     <h1>MX Fantasy League</h1>
                 </div>
                 <div class="content">
@@ -213,14 +241,14 @@ def send_admin_announcement(user_email: str, user_name: str, subject: str, messa
                     </div>
                 </div>
                 <div class="footer">
-                    <p>Detta är ett meddelande från MX Fantasy League.</p>
+                    <p>Hälsning från oss på MX Fantasy teamet</p>
                 </div>
             </div>
         </div>
     </body>
     </html>
     """
-    
+
     return send_email(user_email, subject, html_content)
 
 
