@@ -1,9 +1,10 @@
 """
-Email utilities for sending emails via SendGrid
+Email utilities for sending emails via Gmail SMTP
 """
 import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import List, Optional
 
 
@@ -15,141 +16,81 @@ def send_email(
     from_name: Optional[str] = None
 ) -> tuple[bool, Optional[str]]:
     """
-    Send an email via SendGrid
+    Send an email via Gmail SMTP
     
     Args:
         to_email: Recipient email address
         subject: Email subject
         html_content: HTML content of the email
-        from_email: Sender email (defaults to SENDGRID_FROM_EMAIL env var)
-        from_name: Sender name (defaults to SENDGRID_FROM_NAME env var)
+        from_email: Sender email (defaults to GMAIL_USER env var)
+        from_name: Sender name (defaults to GMAIL_FROM_NAME env var)
     
     Returns:
-        True if email was sent successfully, False otherwise
+        Tuple of (success: bool, error_message: Optional[str])
     """
-    api_key = os.getenv('SENDGRID_API_KEY')
-    if not api_key:
-        print("ERROR: SENDGRID_API_KEY not set in environment variables")
-        return False, "SENDGRID_API_KEY not configured"
+    # Get Gmail credentials from environment variables
+    gmail_user = os.getenv('GMAIL_USER', 'spliffan78@gmail.com')
+    gmail_password = os.getenv('GMAIL_PASSWORD')  # App Password
     
-    from_email = from_email or os.getenv('SENDGRID_FROM_EMAIL', 'spliffan78@gmail.com')
-    from_name = from_name or os.getenv('SENDGRID_FROM_NAME', 'MX Fantasy League')
+    if not gmail_password:
+        print("ERROR: GMAIL_PASSWORD not set in environment variables")
+        print("ERROR: You need to set GMAIL_PASSWORD to your Gmail App Password")
+        return False, "GMAIL_PASSWORD not configured"
     
-    message = Mail(
-        from_email=(from_email, from_name),
-        to_emails=to_email,
-        subject=subject,
-        html_content=html_content
-    )
+    from_email = from_email or gmail_user
+    from_name = from_name or os.getenv('GMAIL_FROM_NAME', 'MX Fantasy League')
     
     try:
-        sg = SendGridAPIClient(api_key)
-        response = sg.send(message)
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"{from_name} <{from_email}>"
+        msg['To'] = to_email
         
-        # Log response details for debugging
-        print(f"DEBUG: SendGrid response status: {response.status_code}")
-        print(f"DEBUG: SendGrid response headers: {dict(response.headers) if hasattr(response, 'headers') else 'N/A'}")
+        # Add HTML content
+        html_part = MIMEText(html_content, 'html', 'utf-8')
+        msg.attach(html_part)
         
-        if response.status_code in [200, 201, 202]:
-            print(f"DEBUG: ✅ Email sent successfully to {to_email}")
-            return True, None
-        else:
-            # Try to get error details from response
-            error_message = None
-            try:
-                error_body = response.body.decode('utf-8') if response.body else 'No error details'
-                print(f"ERROR: SendGrid returned status code {response.status_code}")
-                print(f"ERROR: SendGrid error body: {error_body}")
-                print(f"ERROR: From email used: {from_email}")
-                print(f"ERROR: To email: {to_email}")
-                
-                # Try to parse JSON error
-                import json
-                try:
-                    error_data = json.loads(error_body)
-                    if 'errors' in error_data and len(error_data['errors']) > 0:
-                        error_message = error_data['errors'][0].get('message', '')
-                        print(f"ERROR: Extracted error message from JSON: {error_message}")
-                except:
-                    # If not JSON, check if error message is in the body string
-                    error_body_lower = error_body.lower()
-                    if ("exceeded your messaging limits" in error_body_lower or 
-                        "messaging limits" in error_body_lower or
-                        "maximum credits exceeded" in error_body_lower or
-                        "credits exceeded" in error_body_lower):
-                        error_message = "You have exceeded your messaging limits"
-                        print(f"ERROR: Found messaging limits/credits error in body string")
-                    else:
-                        error_message = error_body[:200]  # Limit length
-            except Exception as decode_error:
-                print(f"ERROR: SendGrid returned status code {response.status_code}")
-                print(f"ERROR: Could not decode error body: {decode_error}")
-            
-            # Standardize SendGrid limit error message
-            if error_message:
-                error_lower = error_message.lower()
-                if ("exceeded your messaging limits" in error_lower or 
-                    "messaging limits" in error_lower or 
-                    "you have exceeded" in error_lower or
-                    "maximum credits exceeded" in error_lower or
-                    "credits exceeded" in error_lower):
-                    error_message = "You have exceeded your messaging limits"
-                    print(f"ERROR: Standardized to SendGrid limit error message")
-            
-            return False, error_message
+        # Connect to Gmail SMTP server
+        print(f"DEBUG: Connecting to Gmail SMTP server...")
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Enable encryption
+        print(f"DEBUG: Logging in to Gmail...")
+        server.login(gmail_user, gmail_password)
+        
+        # Send email
+        print(f"DEBUG: Sending email to {to_email}...")
+        text = msg.as_string()
+        server.sendmail(from_email, to_email, text)
+        server.quit()
+        
+        print(f"DEBUG: ✅ Email sent successfully to {to_email}")
+        return True, None
+        
+    except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"Gmail authentication failed: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        print(f"ERROR: Make sure you're using an App Password, not your regular Gmail password")
+        return False, error_msg
+    except smtplib.SMTPRecipientsRefused as e:
+        error_msg = f"Recipient email rejected: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        return False, error_msg
+    except smtplib.SMTPSenderRefused as e:
+        error_msg = f"Sender email rejected: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        return False, error_msg
+    except smtplib.SMTPDataError as e:
+        error_msg = f"Gmail data error (possibly daily limit reached): {str(e)}"
+        print(f"ERROR: {error_msg}")
+        print(f"ERROR: Gmail free accounts have a limit of 500 emails per day")
+        return False, error_msg
     except Exception as e:
-        print(f"ERROR sending email to {to_email}: {e}")
-        print(f"ERROR: From email: {from_email}")
-        print(f"ERROR: Exception type: {type(e)}")
-        
-        # Try to extract SendGrid error message from exception
-        error_message = str(e)
-        
-        # Check if exception has body attribute (SendGrid python-http-client exceptions)
-        if hasattr(e, 'body'):
-            try:
-                import json
-                error_body = e.body.decode('utf-8') if isinstance(e.body, bytes) else str(e.body) if e.body else '{}'
-                print(f"ERROR: Exception body (raw): {error_body}")
-                
-                # Try to parse JSON error
-                try:
-                    error_data = json.loads(error_body) if error_body and error_body != '{}' else {}
-                    if 'errors' in error_data and len(error_data['errors']) > 0:
-                        error_message = error_data['errors'][0].get('message', str(e))
-                        print(f"ERROR: Extracted SendGrid error message: {error_message}")
-                except json.JSONDecodeError:
-                    # If not JSON, check if error message is in the body string
-                    if "exceeded your messaging limits" in error_body.lower() or "messaging limits" in error_body.lower():
-                        error_message = "You have exceeded your messaging limits"
-                        print(f"ERROR: Found messaging limits error in body string")
-            except Exception as parse_error:
-                print(f"ERROR: Failed to parse exception body: {parse_error}")
-        
-        # Also check the exception string itself
-        error_str = str(e).lower()
-        if ("exceeded your messaging limits" in error_str or 
-            "messaging limits" in error_str or
-            "maximum credits exceeded" in error_str or
-            "credits exceeded" in error_str):
-            error_message = "You have exceeded your messaging limits"
-            print(f"ERROR: Found messaging limits/credits error in exception string")
-        
-        print(f"ERROR: Final error_message: {error_message}")
-        
-        # Make sure we return a standardized message if it's a limit error
-        error_lower = error_message.lower() if error_message else ""
-        if ("exceeded your messaging limits" in error_lower or 
-            "messaging limits" in error_lower or 
-            "you have exceeded" in error_lower or
-            "maximum credits exceeded" in error_lower or
-            "credits exceeded" in error_lower):
-            error_message = "You have exceeded your messaging limits"
-            print(f"ERROR: Standardized to SendGrid limit error message")
-        
+        error_msg = f"Error sending email: {str(e)}"
+        print(f"ERROR: {error_msg}")
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
-        return False, error_message
+        return False, error_msg
 
 
 def send_pick_reminder(user_email: str, user_name: str, competition_name: str, deadline_time: str, competition_url: str) -> tuple[bool, Optional[str]]:
