@@ -10711,6 +10711,91 @@ def admin_restore_picks():
         print(traceback.format_exc())
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+
+@app.post("/admin/set_user_picks_full")
+def admin_set_user_picks_full():
+    """Admin: lägg in alla picks manuellt (race, holeshot, wildcard) och räkna poängen."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        data = request.get_json(force=True)
+        username = data.get("username")
+        competition_id = int(data.get("competition_id"))
+        race_picks = data.get("race_picks", [])  # [{"rider_id": int, "predicted_position": int}, ...]
+        holeshot_450_rider_id = data.get("holeshot_450_rider_id")
+        holeshot_250_rider_id = data.get("holeshot_250_rider_id")
+        wildcard_rider_id = data.get("wildcard_rider_id")
+        wildcard_position = data.get("wildcard_position")
+
+        if not username or not competition_id:
+            return jsonify({"error": "username och competition_id krävs"}), 400
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": f"Användare '{username}' hittades inte"}), 404
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": f"Tävling {competition_id} hittades inte"}), 404
+        is_wsx = getattr(comp, "series", None) == "WSX"
+
+        RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
+        db.session.commit()
+
+        for p in race_picks:
+            rider_id = int(p.get("rider_id"))
+            pred = int(p.get("predicted_position"))
+            if Rider.query.get(rider_id):
+                db.session.add(RacePick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=rider_id,
+                    predicted_position=pred,
+                ))
+
+        if holeshot_450_rider_id:
+            r = Rider.query.get(int(holeshot_450_rider_id))
+            if r:
+                db.session.add(HoleshotPick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=r.id,
+                    class_name=r.class_name,
+                ))
+        if holeshot_250_rider_id:
+            r = Rider.query.get(int(holeshot_250_rider_id))
+            if r:
+                db.session.add(HoleshotPick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=r.id,
+                    class_name=r.class_name,
+                ))
+
+        if not is_wsx and wildcard_rider_id and wildcard_position is not None:
+            r = Rider.query.get(int(wildcard_rider_id))
+            if r:
+                db.session.add(WildcardPick(
+                    user_id=user.id,
+                    competition_id=competition_id,
+                    rider_id=r.id,
+                    position=int(wildcard_position),
+                ))
+
+        db.session.commit()
+        calculate_scores(competition_id)
+
+        return jsonify({
+            "success": True,
+            "message": f"Picks och poäng sparade för {username} i {comp.name}.",
+        })
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"ERROR in admin_set_user_picks_full: {e}\n{traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.get("/debug_user_scores/<string:username>")
 def debug_user_scores(username):
     """Debug endpoint to check where a user's points come from"""
