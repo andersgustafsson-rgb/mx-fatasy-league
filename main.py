@@ -2870,9 +2870,23 @@ def series_page(series_id):
         db.session.rollback()
         return redirect(url_for("index"))
 
+def _ensure_rider_image_data_column():
+    """Säkerställ att riders.rider_image_data finns (överlever deploy). Kör tyst om kolumnen redan finns."""
+    try:
+        db.session.execute(db.text("ALTER TABLE riders ADD COLUMN IF NOT EXISTS rider_image_data TEXT"))
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.execute(db.text("ALTER TABLE riders ADD COLUMN rider_image_data TEXT"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
 @app.route("/race_picks/<int:competition_id>")
 @login_required
 def race_picks_page(competition_id):
+    _ensure_rider_image_data_column()
     comp = Competition.query.get_or_404(competition_id)
     
     
