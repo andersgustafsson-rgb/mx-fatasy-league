@@ -261,10 +261,12 @@
                                     <option value="">Välj tävling...</option>
                                 </select>
                             </div>
-                            <div class="flex items-end">
-                                <button type="button" onclick="restorePicksFromResults()" class="btn-primary px-6 py-2 rounded-lg w-full">🔧 Återställ picks från resultat</button>
+                            <div class="flex items-end gap-2">
+                                <button type="button" onclick="showRestorePreview()" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-white text-sm flex-1">👁 Visa picks (förhandsgranska)</button>
+                                <button type="button" onclick="restorePicksFromResults()" class="btn-primary px-4 py-2 rounded-lg flex-1">🔧 Återställ från resultat</button>
                             </div>
                         </div>
+                        <div id="restore-preview" class="mt-4 p-4 bg-gray-900 rounded-lg border border-gray-600 hidden text-sm text-gray-300"></div>
                         <div id="restore-result" class="mt-4 hidden"></div>
                     </div>
                 </div>
@@ -2457,6 +2459,53 @@
                 if (select) {
                     select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
                 }
+            }
+        }
+
+        async function showRestorePreview() {
+            const username = document.getElementById('restore-username')?.value;
+            const compId = document.getElementById('restore-competition')?.value;
+            const previewDiv = document.getElementById('restore-preview');
+            if (!previewDiv) return;
+            if (!username || !compId) {
+                previewDiv.classList.remove('hidden');
+                previewDiv.innerHTML = '<span class="text-amber-400">Välj användare och tävling.</span>';
+                return;
+            }
+            try {
+                const res = await fetch('/admin/user_picks/' + encodeURIComponent(username) + '/' + compId);
+                const data = await res.json();
+                if (!res.ok) {
+                    previewDiv.classList.remove('hidden');
+                    previewDiv.innerHTML = '<span class="text-red-400">' + (data.error || res.status) + '</span>';
+                    return;
+                }
+                let html = '<p class="text-white font-medium mb-2">📋 Nuvarande sparade picks för <strong>' + (data.username || '') + '</strong> i <strong>' + (data.competition_name || '') + '</strong></p>';
+                html += '<p class="text-gray-400 text-xs mb-2">Vid "Återställ från resultat" ersätts endast <em>race-picks</em> med tävlingens faktiska topp 6 (450cc + 250cc). Holeshot och wildcard ändras inte.</p>';
+                html += '<p><strong>Race-picks:</strong> ' + (data.race_picks_count || 0);
+                if (data.race_picks && data.race_picks.length) {
+                    html += ' — ' + data.race_picks.map(function(p) { return p.rider_name + ' (pos ' + p.predicted_position + ')'; }).join(', ');
+                } else {
+                    html += ' <span class="text-amber-400">inga</span>';
+                }
+                html += '</p><p><strong>Holeshot:</strong> ';
+                if (data.holeshot_picks && data.holeshot_picks.length) {
+                    html += data.holeshot_picks.map(function(h) { return h.class_name + ' ' + h.rider_name; }).join(', ');
+                } else {
+                    html += '<span class="text-amber-400">inga</span>';
+                }
+                html += '</p><p><strong>Wildcard:</strong> ';
+                if (data.wildcard) {
+                    html += data.wildcard.rider_name + ' (pos ' + data.wildcard.position + ')';
+                } else {
+                    html += '<span class="text-amber-400">ingen</span>';
+                }
+                html += '</p>';
+                previewDiv.classList.remove('hidden');
+                previewDiv.innerHTML = html;
+            } catch (e) {
+                previewDiv.classList.remove('hidden');
+                previewDiv.innerHTML = '<span class="text-red-400">' + e.message + '</span>';
             }
         }
 
