@@ -2979,9 +2979,21 @@ def race_picks_page(competition_id):
     trackmap_images = []
     try:
         trackmap_images = CompetitionImage.query.filter_by(competition_id=comp.id).order_by(CompetitionImage.sort_order).all()
-        # Found trackmap images
+        # Fix: Daytona bytte från daytona.jpg till daytona.png – uppdatera DB om gamla sökvägen används
+        for ci in trackmap_images:
+            if ci.image_url and "daytona.jpg" in ci.image_url:
+                ci.image_url = ci.image_url.replace("daytona.jpg", "daytona.png")
+                db.session.add(ci)
+        # Om Daytona saknar track map-rad, skapa en (daytona.png)
+        if not trackmap_images and comp.name == "Daytona":
+            ci = CompetitionImage(competition_id=comp.id, image_url="trackmaps/compressed/daytona.png", sort_order=0)
+            db.session.add(ci)
+            trackmap_images = [ci]
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
     except Exception as e:
-        # Error getting trackmap images
         pass
     
     # 6) Skicka out_ids till templaten för (OUT)/disabled
