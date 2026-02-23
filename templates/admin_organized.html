@@ -293,7 +293,11 @@
                             <div class="flex items-end">
                                 <button type="button" id="btn-quick-set-score" class="bg-amber-600 hover:bg-amber-700 px-4 py-2 rounded-lg w-full text-sm text-white">Bara sätt totalpoäng</button>
                             </div>
+                            <div class="flex items-end">
+                                <button type="button" id="btn-show-saved-picks" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg w-full text-sm text-white">Visa sparade picks</button>
+                            </div>
                         </div>
+                        <div id="saved-picks-display" class="hidden mt-3 p-3 bg-gray-900 rounded border border-gray-600 text-sm text-gray-300"></div>
                         <div id="full-picks-panel" class="hidden mt-4 p-4 bg-gray-900 rounded-lg border border-gray-600">
                             <p class="text-gray-400 text-sm mb-3">Välj förare för varje position. Poängen räknas automatiskt ut från tävlingsresultatet.</p>
                             <div class="grid grid-cols-2 md:grid-cols-6 gap-2 mb-3">
@@ -2637,6 +2641,48 @@
                 }
             } catch (e) {
                 resultDiv.innerHTML = '<div class="bg-red-900/30 border border-red-500 rounded p-3 text-red-400">❌ ' + e.message + '</div>';
+            }
+        });
+        document.getElementById('btn-show-saved-picks')?.addEventListener('click', async function() {
+            const username = document.getElementById('full-picks-username')?.value;
+            const compId = document.getElementById('full-picks-competition')?.value;
+            const div = document.getElementById('saved-picks-display');
+            if (!div) return;
+            if (!username || !compId) {
+                div.classList.remove('hidden');
+                div.innerHTML = '<span class="text-amber-400">Välj användare och tävling.</span>';
+                return;
+            }
+            try {
+                const res = await fetch('/admin/user_picks/' + encodeURIComponent(username) + '/' + compId);
+                const data = await res.json();
+                if (!res.ok) {
+                    div.classList.remove('hidden');
+                    div.innerHTML = '<span class="text-red-400">' + (data.error || res.status) + '</span>';
+                    return;
+                }
+                let html = '<strong class="text-white">' + (data.competition_name || '') + '</strong> — ' + (data.username || '') + '<br>';
+                html += 'Race-picks: ' + (data.race_picks_count || 0);
+                if (data.race_picks && data.race_picks.length) {
+                    html += ' <span class="text-gray-400">(' + data.race_picks.map(p => p.rider_name + ' pos ' + p.predicted_position).join(', ') + ')</span>';
+                }
+                html += '<br>Holeshot: ';
+                if (data.holeshot_picks && data.holeshot_picks.length) {
+                    html += data.holeshot_picks.map(h => h.class_name + ' ' + h.rider_name).join(', ');
+                } else {
+                    html += '<span class="text-amber-400">inga</span>';
+                }
+                html += '<br>Wildcard: ';
+                if (data.wildcard) {
+                    html += data.wildcard.rider_name + ' pos ' + data.wildcard.position;
+                } else {
+                    html += '<span class="text-amber-400">ingen</span>';
+                }
+                div.classList.remove('hidden');
+                div.innerHTML = html;
+            } catch (e) {
+                div.classList.remove('hidden');
+                div.innerHTML = '<span class="text-red-400">' + e.message + '</span>';
             }
         });
 

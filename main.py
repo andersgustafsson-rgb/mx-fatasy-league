@@ -7597,74 +7597,88 @@ def save_picks():
     if len(new_rider_ids) != len(set(new_rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
     
-    # 4) Rensa tidigare picks/holeshot för användaren i denna tävling FÖRST
-    # VIKTIGT: Rensa INTE resultat när picks sparas - bara picks
-    # VIKTIGT: Committa direkt efter delete för att undvika race conditions om användaren klickar "Spara" flera gånger
-    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
-    db.session.commit()  # Commit deletions immediately to prevent race conditions
-    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
-
-    # 5) Validera wildcard EFTER att gamla picks rensats
-    # Wildcard handling - skip for WSX series
+    # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
-    
-    # Skip wildcard validation and saving for WSX series
     if comp.series == "WSX":
         wc_pick = None
         wc_pos = None
+    
+    riders_450_ids = []
+    for p in picks:
+        try:
+            pos = int(p.get("position"))
+            rid = int(p.get("rider_id"))
+        except Exception:
+            return jsonify({"error": "Ogiltig pick-format"}), 400
+        rider = Rider.query.get(rid)
+        if not rider:
+            return jsonify({"error": f"Förare med id {rid} hittades inte"}), 400
+        if rider.id in out_ids:
+            return jsonify({"error": "Förare är OUT för detta race"}), 400
+        if rider.class_name == "250cc" and comp.coast_250 in ("east", "west"):
+            if rider.coast_250 not in (comp.coast_250, "both"):
+                return jsonify({"error": "250-förare matchar inte denna coast"}), 400
+        if rider.class_name == "450cc" or p.get("class") == "450cc":
+            riders_450_ids.append(rid)
     
     if wc_pick and wc_pos:
         try:
             wc_pick_i = int(wc_pick)
             wc_pos_i = int(wc_pos)
-
-            # Blockera OUT även för wildcard
             if wc_pick_i in out_ids:
                 return jsonify({"error": "Förare är OUT för detta race"}), 400
-            
-            # Blockera om samma förare redan är vald i top 6 (endast 450cc)
-            # Hämta 450cc rider IDs från de nya picksen
-            riders_450_ids = []
-            for p in picks:
-                if p.get("rider_id") and p.get("class") == "450cc":
-                    riders_450_ids.append(int(p.get("rider_id")))
-            
             if wc_pick_i in riders_450_ids:
                 return jsonify({"error": "Du kan inte välja samma förare för wildcard som i top 6"}), 400
         except Exception:
-            pass
-
-    # 6) Spara Top-6 picks
+            return jsonify({"error": "Ogiltig wildcard-val"}), 400
+    
+    hs450 = data.get("holeshot_450")
+    if not hs450:
+        return jsonify({"error": "Du måste välja en holeshot-förare för 450cc/SX1"}), 400
+    try:
+        rid = int(hs450)
+        if rid in out_ids:
+            return jsonify({"error": "Förare är OUT för detta race"}), 400
+    except Exception:
+        return jsonify({"error": "Ogiltig holeshot-förare för 450cc/SX1"}), 400
+    
+    hs250 = data.get("holeshot_250")
+    if not hs250:
+        return jsonify({"error": "Du måste välja en holeshot-förare för 250cc/SX2"}), 400
+    try:
+        rid = int(hs250)
+        rider = Rider.query.get(rid)
+        if rider and rider.id in out_ids:
+            return jsonify({"error": "Förare är OUT för detta race"}), 400
+        if rider and comp.coast_250 in ("east", "west"):
+            if rider.coast_250 not in (comp.coast_250, "both"):
+                return jsonify({"error": "250-holeshot matchar inte denna coast"}), 400
+    except Exception:
+        return jsonify({"error": "Ogiltig holeshot-förare för 250cc/SX2"}), 400
+    
+    if comp.series != "WSX":
+        if not wc_pick:
+            return jsonify({"error": "Du måste välja en wildcard-förare"}), 400
+        if not wc_pos or str(wc_pos).strip() == "":
+            return jsonify({"error": "Du måste välja en wildcard-position (rulla tärningen)"}), 400
+    
+    # 4) All validering klar – nu radera och spara (en commit så inget delvis tillstånd)
+    deleted_picks = RacePick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_holeshots = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    deleted_wildcards = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).delete()
+    print(f"DEBUG: Deleted {deleted_picks} old picks, {deleted_holeshots} old holeshots, {deleted_wildcards} old wildcards")
+    
     saved_picks = 0
     for p in picks:
         try:
             pos = int(p.get("position"))
             rid = int(p.get("rider_id"))
-            print(f"DEBUG: Processing pick - position: {pos}, rider_id: {rid}")
-        except Exception as e:
-            print(f"DEBUG: Error parsing pick {p}: {e}")
+        except Exception:
             continue
-
         rider = Rider.query.get(rid)
         if not rider:
-            print(f"DEBUG: Rider {rid} not found")
             continue
-
-        # 4a) Blockera OUT alltid
-        if rider.id in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
-
-        # 4b) Coast‑validering för 250cc
-        if rider.class_name == "250cc" and comp.coast_250 in ("east","west"):
-            # Tillåt endast exakt match eller 'both'
-            if rider.coast_250 not in (comp.coast_250, "both"):
-                print(f"DEBUG: Coast validation failed - Rider: {rider.name} (ID: {rider.id}), rider coast: {rider.coast_250}, competition coast: {comp.coast_250}")
-                return jsonify({"error":"250-förare matchar inte denna coast"}), 400
-        # (för 'both' -> tillåt alla 250)
-
         db.session.add(
             RacePick(
                 user_id=uid,
@@ -7676,89 +7690,37 @@ def save_picks():
         saved_picks += 1
         print(f"DEBUG: Added pick - {rider.name} at position {pos}")
     
-    print(f"DEBUG: Saved {saved_picks} picks total")
-
-    # 5) Holeshot 450 - KRAVS för alla serier
-    hs450 = data.get("holeshot_450")
-    if not hs450:
-        return jsonify({"error": "Du måste välja en holeshot-förare för 450cc/SX1"}), 400
-    
-    try:
-        rid = int(hs450)
-        # (om du vill låsa 450-OUT, lägg samma OUT-koll här)
-        if rid in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
-        
-        # Holeshot och top 6 kan vara samma förare - det är naturligt!
-        db.session.add(
-            HoleshotPick(
-                user_id=uid,
-                competition_id=comp_id,
-                rider_id=rid,
-                class_name="450cc"
-            )
+    rid = int(hs450)
+    db.session.add(
+        HoleshotPick(
+            user_id=uid,
+            competition_id=comp_id,
+            rider_id=rid,
+            class_name="450cc"
         )
-    except Exception:
-        return jsonify({"error": "Ogiltig holeshot-förare för 450cc/SX1"}), 400
-
-    # 6) Holeshot 250 - KRAVS för alla serier
-    hs250 = data.get("holeshot_250")
-    if not hs250:
-        return jsonify({"error": "Du måste välja en holeshot-förare för 250cc/SX2"}), 400
-    
-    try:
-        rid = int(hs250)
-        rider = Rider.query.get(rid)
-
-        # 6a) Blockera OUT
-        if rider and rider.id in out_ids:
-            return jsonify({"error": "Förare är OUT för detta race"}), 400
-
-        # 6b) Coast‑validering för 250 holeshot
-        if rider and comp.coast_250 in ("east","west"):
-            if rider.coast_250 not in (comp.coast_250, "both"):
-                return jsonify({"error":"250-holeshot matchar inte denna coast"}), 400
-        
-        # Holeshot och top 6 kan vara samma förare - det är naturligt!
-
-        db.session.add(
-            HoleshotPick(
-                user_id=uid,
-                competition_id=comp_id,
-                rider_id=rid,
-                class_name="250cc"
-            )
+    )
+    rid = int(hs250)
+    db.session.add(
+        HoleshotPick(
+            user_id=uid,
+            competition_id=comp_id,
+            rider_id=rid,
+            class_name="250cc"
         )
-    except Exception:
-        return jsonify({"error": "Ogiltig holeshot-förare för 250cc/SX2"}), 400
-
-    # 7) Wildcard – spara efter validering (skip for WSX, KRAVS för andra serier)
-    if comp.series != "WSX":
-        wc_pick = data.get("wildcard_pick")
-        wc_pos = data.get("wildcard_pos")
-        
-        # Wildcard är obligatoriskt för alla serier utom WSX
-        if not wc_pick:
-            return jsonify({"error": "Du måste välja en wildcard-förare"}), 400
-        
-        if not wc_pos or str(wc_pos).strip() == "":
-            return jsonify({"error": "Du måste välja en wildcard-position (rulla tärningen)"}), 400
-        
-        try:
-            wc_pick_i = int(wc_pick)
-            wc_pos_i = int(wc_pos)
-
-            existing_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
-            if not existing_wc:
-                existing_wc = WildcardPick(user_id=uid, competition_id=comp_id)
-                db.session.add(existing_wc)
-            existing_wc.rider_id = wc_pick_i
-            existing_wc.position = wc_pos_i
-        except Exception:
-            return jsonify({"error": "Ogiltig wildcard-val"}), 400
+    )
+    
+    if comp.series != "WSX" and wc_pick and wc_pos:
+        wc_pick_i = int(wc_pick)
+        wc_pos_i = int(wc_pos)
+        existing_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
+        if not existing_wc:
+            existing_wc = WildcardPick(user_id=uid, competition_id=comp_id)
+            db.session.add(existing_wc)
+        existing_wc.rider_id = wc_pick_i
+        existing_wc.position = wc_pos_i
 
     db.session.commit()
-    return jsonify({"message":"Picks sparade"}), 200
+    return jsonify({"message": "Picks sparade"}), 200
 
 
 
@@ -10669,7 +10631,13 @@ def admin_restore_picks():
         if not comp:
             return jsonify({"error": f"Competition {competition_id} not found"}), 404
         
-        # Delete existing picks for this user/competition first
+        # Säkerställ att vi inte bara raderar race-picks utan att lägga till några (lämnar holeshot+wildcard kvar, tokigt tillstånd)
+        if not picks_data or len(picks_data) == 0:
+            return jsonify({
+                "error": "Kan inte återställa med tom lista – det skulle ta bort bara race-picks. Använd 'Lägg in picks (positioner)' om du vill sätta alla picks."
+            }), 400
+        
+        # Delete existing RACE picks only (holeshot/wildcard lämnas oförändrade)
         RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).delete()
         db.session.commit()
         
@@ -10794,6 +10762,34 @@ def admin_set_user_picks_full():
         import traceback
         print(f"ERROR in admin_set_user_picks_full: {e}\n{traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/user_picks/<string:username>/<int:competition_id>")
+def admin_get_user_picks(username: str, competition_id: int):
+    """Admin: visa exakt vilka picks en användare har för en tävling (för felsökning)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "Användare hittades inte"}), 404
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({"error": "Tävling hittades inte"}), 404
+    race = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).order_by(RacePick.predicted_position).all()
+    holes = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+    wc = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
+    def rider_name(rid):
+        r = Rider.query.get(rid)
+        return r.name if r else f"rider_id={rid}"
+    return jsonify({
+        "username": username,
+        "competition_id": competition_id,
+        "competition_name": comp.name,
+        "race_picks": [{"rider_id": p.rider_id, "rider_name": rider_name(p.rider_id), "predicted_position": p.predicted_position} for p in race],
+        "race_picks_count": len(race),
+        "holeshot_picks": [{"class_name": h.class_name, "rider_id": h.rider_id, "rider_name": rider_name(h.rider_id)} for h in holes],
+        "wildcard": {"rider_id": wc.rider_id, "rider_name": rider_name(wc.rider_id), "position": wc.position} if wc else None,
+    })
 
 
 @app.get("/debug_user_scores/<string:username>")
