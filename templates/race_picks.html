@@ -1419,12 +1419,11 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
   
-  // 1. Try rider image first if image_url exists
+  // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {
-    // Remove 'riders/' prefix if it exists to avoid double path
+    if (r.image_url.startsWith('data:')) return r.image_url;
     const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
-    const url = `/static/${imagePath}`;
-    return url;
+    return `/static/${imagePath}`;
   }
   
   // 2. Check if this is a WSX rider - try WSX folder first (before standard format)
@@ -1441,17 +1440,23 @@ function imgSrcFor(riderId) {
     return url;
   }
   
-  // 3. If no image_url, try to construct filename from rider_number and name (standard format: 50_enzo_lopes.png)
-  // This works for ALL riders (both regular and WSX) as fallback
+  // 3. If no image_url, try 250 East/West subfolder first (e.g. riders/250east/50_enzo_lopes.png)
+  const coast = (r.coast_250 || '').toLowerCase();
+  if (r.rider_number && r.name && r.class === '250cc' && (coast === 'east' || coast === 'west')) {
+    const nameSlug = (r.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const sub = coast === 'east' ? '250east' : '250west';
+    const pngPath = `riders/${sub}/${r.rider_number}_${nameSlug}.png`;
+    return `/static/${pngPath}`;
+  }
+  
+  // 4. Generic: riders/num_name.png (standard format)
   if (r.rider_number && r.name) {
     const nameSlug = (r.name || '').toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    // Try PNG first
     const pngPath = `riders/${r.rider_number}_${nameSlug}.png`;
-    const url = `/static/${pngPath}`;
-    return url;
+    return `/static/${pngPath}`;
   }
 
-  // 4. If no rider image found, use bike brand logo directly
+  // 5. If no rider image found, use bike brand logo directly
   if (r.bike_brand) {
     const brandName = (r.bike_brand || "").toLowerCase().trim();
     const brandMap = {
@@ -1464,7 +1469,7 @@ function imgSrcFor(riderId) {
     return url;
   }
   
-  // 5. Final fallback to Honda logo
+  // 6. Final fallback to Honda logo
   return '/static/brand_logos/honda.png';
 }
 

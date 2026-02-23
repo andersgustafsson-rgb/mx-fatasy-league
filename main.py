@@ -300,7 +300,7 @@ def create_trackmap_images():
         "Glendale": "glendale.jpg",
         "Seattle": "seattle.jpg",
         "Arlington": "arlington.jpg",
-        "Daytona": "daytona.jpg",
+        "Daytona": "daytona.png",
         "Indianapolis": "indianapolis.jpg",
         "Birmingham": "birmingham.jpg",
         "Detroit": "detroit.jpg",
@@ -838,7 +838,7 @@ def index():
                         "number": r.rider_number,
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
-                        "image_url": r.image_url or None,   # <-- added
+                        "image_url": getattr(r, 'rider_image_data', None) or r.image_url or None,
                     }
                     for r in rs
                 ]
@@ -2323,7 +2323,7 @@ def season_team_builder():
                 'class': rider.class_name,
                 'rider_number': rider.rider_number,
                 'bike_brand': rider.bike_brand,
-                'image_url': rider.image_url,
+                'image_url': getattr(rider, 'rider_image_data', None) or rider.image_url,
                 'price': rider.price,
                 'coast_250': rider.coast_250
             })
@@ -2935,6 +2935,8 @@ def race_picks_page(competition_id):
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
+        # Föredra rider_image_data (base64) så bilder överlever deploy; annars image_url (fil)
+        img = getattr(r, 'rider_image_data', None) or r.image_url
         return {
             "id": r.id,
             "name": r.name,
@@ -2943,8 +2945,8 @@ def race_picks_page(competition_id):
             "bike_brand": r.bike_brand,
             "price": r.price,
             "is_out": (r.id in out_ids),
-            "image_url": r.image_url,  # Viktigt för att kunna visa headshots i UI
-            "coast_250": r.coast_250,  # För coast-filtrering
+            "image_url": img,
+            "coast_250": r.coast_250,
         }
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
@@ -4662,9 +4664,20 @@ def fix_database_tables():
             result = db.session.execute(db.text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='smx_seed_points'"))
             if not result.fetchone():
                 db.session.execute(db.text("ALTER TABLE riders ADD COLUMN smx_seed_points INTEGER DEFAULT 0"))
+            # rider_image_data (base64) så förarebilder överlever deploy
+            result = db.session.execute(db.text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='rider_image_data'"))
+            if not result.fetchone():
+                db.session.execute(db.text("ALTER TABLE riders ADD COLUMN rider_image_data TEXT"))
             
             db.session.commit()
         except Exception as riders_error:
+            db.session.rollback()
+        
+        # rider_image_data (för SQLite eller om information_schema inte finns)
+        try:
+            db.session.execute(db.text("ALTER TABLE riders ADD COLUMN rider_image_data TEXT"))
+            db.session.commit()
+        except Exception:
             db.session.rollback()
         
         # Check if global_simulation exists and create default entry
@@ -10094,7 +10107,7 @@ def import_race_results_complete():
 
 @app.route("/restore_rider_images")
 def restore_rider_images():
-    """Restore rider images from static/riders/ directory"""
+    """Restore rider images from static/riders/ directory (including subfolders like 250east, 250_east)."""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     
@@ -10103,7 +10116,6 @@ def restore_rider_images():
         import re
         from pathlib import Path
         
-        # Get static directory
         static_dir = Path(app.static_folder)
         riders_dir = static_dir / "riders"
         
@@ -10113,67 +10125,78 @@ def restore_rider_images():
                 "error": "static/riders directory not found"
             })
         
-        # Get all image files
-        image_files = [f for f in riders_dir.iterdir() if f.is_file() and f.suffix.lower() in ['.jpg', '.jpeg', '.png', '.gif']]
+        # Collect image files from riders/ and all subfolders (e.g. riders/250east/, riders/250_east/)
+        image_ext = {'.jpg', '.jpeg', '.png', '.gif'}
+        image_files = []
+        for p in riders_dir.rglob("*"):
+            if p.is_file() and p.suffix.lower() in image_ext:
+                image_files.append(p)
         
         if not image_files:
             return jsonify({
                 "success": False,
-                "error": "No image files found in static/riders/"
+                "error": "No image files found in static/riders/ (or in subfolders like 250east)"
             })
         
-        # Normalize function
         def norm(s: str) -> str:
             s = (s or "").strip().lower()
             s = s.replace(".", "")
             s = re.sub(r"[\s_]+", " ", s)
             return s
         
-        # Get all riders
         riders = Rider.query.all()
-        
-        # Index riders by number and name
         by_number = {}
         by_name = {}
+        by_number_and_coast = {}
         for rider in riders:
             if rider.rider_number:
-                by_number[int(rider.rider_number)] = rider
+                num = int(rider.rider_number)
+                by_number[num] = rider
+                coast = (getattr(rider, 'coast_250', None) or "").lower()
+                if coast:
+                    by_number_and_coast[(num, coast)] = rider
             by_name[norm(rider.name)] = rider
         
         updated = 0
         skipped = 0
         
         for image_file in image_files:
-            rel_path = f"riders/{image_file.name}"
+            try:
+                rel_path = str(image_file.relative_to(static_dir)).replace("\\", "/")
+            except ValueError:
+                rel_path = f"riders/{image_file.name}"
             filename = image_file.stem
+            parent_name = (image_file.parent.name or "").lower()
+            is_east = "east" in parent_name and ("250" in parent_name or "east" == parent_name)
+            is_west = "west" in parent_name and ("250" in parent_name or "west" == parent_name)
             
-            # Try to find rider by number first
             candidate = None
             m = re.match(r"^(\d{1,3})[_\s-]", filename)
             if m:
                 try:
                     num = int(m.group(1))
-                    candidate = by_number.get(num)
+                    if is_east:
+                        candidate = by_number_and_coast.get((num, "east")) or by_number.get(num)
+                    elif is_west:
+                        candidate = by_number_and_coast.get((num, "west")) or by_number.get(num)
+                    else:
+                        candidate = by_number.get(num)
                 except Exception:
                     candidate = None
             
-            # If not found by number, try by name
             if not candidate:
-                # Remove leading number + separator
                 tmp = re.sub(r"^\d{1,3}[_\s-]+", "", filename)
                 name = norm(tmp)
                 candidate = by_name.get(name)
                 if not candidate:
-                    # More tolerant: only letters and spaces
                     name2 = norm(re.sub(r"[^a-z0-9\s]", "", tmp))
                     candidate = by_name.get(name2)
             
             if not candidate:
-                print(f"[SKIP] No match for file: {image_file.name}")
+                print(f"[SKIP] No match for file: {rel_path}")
                 skipped += 1
                 continue
             
-            # Set image_url
             candidate.image_url = rel_path
             db.session.add(candidate)
             updated += 1
@@ -12454,7 +12477,7 @@ def view_user_profile(user_id):
                         "number": r.rider_number,
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
-                        "image_url": r.image_url or None,
+                        "image_url": getattr(r, 'rider_image_data', None) or r.image_url or None,
                     }
                     for r in rs
                 ]
@@ -13484,7 +13507,7 @@ if init_success:
                     "Glendale": "glendale.jpg",
                     "Seattle": "seattle.jpg",
                     "Arlington": "arlington.jpg",
-                    "Daytona": "daytona.jpg",
+                    "Daytona": "daytona.png",
                     "Indianapolis": "indianapolis.jpg",
                     "Birmingham": "birmingham.jpg",
                     "Detroit": "detroit.jpg",
@@ -14525,7 +14548,7 @@ def force_create_all_trackmaps():
         "Glendale": "glendale.jpg",
         "Seattle": "seattle.jpg",
         "Arlington": "arlington.jpg",
-        "Daytona": "daytona.jpg",
+        "Daytona": "daytona.png",
         "Indianapolis": "indianapolis.jpg",
         "Birmingham": "birmingham.jpg",
         "Detroit": "detroit.jpg",

@@ -104,6 +104,7 @@ class Rider(db.Model):
     rider_number = db.Column(db.Integer)
     bike_brand = db.Column(db.String(50))
     image_url = db.Column(db.String(200))
+    rider_image_data = db.Column(db.Text, nullable=True)  # base64 data URL, överlever deploy (Render)
     price = db.Column(db.Integer, nullable=False)
     coast_250 = db.Column(db.String(10), nullable=True)
     series_participation = db.Column(db.String(50), default='all')

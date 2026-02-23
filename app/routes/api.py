@@ -95,14 +95,18 @@ def add_rider():
 
 	data = request.get_json() if request.is_json else request.form.to_dict()
 
-	# Optional image upload
+	# Optional image upload – spara både till fil (lokalt) och som base64 i DB (överlever deploy på Render)
 	image_url = None
+	rider_image_data = None
 	if 'rider_image' in request.files:
 		file = request.files['rider_image']
 		if file and file.filename:
 			try:
 				import os
+				import base64
 				from werkzeug.utils import secure_filename
+				file_bytes = file.read()
+				file.seek(0)
 				riders_dir = os.path.join(app.static_folder, 'riders')
 				os.makedirs(riders_dir, exist_ok=True)
 				original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
@@ -110,6 +114,11 @@ def add_rider():
 				file_path = os.path.join(riders_dir, filename)
 				file.save(file_path)
 				image_url = f"riders/{filename}"
+				# Spara även som base64 så bilden överlever deploy (Render har tillfällig disk)
+				mime = file.content_type or 'image/jpeg'
+				if not mime.startswith('image/'):
+					mime = 'image/jpeg'
+				rider_image_data = f"data:{mime};base64,{base64.b64encode(file_bytes).decode()}"
 			except Exception as e:
 				print(f"Error saving rider image: {e}")
 
@@ -126,6 +135,8 @@ def add_rider():
 		existing_rider.bike_brand = data['bike_brand']
 		if image_url:
 			existing_rider.image_url = image_url
+		if rider_image_data is not None:
+			existing_rider.rider_image_data = rider_image_data
 		if 'price' in data:
 			existing_rider.price = data['price']
 		if 'coast_250' in data:
@@ -177,6 +188,7 @@ def add_rider():
 		coast_250=data.get('coast_250'),
 		price=price,
 		image_url=image_url,
+		rider_image_data=rider_image_data,
 		series_participation=data.get('series_participation')
 	)
 	db.session.add(rider)
@@ -217,13 +229,16 @@ def update_rider(rider_id: int):
 		except Exception:
 			pass
 
-		# Optional new image
+		# Optional new image – spara till fil och som base64 (överlever deploy på Render)
 		if 'rider_image' in request.files:
 			file = request.files['rider_image']
 			if file and file.filename:
 				try:
 					import os
+					import base64
 					from werkzeug.utils import secure_filename
+					file_bytes = file.read()
+					file.seek(0)
 					riders_dir = os.path.join(app.static_folder, 'riders')
 					os.makedirs(riders_dir, exist_ok=True)
 					original_ext = os.path.splitext(file.filename)[1].lower() or '.jpg'
@@ -231,6 +246,10 @@ def update_rider(rider_id: int):
 					file_path = os.path.join(riders_dir, filename)
 					file.save(file_path)
 					rider.image_url = f"riders/{filename}"
+					mime = file.content_type or 'image/jpeg'
+					if not mime.startswith('image/'):
+						mime = 'image/jpeg'
+					rider.rider_image_data = f"data:{mime};base64,{base64.b64encode(file_bytes).decode()}"
 				except Exception as e:
 					print(f"Error saving rider image: {e}")
 

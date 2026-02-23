@@ -336,9 +336,10 @@
       // In replacement mode, no rider is too expensive since we're swapping
       let isTooExpensive = false;
       
-      // Bygg HTML för rider-kortet: visa image_url om finns, annars logga/placeholder
+      // Bygg HTML för rider-kortet: visa image_url om finns (data-URL eller filsökväg), annars logga/placeholder
+      const riderImgSrc = r.image_url ? (r.image_url.startsWith('data:') ? r.image_url : '/static/' + (r.image_url.startsWith('riders/') ? r.image_url : 'riders/' + r.image_url)) : '';
       const imgHtml = r.image_url
-        ? `<img src="${window.location.origin}${window.location.pathname.includes('/static') ? '' : ''}${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
+        ? `<img src="${riderImgSrc}"
                 alt="${r.name} headshot"
                 class="rider-image w-12 h-12 object-cover rounded-full" width="48" height="48"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -547,7 +548,7 @@
         row.innerHTML = `
           <div class="flex items-center gap-3">
             ${r.image_url
-              ? `<img src="${(r.image_url.startsWith('/') ? '/static' : '/static/') + r.image_url}"
+              ? `<img src="${r.image_url.startsWith('data:') ? r.image_url : '/static/' + (r.image_url.startsWith('riders/') ? r.image_url : 'riders/' + r.image_url)}"
                        alt="${r.name} headshot"
                        class="w-10 h-10 object-cover rounded-full border-2 border-green-300" width="40" height="40"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
@@ -776,7 +777,7 @@
           <div class="flex flex-col items-center space-y-1 mb-2">
             <div class="flex-shrink-0 flex items-center gap-2">
               ${rider.image_url
-                ? `<img src="${(rider.image_url.startsWith('/') ? '/static' : '/static/') + rider.image_url}"
+                ? `<img src="${rider.image_url.startsWith('data:') ? rider.image_url : '/static/' + (rider.image_url.startsWith('riders/') ? rider.image_url : 'riders/' + rider.image_url)}"
                        alt="${rider.name} headshot"
                        class="w-8 h-8 object-cover rounded-full border border-yellow-300" width="32" height="32"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

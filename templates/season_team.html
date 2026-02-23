@@ -50,7 +50,7 @@
               <div class="flex items-center gap-2 sm:gap-3 mr-2 sm:mr-3 flex-shrink-0">
                 {% if rider.image_url %}
                   <img
-                    src="{{ url_for('static', filename=rider.image_url) }}"
+                    src="{{ rider.image_url if rider.image_url.startswith('data:') else url_for('static', filename=rider.image_url) }}"
                     alt="{{ rider.name }} headshot"
                     class="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-full" width="40" height="40"
                   />
