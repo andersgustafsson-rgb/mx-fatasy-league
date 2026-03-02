@@ -8350,14 +8350,16 @@ def calculate_scores(comp_id: int):
 # -------------------------------------------------
 # Felsökning: lista routes
 # -------------------------------------------------
-@app.get("/clear_my_picks")
-def clear_my_picks():
-    """Clear all picks for the current user - for debugging"""
+@app.get("/debug_clear_my_picks")
+def debug_clear_my_picks():
+    """Clear all picks for the current user - for debugging (admin only)"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     
     uid = session["user_id"]
-    print(f"DEBUG: clear_my_picks called for user {uid}")
+    print(f"DEBUG: debug_clear_my_picks called for user {uid}")
     
     # Delete all picks for this user
     deleted_picks = RacePick.query.filter_by(user_id=uid).delete()
