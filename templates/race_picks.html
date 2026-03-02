@@ -659,10 +659,12 @@
     </div>
     {% endif %}
 
-    <div class="mt-4 sm:mt-6 flex gap-3">
+    <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
       <button id="save-picks-btn" onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
       {% if picks_locked %}
       <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
+      {% else %}
+      <button type="button" onclick="clearMyPicks()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">🧹 Rensa alla val</button>
       {% endif %}
     </div>
 
@@ -2297,6 +2299,85 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       // Picks are already displayed correctly in UI, no need to reload from server
     } catch (e) {
       alert("Ett fel uppstod vid sparning.");
+    }
+  }
+
+  // Rensa alla mina val för denna tävling (topp 6, holeshot, wildcard)
+  async function clearMyPicks() {
+    if (!confirm("Är du säker på att du vill rensa ALLA dina val (topp 6, holeshots och wildcard) för detta race?")) {
+      return;
+    }
+
+    try {
+      const resp = await fetch(`/clear_my_picks/${competitionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        alert(data.error || "Ett fel uppstod när dina val skulle rensas.");
+        return;
+      }
+
+      // 1) Nollställ alla topp-6 selectors (450/250 eller WSX-klasser)
+      const class450 = isWSXSeries ? 'wsx_sx1' : '450cc';
+      const class250 = isWSXSeries ? 'wsx_sx2' : '250cc';
+      for (let i = 1; i <= 6; i++) {
+        const sel450 = document.querySelector(`.rider-selector[data-class="${class450}"][data-position="${i}"]`);
+        const sel250 = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
+        if (sel450) {
+          const span = sel450.querySelector('.selected-rider');
+          if (span) span.textContent = '-- välj förare --';
+          const hidden = document.querySelector(`select[name="pick_${class450.replace('cc', '')}_${i}"]`);
+          if (hidden) hidden.value = '';
+          onPickChange(class450, i, null);
+        }
+        if (sel250) {
+          const span = sel250.querySelector('.selected-rider');
+          if (span) span.textContent = '-- välj förare --';
+          const hidden = document.querySelector(`select[name="pick_${class250.replace('cc', '')}_${i}"]`);
+          if (hidden) hidden.value = '';
+          onPickChange(class250, i, null);
+        }
+      }
+
+      // 2) Nollställ holeshot selectors
+      const hs450Sel = document.querySelector('.rider-selector[data-class="holeshot-450"] .selected-rider');
+      const hs250Sel = document.querySelector('.rider-selector[data-class="holeshot-250"] .selected-rider');
+      if (hs450Sel) hs450Sel.textContent = '-- välj förare --';
+      if (hs250Sel) hs250Sel.textContent = '-- välj förare --';
+      const hs450Hidden = document.getElementById("holeshot-450");
+      const hs250Hidden = document.getElementById("holeshot-250");
+      if (hs450Hidden) hs450Hidden.value = "";
+      if (hs250Hidden) hs250Hidden.value = "";
+
+      // 3) Nollställ wildcard
+      if (!isWSXSeries) {
+        const wcSel = document.querySelector('.rider-selector[data-class="wildcard-pick"] .selected-rider');
+        if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
+        const wcHidden = document.getElementById("wildcard-pick");
+        const wcPos = document.getElementById("wildcard-position");
+        const wcLabel = document.getElementById("wildcard-position-label");
+        if (wcHidden) wcHidden.value = "";
+        if (wcPos) wcPos.value = "";
+        if (wcLabel) wcLabel.textContent = "";
+      }
+
+      // 4) Återställ dolda alternativ i dropdowns
+      updateRiderSelectors(class450);
+      updateRiderSelectors(class250);
+
+      // 5) Ta bort ev. sparade picks i localStorage
+      localStorage.removeItem(`race_picks_${competitionId}`);
+
+      // 6) Markera att inga picks är sparade ännu (visa spara-knapp)
+      savedPicksState = null;
+      updateSaveButtonVisibility();
+
+      alert(data.message || "Alla dina val har rensats.");
+    } catch (e) {
+      alert("Ett fel uppstod när dina val skulle rensas.");
     }
   }
 

@@ -7770,6 +7770,39 @@ def save_picks():
     return jsonify({"message": "Picks sparade"}), 200
 
 
+@app.post("/clear_my_picks/<int:competition_id>")
+def clear_my_picks(competition_id: int):
+    """
+    Rensa alla picks (topp 6, holeshot, wildcard) för inloggad användare i en tävling.
+    Används från race_picks-sidan som en \"börja om\"-knapp.
+    """
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({"error": "competition_not_found"}), 404
+
+    # Samma låslogik som save_picks – efter låsning får man inte rensa
+    if is_picks_locked(comp):
+        return jsonify({"error": "Picks är låsta! Du kan inte längre ändra eller rensa dina val."}), 403
+
+    uid = session["user_id"]
+
+    deleted_race = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_holo = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    deleted_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+
+    db.session.commit()
+
+    print(
+        f"DEBUG: clear_my_picks – user_id={uid}, competition_id={competition_id}, "
+        f"deleted race={deleted_race}, holeshot={deleted_holo}, wildcard={deleted_wc}"
+    )
+
+    return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200
+
+
 
 
 @app.post("/lock_wildcard_pos")
