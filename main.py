@@ -2935,16 +2935,13 @@ def race_picks_page(competition_id):
         )
 
         riders_250_query = Rider.query.filter_by(class_name="250cc")
-        if comp.coast_250 == "both":
+        coast = (comp.coast_250 or "").lower()
+        if coast in ("east", "west"):
+            # Endast en coast: visa bara den coasten + "both"
             riders_250_query = riders_250_query.filter(
-                (Rider.coast_250 == "east")
-                | (Rider.coast_250 == "west")
-                | (Rider.coast_250 == "both")
+                (Rider.coast_250 == coast) | (Rider.coast_250 == "both")
             )
-        elif comp.coast_250 in ("east", "west"):
-            riders_250_query = riders_250_query.filter(
-                (Rider.coast_250 == comp.coast_250) | (Rider.coast_250 == "both")
-            )
+        # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
     # 3) Serialisering för JS (inkl is_out + image_url)

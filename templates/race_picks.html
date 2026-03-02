@@ -896,7 +896,7 @@
 
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
-    if (competitionCoast && competitionCoast !== 'both') {
+    if (competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
       
       // Check all 250cc selectors
       const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
@@ -1052,7 +1052,7 @@
 
   function selectRider(riderClass, position, riderId, riderName) {
     // Check coast validation for 250cc riders
-    if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+    if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
       const riderOption = document.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
       if (riderOption) {
         const riderCoast = riderOption.dataset.coast;
@@ -1154,7 +1154,7 @@
       
       // Check coast for 250cc race picks (not holeshot)
       let isWrongCoast = false;
-      if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+      if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
         const riderCoast = option.dataset.coast;
         if (riderCoast) {
           isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
@@ -1301,7 +1301,7 @@
         
         // Check coast for 250cc riders
         let isWrongCoast = false;
-        if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both') {
+        if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
           const riderCoast = option.dataset.coast;
           if (riderCoast) {
             isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
@@ -1350,7 +1350,7 @@
         
         // Coast-filtrering för 250cc
         let isWrongCoast = false;
-        if (riderClass === "250cc" && competitionCoast && competitionCoast !== "both") {
+        if (riderClass === "250cc" && competitionCoast && competitionCoast !== "both" && competitionCoast !== "showdown") {
           const rider = allRiders.find(r => String(r.id) === String(opt.value));
           if (rider && rider.class === "250cc") {
             // Tillåt endast samma coast eller 'both'
@@ -1376,7 +1376,7 @@
   // Uppdatera holeshot-dropdowns med coast-filtrering
   function updateHoleshotDropdowns() {
     const holeshot250 = document.getElementById('holeshot-250');
-    if (holeshot250 && competitionCoast && competitionCoast !== "both") {
+    if (holeshot250 && competitionCoast && competitionCoast !== "both" && competitionCoast !== "showdown") {
       const currentValue = holeshot250.value;
       const optionsToRemove = [];
       
@@ -1422,7 +1422,13 @@ function imgSrcFor(riderId) {
   // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {
     if (r.image_url.startsWith('data:')) return r.image_url;
-    const imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
+    let imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
+    // Filnamn med mellanslag ger 404 – normalisera till understreck
+    if (imagePath.includes(' ')) {
+      const parts = imagePath.split('/');
+      parts[parts.length - 1] = parts[parts.length - 1].replace(/\s+/g, '_');
+      imagePath = parts.join('/');
+    }
     return `/static/${imagePath}`;
   }
   
