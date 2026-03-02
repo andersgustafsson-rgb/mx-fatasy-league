@@ -1051,6 +1051,22 @@
   }
 
   function selectRider(riderClass, position, riderId, riderName) {
+    // Extra duplicate guard:
+    // - Prevent selecting the same rider multiple times even if DB contains duplicate Rider rows
+    //   (same display text/number but different id).
+    const normName = (riderName || '').trim().replace(/\s+/g, ' ');
+    const otherSelectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
+    for (const sel of otherSelectors) {
+      const selPos = Number(sel.dataset.position || 0);
+      if (selPos === Number(position)) continue;
+      const txt = (sel.querySelector('.selected-rider')?.textContent || '').trim().replace(/\s+/g, ' ');
+      if (!txt || txt === '-- välj förare --' || txt === '-- välj 450cc förare --' || txt === '-- välj 250cc förare --') continue;
+      if (txt === normName) {
+        alert(`Du kan inte välja samma förare flera gånger (${normName}).`);
+        return;
+      }
+    }
+
     // Check coast validation for 250cc riders
     if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
       const riderOption = document.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
@@ -1129,7 +1145,7 @@
         const currentText = selectedRiderSpan.textContent;
         
         // Skip if no selection made yet
-        if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
+        if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --' || currentText === '-- välj 250cc förare --') {
           return null;
         }
         
@@ -1278,7 +1294,7 @@
       const currentText = selectedRiderSpan.textContent;
       
       // Skip if no selection made yet
-      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --') {
+      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --' || currentText === '-- välj 250cc förare --') {
         return null;
       }
       

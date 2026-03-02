@@ -7632,6 +7632,10 @@ def save_picks():
     new_rider_ids = [int(p.get("rider_id")) for p in picks if p.get("rider_id")]
     if len(new_rider_ids) != len(set(new_rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
+
+    # Extra skydd: om Rider-tabellen råkar innehålla dubletter (samma rider_number i samma klass men olika id),
+    # blockera ändå att man kan välja "samma förare" flera gånger.
+    seen_number_keys = set()
     
     # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
@@ -7652,6 +7656,13 @@ def save_picks():
             return jsonify({"error": f"Förare med id {rid} hittades inte"}), 400
         if rider.id in out_ids:
             return jsonify({"error": "Förare är OUT för detta race"}), 400
+
+        if rider.rider_number is not None:
+            key = (rider.class_name, int(rider.rider_number))
+            if key in seen_number_keys:
+                return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
+            seen_number_keys.add(key)
+
         if rider.class_name == "250cc" and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-förare matchar inte denna coast"}), 400
