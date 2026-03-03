@@ -2308,6 +2308,12 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       return;
     }
 
+    // Spara wildcard-platsen så vi kan återställa den – den ska inte nollställas
+    const wcPosEl = document.getElementById("wildcard-position");
+    const wcLabelEl = document.getElementById("wildcard-position-label");
+    const savedWcPos = wcPosEl ? wcPosEl.value : "";
+    const savedWcLabel = wcLabelEl ? wcLabelEl.textContent : "";
+
     try {
       const resp = await fetch(`/clear_my_picks/${competitionId}`, {
         method: "POST",
@@ -2352,16 +2358,12 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       if (hs450Hidden) hs450Hidden.value = "";
       if (hs250Hidden) hs250Hidden.value = "";
 
-      // 3) Nollställ wildcard
+      // 3) Nollställ wildcard-föraren; behåll den slumpade platsen (10–20)
       if (!isWSXSeries) {
         const wcSel = document.querySelector('.rider-selector[data-class="wildcard-pick"] .selected-rider');
         if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
         const wcHidden = document.getElementById("wildcard-pick");
-        const wcPos = document.getElementById("wildcard-position");
-        const wcLabel = document.getElementById("wildcard-position-label");
         if (wcHidden) wcHidden.value = "";
-        if (wcPos) wcPos.value = "";
-        if (wcLabel) wcLabel.textContent = "";
       }
 
       // 4) Återställ dolda alternativ i dropdowns
@@ -2371,7 +2373,13 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       // 5) Ta bort ev. sparade picks i localStorage
       localStorage.removeItem(`race_picks_${competitionId}`);
 
-      // 6) Markera att inga picks är sparade ännu (visa spara-knapp)
+      // 6) Återställ wildcard-platsen (användaren ska inte behöva slå om)
+      if (!isWSXSeries && savedWcPos) {
+        if (wcPosEl) wcPosEl.value = savedWcPos;
+        if (wcLabelEl) wcLabelEl.textContent = savedWcLabel || ("Plats " + savedWcPos);
+      }
+
+      // 7) Markera att inga picks är sparade ännu (visa spara-knapp)
       savedPicksState = null;
       updateSaveButtonVisibility();
 
