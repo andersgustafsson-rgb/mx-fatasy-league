@@ -2454,6 +2454,33 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       const saveBtn = document.getElementById("save-picks-btn");
       if (!saveBtn) return;
       
+      // Update status based on the currently selected draft picks (including selections loaded from localStorage).
+      // The server picks can lag behind until the user hits "Spara Mina Val".
+      try {
+        const state = JSON.parse(getCurrentPicksState());
+        const draftTop6 = (state.racePicks || []).map((p) => ({
+          rider_id: p.rider_id,
+          predicted_position: p.position,
+          class: p.class,
+        }));
+        const draftHoleshot450 = state.holeshot450 || null;
+        const draftHoleshot250 = state.holeshot250 || null;
+        const draftWildcardPick = state.wildcardPick || null;
+        
+        updatePicksStatus({
+          top6_picks: draftTop6,
+          holeshot_picks: {
+            "450cc": draftHoleshot450,
+            "wsx_sx1": draftHoleshot450,
+            "250cc": draftHoleshot250,
+            "wsx_sx2": draftHoleshot250,
+          },
+          wildcard_pick: draftWildcardPick,
+        });
+      } catch (e) {
+        // If anything fails, don't block UI saving; status will update on next interaction.
+      }
+      
       if (hasPicksChanged()) {
         saveBtn.style.display = "flex";
         saveBtn.disabled = false;
