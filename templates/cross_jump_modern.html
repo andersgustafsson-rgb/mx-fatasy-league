@@ -503,6 +503,9 @@
                 // Game settings
                 this.gameSpeed = 3;
                 this.bgScroll = 0;
+                this.animTime = 0;
+                /** Sätt true om du vill använda /static/images/blue_biker_exact.svg igen */
+                this.useBitmapRider = false;
                 this.gravity = 0.6;
                 this.jumpPower = -16;
                 this.jumpCooldown = 0;
@@ -645,10 +648,25 @@
                 }
             }
             
+            createDustPuff(x, y) {
+                for (let i = 0; i < 18; i++) {
+                    this.particles.push({
+                        x: x + (Math.random() - 0.5) * 14,
+                        y: y - Math.random() * 6,
+                        vx: -this.gameSpeed * 0.4 - Math.random() * 4,
+                        vy: -Math.random() * 2.2,
+                        size: Math.random() * 5 + 2,
+                        color: ['#c9a66b', '#a67c52', '#e8d4b8', '#8b6914'][Math.floor(Math.random() * 4)],
+                        life: 1,
+                        decay: Math.random() * 0.025 + 0.018
+                    });
+                }
+            }
+            
             createParticles(x, y, type) {
-                const count = type === 'jump' ? 15 : 20;
+                const count = type === 'jump' ? 12 : 20;
                 const colors = type === 'jump' 
-                    ? ['#00ffff', '#ff00ff', '#ffff00'] 
+                    ? ['#f4e4c1', '#d4b896', '#fff8e7'] 
                     : ['#ff0000', '#ff6600', '#ffff00'];
                 
                 for (let i = 0; i < count; i++) {
@@ -696,6 +714,7 @@
                 this.particles = [];
                 this.trail = [];
                 this.bgScroll = 0;
+                this.animTime = 0;
                 
                 this.syncHighscore();
                 
@@ -716,6 +735,7 @@
                 if (this.jumpCooldown > 0) this.jumpCooldown--;
                 
                 this.bgScroll += this.gameSpeed * 0.35;
+                this.animTime += this.gameSpeed * 0.22;
                 
                 // Update physics
                 this.biker.velocityY += this.gravity;
@@ -723,6 +743,12 @@
                 
                 // Ground collision
                 if (this.biker.y >= this.biker.groundY - this.biker.height) {
+                    if (this.biker.velocityY > 2.5) {
+                        this.createDustPuff(
+                            this.biker.x + this.biker.width * 0.5,
+                            this.biker.groundY - 4
+                        );
+                    }
                     this.biker.y = this.biker.groundY - this.biker.height;
                     this.biker.velocityY = 0;
                     this.biker.isJumping = false;
@@ -921,55 +947,127 @@
                 });
             }
             
-            drawSkyHillsTrack() {
+            drawParallaxScene() {
                 const ctx = this.ctx;
-                const h = this.height;
                 const w = this.width;
+                const h = this.height;
                 const groundY = this.biker.groundY;
+                const s = this.bgScroll;
                 
-                const sky = ctx.createLinearGradient(0, 0, 0, groundY - 40);
-                sky.addColorStop(0, '#6eb6ff');
-                sky.addColorStop(0.55, '#c8e6ff');
-                sky.addColorStop(1, '#f5e6a8');
+                const sky = ctx.createLinearGradient(0, 0, 0, groundY + 20);
+                sky.addColorStop(0, '#4a90d9');
+                sky.addColorStop(0.45, '#8ec5ff');
+                sky.addColorStop(0.72, '#ffeaa7');
+                sky.addColorStop(1, '#fdcb6e');
                 ctx.fillStyle = sky;
-                ctx.fillRect(0, 0, w, groundY);
+                ctx.fillRect(0, 0, w, groundY + 40);
                 
-                const scroll = this.bgScroll;
-                ctx.fillStyle = 'rgba(55, 105, 55, 0.5)';
+                ctx.fillStyle = 'rgba(255, 230, 150, 0.45)';
                 ctx.beginPath();
-                ctx.moveTo(0, groundY);
-                for (let x = 0; x <= w; x += 6) {
-                    const y = groundY - 42 - Math.sin((x + scroll * 0.25) * 0.009) * 32;
-                    ctx.lineTo(x, y);
+                ctx.arc(w * 0.78, groundY * 0.22, Math.min(w, h) * 0.09, 0, Math.PI * 2);
+                ctx.fill();
+                
+                const cloud = (cx, cy, sc) => {
+                    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 22 * sc, 0, Math.PI * 2);
+                    ctx.arc(cx + 28 * sc, cy - 4 * sc, 18 * sc, 0, Math.PI * 2);
+                    ctx.arc(cx + 50 * sc, cy, 16 * sc, 0, Math.PI * 2);
+                    ctx.fill();
+                };
+                cloud(((s * 0.08) % (w + 120)) - 40, groundY * 0.18, 1);
+                cloud(((s * 0.12 + 200) % (w + 160)) - 60, groundY * 0.28, 0.75);
+                
+                ctx.fillStyle = '#5c6b7a';
+                ctx.beginPath();
+                ctx.moveTo(0, groundY - 12);
+                for (let x = 0; x <= w + 20; x += 12) {
+                    const nx = x - (s * 0.06) % 12;
+                    const y = groundY - 70 - Math.sin(nx * 0.004 + 0.3) * 28 - Math.sin(nx * 0.009) * 12;
+                    ctx.lineTo(nx, y);
                 }
-                ctx.lineTo(w, groundY);
-                ctx.lineTo(0, groundY);
+                ctx.lineTo(w + 20, groundY + 50);
+                ctx.lineTo(0, groundY + 50);
                 ctx.closePath();
                 ctx.fill();
                 
-                ctx.fillStyle = 'rgba(40, 88, 40, 0.72)';
+                ctx.fillStyle = '#4a6741';
                 ctx.beginPath();
                 ctx.moveTo(0, groundY);
-                for (let x = 0; x <= w; x += 5) {
-                    const y = groundY - 22 - Math.sin((x + scroll * 0.45) * 0.012) * 16;
-                    ctx.lineTo(x, y);
+                for (let x = 0; x <= w + 10; x += 8) {
+                    const nx = x - (s * 0.18) % 8;
+                    const y = groundY - 45 - Math.sin((nx + s * 0.15) * 0.01) * 22;
+                    ctx.lineTo(nx, y);
                 }
-                ctx.lineTo(w, groundY);
-                ctx.lineTo(0, groundY);
+                ctx.lineTo(w + 10, groundY);
                 ctx.closePath();
                 ctx.fill();
                 
-                ctx.fillStyle = '#c4a574';
-                ctx.fillRect(0, groundY - 8, w, 8);
+                ctx.fillStyle = '#3d5c35';
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                for (let x = 0; x <= w + 8; x += 6) {
+                    const nx = x - (s * 0.35) % 6;
+                    const y = groundY - 28 - Math.sin((nx + s * 0.4) * 0.014) * 14;
+                    ctx.lineTo(nx, y);
+                }
+                ctx.lineTo(w + 8, groundY);
+                ctx.closePath();
+                ctx.fill();
                 
-                const dirt = ctx.createLinearGradient(0, groundY, 0, h);
-                dirt.addColorStop(0, '#8b6914');
-                dirt.addColorStop(1, '#4a3410');
-                ctx.fillStyle = dirt;
+                ctx.fillStyle = '#654321';
+                ctx.strokeStyle = 'rgba(40, 28, 14, 0.6)';
+                ctx.lineWidth = 2;
+                const fenceY = groundY - 6;
+                for (let x = -20; x < w + 40; x += 44) {
+                    const px = x - (s * 0.55) % 44;
+                    ctx.fillRect(px, fenceY - 38, 5, 38);
+                }
+                ctx.beginPath();
+                ctx.moveTo(0, fenceY - 32);
+                ctx.lineTo(w, fenceY - 32);
+                ctx.moveTo(0, fenceY - 18);
+                ctx.lineTo(w, fenceY - 18);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#7a5230';
+                for (let x = -30; x < w + 60; x += 90) {
+                    const tx = x - (s * 0.42) % 90;
+                    ctx.fillRect(tx + 35, groundY - 52, 14, 52);
+                    ctx.beginPath();
+                    ctx.arc(tx + 42, groundY - 58, 28, 0, Math.PI * 2);
+                    ctx.fillStyle = '#2d5016';
+                    ctx.fill();
+                    ctx.fillStyle = '#7a5230';
+                }
+                
+                ctx.fillStyle = '#8fbf6a';
+                ctx.fillRect(0, groundY - 10, w, 10);
+                ctx.fillStyle = '#6b9e46';
+                ctx.fillRect(0, groundY - 4, w, 4);
+                
+                const dirtGrad = ctx.createLinearGradient(0, groundY, 0, h);
+                dirtGrad.addColorStop(0, '#a67c3a');
+                dirtGrad.addColorStop(0.35, '#7a5420');
+                dirtGrad.addColorStop(1, '#3d2810');
+                ctx.fillStyle = dirtGrad;
                 ctx.fillRect(0, groundY, w, h - groundY);
                 
-                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-                ctx.lineWidth = 1;
+                ctx.save();
+                ctx.globalAlpha = 0.12;
+                for (let y = groundY; y < h; y += 6) {
+                    ctx.strokeStyle = y % 12 === 0 ? '#4a3010' : '#5c3d18';
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    for (let x = 0; x <= w; x += 14) {
+                        ctx.lineTo(x + ((s + y) * 0.3) % 14, y + (Math.sin(x * 0.04) * 1.2));
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+                
+                ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(0, groundY);
                 ctx.lineTo(w, groundY);
@@ -983,62 +1081,132 @@
                 const bw = obstacle.width;
                 const bh = obstacle.height;
                 const cx = x + bw / 2;
-                const top = y;
+                const bot = y + bh;
                 
-                const g = ctx.createLinearGradient(x, top, x, top + bh);
-                g.addColorStop(0, '#d4a574');
-                g.addColorStop(0.5, '#a67c3a');
-                g.addColorStop(1, '#6b4a1e');
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                ctx.beginPath();
+                ctx.ellipse(cx, bot + 4, bw * 0.85, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                const g = ctx.createLinearGradient(x, y, x, bot);
+                g.addColorStop(0, '#e8c08c');
+                g.addColorStop(0.45, '#b07d3c');
+                g.addColorStop(1, '#5c3d1a');
                 ctx.fillStyle = g;
                 
                 ctx.beginPath();
-                ctx.moveTo(x, top + bh);
-                ctx.quadraticCurveTo(cx, top - bh * 0.15, x + bw, top + bh);
+                ctx.moveTo(x, bot);
+                ctx.quadraticCurveTo(cx, y - bh * 0.2, x + bw, bot);
                 ctx.closePath();
                 ctx.fill();
                 
-                ctx.strokeStyle = 'rgba(40, 25, 10, 0.35)';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(35, 22, 10, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx - bw * 0.25, y + bh * 0.35);
+                ctx.quadraticCurveTo(cx - 2, y + bh * 0.1, cx + bw * 0.1, y + bh * 0.45);
                 ctx.stroke();
             }
             
-            drawMXBikeSilhouette(cx, cy, rotDeg) {
+            drawRiderGroundShadow(cx, groundY) {
                 const ctx = this.ctx;
                 ctx.save();
-                ctx.translate(cx, cy);
+                ctx.fillStyle = 'rgba(0,0,0,0.28)';
+                ctx.beginPath();
+                ctx.ellipse(cx, groundY - 2, 44, 11, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            drawMXBikeRig(cx, cy, rotDeg, animTime) {
+                const ctx = this.ctx;
+                const bob = Math.sin(animTime * 0.08) * 1.2;
+                const spin = (animTime * 0.35) % (Math.PI * 2);
+                
+                ctx.save();
+                ctx.translate(cx, cy + bob);
                 ctx.rotate((rotDeg * Math.PI) / 180);
                 
-                const rW = 11;
-                const fW = 9;
-                const base = 14;
+                const baseY = 12;
+                const rw = 12;
+                const fw = 9;
+                const rx = -24;
+                const fx = 20;
+                
+                const drawWheel = (wx, wy, r, phase) => {
+                    const g = ctx.createRadialGradient(wx - 3, wy - 3, 2, wx, wy, r);
+                    g.addColorStop(0, '#444');
+                    g.addColorStop(0.7, '#222');
+                    g.addColorStop(1, '#111');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.arc(wx, wy, r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#0d0d0d';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.strokeStyle = 'rgba(200,200,200,0.35)';
+                    ctx.lineWidth = 1.2;
+                    for (let i = 0; i < 3; i++) {
+                        const a = phase + (i * Math.PI * 2) / 3;
+                        ctx.beginPath();
+                        ctx.moveTo(wx, wy);
+                        ctx.lineTo(wx + Math.cos(a) * (r - 2), wy + Math.sin(a) * (r - 2));
+                        ctx.stroke();
+                    }
+                };
+                
+                drawWheel(rx, baseY, rw, spin);
+                drawWheel(fx, baseY, fw, spin * 1.12);
+                
                 ctx.strokeStyle = '#1a1a1a';
-                ctx.lineWidth = 3;
-                ctx.fillStyle = '#f4d03f';
-                
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(-22, base, rW, 0, Math.PI * 2);
+                ctx.moveTo(rx + 6, baseY - 4);
+                ctx.lineTo(2, baseY - 22);
+                ctx.lineTo(fx - 2, baseY - 6);
+                ctx.stroke();
+                
+                const bodyG = ctx.createLinearGradient(-8, baseY - 40, 8, baseY);
+                bodyG.addColorStop(0, '#f1c40f');
+                bodyG.addColorStop(0.5, '#f39c12');
+                bodyG.addColorStop(1, '#d68910');
+                ctx.fillStyle = bodyG;
+                ctx.beginPath();
+                ctx.moveTo(-6, baseY - 6);
+                ctx.lineTo(4, baseY - 32);
+                ctx.lineTo(14, baseY - 10);
+                ctx.lineTo(10, baseY - 4);
+                ctx.closePath();
                 ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
+                
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(-2, baseY - 38, 14, 10);
+                ctx.fillStyle = '#e74c3c';
+                ctx.font = 'bold 8px sans-serif';
+                ctx.fillText('MX', 1, baseY - 31);
+                
+                ctx.fillStyle = '#2c3e50';
                 ctx.beginPath();
-                ctx.arc(18, base, fW, 0, Math.PI * 2);
+                ctx.ellipse(2, baseY - 38, 9, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+                ctx.lineWidth = 1;
                 ctx.stroke();
-                
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 4;
+                ctx.fillStyle = 'rgba(255,255,255,0.65)';
                 ctx.beginPath();
-                ctx.moveTo(-18, base - 2);
-                ctx.lineTo(8, base - 18);
-                ctx.lineTo(14, base - 2);
-                ctx.stroke();
-                
-                ctx.strokeStyle = '#222';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(-10, base - 6);
-                ctx.lineTo(-4, base - 26);
-                ctx.lineTo(6, base - 14);
-                ctx.stroke();
+                ctx.arc(-1, baseY - 42, 2.5, 0, Math.PI * 2);
+                ctx.fill();
                 
                 ctx.restore();
             }
@@ -1046,14 +1214,14 @@
             draw() {
                 this.ctx.clearRect(0, 0, this.width, this.height);
                 
-                this.drawSkyHillsTrack();
+                this.drawParallaxScene();
                 
                 this.trail.forEach((t, i) => {
                     this.ctx.save();
                     this.ctx.globalAlpha = t.alpha * (i / this.trail.length) * 0.45;
                     this.ctx.translate(t.x + 30, t.y);
                     this.ctx.rotate(t.rotation * Math.PI / 180);
-                    this.ctx.fillStyle = 'rgba(180, 130, 70, 0.5)';
+                    this.ctx.fillStyle = 'rgba(160, 110, 60, 0.45)';
                     this.ctx.beginPath();
                     this.ctx.ellipse(0, 8, 28, 12, 0, 0, Math.PI * 2);
                     this.ctx.fill();
@@ -1064,13 +1232,16 @@
                 
                 const bx = this.biker.x + this.biker.width / 2;
                 const by = this.biker.y + this.biker.height / 2;
+                const gy = this.biker.groundY;
                 
-                this.ctx.save();
-                this.ctx.translate(bx, by);
-                this.ctx.rotate((this.biker.rotation * Math.PI) / 180);
-                this.ctx.translate(-bx, -by);
+                this.drawRiderGroundShadow(bx, gy);
                 
-                if (this.bikerImage.complete && this.bikerImage.naturalWidth > 0) {
+                const useImg = this.useBitmapRider && this.bikerImage.complete && this.bikerImage.naturalWidth > 0;
+                if (useImg) {
+                    this.ctx.save();
+                    this.ctx.translate(bx, by);
+                    this.ctx.rotate((this.biker.rotation * Math.PI) / 180);
+                    this.ctx.translate(-bx, -by);
                     this.ctx.drawImage(
                         this.bikerImage,
                         this.biker.x - 30,
@@ -1078,11 +1249,10 @@
                         this.biker.width + 60,
                         this.biker.height + 60
                     );
+                    this.ctx.restore();
                 } else {
-                    this.drawMXBikeSilhouette(bx, by + 8, 0);
+                    this.drawMXBikeRig(bx, by + 8, this.biker.rotation, this.animTime);
                 }
-                
-                this.ctx.restore();
                 
                 this.particles.forEach(p => {
                     this.ctx.save();
