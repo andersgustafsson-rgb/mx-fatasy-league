@@ -504,8 +504,8 @@
                 this.gameSpeed = 3;
                 this.bgScroll = 0;
                 this.animTime = 0;
-                /** Sätt true om du vill använda /static/images/blue_biker_exact.svg igen */
-                this.useBitmapRider = false;
+                /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
+                this.useBitmapRider = true;
                 this.gravity = 0.6;
                 this.jumpPower = -16;
                 this.jumpCooldown = 0;
@@ -754,8 +754,8 @@
                     this.biker.isJumping = false;
                     this.biker.rotation = 0;
                 } else {
-                    // Rotate while jumping
-                    this.biker.rotation = Math.min(this.biker.rotation + 3, 20);
+                    // Ingen lutning i luften (såg konstig ut med SVG/vektor)
+                    this.biker.rotation = 0;
                 }
                 
                 // Update trail
