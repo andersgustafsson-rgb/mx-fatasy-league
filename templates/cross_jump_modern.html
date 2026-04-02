@@ -427,7 +427,7 @@
         <!-- Start Screen -->
         <div id="startScreen" class="glass-panel">
             <h1>🏍️ CROSS JUMP 🏍️</h1>
-            <p>Modern Edition</p>
+            <p style="font-size:0.95em;opacity:0.85;margin-bottom:12px;">Arcade hopp · sidovy MX-stil (inte samma fysik som Mad Skills-appen)</p>
             
             <div class="instructions">
                 <strong>Kontroller:</strong><br>
@@ -469,7 +469,7 @@
                 </div>
             </div>
 
-            <button class="neon-button" onclick="startGame()">🚀 Starta Spel</button>
+            <button type="button" class="neon-button" onclick="startGame()">🚀 Starta Spel</button>
         </div>
 
         <!-- Game Over Screen -->
@@ -477,8 +477,8 @@
             <h1>GAME OVER</h1>
             <p>Poäng: <span id="finalScore">0</span></p>
             <p>Bästa: <span id="finalHighScore">0</span></p>
-            <button class="neon-button" onclick="restartGame()">🔄 Spela Igen</button>
-            <button class="neon-button" onclick="window.location.href='/'">🏠 Hem</button>
+            <button type="button" class="neon-button" onclick="restartGame()">🔄 Spela Igen</button>
+            <button type="button" class="neon-button" onclick="window.location.href='/'">🏠 Hem</button>
         </div>
     </div>
 
@@ -502,6 +502,7 @@
                 
                 // Game settings
                 this.gameSpeed = 3;
+                this.bgScroll = 0;
                 this.gravity = 0.6;
                 this.jumpPower = -16;
                 this.jumpCooldown = 0;
@@ -694,6 +695,7 @@
                 this.obstacleTimer = 0;
                 this.particles = [];
                 this.trail = [];
+                this.bgScroll = 0;
                 
                 this.syncHighscore();
                 
@@ -712,6 +714,8 @@
                 
                 // Update cooldown
                 if (this.jumpCooldown > 0) this.jumpCooldown--;
+                
+                this.bgScroll += this.gameSpeed * 0.35;
                 
                 // Update physics
                 this.biker.velocityY += this.gravity;
@@ -862,8 +866,8 @@
                             localStorage.setItem('crossJumpModernHighScore', this.highScore);
                         }
                     } else {
-                        this.highScore = 0;
-                        localStorage.removeItem('crossJumpModernHighScore');
+                        const stored = parseInt(localStorage.getItem('crossJumpModernHighScore') || '0', 10);
+                        if (stored > this.highScore) this.highScore = stored;
                     }
                     this.updateHUD();
                 } catch (error) {
@@ -917,100 +921,156 @@
                 });
             }
             
+            drawSkyHillsTrack() {
+                const ctx = this.ctx;
+                const h = this.height;
+                const w = this.width;
+                const groundY = this.biker.groundY;
+                
+                const sky = ctx.createLinearGradient(0, 0, 0, groundY - 40);
+                sky.addColorStop(0, '#6eb6ff');
+                sky.addColorStop(0.55, '#c8e6ff');
+                sky.addColorStop(1, '#f5e6a8');
+                ctx.fillStyle = sky;
+                ctx.fillRect(0, 0, w, groundY);
+                
+                const scroll = this.bgScroll;
+                ctx.fillStyle = 'rgba(55, 105, 55, 0.5)';
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                for (let x = 0; x <= w; x += 6) {
+                    const y = groundY - 42 - Math.sin((x + scroll * 0.25) * 0.009) * 32;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(w, groundY);
+                ctx.lineTo(0, groundY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = 'rgba(40, 88, 40, 0.72)';
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                for (let x = 0; x <= w; x += 5) {
+                    const y = groundY - 22 - Math.sin((x + scroll * 0.45) * 0.012) * 16;
+                    ctx.lineTo(x, y);
+                }
+                ctx.lineTo(w, groundY);
+                ctx.lineTo(0, groundY);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = '#c4a574';
+                ctx.fillRect(0, groundY - 8, w, 8);
+                
+                const dirt = ctx.createLinearGradient(0, groundY, 0, h);
+                dirt.addColorStop(0, '#8b6914');
+                dirt.addColorStop(1, '#4a3410');
+                ctx.fillStyle = dirt;
+                ctx.fillRect(0, groundY, w, h - groundY);
+                
+                ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, groundY);
+                ctx.lineTo(w, groundY);
+                ctx.stroke();
+            }
+            
+            drawDirtObstacle(obstacle) {
+                const ctx = this.ctx;
+                const x = obstacle.x;
+                const y = obstacle.y;
+                const bw = obstacle.width;
+                const bh = obstacle.height;
+                const cx = x + bw / 2;
+                const top = y;
+                
+                const g = ctx.createLinearGradient(x, top, x, top + bh);
+                g.addColorStop(0, '#d4a574');
+                g.addColorStop(0.5, '#a67c3a');
+                g.addColorStop(1, '#6b4a1e');
+                ctx.fillStyle = g;
+                
+                ctx.beginPath();
+                ctx.moveTo(x, top + bh);
+                ctx.quadraticCurveTo(cx, top - bh * 0.15, x + bw, top + bh);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.strokeStyle = 'rgba(40, 25, 10, 0.35)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            drawMXBikeSilhouette(cx, cy, rotDeg) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate((rotDeg * Math.PI) / 180);
+                
+                const rW = 11;
+                const fW = 9;
+                const base = 14;
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 3;
+                ctx.fillStyle = '#f4d03f';
+                
+                ctx.beginPath();
+                ctx.arc(-22, base, rW, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(18, base, fW, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(-18, base - 2);
+                ctx.lineTo(8, base - 18);
+                ctx.lineTo(14, base - 2);
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-10, base - 6);
+                ctx.lineTo(-4, base - 26);
+                ctx.lineTo(6, base - 14);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+            
             draw() {
-                // Clear canvas
                 this.ctx.clearRect(0, 0, this.width, this.height);
                 
-                // Draw stars
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                this.stars.forEach(star => {
-                    this.ctx.beginPath();
-                    this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-                    this.ctx.fill();
-                });
+                this.drawSkyHillsTrack();
                 
-                // Draw ground
-                const groundGradient = this.ctx.createLinearGradient(0, this.height - 30, 0, this.height);
-                groundGradient.addColorStop(0, 'rgba(100, 100, 150, 0.8)');
-                groundGradient.addColorStop(1, 'rgba(50, 50, 100, 0.9)');
-                this.ctx.fillStyle = groundGradient;
-                this.ctx.fillRect(0, this.height - 30, this.width, 30);
-                
-                // Ground line with glow
-                this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-                this.ctx.lineWidth = 2;
-                this.ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
-                this.ctx.shadowBlur = 10;
-                this.ctx.beginPath();
-                this.ctx.moveTo(0, this.height - 30);
-                this.ctx.lineTo(this.width, this.height - 30);
-                this.ctx.stroke();
-                this.ctx.shadowBlur = 0;
-                
-                // Draw trail
                 this.trail.forEach((t, i) => {
                     this.ctx.save();
-                    this.ctx.globalAlpha = t.alpha * (i / this.trail.length) * 0.5;
+                    this.ctx.globalAlpha = t.alpha * (i / this.trail.length) * 0.45;
                     this.ctx.translate(t.x + 30, t.y);
                     this.ctx.rotate(t.rotation * Math.PI / 180);
-                    this.ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
-                    this.ctx.fillRect(-30, -30, 60, 60);
+                    this.ctx.fillStyle = 'rgba(180, 130, 70, 0.5)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 8, 28, 12, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
                     this.ctx.restore();
                 });
                 
-                // Draw obstacles with glow
-                this.obstacles.forEach(obstacle => {
-                    // Glow effect
-                    this.ctx.shadowColor = 'rgba(255, 0, 255, 0.8)';
-                    this.ctx.shadowBlur = 20;
-                    
-                    // Gradient for obstacle
-                    const obsGradient = this.ctx.createLinearGradient(
-                        obstacle.x, obstacle.y,
-                        obstacle.x, obstacle.y + obstacle.height
-                    );
-                    obsGradient.addColorStop(0, '#ff00ff');
-                    obsGradient.addColorStop(1, '#6600cc');
-                    this.ctx.fillStyle = obsGradient;
-                    
-                    // Rounded top
-                    this.ctx.beginPath();
-                    this.ctx.arc(
-                        obstacle.x + obstacle.width / 2,
-                        obstacle.y + obstacle.height / 2,
-                        obstacle.height / 2,
-                        Math.PI, 0, false
-                    );
-                    this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y + obstacle.height);
-                    this.ctx.lineTo(obstacle.x, obstacle.y + obstacle.height);
-                    this.ctx.closePath();
-                    this.ctx.fill();
-                    
-                    // Highlight
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                    this.ctx.beginPath();
-                    this.ctx.arc(
-                        obstacle.x + obstacle.width / 2 - 5,
-                        obstacle.y + obstacle.height / 2 - 5,
-                        obstacle.height / 4,
-                        0, Math.PI * 2
-                    );
-                    this.ctx.fill();
-                    
-                    this.ctx.shadowBlur = 0;
-                });
+                this.obstacles.forEach(obstacle => this.drawDirtObstacle(obstacle));
                 
-                // Draw biker
+                const bx = this.biker.x + this.biker.width / 2;
+                const by = this.biker.y + this.biker.height / 2;
+                
                 this.ctx.save();
-                this.ctx.translate(this.biker.x + this.biker.width / 2, this.biker.y + this.biker.height / 2);
-                this.ctx.rotate(this.biker.rotation * Math.PI / 180);
-                this.ctx.translate(-(this.biker.x + this.biker.width / 2), -(this.biker.y + this.biker.height / 2));
+                this.ctx.translate(bx, by);
+                this.ctx.rotate((this.biker.rotation * Math.PI) / 180);
+                this.ctx.translate(-bx, -by);
                 
-                // Glow effect
-                this.ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
-                this.ctx.shadowBlur = 20;
-                
-                if (this.bikerImage.complete) {
+                if (this.bikerImage.complete && this.bikerImage.naturalWidth > 0) {
                     this.ctx.drawImage(
                         this.bikerImage,
                         this.biker.x - 30,
@@ -1019,44 +1079,38 @@
                         this.biker.height + 60
                     );
                 } else {
-                    this.ctx.font = '50px Arial';
-                    this.ctx.fillText('🏍️', this.biker.x, this.biker.y + 40);
+                    this.drawMXBikeSilhouette(bx, by + 8, 0);
                 }
                 
                 this.ctx.restore();
-                this.ctx.shadowBlur = 0;
                 
-                // Draw particles
                 this.particles.forEach(p => {
                     this.ctx.save();
                     this.ctx.globalAlpha = p.life;
                     this.ctx.fillStyle = p.color;
-                    this.ctx.shadowColor = p.color;
-                    this.ctx.shadowBlur = 10;
                     this.ctx.beginPath();
                     this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                     this.ctx.fill();
                     this.ctx.restore();
                 });
                 
-                // Draw pause overlay
-                if (gamePaused) {
-                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                if (this.gamePaused) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
                     this.ctx.fillRect(0, 0, this.width, this.height);
-                    
-                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    this.ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
-                    this.ctx.shadowBlur = 30;
-                    this.ctx.font = 'bold 60px Segoe UI';
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    this.ctx.font = 'bold 48px Segoe UI';
                     this.ctx.textAlign = 'center';
                     this.ctx.fillText('PAUSAD', this.width / 2, this.height / 2);
-                    this.ctx.shadowBlur = 0;
                 }
             }
             
             gameLoop() {
-                this.update();
-                this.draw();
+                try {
+                    this.update();
+                    this.draw();
+                } catch (e) {
+                    console.error('Cross Jump game loop:', e);
+                }
                 requestAnimationFrame(() => this.gameLoop());
             }
         }
