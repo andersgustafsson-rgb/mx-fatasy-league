@@ -129,6 +129,12 @@
       opacity: 0.7;
     }
     details.race-details[open] > summary::after { content: " ▲"; }
+    /* Totalställning: förhindra att tabeller trycker ihop kolumner (minmax(0,1fr)) */
+    @media (min-width: 1024px) {
+      .standings-triple-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
   </style>
 </head>
 <body class="page-bg text-slate-100">
@@ -217,34 +223,42 @@
 
   {% macro standings_row(r, rank) %}
     <tr class="border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40">
-      <td class="py-1.5 pr-1 text-slate-500 text-xs w-6 tabular-nums">{{ rank }}</td>
-      <td class="py-1.5 pr-2 w-9">
+      <td class="py-1.5 pr-1 align-middle text-slate-500 text-xs tabular-nums w-[1.5rem]">{{ rank }}</td>
+      <td class="py-1.5 pr-1.5 align-middle w-[2.25rem]">
         {% set src = rider_image_src(r) %}
         {% if src %}
-          <img class="w-7 h-7 rounded-full object-cover border border-slate-600 shrink-0" src="{{ src }}" alt="">
+          <img class="w-7 h-7 rounded-full object-cover border border-slate-600 shrink-0 block" src="{{ src }}" alt="">
         {% else %}
           <span class="inline-flex w-7 h-7 items-center justify-center rounded-full bg-slate-700 text-[10px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% endif %}
       </td>
-      <td class="py-1.5 min-w-0">
-        <div class="font-medium text-slate-100 text-sm truncate">{{ r.rider_name }}</div>
-        <div class="text-[11px] text-slate-500">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
+      <td class="py-1.5 min-w-0 align-middle pr-2 overflow-hidden">
+        <div class="font-medium text-slate-100 text-xs leading-tight truncate">{{ r.rider_name }}</div>
+        <div class="text-[10px] text-slate-500 truncate">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
       </td>
-      <td class="py-1.5 text-right font-bold text-amber-300/95 tabular-nums text-sm whitespace-nowrap">{{ r.points }}</td>
+      <td class="py-1.5 align-middle text-right font-bold text-amber-300/95 tabular-nums text-xs whitespace-nowrap pl-1">{{ r.points }}</td>
     </tr>
   {% endmacro %}
 
   {% macro standings_sub(title, rows) %}
     {% if rows and rows|length > 0 %}
-    <div class="min-w-0">
-      <h4 class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2">{{ title }}</h4>
-      <table class="w-full">
-        <tbody>
-          {% for r in rows %}
-            {{ standings_row(r, loop.index) }}
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="standings-col min-w-0 max-w-full overflow-hidden flex flex-col">
+      <h4 class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2 shrink-0">{{ title }}</h4>
+      <div class="overflow-x-auto -mx-0.5 px-0.5">
+        <table class="w-full table-fixed border-separate border-spacing-0 text-sm" style="min-width:0">
+          <colgroup>
+            <col style="width:1.5rem">
+            <col style="width:2.25rem">
+            <col>
+            <col style="width:3rem">
+          </colgroup>
+          <tbody>
+            {% for r in rows %}
+              {{ standings_row(r, loop.index) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
     {% endif %}
   {% endmacro %}
@@ -304,7 +318,7 @@
         {% if sx.get('450') or sx.get('250_east') or sx.get('250_west') %}
         <div class="rounded-xl border border-cyan-700/30 bg-slate-900/25 p-4">
           <h3 class="text-base font-bold text-cyan-300 mb-4 border-b border-cyan-800/40 pb-2">{{ sx.get('label', 'AMA Supercross (SX)') }}</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
             {{ standings_sub('450cc', sx.get('450')) }}
             {{ standings_sub('250 East', sx.get('250_east')) }}
             {{ standings_sub('250 West', sx.get('250_west')) }}
@@ -315,7 +329,7 @@
         {% if mx.get('450') or mx.get('250_east') or mx.get('250_west') %}
         <div class="rounded-xl border border-emerald-800/35 bg-slate-900/25 p-4">
           <h3 class="text-base font-bold text-emerald-300 mb-4 border-b border-emerald-800/40 pb-2">{{ mx.get('label', 'Pro Motocross (MX)') }}</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
             {{ standings_sub('450cc', mx.get('450')) }}
             {{ standings_sub('250 East', mx.get('250_east')) }}
             {{ standings_sub('250 West', mx.get('250_west')) }}
@@ -326,7 +340,7 @@
         {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
         <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4">
           <h3 class="text-base font-bold text-violet-300 mb-4 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX') }}</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
             {{ standings_sub('450cc', smx.get('450')) }}
             {{ standings_sub('250 East', smx.get('250_east')) }}
             {{ standings_sub('250 West', smx.get('250_west')) }}
@@ -335,9 +349,9 @@
         {% endif %}
         {% set wsx = championship_totals.get('WSX') or {} %}
         {% if wsx.get('sx1') or wsx.get('sx2') %}
-        <div class="rounded-xl border border-amber-700/35 bg-slate-900/25 p-4 xl:col-span-2">
+        <div class="rounded-xl border border-amber-700/35 bg-slate-900/25 p-4 xl:col-span-2 min-w-0">
           <h3 class="text-base font-bold text-amber-200 mb-4 border-b border-amber-800/40 pb-2">{{ wsx.get('label', 'WSX') }}</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 min-w-0">
             {{ standings_sub('WSX SX1', wsx.get('sx1')) }}
             {{ standings_sub('WSX SX2', wsx.get('sx2')) }}
           </div>
