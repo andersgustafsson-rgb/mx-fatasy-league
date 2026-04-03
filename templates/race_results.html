@@ -132,9 +132,34 @@
   </style>
 </head>
 <body class="page-bg text-slate-100">
+  {# Samma logik som race picks: data-URL, eller /static/ + riders/… #}
+  {% macro rider_image_src(r) -%}
+    {%- if r and r.image_url -%}
+      {%- set u = r.image_url | trim -%}
+      {%- if u.startswith('data:') -%}
+        {{- u -}}
+      {%- elif u.startswith('http://') or u.startswith('https://') -%}
+        {{- u -}}
+      {%- else -%}
+        {%- set path = u if (u.startswith('riders/') or u.startswith('uploads/') or u.startswith('trackmaps/')) else ('riders/' ~ u) -%}
+        {%- set rp = path.rpartition('/') -%}
+        {%- set dir_part = rp[0] -%}
+        {%- set slash = rp[1] -%}
+        {%- set fname = rp[2] -%}
+        {%- if slash -%}
+          {%- set path_fixed = dir_part ~ slash ~ (fname | replace(' ', '_')) -%}
+        {%- else -%}
+          {%- set path_fixed = path | replace(' ', '_') -%}
+        {%- endif -%}
+        /static/{{ path_fixed }}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endmacro %}
+
   {% macro rider_avatar(r, extra_class) %}
-    {% if r and r.image_url %}
-      <img src="/static/{{ r.image_url }}" alt="" class="podium-avatar {{ extra_class }}"
+    {% set src = rider_image_src(r) %}
+    {% if r and src %}
+      <img src="{{ src }}" alt="" class="podium-avatar {{ extra_class }}"
            onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
       <div class="podium-avatar {{ extra_class }} hidden flex items-center justify-center text-xs font-bold text-slate-300 bg-slate-700">
         #{{ r.rider_number or '?' }}
@@ -197,7 +222,8 @@
       <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto sm:max-h-none">
         {% for c in competitions %}
           <a href="#comp-card-{{ c.id }}"
-             class="nav-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
+             data-comp-id="{{ c.id }}"
+             class="race-jump-link nav-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
                     {% if c.status == 'completed' %}bg-emerald-900/80 text-emerald-200 border border-emerald-600/50 hover:bg-emerald-800/80
                     {% elif c.status == 'missed' %}bg-red-900/60 text-red-200 border border-red-600/40 hover:bg-red-800/60
                     {% else %}bg-slate-700/80 text-slate-200 border border-slate-500/50 hover:bg-slate-600{% endif %}">
@@ -413,8 +439,9 @@
                     <div class="rounded-xl bg-gradient-to-br from-amber-900/40 to-slate-900/60 p-4 border border-amber-600/30 flex items-center gap-3">
                       <div class="shrink-0 w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center text-lg shadow-lg">🏁</div>
                       <div class="shrink-0">
-                        {% if holeshot.image_url %}
-                          <img src="/static/{{ holeshot.image_url }}"
+                        {% set hs_src = rider_image_src(holeshot) %}
+                        {% if hs_src %}
+                          <img src="{{ hs_src }}"
                                alt="{{ holeshot.rider_name }}"
                                class="w-12 h-12 rounded-full object-cover border-2 border-amber-400/80"
                                onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
@@ -455,9 +482,11 @@
   <script>
     function toggleAccordion(compId) {
       const content = document.getElementById(compId);
+      if (!content) return;
       const idNum = compId.replace('comp-', '');
       const icon = document.getElementById('icon-' + idNum);
       const button = content.previousElementSibling;
+      if (!button) return;
 
       if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');
@@ -470,7 +499,32 @@
       }
     }
 
+    function jumpToRace(compId) {
+      const sid = String(compId);
+      const panel = document.getElementById('comp-' + sid);
+      const card = document.getElementById('comp-card-' + sid);
+      if (!card) return;
+      if (panel && panel.classList.contains('hidden')) {
+        toggleAccordion('comp-' + sid);
+      }
+      requestAnimationFrame(function () {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('a.race-jump-link').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          jumpToRace(this.getAttribute('data-comp-id'));
+        });
+      });
+
+      var hashMatch = location.hash.match(/^#comp-card-(\d+)$/);
+      if (hashMatch) {
+        jumpToRace(hashMatch[1]);
+        return;
+      }
       {% if latest_competition_id %}
         toggleAccordion('comp-{{ latest_competition_id }}');
       {% else %}

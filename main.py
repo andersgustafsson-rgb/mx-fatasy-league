@@ -6966,7 +6966,8 @@ def race_results_page():
                     Rider.class_name,
                     Rider.rider_number,
                     Rider.image_url,
-                    Rider.bike_brand
+                    Rider.rider_image_data,
+                    Rider.bike_brand,
                 )
                 .join(Rider, Rider.id == CompetitionResult.rider_id)
                 .filter(CompetitionResult.competition_id == comp.id)
@@ -6974,14 +6975,15 @@ def race_results_page():
                 .all()
             )
             
-            holeshots = (
+            holeshots_rows = (
                 db.session.query(
                     HoleshotResult.rider_id,
                     Rider.name.label('rider_name'),
                     HoleshotResult.class_name,
                     Rider.rider_number,
                     Rider.image_url,
-                    Rider.bike_brand
+                    Rider.rider_image_data,
+                    Rider.bike_brand,
                 )
                 .join(Rider, Rider.id == HoleshotResult.rider_id)
                 .filter(HoleshotResult.competition_id == comp.id)
@@ -7007,21 +7009,35 @@ def race_results_page():
                 else:
                     points = get_smx_qualification_points(result.position)  # Default to SMX points
                 
+                merged_img = getattr(result, "rider_image_data", None) or result.image_url
                 result_dict = {
                     'rider_id': result.rider_id,
                     'position': result.position,
                     'rider_name': result.rider_name,
                     'class_name': result.class_name,
                     'rider_number': result.rider_number,
-                    'image_url': result.image_url,
+                    'image_url': merged_img,
                     'bike_brand': result.bike_brand,
-                    'points': points
+                    'points': points,
                 }
                 results_with_points.append(result_dict)
             
+            holeshots = []
+            for h in holeshots_rows:
+                merged_h_img = getattr(h, "rider_image_data", None) or h.image_url
+                holeshots.append(
+                    {
+                        'rider_name': h.rider_name,
+                        'class_name': h.class_name,
+                        'rider_number': h.rider_number,
+                        'image_url': merged_h_img,
+                        'bike_brand': h.bike_brand,
+                    }
+                )
+
             competition_results[comp.id] = {
                 'results': results_with_points,
-                'holeshots': holeshots
+                'holeshots': holeshots,
             }
     
         # Determine status for each competition and find the latest one
