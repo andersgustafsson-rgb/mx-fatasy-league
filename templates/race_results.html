@@ -221,29 +221,35 @@
 
   {% macro standings_row_wide(r, rank) %}
     <tr class="border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40">
-      <td class="py-2.5 pr-2 align-middle text-slate-500 text-sm tabular-nums w-10">{{ rank }}</td>
-      <td class="py-2.5 pr-3 align-middle w-12">
+      <td class="py-3 pl-5 pr-2 align-middle text-slate-400 text-base font-semibold tabular-nums">{{ rank }}</td>
+      <td class="py-3 pr-4 align-middle w-[3.5rem]">
         {% set src = rider_image_src(r) %}
         {% if src %}
-          <img class="standings-avatar-img w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0 block bg-slate-800" src="{{ src }}" alt=""
+          <img class="standings-avatar-img w-10 h-10 rounded-full object-cover border border-slate-600 shrink-0 block bg-slate-800" src="{{ src }}" alt=""
                onerror="this.style.display='none'; var s=this.nextElementSibling; if(s) s.classList.remove('hidden');">
-          <span class="standings-avatar-fallback hidden inline-flex w-9 h-9 items-center justify-center rounded-full bg-slate-700 text-[11px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
+          <span class="standings-avatar-fallback hidden inline-flex w-10 h-10 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% else %}
-          <span class="inline-flex w-9 h-9 items-center justify-center rounded-full bg-slate-700 text-[11px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
+          <span class="inline-flex w-10 h-10 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% endif %}
       </td>
-      <td class="py-2.5 align-middle pr-4 min-w-0">
-        <div class="font-semibold text-slate-100 text-sm sm:text-base leading-snug break-words">{{ r.rider_name }}</div>
-        <div class="text-xs text-slate-500 mt-0.5">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
+      <td class="py-3 align-middle pr-4 min-w-0">
+        <div class="font-semibold text-slate-100 text-base sm:text-lg leading-snug break-words">{{ r.rider_name }}</div>
+        <div class="text-sm text-slate-500 mt-0.5">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
       </td>
-      <td class="py-2.5 align-middle text-right font-bold text-amber-300 tabular-nums text-base whitespace-nowrap w-24 pl-2">{{ r.points }}</td>
+      <td class="py-3 pl-3 pr-5 align-middle text-right font-bold text-amber-300 tabular-nums text-lg sm:text-xl whitespace-nowrap">{{ r.points }}</td>
     </tr>
   {% endmacro %}
 
   {% macro standings_table_wide(rows) %}
     {% if rows and rows|length > 0 %}
     <div class="overflow-x-auto rounded-xl border border-slate-600/50 bg-slate-950/30">
-      <table class="w-full min-w-[min(100%,520px)] text-sm">
+      <table class="w-full table-fixed text-sm sm:text-base" style="min-width: 100%">
+        <colgroup>
+          <col style="width:4.25rem">
+          <col style="width:4.25rem">
+          <col>
+          <col style="width:6rem">
+        </colgroup>
         <tbody>
           {% for r in rows %}
             {{ standings_row_wide(r, loop.index) }}
@@ -320,7 +326,7 @@
     </div>
   {% endmacro %}
 
-  <div class="container mx-auto px-3 sm:px-6 pb-16 max-w-6xl">
+  <div class="mx-auto w-full max-w-[min(100%,90rem)] px-4 sm:px-8 lg:px-10 pb-16">
     <!-- Snabbnavigering -->
     <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-900/85 backdrop-blur-md border-b border-slate-600/50 mb-6">
       <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Hoppa till tävling</p>
