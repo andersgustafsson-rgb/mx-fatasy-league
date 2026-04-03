@@ -219,8 +219,8 @@
     {% endif %}
   {% endmacro %}
 
-  {% macro standings_row_wide(r, rank) %}
-    <tr class="border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40">
+  {% macro standings_row_wide(r, rank, extra_row) %}
+    <tr class="standings-data-row border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40 {% if extra_row %}standings-more hidden{% endif %}">
       <td class="py-3 pl-5 pr-2 align-middle text-slate-400 text-base font-semibold tabular-nums">{{ rank }}</td>
       <td class="py-3 pr-4 align-middle w-[3.5rem]">
         {% set src = rider_image_src(r) %}
@@ -242,7 +242,7 @@
 
   {% macro standings_table_wide(rows) %}
     {% if rows and rows|length > 0 %}
-    <div class="overflow-x-auto rounded-xl border border-slate-600/50 bg-slate-950/30">
+    <div class="standings-table-wrap overflow-x-auto rounded-xl border border-slate-600/50 bg-slate-950/30">
       <table class="w-full table-fixed text-sm sm:text-base" style="min-width: 100%">
         <colgroup>
           <col style="width:4.25rem">
@@ -252,9 +252,21 @@
         </colgroup>
         <tbody>
           {% for r in rows %}
-            {{ standings_row_wide(r, loop.index) }}
+            {{ standings_row_wide(r, loop.index, loop.index > 5) }}
           {% endfor %}
         </tbody>
+        {% if rows|length > 5 %}
+        <tfoot>
+          <tr class="standings-expand-footer border-t border-slate-600/50 bg-slate-900/40">
+            <td colspan="4" class="px-4 py-3 text-center">
+              <button type="button" class="standings-show-all-btn text-cyan-400 hover:text-cyan-300 text-sm font-bold underline underline-offset-2 decoration-cyan-500/50 hover:decoration-cyan-400"
+                      aria-expanded="false" data-count="{{ rows|length }}">
+                Se alla ({{ rows|length - 5 }} till)
+              </button>
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
       </table>
     </div>
     {% endif %}
@@ -680,8 +692,35 @@
       });
     }
 
+    function initStandingsCollapse() {
+      document.querySelectorAll('.standings-table-wrap').forEach(function (tableWrap) {
+        var btn = tableWrap.querySelector('.standings-show-all-btn');
+        if (!btn) return;
+        var moreRows = tableWrap.querySelectorAll('tr.standings-more');
+        if (!moreRows.length) return;
+        var extra = moreRows.length;
+        var labelOpen = 'Se alla (' + extra + ' till)';
+        var labelShut = 'Visa bara topp 5';
+
+        function setExpanded(exp) {
+          moreRows.forEach(function (tr) {
+            tr.classList.toggle('hidden', !exp);
+          });
+          btn.setAttribute('aria-expanded', exp ? 'true' : 'false');
+          btn.textContent = exp ? labelShut : labelOpen;
+        }
+
+        btn.addEventListener('click', function () {
+          setExpanded(btn.getAttribute('aria-expanded') !== 'true');
+        });
+
+        setExpanded(false);
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
       initStandingsTabs();
+      initStandingsCollapse();
 
       document.querySelectorAll('a.race-jump-link').forEach(function (a) {
         a.addEventListener('click', function (e) {
