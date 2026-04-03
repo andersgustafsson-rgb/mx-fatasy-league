@@ -129,12 +129,10 @@
       opacity: 0.7;
     }
     details.race-details[open] > summary::after { content: " ▲"; }
-    /* Totalställning: förhindra att tabeller trycker ihop kolumner (minmax(0,1fr)) */
-    @media (min-width: 1024px) {
-      .standings-triple-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
+    .standings-tab.ring-active-sx { box-shadow: 0 0 0 2px rgb(34 211 238 / 0.6); }
+    .standings-tab.ring-active-mx { box-shadow: 0 0 0 2px rgb(52 211 153 / 0.55); }
+    .standings-tab.ring-active-smx { box-shadow: 0 0 0 2px rgb(167 139 250 / 0.55); }
+    .standings-tab.ring-active-wsx { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.55); }
   </style>
 </head>
 <body class="page-bg text-slate-100">
@@ -221,46 +219,105 @@
     {% endif %}
   {% endmacro %}
 
-  {% macro standings_row(r, rank) %}
+  {% macro standings_row_wide(r, rank) %}
     <tr class="border-b border-slate-700/40 last:border-0 hover:bg-slate-800/40">
-      <td class="py-1.5 pr-1 align-middle text-slate-500 text-xs tabular-nums w-[1.5rem]">{{ rank }}</td>
-      <td class="py-1.5 pr-1.5 align-middle w-[2.25rem]">
+      <td class="py-2.5 pr-2 align-middle text-slate-500 text-sm tabular-nums w-10">{{ rank }}</td>
+      <td class="py-2.5 pr-3 align-middle w-12">
         {% set src = rider_image_src(r) %}
         {% if src %}
-          <img class="w-7 h-7 rounded-full object-cover border border-slate-600 shrink-0 block" src="{{ src }}" alt="">
+          <img class="standings-avatar-img w-9 h-9 rounded-full object-cover border border-slate-600 shrink-0 block bg-slate-800" src="{{ src }}" alt=""
+               onerror="this.style.display='none'; var s=this.nextElementSibling; if(s) s.classList.remove('hidden');">
+          <span class="standings-avatar-fallback hidden inline-flex w-9 h-9 items-center justify-center rounded-full bg-slate-700 text-[11px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% else %}
-          <span class="inline-flex w-7 h-7 items-center justify-center rounded-full bg-slate-700 text-[10px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
+          <span class="inline-flex w-9 h-9 items-center justify-center rounded-full bg-slate-700 text-[11px] font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% endif %}
       </td>
-      <td class="py-1.5 min-w-0 align-middle pr-2 overflow-hidden">
-        <div class="font-medium text-slate-100 text-xs leading-tight truncate">{{ r.rider_name }}</div>
-        <div class="text-[10px] text-slate-500 truncate">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
+      <td class="py-2.5 align-middle pr-4 min-w-0">
+        <div class="font-semibold text-slate-100 text-sm sm:text-base leading-snug break-words">{{ r.rider_name }}</div>
+        <div class="text-xs text-slate-500 mt-0.5">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
       </td>
-      <td class="py-1.5 align-middle text-right font-bold text-amber-300/95 tabular-nums text-xs whitespace-nowrap pl-1">{{ r.points }}</td>
+      <td class="py-2.5 align-middle text-right font-bold text-amber-300 tabular-nums text-base whitespace-nowrap w-24 pl-2">{{ r.points }}</td>
     </tr>
   {% endmacro %}
 
-  {% macro standings_sub(title, rows) %}
+  {% macro standings_table_wide(rows) %}
     {% if rows and rows|length > 0 %}
-    <div class="standings-col min-w-0 max-w-full overflow-hidden flex flex-col">
-      <h4 class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2 shrink-0">{{ title }}</h4>
-      <div class="overflow-x-auto -mx-0.5 px-0.5">
-        <table class="w-full table-fixed border-separate border-spacing-0 text-sm" style="min-width:0">
-          <colgroup>
-            <col style="width:1.5rem">
-            <col style="width:2.25rem">
-            <col>
-            <col style="width:3rem">
-          </colgroup>
-          <tbody>
-            {% for r in rows %}
-              {{ standings_row(r, loop.index) }}
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+    <div class="overflow-x-auto rounded-xl border border-slate-600/50 bg-slate-950/30">
+      <table class="w-full min-w-[min(100%,520px)] text-sm">
+        <tbody>
+          {% for r in rows %}
+            {{ standings_row_wide(r, loop.index) }}
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
     {% endif %}
+  {% endmacro %}
+
+  {# En klass i taget — samma id-mönster som JS initStandingsTabs() #}
+  {% macro standings_class_picker(group_id, ring, label, d450, d_east, d_west) %}
+    {% set ns = namespace(which='') %}
+    {% if d450 and d450|length %}
+      {% set ns.which = '450' %}
+    {% elif d_east and d_east|length %}
+      {% set ns.which = '250east' %}
+    {% elif d_west and d_west|length %}
+      {% set ns.which = '250west' %}
+    {% endif %}
+    <div data-standings-group="{{ group_id }}">
+      <p class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">Välj klass</p>
+      <div class="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Klass för {{ label }}">
+        {% if d450 and d450|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '450' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-450" data-ring="{{ ring }}">450cc</button>
+        {% endif %}
+        {% if d_east and d_east|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '250east' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-250east" data-ring="{{ ring }}">250 East</button>
+        {% endif %}
+        {% if d_west and d_west|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if ns.which == '250west' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-250west" data-ring="{{ ring }}">250 West</button>
+        {% endif %}
+      </div>
+      {% if d450 and d450|length %}
+      <div id="standings-panel-{{ group_id }}-450" class="standings-subpanel {% if ns.which != '450' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d450) }}</div>
+      {% endif %}
+      {% if d_east and d_east|length %}
+      <div id="standings-panel-{{ group_id }}-250east" class="standings-subpanel {% if ns.which != '250east' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d_east) }}</div>
+      {% endif %}
+      {% if d_west and d_west|length %}
+      <div id="standings-panel-{{ group_id }}-250west" class="standings-subpanel {% if ns.which != '250west' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(d_west) }}</div>
+      {% endif %}
+    </div>
+  {% endmacro %}
+
+  {% macro standings_wsx_picker(group_id, ring, label, sx1, sx2) %}
+    {% set wsxns = namespace(which='') %}
+    {% if sx1 and sx1|length %}
+      {% set wsxns.which = 'sx1' %}
+    {% elif sx2 and sx2|length %}
+      {% set wsxns.which = 'sx2' %}
+    {% endif %}
+    <div data-standings-group="{{ group_id }}">
+      <p class="text-xs text-slate-500 mb-2 font-medium uppercase tracking-wide">Välj klass</p>
+      <div class="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Klass för {{ label }}">
+        {% if sx1 and sx1|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if wsxns.which == 'sx1' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-sx1" data-ring="{{ ring }}">WSX SX1</button>
+        {% endif %}
+        {% if sx2 and sx2|length %}
+        <button type="button" class="standings-tab px-3 py-2 rounded-full text-xs font-bold border border-slate-600 bg-slate-800/80 text-slate-100 hover:bg-slate-700 transition-colors {% if wsxns.which == 'sx2' %}ring-active-{{ ring }}{% endif %}"
+                data-standings-target="standings-panel-{{ group_id }}-sx2" data-ring="{{ ring }}">WSX SX2</button>
+        {% endif %}
+      </div>
+      {% if sx1 and sx1|length %}
+      <div id="standings-panel-{{ group_id }}-sx1" class="standings-subpanel {% if wsxns.which != 'sx1' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(sx1) }}</div>
+      {% endif %}
+      {% if sx2 and sx2|length %}
+      <div id="standings-panel-{{ group_id }}-sx2" class="standings-subpanel {% if wsxns.which != 'sx2' %}hidden{% endif %}" role="tabpanel">{{ standings_table_wide(sx2) }}</div>
+      {% endif %}
+    </div>
   {% endmacro %}
 
   <div class="container mx-auto px-3 sm:px-6 pb-16 max-w-6xl">
@@ -308,53 +365,38 @@
           <span class="text-amber-400">◎</span> Totalställning · säsongspoäng
         </h2>
         <p class="text-slate-400 text-sm mt-1 max-w-3xl">
-          Summering av tävlingspoäng (AMA Supercross-skala som ovan). <strong class="text-slate-300">SX</strong>, <strong class="text-slate-300">MX</strong> och <strong class="text-slate-300">SMX</strong> visas var för sig.
-          <strong class="text-slate-300">250 East / West</strong> räknar bara rundor där både tävlingens region och förarens region stämmer överens.
-          <strong class="text-slate-300">WSX</strong> (SX1 / SX2) följer registrerade resultat (manuella WSX-poäng om de finns).
+          Under varje serie väljer du <strong class="text-slate-300">450cc</strong>, <strong class="text-slate-300">250 East</strong> eller <strong class="text-slate-300">250 West</strong> — en tabell i full bredd i taget (samma poängskala som per race).
+          <strong class="text-slate-300">250 East/West</strong> räknar rundor där tävlingens region och förarens region överensstämmer.
+          <strong class="text-slate-300">WSX</strong>: välj SX1 eller SX2.
         </p>
       </div>
       <div class="p-4 sm:p-6 grid grid-cols-1 xl:grid-cols-2 gap-5">
         {% set sx = championship_totals.get('SX') or {} %}
         {% if sx.get('450') or sx.get('250_east') or sx.get('250_west') %}
-        <div class="rounded-xl border border-cyan-700/30 bg-slate-900/25 p-4">
-          <h3 class="text-base font-bold text-cyan-300 mb-4 border-b border-cyan-800/40 pb-2">{{ sx.get('label', 'AMA Supercross (SX)') }}</h3>
-          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
-            {{ standings_sub('450cc', sx.get('450')) }}
-            {{ standings_sub('250 East', sx.get('250_east')) }}
-            {{ standings_sub('250 West', sx.get('250_west')) }}
-          </div>
+        <div class="rounded-xl border border-cyan-700/30 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-cyan-300 mb-2 border-b border-cyan-800/40 pb-2">{{ sx.get('label', 'AMA Supercross (SX)') }}</h3>
+          {{ standings_class_picker('sx', 'sx', sx.get('label'), sx.get('450'), sx.get('250_east'), sx.get('250_west')) }}
         </div>
         {% endif %}
         {% set mx = championship_totals.get('MX') or {} %}
         {% if mx.get('450') or mx.get('250_east') or mx.get('250_west') %}
-        <div class="rounded-xl border border-emerald-800/35 bg-slate-900/25 p-4">
-          <h3 class="text-base font-bold text-emerald-300 mb-4 border-b border-emerald-800/40 pb-2">{{ mx.get('label', 'Pro Motocross (MX)') }}</h3>
-          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
-            {{ standings_sub('450cc', mx.get('450')) }}
-            {{ standings_sub('250 East', mx.get('250_east')) }}
-            {{ standings_sub('250 West', mx.get('250_west')) }}
-          </div>
+        <div class="rounded-xl border border-emerald-800/35 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-emerald-300 mb-2 border-b border-emerald-800/40 pb-2">{{ mx.get('label', 'Pro Motocross (MX)') }}</h3>
+          {{ standings_class_picker('mx', 'mx', mx.get('label'), mx.get('450'), mx.get('250_east'), mx.get('250_west')) }}
         </div>
         {% endif %}
         {% set smx = championship_totals.get('SMX') or {} %}
         {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
-        <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4">
-          <h3 class="text-base font-bold text-violet-300 mb-4 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX') }}</h3>
-          <div class="standings-triple-grid grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 lg:gap-x-5">
-            {{ standings_sub('450cc', smx.get('450')) }}
-            {{ standings_sub('250 East', smx.get('250_east')) }}
-            {{ standings_sub('250 West', smx.get('250_west')) }}
-          </div>
+        <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
+          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX') }}</h3>
+          {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west')) }}
         </div>
         {% endif %}
         {% set wsx = championship_totals.get('WSX') or {} %}
         {% if wsx.get('sx1') or wsx.get('sx2') %}
         <div class="rounded-xl border border-amber-700/35 bg-slate-900/25 p-4 xl:col-span-2 min-w-0">
-          <h3 class="text-base font-bold text-amber-200 mb-4 border-b border-amber-800/40 pb-2">{{ wsx.get('label', 'WSX') }}</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 min-w-0">
-            {{ standings_sub('WSX SX1', wsx.get('sx1')) }}
-            {{ standings_sub('WSX SX2', wsx.get('sx2')) }}
-          </div>
+          <h3 class="text-base font-bold text-amber-200 mb-2 border-b border-amber-800/40 pb-2">{{ wsx.get('label', 'WSX') }}</h3>
+          {{ standings_wsx_picker('wsx', 'wsx', wsx.get('label'), wsx.get('sx1'), wsx.get('sx2')) }}
         </div>
         {% endif %}
       </div>
@@ -612,7 +654,29 @@
       });
     }
 
+    function initStandingsTabs() {
+      document.querySelectorAll('.standings-tab[data-standings-target]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var targetId = this.getAttribute('data-standings-target');
+          var ring = this.getAttribute('data-ring') || 'sx';
+          var wrap = this.closest('[data-standings-group]');
+          if (!wrap || !targetId) return;
+          wrap.querySelectorAll('.standings-subpanel').forEach(function (p) {
+            p.classList.add('hidden');
+          });
+          var panel = document.getElementById(targetId);
+          if (panel) panel.classList.remove('hidden');
+          wrap.querySelectorAll('.standings-tab').forEach(function (b) {
+            b.classList.remove('ring-active-sx', 'ring-active-mx', 'ring-active-smx', 'ring-active-wsx');
+          });
+          this.classList.add('ring-active-' + ring);
+        });
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+      initStandingsTabs();
+
       document.querySelectorAll('a.race-jump-link').forEach(function (a) {
         a.addEventListener('click', function (e) {
           e.preventDefault();
