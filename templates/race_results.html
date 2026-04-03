@@ -218,10 +218,10 @@
   <div class="container mx-auto px-3 sm:px-6 pb-16 max-w-5xl">
     <!-- Snabbnavigering -->
     <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-900/85 backdrop-blur-md border-b border-slate-600/50 mb-6">
-      <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Hoppa till race</p>
+      <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Hoppa till tävling</p>
       <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto sm:max-h-none">
         {% for c in competitions %}
-          <a href="#comp-card-{{ c.id }}"
+          <a href="#race-{{ c.id }}"
              data-comp-id="{{ c.id }}"
              class="race-jump-link nav-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
                     {% if c.status == 'completed' %}bg-emerald-900/80 text-emerald-200 border border-emerald-600/50 hover:bg-emerald-800/80
@@ -243,7 +243,7 @@
             Race results
           </h1>
           <p class="text-blue-100/90 text-sm sm:text-base max-w-xl">
-            Podium och resultat per tävling — öppna ett race nedan eller använd snabbmenyn.
+            Välj tävling i <strong class="text-white font-semibold">menyn ovan</strong> — ett resultat visas i taget.
           </p>
         </div>
         <a href="{{ url_for('index') }}"
@@ -253,35 +253,27 @@
       </div>
     </div>
 
-    <div class="space-y-4">
-      {% for comp in competitions %}
-        <div id="comp-card-{{ comp.id }}" class="scroll-mt-28 bg-slate-800/50 rounded-xl shadow-xl border border-slate-600/40 overflow-hidden backdrop-blur-sm">
-          <button
-            type="button"
-            class="w-full p-4 sm:p-5 text-left hover:bg-slate-700/30 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-inset"
-            onclick="toggleAccordion('comp-{{ comp.id }}')"
-            aria-expanded="false"
-            aria-controls="comp-{{ comp.id }}"
-          >
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-              <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                <h2 class="text-lg sm:text-xl font-bold text-white">
-                  {{ comp.name }}
-                </h2>
-                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full {{ comp.status_bg }} {{ comp.status_color }} ring-1 ring-black/10">
-                  {{ comp.status_text }}
-                </span>
-                <svg id="icon-{{ comp.id }}" class="w-5 h-5 text-slate-400 transform transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </div>
-              <span class="text-sm text-slate-400 font-medium">
-                {{ comp.event_date }}
-              </span>
-            </div>
-          </button>
+    {% set panel_default = latest_competition_id if latest_competition_id else (competitions[0].id if competitions else none) %}
 
-          <div id="comp-{{ comp.id }}" class="hidden px-4 sm:px-5 pb-5 border-t border-slate-600/30">
+    <div id="race-results-viewport" class="min-h-[12rem]">
+      {% for comp in competitions %}
+      <section
+        id="race-panel-{{ comp.id }}"
+        data-comp-id="{{ comp.id }}"
+        class="race-result-panel scroll-mt-28 bg-slate-800/50 rounded-xl shadow-xl border border-slate-600/40 overflow-hidden backdrop-blur-sm {% if panel_default is not none and comp.id != panel_default %}hidden{% endif %}"
+        {% if panel_default is not none and comp.id == panel_default %}aria-current="true"{% endif %}
+      >
+        <header class="px-4 sm:px-5 py-4 border-b border-slate-600/40 bg-slate-900/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h2 class="text-lg sm:text-xl font-bold text-white">{{ comp.name }}</h2>
+            <span class="px-2.5 py-0.5 text-xs font-bold rounded-full {{ comp.status_bg }} {{ comp.status_color }} ring-1 ring-black/10">
+              {{ comp.status_text }}
+            </span>
+          </div>
+          <span class="text-sm text-slate-400 font-medium tabular-nums">{{ comp.event_date }}</span>
+        </header>
+
+        <div class="px-4 sm:px-5 pb-5 pt-4">
 
           {% set results = competition_results[comp.id] %}
           {% if results.results or results.holeshots %}
@@ -473,69 +465,66 @@
               <p class="text-sm mt-1 text-slate-500">De visas här när admin har registrerat dem.</p>
             </div>
           {% endif %}
-          </div>
         </div>
+      </section>
       {% endfor %}
     </div>
   </div>
 
   <script>
-    function toggleAccordion(compId) {
-      const content = document.getElementById(compId);
-      if (!content) return;
-      const idNum = compId.replace('comp-', '');
-      const icon = document.getElementById('icon-' + idNum);
-      const button = content.previousElementSibling;
-      if (!button) return;
+    var defaultRaceId = {{ panel_default | tojson }};
 
-      if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        if (icon) icon.style.transform = 'rotate(180deg)';
-        button.setAttribute('aria-expanded', 'true');
-      } else {
-        content.classList.add('hidden');
-        if (icon) icon.style.transform = 'rotate(0deg)';
-        button.setAttribute('aria-expanded', 'false');
+    function showRacePanel(compId) {
+      var sid = String(compId);
+      document.querySelectorAll('.race-result-panel').forEach(function (el) {
+        el.classList.add('hidden');
+        el.removeAttribute('aria-current');
+      });
+      var panel = document.getElementById('race-panel-' + sid);
+      if (panel) {
+        panel.classList.remove('hidden');
+        panel.setAttribute('aria-current', 'true');
       }
-    }
-
-    function jumpToRace(compId) {
-      const sid = String(compId);
-      const panel = document.getElementById('comp-' + sid);
-      const card = document.getElementById('comp-card-' + sid);
-      if (!card) return;
-      if (panel && panel.classList.contains('hidden')) {
-        toggleAccordion('comp-' + sid);
-      }
+      document.querySelectorAll('a.race-jump-link').forEach(function (a) {
+        var active = a.getAttribute('data-comp-id') === sid;
+        a.setAttribute('aria-current', active ? 'true' : 'false');
+        a.classList.toggle('ring-2', active);
+        a.classList.toggle('ring-cyan-400', active);
+        a.classList.toggle('ring-offset-2', active);
+        a.classList.toggle('ring-offset-slate-900', active);
+      });
+      try {
+        history.replaceState(null, '', '#race-' + sid);
+      } catch (e) {}
       requestAnimationFrame(function () {
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var vp = document.getElementById('race-results-viewport');
+        if (vp) {
+          vp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       document.querySelectorAll('a.race-jump-link').forEach(function (a) {
         a.addEventListener('click', function (e) {
           e.preventDefault();
-          jumpToRace(this.getAttribute('data-comp-id'));
+          showRacePanel(this.getAttribute('data-comp-id'));
         });
       });
 
-      var hashMatch = location.hash.match(/^#comp-card-(\d+)$/);
-      if (hashMatch) {
-        jumpToRace(hashMatch[1]);
-        return;
+      var m = location.hash.match(/^#(?:race-|comp-card-)(\d+)$/);
+      if (m) {
+        showRacePanel(m[1]);
+      } else if (defaultRaceId != null) {
+        document.querySelectorAll('a.race-jump-link').forEach(function (a) {
+          var active = a.getAttribute('data-comp-id') === String(defaultRaceId);
+          a.setAttribute('aria-current', active ? 'true' : 'false');
+          a.classList.toggle('ring-2', active);
+          a.classList.toggle('ring-cyan-400', active);
+          a.classList.toggle('ring-offset-2', active);
+          a.classList.toggle('ring-offset-slate-900', active);
+        });
       }
-      {% if latest_competition_id %}
-        toggleAccordion('comp-{{ latest_competition_id }}');
-      {% else %}
-        for (const p of document.querySelectorAll('[id^="comp-"]')) {
-          if (p.id.startsWith('comp-card-')) continue;
-          if (p.querySelector('.podium-stage')) {
-            toggleAccordion(p.id);
-            break;
-          }
-        }
-      {% endif %}
     });
   </script>
 </body>
