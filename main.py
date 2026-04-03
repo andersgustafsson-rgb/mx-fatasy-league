@@ -6943,11 +6943,140 @@ def user_stats_page(username: str):
         history=history,
     )
 
+
+def compute_series_championship_totals():
+    """
+    Summarizes season points using the same rules as the per-race results view:
+    WSX (rider_points or position), SMX (position × point_multiplier), SX/MX (AMA scale).
+    Buckets: SX/MX/SMX × (450cc, 250 East, 250 West); WSX × (SX1, SX2).
+    """
+    from collections import defaultdict
+
+    totals = defaultdict(lambda: defaultdict(float))
+    rider_meta = {}
+
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .all()
+    )
+
+    for cr, comp, rider in rows:
+        s = comp.series
+        if s not in ("WSX", "SX", "MX", "SMX"):
+            continue
+
+        if s == "WSX":
+            if cr.rider_points is not None:
+                pts = float(cr.rider_points)
+            else:
+                pts = float(get_smx_qualification_points(cr.position))
+        elif s == "SMX":
+            mult = comp.point_multiplier or 1.0
+            pts = float(get_smx_qualification_points(cr.position)) * float(mult)
+        else:
+            pts = float(get_smx_qualification_points(cr.position))
+
+        if s == "WSX":
+            if rider.class_name not in ("wsx_sx1", "wsx_sx2"):
+                continue
+            bucket = ("wsx", rider.class_name)
+        else:
+            if rider.class_name == "450cc":
+                bucket = (s.lower(), "450")
+            elif rider.class_name == "250cc":
+                cc = (comp.coast_250 or "").strip().lower()
+                rc = (rider.coast_250 or "").strip().lower()
+                if cc not in ("east", "west") or rc not in ("east", "west") or cc != rc:
+                    continue
+                bucket = (s.lower(), "250", cc)
+            else:
+                continue
+
+        rid = rider.id
+        totals[bucket][rid] += pts
+
+        if rid not in rider_meta:
+            merged_img = getattr(rider, "rider_image_data", None) or rider.image_url
+            rider_meta[rid] = {
+                "rider_id": rid,
+                "rider_name": rider.name,
+                "rider_number": rider.rider_number,
+                "bike_brand": rider.bike_brand or "",
+                "image_url": merged_img,
+            }
+
+    def top_list(*bucket_parts, limit=12):
+        bucket = tuple(bucket_parts)
+        d = totals.get(bucket) or {}
+        items = sorted(d.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rid, p in items[:limit]:
+            row = dict(rider_meta.get(rid, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            out.append(row)
+        return out
+
+    sx = {
+        "label": "AMA Supercross (SX)",
+        "450": top_list("sx", "450"),
+        "250_east": top_list("sx", "250", "east"),
+        "250_west": top_list("sx", "250", "west"),
+    }
+    mx = {
+        "label": "Pro Motocross (MX)",
+        "450": top_list("mx", "450"),
+        "250_east": top_list("mx", "250", "east"),
+        "250_west": top_list("mx", "250", "west"),
+    }
+    smx = {
+        "label": "SMX (playoff / final)",
+        "450": top_list("smx", "450"),
+        "250_east": top_list("smx", "250", "east"),
+        "250_west": top_list("smx", "250", "west"),
+    }
+    wsx = {
+        "label": "WSX (World Supercross)",
+        "sx1": top_list("wsx", "wsx_sx1"),
+        "sx2": top_list("wsx", "wsx_sx2"),
+    }
+
+    def _block_nonempty(block):
+        for k, v in block.items():
+            if k == "label" or not isinstance(v, list):
+                continue
+            if len(v) > 0:
+                return True
+        return False
+
+    has_any = _block_nonempty(sx) or _block_nonempty(mx) or _block_nonempty(smx) or _block_nonempty(wsx)
+
+    return {
+        "SX": sx,
+        "MX": mx,
+        "SMX": smx,
+        "WSX": wsx,
+        "has_any": has_any,
+    }
+
+
 @app.get("/race_results")
 def race_results_page():
     """Show actual race results for all competitions"""
     try:
-        
+        try:
+            championship_totals = compute_series_championship_totals()
+        except Exception as ex_ct:
+            print(f"WARNING compute_series_championship_totals: {ex_ct}")
+            championship_totals = {
+                "has_any": False,
+                "SX": {},
+                "MX": {},
+                "SMX": {},
+                "WSX": {},
+            }
+
         competitions = (
             Competition.query
             .order_by(Competition.event_date.asc())
@@ -7077,12 +7206,13 @@ def race_results_page():
                 latest_competition_date = comp.event_date
         
         return render_template(
-            "race_results.html", 
-            competitions=competitions, 
+            "race_results.html",
+            competitions=competitions,
             competition_results=competition_results,
             latest_competition_id=latest_competition_id,
+            championship_totals=championship_totals,
             username=session.get("username", "Gäst"),
-            is_logged_in="user_id" in session
+            is_logged_in="user_id" in session,
         )
     
     except Exception as e:
