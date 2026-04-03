@@ -506,8 +506,11 @@
                 this.animTime = 0;
                 /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
                 this.useBitmapRider = true;
-                this.gravity = 0.6;
-                this.jumpPower = -16;
+                /** Lite lägre gravitation = högre, luftigare hopp */
+                this.gravity = 0.52;
+                /** Slumpas per hopp i jump(); minsta möjliga impuls (negativa Y) */
+                this.jumpPowerMin = -19;
+                this.jumpPowerMax = -27;
                 this.jumpCooldown = 0;
                 
                 // Player (biker)
@@ -525,7 +528,9 @@
                 // Obstacles
                 this.obstacles = [];
                 this.obstacleTimer = 0;
-                this.obstacleInterval = 150;
+                /** Bas-avstånd mellan hinder (minskas vid svårare spel); + slump per hinder */
+                this.obstacleGapBase = 150;
+                this.obstacleTimerTarget = 150;
                 
                 // Particles
                 this.particles = [];
@@ -639,9 +644,11 @@
             
             jump() {
                 if (!this.biker.isJumping && this.jumpCooldown <= 0) {
-                    this.biker.velocityY = this.jumpPower;
+                    const lo = this.jumpPowerMin;
+                    const hi = this.jumpPowerMax;
+                    this.biker.velocityY = lo + Math.random() * (hi - lo);
                     this.biker.isJumping = true;
-                    this.jumpCooldown = 8;
+                    this.jumpCooldown = 7;
                     
                     // Create jump particles
                     this.createParticles(this.biker.x + this.biker.width/2, this.biker.y + this.biker.height, 'jump');
@@ -711,6 +718,11 @@
                 this.biker.rotation = 0;
                 this.obstacles = [];
                 this.obstacleTimer = 0;
+                this.obstacleGapBase = 150;
+                this.obstacleTimerTarget = Math.max(
+                    72,
+                    this.obstacleGapBase + Math.floor(Math.random() * 90) - 45
+                );
                 this.particles = [];
                 this.trail = [];
                 this.bgScroll = 0;
@@ -773,9 +785,13 @@
                 
                 // Update obstacles
                 this.obstacleTimer++;
-                if (this.obstacleTimer >= this.obstacleInterval) {
+                if (this.obstacleTimer >= this.obstacleTimerTarget) {
                     this.addObstacle();
                     this.obstacleTimer = 0;
+                    this.obstacleTimerTarget = Math.max(
+                        72,
+                        this.obstacleGapBase + Math.floor(Math.random() * 100) - 50
+                    );
                 }
                 
                 // Move obstacles
@@ -815,7 +831,7 @@
                 // Increase difficulty
                 if (this.score > 0 && this.score % 50 === 0) {
                     this.gameSpeed += 0.05;
-                    this.obstacleInterval = Math.max(100, this.obstacleInterval - 2);
+                    this.obstacleGapBase = Math.max(100, this.obstacleGapBase - 2);
                 }
                 
                 // Update stars
@@ -829,16 +845,19 @@
             }
             
             addObstacle() {
-                const heights = [30, 45, 60];
+                const heights = [24, 36, 48, 58, 72, 88, 102];
                 const height = heights[Math.floor(Math.random() * heights.length)];
-                const width = 35;
+                const width = Math.round(30 + Math.random() * 38);
+                const variant = Math.random();
+                const wideLow = height < 42 && width > 48;
                 
                 this.obstacles.push({
                     x: this.width,
                     y: this.height - height - 30,
                     width: width,
                     height: height,
-                    type: 'jump'
+                    type: wideLow ? 'table' : 'jump',
+                    variant: variant
                 });
             }
             
@@ -1080,8 +1099,13 @@
                 const y = obstacle.y;
                 const bw = obstacle.width;
                 const bh = obstacle.height;
-                const cx = x + bw / 2;
+                const v = typeof obstacle.variant === 'number' ? obstacle.variant : 0.5;
+                const peakShift = (v - 0.5) * bw * 0.42;
+                const cx = x + bw / 2 + peakShift;
                 const bot = y + bh;
+                const isTable = obstacle.type === 'table';
+                const peakLift = isTable ? bh * 0.08 : bh * 0.18 + v * bh * 0.12;
+                const hue = 28 + v * 14;
                 
                 ctx.save();
                 ctx.fillStyle = 'rgba(0,0,0,0.22)';
@@ -1091,14 +1115,24 @@
                 ctx.restore();
                 
                 const g = ctx.createLinearGradient(x, y, x, bot);
-                g.addColorStop(0, '#e8c08c');
-                g.addColorStop(0.45, '#b07d3c');
-                g.addColorStop(1, '#5c3d1a');
+                g.addColorStop(0, `hsl(${hue}, 58%, 72%)`);
+                g.addColorStop(0.45, `hsl(${hue + 8}, 48%, 44%)`);
+                g.addColorStop(1, `hsl(${hue + 4}, 42%, 26%)`);
                 ctx.fillStyle = g;
                 
                 ctx.beginPath();
                 ctx.moveTo(x, bot);
-                ctx.quadraticCurveTo(cx, y - bh * 0.2, x + bw, bot);
+                if (isTable) {
+                    const r = Math.min(bh * 0.55, bw * 0.2);
+                    const topY = y + bh * 0.35;
+                    ctx.lineTo(x, topY + r);
+                    ctx.quadraticCurveTo(x, topY, x + r, topY);
+                    ctx.lineTo(x + bw - r, topY);
+                    ctx.quadraticCurveTo(x + bw, topY, x + bw, topY + r);
+                    ctx.lineTo(x + bw, bot);
+                } else {
+                    ctx.quadraticCurveTo(cx, y - peakLift, x + bw, bot);
+                }
                 ctx.closePath();
                 ctx.fill();
                 

@@ -6,209 +6,352 @@
   <title>Race Results – AMA Supercross 2026</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Suppress Tailwind CDN warning in production
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       console.log('Using Tailwind CSS CDN in production - consider installing locally for better performance');
     }
   </script>
+  <style>
+    :root {
+      --podium-gold: linear-gradient(180deg, #fde68a 0%, #d97706 45%, #b45309 100%);
+      --podium-silver: linear-gradient(180deg, #f3f4f6 0%, #9ca3af 50%, #6b7280 100%);
+      --podium-bronze: linear-gradient(180deg, #fed7aa 0%, #c2410c 55%, #9a3412 100%);
+    }
+    .page-bg {
+      background:
+        radial-gradient(ellipse 120% 80% at 20% -10%, rgba(59, 130, 246, 0.18), transparent 55%),
+        radial-gradient(ellipse 100% 60% at 100% 20%, rgba(251, 146, 60, 0.12), transparent 50%),
+        linear-gradient(180deg, #0f172a 0%, #1e293b 35%, #0f172a 100%);
+    }
+    .page-bg {
+      min-height: 100vh;
+    }
+    .podium-stage {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1.25rem 0.5rem 0;
+      margin-bottom: 1rem;
+    }
+    @media (min-width: 640px) {
+      .podium-stage { gap: 1.25rem; padding: 1.5rem 1rem 0; }
+    }
+    .podium-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 40%),
+        repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(255,255,255,0.03) 48px, rgba(255,255,255,0.03) 50px);
+      border-radius: 1rem;
+      pointer-events: none;
+    }
+    .podium-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      max-width: 8.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .podium-col.first { max-width: 9.5rem; transform: translateY(-0.35rem); z-index: 2; }
+    .podium-avatar {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 9999px;
+      object-fit: cover;
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      background: #334155;
+    }
+    .podium-col.first .podium-avatar {
+      width: 4.75rem;
+      height: 4.75rem;
+      border-width: 4px;
+      box-shadow: 0 12px 32px rgba(251, 191, 36, 0.35);
+    }
+    .podium-block {
+      width: 100%;
+      margin-top: 0.65rem;
+      border-radius: 0.5rem 0.5rem 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.35rem;
+      color: rgba(255,255,255,0.95);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .podium-block.second { height: 3.75rem; background: var(--podium-silver); }
+    .podium-block.first { height: 5.25rem; background: var(--podium-gold); font-size: 1.5rem; }
+    .podium-block.third { height: 3rem; background: var(--podium-bronze); }
+    .podium-medal {
+      font-size: 1.75rem;
+      line-height: 1;
+      margin-bottom: 0.15rem;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    }
+    .podium-name {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+      margin-top: 0.35rem;
+      min-height: 2.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e2e8f0;
+      padding: 0 0.15rem;
+    }
+    @media (min-width: 640px) {
+      .podium-name { font-size: 0.8rem; }
+    }
+    .podium-meta {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      text-align: center;
+      margin-top: 0.15rem;
+    }
+    .nav-chip {
+      scroll-margin-top: 5.5rem;
+    }
+    details.race-details > summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    details.race-details > summary::-webkit-details-marker { display: none; }
+    details.race-details > summary::after {
+      content: " ▼";
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+    details.race-details[open] > summary::after { content: " ▲"; }
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-  <div class="container mx-auto p-4 sm:p-6">
+<body class="page-bg text-slate-100">
+  {% macro rider_avatar(r, extra_class) %}
+    {% if r and r.image_url %}
+      <img src="/static/{{ r.image_url }}" alt="" class="podium-avatar {{ extra_class }}"
+           onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+      <div class="podium-avatar {{ extra_class }} hidden flex items-center justify-center text-xs font-bold text-slate-300 bg-slate-700">
+        #{{ r.rider_number or '?' }}
+      </div>
+    {% elif r %}
+      <div class="podium-avatar {{ extra_class }} flex items-center justify-center text-xs font-bold text-slate-200 bg-slate-700 border-slate-500">
+        {% if r.bike_brand %}
+          <img src="/static/brand_logos/{{ r.bike_brand.lower() }}.png" alt="" class="w-9 h-9 object-contain max-h-full"
+               onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+          <span class="hidden text-xs font-bold">#{{ r.rider_number or '?' }}</span>
+        {% else %}
+          #{{ r.rider_number or '?' }}
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="podium-avatar {{ extra_class }} flex items-center justify-center text-slate-500 bg-slate-800 border-slate-600 border-dashed">—</div>
+    {% endif %}
+  {% endmacro %}
+
+  {% macro podium_row(class_label, rows) %}
+    {% if rows and rows|length > 0 %}
+      {% set p1 = rows[0] %}
+      {% set p2 = rows[1] if rows|length > 1 else none %}
+      {% set p3 = rows[2] if rows|length > 2 else none %}
+      <div class="rounded-xl border border-slate-600/60 bg-slate-800/40 backdrop-blur-sm overflow-hidden mb-5">
+        <div class="px-3 py-2 bg-slate-900/50 border-b border-slate-600/40 text-sm font-semibold text-cyan-300 flex items-center gap-2">
+          <span>🏆</span> Topp 3 – {{ class_label }}
+        </div>
+        <div class="podium-stage">
+          <div class="podium-col second order-1">
+            <span class="podium-medal">🥈</span>
+            {{ rider_avatar(p2, '') }}
+            <div class="podium-block second">2</div>
+            <div class="podium-name">{% if p2 %}{{ p2.rider_name }}{% else %}—{% endif %}</div>
+            {% if p2 %}<div class="podium-meta">#{{ p2.rider_number }} · {{ p2.points or 0 }} pt{% if p2.bike_brand %} · {{ p2.bike_brand }}{% endif %}</div>{% endif %}
+          </div>
+          <div class="podium-col first order-2">
+            <span class="podium-medal">🥇</span>
+            {{ rider_avatar(p1, '') }}
+            <div class="podium-block first">1</div>
+            <div class="podium-name">{{ p1.rider_name }}</div>
+            <div class="podium-meta">#{{ p1.rider_number }} · {{ p1.points or 0 }} pt{% if p1.bike_brand %} · {{ p1.bike_brand }}{% endif %}</div>
+          </div>
+          <div class="podium-col third order-3">
+            <span class="podium-medal">🥉</span>
+            {{ rider_avatar(p3, '') }}
+            <div class="podium-block third">3</div>
+            <div class="podium-name">{% if p3 %}{{ p3.rider_name }}{% else %}—{% endif %}</div>
+            {% if p3 %}<div class="podium-meta">#{{ p3.rider_number }} · {{ p3.points or 0 }} pt{% if p3.bike_brand %} · {{ p3.bike_brand }}{% endif %}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  {% endmacro %}
+
+  <div class="container mx-auto px-3 sm:px-6 pb-16 max-w-5xl">
+    <!-- Snabbnavigering -->
+    <nav class="sticky top-0 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-slate-900/85 backdrop-blur-md border-b border-slate-600/50 mb-6">
+      <p class="text-xs text-slate-400 mb-2 font-medium uppercase tracking-wide">Hoppa till race</p>
+      <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto sm:max-h-none">
+        {% for c in competitions %}
+          <a href="#comp-card-{{ c.id }}"
+             class="nav-chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all
+                    {% if c.status == 'completed' %}bg-emerald-900/80 text-emerald-200 border border-emerald-600/50 hover:bg-emerald-800/80
+                    {% elif c.status == 'missed' %}bg-red-900/60 text-red-200 border border-red-600/40 hover:bg-red-800/60
+                    {% else %}bg-slate-700/80 text-slate-200 border border-slate-500/50 hover:bg-slate-600{% endif %}">
+            <span class="truncate max-w-[9rem] sm:max-w-[12rem]">{{ c.name }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </nav>
+
     <!-- Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 mb-8 text-white shadow-lg">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+    <div class="relative rounded-2xl overflow-hidden mb-8 shadow-2xl border border-slate-500/30">
+      <div class="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-800 to-slate-900"></div>
+      <div class="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L60 30 30 60 0 30z\' fill=\'none\' stroke=\'%23fff\' stroke-width=\'0.5\' opacity=\'0.15\'/%3E%3C/svg%3E')]"></div>
+      <div class="relative p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-bold mb-2">
-            🏁 Race Results – AMA Supercross 2026
+          <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight mb-1 drop-shadow-lg">
+            Race results
           </h1>
-          <p class="text-blue-100 text-sm sm:text-base">
-            Officiella resultat från alla tävlingar
+          <p class="text-blue-100/90 text-sm sm:text-base max-w-xl">
+            Podium och resultat per tävling — öppna ett race nedan eller använd snabbmenyn.
           </p>
         </div>
-        <a href="{{ url_for('index') }}" 
-           class="bg-white text-blue-600 hover:bg-blue-50 font-bold py-2 px-4 rounded shadow text-sm sm:text-base mt-4 sm:mt-0 transition-colors">
-          ← Tillbaka till startsidan
+        <a href="{{ url_for('index') }}"
+           class="shrink-0 inline-flex items-center justify-center bg-white/15 hover:bg-white/25 text-white font-bold py-2.5 px-5 rounded-xl border border-white/30 backdrop-blur text-sm transition-colors">
+          ← Startsidan
         </a>
       </div>
     </div>
 
-    <!-- Competitions Accordion -->
     <div class="space-y-4">
       {% for comp in competitions %}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-          <!-- Accordion Header -->
-          <button 
-            class="w-full p-4 sm:p-6 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div id="comp-card-{{ comp.id }}" class="scroll-mt-28 bg-slate-800/50 rounded-xl shadow-xl border border-slate-600/40 overflow-hidden backdrop-blur-sm">
+          <button
+            type="button"
+            class="w-full p-4 sm:p-5 text-left hover:bg-slate-700/30 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-inset"
             onclick="toggleAccordion('comp-{{ comp.id }}')"
             aria-expanded="false"
             aria-controls="comp-{{ comp.id }}"
           >
-            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-              <div class="flex items-center gap-3">
-                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h2 class="text-lg sm:text-xl font-bold text-white">
                   {{ comp.name }}
                 </h2>
-                <!-- Status Badge -->
-                <span class="px-2 py-1 text-xs font-semibold rounded-full {{ comp.status_bg }} {{ comp.status_color }}">
+                <span class="px-2.5 py-0.5 text-xs font-bold rounded-full {{ comp.status_bg }} {{ comp.status_color }} ring-1 ring-black/10">
                   {{ comp.status_text }}
                 </span>
-                <!-- Expand/Collapse Icon -->
-                <svg id="icon-{{ comp.id }}" class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg id="icon-{{ comp.id }}" class="w-5 h-5 text-slate-400 transform transition-transform duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </div>
-              <span class="text-sm text-gray-600 dark:text-gray-400 mt-2 sm:mt-0">
+              <span class="text-sm text-slate-400 font-medium">
                 {{ comp.event_date }}
               </span>
             </div>
           </button>
-          
-          <!-- Accordion Content -->
-          <div id="comp-{{ comp.id }}" class="hidden px-4 sm:px-6 pb-4 sm:pb-6">
+
+          <div id="comp-{{ comp.id }}" class="hidden px-4 sm:px-5 pb-5 border-t border-slate-600/30">
 
           {% set results = competition_results[comp.id] %}
           {% if results.results or results.holeshots %}
-            <!-- 450cc Results / SX1 for WSX -->
             {% if comp.series == 'WSX' %}
               {% set results450 = results.results | selectattr('class_name', 'equalto', 'wsx_sx1') | list %}
             {% else %}
               {% set results450 = results.results | selectattr('class_name', 'equalto', '450cc') | list %}
             {% endif %}
             {% if results450 %}
-              <div class="mb-6">
+              <div class="mb-6 pt-4">
                 {% if comp.series == 'WSX' %}
-                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">WSX SX1 Results (Top 6) - {{ results450|length }} results found</h3>
+                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
+                    <span class="text-cyan-400">◆</span> WSX SX1 <span class="text-slate-500 font-normal text-sm">({{ results450|length }} i databasen)</span>
+                  </h3>
                 {% else %}
-                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">450cc Results (Top 20) - {{ results450|length }} results found</h3>
+                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
+                    <span class="text-cyan-400">◆</span> 450cc <span class="text-slate-500 font-normal text-sm">({{ results450|length }} i databasen)</span>
+                  </h3>
                 {% endif %}
                 {% if comp.series == 'WSX' %}
-                  <!-- WSX SX1: Show only Top 6 in a single table -->
-                  <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
-                    <div class="overflow-x-auto">
-                      <table class="w-full">
-                        <thead class="bg-gray-100 dark:bg-gray-700">
+                  {{ podium_row('WSX SX1', results450[:6]) }}
+                {% else %}
+                  {{ podium_row('450cc', results450[:20]) }}
+                {% endif %}
+                <details class="race-details group bg-slate-900/40 rounded-lg border border-slate-600/50">
+                  <summary class="px-4 py-3 text-sm font-semibold text-cyan-300 hover:bg-slate-700/30 rounded-lg transition-colors">
+                    Visa full resultatlista
+                    {% if comp.series == 'WSX' %}(topp 6){% else %}(topp 20){% endif %}
+                  </summary>
+                  <div class="px-1 pb-3 pt-1">
+                  {% if comp.series == 'WSX' %}
+                    <div class="overflow-x-auto rounded-lg border border-cyan-600/30">
+                      <table class="w-full text-sm">
+                        <thead class="bg-slate-900/80 text-slate-400 text-xs uppercase">
                           <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Points</th>
+                            <th class="px-3 py-2 text-left">Pos</th>
+                            <th class="px-3 py-2 text-left">Förare</th>
+                            <th class="px-3 py-2 text-left">#</th>
+                            <th class="px-3 py-2 text-left">Märke</th>
+                            <th class="px-3 py-2 text-left">Poäng</th>
                           </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                        <tbody class="divide-y divide-slate-700/80">
                           {% for result in results450[:6] %}
-                          <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <td class="px-4 py-3 whitespace-nowrap">
-                              <div class="w-6 h-6 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-green-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
-                                {{ result.position }}
-                              </div>
+                          <tr class="hover:bg-slate-700/40">
+                            <td class="px-3 py-2">
+                              <span class="inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold text-white
+                                {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-emerald-700{% endif %}">{{ result.position }}</span>
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {{ result.rider_name }}
-                            </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                              #{{ result.rider_number }}
-                            </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                              {{ result.bike_brand }}
-                            </td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {{ result.points or 0 }}
-                            </td>
+                            <td class="px-3 py-2 font-medium text-slate-100">{{ result.rider_name }}</td>
+                            <td class="px-3 py-2 text-slate-400">#{{ result.rider_number }}</td>
+                            <td class="px-3 py-2 text-slate-400">{{ result.bike_brand }}</td>
+                            <td class="px-3 py-2 font-semibold text-white">{{ result.points or 0 }}</td>
                           </tr>
                           {% endfor %}
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                {% else %}
-                  <!-- Non-WSX: Show Top 20 in two columns -->
-                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <!-- Left Column: Positions 1-10 -->
-                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
-                      <div class="overflow-x-auto">
-                        <table class="w-full">
-                          <thead class="bg-gray-100 dark:bg-gray-700">
+                  {% else %}
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {% for chunk_start in [0, 10] %}
+                      <div class="overflow-x-auto rounded-lg border border-cyan-600/30">
+                        <table class="w-full text-xs sm:text-sm">
+                          <thead class="bg-slate-900/80 text-slate-400 text-xs uppercase">
                             <tr>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
+                              <th class="px-2 py-2 text-left">Pos</th>
+                              <th class="px-2 py-2 text-left">Förare</th>
+                              <th class="px-2 py-2 text-left">#</th>
+                              <th class="px-2 py-2 text-left">Märke</th>
+                              <th class="px-2 py-2 text-left">Pt</th>
                             </tr>
                           </thead>
-                          <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                            {% for result in results450[:10] %}
-                            <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                              <td class="px-3 py-2 whitespace-nowrap">
-                                <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
-                                  {{ result.position }}
-                                </div>
+                          <tbody class="divide-y divide-slate-700/80">
+                            {% for result in results450[chunk_start:chunk_start+10] %}
+                            <tr class="hover:bg-slate-700/40">
+                              <td class="px-2 py-1.5">
+                                <span class="inline-flex w-6 h-6 items-center justify-center rounded-full text-[10px] font-bold text-white
+                                  {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-blue-700{% endif %}">{{ result.position }}</span>
                               </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
-                                {{ result.rider_name }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                                #{{ result.rider_number }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                                {{ result.bike_brand }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
-                                {{ result.points or 0 }}
-                              </td>
+                              <td class="px-2 py-1.5 font-medium text-slate-100">{{ result.rider_name }}</td>
+                              <td class="px-2 py-1.5 text-slate-400">#{{ result.rider_number }}</td>
+                              <td class="px-2 py-1.5 text-slate-400">{{ result.bike_brand }}</td>
+                              <td class="px-2 py-1.5 font-semibold text-white">{{ result.points or 0 }}</td>
                             </tr>
                             {% endfor %}
                           </tbody>
                         </table>
                       </div>
+                      {% endfor %}
                     </div>
-                    
-                    <!-- Right Column: Positions 11-20 -->
-                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
-                      <div class="overflow-x-auto">
-                        <table class="w-full">
-                          <thead class="bg-gray-100 dark:bg-gray-700">
-                            <tr>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">#</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                              <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pts</th>
-                            </tr>
-                          </thead>
-                          <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                            {% for result in results450[10:20] %}
-                            <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                              <td class="px-3 py-2 whitespace-nowrap">
-                                <div class="w-5 h-5 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-blue-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
-                                  {{ result.position }}
-                                </div>
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs font-medium text-gray-900 dark:text-gray-100">
-                                {{ result.rider_name }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                                #{{ result.rider_number }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-300">
-                                {{ result.bike_brand }}
-                              </td>
-                              <td class="px-3 py-2 whitespace-nowrap text-xs font-semibold text-gray-900 dark:text-gray-100">
-                                {{ result.points or 0 }}
-                              </td>
-                            </tr>
-                            {% endfor %}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                  {% endif %}
                   </div>
-                {% endif %}
+                </details>
               </div>
             {% endif %}
 
-            <!-- 250cc Results / SX2 for WSX -->
             {% if comp.series == 'WSX' %}
               {% set results250 = results.results | selectattr('class_name', 'equalto', 'wsx_sx2') | list %}
             {% else %}
@@ -217,110 +360,80 @@
             {% if results250 %}
               <div class="mb-6">
                 {% if comp.series == 'WSX' %}
-                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">WSX SX2 Results (Top 6) - {{ results250|length }} results found</h3>
+                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
+                    <span class="text-orange-400">◆</span> WSX SX2 <span class="text-slate-500 font-normal text-sm">({{ results250|length }})</span>
+                  </h3>
                 {% else %}
-                  <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">250cc Results (Top 6) - {{ results250|length }} results found</h3>
+                  <h3 class="text-base font-bold mb-3 text-slate-200 flex items-center gap-2">
+                    <span class="text-orange-400">◆</span> 250cc <span class="text-slate-500 font-normal text-sm">({{ results250|length }})</span>
+                  </h3>
                 {% endif %}
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border border-cyan-500">
-                  <div class="overflow-x-auto">
-                    <table class="w-full">
-                      <thead class="bg-gray-100 dark:bg-gray-700">
+                {{ podium_row('WSX SX2' if comp.series == 'WSX' else '250cc', results250[:6]) }}
+                <details class="race-details group bg-slate-900/40 rounded-lg border border-slate-600/50">
+                  <summary class="px-4 py-3 text-sm font-semibold text-orange-300 hover:bg-slate-700/30 rounded-lg transition-colors">
+                    Visa full resultatlista (topp 6)
+                  </summary>
+                  <div class="overflow-x-auto rounded-lg border border-orange-600/30 mb-2">
+                    <table class="w-full text-sm">
+                      <thead class="bg-slate-900/80 text-slate-400 text-xs uppercase">
                         <tr>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pos</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Rider</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Number</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brand</th>
-                          <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Points</th>
+                          <th class="px-3 py-2 text-left">Pos</th>
+                          <th class="px-3 py-2 text-left">Förare</th>
+                          <th class="px-3 py-2 text-left">#</th>
+                          <th class="px-3 py-2 text-left">Märke</th>
+                          <th class="px-3 py-2 text-left">Poäng</th>
                         </tr>
                       </thead>
-                      <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
+                      <tbody class="divide-y divide-slate-700/80">
                         {% for result in results250[:6] %}
-                        <tr class="hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                          <td class="px-4 py-3 whitespace-nowrap">
-                            <div class="w-6 h-6 {% if result.position == 1 %}bg-yellow-500{% elif result.position == 2 %}bg-gray-400{% elif result.position == 3 %}bg-orange-600{% else %}bg-green-600{% endif %} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-sm">
-                              {{ result.position }}
-                            </div>
+                        <tr class="hover:bg-slate-700/40">
+                          <td class="px-3 py-2">
+                            <span class="inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold text-white
+                              {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-emerald-700{% endif %}">{{ result.position }}</span>
                           </td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {{ result.rider_name }}
-                          </td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                            #{{ result.rider_number }}
-                          </td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                            {{ result.bike_brand }}
-                          </td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {{ result.points or 0 }}
-                          </td>
+                          <td class="px-3 py-2 font-medium text-slate-100">{{ result.rider_name }}</td>
+                          <td class="px-3 py-2 text-slate-400">#{{ result.rider_number }}</td>
+                          <td class="px-3 py-2 text-slate-400">{{ result.bike_brand }}</td>
+                          <td class="px-3 py-2 font-semibold text-white">{{ result.points or 0 }}</td>
                         </tr>
                         {% endfor %}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </details>
               </div>
             {% endif %}
 
-            <!-- Holeshot Results -->
             {% if results.holeshots %}
-              <div class="mb-4">
-                <h3 class="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">🏁 Holeshot Winners</h3>
+              <div class="mb-2">
+                <h3 class="text-base font-bold mb-3 text-slate-200">🏁 Holeshot</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {% for holeshot in results.holeshots %}
                     {% set display_class = 'SX1' if (comp.series == 'WSX' and holeshot.class_name == '450cc') else ('SX2' if (comp.series == 'WSX' and holeshot.class_name == '250cc') else holeshot.class_name) %}
-                    <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900 dark:to-yellow-800 p-4 rounded-lg border-l-4 border-yellow-500 shadow-sm">
-                      <div class="flex items-center space-x-3">
-                        <!-- Holeshot Icon -->
-                        <div class="flex-shrink-0">
-                          <div class="w-10 h-10 bg-yellow-500 text-white rounded-full flex items-center justify-center text-lg">
-                            🏁
+                    <div class="rounded-xl bg-gradient-to-br from-amber-900/40 to-slate-900/60 p-4 border border-amber-600/30 flex items-center gap-3">
+                      <div class="shrink-0 w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center text-lg shadow-lg">🏁</div>
+                      <div class="shrink-0">
+                        {% if holeshot.image_url %}
+                          <img src="/static/{{ holeshot.image_url }}"
+                               alt="{{ holeshot.rider_name }}"
+                               class="w-12 h-12 rounded-full object-cover border-2 border-amber-400/80"
+                               onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
+                          <div class="w-12 h-12 rounded-full bg-slate-700 hidden flex items-center justify-center text-xs font-bold text-amber-200">#{{ holeshot.rider_number }}</div>
+                        {% else %}
+                          <div class="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center">
+                            {% if holeshot.bike_brand %}
+                              <img src="/static/brand_logos/{{ holeshot.bike_brand.lower() }}.png" alt="" class="w-9 h-9 object-contain"
+                                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                              <span class="text-amber-200 font-bold text-xs hidden">#{{ holeshot.rider_number }}</span>
+                            {% else %}
+                              <span class="text-amber-200 font-bold text-xs">#{{ holeshot.rider_number }}</span>
+                            {% endif %}
                           </div>
-                        </div>
-                        
-                        <!-- Rider Image -->
-                        <div class="flex-shrink-0">
-                          {% if holeshot.image_url %}
-                            <img src="/static/{{ holeshot.image_url }}" 
-                                 alt="{{ holeshot.name }}" 
-                                 class="w-10 h-10 rounded-full object-cover border-2 border-yellow-300"
-                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                            <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center" style="display: none;">
-                              {% if holeshot.bike_brand %}
-                                <img src="/static/brand_logos/{{ holeshot.bike_brand.lower() }}.png" 
-                                     alt="{{ holeshot.bike_brand }} logo" 
-                                     class="w-8 h-8 object-contain"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <span class="text-yellow-800 font-bold text-xs" style="display: none;">#{{ holeshot.rider_number }}</span>
-                              {% else %}
-                                <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
-                              {% endif %}
-                            </div>
-                          {% else %}
-                            <div class="w-10 h-10 rounded-full bg-yellow-200 flex items-center justify-center">
-                              {% if holeshot.bike_brand %}
-                                <img src="/static/brand_logos/{{ holeshot.bike_brand.lower() }}.png" 
-                                     alt="{{ holeshot.bike_brand }} logo" 
-                                     class="w-8 h-8 object-contain"
-                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                <span class="text-yellow-800 font-bold text-xs" style="display: none;">#{{ holeshot.rider_number }}</span>
-                              {% else %}
-                                <span class="text-yellow-800 font-bold text-xs">#{{ holeshot.rider_number }}</span>
-                              {% endif %}
-                            </div>
-                          {% endif %}
-                        </div>
-                        
-                        <!-- Rider Info -->
-                        <div class="flex-1">
-                          <div class="font-semibold text-yellow-800 dark:text-yellow-200">
-                            {{ display_class }}: {{ holeshot.rider_name }}
-                          </div>
-                          <div class="text-sm text-yellow-700 dark:text-yellow-300">
-                            #{{ holeshot.rider_number }}
-                            {% if holeshot.bike_brand %} • {{ holeshot.bike_brand }}{% endif %}
-                          </div>
-                        </div>
+                        {% endif %}
+                      </div>
+                      <div class="min-w-0">
+                        <div class="font-bold text-amber-100 truncate">{{ display_class }}: {{ holeshot.rider_name }}</div>
+                        <div class="text-sm text-amber-200/80">#{{ holeshot.rider_number }}{% if holeshot.bike_brand %} · {{ holeshot.bike_brand }}{% endif %}</div>
                       </div>
                     </div>
                   {% endfor %}
@@ -328,58 +441,45 @@
               </div>
             {% endif %}
           {% else %}
-            <div class="text-center text-gray-500 dark:text-gray-400 py-8">
-              <p class="text-lg">Inga resultat registrerade ännu</p>
-              <p class="text-sm mt-2">Resultat kommer att visas här när admin har registrerat dem</p>
+            <div class="text-center text-slate-500 py-10">
+              <p class="text-base font-medium text-slate-400">Inga resultat ännu</p>
+              <p class="text-sm mt-1 text-slate-500">De visas här när admin har registrerat dem.</p>
             </div>
           {% endif %}
-          </div> <!-- End accordion content -->
+          </div>
         </div>
       {% endfor %}
     </div>
   </div>
 
-  <!-- JavaScript for Accordion -->
   <script>
     function toggleAccordion(compId) {
       const content = document.getElementById(compId);
-      const icon = document.getElementById('icon-' + compId.split('-')[1]);
+      const idNum = compId.replace('comp-', '');
+      const icon = document.getElementById('icon-' + idNum);
       const button = content.previousElementSibling;
-      
+
       if (content.classList.contains('hidden')) {
-        // Expand
         content.classList.remove('hidden');
-        icon.style.transform = 'rotate(180deg)';
+        if (icon) icon.style.transform = 'rotate(180deg)';
         button.setAttribute('aria-expanded', 'true');
       } else {
-        // Collapse
         content.classList.add('hidden');
-        icon.style.transform = 'rotate(0deg)';
+        if (icon) icon.style.transform = 'rotate(0deg)';
         button.setAttribute('aria-expanded', 'false');
       }
     }
 
-    // Auto-expand the latest competition
     document.addEventListener('DOMContentLoaded', function() {
       {% if latest_competition_id %}
-        // Expand the latest competition
-        const latestCompId = 'comp-{{ latest_competition_id }}';
-        toggleAccordion(latestCompId);
+        toggleAccordion('comp-{{ latest_competition_id }}');
       {% else %}
-        // Fallback: expand first competition with results
-        const competitions = document.querySelectorAll('[id^="comp-"]');
-        let firstWithResults = null;
-        
-        competitions.forEach(comp => {
-          const hasResults = comp.querySelector('.grid') !== null;
-          if (hasResults && !firstWithResults) {
-            firstWithResults = comp;
+        for (const p of document.querySelectorAll('[id^="comp-"]')) {
+          if (p.id.startsWith('comp-card-')) continue;
+          if (p.querySelector('.podium-stage')) {
+            toggleAccordion(p.id);
+            break;
           }
-        });
-        
-        if (firstWithResults) {
-          const compId = firstWithResults.id;
-          toggleAccordion(compId);
         }
       {% endif %}
     });
