@@ -384,7 +384,8 @@
         </h2>
         <p class="text-slate-400 text-sm mt-1 max-w-3xl">
           Under varje serie väljer du <strong class="text-slate-300">450cc</strong>, <strong class="text-slate-300">250 East</strong> eller <strong class="text-slate-300">250 West</strong> — en tabell i full bredd i taget (samma poängskala som per race).
-          <strong class="text-slate-300">250 East/West</strong> räknar rundor där tävlingens region och förarens region överensstämmer.
+          <strong class="text-slate-300">250 East/West</strong>: för SX/MX krävs att tävling och förare har samma region; för <strong class="text-slate-300">SMX Finals</strong>-rader räknas per förares region om tävlingen saknar coast.
+          <strong class="text-slate-300">SMX Combined</strong> (violett) är samma princip som på supermotocross.com / Racer X: <strong class="text-slate-300">SX-poäng + MX-poäng + SMX Playoff/Final</strong> (multiplikator per tävling).
           <strong class="text-slate-300">WSX</strong>: välj SX1 eller SX2.
         </p>
       </div>
@@ -404,10 +405,16 @@
         </div>
         {% endif %}
         {% set smx = championship_totals.get('SMX') or {} %}
-        {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
+        {% if championship_totals.get('show_smx_section') %}
         <div class="rounded-xl border border-violet-700/35 bg-slate-900/25 p-4 min-w-0">
-          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX') }}</h3>
-          {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west')) }}
+          <h3 class="text-base font-bold text-violet-300 mb-2 border-b border-violet-800/40 pb-2">{{ smx.get('label', 'SMX Combined (SX + MX + SMX Finals)') }}</h3>
+          {% if smx.get('450') or smx.get('250_east') or smx.get('250_west') %}
+            {{ standings_class_picker('smx', 'smx', smx.get('label'), smx.get('450'), smx.get('250_east'), smx.get('250_west')) }}
+          {% else %}
+            <p class="text-slate-500 text-sm py-8 text-center leading-relaxed">
+              Inga poäng att visa ännu — kombinerad SMX-total bygger på SX- och MX-resultat plus SMX Playoff/Final (samma grund som officiella SMX-ställningar).
+            </p>
+          {% endif %}
         </div>
         {% endif %}
         {% set wsx = championship_totals.get('WSX') or {} %}

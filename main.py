@@ -6947,10 +6947,15 @@ def user_stats_page(username: str):
 def compute_series_championship_totals():
     """
     Summarizes season points using the same rules as the per-race results view:
-    WSX (rider_points or position), SMX (position × point_multiplier), SX/MX (AMA scale).
-    Buckets: SX/MX/SMX × (450cc, 250 East, 250 West); WSX × (SX1, SX2).
+    WSX (rider_points or position), SMX Finals (position × point_multiplier), SX/MX (AMA scale).
+
+    The SMX *combined* block matches official SMX championship tables (e.g. supermotocross.com):
+    regular season = SX points + MX points, plus SMX Playoff / Final rounds on top — not playoff-only.
+    Buckets internally: SX/MX/SMX × (450cc, 250 East, 250 West); WSX × (SX1, SX2).
     """
     from collections import defaultdict
+
+    from sqlalchemy import func
 
     totals = defaultdict(lambda: defaultdict(float))
     rider_meta = {}
@@ -6963,7 +6968,7 @@ def compute_series_championship_totals():
     )
 
     for cr, comp, rider in rows:
-        s = comp.series
+        s = str(comp.series).strip() if comp.series is not None else ""
         if s not in ("WSX", "SX", "MX", "SMX"):
             continue
 
@@ -6986,11 +6991,20 @@ def compute_series_championship_totals():
             if rider.class_name == "450cc":
                 bucket = (s.lower(), "450")
             elif rider.class_name == "250cc":
-                cc = (comp.coast_250 or "").strip().lower()
                 rc = (rider.coast_250 or "").strip().lower()
-                if cc not in ("east", "west") or rc not in ("east", "west") or cc != rc:
+                if rc not in ("east", "west"):
                     continue
-                bucket = (s.lower(), "250", cc)
+                cc = (comp.coast_250 or "").strip().lower()
+                # SMX: tävling saknar ofta coast — räkna per förares East/West.
+                if s == "SMX":
+                    bucket = ("smx", "250", rc)
+                elif cc in ("both", "showdown"):
+                    # MX m.fl.: kombinerad 250-klass — fördela per förares region.
+                    bucket = (s.lower(), "250", rc)
+                elif cc in ("east", "west") and cc == rc:
+                    bucket = (s.lower(), "250", rc)
+                else:
+                    continue
             else:
                 continue
 
@@ -7018,6 +7032,21 @@ def compute_series_championship_totals():
             out.append(row)
         return out
 
+    def combined_top_list(*bucket_tuples, limit=12):
+        """Official SMX combined: sum SX + MX + SMX Finals for the same class bucket."""
+        merged = defaultdict(float)
+        for bucket_parts in bucket_tuples:
+            bucket = tuple(bucket_parts)
+            for rid, p in (totals.get(bucket) or {}).items():
+                merged[rid] += float(p)
+        items = sorted(merged.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rid, p in items[:limit]:
+            row = dict(rider_meta.get(rid, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            out.append(row)
+        return out
+
     sx = {
         "label": "AMA Supercross (SX)",
         "450": top_list("sx", "450"),
@@ -7031,10 +7060,14 @@ def compute_series_championship_totals():
         "250_west": top_list("mx", "250", "west"),
     }
     smx = {
-        "label": "SMX (playoff / final)",
-        "450": top_list("smx", "450"),
-        "250_east": top_list("smx", "250", "east"),
-        "250_west": top_list("smx", "250", "west"),
+        "label": "SMX Combined (SX + MX + SMX Finals)",
+        "450": combined_top_list(("sx", "450"), ("mx", "450"), ("smx", "450")),
+        "250_east": combined_top_list(
+            ("sx", "250", "east"), ("mx", "250", "east"), ("smx", "250", "east")
+        ),
+        "250_west": combined_top_list(
+            ("sx", "250", "west"), ("mx", "250", "west"), ("smx", "250", "west")
+        ),
     }
     wsx = {
         "label": "WSX (World Supercross)",
@@ -7050,7 +7083,19 @@ def compute_series_championship_totals():
                 return True
         return False
 
-    has_any = _block_nonempty(sx) or _block_nonempty(mx) or _block_nonempty(smx) or _block_nonempty(wsx)
+    smx_comp_exists = (
+        db.session.query(Competition.id)
+        .filter(func.trim(Competition.series) == "SMX")
+        .first()
+        is not None
+    )
+    has_any = (
+        _block_nonempty(sx)
+        or _block_nonempty(mx)
+        or _block_nonempty(smx)
+        or _block_nonempty(wsx)
+        or smx_comp_exists
+    )
 
     return {
         "SX": sx,
@@ -7058,6 +7103,7 @@ def compute_series_championship_totals():
         "SMX": smx,
         "WSX": wsx,
         "has_any": has_any,
+        "show_smx_section": _block_nonempty(smx) or smx_comp_exists,
     }
 
 
@@ -7075,6 +7121,7 @@ def race_results_page():
                 "MX": {},
                 "SMX": {},
                 "WSX": {},
+                "show_smx_section": False,
             }
 
         competitions = (
