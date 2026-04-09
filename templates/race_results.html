@@ -430,6 +430,61 @@
 
     {% set panel_default = latest_competition_id if latest_competition_id else (competitions[0].id if competitions else none) %}
 
+    <section class="mb-6 rounded-2xl border border-slate-600/45 bg-slate-800/30 shadow-xl overflow-hidden" aria-labelledby="rider-search-heading">
+      <div class="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900/70 to-slate-800/40 border-b border-slate-600/40">
+        <h2 id="rider-search-heading" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          <span class="text-fuchsia-300">⌕</span> Sök förare · poäng per tävling
+        </h2>
+        <p class="text-slate-400 text-sm mt-1 max-w-3xl">
+          Skriv ett namn (t.ex. <strong class="text-slate-200">Haiden Deegan</strong>) så får du hans/hennes poäng per tävling. Klicka på en rad för att hoppa till racet.
+        </p>
+      </div>
+      <div class="p-4 sm:p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <input id="rider-search-input" type="text" placeholder="Sök förare…"
+                   class="w-full bg-slate-950/35 border border-slate-700/60 focus:border-fuchsia-500/60 focus:ring-2 focus:ring-fuchsia-500/20 rounded-xl px-4 py-3 text-sm sm:text-base text-slate-100 placeholder:text-slate-500 outline-none" />
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="rider-search-series"
+                    class="bg-slate-950/35 border border-slate-700/60 rounded-xl px-3 py-3 text-sm text-slate-100 outline-none">
+              <option value="all">Alla serier</option>
+              <option value="SX">SX</option>
+              <option value="MX">MX</option>
+              <option value="SMX">SMX</option>
+              <option value="WSX">WSX</option>
+            </select>
+            <button id="rider-search-clear"
+                    class="inline-flex items-center justify-center bg-white/8 hover:bg-white/14 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-100 transition-colors">
+              Rensa
+            </button>
+          </div>
+        </div>
+
+        <div id="rider-search-meta" class="text-xs text-slate-500 mt-3"></div>
+
+        <div id="rider-search-results" class="hidden mt-4 overflow-x-auto rounded-xl border border-slate-700/50">
+          <table class="w-full min-w-[54rem] text-sm">
+            <thead class="bg-slate-900/80 text-slate-400 text-xs uppercase">
+              <tr>
+                <th class="px-3 py-2 text-left">Datum</th>
+                <th class="px-3 py-2 text-left">Tävling</th>
+                <th class="px-3 py-2 text-center">Serie</th>
+                <th class="px-3 py-2 text-center">Klass</th>
+                <th class="px-3 py-2 text-center">Pos</th>
+                <th class="px-3 py-2 text-right">Poäng</th>
+              </tr>
+            </thead>
+            <tbody id="rider-search-tbody" class="divide-y divide-slate-700/80"></tbody>
+          </table>
+        </div>
+
+        <div id="rider-search-empty" class="hidden mt-4 text-slate-500 text-sm">
+          Ingen matchning.
+        </div>
+      </div>
+    </section>
+
     <div id="race-results-viewport" class="min-h-[12rem]">
       {% for comp in competitions %}
       <section
@@ -649,6 +704,105 @@
   <script>
     var defaultRaceId = {{ panel_default | tojson }};
 
+    // Flatten all rider points for client-side search.
+    // Note: points in these rows follow the same display logic as the per-race results tables.
+    var riderPoints = [
+      {%- for comp in competitions -%}
+        {%- set results = competition_results[comp.id] -%}
+        {%- for r in (results.results or []) -%}
+          {
+            comp_id: {{ comp.id }},
+            comp_name: {{ comp.name | tojson }},
+            event_date: {{ comp.event_date | tojson }},
+            series: {{ comp.series | tojson }},
+            class_name: {{ r.class_name | tojson }},
+            rider_name: {{ r.rider_name | tojson }},
+            position: {{ r.position | tojson }},
+            points: {{ (r.points or 0) | tojson }}
+          }{{ "," if not (loop.last and loop.parent.last) else "" }}
+        {%- endfor -%}
+      {%- endfor -%}
+    ];
+
+    function normalize(s) {
+      return String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+    }
+
+    function prettyClass(series, className) {
+      if (series === "WSX") {
+        if (className === "wsx_sx1") return "SX1";
+        if (className === "wsx_sx2") return "SX2";
+      }
+      return className;
+    }
+
+    function renderRiderSearch() {
+      var q = normalize(document.getElementById("rider-search-input")?.value);
+      var series = document.getElementById("rider-search-series")?.value || "all";
+
+      var meta = document.getElementById("rider-search-meta");
+      var box = document.getElementById("rider-search-results");
+      var empty = document.getElementById("rider-search-empty");
+      var tbody = document.getElementById("rider-search-tbody");
+      if (!tbody || !meta || !box || !empty) return;
+
+      tbody.innerHTML = "";
+
+      if (!q) {
+        meta.textContent = "Tips: skriv minst 2 tecken för att söka.";
+        box.classList.add("hidden");
+        empty.classList.add("hidden");
+        return;
+      }
+
+      var filtered = riderPoints.filter(function (row) {
+        if (series !== "all" && row.series !== series) return false;
+        return normalize(row.rider_name).includes(q);
+      });
+
+      filtered.sort(function (a, b) {
+        var da = String(a.event_date || "");
+        var db = String(b.event_date || "");
+        if (da < db) return -1;
+        if (da > db) return 1;
+        return (a.comp_id || 0) - (b.comp_id || 0);
+      });
+
+      meta.textContent = filtered.length + " träffar";
+      box.classList.toggle("hidden", filtered.length === 0);
+      empty.classList.toggle("hidden", filtered.length !== 0);
+
+      var cap = 200;
+      var shown = filtered.slice(0, cap);
+      if (filtered.length > cap) {
+        meta.textContent += " (visar första " + cap + ")";
+      }
+
+      shown.forEach(function (row) {
+        var tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-700/40 cursor-pointer";
+        tr.addEventListener("click", function () {
+          showRacePanel(row.comp_id);
+          var panel = document.getElementById("race-panel-" + String(row.comp_id));
+          if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+
+        var cls = prettyClass(row.series, row.class_name);
+        tr.innerHTML =
+          '<td class="px-3 py-2 text-slate-300 tabular-nums whitespace-nowrap">' + (row.event_date || "") + "</td>" +
+          '<td class="px-3 py-2 font-medium text-slate-100">' + (row.comp_name || "") + "</td>" +
+          '<td class="px-3 py-2 text-center text-slate-300">' + (row.series || "") + "</td>" +
+          '<td class="px-3 py-2 text-center text-slate-300">' + (cls || "") + "</td>" +
+          '<td class="px-3 py-2 text-center text-slate-300 tabular-nums">' + (row.position ?? "") + "</td>" +
+          '<td class="px-3 py-2 text-right font-semibold text-white tabular-nums">' + (row.points ?? 0) + "</td>";
+        tbody.appendChild(tr);
+      });
+    }
+
     function showRacePanel(compId) {
       var sid = String(compId);
       document.querySelectorAll('.race-result-panel').forEach(function (el) {
@@ -678,6 +832,22 @@
         }
       });
     }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      var input = document.getElementById("rider-search-input");
+      var seriesSel = document.getElementById("rider-search-series");
+      var clear = document.getElementById("rider-search-clear");
+
+      if (input) input.addEventListener("input", renderRiderSearch);
+      if (seriesSel) seriesSel.addEventListener("change", renderRiderSearch);
+      if (clear) clear.addEventListener("click", function () {
+        if (input) input.value = "";
+        if (seriesSel) seriesSel.value = "all";
+        renderRiderSearch();
+      });
+
+      renderRiderSearch();
+    });
 
     function initStandingsTabs() {
       document.querySelectorAll('.standings-tab[data-standings-target]').forEach(function (btn) {
