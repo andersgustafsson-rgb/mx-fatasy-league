@@ -17585,61 +17585,50 @@ def get_current_time():
 
 def calculate_smx_qualification_points():
     """Calculate SMX qualification points for all riders based on Supercross and Motocross results"""
-    # Get all riders
+    # Regular season SMX combined = SX + MX points (no playoffs).
+    # We calculate from stored CompetitionResult rows, scoped to the correct Competition.series values.
     riders = Rider.query.all()
-    riders_450 = [r for r in riders if r.class_name == '450cc']
-    riders_250 = [r for r in riders if r.class_name == '250cc']
-    
+
     smx_points = {}
     
     for rider in riders:
-        total_points = 0
-        
-        # Get Supercross results for this rider (considering coast for 250cc)
-        sx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-            CompetitionResult.rider_id == rider.id,
-            Series.name.ilike('%supercross%')
-        ).all()
-        
-        # For SMX, 250cc riders get points from both East and West coasts
-        # No coast filtering needed for SMX calculation
-        
-        # Get Motocross results for this rider (considering coast for 250cc)
-        mx_results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-            CompetitionResult.rider_id == rider.id,
-            Series.name.ilike('%motocross%')
-        ).all()
-        
-        # For SMX, 250cc riders get points from both East and West coasts
-        # No coast filtering needed for SMX calculation
-        
-        # Calculate points from Supercross (top 17 rounds)
-        sx_points = []
+        # Get SX/MX results for this rider
+        sx_results = (
+            db.session.query(CompetitionResult)
+            .join(Competition)
+            .filter(
+                CompetitionResult.rider_id == rider.id,
+                Competition.series == "SX",
+            )
+            .all()
+        )
+        mx_results = (
+            db.session.query(CompetitionResult)
+            .join(Competition)
+            .filter(
+                CompetitionResult.rider_id == rider.id,
+                Competition.series == "MX",
+            )
+            .all()
+        )
+
+        sx_points = 0
         for result in sx_results:
-            if result.position and result.position <= 20:  # Only top 20 get points
-                points = get_smx_qualification_points(result.position)
-                sx_points.append(points)
-        
-        # Take best 17 rounds from Supercross
-        sx_points.sort(reverse=True)
-        total_points += sum(sx_points[:17])
-        
-        # Calculate points from Motocross (top 11 rounds)
-        mx_points = []
+            if result.position and result.position <= 20:
+                sx_points += get_smx_qualification_points(result.position)
+
+        mx_points = 0
         for result in mx_results:
-            if result.position and result.position <= 20:  # Only top 20 get points
-                points = get_smx_qualification_points(result.position)
-                mx_points.append(points)
-        
-        # Take best 11 rounds from Motocross
-        mx_points.sort(reverse=True)
-        total_points += sum(mx_points[:11])
+            if result.position and result.position <= 20:
+                mx_points += get_smx_qualification_points(result.position)
+
+        total_points = sx_points + mx_points
         
         smx_points[rider.id] = {
             'rider': rider,
             'total_points': total_points,
-            'sx_points': sum(sx_points[:17]),
-            'mx_points': sum(mx_points[:11])
+            'sx_points': sx_points,
+            'mx_points': mx_points,
         }
         
     
@@ -17673,23 +17662,35 @@ def get_series_leaders():
     # Get all riders
     riders = Rider.query.all()
     
-    # Calculate points for all riders
+    # Calculate points for all riders (Supercross standings)
     rider_points = {}
     for rider in riders:
         total_points = 0
         
         # Get results for this rider based on their class and coast
         if rider.class_name == '450cc':
-            # 450cc riders compete in all series
-            results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-                CompetitionResult.rider_id == rider.id
-            ).all()
+            # 450cc: sum all SX rounds
+            results = (
+                db.session.query(CompetitionResult)
+                .join(Competition)
+                .filter(
+                    CompetitionResult.rider_id == rider.id,
+                    Competition.series == "SX",
+                )
+                .all()
+            )
         else:
-            # 250cc riders only compete in their coast
-            results = db.session.query(CompetitionResult).join(Competition).join(Series).filter(
-                CompetitionResult.rider_id == rider.id,
-                Competition.coast_250 == rider.coast_250
-            ).all()
+            # 250cc: include their coast rounds plus "both/showdown" events
+            results = (
+                db.session.query(CompetitionResult)
+                .join(Competition)
+                .filter(
+                    CompetitionResult.rider_id == rider.id,
+                    Competition.series == "SX",
+                    Competition.coast_250.in_([rider.coast_250, "both", "showdown"]),
+                )
+                .all()
+            )
         
         # Calculate total points
         for result in results:
