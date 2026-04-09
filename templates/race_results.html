@@ -719,7 +719,7 @@
             rider_name: {{ r.rider_name | tojson }},
             position: {{ r.position | tojson }},
             points: {{ (r.points or 0) | tojson }}
-          }{{ "," if not (loop.last and loop.parent.last) else "" }}
+          },
         {%- endfor -%}
       {%- endfor -%}
     ];
