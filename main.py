@@ -403,7 +403,13 @@ def login():
                 flash("Användarnamn och lösenord krävs", "error")
                 return render_template("login.html")
         
+        # Match username, or e-post (många skriver mail efter lösenordsåterställning)
         user = User.query.filter_by(username=username).first()
+        if not user and "@" in username:
+            user = User.query.filter(
+                User.email.isnot(None),
+                db.func.lower(User.email) == username.lower(),
+            ).first()
         
         if user and check_password_hash(user.password_hash, password):
             # Complete session reset - nuclear approach
@@ -491,7 +497,10 @@ def reset_password():
         user.password_reset_token = None
         user.password_reset_expires = None
         db.session.commit()
-        flash("Lösenordet är uppdaterat. Logga in med ditt nya lösenord.", "success")
+        flash(
+            "Lösenordet är uppdaterat. Logga in med ditt användarnamn eller din e-post och det nya lösenordet.",
+            "success",
+        )
         return redirect(url_for("login"))
     return render_template("reset_password.html", token=token)
 
