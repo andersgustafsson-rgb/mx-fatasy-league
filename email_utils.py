@@ -308,7 +308,7 @@ def send_password_reset_email(
                 <div class="content">
                     <h2>Hej {user_name}!</h2>
                     <p>Du har begärt att återställa ditt lösenord. Klicka på knappen nedan för att välja ett nytt lösenord.</p>
-                    <p><strong style="color:#94a3b8;">Länken gäller i 1 timme.</strong></p>
+                    <p><strong style="color:#94a3b8;">Länken gäller i 24 timmar.</strong></p>
                     <div class="cta-wrap">
                         <a href="{reset_url}" class="cta">Återställ lösenord</a>
                     </div>

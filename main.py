@@ -105,6 +105,20 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
+
+def get_public_base_url() -> str:
+    """
+    Canonical public site URL (https, correct host) for links in emails.
+    On Render, request.host_url can be http or wrong without proxy headers;
+    set PUBLIC_BASE_URL or rely on RENDER_EXTERNAL_URL.
+    """
+    for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
+        v = (os.getenv(key) or "").strip().rstrip("/")
+        if v:
+            return v
+    return request.host_url.rstrip("/")
+
+
 # Database is initialized in models.py and bound here via db.init_app(app)
 
 # --- Backward-compatible blueprint registration (prod runs main:app) ---
@@ -435,9 +449,9 @@ def forgot_password():
         if user and user.email:
             token = secrets.token_urlsafe(32)
             user.password_reset_token = token
-            user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+            user.password_reset_expires = datetime.utcnow() + timedelta(hours=24)
             db.session.commit()
-            base_url = request.host_url.rstrip("/")
+            base_url = get_public_base_url()
             reset_url = f"{base_url}/reset_password?token={token}"
             from email_utils import send_password_reset_email
             success, _ = send_password_reset_email(
@@ -456,7 +470,8 @@ def forgot_password():
 def reset_password():
     """Set new password using token from email."""
     session.clear()
-    token = request.args.get("token", "").strip()
+    # Query string (GET link) or hidden field (POST) — some clients strip ?token= on POST.
+    token = (request.values.get("token") or "").strip()
     if not token:
         flash("Ogiltig eller saknad återställningslänk.", "error")
         return redirect(url_for("login"))
