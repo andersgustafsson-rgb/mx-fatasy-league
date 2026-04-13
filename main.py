@@ -8364,7 +8364,7 @@ def get_user_race_results(username: str, competition_id: int):
         else:
             breakdown.append(f"❌ Wildcard: {rider_name} fel")
 
-       return jsonify({"breakdown": breakdown, "total": total})
+    return jsonify({"breakdown": breakdown, "total": total})
 
 # -------------------------------------------------
 # Poängberäkning
