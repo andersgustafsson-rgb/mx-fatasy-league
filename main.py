@@ -1850,11 +1850,68 @@ def calculate_leaderboard_deltas():
     
     return leaderboard_data
 
+
+def aggregate_weekly_holeshot_points_from_picks(comp_ids: list[int]) -> dict[int, int]:
+    """
+    Holeshot-poäng per användare över angivna tävlingar, från HoleshotPick + HoleshotResult
+    med samma regler som calculate_scores (inkl. dedupe per klass och 25p-bonus).
+
+    Används i Veckans prestationer så att Holeshot-Mästare inte bara speglar
+    CompetitionScore.holeshot_points (som kan vara 0 om poäng inte omräknats).
+    """
+    from collections import defaultdict
+
+    if not comp_ids:
+        return {}
+    db.session.rollback()
+    all_results = HoleshotResult.query.filter(
+        HoleshotResult.competition_id.in_(comp_ids)
+    ).all()
+    by_comp_lists: dict[int, list] = defaultdict(list)
+    for hs in all_results:
+        by_comp_lists[hs.competition_id].append(hs)
+    buckets_by_comp = {
+        cid: holeshot_results_by_bucket(lst) for cid, lst in by_comp_lists.items()
+    }
+
+    all_picks = HoleshotPick.query.filter(HoleshotPick.competition_id.in_(comp_ids)).all()
+    picks_by_u_c = defaultdict(list)
+    for hp in all_picks:
+        picks_by_u_c[(hp.user_id, hp.competition_id)].append(hp)
+
+    user_totals: dict[int, int] = defaultdict(int)
+    for (uid, cid), hplist in picks_by_u_c.items():
+        actual_dict = buckets_by_comp.get(cid, {})
+        seen: dict[tuple, HoleshotPick] = {}
+        for hp in hplist:
+            key = (hp.user_id, hp.competition_id, hp.class_name)
+            if key not in seen or hp.id > seen[key].id:
+                seen[key] = hp
+        unique_hps = list(seen.values())
+        holeshot_450_correct = False
+        holeshot_250_correct = False
+        holeshot_points = 0
+        for hp in unique_hps:
+            bucket = holeshot_pick_class_for_result(hp.class_name)
+            actual_hs = actual_dict.get(bucket)
+            if actual_hs and actual_hs.rider_id == hp.rider_id:
+                if bucket == "450cc":
+                    holeshot_450_correct = True
+                    holeshot_points += 10
+                elif bucket == "250cc":
+                    holeshot_250_correct = True
+                    holeshot_points += 10
+        if holeshot_450_correct and holeshot_250_correct:
+            holeshot_points = 25
+        if holeshot_points:
+            user_totals[uid] += holeshot_points
+    return dict(user_totals)
+
+
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
     """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
     try:
-        from sqlalchemy import func
         from datetime import datetime, timedelta
         
         # Use shared function to calculate deltas - ensures consistency
@@ -1918,6 +1975,7 @@ def get_weekly_fun_stats():
             Competition.event_date.isnot(None),
             Competition.event_date >= week_ago_date,
             Competition.event_date <= today_utc,
+            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
         ).all()
         
         comp_ids = [c.id for c in recent_competitions]
@@ -1976,30 +2034,21 @@ def get_weekly_fun_stats():
         if perfect_picks_stats:
             perfect_picks_winner = max(perfect_picks_stats.values(), key=lambda x: x['perfect_count'])
         
-        # Holeshot master - count users with most correct holeshot picks this week
+        # Holeshot master — samma idé som Perfekt gissning: räkna från picks + resultat
+        # (inte bara CompetitionScore.holeshot_points, som kan vara 0 utan omräkning).
         holeshot_stats = {}
         if comp_ids:
-            holeshot_scores = (
-                db.session.query(
-                    CompetitionScore.user_id,
-                    func.sum(CompetitionScore.holeshot_points).label('total_holeshot_points')
-                )
-                .filter(
-                    CompetitionScore.competition_id.in_(comp_ids),
-                    CompetitionScore.holeshot_points > 0
-                )
-                .group_by(CompetitionScore.user_id)
-                .all()
-            )
-            
-            for user_id, total_points in holeshot_scores:
+            totals_by_user = aggregate_weekly_holeshot_points_from_picks(comp_ids)
+            for user_id, total_points in totals_by_user.items():
+                if not total_points:
+                    continue
                 user = User.query.get(user_id)
-                if user and total_points:
+                if user:
                     holeshot_stats[user_id] = {
                         'user_id': user_id,
                         'username': user.username,
                         'display_name': getattr(user, 'display_name', None) or user.username,
-                        'total_holeshot_points': int(total_points)
+                        'total_holeshot_points': int(total_points),
                     }
         
         holeshot_master = None
@@ -2015,6 +2064,7 @@ def get_weekly_fun_stats():
             'meta': {
                 'week_competition_count': len(comp_ids),
                 'users_with_holeshot_points_gt_0': len(holeshot_stats),
+                'holeshot_master_basis': 'picks_and_results',
             },
         })
         
@@ -8127,15 +8177,61 @@ def lock_wildcard_pos():
     return jsonify({"status": "locked"}), 200
 
 
+def holeshot_result_class_bucket(raw_class: str | None) -> str:
+    """
+    Normalisera holeshot_results.kolumnen "class" till 450cc / 250cc.
+    Olika importvägar eller manuella rader kan ge "450", "SX1", mellanslag m.m.
+    Okända värden ger tom sträng (raden ignoreras vid uppslag).
+    """
+    c = (raw_class or "").strip().lower().replace(" ", "")
+    if c in ("450cc", "450", "sx450", "sx1", "wsx_sx1"):
+        return "450cc"
+    if c in ("250cc", "250", "sx250", "sx2", "wsx_sx2", "250east", "250west"):
+        return "250cc"
+    return ""
+
+
+def holeshot_results_by_bucket(holeshots: list) -> dict[str, HoleshotResult]:
+    """Bygg {450cc: HoleshotResult, 250cc: ...} med normaliserade nycklar och dedupe."""
+    out: dict[str, HoleshotResult] = {}
+    for hs in holeshots:
+        bucket = holeshot_result_class_bucket(getattr(hs, "class_name", None))
+        if bucket not in ("450cc", "250cc"):
+            print(
+                f"WARNING: HoleshotResult id={getattr(hs, 'id', '?')} "
+                f"competition_id={getattr(hs, 'competition_id', '?')} "
+                f"has unrecognized class={getattr(hs, 'class_name', None)!r} (skipped for scoring)"
+            )
+            continue
+        existing = out.get(bucket)
+        if existing is not None:
+            ex_id = getattr(existing, "id", 0) or 0
+            hs_id = getattr(hs, "id", 0) or 0
+            if hs_id > ex_id:
+                print(
+                    f"WARNING: Duplicate HoleshotResult for {bucket}; "
+                    f"keeping id={hs_id} over id={ex_id}"
+                )
+                out[bucket] = hs
+            else:
+                print(
+                    f"WARNING: Duplicate HoleshotResult for {bucket}; "
+                    f"keeping id={ex_id} over id={hs_id}"
+                )
+        else:
+            out[bucket] = hs
+    return out
+
+
 def holeshot_pick_class_for_result(pick_class: str) -> str:
     """
     HoleshotResult använder alltid class_name 450cc / 250cc.
     Vissa picks sparades med rider.class_name (t.ex. wsx_sx1) — mappa till samma bucket som resultatraden.
     """
-    c = (pick_class or "").strip().lower()
-    if c in ("wsx_sx1", "450cc"):
+    c = (pick_class or "").strip().lower().replace(" ", "")
+    if c in ("wsx_sx1", "450cc", "450", "sx450", "sx1"):
         return "450cc"
-    if c in ("wsx_sx2", "250cc"):
+    if c in ("wsx_sx2", "250cc", "250", "sx250", "sx2", "250east", "250west"):
         return "250cc"
     return pick_class or ""
 
@@ -8183,7 +8279,7 @@ def get_my_race_results(competition_id):
 
     holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
-    holo_by_class = {h.class_name: h for h in holos}
+    holo_by_class = holeshot_results_by_bucket(holos)
     
     # Calculate holeshot points
     holeshot_450_correct = False
@@ -8308,7 +8404,7 @@ def get_user_race_results(username: str, competition_id: int):
     
     holopicks = list(seen_holeshots.values())
     holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
-    holo_by_class = {h.class_name: h for h in holos}
+    holo_by_class = holeshot_results_by_bucket(holos)
     
     # Calculate holeshot points
     holeshot_450_correct = False
@@ -8430,7 +8526,7 @@ def calculate_scores(comp_id: int):
         print(f"⚠️ WARNING: Found {duplicate_count} duplicate results for competition {comp_id}. Using most recent entry for each rider.")
     
     actual_results_dict = seen_riders
-    actual_holeshots_dict = {hs.class_name: hs for hs in actual_holeshots}
+    actual_holeshots_dict = holeshot_results_by_bucket(actual_holeshots)
 
     for user in users:
         race_points = 0
