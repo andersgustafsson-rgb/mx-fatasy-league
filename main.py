@@ -1911,10 +1911,13 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
         
-        # Get competitions from last 7 days (for perfect picks and holeshot master)
+        # Tävlingar senaste 7 dagarna (endast datum som passerat, undvik framtida race i samma lista)
         week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+        today_utc = datetime.utcnow().date()
         recent_competitions = Competition.query.filter(
-            Competition.event_date >= week_ago_date
+            Competition.event_date.isnot(None),
+            Competition.event_date >= week_ago_date,
+            Competition.event_date <= today_utc,
         ).all()
         
         comp_ids = [c.id for c in recent_competitions]
@@ -2008,7 +2011,11 @@ def get_weekly_fun_stats():
             'rocket': rocket,
             'anchor': anchor,
             'perfect_picks': perfect_picks_winner,
-            'holeshot_master': holeshot_master
+            'holeshot_master': holeshot_master,
+            'meta': {
+                'week_competition_count': len(comp_ids),
+                'users_with_holeshot_points_gt_0': len(holeshot_stats),
+            },
         })
         
     except Exception as e:
@@ -2019,6 +2026,85 @@ def get_weekly_fun_stats():
             'holeshot_master': None,
             'error': str(e)
         })
+
+
+@app.get("/admin/diagnostics/holeshot_recent")
+def admin_holeshot_recent_diagnostics():
+    """
+    Admin: se om holeshot-mästare saknas p.g.a. data (inga HoleshotResult),
+    ej omräknade poäng, eller för att ingen fick holeshot-poäng.
+    Öppna i webbläsaren inloggad som admin: /admin/diagnostics/holeshot_recent?days=14
+    """
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 401
+    try:
+        from sqlalchemy import func
+
+        days = int(request.args.get("days", 14))
+        days = max(1, min(days, 90))
+        since = (datetime.utcnow() - timedelta(days=days)).date()
+        today_utc = datetime.utcnow().date()
+        comps = (
+            Competition.query.filter(
+                Competition.event_date.isnot(None),
+                Competition.event_date >= since,
+                Competition.event_date <= today_utc,
+            )
+            .order_by(Competition.event_date.desc(), Competition.id.desc())
+            .all()
+        )
+        out = []
+        for c in comps:
+            n_hs_results = HoleshotResult.query.filter_by(competition_id=c.id).count()
+            n_hs_pickers = (
+                db.session.query(func.count(func.distinct(HoleshotPick.user_id)))
+                .filter(HoleshotPick.competition_id == c.id)
+                .scalar()
+            )
+            n_hs_pickers = int(n_hs_pickers or 0)
+            scores = CompetitionScore.query.filter_by(competition_id=c.id).all()
+            n_scores = len(scores)
+            hs_vals = [s.holeshot_points or 0 for s in scores]
+            n_with_hs = sum(1 for p in hs_vals if p > 0)
+            max_hs = max(hs_vals) if hs_vals else 0
+
+            if n_hs_results == 0 and n_hs_pickers > 0:
+                hint = "Inga holeshot-resultat i DB — alla får 0 holeshot-poäng (kör import/beräkning med holeshot)."
+            elif n_hs_results > 0 and n_with_hs == 0 and n_hs_pickers > 0:
+                hint = "Holeshot-resultat finns men ingen fick poäng — antingen ingen träffade rätt, eller fel class_name på picks/resultat."
+            elif n_scores == 0 and n_hs_results > 0:
+                hint = "Resultat finns men inga competition_scores-rader — kör calculate_scores för tävlingen."
+            elif n_hs_pickers == 0:
+                hint = "Ingen har lagt holeshot-pick för denna tävling."
+            else:
+                hint = "OK — någon har holeshot-poäng."
+
+            out.append(
+                {
+                    "competition_id": c.id,
+                    "name": c.name,
+                    "event_date": str(c.event_date),
+                    "series": c.series,
+                    "holeshot_results_in_db": n_hs_results,
+                    "users_who_picked_holeshot": n_hs_pickers,
+                    "competition_score_rows": n_scores,
+                    "users_with_holeshot_points_gt_0": n_with_hs,
+                    "max_holeshot_points_in_scores": max_hs,
+                    "hint": hint,
+                }
+            )
+        return jsonify(
+            {
+                "since": str(since),
+                "through": str(today_utc),
+                "days": days,
+                "competition_count": len(out),
+                "competitions": out,
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/profile")
 def profile_page():
@@ -8041,6 +8127,19 @@ def lock_wildcard_pos():
     return jsonify({"status": "locked"}), 200
 
 
+def holeshot_pick_class_for_result(pick_class: str) -> str:
+    """
+    HoleshotResult använder alltid class_name 450cc / 250cc.
+    Vissa picks sparades med rider.class_name (t.ex. wsx_sx1) — mappa till samma bucket som resultatraden.
+    """
+    c = (pick_class or "").strip().lower()
+    if c in ("wsx_sx1", "450cc"):
+        return "450cc"
+    if c in ("wsx_sx2", "250cc"):
+        return "250cc"
+    return pick_class or ""
+
+
 @app.get("/get_my_race_results/<int:competition_id>")
 def get_my_race_results(competition_id):
     if "user_id" not in session:
@@ -8092,16 +8191,17 @@ def get_my_race_results(competition_id):
     holeshot_points = 0
     
     for hp in holopicks:
-        act = holo_by_class.get(hp.class_name)
+        bucket = holeshot_pick_class_for_result(hp.class_name)
+        act = holo_by_class.get(bucket)
         rider = Rider.query.get(hp.rider_id)
         rider_name = rider.name if rider else f"rider {hp.rider_id}"
         
         if act and act.rider_id == hp.rider_id:
-            if hp.class_name == "450cc":
+            if bucket == "450cc":
                 holeshot_450_correct = True
                 holeshot_points += 10
                 breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-            elif hp.class_name == "250cc":
+            elif bucket == "250cc":
                 holeshot_250_correct = True
                 holeshot_points += 10
                 breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
@@ -8216,16 +8316,17 @@ def get_user_race_results(username: str, competition_id: int):
     holeshot_points = 0
     
     for hp in holopicks:
-        act = holo_by_class.get(hp.class_name)
+        bucket = holeshot_pick_class_for_result(hp.class_name)
+        act = holo_by_class.get(bucket)
         rider = Rider.query.get(hp.rider_id)
         rider_name = rider.name if rider else f"rider {hp.rider_id}"
         
         if act and act.rider_id == hp.rider_id:
-            if hp.class_name == "450cc":
+            if bucket == "450cc":
                 holeshot_450_correct = True
                 holeshot_points += 10
                 breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-            elif hp.class_name == "250cc":
+            elif bucket == "250cc":
                 holeshot_250_correct = True
                 holeshot_points += 10
                 breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
@@ -8263,7 +8364,7 @@ def get_user_race_results(username: str, competition_id: int):
         else:
             breakdown.append(f"❌ Wildcard: {rider_name} fel")
 
-    return jsonify({"breakdown": breakdown, "total": total})
+       return jsonify({"breakdown": breakdown, "total": total})
 
 # -------------------------------------------------
 # Poängberäkning
@@ -8418,12 +8519,13 @@ def calculate_scores(comp_id: int):
         holeshot_450_correct = False
         holeshot_250_correct = False
         for hp in unique_holeshot_picks:
-            actual_hs = actual_holeshots_dict.get(hp.class_name)
+            bucket = holeshot_pick_class_for_result(hp.class_name)
+            actual_hs = actual_holeshots_dict.get(bucket)
             if actual_hs and actual_hs.rider_id == hp.rider_id:
-                if hp.class_name == "450cc":
+                if bucket == "450cc":
                     holeshot_450_correct = True
                     holeshot_points += 10
-                elif hp.class_name == "250cc":
+                elif bucket == "250cc":
                     holeshot_250_correct = True
                     holeshot_points += 10
         
@@ -11037,7 +11139,7 @@ def admin_set_user_picks_full():
                     user_id=user.id,
                     competition_id=competition_id,
                     rider_id=r.id,
-                    class_name=r.class_name,
+                    class_name="450cc",
                 ))
         if holeshot_250_rider_id:
             r = Rider.query.get(int(holeshot_250_rider_id))
@@ -11046,7 +11148,7 @@ def admin_set_user_picks_full():
                     user_id=user.id,
                     competition_id=competition_id,
                     rider_id=r.id,
-                    class_name=r.class_name,
+                    class_name="250cc",
                 ))
 
         if not is_wsx and wildcard_rider_id and wildcard_position is not None:
