@@ -506,11 +506,11 @@
                 this.animTime = 0;
                 /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
                 this.useBitmapRider = true;
-                /** Lite lägre gravitation = högre, luftigare hopp */
-                this.gravity = 0.52;
-                /** Slumpas per hopp i jump(); minsta möjliga impuls (negativa Y) */
-                this.jumpPowerMin = -19;
-                this.jumpPowerMax = -27;
+                /** Högre gravitation = kortare, mer kontrollerade hopp */
+                this.gravity = 0.9;
+                /** Slumpas per hopp i jump(); impuls (negativa Y). */
+                this.jumpPowerMin = -13;
+                this.jumpPowerMax = -16;
                 this.jumpCooldown = 0;
                 
                 // Player (biker)
