@@ -507,17 +507,17 @@
                 /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
                 this.useBitmapRider = true;
                 /** Högre gravitation = kortare, mer kontrollerade hopp */
-                this.gravity = 1.05;
+                this.gravity = 0.98;
                 /** Slumpas per hopp i jump(); impuls (negativa Y). */
-                this.jumpPowerMin = -11.5;
-                this.jumpPowerMax = -13.5;
+                this.jumpPowerMin = -12.3;
+                this.jumpPowerMax = -14.2;
                 this.jumpCooldown = 0;
                 
                 // Variable jump height (tap = low, hold = higher)
                 this.jumpHeld = false;
                 this.jumpHoldFrames = 0;
                 this.jumpHoldMaxFrames = 10;
-                this.jumpHoldBoost = 0.55;
+                this.jumpHoldBoost = 0.5;
                 
                 // Player (biker)
                 this.biker = {
