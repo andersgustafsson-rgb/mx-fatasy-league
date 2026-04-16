@@ -507,10 +507,10 @@
                 /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
                 this.useBitmapRider = true;
                 /** Högre gravitation = kortare, mer kontrollerade hopp */
-                this.gravity = 0.98;
+                this.gravity = 0.95;
                 /** Slumpas per hopp i jump(); impuls (negativa Y). */
-                this.jumpPowerMin = -12.3;
-                this.jumpPowerMax = -14.2;
+                this.jumpPowerMin = -12.8;
+                this.jumpPowerMax = -14.8;
                 this.jumpCooldown = 0;
                 
                 // Variable jump height (tap = low, hold = higher)
@@ -903,11 +903,29 @@
             }
             
             checkCollision(rect1, rect2) {
-                const margin = 8;
-                return rect1.x + margin < rect2.x + rect2.width - margin &&
-                       rect1.x + rect1.width - margin > rect2.x + margin &&
-                       rect1.y + margin < rect2.y + rect2.height - margin &&
-                       rect1.y + rect1.height - margin > rect2.y + margin;
+                // Forgiving hitboxes: shrink both boxes and ignore "air clears".
+                // rect1 = biker, rect2 = obstacle
+                const mx = 14; // horizontal shrink
+                const myTop = 10; // shrink top of biker box
+                const myBottom = 14; // shrink bottom of biker box
+                const ox = 10; // shrink obstacle horizontally
+                const oy = 6; // shrink obstacle vertically
+                const airClearance = 12; // if biker bottom is above obstacle top by this, no collision
+
+                const bLeft = rect1.x + mx;
+                const bRight = rect1.x + rect1.width - mx;
+                const bTop = rect1.y + myTop;
+                const bBottom = rect1.y + rect1.height - myBottom;
+
+                const oLeft = rect2.x + ox;
+                const oRight = rect2.x + rect2.width - ox;
+                const oTop = rect2.y + oy;
+                const oBottom = rect2.y + rect2.height - oy;
+
+                // If we're clearly above the obstacle, we don't collide.
+                if (bBottom <= oTop - airClearance) return false;
+
+                return bLeft < oRight && bRight > oLeft && bTop < oBottom && bBottom > oTop;
             }
             
             updateHUD() {
