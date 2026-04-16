@@ -507,11 +507,17 @@
                 /** true = blå SVG-hoj (/static/images/blue_biker_exact.svg), false = vektor-hoj */
                 this.useBitmapRider = true;
                 /** Högre gravitation = kortare, mer kontrollerade hopp */
-                this.gravity = 0.9;
+                this.gravity = 1.05;
                 /** Slumpas per hopp i jump(); impuls (negativa Y). */
-                this.jumpPowerMin = -13;
-                this.jumpPowerMax = -16;
+                this.jumpPowerMin = -11.5;
+                this.jumpPowerMax = -13.5;
                 this.jumpCooldown = 0;
+                
+                // Variable jump height (tap = low, hold = higher)
+                this.jumpHeld = false;
+                this.jumpHoldFrames = 0;
+                this.jumpHoldMaxFrames = 10;
+                this.jumpHoldBoost = 0.55;
                 
                 // Player (biker)
                 this.biker = {
@@ -598,6 +604,7 @@
                     
                     if ((e.code === 'Space' || e.code === 'ArrowUp') && !e.repeat) {
                         e.preventDefault();
+                        this.jumpHeld = true;
                         if (this.gameRunning && !this.gamePaused && this.jumpCooldown <= 0) {
                             this.jump();
                         }
@@ -611,6 +618,9 @@
                 
                 document.addEventListener('keyup', (e) => {
                     this.keys[e.code] = false;
+                    if (e.code === 'Space' || e.code === 'ArrowUp') {
+                        this.jumpHeld = false;
+                    }
                 });
             }
             
@@ -621,9 +631,18 @@
                 if (jumpBtn) {
                     jumpBtn.addEventListener('touchstart', (e) => {
                         e.preventDefault();
+                        this.jumpHeld = true;
                         if (this.gameRunning && !this.gamePaused && this.jumpCooldown <= 0) {
                             this.jump();
                         }
+                    });
+                    jumpBtn.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        this.jumpHeld = false;
+                    });
+                    jumpBtn.addEventListener('touchcancel', (e) => {
+                        e.preventDefault();
+                        this.jumpHeld = false;
                     });
                 }
                 
@@ -636,9 +655,18 @@
                 
                 this.canvas.addEventListener('touchstart', (e) => {
                     e.preventDefault();
+                    this.jumpHeld = true;
                     if (this.gameRunning && !this.gamePaused && this.jumpCooldown <= 0) {
                         this.jump();
                     }
+                });
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.jumpHeld = false;
+                });
+                this.canvas.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    this.jumpHeld = false;
                 });
             }
             
@@ -648,6 +676,7 @@
                     const hi = this.jumpPowerMax;
                     this.biker.velocityY = lo + Math.random() * (hi - lo);
                     this.biker.isJumping = true;
+                    this.jumpHoldFrames = 0;
                     this.jumpCooldown = 7;
                     
                     // Create jump particles
@@ -751,6 +780,17 @@
                 
                 // Update physics
                 this.biker.velocityY += this.gravity;
+                
+                // Variable jump height: while holding jump, add a small upward boost early in the jump.
+                if (
+                    this.biker.isJumping &&
+                    this.jumpHeld &&
+                    this.jumpHoldFrames < this.jumpHoldMaxFrames &&
+                    this.biker.velocityY < 0
+                ) {
+                    this.biker.velocityY -= this.jumpHoldBoost;
+                    this.jumpHoldFrames++;
+                }
                 this.biker.y += this.biker.velocityY;
                 
                 // Ground collision
@@ -764,6 +804,7 @@
                     this.biker.y = this.biker.groundY - this.biker.height;
                     this.biker.velocityY = 0;
                     this.biker.isJumping = false;
+                    this.jumpHoldFrames = 0;
                     this.biker.rotation = 0;
                 } else {
                     // Ingen lutning i luften (såg konstig ut med SVG/vektor)
