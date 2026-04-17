@@ -86,11 +86,16 @@
         }
 
         #startScreen {
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            max-width: 500px;
+            inset: 0;
+            margin: auto;
+            width: calc(100% - 32px);
+            max-width: 520px;
+            max-height: calc(100% - 32px);
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         #gameOver {
