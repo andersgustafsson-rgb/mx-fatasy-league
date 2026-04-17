@@ -5639,11 +5639,80 @@ def send_pick_reminders():
         
         print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
         
-        # Format deadline time
-        if next_comp.start_time:
-            deadline_time = f"{next_comp.event_date} kl. {next_comp.start_time}"
-        else:
-            deadline_time = f"{next_comp.event_date}"
+        def _format_pick_deadline_for_email(comp: Competition) -> str:
+            """
+            E-post ska visa samma picks-deadline som countdown: 2h före racestart,
+            formaterat i svensk tid (Europe/Stockholm).
+            """
+            from datetime import datetime, timedelta
+            try:
+                from zoneinfo import ZoneInfo
+            except Exception:  # pragma: no cover
+                ZoneInfo = None  # type: ignore
+
+            if not comp.event_date:
+                return "-"
+
+            # Racets lokala tid i track-timezone (t.ex. America/New_York), baserat på DB-fält.
+            start_time = getattr(comp, "start_time", None)
+            if start_time:
+                race_local_naive = datetime.combine(comp.event_date, start_time)
+            else:
+                race_local_naive = datetime.combine(comp.event_date, datetime.min.time().replace(hour=20, minute=0))
+
+            tz_name = getattr(comp, "timezone", None) or "America/Los_Angeles"
+
+            # Konvertera racestart till UTC robust (zoneinfo→pytz→offset-fallback)
+            race_utc_naive: datetime
+            if ZoneInfo:
+                try:
+                    race_utc_naive = (
+                        race_local_naive.replace(tzinfo=ZoneInfo(tz_name))
+                        .astimezone(ZoneInfo("UTC"))
+                        .replace(tzinfo=None)
+                    )
+                except Exception:
+                    race_utc_naive = race_local_naive  # fallback handled below
+            else:
+                race_utc_naive = race_local_naive
+
+            if race_utc_naive is race_local_naive:
+                try:
+                    import pytz
+                    tz = pytz.timezone(tz_name)
+                    race_utc_naive = tz.localize(race_local_naive).astimezone(pytz.UTC).replace(tzinfo=None)
+                except Exception:
+                    timezone_offsets = {
+                        "America/Los_Angeles": -8,
+                        "America/Denver": -7,
+                        "America/Phoenix": -7,
+                        "America/Chicago": -6,
+                        "America/New_York": -5,
+                        "America/Argentina/Buenos_Aires": -3,
+                        "Australia/Brisbane": 10,
+                        "Europe/Stockholm": 1,
+                    }
+                    utc_offset = timezone_offsets.get(tz_name, -8)
+                    race_utc_naive = race_local_naive - timedelta(hours=utc_offset)
+
+            deadline_utc_naive = race_utc_naive - timedelta(hours=2)
+
+            # Visa alltid i svensk tid i mail
+            if ZoneInfo:
+                try:
+                    stockholm = ZoneInfo("Europe/Stockholm")
+                    deadline_stockholm = (
+                        deadline_utc_naive.replace(tzinfo=ZoneInfo("UTC"))
+                        .astimezone(stockholm)
+                    )
+                    return deadline_stockholm.strftime("%Y-%m-%d kl. %H:%M")
+                except Exception:
+                    pass
+
+            # Sista fallback: visa UTC (bättre än fel lokal tid)
+            return deadline_utc_naive.strftime("%Y-%m-%d %H:%M UTC")
+
+        deadline_time = _format_pick_deadline_for_email(next_comp)
         
         competition_url = f"{request.host_url}race_picks/{next_comp.id}"
         base_url = request.host_url.rstrip('/')
