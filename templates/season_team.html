@@ -159,52 +159,139 @@
           return;
         }
         
-        let html = '<table class="w-full border-collapse bg-white dark:bg-gray-800 shadow-lg rounded text-sm">';
-        html += '<thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"><tr>';
-        html += '<th class="p-2 text-left">Datum</th>';
-        html += '<th class="p-2 text-left">Tävling</th>';
-        html += '<th class="p-2">Serie</th>';
-        html += '<th class="p-2 text-center">Status</th>';
-        html += '<th class="p-2 text-right">Poäng</th>';
-        html += '</tr></thead><tbody>';
-        
-        data.competitions.forEach(comp => {
-          const hasResults = comp.has_results;
-          const canClick = hasResults && comp.rider_breakdown.length > 0;
-          const rowClass = canClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : '';
+        const all = (data.competitions || []).slice();
+        all.sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''));
+
+        const state = {
+          showAll: false,
+          status: 'all', // all | done | waiting
+          series: 'all',  // all | SX | MX | SMX | ...
+          q: '',
+        };
+
+        const uniqueSeries = Array.from(new Set(all.map(c => c.series).filter(Boolean))).sort();
+
+        function passesFilters(comp) {
+          const hasResults = !!comp.has_results;
+          if (state.status === 'done' && !hasResults) return false;
+          if (state.status === 'waiting' && hasResults) return false;
+          if (state.series !== 'all' && (comp.series || '—') !== state.series) return false;
+          if (state.q) {
+            const hay = `${comp.name || ''} ${(comp.series || '')} ${(comp.event_date || '')}`.toLowerCase();
+            if (!hay.includes(state.q)) return false;
+          }
+          return true;
+        }
+
+        function rowHtml(comp) {
+          const hasResults = !!comp.has_results;
+          const canClick = hasResults && comp.rider_breakdown && comp.rider_breakdown.length > 0;
           const onClick = canClick ? `onclick="showSeasonTeamDetails(${comp.competition_id})"` : '';
-          
-          html += `<tr ${onClick} class="border-t border-gray-200 dark:border-gray-600 ${rowClass} transition-colors group">`;
-          html += `<td class="p-2">${comp.event_date}</td>`;
-          html += `<td class="p-2">`;
-          html += `<div class="flex items-center gap-2">`;
-          html += `<span>${comp.name}</span>`;
-          if (canClick) {
-            html += `<span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">👆 Klicka för detaljer</span>`;
+          const statusBadge = hasResults
+            ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">✅ Kört</span>'
+            : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">⏳ Väntar</span>';
+
+          let ptsClass = 'text-gray-400';
+          if (hasResults && comp.total_points > 0) ptsClass = 'text-green-500';
+          else if (hasResults && comp.total_points === 0) ptsClass = 'text-red-500';
+
+          return `
+            <tr ${onClick} class="border-t border-gray-200 dark:border-gray-600 ${canClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : ''} transition-colors group">
+              <td class="p-2 whitespace-nowrap">${comp.event_date}</td>
+              <td class="p-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-900 dark:text-gray-100">${comp.name}</span>
+                  ${canClick ? '<span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">👆 Detaljer</span>' : ''}
+                </div>
+              </td>
+              <td class="p-2 text-center">${comp.series || '—'}</td>
+              <td class="p-2 text-center">${statusBadge}</td>
+              <td class="p-2 text-right font-bold ${ptsClass}">${comp.total_points}</td>
+            </tr>
+          `;
+        }
+
+        function render() {
+          const filtered = all.filter(passesFilters);
+          const visible = state.showAll ? filtered : filtered.slice(0, 6);
+          const showingText = state.showAll
+            ? `Visar ${filtered.length} tävlingar`
+            : `Visar ${Math.min(6, filtered.length)} av ${filtered.length}`;
+
+          let html = '';
+          html += `
+            <div class="flex flex-col gap-3 mb-3">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div class="text-xs text-gray-500 dark:text-gray-400">${showingText}</div>
+                <div class="flex flex-wrap gap-2">
+                  <button data-status="all" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='all' ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">Alla</button>
+                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">✅ Kört</button>
+                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">⏳ Väntar</button>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-2">
+                <div class="flex-1">
+                  <input id="comp-search" value="${state.q}" placeholder="Sök tävling…" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm" />
+                </div>
+                <div class="sm:w-48">
+                  <select id="series-filter" class="w-full px-3 py-2 rounded-lg bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 text-sm">
+                    <option value="all"${state.series==='all' ? ' selected' : ''}>Alla serier</option>
+                    ${uniqueSeries.map(s => `<option value="${s}"${state.series===s ? ' selected' : ''}>${s}</option>`).join('')}
+                  </select>
+                </div>
+                <div>
+                  <button id="toggle-show" class="px-3 py-2 rounded-lg text-sm font-bold bg-gray-700 hover:bg-gray-600 text-white">
+                    ${state.showAll ? 'Visa färre' : 'Visa fler'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          html += '<table class="w-full border-collapse bg-white dark:bg-gray-800 shadow-lg rounded text-sm">';
+          html += '<thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"><tr>';
+          html += '<th class="p-2 text-left">Datum</th>';
+          html += '<th class="p-2 text-left">Tävling</th>';
+          html += '<th class="p-2">Serie</th>';
+          html += '<th class="p-2 text-center">Status</th>';
+          html += '<th class="p-2 text-right">Poäng</th>';
+          html += '</tr></thead><tbody>';
+          html += visible.map(rowHtml).join('');
+          html += '</tbody></table>';
+
+          container.innerHTML = html;
+
+          container.querySelectorAll('.filter-status').forEach(btn => {
+            btn.addEventListener('click', () => {
+              state.status = btn.getAttribute('data-status') || 'all';
+              render();
+            });
+          });
+          const search = container.querySelector('#comp-search');
+          if (search) {
+            search.addEventListener('input', (e) => {
+              state.q = (e.target.value || '').trim().toLowerCase();
+              render();
+            });
           }
-          html += `</div></td>`;
-          html += `<td class="p-2 text-center">${comp.series || '—'}</td>`;
-          html += `<td class="p-2 text-center">`;
-          if (hasResults) {
-            html += '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">✅ Kört</span>';
-          } else {
-            html += '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">⏳ Väntar</span>';
+          const seriesSel = container.querySelector('#series-filter');
+          if (seriesSel) {
+            seriesSel.addEventListener('change', (e) => {
+              state.series = e.target.value || 'all';
+              render();
+            });
           }
-          html += `</td>`;
-          html += `<td class="p-2 text-right font-bold `;
-          if (hasResults && comp.total_points > 0) {
-            html += 'text-green-500';
-          } else if (hasResults && comp.total_points === 0) {
-            html += 'text-red-500';
-          } else {
-            html += 'text-gray-400';
+          const toggle = container.querySelector('#toggle-show');
+          if (toggle) {
+            toggle.addEventListener('click', () => {
+              state.showAll = !state.showAll;
+              render();
+            });
           }
-          html += `">${comp.total_points}</td>`;
-          html += `</tr>`;
-        });
-        
-        html += '</tbody></table>';
-        container.innerHTML = html;
+        }
+
+        render();
       } catch (e) {
         console.error('Error loading season team competitions:', e);
         container.innerHTML = '<p class="text-red-400">Fel vid laddning av tävlingar.</p>';
