@@ -1378,19 +1378,27 @@
             }
         }
 
-        // Initialize
+        // Initialize (use DOMContentLoaded so mobile can start immediately)
         let game;
-        window.addEventListener('load', () => {
-            game = new CrossJumpModern();
+        function ensureGame() {
+            if (!game) {
+                game = new CrossJumpModern();
+            }
+            return game;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            ensureGame();
         });
 
-        function startGame() {
-            game.start();
-        }
+        // Expose for inline onclick handlers
+        window.startGame = function startGame() {
+            ensureGame().start();
+        };
 
-        function restartGame() {
-            game.restart();
-        }
+        window.restartGame = function restartGame() {
+            ensureGame().restart();
+        };
     </script>
 </body>
 </html>
