@@ -2488,11 +2488,19 @@ def season_team_builder():
                 'coast_250': rider.coast_250
             })
         
-        return render_template("season_team_builder.html", 
-                             riders=riders_data, 
-                             has_existing_team=has_existing_team,
-                             existing_team=existing_team,
-                             existing_team_riders=existing_team_riders)
+        user = User.query.get(user_id)
+        html = render_template(
+            "season_team_builder.html",
+            username=user.username if user else "",
+            riders=riders_data,
+            has_existing_team=has_existing_team,
+            existing_team=existing_team,
+            existing_team_riders=existing_team_riders,
+        )
+        resp = make_response(html)
+        resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
     except Exception as e:
         print(f"Error in season_team_builder: {e}")
         return f"Error loading riders: {str(e)}", 500

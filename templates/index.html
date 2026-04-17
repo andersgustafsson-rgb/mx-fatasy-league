@@ -1736,52 +1736,95 @@
           ? competitionsWithPoints.reduce((best, c) => c.total_points > best.total_points ? c : best, competitionsWithPoints[0])
           : null;
         
-        let html = '<div class="grid grid-cols-2 gap-4 mb-4">';
-        html += `<div class="bg-gradient-to-r from-green-100 to-green-200 dark:from-green-800 dark:to-green-700 p-3 rounded-lg text-center">`;
-        html += `<div class="text-2xl font-bold text-green-700 dark:text-green-300">${totalPoints}</div>`;
-        html += `<div class="text-xs text-green-600 dark:text-green-400 mt-1">Totalt poäng</div>`;
-        html += `</div>`;
-        
-        html += `<div class="bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-800 dark:to-blue-700 p-3 rounded-lg text-center">`;
-        html += `<div class="text-2xl font-bold text-blue-700 dark:text-blue-300">${competitionsWithPoints.length}</div>`;
-        html += `<div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Tävlingar</div>`;
-        html += `</div>`;
-        
-        html += `<div class="bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-800 dark:to-purple-700 p-3 rounded-lg text-center">`;
-        html += `<div class="text-2xl font-bold text-purple-700 dark:text-purple-300">${avgPoints}</div>`;
-        html += `<div class="text-xs text-purple-600 dark:text-purple-400 mt-1">Snitt poäng</div>`;
-        html += `</div>`;
-        
-        html += `<div class="bg-gradient-to-r from-orange-100 to-orange-200 dark:from-orange-800 dark:to-orange-700 p-3 rounded-lg text-center">`;
-        if (bestCompetition) {
-          html += `<div class="text-lg font-bold text-orange-700 dark:text-orange-300 truncate">${bestCompetition.name}</div>`;
-          html += `<div class="text-xs text-orange-600 dark:text-orange-400 mt-1">${bestCompetition.total_points}p (Bästa)</div>`;
-        } else {
-          html += `<div class="text-lg font-bold text-orange-700 dark:text-orange-300">—</div>`;
-          html += `<div class="text-xs text-orange-600 dark:text-orange-400 mt-1">Bästa tävling</div>`;
-        }
-        html += `</div>`;
+        const statCard = (opts) => `
+          <div class="relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-gray-600/80 bg-gradient-to-br ${opts.grad} p-4 shadow-md ring-1 ring-black/5 dark:ring-white/5">
+            <div class="absolute -right-1 -top-1 text-4xl opacity-25 select-none pointer-events-none" aria-hidden="true">${opts.icon}</div>
+            <div class="relative">
+              <div class="text-[10px] font-bold uppercase tracking-wider ${opts.muted}">${opts.label}</div>
+              <div class="mt-1 text-2xl sm:text-3xl font-extrabold ${opts.valClass}">${opts.value}</div>
+              ${opts.hint ? `<div class="mt-1 text-[11px] leading-snug ${opts.hintClass || opts.muted}">${opts.hint}</div>` : ''}
+            </div>
+          </div>`;
+
+        let html = '<div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">';
+        html += statCard({
+          icon: '🏁',
+          grad: 'from-emerald-50 to-green-100 dark:from-emerald-950/60 dark:to-green-900/40',
+          muted: 'text-emerald-700/80 dark:text-emerald-300/80',
+          valClass: 'text-emerald-800 dark:text-emerald-200',
+          label: 'Totalt poäng',
+          value: totalPoints,
+          hint: 'Summerat över avslutade tävlingar',
+          hintClass: 'text-emerald-800/70 dark:text-emerald-200/70',
+        });
+        html += statCard({
+          icon: '📅',
+          grad: 'from-sky-50 to-blue-100 dark:from-sky-950/50 dark:to-blue-900/40',
+          muted: 'text-sky-700/80 dark:text-sky-300/80',
+          valClass: 'text-sky-900 dark:text-sky-100',
+          label: 'Tävlingar',
+          value: competitionsWithPoints.length,
+          hint: 'Där du fått poäng',
+          hintClass: 'text-sky-900/70 dark:text-sky-100/70',
+        });
+        html += statCard({
+          icon: '📈',
+          grad: 'from-violet-50 to-fuchsia-100 dark:from-violet-950/50 dark:to-fuchsia-900/35',
+          muted: 'text-violet-700/80 dark:text-violet-300/80',
+          valClass: 'text-violet-900 dark:text-violet-100',
+          label: 'Snitt / race',
+          value: avgPoints,
+          hint: 'Genomsnitt när du fått poäng',
+          hintClass: 'text-violet-900/70 dark:text-violet-100/70',
+        });
+        html += statCard({
+          icon: '🏆',
+          grad: 'from-amber-50 to-orange-100 dark:from-amber-950/45 dark:to-orange-900/35',
+          muted: 'text-amber-800/80 dark:text-amber-300/80',
+          valClass: 'text-amber-900 dark:text-amber-100',
+          label: 'Bästa race',
+          value: bestCompetition ? `${bestCompetition.total_points}p` : '—',
+          hint: bestCompetition ? bestCompetition.name : 'Ingen ännu',
+          hintClass: 'text-amber-900/75 dark:text-amber-100/75 truncate',
+        });
         html += '</div>';
         
-        // Show recent competitions
+        // Show recent competitions — horisontell snabbnavigering (chips)
         const recentCompetitions = data.competitions
           .filter(c => c.has_results)
-          .slice(-5)
+          .slice(-6)
           .reverse();
         
         if (recentCompetitions.length > 0) {
-          html += '<div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">';
-          html += '<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Senaste tävlingar:</h3>';
-          html += '<div class="space-y-1">';
+          html += `
+            <div class="rounded-2xl border border-gray-200/80 dark:border-gray-600/80 bg-gradient-to-br from-gray-50/90 to-slate-100/90 dark:from-gray-800/80 dark:to-slate-900/60 p-4 shadow-inner">
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <div>
+                  <h3 class="text-sm font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">Senaste form</h3>
+                  <p class="text-[11px] text-gray-500 dark:text-gray-400">Swipea sidledes på mobil</p>
+                </div>
+                <a href="${window.seasonTeamPageUrl || '/season_team'}" class="shrink-0 text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline">Alla tävlingar →</a>
+              </div>
+              <div class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style="-webkit-overflow-scrolling: touch; scrollbar-width: thin;">
+          `;
           recentCompetitions.forEach(comp => {
-            html += `<div class="flex justify-between items-center text-xs">`;
-            html += `<span class="text-gray-600 dark:text-gray-400">${comp.name}</span>`;
-            html += `<span class="font-bold ${comp.total_points > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">${comp.total_points}p</span>`;
-            html += `</div>`;
+            const ptsClass = comp.total_points > 0
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-500 dark:text-red-400';
+            const ser = (comp.series || '—').toString();
+            html += `
+              <div class="shrink-0 w-[148px] sm:w-[168px] rounded-xl border border-gray-200/90 dark:border-gray-600/80 bg-white/80 dark:bg-gray-900/50 backdrop-blur-sm px-3 py-2 shadow-sm">
+                <div class="flex items-center justify-between gap-1 mb-1">
+                  <span class="text-[10px] font-mono text-gray-500 dark:text-gray-400">${comp.event_date || ''}</span>
+                  <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">${ser}</span>
+                </div>
+                <div class="text-xs font-bold text-gray-800 dark:text-gray-100 leading-tight line-clamp-2 min-h-[2.25rem]">${comp.name}</div>
+                <div class="mt-1 text-lg font-black ${ptsClass}">${comp.total_points}<span class="text-xs font-bold opacity-80">p</span></div>
+              </div>`;
           });
-          html += '</div>';
-          html += `<a href="${window.seasonTeamPageUrl || '/season_team'}" class="block text-center mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline">Se alla tävlingar →</a>`;
-          html += '</div>';
+          html += `
+              </div>
+            </div>`;
         }
         
         container.innerHTML = html;

@@ -3,73 +3,73 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Skapa ditt Säsongsteam</title>
+  <title>Säsongsteam – bygg lag</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .rider-card { 
-      transition: all 0.3s ease;
-      border: 2px solid transparent;
+    .rider-card {
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      border: 1px solid rgb(51 65 85 / 0.6);
     }
-    .rider-card:hover { 
-      transform: translateY(-6px) scale(1.02);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-      border-color: #3b82f6;
+    .rider-card:hover {
+      border-color: rgb(34 211 238 / 0.45);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    .dark .rider-card:hover {
+      border-color: rgb(34 211 238 / 0.35);
     }
     .rider-card.selected {
-      border-color: #10b981;
-      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border-color: rgb(52 211 153 / 0.45);
+      background: rgb(6 78 59 / 0.22);
+      box-shadow: 0 0 0 1px rgb(52 211 153 / 0.15), inset 0 0 0 1px rgb(52 211 153 / 0.06);
     }
     .btn-add {
-      transition: all 0.2s ease;
+      transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
       position: relative;
       overflow: hidden;
     }
     .btn-add:hover:not(:disabled) {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
     }
-    .btn-add:disabled { 
-      background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-      cursor: not-allowed; 
-      opacity: 0.6; 
+    .btn-add:disabled {
+      background: rgb(51 65 85);
+      cursor: not-allowed;
+      opacity: 0.55;
     }
     .btn-add.selected {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: rgb(5 150 105);
     }
-    .rule-valid { color: #10b981; font-weight: 600; }
-    .rule-invalid { color: #ef4444; font-weight: 600; }
+    .rule-valid { color: #34d399; font-weight: 600; }
+    .rule-invalid { color: #f87171; font-weight: 600; }
     .budget-bar {
-      height: 8px;
-      background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%);
-      border-radius: 4px;
-      transition: all 0.3s ease;
+      height: 6px;
+      background: rgb(30 41 59);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgb(51 65 85 / 0.8);
     }
     .budget-fill {
       height: 100%;
-      background: linear-gradient(90deg, #1f2937 0%, #374151 100%);
-      border-radius: 4px;
-      transition: all 0.3s ease;
+      min-width: 0;
+      border-radius: 999px;
+      transition: width 0.25s ease, background 0.25s ease;
     }
     .team-card {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border: 2px solid #e2e8f0;
-      transition: all 0.3s ease;
+      background: rgb(30 41 59 / 0.35);
+      border: 1px solid rgb(51 65 85 / 0.7);
+      transition: border-color 0.2s ease;
     }
     .team-card:hover {
-      border-color: #3b82f6;
-      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1);
+      border-color: rgb(34 211 238 / 0.25);
     }
     .filter-btn {
-      transition: all 0.2s ease;
+      transition: background 0.15s ease, border-color 0.15s ease;
       position: relative;
     }
     .filter-btn.active {
-      background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 0 0 1px rgb(34 211 238 / 0.35);
     }
     .filter-btn:hover:not(.active) {
-      transform: scale(1.02);
+      border-color: rgb(71 85 105);
     }
     #toast { 
       position: fixed; 
@@ -88,20 +88,19 @@
     #toast.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
     #toast.error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
     .rider-image {
-      border: 3px solid #e5e7eb;
-      transition: all 0.3s ease;
+      border: 2px solid rgb(51 65 85);
+      transition: border-color 0.2s ease;
     }
     .rider-card:hover .rider-image {
-      border-color: #3b82f6;
-      transform: scale(1.1);
+      border-color: rgb(34 211 238 / 0.5);
     }
     .price-tag {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
+      display: inline-block;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      color: rgb(52 211 153);
     }
     .header-gradient {
       background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #06b6d4 100%);
@@ -111,7 +110,7 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans">
+<body class="min-h-screen bg-slate-950 text-slate-200 font-sans antialiased">
   <div id="toast"></div>
 
   <div class="container mx-auto p-3 sm:p-4 md:p-8">
@@ -120,47 +119,47 @@
       <header>
         {% if has_existing_team %}
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Redigera Säsongsteam</h1>
-        <p class="text-base sm:text-lg mt-2 text-gray-600 dark:text-gray-400">
-          Inloggad som: <strong class="text-blue-600">{{ username }}</strong>
+        <p class="text-base sm:text-lg mt-2 text-slate-400">
+          Inloggad som: <strong class="text-cyan-300">{{ username }}</strong>
         </p>
-        <div class="mt-3 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
-          <p class="text-yellow-800 text-sm font-medium">
-            ⚠️ <strong>Att byta förare kostar 50 poäng per byte!</strong> Du har redan ett team: <strong>{{ existing_team.team_name }}</strong>
+        <div class="mt-3 p-3 rounded-lg border border-amber-800/40 bg-amber-950/25 dark:bg-amber-950/30 text-amber-100/95">
+          <p class="text-sm leading-snug">
+            <span class="font-semibold text-amber-200">Byte av förare:</span> 50 poäng per förare. Aktivt team: <strong class="text-white">{{ existing_team.team_name }}</strong>
           </p>
-          <p class="text-yellow-700 text-xs mt-1">
-            💡 Att ändra teamnamnet kostar inga poäng - bara att byta förare kostar poäng.
+          <p class="text-xs mt-1.5 text-amber-200/80">
+            Teamnamn kan ändras utan poängstraff.
           </p>
         </div>
         {% else %}
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Skapa ditt Säsongsteam</h1>
-        <p class="text-base sm:text-lg mt-2 text-gray-600 dark:text-gray-400">
-          Inloggad som: <strong class="text-blue-600">{{ username }}</strong>
+        <p class="text-base sm:text-lg mt-2 text-slate-400">
+          Inloggad som: <strong class="text-cyan-300">{{ username }}</strong>
         </p>
         {% endif %}
         
         <!-- Poängvisning -->
-        <div id="points-display" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-          <div class="flex items-center justify-between">
+        <div id="points-display" class="mt-4 p-4 rounded-xl border border-slate-600/60 bg-slate-800/40 dark:bg-slate-800/50">
+          <div class="flex items-center justify-between gap-3">
             <div>
-              <h3 class="text-lg font-semibold text-blue-800">💰 Dina Poäng</h3>
-              <p class="text-sm text-blue-600">Totalt tillgängliga poäng</p>
+              <h3 class="text-sm font-bold uppercase tracking-wide text-slate-300">Dina poäng</h3>
+              <p class="text-xs text-slate-400">Tillgängligt saldo</p>
             </div>
             <div class="text-right">
-              <div id="current-points" class="text-2xl font-bold text-blue-800">Laddar...</div>
-              <div id="penalty-preview" class="text-sm text-red-600 font-medium hidden">
-                -<span id="penalty-amount">0</span><span class="penalty-text"> poäng för byten</span>
+              <div id="current-points" class="text-2xl font-black tabular-nums text-cyan-300">Laddar...</div>
+              <div id="penalty-preview" class="text-xs text-red-400 font-medium hidden mt-0.5">
+                −<span id="penalty-amount">0</span><span class="penalty-text"> vid sparning</span>
               </div>
             </div>
           </div>
-          <div class="mt-2">
-            <div class="text-xs text-gray-600">
+          <div class="mt-2 border-t border-slate-600/50 pt-2 hidden" id="points-after-wrap">
+            <div class="text-xs text-slate-400">
               <span id="points-after-change" class="font-medium">Efter ändring: <span id="points-after-amount">-</span> poäng</span>
             </div>
           </div>
         </div>
       </header>
       <a href="{{ url_for('index') }}"
-         class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 sm:px-4 rounded text-sm sm:text-base self-start sm:self-center">
+         class="border border-slate-500 bg-slate-800/80 hover:bg-slate-700 text-slate-100 font-semibold py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base self-start sm:self-center transition-colors">
         Tillbaka
       </a>
     </div>
@@ -168,90 +167,114 @@
     <main class="space-y-4 sm:space-y-6">
       <!-- Nuvarande team (om det finns) - kompakt version ovanför -->
       {% if has_existing_team %}
-      <div class="current-team-card bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border-2 border-yellow-400">
-        <h2 class="text-lg font-semibold mb-2 border-b border-yellow-200 pb-1 text-yellow-600">⭐ Nuvarande Team</h2>
-        <div id="current-team-list" class="grid grid-cols-4 gap-2">
-          <!-- Current team riders will be loaded here -->
-        </div>
-        <div class="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200">
-          <p class="text-xs text-yellow-800 dark:text-yellow-200 mb-1">
-            💡 <strong>Tips:</strong> Klicka "Byt ut" för att ersätta en förare, eller kopiera teamet som start.
-          </p>
-          <button onclick="copyCurrentTeam()" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors">
-            📋 Kopiera nuvarande team som start
+      <div class="current-team-card rounded-xl border border-slate-600/70 bg-slate-800/30 dark:bg-slate-900/40 p-4 shadow-lg border-l-4 border-l-cyan-500/80">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wide text-slate-200">Nuvarande team</h2>
+          <button type="button" onclick="copyCurrentTeam()" class="text-xs font-semibold text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline sm:no-underline sm:border sm:border-cyan-700/60 sm:rounded-lg sm:px-3 sm:py-1.5 sm:hover:bg-cyan-950/40">
+            Kopiera som utgångsläge
           </button>
         </div>
+        <div id="current-team-list" class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <!-- Current team riders will be loaded here -->
+        </div>
+        <p class="text-[11px] text-slate-400 mt-3 leading-relaxed">
+          Använd <strong class="text-slate-300">Byt ut</strong> under en förare, eller <strong class="text-slate-300">Kopiera som utgångsläge</strong> för att fylla utkastet till höger.
+        </p>
       </div>
       {% endif %}
 
       <!-- Huvudlayout med grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
         <!-- Riderlista -->
-        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-lg">
-          <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 border-b pb-2">Välj Förare</h2>
+        <div class="lg:col-span-2 rounded-xl border border-slate-600/70 bg-slate-800/25 dark:bg-slate-800/40 p-4 sm:p-5 shadow-lg">
+          <h2 class="text-lg sm:text-xl font-bold text-slate-100 mb-1">Välj förare</h2>
+          <p class="text-xs text-slate-400 mb-4">Filtrera klass och lägg till i utkastet till höger.</p>
 
-          <div class="mb-3 sm:mb-4 flex flex-wrap gap-2 items-center">
-            <button id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium active" onclick="setFilter('all')">
-              🏍️ Alla
+          <div class="mb-3 flex flex-wrap gap-2 items-center">
+            <button type="button" id="tab-all" class="filter-btn px-3 py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold border border-cyan-500/50" onclick="setFilter('all')">
+              Alla
             </button>
-            <button id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('450cc')">
-              🔥 450cc
-          </button>
-            <button id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium" onclick="setFilter('250cc')">
-              ⚡ 250cc
-          </button>
-            <span class="text-xs text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded">💡 Klicka på + för att lägga till</span>
-        </div>
+            <button type="button" id="tab-450" class="filter-btn px-3 py-2 rounded-lg bg-slate-700 text-slate-200 text-sm font-medium border border-slate-600" onclick="setFilter('450cc')">
+              450cc
+            </button>
+            <button type="button" id="tab-250" class="filter-btn px-3 py-2 rounded-lg bg-slate-700 text-slate-200 text-sm font-medium border border-slate-600" onclick="setFilter('250cc')">
+              250cc
+            </button>
+          </div>
 
-          <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+            <div class="flex-1">
+              <label for="rider-search" class="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1">
+                Sök förare
+              </label>
+              <input
+                id="rider-search"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                placeholder="Sök på namn, nummer eller märke…"
+                class="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 outline-none transition-all placeholder:text-slate-500"
+                oninput="setSearch(this.value)"
+              />
+              <p class="text-[11px] text-slate-500 mt-1">
+                Listan laddas inte fullt ut: skriv <strong class="text-slate-300">minst 2 tecken</strong> (namn, # eller märke). Dina valda i utkastet syns alltid.
+              </p>
+            </div>
+            <div class="sm:pt-6 flex items-center justify-between sm:justify-end gap-2">
+              <span id="rider-count" class="text-xs text-slate-400 tabular-nums"></span>
+              <button type="button" onclick="clearSearch()" class="text-xs font-semibold text-slate-300 hover:text-white border border-slate-600 bg-slate-800/80 hover:bg-slate-700 px-3 py-2 rounded-lg transition-colors">
+                Rensa
+              </button>
+            </div>
+          </div>
+
+          <div id="rider-list" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
       </div>
 
       <!-- Ditt team -->
-      <div class="team-card bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-xl h-fit sticky top-4 sm:top-8">
-        <h2 class="text-xl sm:text-2xl font-semibold mb-4 border-b-2 border-blue-200 pb-3 text-blue-600">
-          {% if has_existing_team %}🔄 Nytt Team{% else %}🏆 Ditt Team{% endif %}
+      <div class="team-card rounded-xl p-4 sm:p-5 shadow-xl h-fit lg:sticky lg:top-4">
+        <h2 class="text-lg font-bold text-slate-100 mb-1 pb-3 border-b border-slate-600/80">
+          {% if has_existing_team %}Nytt team (utkast){% else %}Ditt team{% endif %}
         </h2>
 
         <div class="mb-4">
-          <label for="team-name-input" class="block dark:text-gray-300 mb-2 text-sm font-medium">
-            Teamnamn:
+          <label for="team-name-input" class="block text-slate-300 mb-1.5 text-xs font-semibold uppercase tracking-wide">
+            Teamnamn
             {% if has_existing_team %}
-            <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">(Du kan ändra namnet när som helst)</span>
+            <span class="normal-case font-normal text-slate-500"> · kan ändras fritt</span>
             {% endif %}
           </label>
           <input type="text" id="team-name-input"
-                 class="w-full p-3 border-2 border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                 class="w-full p-2.5 rounded-lg bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/40 outline-none transition-all placeholder:text-slate-500"
                  placeholder="T.ex. Team Awesome" 
                  {% if has_existing_team %}value="{{ existing_team.team_name }}"{% endif %}
                  oninput="validateAndRender()"
                  onfocus="this.select()" />
-          {% if has_existing_team %}
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            💡 Att ändra teamnamnet kostar inga poäng - bara att byta förare kostar poäng.
-          </p>
-          {% endif %}
         </div>
 
-        <div class="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600 rounded-lg border border-blue-200">
-          <h4 class="font-semibold mb-3 text-sm text-blue-700 dark:text-blue-300">📋 Regler:</h4>
-          <ul class="space-y-2 text-sm">
-            <li id="rule-total" class="flex justify-between items-center">
-              <span>👥 Totalt:</span><span class="font-mono">0 / 4</span>
-            </li>
-            <li id="rule-450" class="flex justify-between items-center">
-              <span>🔥 450cc:</span><span class="font-mono">0 / 2</span>
-            </li>
-            <li id="rule-250" class="flex justify-between items-center">
-              <span>⚡ 250cc:</span><span class="font-mono">0 / 2</span>
-            </li>
-            <li id="rule-budget" class="flex justify-between items-center">
-              <span>💰 Budget:</span>
-              <span id="budget-remaining" class="font-mono text-green-600 font-bold">1 500 000</span>
-            </li>
-          </ul>
+        <div class="mb-4 p-3 rounded-xl border border-slate-600/70 bg-slate-900/35">
+          <h4 class="font-bold mb-2 text-[11px] uppercase tracking-wide text-slate-400">Regler & budget</h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div id="rule-total" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
+              <span class="text-slate-400 text-xs">Totalt</span><span class="font-mono font-bold tabular-nums">0 / 4</span>
+            </div>
+            <div id="rule-450" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
+              <span class="text-slate-400 text-xs">450cc</span><span class="font-mono font-bold tabular-nums">0 / 2</span>
+            </div>
+            <div id="rule-250" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
+              <span class="text-slate-400 text-xs">250cc</span><span class="font-mono font-bold tabular-nums">0 / 2</span>
+            </div>
+            <div id="rule-budget" class="flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80">
+              <span class="text-slate-400 text-xs">Kvar</span>
+              <span id="budget-remaining" class="font-mono font-bold tabular-nums text-emerald-400">1 500 000</span>
+            </div>
+          </div>
           
-          <!-- Budget Progress Bar -->
           <div class="mt-3">
+            <div class="flex justify-between text-[10px] text-slate-500 mb-1">
+              <span>Budget använd</span>
+              <span id="budget-pct-label">0%</span>
+            </div>
             <div class="budget-bar">
               <div class="budget-fill" id="budget-progress" style="width: 0%"></div>
             </div>
@@ -262,20 +285,20 @@
 
         <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {% if has_existing_team %}
-          <button onclick="undoChanges()"
+          <button type="button" onclick="undoChanges()"
                   id="undo-btn"
-                  class="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 font-bold py-3 px-4 rounded-lg text-white text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg">
-            ↩️ Ångra
+                  class="border border-slate-500 bg-slate-800 hover:bg-slate-700 font-semibold py-3 px-4 rounded-lg text-slate-100 text-sm sm:text-base transition-colors">
+            Ångra
           </button>
           {% endif %}
-          <button onclick="saveSeasonTeam()"
+          <button type="button" onclick="saveSeasonTeam()"
                   id="save-team-btn"
-                  class="{% if has_existing_team %}col-span-1{% else %}col-span-2{% endif %} bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base transition-all duration-200 transform hover:scale-105 shadow-lg"
+                  class="{% if has_existing_team %}col-span-1{% else %}col-span-2{% endif %} bg-emerald-600 hover:bg-emerald-500 font-bold py-3 px-4 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base transition-colors shadow-lg shadow-emerald-900/20"
                   disabled>
             {% if has_existing_team %}
-            ⚠️ Uppdatera Team (-50 poäng)
+            Uppdatera team
             {% else %}
-            💾 Spara Team
+            Spara team
             {% endif %}
           </button>
         </div>
@@ -287,8 +310,8 @@
   <script>
     // Data från servern (se till att du skickar 'riders' i samma format som tidigare)
     const allRiders = {{ riders | tojson | safe }};
-    const hasExistingTeam = {{ has_existing_team | tojson | safe }};
-    const existingTeamRiders = {{ existing_team_riders | tojson | safe }};
+    const hasExistingTeam = {{ has_existing_team | default(false) | tojson | safe }};
+    const existingTeamRiders = {{ existing_team_riders | default([]) | tojson | safe }};
 
     // Konfiguration
     const totalBudget = 1500000;
@@ -298,6 +321,26 @@
     let myTeam = [];
     let classFilter = "all";
     let currentTeam = []; // Store current team riders
+    let searchQuery = "";
+
+    function normalizeSearch(s) {
+      return (s || "")
+        .toString()
+        .toLowerCase()
+        .trim();
+    }
+
+    function setSearch(val) {
+      searchQuery = val || "";
+      renderRiderList();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById("rider-search");
+      if (input) input.value = "";
+      searchQuery = "";
+      renderRiderList();
+    }
 
     function showToast(msg, ok = true) {
       const t = document.getElementById("toast");
@@ -315,12 +358,11 @@
       const btn450 = document.getElementById("tab-450");
       const btn250 = document.getElementById("tab-250");
       
-      allBtn.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
-        (cls === "all" ? "bg-blue-600 active" : "bg-gray-600");
-      btn450.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
-        (cls === "450cc" ? "bg-blue-600 active" : "bg-gray-600");
-      btn250.className = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-medium " + 
-        (cls === "250cc" ? "bg-blue-600 active" : "bg-gray-600");
+      const inactive = "filter-btn px-3 py-2 rounded-lg text-slate-200 text-sm font-medium border border-slate-600 bg-slate-700";
+      const active = "filter-btn px-3 py-2 rounded-lg text-white text-sm font-semibold border border-cyan-500/50 bg-cyan-600 active";
+      allBtn.className = cls === "all" ? active : inactive;
+      btn450.className = cls === "450cc" ? active : inactive;
+      btn250.className = cls === "250cc" ? active : inactive;
 
       renderRiderList();
     }
@@ -341,9 +383,9 @@
       const imgHtml = r.image_url
         ? `<img src="${riderImgSrc}"
                 alt="${r.name} headshot"
-                class="rider-image w-12 h-12 object-cover rounded-full" width="48" height="48"
+                class="rider-image w-11 h-11 object-cover rounded-full" width="44" height="44"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center" style="display: none;">
+            <div class="w-11 h-11 bg-slate-700 rounded-full flex items-center justify-center" style="display: none;">
               ${r.bike_brand 
                 ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
                        alt="${r.bike_brand} logo" 
@@ -355,49 +397,118 @@
         : (r.bike_brand
             ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                    alt="${r.bike_brand} logo"
-                   class="rider-image w-12 h-12 object-contain" width="48" height="48" />`
-            : `<div class="w-12 h-12 bg-gradient-to-br from-gray-600 to-gray-700 rounded-full flex items-center justify-center">
+                   class="rider-image w-11 h-11 object-contain" width="44" height="44" />`
+            : `<div class="w-11 h-11 bg-slate-700 rounded-full flex items-center justify-center">
                  <span class="text-white text-xs font-bold">#${r.rider_number}</span>
                </div>`);
 
-      // Bygg HTML för nummer-cirkeln med olika färger för 450cc och 250cc
-      const numberBgClass = r.class === "450cc" 
-        ? "bg-gradient-to-br from-orange-500 to-red-600" 
-        : "bg-gradient-to-br from-yellow-400 to-orange-500";
-      
-      const numberHtml = `<div class="w-10 h-10 ${numberBgClass} rounded-full flex items-center justify-center shadow-lg">
-        <span class="text-white text-sm font-bold">#${r.rider_number || "-"}</span>
+      const classChip =
+        r.class === "450cc"
+          ? '<span class="inline-flex items-center gap-1 rounded-full bg-orange-500/15 text-orange-200 border border-orange-500/30 px-2 py-0.5 text-[10px] font-bold">450cc</span>'
+          : '<span class="inline-flex items-center gap-1 rounded-full bg-violet-500/15 text-violet-200 border border-violet-500/30 px-2 py-0.5 text-[10px] font-bold">250cc</span>';
+      const numberHtml = `<div class="w-9 h-9 rounded-full flex items-center justify-center bg-slate-900/80 border border-slate-500/80">
+        <span class="text-slate-200 text-xs font-black tabular-nums">#${r.rider_number || "-"}</span>
       </div>`;
 
       return `
-        <div class="rider-card bg-white dark:bg-gray-700 p-4 rounded-xl shadow-lg flex items-center gap-4 ${isSelected ? 'selected' : ''} ${isTooExpensive ? 'opacity-60' : ''}">
-          <div class="flex-shrink-0 flex items-center gap-3">
+        <div class="rider-card bg-slate-800/40 dark:bg-slate-800/50 p-3 rounded-xl flex items-center gap-3 ${isSelected ? 'selected' : ''} ${isTooExpensive ? 'opacity-55' : ''}">
+          <div class="flex-shrink-0 flex items-center gap-2.5">
             ${imgHtml}
             ${numberHtml}
           </div>
-          <div class="flex-1">
-            <div class="font-bold text-gray-800 dark:text-gray-200">${r.name}</div>
-            <div class="text-xs text-gray-600 dark:text-gray-300 mb-1">
-              ${r.class === '450cc' ? '🔥' : '⚡'} ${r.class}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-bold text-slate-100 text-sm leading-tight truncate">${r.name}</span>
+              ${classChip}
             </div>
-            <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">${r.bike_brand || "—"}</div>
-            <div class="price-tag inline-block ${isTooExpensive ? 'text-red-600 font-bold' : ''}">${formatCurrency(r.price)} kr</div>
-            ${isTooExpensive ? '<div class="text-xs text-red-600 font-medium mt-1">För dyr att byta till!</div>' : ''}
+            <div class="text-[11px] text-slate-400 mt-0.5 truncate">${r.bike_brand || "—"}</div>
+            <div class="price-tag mt-1 ${isTooExpensive ? '!text-red-400' : ''}">${formatCurrency(r.price)} kr</div>
+            ${isTooExpensive ? '<div class="text-[10px] text-red-400 font-medium mt-0.5">Över budget för detta byte</div>' : ''}
           </div>
-          <button class="btn-add px-4 py-2 text-white rounded-lg font-medium text-sm ${isSelected ? 'selected' : isTooExpensive ? 'bg-red-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}"
+          <button type="button" class="btn-add shrink-0 px-3 py-2 text-white rounded-lg font-semibold text-xs ${isSelected ? 'selected' : isTooExpensive ? 'bg-red-900/60 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500'}"
                   ${!canAdd ? "disabled" : ""}>
-            ${isSelected ? "✅ Vald" : isTooExpensive ? "❌ För dyr" : "➕ Lägg till"}
+            ${isSelected ? "Vald" : isTooExpensive ? "Stopp" : "Lägg till"}
           </button>
         </div>
       `;
     }
 
+    const MIN_SEARCH_LEN = 2;
+
     function renderRiderList() {
       const container = document.getElementById("rider-list");
       container.innerHTML = "";
-      const filtered = allRiders.filter(
-        (r) => classFilter === "all" || r.class === classFilter
+      const countEl = document.getElementById("rider-count");
+      const q = normalizeSearch(searchQuery);
+      const draftIds = new Set(myTeam.map((x) => x.id));
+
+      const matchesClass = (r) => classFilter === "all" || r.class === classFilter;
+
+      const matchesSearch = (r) => {
+        const name = normalizeSearch(r.name);
+        const brand = normalizeSearch(r.bike_brand);
+        const num = normalizeSearch(r.rider_number);
+        return name.includes(q) || brand.includes(q) || num.includes(q);
+      };
+
+      // Never dump the full roster: need search, except we always show riders already in the draft.
+      if (q.length < MIN_SEARCH_LEN) {
+        const draftOnly = allRiders.filter((r) => matchesClass(r) && draftIds.has(r.id));
+        if (draftOnly.length === 0) {
+          if (countEl) countEl.textContent = "";
+          container.innerHTML = `
+          <div class="col-span-full rounded-xl border border-slate-600/70 bg-slate-900/30 p-4 text-center">
+            <div class="text-sm font-semibold text-slate-200">Börja med att söka</div>
+            <div class="text-xs text-slate-400 mt-1">Skriv minst ${MIN_SEARCH_LEN} tecken (namn, nummer eller märke). Välj gärna 450cc/250cc först om du vill begränsa klassen.</div>
+          </div>
+        `;
+          return;
+        }
+        if (countEl) countEl.textContent = `${draftOnly.length} i utkastet · sök för fler`;
+        container.insertAdjacentHTML(
+          "afterbegin",
+          `<div class="col-span-full text-[11px] text-slate-400 -mt-1 mb-2">Visar endast valda i utkastet tills du söker.</div>`
+        );
+        draftOnly.forEach((r) => {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = riderCardHTML(r);
+          const btn = wrapper.querySelector(".btn-add");
+          btn.onclick = (event) => {
+            event.stopPropagation();
+            addRider(r);
+          };
+          container.appendChild(wrapper.firstElementChild);
+        });
+        return;
+      }
+
+      const fromSearch = allRiders.filter(
+        (r) => matchesClass(r) && matchesSearch(r)
       );
+      const searchIds = new Set(fromSearch.map((r) => r.id));
+      const draftExtra = allRiders.filter(
+        (r) => matchesClass(r) && draftIds.has(r.id) && !searchIds.has(r.id)
+      );
+      const filtered = draftExtra.length
+        ? [...draftExtra, ...fromSearch]
+        : fromSearch;
+
+      if (countEl) {
+        countEl.textContent =
+          draftExtra.length > 0
+            ? `${filtered.length} träffar (${draftExtra.length} i utkast + sök)`
+            : `${filtered.length} träffar`;
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full rounded-xl border border-slate-600/70 bg-slate-900/30 p-4 text-center">
+            <div class="text-sm font-semibold text-slate-200">Inga träffar</div>
+            <div class="text-xs text-slate-400 mt-1">Prova en annan sökning eller byt klass.</div>
+          </div>
+        `;
+        return;
+      }
 
       filtered.forEach((r) => {
         const wrapper = document.createElement("div");
@@ -540,41 +651,42 @@
       
       // Render teamlistan
       const list = document.getElementById("your-team-list");
-      list.innerHTML = myTeam.length ? "" : "<p class='text-gray-500'>Välj förare från listan.</p>";
+      list.innerHTML = myTeam.length ? "" : "<p class='text-slate-500 text-sm'>Välj fyra förare i listan till vänster.</p>";
 
       myTeam.forEach((r) => {
         const row = document.createElement("div");
-        row.className = "flex justify-between items-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 p-3 rounded-lg border border-green-200 dark:border-gray-600";
+        row.className =
+          "flex justify-between items-center gap-2 p-2.5 rounded-lg border border-slate-600/80 bg-slate-900/40";
         row.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             ${r.image_url
               ? `<img src="${r.image_url.startsWith('data:') ? r.image_url : '/static/' + (r.image_url.startsWith('riders/') ? r.image_url : 'riders/' + r.image_url)}"
                        alt="${r.name} headshot"
-                       class="w-10 h-10 object-cover rounded-full border-2 border-green-300" width="40" height="40"
+                       class="w-9 h-9 object-cover rounded-full border border-slate-500 shrink-0" width="36" height="36"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                   <div class="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center" style="display: none;">
+                   <div class="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center shrink-0" style="display: none;">
                      ${r.bike_brand 
                        ? `<img src="/static/brand_logos/${r.bike_brand.toLowerCase()}.png" 
                               alt="${r.bike_brand} logo" 
-                              class="w-6 h-6 object-contain"
+                              class="w-5 h-5 object-contain"
                               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                         <span class="text-white text-xs font-bold" style="display: none;">#${r.rider_number}</span>`
-                       : `<span class="text-white text-xs font-bold">#${r.rider_number}</span>`}
+                         <span class="text-white text-[10px] font-bold" style="display: none;">#${r.rider_number}</span>`
+                       : `<span class="text-white text-[10px] font-bold">#${r.rider_number}</span>`}
                    </div>`
               : (r.bike_brand
                   ? `<img src="{{ url_for('static', filename='brand_logos') }}/${(r.bike_brand || '').toLowerCase()}.png"
                          alt="${r.bike_brand} logo"
-                         class="w-10 h-10 object-contain border-2 border-green-300 rounded-full" width="40" height="40" />`
-                  : `<div class="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
-                       <span class="text-white text-xs font-bold">#${r.rider_number}</span>
+                         class="w-9 h-9 object-contain border border-slate-500 rounded-full shrink-0" width="36" height="36" />`
+                  : `<div class="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center shrink-0">
+                       <span class="text-white text-[10px] font-bold">#${r.rider_number}</span>
                      </div>`)}
-            <div>
-              <div class="font-semibold text-gray-800 dark:text-gray-200">${r.name}</div>
-              <div class="text-xs text-gray-600 dark:text-gray-300">${r.class === '450cc' ? '🔥' : '⚡'} ${r.class} • #${r.rider_number || "-"}</div>
-              <div class="text-xs text-green-600 font-medium">${formatCurrency(r.price)} kr</div>
+            <div class="min-w-0">
+              <div class="font-semibold text-slate-100 text-sm truncate">${r.name}</div>
+              <div class="text-[11px] text-slate-400">${r.class} · #${r.rider_number || "-"}</div>
+              <div class="text-[11px] text-emerald-400/90 font-semibold tabular-nums">${formatCurrency(r.price)} kr</div>
             </div>
           </div>
-          <button class="text-red-500 hover:text-red-700 font-bold text-lg hover:scale-110 transition-transform" onclick="removeRider(${r.id})" title="Ta bort från team">🗑️</button>
+          <button type="button" class="shrink-0 text-slate-500 hover:text-red-400 text-sm font-bold px-2 py-1 rounded-md hover:bg-slate-800 transition-colors" onclick="removeRider(${r.id})" title="Ta bort från team">✕</button>
         `;
         list.appendChild(row);
       });
@@ -584,10 +696,15 @@
       const c250 = myTeam.filter((x) => x.class === "250cc").length;
       const total = myTeam.length;
 
+      const ruleBox =
+        "flex justify-between items-center gap-2 rounded-lg bg-slate-800/80 px-2.5 py-2 border border-slate-700/80";
       const rule = (id, ok, txt) => {
-        const li = document.getElementById(id);
-        li.querySelector("span:last-child").textContent = txt;
-        li.className = (ok ? "rule-valid" : "rule-invalid") + " flex justify-between";
+        const box = document.getElementById(id);
+        const val = box.querySelector("span:last-child");
+        val.textContent = txt;
+        val.className =
+          "font-mono font-bold tabular-nums " + (ok ? "text-emerald-400" : "text-red-400");
+        box.className = ruleBox;
       };
 
       document.getElementById("budget-remaining").textContent = formatCurrency(budget);
@@ -601,6 +718,8 @@
       const percentage = (spent / totalBudget) * 100;
       const progressBar = document.getElementById("budget-progress");
       progressBar.style.width = `${percentage}%`;
+      const pctEl = document.getElementById("budget-pct-label");
+      if (pctEl) pctEl.textContent = `${Math.min(100, Math.round(percentage))}%`;
       
       // Change color based on budget usage
       if (percentage > 80) {
@@ -649,16 +768,16 @@
     function updateSaveButtonText() {
       const saveBtn = document.getElementById("save-team-btn");
       if (!hasExistingTeam) {
-        saveBtn.textContent = "💾 Spara Team";
+        saveBtn.textContent = "Spara team";
         return;
       }
       
       const ridersChanged = calculateRidersChanged();
       if (ridersChanged === 0) {
-        saveBtn.textContent = "💾 Uppdatera Team (Inga poängstraff)";
+        saveBtn.textContent = "Uppdatera team (inga poängstraff)";
       } else {
         const penaltyPoints = ridersChanged * 50;
-        saveBtn.textContent = `⚠️ Uppdatera Team (-${penaltyPoints} poäng)`;
+        saveBtn.textContent = `Uppdatera team (−${penaltyPoints} poäng)`;
       }
     }
 
@@ -722,30 +841,29 @@
       const penaltyAmount = document.getElementById("penalty-amount");
       const pointsAfterAmount = document.getElementById("points-after-amount");
       const pointsAfterChange = document.getElementById("points-after-change");
+      const pointsAfterWrap = document.getElementById("points-after-wrap");
       
       if (penaltyPoints > 0) {
         penaltyAmount.textContent = penaltyPoints;
         penaltyPreview.classList.remove("hidden");
         pointsAfterAmount.textContent = pointsAfter;
-        pointsAfterChange.classList.remove("hidden");
+        if (pointsAfterWrap) pointsAfterWrap.classList.remove("hidden");
         
-        // Update penalty text to be more dynamic
         const penaltyText = penaltyPreview.querySelector('.penalty-text');
         if (penaltyText) {
-          penaltyText.textContent = ` poäng för ${ridersChanged} byte`;
+          penaltyText.textContent = ` poäng (${ridersChanged} byte)`;
         }
         
-        // Change color based on whether user has enough points
         if (pointsAfter < 0) {
-          pointsAfterChange.className = "text-xs text-red-600 font-medium";
-          pointsAfterAmount.className = "text-red-600 font-bold";
+          pointsAfterChange.className = "font-medium text-red-400";
+          pointsAfterAmount.className = "text-red-400 font-bold tabular-nums";
         } else {
-          pointsAfterChange.className = "text-xs text-gray-600 font-medium";
-          pointsAfterAmount.className = "text-green-600 font-bold";
+          pointsAfterChange.className = "font-medium text-slate-400";
+          pointsAfterAmount.className = "text-emerald-400 font-bold tabular-nums";
         }
       } else {
         penaltyPreview.classList.add("hidden");
-        pointsAfterChange.classList.add("hidden");
+        if (pointsAfterWrap) pointsAfterWrap.classList.add("hidden");
       }
     }
 
@@ -759,18 +877,13 @@
         const card = document.createElement("div");
         // Highlight the rider being replaced
         const isBeingReplaced = window.replacingRiderId === rider.id;
-        const baseClasses = "p-2 rounded-lg border text-center";
-        const normalClasses = "bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 border-yellow-200 dark:border-yellow-700";
-        const highlightClasses = "bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 border-green-400 dark:border-green-600 ring-2 ring-green-300";
+        const baseClasses = "p-2.5 rounded-xl border text-center";
+        const normalClasses = "bg-slate-900/35 border-slate-600/80";
+        const highlightClasses = "bg-cyan-950/50 border-cyan-500/70 ring-1 ring-cyan-400/40";
         
         card.className = `${baseClasses} ${isBeingReplaced ? highlightClasses : normalClasses}`;
-        // Bygg HTML för nummer-cirkeln med olika färger för 450cc och 250cc
-        const numberBgClass = rider.class === "450cc" 
-          ? "bg-gradient-to-br from-orange-500 to-red-600" 
-          : "bg-gradient-to-br from-yellow-400 to-orange-500";
-        
-        const numberHtml = `<div class="w-6 h-6 ${numberBgClass} rounded-full flex items-center justify-center shadow-md">
-          <span class="text-white text-xs font-bold">#${rider.rider_number || "-"}</span>
+        const numberHtml = `<div class="w-6 h-6 rounded-full flex items-center justify-center bg-slate-800 border border-slate-600">
+          <span class="text-slate-200 text-[10px] font-black">#${rider.rider_number || "-"}</span>
         </div>`;
 
         card.innerHTML = `
@@ -779,9 +892,9 @@
               ${rider.image_url
                 ? `<img src="${rider.image_url.startsWith('data:') ? rider.image_url : '/static/' + (rider.image_url.startsWith('riders/') ? rider.image_url : 'riders/' + rider.image_url)}"
                        alt="${rider.name} headshot"
-                       class="w-8 h-8 object-cover rounded-full border border-yellow-300" width="32" height="32"
+                       class="w-8 h-8 object-cover rounded-full border border-slate-500" width="32" height="32"
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                 <div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center" style="display: none;">
+                 <div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center" style="display: none;">
                    ${rider.bike_brand 
                      ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png" 
                             alt="${rider.bike_brand} logo" 
@@ -793,21 +906,21 @@
                 : (rider.bike_brand
                     ? `<img src="/static/brand_logos/${rider.bike_brand.toLowerCase()}.png"
                            alt="${rider.bike_brand} logo"
-                           class="w-8 h-8 object-contain border border-yellow-300 rounded-full" width="32" height="32" />`
-                    : `<div class="w-8 h-8 bg-gradient-to-br from-yellow-600 to-orange-600 rounded-full flex items-center justify-center">
+                           class="w-8 h-8 object-contain border border-slate-500 rounded-full" width="32" height="32" />`
+                    : `<div class="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                          <span class="text-white text-xs font-bold">#${rider.rider_number}</span>
                        </div>`)}
               ${numberHtml}
             </div>
             <div class="w-full">
-              <div class="font-semibold text-gray-800 dark:text-gray-200 text-xs truncate">${rider.name}</div>
-              <div class="text-xs text-gray-600 dark:text-gray-300">${rider.class === '450cc' ? '🔥' : '⚡'} ${rider.class}</div>
+              <div class="font-semibold text-slate-100 text-xs truncate">${rider.name}</div>
+              <div class="text-[10px] text-slate-400">${rider.class}</div>
             </div>
           </div>
-          <button class="w-full ${isBeingReplaced ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-1 py-1 rounded text-xs font-medium transition-colors" 
+          <button type="button" class="w-full ${isBeingReplaced ? 'bg-cyan-700 hover:bg-cyan-600' : 'bg-slate-700 hover:bg-slate-600 border border-slate-500'} text-white px-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors" 
                   onclick="event.stopPropagation(); replaceRider(${rider.id})" 
                   title="Byt ut denna förare">
-            ${isBeingReplaced ? '🔄 Byter ut...' : 'Byt ut'}
+            ${isBeingReplaced ? 'Välj ersättare…' : 'Byt ut'}
           </button>
         `;
         list.appendChild(card);

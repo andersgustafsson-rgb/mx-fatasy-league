@@ -11,6 +11,7 @@ from flask import (
     redirect,
     url_for,
     flash,
+    make_response,
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1026,34 +1027,58 @@ def admin_set_out_status():
 
 
 @app.get("/season_team_build")
+@app.get("/season_team_builder")
 def season_team_build():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
-    # Hämta alla riders till buildern
-    riders = (
-        Rider.query
-        .order_by(Rider.class_name.desc(), Rider.price.desc(), Rider.name.asc())
+    uid = session["user_id"]
+    user = User.query.get(uid)
+
+    # Samma vy som main.py: bara SMX-klasserna i säsongsteam
+    all_riders = (
+        Rider.query.filter(Rider.class_name.in_(["450cc", "250cc"]))
+        .order_by(Rider.rider_number, Rider.name)
         .all()
     )
+
     riders_payload = [
         {
             "id": r.id,
             "name": r.name,
-            "class": r.class_name,      # buildern förväntar nyckeln "class"
+            "class": r.class_name,
             "rider_number": r.rider_number,
             "bike_brand": r.bike_brand,
+            "image_url": r.image_url,
             "price": r.price,
+            "coast_250": r.coast_250,
         }
-        for r in riders
+        for r in all_riders
     ]
 
-    # VIKTIGT: rendera BUILDERN här:
-    return render_template(
+    existing_team = SeasonTeam.query.filter_by(user_id=uid).first()
+    has_existing_team = existing_team is not None
+    existing_team_riders = []
+    if existing_team:
+        existing_team_riders = [
+            str(tr.rider_id)
+            for tr in SeasonTeamRider.query.filter_by(
+                season_team_id=existing_team.id
+            ).all()
+        ]
+
+    html = render_template(
         "season_team_builder.html",
-        username=session.get("username"),
+        username=user.username if user else session.get("username") or "",
         riders=riders_payload,
+        has_existing_team=has_existing_team,
+        existing_team=existing_team,
+        existing_team_riders=existing_team_riders,
     )
+    resp = make_response(html)
+    resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 
