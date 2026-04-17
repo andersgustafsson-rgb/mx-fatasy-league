@@ -1800,8 +1800,8 @@
                     alert('❌ Kunde inte hämta nästa tävling. Förhandsvisning visar exempel.');
                 }
                 
-                const comp = compData.competition || { name: 'Exempel Tävling', event_date: '2026-01-15', start_time: '20:00', trackmap_url: null };
-                const deadlineTime = comp.start_time ? `${comp.event_date} kl. ${comp.start_time}` : comp.event_date;
+                const comp = compData.competition || { name: 'Exempel Tävling', event_date: '2026-01-15', start_time: '20:00', pick_deadline_stockholm: '2026-01-15 kl. 18:00', trackmap_url: null };
+                const deadlineTime = comp.pick_deadline_stockholm || (comp.start_time ? `${comp.event_date} kl. ${comp.start_time}` : comp.event_date);
                 const competitionUrl = `${window.location.origin}/race_picks/${comp.id || 1}`;
                 const logoUrl = window.location.origin + '/static/images/mx_fantasy_logo.png';
                 const logoImg = '<img src="' + logoUrl + '" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />';

@@ -5548,6 +5548,68 @@ def get_next_competition():
         return jsonify({"error": "unauthorized"}), 403
     
     try:
+        def _pick_deadline_stockholm_str(comp: Competition) -> str:
+            from datetime import datetime, timedelta
+            try:
+                from zoneinfo import ZoneInfo
+            except Exception:  # pragma: no cover
+                ZoneInfo = None  # type: ignore
+
+            if not comp or not comp.event_date:
+                return "-"
+            start_time = getattr(comp, "start_time", None)
+            if start_time:
+                race_local_naive = datetime.combine(comp.event_date, start_time)
+            else:
+                race_local_naive = datetime.combine(comp.event_date, datetime.min.time().replace(hour=20, minute=0))
+
+            tz_name = getattr(comp, "timezone", None) or "America/Los_Angeles"
+            race_utc_naive: datetime
+            if ZoneInfo:
+                try:
+                    race_utc_naive = (
+                        race_local_naive.replace(tzinfo=ZoneInfo(tz_name))
+                        .astimezone(ZoneInfo("UTC"))
+                        .replace(tzinfo=None)
+                    )
+                except Exception:
+                    race_utc_naive = race_local_naive
+            else:
+                race_utc_naive = race_local_naive
+
+            if race_utc_naive is race_local_naive:
+                try:
+                    import pytz
+                    tz = pytz.timezone(tz_name)
+                    race_utc_naive = tz.localize(race_local_naive).astimezone(pytz.UTC).replace(tzinfo=None)
+                except Exception:
+                    timezone_offsets = {
+                        "America/Los_Angeles": -8,
+                        "America/Denver": -7,
+                        "America/Phoenix": -7,
+                        "America/Chicago": -6,
+                        "America/New_York": -5,
+                        "America/Argentina/Buenos_Aires": -3,
+                        "Australia/Brisbane": 10,
+                        "Europe/Stockholm": 1,
+                    }
+                    utc_offset = timezone_offsets.get(tz_name, -8)
+                    race_utc_naive = race_local_naive - timedelta(hours=utc_offset)
+
+            deadline_utc_naive = race_utc_naive - timedelta(hours=2)
+
+            if ZoneInfo:
+                try:
+                    deadline_stockholm = (
+                        deadline_utc_naive.replace(tzinfo=ZoneInfo("UTC"))
+                        .astimezone(ZoneInfo("Europe/Stockholm"))
+                    )
+                    return deadline_stockholm.strftime("%Y-%m-%d kl. %H:%M")
+                except Exception:
+                    pass
+
+            return deadline_utc_naive.strftime("%Y-%m-%d %H:%M UTC")
+
         today = get_today()
         next_comp = (
             Competition.query
@@ -5580,6 +5642,7 @@ def get_next_competition():
                 "name": next_comp.name,
                 "event_date": str(next_comp.event_date) if next_comp.event_date else None,
                 "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None,
+                "pick_deadline_stockholm": _pick_deadline_stockholm_str(next_comp),
                 "trackmap_url": trackmap_url
             }
         })
