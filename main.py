@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import os
 import random
 import secrets
 import string
+import math
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from flask import (
     Flask,
@@ -1376,6 +1380,235 @@ def api_leagues_stats():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+
+def _resolve_power_ranking_competition(competition_id: int | None) -> Competition | None:
+    """Same idea as index: active race from admin, else next race without results."""
+    if competition_id:
+        c = Competition.query.get(competition_id)
+        if c:
+            return c
+    try:
+        global_sim = GlobalSimulation.query.first()
+        if global_sim and global_sim.active and global_sim.active_race_id:
+            c = Competition.query.get(global_sim.active_race_id)
+            if c:
+                return c
+    except Exception:
+        pass
+    today = get_today()
+    for c in Competition.query.order_by(Competition.event_date).all():
+        if c.event_date and c.event_date >= today:
+            has_results = CompetitionResult.query.filter_by(competition_id=c.id).first() is not None
+            if not has_results:
+                return c
+    return None
+
+
+def _position_form_points(position: int | None) -> float:
+    if position is None or position < 1:
+        return 0.0
+    return max(0.0, 26.0 - float(position))
+
+
+def _past_races_for_form(target: Competition, limit: int = 5) -> list[Competition]:
+    """Most recent completed races (have results) strictly before target date."""
+    ids_with_results = [
+        row[0]
+        for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+    ]
+    if not ids_with_results:
+        return []
+    q = Competition.query.filter(Competition.id.in_(ids_with_results))
+    if target.event_date:
+        q = q.filter(Competition.event_date < target.event_date)
+    else:
+        q = q.filter(Competition.id != target.id)
+    return q.order_by(Competition.event_date.desc()).limit(limit).all()
+
+
+def _form_scores_for_riders(
+    rider_ids: set[int], past_comps: list[Competition], decay: float = 0.86
+) -> dict[int, float]:
+    scores = defaultdict(float)
+    for idx, comp in enumerate(past_comps):
+        w = decay ** idx
+        for res in CompetitionResult.query.filter_by(competition_id=comp.id).all():
+            if res.rider_id in rider_ids:
+                scores[res.rider_id] += w * _position_form_points(res.position)
+    return dict(scores)
+
+
+def _crowd_scores_for_competition(competition_id: int, rider_ids: set[int]) -> dict[int, float]:
+    scores = defaultdict(float)
+    picks = RacePick.query.filter_by(competition_id=competition_id).all()
+    for p in picks:
+        if p.rider_id not in rider_ids:
+            continue
+        pred = p.predicted_position
+        if pred is None or pred < 1:
+            continue
+        # Higher weight for better predicted finishes (Borda-style, cap at top 10)
+        scores[p.rider_id] += max(0.0, 11.0 - float(min(pred, 10)))
+    return dict(scores)
+
+
+def _min_max_normalize(d: dict[int, float]) -> dict[int, float]:
+    if not d:
+        return {}
+    vals = list(d.values())
+    lo, hi = min(vals), max(vals)
+    if hi <= lo + 1e-9:
+        return {k: 0.5 for k in d}
+    return {k: (v - lo) / (hi - lo) for k, v in d.items()}
+
+
+def _softmax_percentages(raw: list[float]) -> list[float]:
+    if not raw:
+        return []
+    m = max(raw)
+    exps = [math.exp(x - m) for x in raw]
+    s = sum(exps) or 1.0
+    return [round(100.0 * e / s, 1) for e in exps]
+
+
+def _out_rider_ids(competition_id: int) -> set[int]:
+    try:
+        rows = CompetitionRiderStatus.query.filter_by(
+            competition_id=competition_id, status="OUT"
+        ).all()
+        return {r.rider_id for r in rows}
+    except Exception:
+        return set()
+
+
+def _riders_450_scope(out_ids: set[int]) -> list[Rider]:
+    q = Rider.query.filter(Rider.class_name == "450cc")
+    riders = [r for r in q.all() if r.id not in out_ids]
+    return riders
+
+
+def _riders_250_scope(out_ids: set[int], coast: str | None) -> tuple[list[Rider], list[Rider] | None]:
+    """
+    Returns (single_list, split_pair).
+    If coast is 'both', single_list is empty and split_pair is (east_riders, west_riders).
+    Otherwise single_list is filtered 250 riders for that coast.
+    """
+    base = [r for r in Rider.query.filter(Rider.class_name == "250cc").all() if r.id not in out_ids]
+    c = (coast or "").lower()
+    if c == "both":
+        east = [r for r in base if (r.coast_250 or "") in ("east", "both")]
+        west = [r for r in base if (r.coast_250 or "") in ("west", "both")]
+        return [], (east, west)
+    if c == "east":
+        return [r for r in base if (r.coast_250 or "") in ("east", "both")], None
+    if c == "west":
+        return [r for r in base if (r.coast_250 or "") in ("west", "both")], None
+    return base, None
+
+
+def _rank_bucket(
+    riders: list[Rider],
+    target: Competition,
+    past_comps: list[Competition],
+    out_ids: set[int],
+    form_weight: float = 0.55,
+    crowd_weight: float = 0.45,
+    top_n: int = 3,
+) -> list[dict]:
+    if not riders:
+        return []
+    rids = {r.id for r in riders}
+    form_raw = _form_scores_for_riders(rids, past_comps)
+    crowd_raw = _crowd_scores_for_competition(target.id, rids)
+    form_n = _min_max_normalize(form_raw)
+    crowd_n = _min_max_normalize(crowd_raw)
+
+    combined: dict[int, float] = {}
+    for rid in rids:
+        f = form_n.get(rid, 0.0 if form_raw else 0.5)
+        c = crowd_n.get(rid, 0.0 if crowd_raw else 0.5)
+        if not form_raw and crowd_raw:
+            combined[rid] = c
+        elif form_raw and not crowd_raw:
+            combined[rid] = f
+        else:
+            combined[rid] = form_weight * f + crowd_weight * c
+
+    sorted_ids = sorted(combined.keys(), key=lambda i: combined[i], reverse=True)
+    top_ids = sorted_ids[:top_n]
+    raw_top = [combined[i] for i in top_ids]
+    pcts = _softmax_percentages(raw_top)
+    id_to_rider = {r.id: r for r in riders}
+    rows = []
+    for i, rid in enumerate(top_ids):
+        r = id_to_rider.get(rid)
+        if not r:
+            continue
+        rows.append(
+            {
+                "rank": i + 1,
+                "rider_id": rid,
+                "name": r.name,
+                "number": r.rider_number,
+                "coast_250": r.coast_250,
+                "strength_pct": pcts[i] if i < len(pcts) else 0.0,
+                "score": round(combined[rid], 4),
+            }
+        )
+    return rows
+
+
+@app.get("/api/power_ranking")
+def api_power_ranking():
+    """
+    Informationsvy: form från senaste resultat + aggregerade spelarpicks.
+    Inte bettingodds.
+    """
+    try:
+        comp_id = request.args.get("competition_id", type=int)
+        target = _resolve_power_ranking_competition(comp_id)
+        if not target:
+            return jsonify({"ok": False, "error": "no_competition"}), 404
+
+        past = _past_races_for_form(target, limit=5)
+        out_ids = _out_rider_ids(target.id)
+
+        riders_450 = _riders_450_scope(out_ids)
+        single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
+
+        top_450 = _rank_bucket(riders_450, target, past, out_ids)
+
+        payload: dict = {
+            "ok": True,
+            "competition": {
+                "id": target.id,
+                "name": target.name,
+                "series": target.series,
+                "coast_250": target.coast_250,
+                "event_date": target.event_date.isoformat() if target.event_date else None,
+            },
+            "method": "55% senaste resultat · 45% spelarnas picks till denna tävling",
+            "past_races_used": len(past),
+            "riders_450": top_450,
+            "riders_250": None,
+            "riders_250_east": None,
+            "riders_250_west": None,
+        }
+
+        if split_250:
+            east_r, west_r = split_250
+            payload["riders_250_east"] = _rank_bucket(east_r, target, past, out_ids)
+            payload["riders_250_west"] = _rank_bucket(west_r, target, past, out_ids)
+        else:
+            payload["riders_250"] = _rank_bucket(single_250, target, past, out_ids)
+
+        return jsonify(payload)
+    except Exception as e:
+        print(f"power_ranking error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/leagues/<int:league_id>")

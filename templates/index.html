@@ -766,6 +766,20 @@
                 </div>
               </div>
             </div>
+
+            <!-- Power ranking (informationsvy — ej betting) -->
+            <div id="power-ranking-wrap" class="mb-6 hidden">
+              <div class="rounded-xl border-2 border-cyan-500/50 bg-gray-900/90 p-4 sm:p-5 shadow-xl" style="box-shadow: 0 0 18px rgba(34, 211, 238, 0.2);">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                  <h3 class="text-lg sm:text-xl font-bold text-cyan-300" style="text-shadow: 0 0 12px rgba(34, 211, 238, 0.35);">Power ranking</h3>
+                  <p id="power-ranking-sub" class="text-xs text-gray-400 sm:text-right max-w-md"></p>
+                </div>
+                <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">
+                  Jämförelsetal utifrån <strong class="text-gray-400">senaste resultat</strong> och <strong class="text-gray-400">spelarnas picks</strong> till aktuell tävling — inte odds eller spel.
+                </p>
+                <div id="power-ranking-body" class="text-sm text-gray-100 space-y-4"></div>
+              </div>
+            </div>
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Quick Actions -->
@@ -3052,6 +3066,68 @@
       }
     }
     
+    function renderPowerRankingRows(rows, label) {
+      if (!rows || rows.length === 0) {
+        return `<p class="text-xs text-gray-500">${label}: ingen data ännu.</p>`;
+      }
+      const medals = ['🥇', '🥈', '🥉'];
+      let h = `<div class="text-xs font-bold text-yellow-400/90 mb-2 uppercase tracking-wide">${label}</div><div class="space-y-2">`;
+      rows.forEach((r, i) => {
+        const m = medals[i] || `${r.rank}.`;
+        const coast = r.coast_250 ? ` <span class="text-gray-500 text-[10px]">(${String(r.coast_250).toUpperCase()})</span>` : '';
+        h += `
+          <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-800/80 border border-gray-700/80 px-3 py-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="text-lg shrink-0">${m}</span>
+              <span class="font-semibold text-white truncate">#${r.number ?? '—'} ${r.name}${coast}</span>
+            </div>
+            <span class="shrink-0 text-cyan-300 font-black tabular-nums">${r.strength_pct}%</span>
+          </div>`;
+      });
+      h += '</div>';
+      return h;
+    }
+
+    async function fetchPowerRanking() {
+      const wrap = document.getElementById('power-ranking-wrap');
+      const body = document.getElementById('power-ranking-body');
+      const sub = document.getElementById('power-ranking-sub');
+      if (!wrap || !body) return;
+      let url = '/api/power_ranking';
+      {% if upcoming_race %}
+      url += '?competition_id={{ upcoming_race.id }}';
+      {% endif %}
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.ok || res.status !== 200) {
+          wrap.classList.add('hidden');
+          return;
+        }
+        wrap.classList.remove('hidden');
+        const c = data.competition || {};
+        sub.textContent = [c.name, c.series, data.past_races_used != null ? `${data.past_races_used} senaste race i form` : '']
+          .filter(Boolean).join(' · ');
+        let html = '';
+        html += renderPowerRankingRows(data.riders_450, '450cc — topp 3');
+        if (data.riders_250_east && data.riders_250_west) {
+          html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            '<div>' + renderPowerRankingRows(data.riders_250_east, '250cc East') + '</div>' +
+            '<div>' + renderPowerRankingRows(data.riders_250_west, '250cc West') + '</div>' +
+            '</div>';
+        } else {
+          html += renderPowerRankingRows(data.riders_250, '250cc — topp 3');
+        }
+        if (data.method) {
+          html += `<p class="text-[10px] text-gray-600 pt-2 border-t border-gray-700/80">${data.method}</p>`;
+        }
+        body.innerHTML = html;
+      } catch (e) {
+        console.warn('power_ranking', e);
+        wrap.classList.add('hidden');
+      }
+    }
+
     function checkAdminAnnouncement() {
       {% if admin_message %}
       try {
@@ -3106,6 +3182,7 @@
       
       // Load series selection
       loadSeriesSelection();
+      fetchPowerRanking();
       
       // Start countdown system
       startCountdown();
