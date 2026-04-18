@@ -1507,6 +1507,15 @@ def _riders_250_scope(out_ids: set[int], coast: str | None) -> tuple[list[Rider]
     return base, None
 
 
+def _rider_portrait_url(r: Rider) -> str | None:
+    """Data-URL eller relativ sökväg under static (samma som övriga API:er)."""
+    raw = getattr(r, "rider_image_data", None) or getattr(r, "image_url", None)
+    if not raw:
+        return None
+    s = str(raw).strip()
+    return s or None
+
+
 def _rank_bucket(
     riders: list[Rider],
     target: Competition,
@@ -1554,6 +1563,7 @@ def _rank_bucket(
                 "coast_250": r.coast_250,
                 "strength_pct": pcts[i] if i < len(pcts) else 0.0,
                 "score": round(combined[rid], 4),
+                "image_url": _rider_portrait_url(r),
             }
         )
     return rows

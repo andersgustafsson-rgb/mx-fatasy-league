@@ -3066,6 +3066,13 @@
       }
     }
     
+    function powerRankingPortraitSrc(r) {
+      if (!r || !r.image_url) return '';
+      const u = r.image_url;
+      if (u.startsWith('data:')) return u;
+      return '/static/' + (u.startsWith('riders/') ? u : 'riders/' + u);
+    }
+
     function renderPowerRankingRows(rows, label) {
       if (!rows || rows.length === 0) {
         return `<p class="text-xs text-gray-500">${label}: ingen data ännu.</p>`;
@@ -3075,11 +3082,19 @@
       rows.forEach((r, i) => {
         const m = medals[i] || `${r.rank}.`;
         const coast = r.coast_250 ? ` <span class="text-gray-500 text-[10px]">(${String(r.coast_250).toUpperCase()})</span>` : '';
+        const src = powerRankingPortraitSrc(r);
+        const imgBlock = src
+          ? `<img src="${src}" alt="" class="w-10 h-10 rounded-full object-cover border-2 border-cyan-500/40 shrink-0 bg-gray-900" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden');" />
+             <div class="hidden w-10 h-10 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`
+          : `<div class="w-10 h-10 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`;
         h += `
-          <div class="flex items-center justify-between gap-2 rounded-lg bg-gray-800/80 border border-gray-700/80 px-3 py-2">
-            <div class="flex items-center gap-2 min-w-0">
-              <span class="text-lg shrink-0">${m}</span>
-              <span class="font-semibold text-white truncate">#${r.number ?? '—'} ${r.name}${coast}</span>
+          <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-800/80 border border-gray-700/80 px-3 py-2">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-lg shrink-0 w-7 text-center">${m}</span>
+              <div class="flex items-center gap-2.5 min-w-0">
+                ${imgBlock}
+                <span class="font-semibold text-white truncate">#${r.number ?? '—'} ${r.name}${coast}</span>
+              </div>
             </div>
             <span class="shrink-0 text-cyan-300 font-black tabular-nums">${r.strength_pct}%</span>
           </div>`;
