@@ -8918,20 +8918,21 @@ def calculate_scores(comp_id: int):
         picks = RacePick.query.filter_by(user_id=user.id, competition_id=comp_id).all()
         
         # Check for duplicate RacePick entries (same user, competition, rider)
-        # Keep only the most recent one (highest pick_id)
+        # Keep only the most recent one (highest pick_id). Endast *förlorande* rad raderas —
+        # annars kan båda hamna i delete-listan om DB returnerar äldre rad före nyare.
         seen_picks = {}
         duplicate_picks = []
         for pick in picks:
             key = (pick.user_id, pick.competition_id, pick.rider_id)
-            if key in seen_picks:
-                duplicate_picks.append(pick)
-                # Keep the one with higher pick_id (more recent)
-                if pick.pick_id > seen_picks[key].pick_id:
-                    duplicate_picks.append(seen_picks[key])
-                    seen_picks[key] = pick
-                # else: keep the existing one, skip this duplicate
-            else:
+            if key not in seen_picks:
                 seen_picks[key] = pick
+                continue
+            existing = seen_picks[key]
+            if pick.pick_id > existing.pick_id:
+                duplicate_picks.append(existing)
+                seen_picks[key] = pick
+            else:
+                duplicate_picks.append(pick)
         
         if duplicate_picks:
             print(f"⚠️ WARNING: Found {len(duplicate_picks)} duplicate RacePick entries for {user.username} in competition {comp_id}. Removing duplicates...")
@@ -8969,19 +8970,20 @@ def calculate_scores(comp_id: int):
         ).all()
         
         # Check for duplicate HoleshotPick entries (same user, competition, class)
-        # Keep only the most recent one (highest id)
+        # Keep only the most recent one (highest id); radera bara den äldre dubbletten.
         seen_holeshots = {}
         duplicate_holeshots = []
         for hp in holeshot_picks:
             key = (hp.user_id, hp.competition_id, hp.class_name)
-            if key in seen_holeshots:
-                duplicate_holeshots.append(hp)
-                # Keep the one with higher id (more recent)
-                if hp.id > seen_holeshots[key].id:
-                    duplicate_holeshots.append(seen_holeshots[key])
-                    seen_holeshots[key] = hp
-            else:
+            if key not in seen_holeshots:
                 seen_holeshots[key] = hp
+                continue
+            existing = seen_holeshots[key]
+            if hp.id > existing.id:
+                duplicate_holeshots.append(existing)
+                seen_holeshots[key] = hp
+            else:
+                duplicate_holeshots.append(hp)
         
         if duplicate_holeshots:
             print(f"⚠️ WARNING: Found {len(duplicate_holeshots)} duplicate HoleshotPick entries for {user.username} in competition {comp_id}. Removing duplicates...")
