@@ -2258,6 +2258,55 @@ def get_weekly_fun_stats():
         ).all()
         
         comp_ids = [c.id for c in recent_competitions]
+
+        # Fallback om delta-baserad raket/ankare saknar signal (vanligt när poäng/omräkning inte
+        # skett i rätt ordning eller tidigt i säsongen): använd veckopoäng från CompetitionScore.
+        if comp_ids and rocket is None and anchor is None:
+            scores = CompetitionScore.query.filter(
+                CompetitionScore.competition_id.in_(comp_ids)
+            ).all()
+
+            # Senaste score-rad per (user, tävling)
+            by_uc = {}
+            for s in scores:
+                k = (s.user_id, s.competition_id)
+                if k not in by_uc or s.score_id > by_uc[k].score_id:
+                    by_uc[k] = s
+
+            weekly_points_by_user: dict[int, int] = defaultdict(int)
+            for s in by_uc.values():
+                weekly_points_by_user[int(s.user_id)] += int(s.total_points or 0)
+
+            # Endast användare med >0 poäng (annars blir det alltid "någon" även när inget hänt)
+            positive = {uid: pts for uid, pts in weekly_points_by_user.items() if pts > 0}
+            if positive:
+                rocket_uid, rocket_pts = max(positive.items(), key=lambda x: x[1])
+                anchor_uid, anchor_pts = min(positive.items(), key=lambda x: x[1])
+
+                ru = User.query.get(rocket_uid)
+                au = User.query.get(anchor_uid)
+                if ru:
+                    rocket = {
+                        'user_id': rocket_uid,
+                        'username': ru.username,
+                        'display_name': getattr(ru, 'display_name', None) or ru.username,
+                        'delta': 0,
+                        'current_rank': next((u['rank'] for u in leaderboard_data if u['user_id'] == rocket_uid), None),
+                        'previous_rank': None,
+                        'weekly_points': int(rocket_pts),
+                        'basis': 'weekly_points',
+                    }
+                if au:
+                    anchor = {
+                        'user_id': anchor_uid,
+                        'username': au.username,
+                        'display_name': getattr(au, 'display_name', None) or au.username,
+                        'delta': 0,
+                        'current_rank': next((u['rank'] for u in leaderboard_data if u['user_id'] == anchor_uid), None),
+                        'previous_rank': None,
+                        'weekly_points': int(anchor_pts),
+                        'basis': 'weekly_points',
+                    }
         
         # Perfect picks - count users with most perfect picks (25p) this week
         # A perfect pick is when predicted_position == actual_position
