@@ -1,6 +1,23 @@
 /* global Chart */
 
-const STORAGE_KEY = "mx_tidrapport_v1";
+const STORAGE_KEY_V1 = "mx_tidrapport_v1";
+const STORAGE_KEY_V2 = "mx_tidrapport_v2";
+
+/** Månadsnamn i samma ordning som i tidrapport.html */
+const SWEDISH_MONTHS = [
+  "Januari",
+  "Februari",
+  "Mars",
+  "April",
+  "Maj",
+  "Juni",
+  "Juli",
+  "Augusti",
+  "September",
+  "Oktober",
+  "November",
+  "December",
+];
 
 const els = {
   pasteInput: document.getElementById("pasteInput"),
@@ -26,6 +43,10 @@ const els = {
   tableBody: document.getElementById("tableBody"),
   chartCanvas: document.getElementById("chartCanvas"),
   layoutGrid: document.getElementById("layoutGrid"),
+  savedSlotSelect: document.getElementById("savedSlotSelect"),
+  btnLoadSlot: document.getElementById("btnLoadSlot"),
+  btnSaveSlot: document.getElementById("btnSaveSlot"),
+  btnDeleteSlot: document.getElementById("btnDeleteSlot"),
 };
 
 function cleanStr(v) {
@@ -554,10 +575,80 @@ function renderAll(state) {
   els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}`;
 }
 
-function saveLocal(state) {
-  const payload = {
+function slotKeyFromMonthYear(monthLabel, yearStr) {
+  const m = cleanStr(monthLabel);
+  const y = cleanStr(yearStr) || String(new Date().getFullYear());
+  const idx = SWEDISH_MONTHS.indexOf(m);
+  if (idx < 0) return null;
+  const mm = String(idx + 1).padStart(2, "0");
+  return `${y}-${mm}`;
+}
+
+function slotLabelFromKey(key) {
+  const parts = key.split("-");
+  if (parts.length < 2) return key;
+  const y = parts[0];
+  const mm = parts[1];
+  const n = parseInt(mm, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 12) return key;
+  return `${SWEDISH_MONTHS[n - 1]} ${y}`;
+}
+
+function readStore() {
+  try {
+    const raw2 = localStorage.getItem(STORAGE_KEY_V2);
+    if (raw2) {
+      const s = JSON.parse(raw2);
+      if (s && s.version === 2 && s.slots && typeof s.slots === "object") {
+        return { version: 2, slots: s.slots, lastKey: s.lastKey || null };
+      }
+    }
+    const raw1 = localStorage.getItem(STORAGE_KEY_V1);
+    if (raw1) {
+      const data = JSON.parse(raw1);
+      const key =
+        slotKeyFromMonthYear(data.month, data.year) ||
+        `importerad_${new Date().toISOString().slice(0, 10)}`;
+      const store = { version: 2, slots: { [key]: { ...data, savedAt: Date.now() } }, lastKey: key };
+      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(store));
+      localStorage.removeItem(STORAGE_KEY_V1);
+      return store;
+    }
+  } catch (e) {
+    console.warn("readStore", e);
+  }
+  return { version: 2, slots: {}, lastKey: null };
+}
+
+function writeStore(store) {
+  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(store));
+}
+
+function refreshSavedSlotSelect(store, preferKey) {
+  if (!els.savedSlotSelect) return;
+  const keys = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
+  els.savedSlotSelect.innerHTML = "";
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = keys.length ? "— Välj sparad månad —" : "Inget sparat ännu";
+  els.savedSlotSelect.appendChild(empty);
+  for (const k of keys) {
+    const o = document.createElement("option");
+    o.value = k;
+    const pl = store.slots[k];
+    const short = pl?.savedAt ? ` · ${new Date(pl.savedAt).toLocaleDateString("sv-SE")}` : "";
+    o.textContent = `${slotLabelFromKey(k)}${short}`;
+    els.savedSlotSelect.appendChild(o);
+  }
+  const pick = preferKey && keys.includes(preferKey) ? preferKey : store.lastKey && keys.includes(store.lastKey) ? store.lastKey : "";
+  if (pick) els.savedSlotSelect.value = pick;
+}
+
+function buildPayloadFromUi(state) {
+  const selected = state?.selectedStatuses instanceof Set ? [...state.selectedStatuses] : [];
+  return {
     text: els.pasteInput.value,
-    selected: [...state.selectedStatuses],
+    selected,
     month: cleanStr(els.monthSelect?.value),
     year: cleanStr(els.yearInput?.value),
     title: cleanStr(els.titleInput?.value),
@@ -565,22 +656,61 @@ function saveLocal(state) {
     orientation: cleanStr(els.orientationSelect?.value) || "horizontal",
     verticalNames: cleanStr(els.verticalNamesSelect?.value) || "20",
     layout: cleanStr(els.layoutSelect?.value) || "side",
+    savedAt: Date.now(),
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function resolveSlotKey(store, payload) {
+  let key = slotKeyFromMonthYear(payload.month, payload.year);
+  if (!key) key = store.lastKey;
+  if (!key) {
+    const d = new Date();
+    key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  return key;
+}
+
+function saveLocal(state) {
+  const store = readStore();
+  const payload = buildPayloadFromUi(state);
+  const key = resolveSlotKey(store, payload);
+  store.slots[key] = payload;
+  store.lastKey = key;
+  writeStore(store);
+  refreshSavedSlotSelect(store, key);
 }
 
 function loadLocal() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    const store = readStore();
+    if (!store.lastKey || !store.slots[store.lastKey]) return null;
+    return store.slots[store.lastKey];
   } catch {
     return null;
   }
 }
 
-function clearLocal() {
-  localStorage.removeItem(STORAGE_KEY);
+function applyPayloadToUi(data) {
+  els.pasteInput.value = data.text || "";
+  if (els.monthSelect && data.month) els.monthSelect.value = data.month;
+  if (els.yearInput && data.year) els.yearInput.value = data.year;
+  if (els.titleInput && data.title != null) els.titleInput.value = data.title;
+  if (els.employeeInput && data.employee != null) els.employeeInput.value = data.employee;
+  if (els.orientationSelect && data.orientation) els.orientationSelect.value = data.orientation;
+  if (els.verticalNamesSelect && data.verticalNames) els.verticalNamesSelect.value = data.verticalNames;
+  if (els.layoutSelect && data.layout) els.layoutSelect.value = data.layout;
+}
+
+function loadFromStoreKey(key) {
+  const store = readStore();
+  const data = store.slots[key];
+  if (!data) return false;
+  applyPayloadToUi(data);
+  store.lastKey = key;
+  writeStore(store);
+  refreshSavedSlotSelect(store, key);
+  regenerateFromText(els.pasteInput.value, data.selected || []);
+  return true;
 }
 
 function regenerateFromText(text, selectedOverride) {
@@ -623,25 +753,57 @@ els.btnGenerate.addEventListener("click", () => {
 
 els.btnClear.addEventListener("click", () => {
   els.pasteInput.value = "";
-  clearLocal();
   regenerateFromText("", null);
 });
 
 els.btnLoad.addEventListener("click", () => {
-  const data = loadLocal();
-  if (!data) {
+  const store = readStore();
+  if (!store.lastKey || !store.slots[store.lastKey]) {
     els.statusText.textContent = "Inget sparat hittades.";
     return;
   }
-  els.pasteInput.value = data.text || "";
-  if (els.monthSelect && data.month) els.monthSelect.value = data.month;
-  if (els.yearInput && data.year) els.yearInput.value = data.year;
-  if (els.titleInput && data.title) els.titleInput.value = data.title;
-  if (els.employeeInput && data.employee) els.employeeInput.value = data.employee;
-  if (els.orientationSelect && data.orientation) els.orientationSelect.value = data.orientation;
-  if (els.verticalNamesSelect && data.verticalNames) els.verticalNamesSelect.value = data.verticalNames;
-  if (els.layoutSelect && data.layout) els.layoutSelect.value = data.layout;
-  regenerateFromText(els.pasteInput.value, data.selected || []);
+  loadFromStoreKey(store.lastKey);
+});
+
+els.btnLoadSlot?.addEventListener("click", () => {
+  const key = cleanStr(els.savedSlotSelect?.value);
+  if (!key) {
+    els.statusText.textContent = "Välj en sparad rapport i listan.";
+    return;
+  }
+  if (!loadFromStoreKey(key)) els.statusText.textContent = "Kunde inte ladda (saknas).";
+});
+
+els.btnSaveSlot?.addEventListener("click", () => {
+  const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
+  if (!key) {
+    els.statusText.textContent = "Välj månad och år innan du sparar.";
+    return;
+  }
+  const stub = window.__tidrapport_state || { selectedStatuses: new Set() };
+  saveLocal(stub);
+  els.statusText.textContent = `Sparat under «${slotLabelFromKey(key)}».`;
+});
+
+els.btnDeleteSlot?.addEventListener("click", () => {
+  const key = cleanStr(els.savedSlotSelect?.value);
+  if (!key) {
+    els.statusText.textContent = "Välj en sparad rapport att ta bort.";
+    return;
+  }
+  const store = readStore();
+  if (!store.slots[key]) {
+    els.statusText.textContent = "Finns inte i sparade listan.";
+    return;
+  }
+  delete store.slots[key];
+  if (store.lastKey === key) {
+    const remain = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
+    store.lastKey = remain[0] || null;
+  }
+  writeStore(store);
+  refreshSavedSlotSelect(store, store.lastKey);
+  els.statusText.textContent = `Tog bort «${slotLabelFromKey(key)}».`;
 });
 
 els.btnAll.addEventListener("click", () => {
@@ -730,16 +892,11 @@ els.btnDownload.addEventListener("click", () => {
 
 // Boot: try load saved, else show empty chart
 (() => {
+  const store = readStore();
+  refreshSavedSlotSelect(store, store.lastKey);
   const saved = loadLocal();
   if (saved?.text) {
-    els.pasteInput.value = saved.text;
-    if (els.monthSelect && saved.month) els.monthSelect.value = saved.month;
-    if (els.yearInput && saved.year) els.yearInput.value = saved.year;
-    if (els.titleInput && saved.title) els.titleInput.value = saved.title;
-    if (els.employeeInput && saved.employee) els.employeeInput.value = saved.employee;
-    if (els.orientationSelect && saved.orientation) els.orientationSelect.value = saved.orientation;
-    if (els.verticalNamesSelect && saved.verticalNames) els.verticalNamesSelect.value = saved.verticalNames;
-    if (els.layoutSelect && saved.layout) els.layoutSelect.value = saved.layout;
+    applyPayloadToUi(saved);
     regenerateFromText(saved.text, saved.selected || []);
   } else {
     if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
