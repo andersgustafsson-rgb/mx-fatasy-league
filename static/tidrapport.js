@@ -398,17 +398,21 @@ function setChartHeightByMode(mode, labelCount) {
   setChartHeightByLabels(labelCount);
 }
 
-function applyOrientation(mode) {
+function applyOrientation(mode, opts = {}) {
   const c = ensureChart(mode);
   const isVertical = mode === "vertical";
+  const verticalLimit = String(opts.verticalLimit || "");
 
   // Improve readability in vertical mode (many labels).
   if (isVertical) {
     c.options.plugins.legend.position = "top";
     c.options.plugins.legend.labels.font = { size: 11 };
-    c.options.scales.x.ticks.autoSkip = true;
+
+    const forceAllLabels = verticalLimit === "all";
+    c.options.scales.x.ticks.autoSkip = !forceAllLabels;
     c.options.scales.x.ticks.maxRotation = 90;
-    c.options.scales.x.ticks.minRotation = 60;
+    c.options.scales.x.ticks.minRotation = forceAllLabels ? 90 : 60;
+    c.options.scales.x.ticks.font = { size: forceAllLabels ? 8 : 10 };
     c.options.scales.y.ticks.precision = 0;
   } else {
     c.options.plugins.legend.position = "right";
@@ -416,6 +420,8 @@ function applyOrientation(mode) {
     // Reset rotations (Chart.js ignores some of these in horizontal mode, but safe).
     c.options.scales.x.ticks.maxRotation = 0;
     c.options.scales.x.ticks.minRotation = 0;
+    c.options.scales.x.ticks.autoSkip = true;
+    c.options.scales.x.ticks.font = { size: 12 };
   }
 }
 
@@ -519,6 +525,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
     if (els.titlePreview) els.titlePreview.textContent = titleText;
   }
   renderColorLegend(datasets);
+  applyOrientation(mode, { verticalLimit: window.__tidrapport_state?.verticalNames || "20" });
   c.update();
 }
 
@@ -538,7 +545,13 @@ function renderAll(state) {
     ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
     : "";
   const emp = state.employeeName ? ` • Anställd: ${state.employeeName}` : "";
-  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${statsText}`;
+  const mode = state.orientation || "horizontal";
+  const limit = state.verticalNames || "20";
+  const shownNames = mode === "vertical" && !state.employeeName
+    ? (limit === "all" ? totalsView.size : Math.min(totalsView.size, Number(limit || 20)))
+    : totalsView.size;
+  const shownText = mode === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
+  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}`;
 }
 
 function saveLocal(state) {
