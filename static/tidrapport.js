@@ -56,7 +56,17 @@ const els = {
   forecastThroughDay: document.getElementById("forecastThroughDay"),
   forecastMonthInfo: document.getElementById("forecastMonthInfo"),
   tableHeadRow: document.getElementById("tableHeadRow"),
+  mergeQueueList: document.getElementById("mergeQueueList"),
+  btnAddToMerge: document.getElementById("btnAddToMerge"),
+  btnAddSavedToMerge: document.getElementById("btnAddSavedToMerge"),
+  btnMergePickFiles: document.getElementById("btnMergePickFiles"),
+  mergeFileInput: document.getElementById("mergeFileInput"),
+  btnClearMergeQueue: document.getElementById("btnClearMergeQueue"),
+  btnApplyMerge: document.getElementById("btnApplyMerge"),
 };
+
+/** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
+const mergeQueue = [];
 
 function getAnalysisMode() {
   return cleanStr(els.analysisModeSelect?.value) || "normal";
@@ -183,9 +193,26 @@ function pickCol(headers, wanted) {
   return null;
 }
 
-function aggregate(text) {
-  const { headers, rows } = parseTable(text);
-  if (!headers.length) return { totals: new Map(), statuses: [], errors: ["Ingen data."] };
+function validateHeadersForAggregate(headers) {
+  const errors = [];
+  if (!headers.length) {
+    errors.push("Saknar rubrikrad.");
+    return errors;
+  }
+  const colName = pickCol(headers, ["Namn", "Name"]);
+  const colFom = pickCol(headers, ["Kl Fom", "Från", "From", "Fom", "F.o.m"]);
+  const colTom = pickCol(headers, ["Kl Tom", "Till", "To", "Tom"]);
+  const colOrsak = pickCol(headers, ["Orsak", "Status", "Typ"]);
+  if (!colName) errors.push("Hittar inte kolumnen «Namn».");
+  if (!colFom) errors.push("Hittar inte kolumnen «Kl Fom» (starttid).");
+  if (!colTom) errors.push("Hittar inte kolumnen «Kl Tom» (sluttid).");
+  if (!colOrsak) errors.push("Hittar inte kolumnen «Orsak»/«Status».");
+  return errors;
+}
+
+function aggregateParsed(headers, rows) {
+  const errors = validateHeadersForAggregate(headers);
+  if (errors.length) return { totals: new Map(), statuses: [], errors, stats: null };
 
   const colName = pickCol(headers, ["Namn", "Name"]);
   const colFom = pickCol(headers, ["Kl Fom", "Från", "From", "Fom", "F.o.m"]);
@@ -193,14 +220,7 @@ function aggregate(text) {
   const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
   const colOrsak = pickCol(headers, ["Orsak", "Status", "Typ"]);
 
-  const errors = [];
-  if (!colName) errors.push("Hittar inte kolumnen «Namn».");
-  if (!colFom) errors.push("Hittar inte kolumnen «Kl Fom» (starttid).");
-  if (!colTom) errors.push("Hittar inte kolumnen «Kl Tom» (sluttid).");
-  if (!colOrsak) errors.push("Hittar inte kolumnen «Orsak»/«Status».");
-  if (errors.length) return { totals: new Map(), statuses: [], errors };
-
-  const totals = new Map(); // name -> Map(status -> hours)
+  const totals = new Map();
   const statusSet = new Set();
   let usedRows = 0;
   let skippedNoName = 0;
@@ -246,6 +266,92 @@ function aggregate(text) {
       skippedNoTime,
     },
   };
+}
+
+function aggregate(text) {
+  const { headers, rows } = parseTable(text);
+  if (!headers.length) return { totals: new Map(), statuses: [], errors: ["Ingen data."], stats: null };
+  return aggregateParsed(headers, rows);
+}
+
+function remapRowToBaseHeaders(row, sourceHeaders, baseHeaders) {
+  const newRow = {};
+  for (const bh of baseHeaders) {
+    const match = sourceHeaders.find((sh) => normHeader(sh) === normHeader(bh));
+    newRow[bh] = match ? row[match] ?? "" : "";
+  }
+  return newRow;
+}
+
+function mergeParsedTables(parsedList) {
+  if (!parsedList.length) {
+    return { headers: [], rows: [], errors: ["Inga tabeller att slå ihop."] };
+  }
+  const base = parsedList[0];
+  if (!base.headers.length) {
+    return { headers: [], rows: [], errors: ["Första delen saknar rubrikrad."] };
+  }
+  const v0 = validateHeadersForAggregate(base.headers);
+  if (v0.length) return { headers: [], rows: [], errors: v0 };
+
+  const allRows = [...base.rows];
+  for (let i = 1; i < parsedList.length; i += 1) {
+    const p = parsedList[i];
+    if (!p.headers.length) {
+      return { headers: [], rows: [], errors: [`Del ${i + 1}: saknar rubrikrad.`] };
+    }
+    const ve = validateHeadersForAggregate(p.headers);
+    if (ve.length) {
+      return { headers: [], rows: [], errors: [`Del ${i + 1}: ${ve.join(" ")}`] };
+    }
+    for (const row of p.rows) {
+      allRows.push(remapRowToBaseHeaders(row, p.headers, base.headers));
+    }
+  }
+  return { headers: base.headers, rows: allRows, errors: [] };
+}
+
+function tableToTsv(headers, rows) {
+  const esc = (v) => {
+    const s = v == null ? "" : String(v);
+    if (s.includes("\t") || s.includes("\n") || s.includes('"')) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+  const lines = [headers.map(esc).join("\t")];
+  for (const row of rows) {
+    lines.push(headers.map((h) => esc(row[h] ?? "")).join("\t"));
+  }
+  return lines.join("\n");
+}
+
+function renderMergeQueueList() {
+  if (!els.mergeQueueList) return;
+  els.mergeQueueList.innerHTML = "";
+  if (mergeQueue.length === 0) {
+    const li = document.createElement("li");
+    li.className = "text-slate-500 italic px-1";
+    li.textContent = "Inget tillagt ännu.";
+    els.mergeQueueList.appendChild(li);
+    return;
+  }
+  mergeQueue.forEach((item, idx) => {
+    const li = document.createElement("li");
+    li.className = "flex items-center justify-between gap-2 border-b border-slate-800/60 py-1.5";
+    const span = document.createElement("span");
+    const dataRows = Math.max(0, splitRows(item.text).length - 1);
+    span.textContent = `${idx + 1}. ${item.label} (${dataRows} rader)`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "shrink-0 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-xs";
+    btn.textContent = "Ta bort";
+    btn.addEventListener("click", () => {
+      mergeQueue.splice(idx, 1);
+      renderMergeQueueList();
+    });
+    li.appendChild(span);
+    li.appendChild(btn);
+    els.mergeQueueList.appendChild(li);
+  });
 }
 
 function round2(n) {
@@ -1348,6 +1454,129 @@ els.layoutSelect?.addEventListener("change", () => {
   saveLocal(window.__tidrapport_state);
 });
 
+els.btnAddToMerge?.addEventListener("click", () => {
+  const text = cleanStr(els.pasteInput?.value);
+  if (!text) {
+    els.statusText.textContent = "Klistra in data i rutan först.";
+    return;
+  }
+  const parsed = parseTable(text);
+  const ve = validateHeadersForAggregate(parsed.headers);
+  if (ve.length) {
+    els.statusText.textContent = ve.join(" ");
+    return;
+  }
+  if (!parsed.rows.length) {
+    els.statusText.textContent = "Inga datarader (bara rubrik?).";
+    return;
+  }
+  const month = cleanStr(els.monthSelect?.value);
+  const year = cleanStr(els.yearInput?.value);
+  const label = [month, year].filter(Boolean).join(" ").trim() || `Del ${mergeQueue.length + 1}`;
+  mergeQueue.push({ label, text });
+  renderMergeQueueList();
+  els.statusText.textContent = `Tillagt «${label}» — ${mergeQueue.length} delar i kön.`;
+});
+
+els.btnAddSavedToMerge?.addEventListener("click", () => {
+  const key = cleanStr(els.savedSlotSelect?.value);
+  if (!key) {
+    els.statusText.textContent = "Välj en sparad månad i listan «Sparade rapporter» först.";
+    return;
+  }
+  const store = readStore();
+  const payload = store.slots[key];
+  const text = cleanStr(payload?.text);
+  if (!text) {
+    els.statusText.textContent = "Den sparade månaden saknar data.";
+    return;
+  }
+  const parsed = parseTable(text);
+  const ve = validateHeadersForAggregate(parsed.headers);
+  if (ve.length) {
+    els.statusText.textContent = ve.join(" ");
+    return;
+  }
+  if (!parsed.rows.length) {
+    els.statusText.textContent = "Sparad månad har inga datarader.";
+    return;
+  }
+  const label = slotLabelFromKey(key);
+  mergeQueue.push({ label, text });
+  renderMergeQueueList();
+  els.statusText.textContent = `Tillagd sparad «${label}» — ${mergeQueue.length} delar i kön.`;
+});
+
+els.btnMergePickFiles?.addEventListener("click", () => {
+  els.mergeFileInput?.click();
+});
+
+els.mergeFileInput?.addEventListener("change", async (e) => {
+  const files = e.target?.files ? [...e.target.files] : [];
+  e.target.value = "";
+  if (!files.length) return;
+  let added = 0;
+  for (const f of files) {
+    try {
+      const text = await f.text();
+      const label = f.name.replace(/\.[^/.]+$/, "") || f.name || "Fil";
+      const parsed = parseTable(text);
+      const ve = validateHeadersForAggregate(parsed.headers);
+      if (ve.length) {
+        els.statusText.textContent = `${f.name}: ${ve.join(" ")}`;
+        continue;
+      }
+      if (!parsed.rows.length) {
+        els.statusText.textContent = `${f.name}: inga datarader.`;
+        continue;
+      }
+      mergeQueue.push({ label, text });
+      added += 1;
+    } catch {
+      els.statusText.textContent = `Kunde inte läsa ${f.name}.`;
+    }
+  }
+  renderMergeQueueList();
+  if (added > 0) els.statusText.textContent = `Tillagde ${added} fil(er). Kö: ${mergeQueue.length} delar.`;
+});
+
+els.btnClearMergeQueue?.addEventListener("click", () => {
+  mergeQueue.length = 0;
+  renderMergeQueueList();
+  els.statusText.textContent = "Sammanslagningskön är tömd.";
+});
+
+els.btnApplyMerge?.addEventListener("click", () => {
+  if (mergeQueue.length < 2) {
+    els.statusText.textContent = "Lägg till minst två delar (t.ex. två månader eller två filer) för samlad vy.";
+    return;
+  }
+  const parsedList = mergeQueue.map((q) => parseTable(q.text));
+  const { headers, rows, errors } = mergeParsedTables(parsedList);
+  if (errors.length) {
+    els.statusText.textContent = errors.join(" ");
+    return;
+  }
+  const agg = aggregateParsed(headers, rows);
+  if (agg.errors.length) {
+    els.statusText.textContent = agg.errors.join(" ");
+    return;
+  }
+  const tsv = tableToTsv(headers, rows);
+  els.pasteInput.value = tsv;
+  const labels = mergeQueue.map((q) => q.label).join(", ");
+  if (els.titleInput) els.titleInput.value = `Samlat: ${labels}`;
+  if (els.analysisModeSelect) {
+    els.analysisModeSelect.value = "normal";
+    updateAnalysisPanels();
+  }
+  window.__tidrapport_compare = null;
+  resetChartFully();
+  window.__chart_kind = "normal";
+  regenerateFromText(tsv, null);
+  els.statusText.textContent = `Samlat diagram: ${mergeQueue.length} delar • ${rows.length} rader • ${agg.totals.size} personer.`;
+});
+
 els.btnDownload.addEventListener("click", () => {
   const c = ensureChart();
   const url = c.toBase64Image("image/png", 1);
@@ -1364,6 +1593,7 @@ els.btnDownload.addEventListener("click", () => {
 
 // Boot: try load saved, else show empty chart
 (() => {
+  renderMergeQueueList();
   updateForecastMonthInfo();
   updateAnalysisPanels();
   const store = readStore();
