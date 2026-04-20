@@ -1862,6 +1862,25 @@
         }
         
         let html = '';
+
+        const weeklyWinnerLine = (w, verb) => {
+          if (!w) return '';
+          if (w.basis === 'weekly_points' && (w.weekly_points !== null && w.weekly_points !== undefined)) {
+            return `<p class="text-xs text-gray-200 mt-1">Veckopoäng: ${Number(w.weekly_points)}p</p>`;
+          }
+          if (w.delta === null || w.delta === undefined) return '';
+          const d = Number(w.delta);
+          if (!Number.isFinite(d) || d === 0) return '';
+          const abs = Math.abs(d);
+          return `<p class="text-xs ${verb === 'up' ? 'text-green-100' : 'text-red-100'} mt-1">${verb === 'up' ? 'Klättrade' : 'Sjönk'} ${abs} platser</p>`;
+        };
+
+        const weeklyRankLine = (w) => {
+          if (!w) return '';
+          if (w.previous_rank === null || w.previous_rank === undefined) return '';
+          if (w.current_rank === null || w.current_rank === undefined) return '';
+          return `<p class="text-xs text-gray-200">#${w.previous_rank} → #${w.current_rank}</p>`;
+        };
         
         // Veckans raket
         if (data.rocket) {
@@ -1871,8 +1890,8 @@
                 <div class="text-2xl sm:text-3xl mb-1 sm:mb-2">🚀</div>
                 <h3 class="text-sm sm:text-base font-bold text-white mb-1">Veckans Raket</h3>
                 <p class="text-green-200 font-semibold text-xs sm:text-sm truncate">${data.rocket.display_name || data.rocket.username}</p>
-                <p class="text-xs text-green-100 mt-1">Klättrade ${Math.abs(data.rocket.delta)} platser</p>
-                <p class="text-xs text-gray-200">#${data.rocket.previous_rank} → #${data.rocket.current_rank}</p>
+                ${weeklyWinnerLine(data.rocket, 'up')}
+                ${weeklyRankLine(data.rocket)}
                 <a href="/profile/${data.rocket.user_id}" class="text-xs text-green-300 hover:underline mt-1 inline-block">Visa profil →</a>
               </div>
             </div>
@@ -1897,8 +1916,8 @@
                 <div class="text-2xl sm:text-3xl mb-1 sm:mb-2">⚓</div>
                 <h3 class="text-sm sm:text-base font-bold text-white mb-1">Veckans Ankare</h3>
                 <p class="text-red-200 font-semibold text-xs sm:text-sm truncate">${data.anchor.display_name || data.anchor.username}</p>
-                <p class="text-xs text-red-100 mt-1">Sjönk ${data.anchor.delta} platser</p>
-                <p class="text-xs text-gray-200">#${data.anchor.previous_rank} → #${data.anchor.current_rank}</p>
+                ${weeklyWinnerLine(data.anchor, 'down')}
+                ${weeklyRankLine(data.anchor)}
                 <a href="/profile/${data.anchor.user_id}" class="text-xs text-red-300 hover:underline mt-1 inline-block">Visa profil →</a>
               </div>
             </div>
