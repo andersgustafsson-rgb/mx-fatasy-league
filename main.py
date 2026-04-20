@@ -1961,7 +1961,19 @@ def calculate_leaderboard_deltas():
         Competition.event_date <= today_utc,
         db.or_(Competition.series.is_(None), Competition.series != "WSX"),
     ).all()
-    recent_comp_ids = {c.id for c in recent_competitions}
+    # Endast *körda* tävlingar — annars finns inga race-poäng i fönstret, alla får samma baseline
+    # som total → delta 0 för alla → Raket/Ankare "Ingen data".
+    ids_in_window = [c.id for c in recent_competitions]
+    if ids_in_window:
+        recent_comp_ids = {
+            row[0]
+            for row in db.session.query(CompetitionResult.competition_id)
+            .filter(CompetitionResult.competition_id.in_(ids_in_window))
+            .distinct()
+            .all()
+        }
+    else:
+        recent_comp_ids = set()
 
     # Get all users
     user_scores = (
@@ -2029,11 +2041,50 @@ def calculate_leaderboard_deltas():
         )
 
     current_leaderboard = sorted(user_scores_list, key=lambda x: x["total_points"], reverse=True)
-    baseline_leaderboard = sorted(user_scores_list, key=lambda x: x["baseline_total"], reverse=True)
 
-    baseline_ranking = {}
-    for i, user in enumerate(baseline_leaderboard, 1):
-        baseline_ranking[str(user["id"])] = i
+    baseline_ranking: dict[str, int] = {}
+    if recent_comp_ids:
+        baseline_leaderboard = sorted(
+            user_scores_list, key=lambda x: x["baseline_total"], reverse=True
+        )
+        for i, user in enumerate(baseline_leaderboard, 1):
+            baseline_ranking[str(user["id"])] = i
+    else:
+        # Inga avklarade race i veckofönstret → jämför mot rank med bara äldre tävlingar (Raket/Ankare dör inte)
+        previous_competitions = (
+            Competition.query.filter(
+                db.or_(
+                    Competition.series.is_(None),
+                    Competition.series != "WSX",
+                ),
+                Competition.event_date.isnot(None),
+                Competition.event_date < week_ago_date,
+            )
+            .order_by(Competition.event_date.asc())
+            .all()
+        )
+        previous_comp_ids = [c.id for c in previous_competitions]
+        previous_rows = []
+        for user_data in user_scores_list:
+            user_id = user_data["id"]
+            previous_points = 0
+            if previous_comp_ids:
+                previous_scores = (
+                    CompetitionScore.query.filter(
+                        CompetitionScore.user_id == user_id,
+                        CompetitionScore.competition_id.in_(previous_comp_ids),
+                    ).all()
+                )
+                scores_by_comp = {}
+                for score in previous_scores:
+                    comp_id = score.competition_id
+                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
+                        scores_by_comp[comp_id] = score
+                previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
+            previous_rows.append({"id": user_id, "total_points": previous_points})
+        previous_rows.sort(key=lambda x: x["total_points"], reverse=True)
+        for i, row in enumerate(previous_rows, 1):
+            baseline_ranking[str(row["id"])] = i
 
     leaderboard_data = []
     for i, user_row in enumerate(current_leaderboard, 1):
@@ -2041,8 +2092,7 @@ def calculate_leaderboard_deltas():
         current_rank = i
         baseline_rank = baseline_ranking.get(str(user_id))
 
-        if baseline_rank is not None and baseline_rank > 0 and recent_comp_ids:
-            # Positiv delta = sämre placering än baslinje (utan senaste veckans race-poäng)
+        if baseline_rank is not None and baseline_rank > 0:
             delta = current_rank - baseline_rank
         else:
             delta = None
