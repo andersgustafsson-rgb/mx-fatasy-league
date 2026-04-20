@@ -1948,30 +1948,41 @@ def debug_weekly_stats():
 
 def calculate_leaderboard_deltas():
     """Shared function to calculate leaderboard deltas - ensures consistency between get_weekly_fun_stats and get_season_leaderboard"""
-    from sqlalchemy import func
     from datetime import datetime, timedelta
-    
+
     db.session.rollback()
-    
+
+    # Samma 7-dagsfönster som get_weekly_fun_stats (event_date, icke-WSX, ej framtida)
+    week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+    today_utc = datetime.utcnow().date()
+    recent_competitions = Competition.query.filter(
+        Competition.event_date.isnot(None),
+        Competition.event_date >= week_ago_date,
+        Competition.event_date <= today_utc,
+        db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+    ).all()
+    recent_comp_ids = {c.id for c in recent_competitions}
+
     # Get all users
     user_scores = (
         db.session.query(
             User.id,
             User.username,
             User.display_name,
-            SeasonTeam.team_name
+            SeasonTeam.team_name,
         )
         .outerjoin(SeasonTeam, SeasonTeam.user_id == User.id)
         .group_by(User.id, User.username, User.display_name, SeasonTeam.team_name)
         .all()
     )
-    
-    # Calculate current total points for each user
+
+    # Per user: total + poäng från "denna veckas" tävlingar (för baslinjerank)
     user_scores_list = []
     for user_row in user_scores:
         user_id = user_row.id
         total = 0
-        
+        recent_week_points = 0
+
         try:
             all_scores = (
                 db.session.query(CompetitionScore)
@@ -1980,117 +1991,74 @@ def calculate_leaderboard_deltas():
                 .filter(
                     db.or_(
                         Competition.series.is_(None),
-                        Competition.series != 'WSX'
+                        Competition.series != "WSX",
                     )
                 )
                 .all()
             )
-            
-            # Handle duplicates - keep only most recent score per competition
+
             scores_by_comp = {}
             for score in all_scores:
                 comp_id = score.competition_id
                 if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
                     scores_by_comp[comp_id] = score
-            
+
             total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            if recent_comp_ids:
+                recent_week_points = sum(
+                    (s.total_points or 0)
+                    for cid, s in scores_by_comp.items()
+                    if cid in recent_comp_ids
+                )
         except Exception as e:
             print(f"Error calculating points for user {user_row.username}: {e}")
             total = 0
-        
-        user_scores_list.append({
-            'id': user_id,
-            'username': user_row.username,
-            'display_name': getattr(user_row, 'display_name', None) or user_row.username,
-            'team_name': user_row.team_name,
-            'total_points': total
-        })
-    
-    # Calculate current leaderboard
-    current_leaderboard = sorted(user_scores_list, key=lambda x: x['total_points'], reverse=True)
-    
-    # Calculate previous leaderboard - compare with competitions from before the last 7 days
-    week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
-    
-    previous_competitions = (
-        db.session.query(Competition)
-        .filter(
-            db.or_(
-                Competition.series.is_(None),
-                Competition.series != 'WSX'
-            ),
-            Competition.event_date < week_ago_date
+            recent_week_points = 0
+
+        baseline_total = max(0, total - recent_week_points)
+
+        user_scores_list.append(
+            {
+                "id": user_id,
+                "username": user_row.username,
+                "display_name": getattr(user_row, "display_name", None) or user_row.username,
+                "team_name": user_row.team_name,
+                "total_points": total,
+                "baseline_total": baseline_total,
+            }
         )
-        .order_by(Competition.event_date.asc())
-        .all()
-    )
-    
-    previous_leaderboard = []
-    for user_data in user_scores_list:
-        user_id = user_data['id']
-        previous_points = 0
-        
-        if previous_competitions:
-            try:
-                previous_comp_ids = [c.id for c in previous_competitions]
-                previous_scores = (
-                    db.session.query(CompetitionScore)
-                    .filter(CompetitionScore.user_id == user_id)
-                    .filter(CompetitionScore.competition_id.in_(previous_comp_ids))
-                    .all()
-                )
-                
-                # Handle duplicates - keep only most recent score per competition
-                scores_by_comp = {}
-                for score in previous_scores:
-                    comp_id = score.competition_id
-                    if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                        scores_by_comp[comp_id] = score
-                
-                previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
-            except Exception as e:
-                previous_points = 0
-        
-        previous_leaderboard.append({
-            'id': user_id,
-            'username': user_data['username'],
-            'display_name': user_data['display_name'],
-            'total_points': previous_points
-        })
-    
-    previous_leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-    
-    # Create ranking maps
-    current_ranking = {}
-    for i, user in enumerate(current_leaderboard, 1):
-        current_ranking[str(user['id'])] = i
-    
-    previous_ranking = {}
-    for i, user in enumerate(previous_leaderboard, 1):
-        previous_ranking[str(user['id'])] = i
-    
-    # Calculate deltas
+
+    current_leaderboard = sorted(user_scores_list, key=lambda x: x["total_points"], reverse=True)
+    baseline_leaderboard = sorted(user_scores_list, key=lambda x: x["baseline_total"], reverse=True)
+
+    baseline_ranking = {}
+    for i, user in enumerate(baseline_leaderboard, 1):
+        baseline_ranking[str(user["id"])] = i
+
     leaderboard_data = []
     for i, user_row in enumerate(current_leaderboard, 1):
-        user_id = user_row['id']
+        user_id = user_row["id"]
         current_rank = i
-        previous_rank = previous_ranking.get(str(user_id))
-        
-        if previous_rank is not None and previous_rank > 0:
-            delta = current_rank - previous_rank
+        baseline_rank = baseline_ranking.get(str(user_id))
+
+        if baseline_rank is not None and baseline_rank > 0 and recent_comp_ids:
+            # Positiv delta = sämre placering än baslinje (utan senaste veckans race-poäng)
+            delta = current_rank - baseline_rank
         else:
             delta = None
-        
-        leaderboard_data.append({
-            'user_id': user_id,
-            'username': user_row['username'],
-            'display_name': user_row['display_name'],
-            'team_name': user_row.get('team_name'),
-            'rank': current_rank,
-            'delta': delta,
-            'total_points': user_row['total_points']
-        })
-    
+
+        leaderboard_data.append(
+            {
+                "user_id": user_id,
+                "username": user_row["username"],
+                "display_name": user_row["display_name"],
+                "team_name": user_row.get("team_name"),
+                "rank": current_rank,
+                "delta": delta,
+                "total_points": user_row["total_points"],
+            }
+        )
+
     return leaderboard_data
 
 
@@ -2227,33 +2195,28 @@ def get_weekly_fun_stats():
         # A perfect pick is when predicted_position == actual_position
         perfect_picks_stats = {}
         if comp_ids:
-            # Get all race picks for recent competitions
-            race_picks = (
-                db.session.query(
-                    RacePick.user_id,
-                    RacePick.competition_id,
-                    RacePick.rider_id,
-                    RacePick.predicted_position
-                )
-                .filter(RacePick.competition_id.in_(comp_ids))
-                .all()
-            )
-            
-            # Get all actual results for recent competitions
-            actual_results = (
-                db.session.query(
-                    CompetitionResult.competition_id,
-                    CompetitionResult.rider_id,
-                    CompetitionResult.position
-                )
-                .filter(CompetitionResult.competition_id.in_(comp_ids))
-                .all()
-            )
-            
-            # Create lookup dict: (competition_id, rider_id) -> position
+            # En pick per (user, tävling, förare) — samma som calculate_scores
+            picks_raw = RacePick.query.filter(RacePick.competition_id.in_(comp_ids)).all()
+            by_pick_key = {}
+            for p in picks_raw:
+                pk = (p.user_id, p.competition_id, p.rider_id)
+                if pk not in by_pick_key or p.pick_id > by_pick_key[pk].pick_id:
+                    by_pick_key[pk] = p
+            race_picks = [
+                (p.user_id, p.competition_id, p.rider_id, p.predicted_position)
+                for p in by_pick_key.values()
+            ]
+
+            # Senaste result-rad per (tävling, förare) om dubbletter finns
+            actual_rows = CompetitionResult.query.filter(
+                CompetitionResult.competition_id.in_(comp_ids)
+            ).all()
             results_lookup = {}
-            for comp_id, rider_id, position in actual_results:
-                results_lookup[(comp_id, rider_id)] = position
+            for res in actual_rows:
+                k = (res.competition_id, res.rider_id)
+                if k not in results_lookup or res.result_id > results_lookup[k][0]:
+                    results_lookup[k] = (res.result_id, res.position)
+            results_lookup = {k: v[1] for k, v in results_lookup.items()}
             
             # Count perfect picks per user
             for user_id, comp_id, rider_id, predicted_pos in race_picks:
