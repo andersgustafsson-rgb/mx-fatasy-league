@@ -267,19 +267,21 @@ function resetChartIfOrientationChanged(mode) {
   }
 }
 
-function ensureChart() {
+function ensureChart(mode = "horizontal") {
   if (typeof Chart === "undefined") {
     throw new Error("Chart.js laddades inte. Ladda om sidan och testa igen.");
   }
   if (chart) return chart;
   const ctx = els.chartCanvas.getContext("2d");
+  const indexAxis = desiredIndexAxis(mode);
   chart = new Chart(ctx, {
     type: "bar",
     data: { labels: [], datasets: [] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      indexAxis: "y",
+      // IMPORTANT: create the chart in the right orientation from start.
+      indexAxis,
       // Workaround: some environments/plugins try to bind DOM events and can crash.
       // We don't need hover/click interactions for this report chart.
       events: [],
@@ -393,9 +395,8 @@ function setChartHeightByMode(mode, labelCount) {
 }
 
 function applyOrientation(mode) {
-  const c = ensureChart();
+  const c = ensureChart(mode);
   const isVertical = mode === "vertical";
-  c.options.indexAxis = desiredIndexAxis(mode);
 
   // Improve readability in vertical mode (many labels).
   if (isVertical) {
@@ -480,7 +481,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
   const mode = window.__tidrapport_state?.orientation || "horizontal";
   // If the user changed orientation, recreate chart BEFORE we set data.
   resetChartIfOrientationChanged(mode);
-  const c = ensureChart();
+  const c = ensureChart(mode);
   applyOrientation(mode);
 
   const limitedPeople = limitForVerticalIfNeeded(mode, sortedPeople, !!window.__tidrapport_state?.employeeName);
