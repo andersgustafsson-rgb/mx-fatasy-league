@@ -10,8 +10,15 @@ const els = {
   btnLoad: document.getElementById("btnLoad"),
   btnAll: document.getElementById("btnAll"),
   btnNone: document.getElementById("btnNone"),
+  monthSelect: document.getElementById("monthSelect"),
+  yearInput: document.getElementById("yearInput"),
+  titleInput: document.getElementById("titleInput"),
+  titlePreview: document.getElementById("titlePreview"),
   statusFilters: document.getElementById("statusFilters"),
   statusText: document.getElementById("statusText"),
+  employeeInput: document.getElementById("employeeInput"),
+  employeeList: document.getElementById("employeeList"),
+  btnClearEmployee: document.getElementById("btnClearEmployee"),
   tableBody: document.getElementById("tableBody"),
   chartCanvas: document.getElementById("chartCanvas"),
 };
@@ -150,13 +157,22 @@ function aggregate(text) {
 
   const totals = new Map(); // name -> Map(status -> hours)
   const statusSet = new Set();
+  let usedRows = 0;
+  let skippedNoName = 0;
+  let skippedNoTime = 0;
 
   for (const row of rows) {
     const name = cleanStr(row[colName]);
-    if (!name) continue;
+    if (!name) {
+      skippedNoName += 1;
+      continue;
+    }
     const fom = parseTimeToHours(row[colFom]);
     const tom = parseTimeToHours(row[colTom]);
-    if (fom == null || tom == null) continue;
+    if (fom == null || tom == null) {
+      skippedNoTime += 1;
+      continue;
+    }
     const rastMin = colRast ? parseRastMinutes(row[colRast]) : 0;
     const gross = durationHours(fom, tom);
     const net = Math.max(0, gross - rastMin / 60);
@@ -166,6 +182,7 @@ function aggregate(text) {
     if (!totals.has(name)) totals.set(name, new Map());
     const byStatus = totals.get(name);
     byStatus.set(status, (byStatus.get(status) || 0) + net);
+    usedRows += 1;
   }
 
   const statuses = [
@@ -173,7 +190,17 @@ function aggregate(text) {
     ...[...statusSet].filter((s) => !ORSAK_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "sv")),
   ];
 
-  return { totals, statuses, errors: [] };
+  return {
+    totals,
+    statuses,
+    errors: [],
+    stats: {
+      rawRows: rows.length,
+      usedRows,
+      skippedNoName,
+      skippedNoTime,
+    },
+  };
 }
 
 function round2(n) {
@@ -230,6 +257,41 @@ function ensureChart() {
     },
   });
   return chart;
+}
+
+function getMonthYearLabel() {
+  const month = cleanStr(els.monthSelect?.value) || "";
+  const y = cleanStr(els.yearInput?.value) || "";
+  const year = y || String(new Date().getFullYear());
+  if (!month) return year;
+  return `${month} ${year}`;
+}
+
+function getSelectedEmployeeName(totals) {
+  const v = cleanStr(els.employeeInput?.value);
+  if (!v) return null;
+  // only accept exact match against known names to avoid accidental filtering
+  for (const name of totals.keys()) {
+    if (cleanStr(name).toLowerCase() === v.toLowerCase()) return name;
+  }
+  return null;
+}
+
+function buildTitleText(state) {
+  const base = cleanStr(els.titleInput?.value) || getMonthYearLabel();
+  const employee = state.employeeName ? ` — ${state.employeeName}` : "";
+  const selected = [...state.selectedStatuses];
+  const allCount = state.statuses.length;
+  let filt = "";
+  if (selected.length === 0) {
+    filt = " — (inga statusar)";
+  } else if (selected.length !== allCount) {
+    // Keep it readable; list a few statuses, then count.
+    const shown = selected.slice(0, 3).join(", ");
+    const more = selected.length > 3 ? ` (+${selected.length - 3})` : "";
+    filt = ` — ${shown}${more}`;
+  }
+  return `${base}${employee}${filt}`;
 }
 
 function palette(i) {
@@ -295,24 +357,41 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
 
   c.data.labels = labels;
   c.data.datasets = datasets;
+  if (window.__tidrapport_state) {
+    const titleText = buildTitleText(window.__tidrapport_state);
+    c.options.plugins.title.text = titleText;
+    if (els.titlePreview) els.titlePreview.textContent = titleText;
+  }
   c.update();
 }
 
 function renderAll(state) {
   const { totals, statuses, selectedStatuses } = state;
-  const sortedPeople = computePeopleSorted(totals, selectedStatuses);
+  const totalsView = state.employeeName
+    ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
+    : totals;
+  const sortedPeople = computePeopleSorted(totalsView, selectedStatuses);
   renderTable(sortedPeople);
-  renderChart(totals, statuses, selectedStatuses, sortedPeople);
+  renderChart(totalsView, statuses, selectedStatuses, sortedPeople);
 
   const totalNames = totals.size;
   const totalStatuses = statuses.length;
-  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}`;
+  const stats = state.stats;
+  const statsText = stats
+    ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
+    : "";
+  const emp = state.employeeName ? ` • Anställd: ${state.employeeName}` : "";
+  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${statsText}`;
 }
 
 function saveLocal(state) {
   const payload = {
     text: els.pasteInput.value,
     selected: [...state.selectedStatuses],
+    month: cleanStr(els.monthSelect?.value),
+    year: cleanStr(els.yearInput?.value),
+    title: cleanStr(els.titleInput?.value),
+    employee: cleanStr(els.employeeInput?.value),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -332,10 +411,10 @@ function clearLocal() {
 }
 
 function regenerateFromText(text, selectedOverride) {
-  const { totals, statuses, errors } = aggregate(text);
+  const { totals, statuses, errors, stats } = aggregate(text);
   if (errors.length) {
     els.statusText.textContent = errors.join(" ");
-    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set() };
+    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null };
     renderAll(window.__tidrapport_state);
     return;
   }
@@ -344,7 +423,18 @@ function regenerateFromText(text, selectedOverride) {
   const preferred = selectedOverride?.length ? selectedOverride : statuses;
   for (const st of preferred) if (statuses.includes(st)) selectedStatuses.add(st);
 
-  window.__tidrapport_state = { totals, statuses, selectedStatuses };
+  const employeeName = getSelectedEmployeeName(totals);
+
+  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats };
+  // update datalist with names
+  if (els.employeeList) {
+    els.employeeList.innerHTML = "";
+    [...totals.keys()].sort((a, b) => a.localeCompare(b, "sv")).forEach((n) => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      els.employeeList.appendChild(opt);
+    });
+  }
   buildStatusFilters(statuses, selectedStatuses);
   renderAll(window.__tidrapport_state);
 }
@@ -368,6 +458,10 @@ els.btnLoad.addEventListener("click", () => {
     return;
   }
   els.pasteInput.value = data.text || "";
+  if (els.monthSelect && data.month) els.monthSelect.value = data.month;
+  if (els.yearInput && data.year) els.yearInput.value = data.year;
+  if (els.titleInput && data.title) els.titleInput.value = data.title;
+  if (els.employeeInput && data.employee) els.employeeInput.value = data.employee;
   regenerateFromText(els.pasteInput.value, data.selected || []);
 });
 
@@ -387,12 +481,42 @@ els.btnNone.addEventListener("click", () => {
   saveLocal(st);
 });
 
+els.btnClearEmployee?.addEventListener("click", () => {
+  if (els.employeeInput) els.employeeInput.value = "";
+  if (window.__tidrapport_state) {
+    window.__tidrapport_state.employeeName = null;
+    renderAll(window.__tidrapport_state);
+    saveLocal(window.__tidrapport_state);
+  }
+});
+
+els.employeeInput?.addEventListener("input", () => {
+  if (!window.__tidrapport_state) return;
+  const nm = getSelectedEmployeeName(window.__tidrapport_state.totals);
+  window.__tidrapport_state.employeeName = nm;
+  renderAll(window.__tidrapport_state);
+  saveLocal(window.__tidrapport_state);
+});
+
+for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
+  el?.addEventListener("input", () => {
+    if (!window.__tidrapport_state) return;
+    renderAll(window.__tidrapport_state);
+    saveLocal(window.__tidrapport_state);
+  });
+}
+
 els.btnDownload.addEventListener("click", () => {
   const c = ensureChart();
   const url = c.toBase64Image("image/png", 1);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `tidrapport_${new Date().toISOString().slice(0, 10)}.png`;
+  const safeTitle = (buildTitleText(window.__tidrapport_state || { statuses: [], selectedStatuses: [], employeeName: null }) || "tidrapport")
+    .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 80);
+  a.download = `${safeTitle || "tidrapport"}_${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
 });
 
@@ -401,9 +525,14 @@ els.btnDownload.addEventListener("click", () => {
   const saved = loadLocal();
   if (saved?.text) {
     els.pasteInput.value = saved.text;
+    if (els.monthSelect && saved.month) els.monthSelect.value = saved.month;
+    if (els.yearInput && saved.year) els.yearInput.value = saved.year;
+    if (els.titleInput && saved.title) els.titleInput.value = saved.title;
+    if (els.employeeInput && saved.employee) els.employeeInput.value = saved.employee;
     regenerateFromText(saved.text, saved.selected || []);
   } else {
-    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set() };
+    if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
+    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null };
     ensureChart();
     els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
   }
