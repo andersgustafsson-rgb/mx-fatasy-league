@@ -18,7 +18,15 @@ const els = {
 
 function cleanStr(v) {
   if (v == null) return "";
-  return String(v).replace(/\u00A0/g, " ").trim();
+  // Normalize "weird" whitespace from Excel/Sheets copy (NBSP, thin NBSP, figure space, etc.)
+  return String(v)
+    .replace(/[\u00A0\u2007\u202F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normHeader(s) {
+  return cleanStr(s).toLowerCase();
 }
 
 function parseRastMinutes(raw) {
@@ -98,7 +106,9 @@ function parseTable(text) {
   if (lines.length === 0) return { headers: [], rows: [] };
 
   const delim = detectDelimiter(lines[0]);
-  const headers = (delim ? lines[0].split(delim) : lines[0].split(/\s{2,}/)).map(cleanStr);
+  let headers = (delim ? lines[0].split(delim) : lines[0].split(/\s{2,}/)).map(cleanStr);
+  // Remove empty trailing headers if the header row ends with separators/tabs.
+  while (headers.length > 0 && !headers[headers.length - 1]) headers.pop();
 
   const rows = [];
   for (let i = 1; i < lines.length; i += 1) {
@@ -113,9 +123,9 @@ function parseTable(text) {
 }
 
 function pickCol(headers, wanted) {
-  const low = headers.map((h) => cleanStr(h).toLowerCase());
+  const low = headers.map(normHeader);
   for (const w of wanted) {
-    const idx = low.indexOf(w.toLowerCase());
+    const idx = low.indexOf(String(w).toLowerCase());
     if (idx >= 0) return headers[idx];
   }
   return null;
