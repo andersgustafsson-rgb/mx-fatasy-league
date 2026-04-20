@@ -280,11 +280,16 @@ function ensureChart() {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: "y",
+      // Workaround: some environments/plugins try to bind DOM events and can crash.
+      // We don't need hover/click interactions for this report chart.
+      events: [],
+      animation: false,
       plugins: {
         legend: {
           position: "right",
           labels: { color: "#e2e8f0", boxWidth: 14, boxHeight: 14, padding: 14, font: { size: 12 } },
         },
+        tooltip: { enabled: false },
         title: { display: true, text: "Timmar per person (per status)", color: "#e2e8f0", font: { size: 14 } },
       },
       scales: {
