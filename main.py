@@ -1952,6 +1952,32 @@ def calculate_leaderboard_deltas():
 
     db.session.rollback()
 
+    # Baslinje för pilar: senaste sparade snapshot i LeaderboardHistory.
+    # Det gör pilar stabila och gör att manuella poängkorrigeringar faktiskt syns (jämfört med
+    # en tidigare sparad rank), istället för att baslinjen räknas om från samma data.
+    baseline_from_history: dict[str, int] = {}
+    try:
+        from sqlalchemy import func
+
+        subq = (
+            db.session.query(
+                LeaderboardHistory.user_id.label("user_id"),
+                func.max(LeaderboardHistory.id).label("max_id"),
+            )
+            .group_by(LeaderboardHistory.user_id)
+            .subquery()
+        )
+        latest_rows = (
+            db.session.query(LeaderboardHistory.user_id, LeaderboardHistory.ranking)
+            .join(subq, LeaderboardHistory.id == subq.c.max_id)
+            .all()
+        )
+        baseline_from_history = {
+            str(int(uid)): int(rank) for uid, rank in latest_rows if uid is not None and rank is not None
+        }
+    except Exception:
+        baseline_from_history = {}
+
     # Samma 7-dagsfönster som get_weekly_fun_stats (event_date, icke-WSX, ej framtida)
     week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
     today_utc = datetime.utcnow().date()
@@ -2060,7 +2086,9 @@ def calculate_leaderboard_deltas():
     )
 
     baseline_ranking: dict[str, int] = {}
-    if use_recent_window_baseline:
+    if baseline_from_history:
+        baseline_ranking = dict(baseline_from_history)
+    elif use_recent_window_baseline:
         baseline_leaderboard = sorted(
             user_scores_list, key=lambda x: x["baseline_total"], reverse=True
         )
@@ -7455,25 +7483,9 @@ def get_season_leaderboard():
                 "rank": user_data['rank'],
                 "delta": user_data['delta']
             })
-            
-            # Always save new ranking snapshot (even if no changes) so weekly stats can compare
-            # This ensures we have a snapshot to compare against for future competitions
-        # Always save new ranking snapshot (even if no changes) so weekly stats can compare
-        # This ensures we have a snapshot to compare against for future competitions
-        try:
-            for row in result:
-                history_entry = LeaderboardHistory(
-                    user_id=row["user_id"],
-                    ranking=row["rank"],
-                    total_points=row["total_points"]
-                )
-                db.session.add(history_entry)
-            
-            db.session.commit()
-        except Exception as commit_error:
-            db.session.rollback()
-            # Continue without saving history - still return the result
-        
+
+        # OBS: Spara inte snapshot på varje fetch (det nollar pilarna vid refresh).
+        # Snapshot skapas via admin-flöden (t.ex. efter omräkning) eller manuellt vid behov.
         # Return the result after successful ranking logic
         return jsonify(result)
     
