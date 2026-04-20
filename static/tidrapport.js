@@ -186,7 +186,8 @@ function detectDelimiter(headerLine) {
 }
 
 function parseTable(text) {
-  const lines = splitRows(text);
+  const raw = String(text ?? "").replace(/^\uFEFF/, "");
+  const lines = splitRows(raw);
   if (lines.length === 0) return { headers: [], rows: [] };
 
   const delim = detectDelimiter(lines[0]);
@@ -1263,6 +1264,13 @@ function loadFromStoreKey(key) {
 }
 
 function regenerateFromText(text, selectedOverride) {
+  // Jämförelseläge ritar bara från sparade månader — ignorera inklistring om vi inte byter vy.
+  if (cleanStr(text) && getAnalysisMode() === "compare") {
+    if (els.analysisModeSelect) els.analysisModeSelect.value = "normal";
+    window.__tidrapport_compare = null;
+    updateAnalysisPanels();
+  }
+
   const { totals, statuses, errors, stats } = aggregate(text);
   if (errors.length) {
     els.statusText.textContent = errors.join(" ");
