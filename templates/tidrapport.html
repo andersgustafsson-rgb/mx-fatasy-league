@@ -49,11 +49,11 @@
               <h3 class="font-semibold text-slate-100 mb-1">B. Samlad period (t.ex. januari–mars i ett diagram)</h3>
               <p class="text-slate-400 mb-1">Du behöver <em>inte</em> spara månader först. Alla delar ska ha samma typ av kolumner som i A.</p>
               <ol class="list-decimal ml-4 space-y-1 text-slate-300">
-                <li>Scrolla till rutan <strong class="text-slate-200 font-medium">Samlad period</strong>.</li>
-                <li>Klistra in <em>första</em> månaden i stora rutan, sätt Månad/År om du vill ha tydlig etikett, klicka <strong class="text-slate-200 font-medium">Lägg till inklistring</strong>.</li>
-                <li>Rensa eller ersätt innehållet i stora rutan, klistra in <em>nästa</em> månad, klicka <strong class="text-slate-200 font-medium">Lägg till inklistring</strong> igen. Upprepa tills listan visar alla månader du vill ha.</li>
+                <li>Öppna avsnittet <strong class="text-slate-200 font-medium">Samlad period</strong> (ihopfällt under huvudrutan).</li>
+                <li>Klistra in <em>första</em> månaden i huvudrutan, sätt Månad/År om du vill ha tydlig etikett, klicka <strong class="text-slate-200 font-medium">Lägg denna inklistring i kön</strong>.</li>
+                <li>Rensa eller ersätt innehållet i huvudrutan, klistra in <em>nästa</em> månad, klicka <strong class="text-slate-200 font-medium">Lägg denna inklistring i kön</strong> igen.</li>
                 <li>Alternativ: <strong class="text-slate-200 font-medium">Välj filer…</strong> för en eller flera .csv/.txt med samma upplägg, eller <strong class="text-slate-200 font-medium">Lägg till vald sparad månad</strong> om du redan har sparat månader lokalt.</li>
-                <li>När minst <strong class="text-slate-200 font-medium">två</strong> delar finns i listan: klicka <strong class="text-slate-200 font-medium">Skapa samlat diagram</strong>. Då slås all data ihop, textfältet fylls med hela perioden och diagrammet visar <strong class="text-slate-200 font-medium">summerade</strong> timmar per person och status.</li>
+                <li>När minst <strong class="text-slate-200 font-medium">två</strong> delar finns i listan: klicka <strong class="text-slate-200 font-medium">Skapa samlat diagram</strong>. Då slås data ihop; diagrammet visar timmar <strong class="text-slate-200 font-medium">uppdelat per månad/del och status</strong>.</li>
                 <li><strong class="text-slate-200 font-medium">Töm listan</strong> om du vill börja om med en ny period.</li>
               </ol>
             </section>
@@ -108,247 +108,287 @@
     </div>
 
     <div id="layoutGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-lg font-semibold">1) Klistra in</h2>
-          <div class="flex flex-wrap items-center gap-2">
-            <button type="button" id="btnLoad" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Ladda senaste</button>
-            <button type="button" id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Tömmer inklistringsrutan och diagrammet">Rensa rutan</button>
+      <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-4">
+        <!-- Huvudflöde: alltid synligt -->
+        <div class="rounded-xl border-2 border-emerald-800/45 bg-slate-950/50 p-4 shadow-lg shadow-emerald-950/10">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-emerald-50 tracking-tight">Skapa diagram</h2>
+              <p class="text-xs text-slate-400 mt-1 max-w-md">
+                Klistra in tidrapport-tabellen nedan och klicka på den gröna knappen. Övriga inställningar finns i ihopfällda avsnitt under.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2 shrink-0">
+              <button type="button" id="btnLoad" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Ladda senaste</button>
+              <button type="button" id="btnClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Tömmer inklistringsrutan och diagrammet">Rensa allt</button>
+            </div>
           </div>
-        </div>
 
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="monthSelect">Månad</label>
-            <select id="monthSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-              <option>Januari</option>
-              <option>Februari</option>
-              <option>Mars</option>
-              <option>April</option>
-              <option>Maj</option>
-              <option>Juni</option>
-              <option>Juli</option>
-              <option>Augusti</option>
-              <option>September</option>
-              <option>Oktober</option>
-              <option>November</option>
-              <option>December</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="yearInput">År</label>
-            <input id="yearInput" type="number" inputmode="numeric" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="2026" />
-          </div>
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="titleInput">Rubrik (valfri)</label>
-            <input id="titleInput" type="text" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Ex: Februari 2026 — Övertid" />
-          </div>
-        </div>
-
-        <p class="text-xs text-slate-500 mt-2 rounded-lg border border-slate-800/80 bg-slate-950/30 px-3 py-2">
-          <strong class="text-slate-300">Var bestäms månaden?</strong>
-          I rutorna <strong class="text-slate-200">Månad</strong> och <strong class="text-slate-200">År</strong> här ovan — det är <em>de</em> som styr under vilket namn inklistringen sparas (t.ex. «Januari 2026»).
-          Tabellens kolumn «Datum» används <strong class="text-slate-400">inte</strong> för att gissa månad.
-          <span class="text-slate-600"> · </span>
-          <strong class="text-slate-300">Januari → februari:</strong> välj <strong class="text-slate-200">Februari</strong> i listan, kolla att året stämmer, klistra in februaridatan, sedan «Skapa / uppdatera diagram» eller «Spara vald månad».
-          (Byter du inte månad först skriver du över föregående sparning med samma nyckel.)
-        </p>
-
-        <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <div class="text-xs font-semibold text-slate-200 mb-2">Spara flera månader (endast i denna webbläsare)</div>
-          <div class="flex flex-wrap items-end gap-2">
-            <div class="min-w-[220px] flex-1">
-              <label class="block text-xs text-slate-400 mb-1" for="savedSlotSelect">Sparade rapporter</label>
-              <select id="savedSlotSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                <option value="">—</option>
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="monthSelect">Månad</label>
+              <select id="monthSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option>Januari</option>
+                <option>Februari</option>
+                <option>Mars</option>
+                <option>April</option>
+                <option>Maj</option>
+                <option>Juni</option>
+                <option>Juli</option>
+                <option>Augusti</option>
+                <option>September</option>
+                <option>Oktober</option>
+                <option>November</option>
+                <option>December</option>
               </select>
             </div>
-            <button type="button" id="btnLoadSlot" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Ladda vald</button>
-            <button type="button" id="btnSaveSlot" class="px-3 py-2 rounded-lg bg-emerald-900/80 hover:bg-emerald-800/80 text-sm border border-emerald-800">Spara vald månad</button>
-            <button type="button" id="btnDeleteSlot" class="px-3 py-2 rounded-lg bg-red-950/60 hover:bg-red-900/50 text-sm border border-red-900/50">Ta bort vald</button>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="yearInput">År</label>
+              <input id="yearInput" type="number" inputmode="numeric" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="2026" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="titleInput">Rubrik (valfri)</label>
+              <input id="titleInput" type="text" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Ex: Februari 2026 — Övertid" />
+            </div>
           </div>
-          <p id="slotActionFeedback" class="text-xs mt-2 min-h-[1.25rem] text-emerald-400 font-medium" role="status" aria-live="polite"></p>
-          <p class="text-xs text-slate-500 mt-2">
-            <strong class="text-slate-400">Så sparas det:</strong> Nyckeln är <span class="text-slate-400">månad + år</span> ovan.
-            När du klickar <span class="text-slate-300">«Skapa / uppdatera diagram»</span> sparas automatiskt till den nyckeln (samma som «Spara vald månad»).
-            Bekräftelse visas i <span class="text-slate-400">grön text</span> precis ovanför denna rad när du sparar eller laddar.
-            Data lagras bara i webbläsaren — inte på servern.
+
+          <textarea
+            id="pasteInput"
+            class="mt-3 w-full h-64 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
+            placeholder="Klistra in här… (första raden ska innehålla rubriker som Namn, Kl Fom, Kl Tom, Rast, Orsak)"
+          ></textarea>
+
+          <p class="text-[11px] text-slate-500 mt-2">
+            Tips: kopiera från Excel eller Google Sheets — tabb-separerat brukar fungera direkt.
           </p>
+
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" id="btnGenerate" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-base font-semibold shadow-md shadow-emerald-900/30">
+              Skapa / uppdatera diagram
+            </button>
+            <button type="button" id="btnClearNearGenerate" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600" title="Tömmer bara rutan och nollställer diagram (samma som Rensa allt)">
+              Töm rutan
+            </button>
+            <div id="statusText" class="text-sm text-slate-300 flex-1 min-w-[12rem]"></div>
+          </div>
         </div>
 
-        <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <div class="flex items-baseline justify-between gap-2 flex-wrap">
-            <label class="block text-xs font-semibold text-slate-200" for="analysisModeSelect">Vy-läge (vad diagrammet ska visa)</label>
-            <span class="text-[10px] uppercase tracking-wide text-slate-500">Påverkar inte inklistrad data</span>
+        <!-- Filter: ofta använt, men ihopfällt för lugnare första intryck -->
+        <details class="group rounded-xl border border-emerald-900/40 bg-emerald-950/10 open:bg-emerald-950/20">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden"
+          >
+            <span>
+              <span class="block text-sm font-semibold text-emerald-100">Filter — status &amp; person</span>
+              <span class="block text-xs text-slate-500 mt-0.5">Välj vilka orsaker som räknas och ev. ett namn (påverkar diagram &amp; tabell)</span>
+            </span>
+            <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
+            <p class="text-xs text-slate-500 mt-3 mb-3">
+              Här styr du <strong class="text-slate-400 font-medium">vilka timmar som syns i staplarna</strong> och om du bara vill se <strong class="text-slate-400 font-medium">en person</strong>. Ändrar inte inklistrad text.
+            </p>
+            <div id="filterContextBanner" class="text-xs rounded-lg px-3 py-2.5 mb-4 border bg-slate-900/80 border-slate-700 text-slate-300" role="status">
+              Välj vy-läge under «Avancerat» för jämförelse/prognos.
+            </div>
+            <div class="border-t border-slate-800/80 pt-4">
+              <h3 class="text-sm font-semibold text-slate-100 mb-1">Statusar (Orsak / typ)</h3>
+              <p class="text-xs text-slate-500 mb-2">
+                <strong class="text-slate-400 font-medium">Alla</strong> / <strong class="text-slate-400 font-medium">Ingen</strong> sätter snabbt kryssrutorna.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-2">
+                <button type="button" id="btnAll" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka i alla statusar">Alla statusar</button>
+                <button type="button" id="btnNone" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka ur alla">Ingen status</button>
+              </div>
+              <div id="statusFilters" class="flex flex-wrap gap-2" aria-label="Välj statusar att visa i diagrammet"></div>
+            </div>
+            <div class="border-t border-slate-800/80 pt-4 mt-4">
+              <h3 class="text-sm font-semibold text-slate-100 mb-1">En viss person (valfritt)</h3>
+              <p class="text-xs text-slate-500 mb-2">Exakt namn som i kolumnen «Namn». Tomt = alla.</p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-slate-400 mb-1" for="employeeInput">Namn</label>
+                  <input
+                    id="employeeInput"
+                    list="employeeList"
+                    class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                    placeholder="Lämna tomt för alla — eller skriv exakt namn"
+                    autocomplete="off"
+                    aria-describedby="employeeHelp"
+                  />
+                  <datalist id="employeeList"></datalist>
+                  <p id="employeeHelp" class="text-[11px] text-slate-600 mt-1">Förslag uppdateras efter «Skapa diagram».</p>
+                </div>
+                <div class="flex items-end">
+                  <button type="button" id="btnClearEmployee" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">
+                    Visa alla igen
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <p id="analysisModeHelp" class="text-xs text-slate-500 mt-1 mb-2">
-            Här väljer du om du tittar på en vanlig månad, jämför två sparade månader eller skalar upp till prognos. Själva filter för status och namn finns längre ner under «Filter».
-          </p>
-          <select id="analysisModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm mb-3" aria-describedby="analysisModeHelp">
-            <option value="normal">Vanlig vy — en månad / sammanslagen period i rutan</option>
-            <option value="compare">Jämför två sparade månader (A mot B)</option>
-            <option value="forecast">Prognos — skala upp till hel månad</option>
-          </select>
+        </details>
 
-          <div id="comparePanel" class="hidden space-y-2">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs text-slate-400 mb-1" for="compareSlotA">Månad A</label>
-                <select id="compareSlotA" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                  <option value="">— Välj —</option>
+        <details class="group rounded-xl border border-slate-800 bg-slate-950/30">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden"
+          >
+            <span>
+              <span class="block text-sm font-semibold text-slate-100">Spara &amp; ladda månader</span>
+              <span class="block text-xs text-slate-500 mt-0.5">Endast i denna webbläsare — månad/år styr sparningsnamnet</span>
+            </span>
+            <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
+            <p class="text-xs text-slate-500 mt-3 rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-2">
+              <strong class="text-slate-300">Var bestäms månaden?</strong>
+              Rutorna <strong class="text-slate-200">Månad</strong> och <strong class="text-slate-200">År</strong> i huvudrutan styr under vilket namn som sparas (t.ex. «Januari 2026»), inte kolumnen «Datum» i tabellen.
+              Byt månad där innan du sparar nästa export — annars skriver du över förra nyckeln.
+            </p>
+            <div class="mt-3 flex flex-wrap items-end gap-2">
+              <div class="min-w-[220px] flex-1">
+                <label class="block text-xs text-slate-400 mb-1" for="savedSlotSelect">Sparade rapporter</label>
+                <select id="savedSlotSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                  <option value="">—</option>
                 </select>
               </div>
-              <div>
-                <label class="block text-xs text-slate-400 mb-1" for="compareSlotB">Månad B</label>
-                <select id="compareSlotB" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                  <option value="">— Välj —</option>
-                </select>
-              </div>
+              <button type="button" id="btnLoadSlot" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Ladda vald</button>
+              <button type="button" id="btnSaveSlot" class="px-3 py-2 rounded-lg bg-emerald-900/80 hover:bg-emerald-800/80 text-sm border border-emerald-800">Spara vald månad</button>
+              <button type="button" id="btnDeleteSlot" class="px-3 py-2 rounded-lg bg-red-950/60 hover:bg-red-900/50 text-sm border border-red-900/50">Ta bort vald</button>
             </div>
-            <button type="button" id="btnRefreshCompare" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Uppdatera jämförelse</button>
-            <p class="text-xs text-slate-500">
-              Kräver två sparade månader (se «Spara flera månader»). Vilka <strong class="text-slate-400 font-medium">statusar</strong> som räknas väljer du i avsnittet <strong class="text-slate-400 font-medium">Filter</strong> nedan — där uppdateras krysslistan när du byter A/B.
+            <p id="slotActionFeedback" class="text-xs mt-2 min-h-[1.25rem] text-emerald-400 font-medium" role="status" aria-live="polite"></p>
+            <p class="text-xs text-slate-500 mt-2">
+              «Skapa / uppdatera diagram» sparar ofta automatiskt till samma nyckel som «Spara vald månad». Data lagras inte på servern.
             </p>
           </div>
+        </details>
 
-          <div id="forecastPanel" class="hidden space-y-2">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-              <div>
-                <label class="block text-xs text-slate-400 mb-1" for="forecastThroughDay">Data fram till dag i månaden (1–31)</label>
-                <input id="forecastThroughDay" type="number" inputmode="numeric" min="1" max="31" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="t.ex. 15" />
-              </div>
-              <div class="text-xs text-slate-400" id="forecastMonthInfo"></div>
-            </div>
-            <p class="text-xs text-slate-500">
-              Prognos timmar ≈ ackumulerade timmar × (antal dagar i månaden ÷ vald dag). Antar jämn fördelning över dagar — använd med sunt förnuft.
-            </p>
-          </div>
-        </div>
-
-        <div class="mt-3 rounded-xl border border-violet-900/40 bg-violet-950/20 p-3">
-          <h3 class="text-xs font-semibold text-violet-200">Diagramutseende (endast layout)</h3>
-          <p class="text-[11px] text-slate-500 mt-0.5 mb-3">
-            Här ändrar du hur diagrammet <em>rits</em>. Det ändrar inte vilka timmar som räknats — bara staplarnas riktning, hur många namn som får plats och om diagrammet ligger bredvid eller under inmatningen.
-          </p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs text-slate-300 mb-1" for="orientationSelect">Staplarnas riktning</label>
-              <select id="orientationSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Liggande = namn på vänster sida. Stående = namn längs botten.">
-                <option value="horizontal">Liggande (namn till vänster)</option>
-                <option value="vertical">Stående (namn längs botten)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1" for="verticalNamesSelect">Vid stående läge: hur många namn</label>
-              <select id="verticalNamesSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Gäller bara när «Stående» är valt ovan.">
-                <option value="20">Top 20 (mest timmar)</option>
-                <option value="50">Top 50</option>
-                <option value="all">Alla namn (mycket högt diagram)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Var diagrammet sitter på sidan</label>
-              <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                <option value="side">Bredvid inmatning (två kolumner)</option>
-                <option value="stack">Under inmatning (full bredd)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <p class="text-slate-300 text-sm mt-2">
-          Tips: du kan klistra direkt från Excel/Sheets. Det funkar bäst med tabb-separerat (vanligt när man kopierar celler).
-        </p>
-
-        <textarea
-          id="pasteInput"
-          class="mt-3 w-full h-64 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
-          placeholder="Klistra in här… (första raden ska innehålla rubriker som Namn, Kl Fom, Kl Tom, Rast, Orsak)"
-        ></textarea>
-
-        <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <div class="text-xs font-semibold text-slate-200 mb-1">Samlad period (t.ex. jan–mars, utan att spara först)</div>
-          <p class="text-xs text-slate-500 mb-3">
-            <strong class="text-slate-400">Ordning:</strong> Klistra in i rutan ovan. Klicka
-            <span class="text-slate-300">«Lägg denna inklistring i kön»</span> för varje månad (byt ev. månad/år uppe till vänster så etiketten stämmer).
-            Du kan också lägga in <span class="text-slate-300">sparade månader</span> eller <span class="text-slate-300">filer</span>.
-            När listan har minst två rader: <span class="text-slate-300">«Skapa samlat diagram»</span>.
-            Diagrammet staplas då per <span class="text-slate-300">månad/del + orsak</span> (teckenförklaring till höger), så du ser vad som kommer var.
-            <span class="text-slate-400">Svar på klick visas i färg precis under knapparna.</span>
-          </p>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <button type="button" id="btnAddToMerge" class="px-3 py-2 rounded-lg bg-teal-900/70 hover:bg-teal-800/80 active:scale-[0.98] transition-transform text-sm font-semibold border border-teal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500" title="Använder innehållet i rutan ovan">Lägg denna inklistring i kön</button>
-            <button type="button" id="btnAddSavedToMerge" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-transform text-sm border border-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" title="Använder månaden vald under «Spara flera månader»">Lägg sparad månad i kön</button>
-            <button type="button" id="btnMergePickFiles" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-transform text-sm border border-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500">Välj filer…</button>
-            <input type="file" id="mergeFileInput" class="hidden" multiple accept=".txt,.csv,.tsv,text/plain,text/csv,text/tab-separated-values" />
-            <button type="button" id="btnClearMergeQueue" class="px-3 py-2 rounded-lg bg-red-950/50 hover:bg-red-900/40 active:scale-[0.98] transition-transform text-sm border border-red-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60">Töm kön</button>
-            <button type="button" id="btnApplyMerge" class="px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-[0.98] transition-transform text-sm font-semibold border border-teal-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">Skapa samlat diagram</button>
-          </div>
-          <p id="mergeQueueFeedback" class="text-xs mt-1 min-h-[1.25rem] font-medium text-slate-500" role="status" aria-live="polite"></p>
-          <ul id="mergeQueueList" class="text-xs text-slate-300 space-y-1 max-h-36 overflow-auto border border-slate-800 rounded-lg p-2 bg-slate-950/50 min-h-[2.5rem]"></ul>
-        </div>
-
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <button type="button" id="btnGenerate" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold">
-            Skapa / uppdatera diagram
-          </button>
-          <button type="button" id="btnClearNearGenerate" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600" title="Tömmer rutan och nollställer diagram (samma som Rensa rutan uppe till vänster)">
-            Rensa rutan
-          </button>
-          <div id="statusText" class="text-sm text-slate-300 flex-1 min-w-[12rem]"></div>
-        </div>
-
-        <div class="mt-5 rounded-xl border border-emerald-900/50 bg-emerald-950/15 p-4">
-          <h2 class="text-sm font-semibold text-emerald-100 mb-1">Filter — vad som visas i diagram och tabell</h2>
-          <p class="text-xs text-slate-500 mb-3">
-            Här bestämmer du <strong class="text-slate-400 font-medium">vilka timmar som räknas med i staplarna</strong> (per vald status) och om du bara vill se <strong class="text-slate-400 font-medium">en person</strong>. Det påverkar inte din inklistrade text — bara uträkningen och bilden.
-          </p>
-
-          <div id="filterContextBanner" class="text-xs rounded-lg px-3 py-2.5 mb-4 border bg-slate-900/80 border-slate-700 text-slate-300" role="status">
-            Välj vy-läge ovan för att se en kort förklaring av vad filtren gör just nu.
-          </div>
-
-          <div class="border-t border-slate-800/80 pt-4">
-            <h3 class="text-sm font-semibold text-slate-100 mb-1">Statusar (Orsak / typ)</h3>
-            <p class="text-xs text-slate-500 mb-2">
-              Varje ruta motsvarar en <strong class="text-slate-400 font-medium">Orsak</strong> från datan. <strong class="text-slate-400 font-medium">Bara ibockade</strong> statusar adderas i staplarna. Färgen på rutan = färg i diagrammet.
-              <span class="text-slate-600"> · </span>
-              <strong class="text-slate-400 font-medium">Alla</strong> / <strong class="text-slate-400 font-medium">Ingen</strong> sätter snabbt alla kryssrutor.
+        <details class="group rounded-xl border border-slate-800 bg-slate-950/30">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden"
+          >
+            <span>
+              <span class="block text-sm font-semibold text-slate-100">Samlad period</span>
+              <span class="block text-xs text-slate-500 mt-0.5">Fler månader i ett diagram utan att spara först</span>
+            </span>
+            <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
+            <p class="text-xs text-slate-500 mt-3 mb-3">
+              Klistra i huvudrutan, lägg i kön, upprepa för nästa månad. Minst två delar krävs. Staplar blir <span class="text-slate-300">månad/del + orsak</span>.
+              Meddelanden under knapparna visar om det lyckades.
             </p>
             <div class="flex flex-wrap gap-2 mb-2">
-              <button type="button" id="btnAll" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka i alla statusar">Alla statusar</button>
-              <button type="button" id="btnNone" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka ur alla">Ingen status</button>
+              <button type="button" id="btnAddToMerge" class="px-3 py-2 rounded-lg bg-teal-900/70 hover:bg-teal-800/80 active:scale-[0.98] transition-transform text-sm font-semibold border border-teal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500" title="Använder innehållet i rutan ovan">Lägg denna inklistring i kön</button>
+              <button type="button" id="btnAddSavedToMerge" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-transform text-sm border border-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500" title="Kräver sparad månad">Lägg sparad månad i kön</button>
+              <button type="button" id="btnMergePickFiles" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-[0.98] transition-transform text-sm border border-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500">Välj filer…</button>
+              <input type="file" id="mergeFileInput" class="hidden" multiple accept=".txt,.csv,.tsv,text/plain,text/csv,text/tab-separated-values" />
+              <button type="button" id="btnClearMergeQueue" class="px-3 py-2 rounded-lg bg-red-950/50 hover:bg-red-900/40 active:scale-[0.98] transition-transform text-sm border border-red-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600/60">Töm kön</button>
+              <button type="button" id="btnApplyMerge" class="px-3 py-2 rounded-lg bg-teal-600 hover:bg-teal-500 active:scale-[0.98] transition-transform text-sm font-semibold border border-teal-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">Skapa samlat diagram</button>
             </div>
-            <div id="statusFilters" class="flex flex-wrap gap-2" aria-label="Välj statusar att visa i diagrammet"></div>
+            <p id="mergeQueueFeedback" class="text-xs mt-1 min-h-[1.25rem] font-medium text-slate-500" role="status" aria-live="polite"></p>
+            <ul id="mergeQueueList" class="text-xs text-slate-300 space-y-1 max-h-36 overflow-auto border border-slate-800 rounded-lg p-2 bg-slate-950/50 min-h-[2.5rem]"></ul>
           </div>
+        </details>
 
-          <div class="border-t border-slate-800/80 pt-4 mt-4">
-            <h3 class="text-sm font-semibold text-slate-100 mb-1">En viss person (valfritt)</h3>
-            <p class="text-xs text-slate-500 mb-2">
-              Skriv ett <strong class="text-slate-400 font-medium">exakt namn</strong> som i kolumnen «Namn» i datan (du kan välja från listan när du skriver). <strong class="text-slate-400 font-medium">Tomt fält</strong> = alla personer visas. I jämförelseläge gäller samma namnfilter för båda månaderna.
+        <details class="group rounded-xl border border-slate-800 bg-slate-950/30">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden"
+          >
+            <span>
+              <span class="block text-sm font-semibold text-slate-100">Vy-läge — jämför eller prognos</span>
+              <span class="block text-xs text-slate-500 mt-0.5">Vanlig vy, två månader mot varandra, eller skala upp till hel månad</span>
+            </span>
+            <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
+            <div class="mt-3 flex items-baseline justify-between gap-2 flex-wrap">
+              <label class="block text-xs font-semibold text-slate-200" for="analysisModeSelect">Läge</label>
+              <span class="text-[10px] uppercase tracking-wide text-slate-500">Påverkar inte inklistrad data</span>
+            </div>
+            <p id="analysisModeHelp" class="text-xs text-slate-500 mt-1 mb-2">
+              Jämför kräver sparade månader. Filter för status finns under «Filter».
+            </p>
+            <select id="analysisModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm mb-3" aria-describedby="analysisModeHelp">
+              <option value="normal">Vanlig vy — en månad / sammanslagen period i rutan</option>
+              <option value="compare">Jämför två sparade månader (A mot B)</option>
+              <option value="forecast">Prognos — skala upp till hel månad</option>
+            </select>
+            <div id="comparePanel" class="hidden space-y-2">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" for="compareSlotA">Månad A</label>
+                  <select id="compareSlotA" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                    <option value="">— Välj —</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" for="compareSlotB">Månad B</label>
+                  <select id="compareSlotB" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                    <option value="">— Välj —</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" id="btnRefreshCompare" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Uppdatera jämförelse</button>
+              <p class="text-xs text-slate-500">
+                Statusfilter under «Filter» gäller här också.
+              </p>
+            </div>
+            <div id="forecastPanel" class="hidden space-y-2">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1" for="forecastThroughDay">Data fram till dag i månaden (1–31)</label>
+                  <input id="forecastThroughDay" type="number" inputmode="numeric" min="1" max="31" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="t.ex. 15" />
+                </div>
+                <div class="text-xs text-slate-400" id="forecastMonthInfo"></div>
+              </div>
+              <p class="text-xs text-slate-500">
+                Prognos ≈ timmar × (dagar i månaden ÷ vald dag). Förenklad modell.
+              </p>
+            </div>
+          </div>
+        </details>
+
+        <details class="group rounded-xl border border-violet-900/35 bg-violet-950/15">
+          <summary
+            class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden"
+          >
+            <span>
+              <span class="block text-sm font-semibold text-violet-200">Diagramutseende</span>
+              <span class="block text-xs text-slate-500 mt-0.5">Stående/liggande staplar, hur många namn, diagram bredvid eller under</span>
+            </span>
+            <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+          </summary>
+          <div class="px-4 pb-4 pt-0 border-t border-violet-900/25">
+            <p class="text-[11px] text-slate-500 mt-3 mb-3">
+              Ändrar bara hur diagrammet ritas — inte beräknade timmar.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div class="md:col-span-2">
-                <label class="block text-xs text-slate-400 mb-1" for="employeeInput">Namn</label>
-                <input
-                  id="employeeInput"
-                  list="employeeList"
-                  class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-                  placeholder="Lämna tomt för alla — eller skriv exakt namn"
-                  autocomplete="off"
-                  aria-describedby="employeeHelp"
-                />
-                <datalist id="employeeList"></datalist>
-                <p id="employeeHelp" class="text-[11px] text-slate-600 mt-1">Matchar exakt mot namn i aktuell data (efter «Skapa diagram» uppdateras förslagen).</p>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="orientationSelect">Staplarnas riktning</label>
+                <select id="orientationSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Liggande = namn på vänster sida. Stående = namn längs botten.">
+                  <option value="horizontal">Liggande (namn till vänster)</option>
+                  <option value="vertical">Stående (namn längs botten)</option>
+                </select>
               </div>
-              <div class="flex items-end">
-                <button type="button" id="btnClearEmployee" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">
-                  Visa alla igen
-                </button>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="verticalNamesSelect">Vid stående: hur många namn</label>
+                <select id="verticalNamesSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Gäller bara när «Stående» är valt ovan.">
+                  <option value="20">Top 20 (mest timmar)</option>
+                  <option value="50">Top 50</option>
+                  <option value="all">Alla namn (mycket högt diagram)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Var diagrammet sitter</label>
+                <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                  <option value="side">Bredvid inmatning (två kolumner)</option>
+                  <option value="stack">Under inmatning (full bredd)</option>
+                </select>
               </div>
             </div>
           </div>
-        </div>
+        </details>
       </section>
 
       <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">

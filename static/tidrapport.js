@@ -216,15 +216,15 @@ function updateFilterContextBanner() {
   if (mode === "compare") {
     el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-amber-950/50 border-amber-700/60 text-amber-100/95`;
     el.textContent =
-      "Jämförelseläge: kryssrutorna väljer vilka statusar (Orsak) som summeras för varje person — en stapel för månad A och en för månad B. Namnfilter nedan begränsar vilka personer som visas i båda.";
+      "Jämförelseläge: kryssrutorna här väljer vilka statusar (Orsak) som summeras — en stapel för månad A och en för B. Månad A/B väljs i avsnittet «Vy-läge». Namnfilter här gäller båda.";
   } else if (mode === "forecast") {
     el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-sky-950/40 border-sky-800/70 text-sky-100/95`;
     el.textContent =
-      "Prognosläge: samma status- och namnfilter som nedan används först; därefter skalas timmarna upp mot hela månaden enligt «Data till dag» under Prognos ovan.";
+      "Prognosläge: status och namn styrs här först; därefter skalas timmarna upp mot hela månaden enligt «Data fram till dag» i avsnittet «Vy-läge».";
   } else {
     el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-emerald-950/35 border-emerald-800/50 text-emerald-50/95`;
     el.textContent =
-      "Vanlig vy: välj vilka statusar som ska ingå i staplarna och valfritt ett namn. Gäller den data som finns i rutan (en månad eller redan sammanslagen period).";
+      "Vanlig vy: välj statusar och valfritt namn. Gäller datan i huvudrutan (en månad eller redan sammanslagen period). Jämför/prognos: öppna «Vy-läge» längre ned.";
   }
 }
 
