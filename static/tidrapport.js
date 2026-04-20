@@ -356,7 +356,9 @@ function setChartHeightByMode(mode, labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
   if (mode === "vertical") {
-    container.style.height = "520px";
+    // Taller for vertical so bars are visible, but keep within a sane range.
+    const h = Math.max(520, Math.min(950, 360 + labelCount * 10));
+    container.style.height = `${h}px`;
     return;
   }
   setChartHeightByLabels(labelCount);
@@ -366,6 +368,28 @@ function applyOrientation(mode) {
   const c = ensureChart();
   const isVertical = mode === "vertical";
   c.options.indexAxis = isVertical ? "x" : "y";
+
+  // Improve readability in vertical mode (many labels).
+  if (isVertical) {
+    c.options.plugins.legend.position = "top";
+    c.options.scales.x.ticks.autoSkip = true;
+    c.options.scales.x.ticks.maxRotation = 90;
+    c.options.scales.x.ticks.minRotation = 60;
+  } else {
+    c.options.plugins.legend.position = "right";
+    // Reset rotations (Chart.js ignores some of these in horizontal mode, but safe).
+    c.options.scales.x.ticks.maxRotation = 0;
+    c.options.scales.x.ticks.minRotation = 0;
+  }
+}
+
+function limitForVerticalIfNeeded(mode, sortedPeople, hasEmployeeFilter) {
+  if (mode !== "vertical") return sortedPeople;
+  if (hasEmployeeFilter) return sortedPeople;
+  const MAX = 20;
+  if (sortedPeople.length <= MAX) return sortedPeople;
+  els.statusText.textContent = `${els.statusText.textContent} • Stående: visar Top ${MAX}`;
+  return sortedPeople.slice(0, MAX);
 }
 
 function renderColorLegend(datasets) {
@@ -423,9 +447,9 @@ function renderTable(sortedPeople) {
 
 function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
   const c = ensureChart();
-  const labels = sortedPeople.map((p) => p.name);
-
   const mode = window.__tidrapport_state?.orientation || "horizontal";
+  const limitedPeople = limitForVerticalIfNeeded(mode, sortedPeople, !!window.__tidrapport_state?.employeeName);
+  const labels = limitedPeople.map((p) => p.name);
   setChartHeightByMode(mode, labels.length);
 
   const colorByStatus = buildStatusColorMap(statuses);
