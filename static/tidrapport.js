@@ -28,6 +28,63 @@ const ORSAK_HEADER_ALIASES = [
   "Bemaningstyp",
 ];
 
+/** Kolumn som sätts vid «Skapa samlat diagram» så varje rad vet vilken kö-del den kommer från. */
+const MERGE_SOURCE_COL = "Samlad del";
+const MERGE_SOURCE_COL_FALLBACK = "__MxKälla";
+
+function sortStatusesLikeOrder(statusSet) {
+  const arr = [...statusSet];
+  const head = ORSAK_ORDER.filter((s) => arr.includes(s));
+  const tail = arr.filter((s) => !ORSAK_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "sv"));
+  return [...head, ...tail];
+}
+
+function mergeSourceHeaderToUse(baseHeaders) {
+  if (pickCol(baseHeaders, [MERGE_SOURCE_COL])) return MERGE_SOURCE_COL_FALLBACK;
+  return MERGE_SOURCE_COL;
+}
+
+function collectMergeSourceOrder(rows, colMerge) {
+  const order = [];
+  const seen = new Set();
+  for (const row of rows) {
+    const s = cleanStr(row[colMerge]);
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    order.push(s);
+  }
+  return order;
+}
+
+function sortCompoundSeriesKeys(keys, seriesMeta, sourceOrder) {
+  const rankSrc = new Map(sourceOrder.map((s, i) => [s, i]));
+  const rankSt = (st) => {
+    const i = ORSAK_ORDER.indexOf(st);
+    return i >= 0 ? i : 999;
+  };
+  return [...keys].sort((a, b) => {
+    const ma = seriesMeta.get(a);
+    const mb = seriesMeta.get(b);
+    if (!ma || !mb) return a.localeCompare(b, "sv");
+    const ra = rankSrc.get(ma.source) ?? 999;
+    const rb = rankSrc.get(mb.source) ?? 999;
+    if (ra !== rb) return ra - rb;
+    const sa = rankSt(ma.status);
+    const sb = rankSt(mb.status);
+    if (sa !== sb) return sa - sb;
+    return a.localeCompare(b, "sv");
+  });
+}
+
+function rgbaFromHex(hex, alpha) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "");
+  if (!m) return `rgba(148,163,184,${alpha})`;
+  const r = parseInt(m[1], 16);
+  const g = parseInt(m[2], 16);
+  const b = parseInt(m[3], 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const els = {
   pasteInput: document.getElementById("pasteInput"),
   btnGenerate: document.getElementById("btnGenerate"),
@@ -336,21 +393,84 @@ function validateHeadersForAggregate(headers) {
 }
 
 function aggregateParsed(headers, rows) {
+  const emptyMeta = {
+    seriesMeta: null,
+    mergedSourceSplit: false,
+    baseStatuses: null,
+    mergeSourceOrder: null,
+  };
   const errors = validateHeadersForAggregate(headers);
-  if (errors.length) return { totals: new Map(), statuses: [], errors, stats: null };
+  if (errors.length) {
+    return { totals: new Map(), statuses: [], errors, stats: null, ...emptyMeta };
+  }
 
   const colName = pickCol(headers, ["Namn", "Name"]);
   const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
   const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
   const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
+  const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
 
   const totals = new Map();
-  const statusSet = new Set();
   let usedRows = 0;
   let skippedNoName = 0;
   let skippedNoTime = 0;
 
+  if (colMerge) {
+    const seriesMeta = new Map();
+    const baseStatusSet = new Set();
+
+    for (const row of rows) {
+      const name = cleanStr(row[colName]);
+      if (!name) {
+        skippedNoName += 1;
+        continue;
+      }
+      const fom = parseTimeToHours(row[colFom]);
+      const tom = parseTimeToHours(row[colTom]);
+      if (fom == null || tom == null) {
+        skippedNoTime += 1;
+        continue;
+      }
+      const rastMin = colRast ? parseRastMinutes(row[colRast]) : 0;
+      const gross = durationHours(fom, tom);
+      const net = Math.max(0, gross - rastMin / 60);
+      const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
+      const source = cleanStr(row[colMerge]) || "Okänd del";
+      const seriesKey = `${source} — ${status}`;
+
+      baseStatusSet.add(status);
+      if (!seriesMeta.has(seriesKey)) seriesMeta.set(seriesKey, { source, status });
+
+      if (!totals.has(name)) totals.set(name, new Map());
+      const bySeries = totals.get(name);
+      bySeries.set(seriesKey, (bySeries.get(seriesKey) || 0) + net);
+      usedRows += 1;
+    }
+
+    const mergeSourceOrder = collectMergeSourceOrder(rows, colMerge);
+    const compoundKeys = [...seriesMeta.keys()];
+    const statuses = sortCompoundSeriesKeys(compoundKeys, seriesMeta, mergeSourceOrder);
+    const baseStatuses = sortStatusesLikeOrder(baseStatusSet);
+
+    return {
+      totals,
+      statuses,
+      errors: [],
+      stats: {
+        rawRows: rows.length,
+        usedRows,
+        skippedNoName,
+        skippedNoTime,
+      },
+      seriesMeta,
+      mergedSourceSplit: true,
+      baseStatuses,
+      mergeSourceOrder,
+    };
+  }
+
+  const statusSet = new Set();
   for (const row of rows) {
     const name = cleanStr(row[colName]);
     if (!name) {
@@ -390,12 +510,24 @@ function aggregateParsed(headers, rows) {
       skippedNoName,
       skippedNoTime,
     },
+    ...emptyMeta,
   };
 }
 
 function aggregate(text) {
   const { headers, rows } = parseTable(text);
-  if (!headers.length) return { totals: new Map(), statuses: [], errors: ["Ingen data."], stats: null };
+  if (!headers.length) {
+    return {
+      totals: new Map(),
+      statuses: [],
+      errors: ["Ingen data."],
+      stats: null,
+      seriesMeta: null,
+      mergedSourceSplit: false,
+      baseStatuses: null,
+      mergeSourceOrder: null,
+    };
+  }
   return aggregateParsed(headers, rows);
 }
 
@@ -408,10 +540,11 @@ function remapRowToBaseHeaders(row, sourceHeaders, baseHeaders) {
   return newRow;
 }
 
-function mergeParsedTables(parsedList) {
-  if (!parsedList.length) {
+function mergeParsedTablesFromQueue(mergeQueue) {
+  if (!mergeQueue.length) {
     return { headers: [], rows: [], errors: ["Inga tabeller att slå ihop."] };
   }
+  const parsedList = mergeQueue.map((q) => parseTable(q.text));
   const base = parsedList[0];
   if (!base.headers.length) {
     return { headers: [], rows: [], errors: ["Första delen saknar rubrikrad."] };
@@ -419,8 +552,12 @@ function mergeParsedTables(parsedList) {
   const v0 = validateHeadersForAggregate(base.headers);
   if (v0.length) return { headers: [], rows: [], errors: v0 };
 
-  const allRows = [...base.rows];
-  for (let i = 1; i < parsedList.length; i += 1) {
+  const srcHeader = mergeSourceHeaderToUse(base.headers);
+  const headersOut = [...base.headers];
+  if (!pickCol(headersOut, [srcHeader])) headersOut.push(srcHeader);
+
+  const allRows = [];
+  for (let i = 0; i < parsedList.length; i += 1) {
     const p = parsedList[i];
     if (!p.headers.length) {
       return { headers: [], rows: [], errors: [`Del ${i + 1}: saknar rubrikrad.`] };
@@ -429,11 +566,14 @@ function mergeParsedTables(parsedList) {
     if (ve.length) {
       return { headers: [], rows: [], errors: [`Del ${i + 1}: ${ve.join(" ")}`] };
     }
+    const label = cleanStr(mergeQueue[i]?.label) || `Del ${i + 1}`;
     for (const row of p.rows) {
-      allRows.push(remapRowToBaseHeaders(row, p.headers, base.headers));
+      const r = remapRowToBaseHeaders(row, p.headers, base.headers);
+      r[srcHeader] = label;
+      allRows.push(r);
     }
   }
-  return { headers: base.headers, rows: allRows, errors: [] };
+  return { headers: headersOut, rows: allRows, errors: [] };
 }
 
 function tableToTsv(headers, rows) {
@@ -643,7 +783,10 @@ function buildTitleText(state) {
   const base = cleanStr(els.titleInput?.value) || getMonthYearLabel();
   const employee = state.employeeName ? ` — ${state.employeeName}` : "";
   const selected = [...state.selectedStatuses];
-  const allCount = state.statuses.length;
+  const allCount =
+    state.mergedSourceSplit && state.baseStatuses?.length
+      ? state.baseStatuses.length
+      : state.statuses.length;
   let filt = "";
   if (selected.length === 0) {
     filt = " — (inga statusar)";
@@ -653,7 +796,15 @@ function buildTitleText(state) {
     const more = selected.length > 3 ? ` (+${selected.length - 3})` : "";
     filt = ` — ${shown}${more}`;
   }
-  return `${base}${employee}${filt}`;
+  let out = `${base}${employee}${filt}`;
+  if (state.mergedSourceSplit) out = `${out} · Staplar: månad/del + status`;
+  return out;
+}
+
+/** Statusfilter (kryssrutor): vid sammanslagning är det «Orsak»-typer, inte en rad per månad. */
+function filterStatusesForUi(state) {
+  if (state?.mergedSourceSplit && state.baseStatuses?.length) return state.baseStatuses;
+  return state?.statuses ?? [];
 }
 
 function palette(i) {
@@ -756,11 +907,19 @@ function renderColorLegend(datasets) {
   els.colorLegend.appendChild(wrap);
 }
 
-function computePeopleSorted(totals, selectedStatuses) {
+function computePeopleSorted(totals, selectedStatuses, splitState) {
   const rows = [];
+  const merged = splitState?.mergedSourceSplit && splitState?.seriesMeta;
   for (const [name, byStatus] of totals.entries()) {
     let sum = 0;
-    for (const st of selectedStatuses) sum += byStatus.get(st) || 0;
+    if (merged) {
+      for (const [seriesKey, hours] of byStatus.entries()) {
+        const meta = splitState.seriesMeta.get(seriesKey);
+        if (meta && selectedStatuses.has(meta.status)) sum += hours;
+      }
+    } else {
+      for (const st of selectedStatuses) sum += byStatus.get(st) || 0;
+    }
     rows.push({ name, sum: round2(sum) });
   }
   rows.sort((a, b) => (b.sum - a.sum) || a.name.localeCompare(b.name, "sv"));
@@ -822,16 +981,45 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   const labels = limitedPeople.map((p) => p.name);
   setChartHeightByMode(mode, labels.length);
 
-  const colorByStatus = buildStatusColorMap(statuses);
+  const merged = window.__tidrapport_state?.mergedSourceSplit;
+  const seriesMeta = window.__tidrapport_state?.seriesMeta;
+  const sourceOrder = window.__tidrapport_state?.mergeSourceOrder || [];
+  const rankSrc = new Map(sourceOrder.map((s, i) => [s, i]));
+  const nSrc = Math.max(sourceOrder.length, 1);
+
+  let colorByStatus = null;
+  let baseColorMap = null;
+  if (merged && seriesMeta) {
+    const baseOnly = sortStatusesLikeOrder(new Set([...seriesMeta.values()].map((v) => v.status)));
+    baseColorMap = buildStatusColorMap(baseOnly);
+  } else {
+    colorByStatus = buildStatusColorMap(statuses);
+  }
+
   const datasets = [];
   for (const st of statuses) {
-    if (!selectedStatuses.has(st)) continue;
-    datasets.push({
-      label: st,
-      data: labels.map((name) => round2((totals.get(name)?.get(st) || 0) * scale)),
-      backgroundColor: colorByStatus.get(st) || "#94a3b8",
-      borderWidth: 0,
-    });
+    if (merged && seriesMeta) {
+      const meta = seriesMeta.get(st);
+      if (!meta || !selectedStatuses.has(meta.status)) continue;
+      const base = baseColorMap.get(meta.status) || "#94a3b8";
+      const i = rankSrc.get(meta.source) ?? 0;
+      const alpha = Math.max(0.52, 1 - (i / (nSrc + 1)) * 0.42);
+      const bg = rgbaFromHex(base, alpha);
+      datasets.push({
+        label: st,
+        data: labels.map((name) => round2((totals.get(name)?.get(st) || 0) * scale)),
+        backgroundColor: bg,
+        borderWidth: 0,
+      });
+    } else {
+      if (!selectedStatuses.has(st)) continue;
+      datasets.push({
+        label: st,
+        data: labels.map((name) => round2((totals.get(name)?.get(st) || 0) * scale)),
+        backgroundColor: colorByStatus.get(st) || "#94a3b8",
+        borderWidth: 0,
+      });
+    }
   }
 
   c.data.labels = labels;
@@ -1137,7 +1325,7 @@ function renderForecastAll(state) {
   const totalsView = state.employeeName
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
-  const sortedPeople = computePeopleSorted(totalsView, selectedStatuses);
+  const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
 
   if (!els.tableHeadRow) return;
   els.tableHeadRow.innerHTML = "";
@@ -1205,12 +1393,13 @@ function renderAll(state) {
   const totalsView = state.employeeName
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
-  const sortedPeople = computePeopleSorted(totalsView, selectedStatuses);
+  const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
   renderTable(sortedPeople);
   renderChart(totalsView, statuses, selectedStatuses, sortedPeople);
 
   const totalNames = totals.size;
-  const totalStatuses = statuses.length;
+  const totalStatusKinds =
+    state.mergedSourceSplit && state.baseStatuses?.length ? state.baseStatuses.length : statuses.length;
   const stats = state.stats;
   const statsText = stats
     ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
@@ -1222,7 +1411,10 @@ function renderAll(state) {
     ? (limit === "all" ? totalsView.size : Math.min(totalsView.size, Number(limit || 20)))
     : totalsView.size;
   const shownText = chartOrient === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
-  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}`;
+  const mergeHint = state.mergedSourceSplit
+    ? ` · Sammanslagen vy: ${statuses.length} stapelsegment (månad/del + status) · ${totalStatusKinds} orsak-typer i filter.`
+    : "";
+  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}`;
 }
 
 function slotKeyFromMonthYear(monthLabel, yearStr) {
@@ -1373,24 +1565,59 @@ function regenerateFromText(text, selectedOverride) {
     updateAnalysisPanels();
   }
 
-  const { totals, statuses, errors, stats } = aggregate(text);
-  if (errors.length) {
-    els.statusText.textContent = errors.join(" ");
-    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null };
+  const agg = aggregate(text);
+  if (agg.errors.length) {
+    els.statusText.textContent = agg.errors.join(" ");
+    window.__tidrapport_state = {
+      totals: new Map(),
+      statuses: [],
+      selectedStatuses: new Set(),
+      employeeName: null,
+      stats: null,
+      seriesMeta: null,
+      mergedSourceSplit: false,
+      baseStatuses: null,
+      mergeSourceOrder: null,
+    };
     safeRenderAll(window.__tidrapport_state);
     return;
   }
 
+  const {
+    totals,
+    statuses,
+    stats,
+    seriesMeta,
+    mergedSourceSplit,
+    baseStatuses,
+    mergeSourceOrder,
+  } = agg;
+
+  const filterStatuses =
+    mergedSourceSplit && baseStatuses?.length ? baseStatuses : statuses;
   const selectedStatuses = new Set();
-  const preferred = selectedOverride?.length ? selectedOverride : statuses;
-  for (const st of preferred) if (statuses.includes(st)) selectedStatuses.add(st);
+  const preferred = selectedOverride?.length ? selectedOverride : filterStatuses;
+  for (const st of preferred) if (filterStatuses.includes(st)) selectedStatuses.add(st);
 
   const employeeName = getSelectedEmployeeName(totals);
 
   const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
   const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
   const layout = cleanStr(els.layoutSelect?.value) || "side";
-  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats, orientation, verticalNames, layout };
+  window.__tidrapport_state = {
+    totals,
+    statuses,
+    selectedStatuses,
+    employeeName,
+    stats,
+    orientation,
+    verticalNames,
+    layout,
+    seriesMeta,
+    mergedSourceSplit: !!mergedSourceSplit,
+    baseStatuses,
+    mergeSourceOrder,
+  };
   // update datalist with names
   if (els.employeeList) {
     els.employeeList.innerHTML = "";
@@ -1400,7 +1627,7 @@ function regenerateFromText(text, selectedOverride) {
       els.employeeList.appendChild(opt);
     });
   }
-  buildStatusFilters(statuses, selectedStatuses);
+  buildStatusFilters(filterStatuses, selectedStatuses);
   safeRenderAll(window.__tidrapport_state);
 }
 
@@ -1511,8 +1738,9 @@ els.btnAll.addEventListener("click", () => {
     return;
   }
   const st = window.__tidrapport_state;
-  st.selectedStatuses = new Set(st.statuses);
-  buildStatusFilters(st.statuses, st.selectedStatuses);
+  const fs = filterStatusesForUi(st);
+  st.selectedStatuses = new Set(fs);
+  buildStatusFilters(fs, st.selectedStatuses);
   safeRenderAll(st);
   saveLocal(st);
 });
@@ -1526,7 +1754,7 @@ els.btnNone.addEventListener("click", () => {
   }
   const st = window.__tidrapport_state;
   st.selectedStatuses = new Set();
-  buildStatusFilters(st.statuses, st.selectedStatuses);
+  buildStatusFilters(filterStatusesForUi(st), st.selectedStatuses);
   safeRenderAll(st);
   saveLocal(st);
 });
@@ -1572,7 +1800,10 @@ els.analysisModeSelect?.addEventListener("change", () => {
     safeRenderAll(window.__tidrapport_state);
     return;
   }
-  buildStatusFilters(window.__tidrapport_state.statuses, window.__tidrapport_state.selectedStatuses);
+  buildStatusFilters(
+    filterStatusesForUi(window.__tidrapport_state),
+    window.__tidrapport_state.selectedStatuses
+  );
   safeRenderAll(window.__tidrapport_state);
 });
 
@@ -1757,8 +1988,7 @@ els.btnApplyMerge?.addEventListener("click", () => {
     setMergeFeedback(m, "err");
     return;
   }
-  const parsedList = mergeQueue.map((q) => parseTable(q.text));
-  const { headers, rows, errors } = mergeParsedTables(parsedList);
+  const { headers, rows, errors } = mergeParsedTablesFromQueue(mergeQueue);
   if (errors.length) {
     const m = errors.join(" ");
     els.statusText.textContent = m;
@@ -1825,6 +2055,10 @@ els.btnDownload.addEventListener("click", () => {
       orientation: "horizontal",
       verticalNames: "20",
       layout: "side",
+      seriesMeta: null,
+      mergedSourceSplit: false,
+      baseStatuses: null,
+      mergeSourceOrder: null,
     };
     ensureChart();
     els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
