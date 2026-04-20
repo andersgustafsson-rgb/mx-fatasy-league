@@ -208,13 +208,20 @@ function round2(n) {
   return Math.round(n * 100) / 100;
 }
 
+function buildStatusColorMap(statuses) {
+  const m = new Map();
+  statuses.forEach((st, idx) => m.set(st, palette(idx)));
+  return m;
+}
+
 function buildStatusFilters(statuses, selected) {
   els.statusFilters.innerHTML = "";
+  const colorByStatus = buildStatusColorMap(statuses);
   for (const st of statuses) {
     const id = `st_${btoa(unescape(encodeURIComponent(st))).replace(/=/g, "")}`;
     const label = document.createElement("label");
     label.className =
-      "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 cursor-pointer select-none";
+      "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 cursor-pointer select-none border border-slate-700";
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.id = id;
@@ -226,10 +233,14 @@ function buildStatusFilters(statuses, selected) {
       safeRenderAll(window.__tidrapport_state);
       saveLocal(window.__tidrapport_state);
     });
+    const sw = document.createElement("span");
+    sw.className = "inline-block w-3 h-3 rounded-sm border border-slate-900";
+    sw.style.background = colorByStatus.get(st) || "#94a3b8";
     const span = document.createElement("span");
     span.textContent = st;
     span.className = "text-xs text-slate-100";
     label.appendChild(cb);
+    label.appendChild(sw);
     label.appendChild(span);
     els.statusFilters.appendChild(label);
   }
@@ -398,17 +409,16 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
 
   setChartHeightByLabels(labels.length);
 
+  const colorByStatus = buildStatusColorMap(statuses);
   const datasets = [];
-  let idx = 0;
   for (const st of statuses) {
     if (!selectedStatuses.has(st)) continue;
     datasets.push({
       label: st,
       data: labels.map((name) => round2((totals.get(name)?.get(st) || 0))),
-      backgroundColor: palette(idx),
+      backgroundColor: colorByStatus.get(st) || "#94a3b8",
       borderWidth: 0,
     });
-    idx += 1;
   }
 
   c.data.labels = labels;

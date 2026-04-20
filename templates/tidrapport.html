@@ -12,9 +12,16 @@
     <div class="flex items-start justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-bold">Tidrapport</h1>
-        <p class="text-slate-300 text-sm mt-1">
-          Klistra in tabellen (med rubriker) → välj statusar → få diagram. Spara diagram som PNG lokalt.
-        </p>
+        <div class="text-slate-300 text-sm mt-2 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+          <div class="font-semibold text-slate-200">Snabbguide</div>
+          <ol class="list-decimal ml-5 mt-1 space-y-1">
+            <li>Välj <span class="font-semibold text-slate-100">Månad</span> och <span class="font-semibold text-slate-100">År</span> (valfritt, men bra för rubriken).</li>
+            <li>Klistra in exporten i rutan (första raden ska vara rubriker, t.ex. <span class="font-mono">Namn</span>, <span class="font-mono">Kl Fom</span>, <span class="font-mono">Kl Tom</span>, <span class="font-mono">Rast</span>, <span class="font-mono">Orsak</span>).</li>
+            <li>Klicka <span class="font-semibold text-slate-100">Skapa / uppdatera diagram</span>.</li>
+            <li>Bocka i/ur <span class="font-semibold text-slate-100">statusar</span> (färgrutan matchar diagrammet). Valfritt: välj en <span class="font-semibold text-slate-100">anställd</span>.</li>
+            <li>Klicka <span class="font-semibold text-slate-100">Spara PNG</span> för att ladda ner diagrammet.</li>
+          </ol>
+        </div>
       </div>
       <div class="text-right text-sm text-slate-300">
         <div>Inloggad: <span class="text-slate-100 font-semibold">{{ username }}</span></div>
