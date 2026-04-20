@@ -85,6 +85,21 @@ function rgbaFromHex(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/** Kort månadstext på stapel i samlat läge (t.ex. Jan, Feb). */
+function shortMergeSourceLabel(full) {
+  const s = cleanStr(full);
+  if (!s) return "?";
+  const lower = s.toLowerCase();
+  for (const m of SWEDISH_MONTHS) {
+    if (lower.startsWith(m.toLowerCase())) {
+      const abbr = m.slice(0, 3);
+      return abbr.charAt(0).toUpperCase() + abbr.slice(1).toLowerCase();
+    }
+  }
+  if (s.length <= 5) return s;
+  return `${s.slice(0, 4)}…`;
+}
+
 const els = {
   pasteInput: document.getElementById("pasteInput"),
   btnGenerate: document.getElementById("btnGenerate"),
@@ -663,6 +678,53 @@ function buildStatusFilters(statuses, selected) {
 
 let chart = null;
 
+(() => {
+  if (typeof Chart === "undefined" || window.__tidrapport_merge_bar_plugin) return;
+  window.__tidrapport_merge_bar_plugin = true;
+  Chart.register({
+    id: "tidrapportMergeBarLabels",
+    afterDatasetsDraw(chart) {
+      const plug = chart.options.plugins?.tidrapportMergeBarLabels;
+      if (!plug?.enabled || !plug.shortLabels?.length) return;
+      const { ctx } = chart;
+      ctx.save();
+      ctx.font = "600 11px system-ui, Segoe UI, sans-serif";
+      chart.data.datasets.forEach((ds, di) => {
+        const meta = chart.getDatasetMeta(di);
+        if (meta.hidden) return;
+        const short = plug.shortLabels[di];
+        if (!short) return;
+        meta.data.forEach((el, i) => {
+          const v = ds.data[i];
+          if (v == null || !(Number(v) > 0) || !el || typeof el.getProps !== "function") return;
+          const props = el.getProps(["x", "y", "base", "horizontal"], true);
+          const horiz = !!props.horizontal;
+          if (horiz) {
+            const left = Math.min(props.x, props.base) + 5;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.85)";
+            ctx.fillStyle = "#f8fafc";
+            ctx.strokeText(short, left, props.y);
+            ctx.fillText(short, left, props.y);
+          } else {
+            const top = Math.min(props.y, props.base) - 4;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "rgba(15, 23, 42, 0.85)";
+            ctx.fillStyle = "#f8fafc";
+            ctx.strokeText(short, props.x, top);
+            ctx.fillText(short, props.x, top);
+          }
+        });
+      });
+      ctx.restore();
+    },
+  });
+})();
+
 function resetChartFully() {
   if (chart) {
     try {
@@ -721,6 +783,7 @@ function ensureChart(mode = "horizontal") {
         },
         tooltip: { enabled: false },
         title: { display: true, text: "Timmar per person (per status)", color: "#e2e8f0", font: { size: 14 } },
+        tidrapportMergeBarLabels: { enabled: false, shortLabels: [] },
       },
       scales: {
         x: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
@@ -797,7 +860,9 @@ function buildTitleText(state) {
     filt = ` — ${shown}${more}`;
   }
   let out = `${base}${employee}${filt}`;
-  if (state.mergedSourceSplit) out = `${out} · Staplar: månad/del + status`;
+  if (state.mergedSourceSplit) {
+    out = `${out} · Samlat: grupperade staplar per månad/del (valda orsaker summerade)`;
+  }
   return out;
 }
 
@@ -966,52 +1031,84 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
     window.__chart_kind = "normal";
   }
 
-  const mode = window.__tidrapport_state?.orientation || "horizontal";
-  // If the user changed orientation, recreate chart BEFORE we set data.
+  const state = window.__tidrapport_state;
+  const mode = state?.orientation || "horizontal";
   resetChartIfOrientationChanged(mode);
   const c = ensureChart(mode);
   applyOrientation(mode);
 
+  const merged = state?.mergedSourceSplit;
+  const seriesMeta = state?.seriesMeta;
+  const sourceOrder = state?.mergeSourceOrder || [];
+  const useMergedGrouped = !!(merged && seriesMeta && sourceOrder.length);
+
   const limitedPeople = limitForVerticalIfNeeded(
     mode,
     sortedPeople,
-    !!window.__tidrapport_state?.employeeName,
-    window.__tidrapport_state?.verticalNames || "20"
+    !!state?.employeeName,
+    state?.verticalNames || "20"
   );
   const labels = limitedPeople.map((p) => p.name);
-  setChartHeightByMode(mode, labels.length);
 
-  const merged = window.__tidrapport_state?.mergedSourceSplit;
-  const seriesMeta = window.__tidrapport_state?.seriesMeta;
-  const sourceOrder = window.__tidrapport_state?.mergeSourceOrder || [];
-  const rankSrc = new Map(sourceOrder.map((s, i) => [s, i]));
-  const nSrc = Math.max(sourceOrder.length, 1);
-
-  let colorByStatus = null;
-  let baseColorMap = null;
-  if (merged && seriesMeta) {
-    const baseOnly = sortStatusesLikeOrder(new Set([...seriesMeta.values()].map((v) => v.status)));
-    baseColorMap = buildStatusColorMap(baseOnly);
+  if (useMergedGrouped && mode === "horizontal") {
+    const nk = sourceOrder.length;
+    const perRow = 26 + Math.max(0, nk - 1) * 5;
+    const container = els.chartCanvas?.parentElement;
+    if (container) {
+      const h = Math.max(400, Math.min(2000, 160 + labels.length * perRow));
+      container.style.height = `${h}px`;
+    }
   } else {
-    colorByStatus = buildStatusColorMap(statuses);
+    setChartHeightByMode(mode, labels.length);
+  }
+
+  const stackScales = !useMergedGrouped;
+  const ix = desiredIndexAxis(mode);
+  if (ix === "y") {
+    c.options.scales.x.stacked = stackScales;
+    c.options.scales.y.stacked = false;
+  } else {
+    c.options.scales.x.stacked = false;
+    c.options.scales.y.stacked = stackScales;
+  }
+
+  if (useMergedGrouped) {
+    c.options.datasets.bar = {
+      categoryPercentage: Math.max(0.48, 0.9 - sourceOrder.length * 0.055),
+      barPercentage: 0.85,
+    };
+  } else {
+    c.options.datasets.bar = {};
   }
 
   const datasets = [];
-  for (const st of statuses) {
-    if (merged && seriesMeta) {
-      const meta = seriesMeta.get(st);
-      if (!meta || !selectedStatuses.has(meta.status)) continue;
-      const base = baseColorMap.get(meta.status) || "#94a3b8";
-      const i = rankSrc.get(meta.source) ?? 0;
-      const alpha = Math.max(0.52, 1 - (i / (nSrc + 1)) * 0.42);
-      const bg = rgbaFromHex(base, alpha);
-      datasets.push({
-        label: st,
-        data: labels.map((name) => round2((totals.get(name)?.get(st) || 0) * scale)),
-        backgroundColor: bg,
-        borderWidth: 0,
+  let shortLabelsForPlugin = [];
+
+  if (useMergedGrouped) {
+    sourceOrder.forEach((source, srcIdx) => {
+      const bg = palette(srcIdx);
+      const row = labels.map((name) => {
+        let sum = 0;
+        const by = totals.get(name);
+        if (!by) return 0;
+        for (const [seriesKey, hours] of by.entries()) {
+          const meta = seriesMeta.get(seriesKey);
+          if (meta && meta.source === source && selectedStatuses.has(meta.status)) sum += hours;
+        }
+        return round2(sum * scale);
       });
-    } else {
+      datasets.push({
+        label: source,
+        data: row,
+        backgroundColor: bg,
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.5)",
+      });
+      shortLabelsForPlugin.push(shortMergeSourceLabel(source));
+    });
+  } else {
+    const colorByStatus = buildStatusColorMap(statuses);
+    for (const st of statuses) {
       if (!selectedStatuses.has(st)) continue;
       datasets.push({
         label: st,
@@ -1024,14 +1121,21 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
 
   c.data.labels = labels;
   c.data.datasets = datasets;
-  if (window.__tidrapport_state) {
-    let titleText = buildTitleText(window.__tidrapport_state);
+
+  if (!c.options.plugins.tidrapportMergeBarLabels) {
+    c.options.plugins.tidrapportMergeBarLabels = { enabled: false, shortLabels: [] };
+  }
+  c.options.plugins.tidrapportMergeBarLabels.enabled = useMergedGrouped;
+  c.options.plugins.tidrapportMergeBarLabels.shortLabels = useMergedGrouped ? shortLabelsForPlugin : [];
+
+  if (state) {
+    let titleText = buildTitleText(state);
     if (titleSuffix) titleText = `${titleText} — ${titleSuffix}`;
     c.options.plugins.title.text = titleText;
     if (els.titlePreview) els.titlePreview.textContent = previewNote != null ? previewNote : titleText;
   }
   renderColorLegend(datasets);
-  applyOrientation(mode, { verticalLimit: window.__tidrapport_state?.verticalNames || "20" });
+  applyOrientation(mode, { verticalLimit: state?.verticalNames || "20" });
   c.update();
   window.__chart_kind = "normal";
 }
@@ -1411,8 +1515,9 @@ function renderAll(state) {
     ? (limit === "all" ? totalsView.size : Math.min(totalsView.size, Number(limit || 20)))
     : totalsView.size;
   const shownText = chartOrient === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
+  const nSrc = state.mergeSourceOrder?.length || 0;
   const mergeHint = state.mergedSourceSplit
-    ? ` · Sammanslagen vy: ${statuses.length} stapelsegment (månad/del + status) · ${totalStatusKinds} orsak-typer i filter.`
+    ? ` · Samlat: ${nSrc} staplar sida-vid-sida per person · ${totalStatusKinds} orsak-typer i filter · kort månad på stapeln.`
     : "";
   els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}`;
 }
