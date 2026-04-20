@@ -1114,12 +1114,12 @@ function renderAll(state) {
     ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
     : "";
   const emp = state.employeeName ? ` • Anställd: ${state.employeeName}` : "";
-  const mode = state.orientation || "horizontal";
+  const chartOrient = state.orientation || "horizontal";
   const limit = state.verticalNames || "20";
-  const shownNames = mode === "vertical" && !state.employeeName
+  const shownNames = chartOrient === "vertical" && !state.employeeName
     ? (limit === "all" ? totalsView.size : Math.min(totalsView.size, Number(limit || 20)))
     : totalsView.size;
-  const shownText = mode === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
+  const shownText = chartOrient === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
   els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatuses} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}`;
 }
 
