@@ -223,7 +223,7 @@ function buildStatusFilters(statuses, selected) {
     cb.addEventListener("change", () => {
       if (cb.checked) selected.add(st);
       else selected.delete(st);
-      renderAll(window.__tidrapport_state);
+      safeRenderAll(window.__tidrapport_state);
       saveLocal(window.__tidrapport_state);
     });
     const span = document.createElement("span");
@@ -238,6 +238,9 @@ function buildStatusFilters(statuses, selected) {
 let chart = null;
 
 function ensureChart() {
+  if (typeof Chart === "undefined") {
+    throw new Error("Chart.js laddades inte. Ladda om sidan och testa igen.");
+  }
   if (chart) return chart;
   const ctx = els.chartCanvas.getContext("2d");
   chart = new Chart(ctx, {
@@ -261,6 +264,20 @@ function ensureChart() {
     },
   });
   return chart;
+}
+
+function showUiError(err) {
+  const msg = err && err.message ? String(err.message) : String(err || "Okänt fel");
+  els.statusText.textContent = `Fel: ${msg}`;
+}
+
+function safeRenderAll(state) {
+  try {
+    renderAll(state);
+  } catch (e) {
+    console.error(e);
+    showUiError(e);
+  }
 }
 
 function getMonthYearLabel() {
@@ -455,7 +472,7 @@ function regenerateFromText(text, selectedOverride) {
   if (errors.length) {
     els.statusText.textContent = errors.join(" ");
     window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null };
-    renderAll(window.__tidrapport_state);
+    safeRenderAll(window.__tidrapport_state);
     return;
   }
 
@@ -476,7 +493,7 @@ function regenerateFromText(text, selectedOverride) {
     });
   }
   buildStatusFilters(statuses, selectedStatuses);
-  renderAll(window.__tidrapport_state);
+  safeRenderAll(window.__tidrapport_state);
 }
 
 els.btnGenerate.addEventListener("click", () => {
@@ -509,7 +526,7 @@ els.btnAll.addEventListener("click", () => {
   const st = window.__tidrapport_state;
   st.selectedStatuses = new Set(st.statuses);
   buildStatusFilters(st.statuses, st.selectedStatuses);
-  renderAll(st);
+  safeRenderAll(st);
   saveLocal(st);
 });
 
@@ -517,7 +534,7 @@ els.btnNone.addEventListener("click", () => {
   const st = window.__tidrapport_state;
   st.selectedStatuses = new Set();
   buildStatusFilters(st.statuses, st.selectedStatuses);
-  renderAll(st);
+  safeRenderAll(st);
   saveLocal(st);
 });
 
@@ -525,7 +542,7 @@ els.btnClearEmployee?.addEventListener("click", () => {
   if (els.employeeInput) els.employeeInput.value = "";
   if (window.__tidrapport_state) {
     window.__tidrapport_state.employeeName = null;
-    renderAll(window.__tidrapport_state);
+    safeRenderAll(window.__tidrapport_state);
     saveLocal(window.__tidrapport_state);
   }
 });
@@ -534,14 +551,14 @@ els.employeeInput?.addEventListener("input", () => {
   if (!window.__tidrapport_state) return;
   const nm = getSelectedEmployeeName(window.__tidrapport_state.totals);
   window.__tidrapport_state.employeeName = nm;
-  renderAll(window.__tidrapport_state);
+  safeRenderAll(window.__tidrapport_state);
   saveLocal(window.__tidrapport_state);
 });
 
 for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
   el?.addEventListener("input", () => {
     if (!window.__tidrapport_state) return;
-    renderAll(window.__tidrapport_state);
+    safeRenderAll(window.__tidrapport_state);
     saveLocal(window.__tidrapport_state);
   });
 }
