@@ -19,6 +19,15 @@ const SWEDISH_MONTHS = [
   "December",
 ];
 
+/** Rubriker som räknas som «Orsak»/status (vissa exportformat använder t.ex. Bemanningstyp). */
+const ORSAK_HEADER_ALIASES = [
+  "Orsak",
+  "Status",
+  "Typ",
+  "Bemanningstyp",
+  "Bemaningstyp",
+];
+
 const els = {
   pasteInput: document.getElementById("pasteInput"),
   btnGenerate: document.getElementById("btnGenerate"),
@@ -64,6 +73,7 @@ const els = {
   mergeFileInput: document.getElementById("mergeFileInput"),
   btnClearMergeQueue: document.getElementById("btnClearMergeQueue"),
   btnApplyMerge: document.getElementById("btnApplyMerge"),
+  mergeQueueFeedback: document.getElementById("mergeQueueFeedback"),
 };
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
@@ -85,6 +95,55 @@ function setSlotFeedback(msg) {
       __slotFeedbackTimer = null;
     }, 14000);
   }
+}
+
+let __mergeFeedbackTimer = null;
+/** Meddelande direkt under sammanslagningsknapparna (användaren ser sällan statusraden längre ner). */
+function setMergeFeedback(msg, kind) {
+  const el = els.mergeQueueFeedback || document.getElementById("mergeQueueFeedback");
+  if (!el) return;
+  const tone =
+    kind === "err"
+      ? "text-red-400"
+      : kind === "ok"
+        ? "text-emerald-400"
+        : "text-slate-400";
+  el.className = `text-xs mt-1 min-h-[1.25rem] font-medium ${tone}`;
+  el.textContent = msg || "";
+  if (__mergeFeedbackTimer) {
+    clearTimeout(__mergeFeedbackTimer);
+    __mergeFeedbackTimer = null;
+  }
+  if (msg) {
+    __mergeFeedbackTimer = setTimeout(() => {
+      el.textContent = "";
+      el.className = "text-xs mt-1 min-h-[1.25rem] font-medium text-slate-400";
+      __mergeFeedbackTimer = null;
+    }, 16000);
+  }
+}
+
+/** Tabelltext från Excel/Sheets — behåll radbrytningar och tabbar (cleanStr på hela strängen förstör strukturen). */
+function normalizePastedTableString(raw) {
+  let s = String(raw ?? "").replace(/^\uFEFF/, "");
+  s = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  s = s.replace(/[\u00A0\u2007\u202F]/g, " ");
+  return s.trim();
+}
+
+function rawPasteFromInput() {
+  return normalizePastedTableString(els.pasteInput?.value);
+}
+
+function flashMergeQueueList() {
+  if (!els.mergeQueueList) return;
+  els.mergeQueueList.classList.remove("ring-2", "ring-teal-500/50");
+  // reflow så animationen kan triggas igen
+  void els.mergeQueueList.offsetWidth;
+  els.mergeQueueList.classList.add("ring-2", "ring-teal-500/50", "transition-shadow", "duration-300");
+  setTimeout(() => {
+    els.mergeQueueList?.classList.remove("ring-2", "ring-teal-500/50", "transition-shadow", "duration-300");
+  }, 900);
 }
 
 function getAnalysisMode() {
@@ -196,12 +255,34 @@ function splitRows(text) {
   return rawLines.map((l) => l.trimEnd()).filter((l) => l.trim().length > 0);
 }
 
-function detectDelimiter(headerLine) {
+function splitCellsForTable(line, delim) {
+  if (delim == null) return line.split(/\s{2,}/).map(cleanStr);
+  return line.split(delim).map(cleanStr);
+}
+
+function trimTrailingEmptyCells(cells) {
+  const out = [...cells];
+  while (out.length > 0 && !out[out.length - 1]) out.pop();
+  return out;
+}
+
+function lineDelimFromContent(headerLine) {
   if (headerLine.includes("\t")) return "\t";
   if (headerLine.includes(";")) return ";";
   if (headerLine.includes(",")) return ",";
-  // fallback: multiple spaces
   return null;
+}
+
+function buildTableFromHeaderRow(lines, headerRowIndex, delim, headers) {
+  const rows = [];
+  for (let i = headerRowIndex + 1; i < lines.length; i += 1) {
+    const parts = splitCellsForTable(lines[i], delim);
+    while (parts.length < headers.length) parts.push("");
+    const row = {};
+    for (let c = 0; c < headers.length; c += 1) row[headers[c]] = parts[c] ?? "";
+    rows.push(row);
+  }
+  return { headers, rows };
 }
 
 function parseTable(text) {
@@ -209,21 +290,23 @@ function parseTable(text) {
   const lines = splitRows(raw);
   if (lines.length === 0) return { headers: [], rows: [] };
 
-  const delim = detectDelimiter(lines[0]);
-  let headers = (delim ? lines[0].split(delim) : lines[0].split(/\s{2,}/)).map(cleanStr);
-  // Remove empty trailing headers if the header row ends with separators/tabs.
-  while (headers.length > 0 && !headers[headers.length - 1]) headers.pop();
+  const delims = ["\t", ";", ",", null];
+  const maxStart = Math.min(lines.length, 35);
 
-  const rows = [];
-  for (let i = 1; i < lines.length; i += 1) {
-    const parts = (delim ? lines[i].split(delim) : lines[i].split(/\s{2,}/)).map(cleanStr);
-    // pad
-    while (parts.length < headers.length) parts.push("");
-    const row = {};
-    for (let c = 0; c < headers.length; c += 1) row[headers[c]] = parts[c] ?? "";
-    rows.push(row);
+  for (let start = 0; start < maxStart; start += 1) {
+    const line = lines[start];
+    for (const delim of delims) {
+      const headers = trimTrailingEmptyCells(splitCellsForTable(line, delim));
+      if (headers.length < 3) continue;
+      if (validateHeadersForAggregate(headers).length === 0) {
+        return buildTableFromHeaderRow(lines, start, delim, headers);
+      }
+    }
   }
-  return { headers, rows };
+
+  const delim = lineDelimFromContent(lines[0]);
+  const headers = trimTrailingEmptyCells(splitCellsForTable(lines[0], delim));
+  return buildTableFromHeaderRow(lines, 0, delim, headers);
 }
 
 function pickCol(headers, wanted) {
@@ -242,13 +325,13 @@ function validateHeadersForAggregate(headers) {
     return errors;
   }
   const colName = pickCol(headers, ["Namn", "Name"]);
-  const colFom = pickCol(headers, ["Kl Fom", "Från", "From", "Fom", "F.o.m"]);
-  const colTom = pickCol(headers, ["Kl Tom", "Till", "To", "Tom"]);
-  const colOrsak = pickCol(headers, ["Orsak", "Status", "Typ"]);
+  const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
+  const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
+  const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   if (!colName) errors.push("Hittar inte kolumnen «Namn».");
   if (!colFom) errors.push("Hittar inte kolumnen «Kl Fom» (starttid).");
   if (!colTom) errors.push("Hittar inte kolumnen «Kl Tom» (sluttid).");
-  if (!colOrsak) errors.push("Hittar inte kolumnen «Orsak»/«Status».");
+  if (!colOrsak) errors.push("Hittar inte kolumnen «Orsak»/«Status» (t.ex. Bemanningstyp).");
   return errors;
 }
 
@@ -257,10 +340,10 @@ function aggregateParsed(headers, rows) {
   if (errors.length) return { totals: new Map(), statuses: [], errors, stats: null };
 
   const colName = pickCol(headers, ["Namn", "Name"]);
-  const colFom = pickCol(headers, ["Kl Fom", "Från", "From", "Fom", "F.o.m"]);
-  const colTom = pickCol(headers, ["Kl Tom", "Till", "To", "Tom"]);
+  const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
+  const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
   const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
-  const colOrsak = pickCol(headers, ["Orsak", "Status", "Typ"]);
+  const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
 
   const totals = new Map();
   const statusSet = new Set();
@@ -1326,11 +1409,11 @@ els.btnGenerate.addEventListener("click", () => {
   regenerateFromText(text, null);
   saveLocal(window.__tidrapport_state);
   const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
-  if (key && cleanStr(text) && window.__tidrapport_state?.totals?.size) {
+  if (key && rawPasteFromInput() && window.__tidrapport_state?.totals?.size) {
     setSlotFeedback(
       `Automatiskt sparat lokalt som «${slotLabelFromKey(key)}». (Samma innehåll som om du tryckte «Spara vald månad».)`
     );
-  } else if (!cleanStr(text)) {
+  } else if (!rawPasteFromInput()) {
     setSlotFeedback("");
   }
 });
@@ -1380,7 +1463,7 @@ els.btnSaveSlot?.addEventListener("click", () => {
     setSlotFeedback(m);
     return;
   }
-  if (!cleanStr(els.pasteInput?.value)) {
+  if (!rawPasteFromInput()) {
     const m = "Inklistringsrutan är tom — inget att spara. Klistra in data eller ladda en rapport först.";
     els.statusText.textContent = m;
     setSlotFeedback(m);
@@ -1542,19 +1625,25 @@ els.layoutSelect?.addEventListener("change", () => {
 });
 
 els.btnAddToMerge?.addEventListener("click", () => {
-  const text = cleanStr(els.pasteInput?.value);
+  const text = rawPasteFromInput();
   if (!text) {
-    els.statusText.textContent = "Klistra in data i rutan först.";
+    const m = "Rutan ovanför är tom — klistra in tabellen där först, sedan klicka igen.";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const parsed = parseTable(text);
   const ve = validateHeadersForAggregate(parsed.headers);
   if (ve.length) {
-    els.statusText.textContent = ve.join(" ");
+    const m = ve.join(" ");
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   if (!parsed.rows.length) {
-    els.statusText.textContent = "Inga datarader (bara rubrik?).";
+    const m = "Inga datarader (bara rubrik?). Kontrollera att du kopierat hela tabellen med rubrikrad.";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const month = cleanStr(els.monthSelect?.value);
@@ -1562,36 +1651,50 @@ els.btnAddToMerge?.addEventListener("click", () => {
   const label = [month, year].filter(Boolean).join(" ").trim() || `Del ${mergeQueue.length + 1}`;
   mergeQueue.push({ label, text });
   renderMergeQueueList();
-  els.statusText.textContent = `Tillagt «${label}» — ${mergeQueue.length} delar i kön.`;
+  flashMergeQueueList();
+  const ok = `Tillagt «${label}» — ${mergeQueue.length} del${mergeQueue.length === 1 ? "" : "ar"} i kön.`;
+  els.statusText.textContent = ok;
+  setMergeFeedback(ok, "ok");
 });
 
 els.btnAddSavedToMerge?.addEventListener("click", () => {
   const key = cleanStr(els.savedSlotSelect?.value);
   if (!key) {
-    els.statusText.textContent = "Välj en sparad månad i listan «Sparade rapporter» först.";
+    const m = "Välj en sparad månad i listan «Sparade rapporter» (längre upp) först.";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const store = readStore();
   const payload = store.slots[key];
-  const text = cleanStr(payload?.text);
+  const text = normalizePastedTableString(payload?.text);
   if (!text) {
-    els.statusText.textContent = "Den sparade månaden saknar data.";
+    const m = "Den sparade månaden saknar data.";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const parsed = parseTable(text);
   const ve = validateHeadersForAggregate(parsed.headers);
   if (ve.length) {
-    els.statusText.textContent = ve.join(" ");
+    const m = ve.join(" ");
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   if (!parsed.rows.length) {
-    els.statusText.textContent = "Sparad månad har inga datarader.";
+    const m = "Sparad månad har inga datarader.";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const label = slotLabelFromKey(key);
   mergeQueue.push({ label, text });
   renderMergeQueueList();
-  els.statusText.textContent = `Tillagd sparad «${label}» — ${mergeQueue.length} delar i kön.`;
+  flashMergeQueueList();
+  const ok = `Tillagd sparad «${label}» — ${mergeQueue.length} del${mergeQueue.length === 1 ? "" : "ar"} i kön.`;
+  els.statusText.textContent = ok;
+  setMergeFeedback(ok, "ok");
 });
 
 els.btnMergePickFiles?.addEventListener("click", () => {
@@ -1610,43 +1713,63 @@ els.mergeFileInput?.addEventListener("change", async (e) => {
       const parsed = parseTable(text);
       const ve = validateHeadersForAggregate(parsed.headers);
       if (ve.length) {
-        els.statusText.textContent = `${f.name}: ${ve.join(" ")}`;
+        const m = `${f.name}: ${ve.join(" ")}`;
+        els.statusText.textContent = m;
+        setMergeFeedback(m, "err");
         continue;
       }
       if (!parsed.rows.length) {
-        els.statusText.textContent = `${f.name}: inga datarader.`;
+        const m = `${f.name}: inga datarader.`;
+        els.statusText.textContent = m;
+        setMergeFeedback(m, "err");
         continue;
       }
       mergeQueue.push({ label, text });
       added += 1;
     } catch {
-      els.statusText.textContent = `Kunde inte läsa ${f.name}.`;
+      const m = `Kunde inte läsa ${f.name}.`;
+      els.statusText.textContent = m;
+      setMergeFeedback(m, "err");
     }
   }
   renderMergeQueueList();
-  if (added > 0) els.statusText.textContent = `Tillagde ${added} fil(er). Kö: ${mergeQueue.length} delar.`;
+  if (added > 0) {
+    flashMergeQueueList();
+    const ok = `Tillagde ${added} fil(er). Kö: ${mergeQueue.length} delar.`;
+    els.statusText.textContent = ok;
+    setMergeFeedback(ok, "ok");
+  }
 });
 
 els.btnClearMergeQueue?.addEventListener("click", () => {
   mergeQueue.length = 0;
   renderMergeQueueList();
-  els.statusText.textContent = "Sammanslagningskön är tömd.";
+  const m = "Kön är tömd.";
+  els.statusText.textContent = m;
+  setMergeFeedback(m, "ok");
 });
 
 els.btnApplyMerge?.addEventListener("click", () => {
   if (mergeQueue.length < 2) {
-    els.statusText.textContent = "Lägg till minst två delar (t.ex. två månader eller två filer) för samlad vy.";
+    const m =
+      "Lägg till minst två delar i listan nedan (samma knapp flera gånger med ny data, eller sparade månader / filer).";
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const parsedList = mergeQueue.map((q) => parseTable(q.text));
   const { headers, rows, errors } = mergeParsedTables(parsedList);
   if (errors.length) {
-    els.statusText.textContent = errors.join(" ");
+    const m = errors.join(" ");
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const agg = aggregateParsed(headers, rows);
   if (agg.errors.length) {
-    els.statusText.textContent = agg.errors.join(" ");
+    const m = agg.errors.join(" ");
+    els.statusText.textContent = m;
+    setMergeFeedback(m, "err");
     return;
   }
   const tsv = tableToTsv(headers, rows);
@@ -1661,7 +1784,9 @@ els.btnApplyMerge?.addEventListener("click", () => {
   resetChartFully();
   window.__chart_kind = "normal";
   regenerateFromText(tsv, null);
-  els.statusText.textContent = `Samlat diagram: ${mergeQueue.length} delar • ${rows.length} rader • ${agg.totals.size} personer.`;
+  const ok = `Klart: samlat diagram — ${mergeQueue.length} delar, ${rows.length} rader, ${agg.totals.size} personer. (Kolla diagrammet nedan.)`;
+  els.statusText.textContent = ok;
+  setMergeFeedback(ok, "ok");
 });
 
 els.btnDownload.addEventListener("click", () => {
