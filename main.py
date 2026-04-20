@@ -2037,18 +2037,35 @@ def calculate_leaderboard_deltas():
                 "team_name": user_row.team_name,
                 "total_points": total,
                 "baseline_total": baseline_total,
+                "recent_week_points": recent_week_points,
             }
         )
 
+    # En rad per användare (outerjoin + group_by kan ge dubbletter om data är konstig)
+    by_uid: dict[int, dict] = {}
+    for row in user_scores_list:
+        uid = int(row["id"])
+        prev = by_uid.get(uid)
+        if prev is None or row["total_points"] > prev["total_points"]:
+            by_uid[uid] = row
+    user_scores_list = list(by_uid.values())
+
     current_leaderboard = sorted(user_scores_list, key=lambda x: x["total_points"], reverse=True)
 
+    # Finns avklarade race i fönstret men ingen har fått veckopoäng i CompetitionScore ännu
+    # (t.ex. perfekt gissning räknas från picks — då är baseline_total == total för alla och
+    # pilar/raket/ankare blir meningslösa). Använd då samma fallback som utan veckofönster.
+    use_recent_window_baseline = bool(recent_comp_ids) and any(
+        int(u.get("recent_week_points") or 0) > 0 for u in user_scores_list
+    )
+
     baseline_ranking: dict[str, int] = {}
-    if recent_comp_ids:
+    if use_recent_window_baseline:
         baseline_leaderboard = sorted(
             user_scores_list, key=lambda x: x["baseline_total"], reverse=True
         )
         for i, user in enumerate(baseline_leaderboard, 1):
-            baseline_ranking[str(user["id"])] = i
+            baseline_ranking[str(int(user["id"]))] = i
     else:
         # Inga avklarade race i veckofönstret → jämför mot rank med bara äldre tävlingar (Raket/Ankare dör inte)
         previous_competitions = (
@@ -2084,18 +2101,19 @@ def calculate_leaderboard_deltas():
             previous_rows.append({"id": user_id, "total_points": previous_points})
         previous_rows.sort(key=lambda x: x["total_points"], reverse=True)
         for i, row in enumerate(previous_rows, 1):
-            baseline_ranking[str(row["id"])] = i
+            baseline_ranking[str(int(row["id"]))] = i
 
     leaderboard_data = []
     for i, user_row in enumerate(current_leaderboard, 1):
         user_id = user_row["id"]
+        uid_key = str(int(user_id))
         current_rank = i
-        baseline_rank = baseline_ranking.get(str(user_id))
+        baseline_rank = baseline_ranking.get(uid_key)
 
         if baseline_rank is not None and baseline_rank > 0:
             delta = current_rank - baseline_rank
         else:
-            delta = None
+            delta = 0
 
         leaderboard_data.append(
             {
