@@ -19051,6 +19051,20 @@ def parse_csv_simple(csv_path, class_name):
     print(f"🔥 TOTAL RIDERS FOUND: {len(riders)}")
     return riders
 
+
+# -------------------------------------------------
+# Tidrapport (klistra in → diagram) - lokalt i webbläsaren
+# -------------------------------------------------
+@app.get("/tidrapport")
+def tidrapport():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return render_template(
+        "tidrapport.html",
+        username=session.get("username") or "",
+        is_logged_in=True,
+    )
+
 if __name__ == "__main__":
     # Production vs Development configuration
     debug_mode = os.getenv('FLASK_ENV') != 'production'
