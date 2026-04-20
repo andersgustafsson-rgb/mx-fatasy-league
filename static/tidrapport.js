@@ -249,6 +249,24 @@ function buildStatusFilters(statuses, selected) {
 
 let chart = null;
 
+function desiredIndexAxis(mode) {
+  return mode === "vertical" ? "x" : "y";
+}
+
+function resetChartIfOrientationChanged(mode) {
+  if (!chart) return;
+  const want = desiredIndexAxis(mode);
+  const cur = chart?.options?.indexAxis || "y";
+  if (cur !== want) {
+    try {
+      chart.destroy();
+    } catch (e) {
+      console.warn("Failed to destroy chart cleanly", e);
+    }
+    chart = null;
+  }
+}
+
 function ensureChart() {
   if (typeof Chart === "undefined") {
     throw new Error("Chart.js laddades inte. Ladda om sidan och testa igen.");
@@ -271,7 +289,12 @@ function ensureChart() {
       },
       scales: {
         x: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
-        y: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.10)" } },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { color: "#cbd5e1", font: { size: 12 } },
+          grid: { color: "rgba(148,163,184,0.10)" },
+        },
       },
     },
   });
@@ -365,18 +388,22 @@ function setChartHeightByMode(mode, labelCount) {
 }
 
 function applyOrientation(mode) {
+  resetChartIfOrientationChanged(mode);
   const c = ensureChart();
   const isVertical = mode === "vertical";
-  c.options.indexAxis = isVertical ? "x" : "y";
+  c.options.indexAxis = desiredIndexAxis(mode);
 
   // Improve readability in vertical mode (many labels).
   if (isVertical) {
     c.options.plugins.legend.position = "top";
+    c.options.plugins.legend.labels.font = { size: 11 };
     c.options.scales.x.ticks.autoSkip = true;
     c.options.scales.x.ticks.maxRotation = 90;
     c.options.scales.x.ticks.minRotation = 60;
+    c.options.scales.y.ticks.precision = 0;
   } else {
     c.options.plugins.legend.position = "right";
+    c.options.plugins.legend.labels.font = { size: 12 };
     // Reset rotations (Chart.js ignores some of these in horizontal mode, but safe).
     c.options.scales.x.ticks.maxRotation = 0;
     c.options.scales.x.ticks.minRotation = 0;
