@@ -1,8 +1,5 @@
 /* global Chart */
 
-const STORAGE_KEY_V1 = "mx_tidrapport_v1";
-const STORAGE_KEY_V2 = "mx_tidrapport_v2";
-
 /** Månadsnamn i samma ordning som i tidrapport.html */
 const SWEDISH_MONTHS = [
   "Januari",
@@ -106,7 +103,6 @@ const els = {
   btnDownload: document.getElementById("btnDownload"),
   btnClear: document.getElementById("btnClear"),
   btnClearNearGenerate: document.getElementById("btnClearNearGenerate"),
-  btnLoad: document.getElementById("btnLoad"),
   btnAll: document.getElementById("btnAll"),
   btnNone: document.getElementById("btnNone"),
   monthSelect: document.getElementById("monthSelect"),
@@ -125,22 +121,13 @@ const els = {
   tableBody: document.getElementById("tableBody"),
   chartCanvas: document.getElementById("chartCanvas"),
   layoutGrid: document.getElementById("layoutGrid"),
-  savedSlotSelect: document.getElementById("savedSlotSelect"),
-  btnLoadSlot: document.getElementById("btnLoadSlot"),
-  btnSaveSlot: document.getElementById("btnSaveSlot"),
-  btnDeleteSlot: document.getElementById("btnDeleteSlot"),
   analysisModeSelect: document.getElementById("analysisModeSelect"),
-  comparePanel: document.getElementById("comparePanel"),
   forecastPanel: document.getElementById("forecastPanel"),
-  compareSlotA: document.getElementById("compareSlotA"),
-  compareSlotB: document.getElementById("compareSlotB"),
-  btnRefreshCompare: document.getElementById("btnRefreshCompare"),
   forecastThroughDay: document.getElementById("forecastThroughDay"),
   forecastMonthInfo: document.getElementById("forecastMonthInfo"),
   tableHeadRow: document.getElementById("tableHeadRow"),
   mergeQueueList: document.getElementById("mergeQueueList"),
   btnAddToMerge: document.getElementById("btnAddToMerge"),
-  btnAddSavedToMerge: document.getElementById("btnAddSavedToMerge"),
   btnMergePickFiles: document.getElementById("btnMergePickFiles"),
   mergeFileInput: document.getElementById("mergeFileInput"),
   btnClearMergeQueue: document.getElementById("btnClearMergeQueue"),
@@ -150,24 +137,6 @@ const els = {
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
 const mergeQueue = [];
-
-let __slotFeedbackTimer = null;
-/** Synlig bekräftelse under «Spara flera månader» (användaren scrollar ofta inte till statusraden). */
-function setSlotFeedback(msg) {
-  const el = document.getElementById("slotActionFeedback");
-  if (!el) return;
-  el.textContent = msg || "";
-  if (__slotFeedbackTimer) {
-    clearTimeout(__slotFeedbackTimer);
-    __slotFeedbackTimer = null;
-  }
-  if (msg) {
-    __slotFeedbackTimer = setTimeout(() => {
-      el.textContent = "";
-      __slotFeedbackTimer = null;
-    }, 14000);
-  }
-}
 
 let __mergeFeedbackTimer = null;
 /** Meddelande direkt under sammanslagningsknapparna (användaren ser sällan statusraden längre ner). */
@@ -228,24 +197,19 @@ function updateFilterContextBanner() {
   const mode = getAnalysisMode();
   const base =
     "ring-1 ring-inset transition-colors";
-  if (mode === "compare") {
-    el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-amber-950/50 border-amber-700/60 text-amber-100/95`;
-    el.textContent =
-      "Jämförelseläge: kryssrutorna här väljer vilka statusar (Orsak) som summeras — en stapel för månad A och en för B. Månad A/B väljs i avsnittet «Vy-läge». Namnfilter här gäller båda.";
-  } else if (mode === "forecast") {
+  if (mode === "forecast") {
     el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-sky-950/40 border-sky-800/70 text-sky-100/95`;
     el.textContent =
       "Prognosläge: status och namn styrs här först; därefter skalas timmarna upp mot hela månaden enligt «Data fram till dag» i avsnittet «Vy-läge».";
   } else {
     el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-emerald-950/35 border-emerald-800/50 text-emerald-50/95`;
     el.textContent =
-      "Vanlig vy: välj statusar och valfritt namn. Gäller datan i huvudrutan (en månad eller redan sammanslagen period). Jämför/prognos: öppna «Vy-läge» längre ned.";
+      "Vanlig vy: välj statusar och valfritt namn. Gäller datan i huvudrutan (en månad eller redan sammanslagen period). Prognos: öppna «Vy-läge» längre ned.";
   }
 }
 
 function updateAnalysisPanels() {
   const m = getAnalysisMode();
-  els.comparePanel?.classList.toggle("hidden", m !== "compare");
   els.forecastPanel?.classList.toggle("hidden", m !== "forecast");
   updateFilterContextBanner();
 }
@@ -661,7 +625,6 @@ function buildStatusFilters(statuses, selected) {
       if (cb.checked) selected.add(st);
       else selected.delete(st);
       safeRenderAll(window.__tidrapport_state);
-      saveLocal(window.__tidrapport_state);
     });
     const sw = document.createElement("span");
     sw.className = "inline-block w-3 h-3 rounded-sm border border-slate-900";
@@ -736,7 +699,7 @@ function resetChartFully() {
   }
 }
 
-/** Jämförelse / annan diagramtyp än staplad status */
+/** Diagramläge (alltid staplad status i denna vy) */
 window.__chart_kind = "normal";
 
 function desiredIndexAxis(mode) {
@@ -827,16 +790,6 @@ function getSelectedEmployeeName(totals) {
   if (!v) return null;
   // only accept exact match against known names to avoid accidental filtering
   for (const name of totals.keys()) {
-    if (cleanStr(name).toLowerCase() === v.toLowerCase()) return name;
-  }
-  return null;
-}
-
-function getSelectedEmployeeNameFromUnion(totalsA, totalsB) {
-  const v = cleanStr(els.employeeInput?.value);
-  if (!v) return null;
-  const names = new Set([...totalsA.keys(), ...totalsB.keys()]);
-  for (const name of names) {
     if (cleanStr(name).toLowerCase() === v.toLowerCase()) return name;
   }
   return null;
@@ -1026,11 +979,6 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   const titleSuffix = chartOpts.titleSuffix || "";
   const previewNote = chartOpts.previewNote;
 
-  if (window.__chart_kind === "compare") {
-    resetChartFully();
-    window.__chart_kind = "normal";
-  }
-
   const state = window.__tidrapport_state;
   const mode = state?.orientation || "horizontal";
   resetChartIfOrientationChanged(mode);
@@ -1169,248 +1117,6 @@ function updateForecastMonthInfo() {
   if (els.forecastThroughDay) els.forecastThroughDay.max = String(dim);
 }
 
-function populateCompareSlotSelects(store) {
-  if (!els.compareSlotA || !els.compareSlotB) return;
-  const keys = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
-  const prevA = cleanStr(els.compareSlotA.value);
-  const prevB = cleanStr(els.compareSlotB.value);
-  for (const sel of [els.compareSlotA, els.compareSlotB]) {
-    sel.innerHTML = "";
-    const ph = document.createElement("option");
-    ph.value = "";
-    ph.textContent = "— Välj —";
-    sel.appendChild(ph);
-    for (const k of keys) {
-      const o = document.createElement("option");
-      o.value = k;
-      o.textContent = slotLabelFromKey(k);
-      sel.appendChild(o);
-    }
-  }
-  if (prevA && keys.includes(prevA)) els.compareSlotA.value = prevA;
-  if (prevB && keys.includes(prevB)) els.compareSlotB.value = prevB;
-}
-
-function ensureCompareDefaults(store) {
-  const keys = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
-  if (keys.length < 2) return;
-  if (!cleanStr(els.compareSlotA?.value)) els.compareSlotA.value = keys[0];
-  if (!cleanStr(els.compareSlotB?.value)) els.compareSlotB.value = keys[1];
-}
-
-function buildCompareStatusFilters(statuses, selected) {
-  els.statusFilters.innerHTML = "";
-  const colorByStatus = buildStatusColorMap(statuses);
-  for (const st of statuses) {
-    const id = `cmp_${btoa(unescape(encodeURIComponent(st))).replace(/=/g, "")}`;
-    const label = document.createElement("label");
-    label.className =
-      "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-700/70 cursor-pointer select-none border border-slate-700";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.id = id;
-    cb.checked = selected.has(st);
-    cb.className = "accent-emerald-500";
-    cb.addEventListener("change", () => {
-      if (!window.__tidrapport_compare) return;
-      if (cb.checked) window.__tidrapport_compare.selectedStatuses.add(st);
-      else window.__tidrapport_compare.selectedStatuses.delete(st);
-      renderCompareAll();
-    });
-    const sw = document.createElement("span");
-    sw.className = "inline-block w-3 h-3 rounded-sm border border-slate-900";
-    sw.style.background = colorByStatus.get(st) || "#94a3b8";
-    const span = document.createElement("span");
-    span.textContent = st;
-    span.className = "text-xs text-slate-100";
-    label.appendChild(cb);
-    label.appendChild(sw);
-    label.appendChild(span);
-    els.statusFilters.appendChild(label);
-  }
-}
-
-function renderCompareAll() {
-  if (getAnalysisMode() !== "compare") return;
-  updateAnalysisPanels();
-  const layout = cleanStr(els.layoutSelect?.value) || "side";
-  applyLayoutMode(layout);
-
-  const store = readStore();
-  populateCompareSlotSelects(store);
-  ensureCompareDefaults(store);
-
-  const keyA = cleanStr(els.compareSlotA?.value);
-  const keyB = cleanStr(els.compareSlotB?.value);
-  if (!keyA || !keyB) {
-    els.statusText.textContent = "Jämförelse: välj två sparade månader (spara minst två rapporter först).";
-    return;
-  }
-  if (keyA === keyB) {
-    els.statusText.textContent = "Välj två olika månader.";
-    return;
-  }
-
-  const textA = store.slots[keyA]?.text;
-  const textB = store.slots[keyB]?.text;
-  if (!cleanStr(textA) || !cleanStr(textB)) {
-    els.statusText.textContent = "Saknar inklistrad data i en av de valda månaderna.";
-    return;
-  }
-
-  const aggA = aggregate(textA);
-  const aggB = aggregate(textB);
-  if (aggA.errors.length || aggB.errors.length) {
-    els.statusText.textContent = [...aggA.errors, ...aggB.errors].join(" ");
-    return;
-  }
-
-  const statusSet = new Set([...aggA.statuses, ...aggB.statuses]);
-  const statusesMerged = [
-    ...ORSAK_ORDER.filter((s) => statusSet.has(s)),
-    ...[...statusSet].filter((s) => !ORSAK_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "sv")),
-  ];
-
-  const pair = `${keyA}|${keyB}`;
-  const isNewPair = !window.__tidrapport_compare || window.__tidrapport_compare.keyPair !== pair;
-  if (isNewPair) {
-    window.__tidrapport_compare = {
-      keyPair: pair,
-      selectedStatuses: new Set(statusesMerged),
-      statuses: statusesMerged,
-    };
-    buildCompareStatusFilters(statusesMerged, window.__tidrapport_compare.selectedStatuses);
-  }
-
-  const sel = window.__tidrapport_compare.selectedStatuses;
-  if (sel.size === 0) {
-    els.statusText.textContent = "Bocka minst en status för jämförelsen.";
-    resetChartFully();
-    els.tableBody.innerHTML = "";
-    return;
-  }
-
-  const emp = getSelectedEmployeeNameFromUnion(aggA.totals, aggB.totals);
-  let totalsA = aggA.totals;
-  let totalsB = aggB.totals;
-  if (emp) {
-    totalsA = new Map([[emp, totalsA.get(emp) || new Map()]]);
-    totalsB = new Map([[emp, totalsB.get(emp) || new Map()]]);
-  }
-
-  const names = new Set([...totalsA.keys(), ...totalsB.keys()]);
-  const rows = [];
-  for (const name of names) {
-    let sumA = 0;
-    let sumB = 0;
-    for (const st of sel) {
-      sumA += totalsA.get(name)?.get(st) || 0;
-      sumB += totalsB.get(name)?.get(st) || 0;
-    }
-    rows.push({ name, sumA: round2(sumA), sumB: round2(sumB), diff: round2(sumB - sumA) });
-  }
-  rows.sort((a, b) => Math.max(b.sumA, b.sumB) - Math.max(a.sumA, a.sumB) || a.name.localeCompare(b.name, "sv"));
-
-  const la = slotLabelFromKey(keyA);
-  const lb = slotLabelFromKey(keyB);
-
-  if (!els.tableHeadRow) return;
-  els.tableHeadRow.innerHTML = "";
-  const h1 = document.createElement("th");
-  h1.className = "text-left px-3 py-2";
-  h1.textContent = "Namn";
-  const h2 = document.createElement("th");
-  h2.className = "text-right px-3 py-2";
-  h2.textContent = la;
-  const h3 = document.createElement("th");
-  h3.className = "text-right px-3 py-2";
-  h3.textContent = lb;
-  const h4 = document.createElement("th");
-  h4.className = "text-right px-3 py-2";
-  h4.textContent = "Diff (B−A)";
-  els.tableHeadRow.appendChild(h1);
-  els.tableHeadRow.appendChild(h2);
-  els.tableHeadRow.appendChild(h3);
-  els.tableHeadRow.appendChild(h4);
-
-  els.tableBody.innerHTML = "";
-  for (const r of rows) {
-    const tr = document.createElement("tr");
-    tr.className = "border-b border-slate-800";
-    const tdN = document.createElement("td");
-    tdN.className = "px-3 py-2 whitespace-nowrap";
-    tdN.textContent = r.name;
-    const tdA = document.createElement("td");
-    tdA.className = "px-3 py-2 text-right tabular-nums";
-    tdA.textContent = r.sumA.toFixed(2);
-    const tdB = document.createElement("td");
-    tdB.className = "px-3 py-2 text-right tabular-nums";
-    tdB.textContent = r.sumB.toFixed(2);
-    const tdD = document.createElement("td");
-    tdD.className = "px-3 py-2 text-right tabular-nums";
-    tdD.textContent = (r.diff >= 0 ? "+" : "") + r.diff.toFixed(2);
-    tr.appendChild(tdN);
-    tr.appendChild(tdA);
-    tr.appendChild(tdB);
-    tr.appendChild(tdD);
-    els.tableBody.appendChild(tr);
-  }
-
-  resetChartFully();
-  window.__chart_kind = "compare";
-  const ctx = els.chartCanvas.getContext("2d");
-  const labels = rows.map((r) => r.name);
-  setChartHeightByLabels(labels.length);
-  chart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels,
-      datasets: [
-        { label: la, data: rows.map((r) => r.sumA), backgroundColor: "#22c55e", borderWidth: 0 },
-        { label: lb, data: rows.map((r) => r.sumB), backgroundColor: "#3b82f6", borderWidth: 0 },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: "y",
-      events: [],
-      animation: false,
-      plugins: {
-        legend: {
-          position: "right",
-          labels: { color: "#e2e8f0", boxWidth: 14, boxHeight: 14, padding: 14, font: { size: 12 } },
-        },
-        tooltip: { enabled: false },
-        title: {
-          display: true,
-          text: "Jämförelse: timmar per person (valda statusar)",
-          color: "#e2e8f0",
-          font: { size: 14 },
-        },
-      },
-      scales: {
-        x: {
-          stacked: false,
-          beginAtZero: true,
-          ticks: { color: "#cbd5e1", font: { size: 12 } },
-          grid: { color: "rgba(148,163,184,0.15)" },
-        },
-        y: {
-          stacked: false,
-          ticks: { color: "#cbd5e1", font: { size: 12 } },
-          grid: { color: "rgba(148,163,184,0.10)" },
-        },
-      },
-    },
-  });
-  renderColorLegend(chart.data.datasets);
-  if (els.titlePreview) els.titlePreview.textContent = `${la} mot ${lb} — summerat per vald status`;
-
-  const statsText = `Jämförelse: ${la} vs ${lb} • Namn: ${rows.length} • Statusar: ${sel.size}${emp ? ` • ${emp}` : ""}`;
-  els.statusText.textContent = statsText;
-}
-
 function renderForecastAll(state) {
   updateAnalysisPanels();
   const layout = state?.layout || cleanStr(els.layoutSelect?.value) || "side";
@@ -1483,10 +1189,6 @@ function renderForecastAll(state) {
 
 function renderAll(state) {
   const mode = getAnalysisMode();
-  if (mode === "compare") {
-    renderCompareAll();
-    return;
-  }
   if (mode === "forecast") {
     renderForecastAll(state);
     return;
@@ -1522,154 +1224,7 @@ function renderAll(state) {
   els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}`;
 }
 
-function slotKeyFromMonthYear(monthLabel, yearStr) {
-  const m = cleanStr(monthLabel);
-  const y = cleanStr(yearStr) || String(new Date().getFullYear());
-  const idx = SWEDISH_MONTHS.indexOf(m);
-  if (idx < 0) return null;
-  const mm = String(idx + 1).padStart(2, "0");
-  return `${y}-${mm}`;
-}
-
-function slotLabelFromKey(key) {
-  const parts = key.split("-");
-  if (parts.length < 2) return key;
-  const y = parts[0];
-  const mm = parts[1];
-  const n = parseInt(mm, 10);
-  if (!Number.isFinite(n) || n < 1 || n > 12) return key;
-  return `${SWEDISH_MONTHS[n - 1]} ${y}`;
-}
-
-function readStore() {
-  try {
-    const raw2 = localStorage.getItem(STORAGE_KEY_V2);
-    if (raw2) {
-      const s = JSON.parse(raw2);
-      if (s && s.version === 2 && s.slots && typeof s.slots === "object") {
-        return { version: 2, slots: s.slots, lastKey: s.lastKey || null };
-      }
-    }
-    const raw1 = localStorage.getItem(STORAGE_KEY_V1);
-    if (raw1) {
-      const data = JSON.parse(raw1);
-      const key =
-        slotKeyFromMonthYear(data.month, data.year) ||
-        `importerad_${new Date().toISOString().slice(0, 10)}`;
-      const store = { version: 2, slots: { [key]: { ...data, savedAt: Date.now() } }, lastKey: key };
-      localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(store));
-      localStorage.removeItem(STORAGE_KEY_V1);
-      return store;
-    }
-  } catch (e) {
-    console.warn("readStore", e);
-  }
-  return { version: 2, slots: {}, lastKey: null };
-}
-
-function writeStore(store) {
-  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(store));
-}
-
-function refreshSavedSlotSelect(store, preferKey) {
-  if (!els.savedSlotSelect) return;
-  const keys = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
-  els.savedSlotSelect.innerHTML = "";
-  const empty = document.createElement("option");
-  empty.value = "";
-  empty.textContent = keys.length ? "— Välj sparad månad —" : "Inget sparat ännu";
-  els.savedSlotSelect.appendChild(empty);
-  for (const k of keys) {
-    const o = document.createElement("option");
-    o.value = k;
-    const pl = store.slots[k];
-    const short = pl?.savedAt ? ` · ${new Date(pl.savedAt).toLocaleDateString("sv-SE")}` : "";
-    o.textContent = `${slotLabelFromKey(k)}${short}`;
-    els.savedSlotSelect.appendChild(o);
-  }
-  const pick = preferKey && keys.includes(preferKey) ? preferKey : store.lastKey && keys.includes(store.lastKey) ? store.lastKey : "";
-  if (pick) els.savedSlotSelect.value = pick;
-  populateCompareSlotSelects(store);
-  updateForecastMonthInfo();
-}
-
-function buildPayloadFromUi(state) {
-  const selected = state?.selectedStatuses instanceof Set ? [...state.selectedStatuses] : [];
-  return {
-    text: els.pasteInput.value,
-    selected,
-    month: cleanStr(els.monthSelect?.value),
-    year: cleanStr(els.yearInput?.value),
-    title: cleanStr(els.titleInput?.value),
-    employee: cleanStr(els.employeeInput?.value),
-    orientation: cleanStr(els.orientationSelect?.value) || "horizontal",
-    verticalNames: cleanStr(els.verticalNamesSelect?.value) || "20",
-    layout: cleanStr(els.layoutSelect?.value) || "side",
-    savedAt: Date.now(),
-  };
-}
-
-function resolveSlotKey(store, payload) {
-  let key = slotKeyFromMonthYear(payload.month, payload.year);
-  if (!key) key = store.lastKey;
-  if (!key) {
-    const d = new Date();
-    key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  }
-  return key;
-}
-
-function saveLocal(state) {
-  const store = readStore();
-  const payload = buildPayloadFromUi(state);
-  const key = resolveSlotKey(store, payload);
-  store.slots[key] = payload;
-  store.lastKey = key;
-  writeStore(store);
-  refreshSavedSlotSelect(store, key);
-}
-
-function loadLocal() {
-  try {
-    const store = readStore();
-    if (!store.lastKey || !store.slots[store.lastKey]) return null;
-    return store.slots[store.lastKey];
-  } catch {
-    return null;
-  }
-}
-
-function applyPayloadToUi(data) {
-  els.pasteInput.value = data.text || "";
-  if (els.monthSelect && data.month) els.monthSelect.value = data.month;
-  if (els.yearInput && data.year) els.yearInput.value = data.year;
-  if (els.titleInput && data.title != null) els.titleInput.value = data.title;
-  if (els.employeeInput && data.employee != null) els.employeeInput.value = data.employee;
-  if (els.orientationSelect && data.orientation) els.orientationSelect.value = data.orientation;
-  if (els.verticalNamesSelect && data.verticalNames) els.verticalNamesSelect.value = data.verticalNames;
-  if (els.layoutSelect && data.layout) els.layoutSelect.value = data.layout;
-}
-
-function loadFromStoreKey(key) {
-  const store = readStore();
-  const data = store.slots[key];
-  if (!data) return false;
-  applyPayloadToUi(data);
-  store.lastKey = key;
-  writeStore(store);
-  refreshSavedSlotSelect(store, key);
-  regenerateFromText(els.pasteInput.value, data.selected || []);
-  return true;
-}
-
 function regenerateFromText(text, selectedOverride) {
-  // Jämförelseläge ritar bara från sparade månader — ignorera inklistring om vi inte byter vy.
-  if (cleanStr(text) && getAnalysisMode() === "compare") {
-    if (els.analysisModeSelect) els.analysisModeSelect.value = "normal";
-    window.__tidrapport_compare = null;
-    updateAnalysisPanels();
-  }
-
   const agg = aggregate(text);
   if (agg.errors.length) {
     els.statusText.textContent = agg.errors.join(" ");
@@ -1739,129 +1294,29 @@ function regenerateFromText(text, selectedOverride) {
 els.btnGenerate.addEventListener("click", () => {
   const text = els.pasteInput.value || "";
   regenerateFromText(text, null);
-  saveLocal(window.__tidrapport_state);
-  const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
-  if (key && rawPasteFromInput() && window.__tidrapport_state?.totals?.size) {
-    setSlotFeedback(
-      `Automatiskt sparat lokalt som «${slotLabelFromKey(key)}». (Samma innehåll som om du tryckte «Spara vald månad».)`
-    );
-  } else if (!rawPasteFromInput()) {
-    setSlotFeedback("");
-  }
 });
 
 function clearPasteAndChart() {
   els.pasteInput.value = "";
-  setSlotFeedback("");
   regenerateFromText("", null);
 }
 
 els.btnClear.addEventListener("click", clearPasteAndChart);
 els.btnClearNearGenerate?.addEventListener("click", clearPasteAndChart);
 
-els.btnLoad.addEventListener("click", () => {
-  const store = readStore();
-  if (!store.lastKey || !store.slots[store.lastKey]) {
-    els.statusText.textContent = "Inget sparat hittades.";
-    return;
-  }
-  loadFromStoreKey(store.lastKey);
-});
-
-els.btnLoadSlot?.addEventListener("click", () => {
-  const key = cleanStr(els.savedSlotSelect?.value);
-  if (!key) {
-    const m = "Välj en sparad rapport i listan.";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-    return;
-  }
-  if (!loadFromStoreKey(key)) {
-    const m = "Kunde inte ladda (saknas).";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-  } else {
-    const ok = `Laddade «${slotLabelFromKey(key)}» från sparade rapporter.`;
-    els.statusText.textContent = ok;
-    setSlotFeedback(ok);
-  }
-});
-
-els.btnSaveSlot?.addEventListener("click", () => {
-  const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
-  if (!key) {
-    const m = "Välj månad och år ovan innan du sparar — de styr nyckeln (t.ex. Februari 2026).";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-    return;
-  }
-  if (!rawPasteFromInput()) {
-    const m = "Inklistringsrutan är tom — inget att spara. Klistra in data eller ladda en rapport först.";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-    return;
-  }
-  const stub = window.__tidrapport_state || { selectedStatuses: new Set() };
-  saveLocal(stub);
-  const ok = `Sparat under «${slotLabelFromKey(key)}» i denna webbläsare. Du ser den i listan «Sparade rapporter».`;
-  els.statusText.textContent = ok;
-  setSlotFeedback(ok);
-});
-
-els.btnDeleteSlot?.addEventListener("click", () => {
-  const key = cleanStr(els.savedSlotSelect?.value);
-  if (!key) {
-    const m = "Välj en sparad rapport att ta bort.";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-    return;
-  }
-  const store = readStore();
-  if (!store.slots[key]) {
-    const m = "Finns inte i sparade listan.";
-    els.statusText.textContent = m;
-    setSlotFeedback(m);
-    return;
-  }
-  delete store.slots[key];
-  if (store.lastKey === key) {
-    const remain = Object.keys(store.slots).sort((a, b) => b.localeCompare(a));
-    store.lastKey = remain[0] || null;
-  }
-  writeStore(store);
-  refreshSavedSlotSelect(store, store.lastKey);
-  const ok = `Tog bort «${slotLabelFromKey(key)}» från sparade rapporter.`;
-  els.statusText.textContent = ok;
-  setSlotFeedback(ok);
-});
-
 els.btnAll.addEventListener("click", () => {
-  if (getAnalysisMode() === "compare" && window.__tidrapport_compare) {
-    window.__tidrapport_compare.selectedStatuses = new Set(window.__tidrapport_compare.statuses);
-    buildCompareStatusFilters(window.__tidrapport_compare.statuses, window.__tidrapport_compare.selectedStatuses);
-    renderCompareAll();
-    return;
-  }
   const st = window.__tidrapport_state;
   const fs = filterStatusesForUi(st);
   st.selectedStatuses = new Set(fs);
   buildStatusFilters(fs, st.selectedStatuses);
   safeRenderAll(st);
-  saveLocal(st);
 });
 
 els.btnNone.addEventListener("click", () => {
-  if (getAnalysisMode() === "compare" && window.__tidrapport_compare) {
-    window.__tidrapport_compare.selectedStatuses = new Set();
-    buildCompareStatusFilters(window.__tidrapport_compare.statuses, window.__tidrapport_compare.selectedStatuses);
-    renderCompareAll();
-    return;
-  }
   const st = window.__tidrapport_state;
   st.selectedStatuses = new Set();
   buildStatusFilters(filterStatusesForUi(st), st.selectedStatuses);
   safeRenderAll(st);
-  saveLocal(st);
 });
 
 els.btnClearEmployee?.addEventListener("click", () => {
@@ -1869,7 +1324,6 @@ els.btnClearEmployee?.addEventListener("click", () => {
   if (window.__tidrapport_state) {
     window.__tidrapport_state.employeeName = null;
     safeRenderAll(window.__tidrapport_state);
-    saveLocal(window.__tidrapport_state);
   }
 });
 
@@ -1878,7 +1332,6 @@ els.employeeInput?.addEventListener("input", () => {
   const nm = getSelectedEmployeeName(window.__tidrapport_state.totals);
   window.__tidrapport_state.employeeName = nm;
   safeRenderAll(window.__tidrapport_state);
-  saveLocal(window.__tidrapport_state);
 });
 
 for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
@@ -1886,18 +1339,12 @@ for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
     updateForecastMonthInfo();
     if (!window.__tidrapport_state) return;
     safeRenderAll(window.__tidrapport_state);
-    saveLocal(window.__tidrapport_state);
   });
 }
 
 els.analysisModeSelect?.addEventListener("change", () => {
   updateAnalysisPanels();
-  window.__tidrapport_compare = null;
   const m = getAnalysisMode();
-  if (m === "compare") {
-    renderCompareAll();
-    return;
-  }
   resetChartFully();
   window.__chart_kind = "normal";
   if (!window.__tidrapport_state) return;
@@ -1912,21 +1359,6 @@ els.analysisModeSelect?.addEventListener("change", () => {
   safeRenderAll(window.__tidrapport_state);
 });
 
-els.compareSlotA?.addEventListener("change", () => {
-  window.__tidrapport_compare = null;
-  if (getAnalysisMode() === "compare") renderCompareAll();
-});
-
-els.compareSlotB?.addEventListener("change", () => {
-  window.__tidrapport_compare = null;
-  if (getAnalysisMode() === "compare") renderCompareAll();
-});
-
-els.btnRefreshCompare?.addEventListener("click", () => {
-  window.__tidrapport_compare = null;
-  if (getAnalysisMode() === "compare") renderCompareAll();
-});
-
 els.forecastThroughDay?.addEventListener("input", () => {
   if (getAnalysisMode() === "forecast" && window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
@@ -1935,14 +1367,12 @@ els.orientationSelect?.addEventListener("change", () => {
   if (!window.__tidrapport_state) return;
   window.__tidrapport_state.orientation = cleanStr(els.orientationSelect.value) || "horizontal";
   safeRenderAll(window.__tidrapport_state);
-  saveLocal(window.__tidrapport_state);
 });
 
 els.verticalNamesSelect?.addEventListener("change", () => {
   if (!window.__tidrapport_state) return;
   window.__tidrapport_state.verticalNames = cleanStr(els.verticalNamesSelect.value) || "20";
   safeRenderAll(window.__tidrapport_state);
-  saveLocal(window.__tidrapport_state);
 });
 
 function applyLayoutMode(mode) {
@@ -1957,7 +1387,6 @@ els.layoutSelect?.addEventListener("change", () => {
   window.__tidrapport_state.layout = cleanStr(els.layoutSelect.value) || "side";
   applyLayoutMode(window.__tidrapport_state.layout);
   safeRenderAll(window.__tidrapport_state);
-  saveLocal(window.__tidrapport_state);
 });
 
 els.btnAddToMerge?.addEventListener("click", () => {
@@ -1989,46 +1418,6 @@ els.btnAddToMerge?.addEventListener("click", () => {
   renderMergeQueueList();
   flashMergeQueueList();
   const ok = `Tillagt «${label}» — ${mergeQueue.length} del${mergeQueue.length === 1 ? "" : "ar"} i kön.`;
-  els.statusText.textContent = ok;
-  setMergeFeedback(ok, "ok");
-});
-
-els.btnAddSavedToMerge?.addEventListener("click", () => {
-  const key = cleanStr(els.savedSlotSelect?.value);
-  if (!key) {
-    const m = "Välj en sparad månad i listan «Sparade rapporter» (längre upp) först.";
-    els.statusText.textContent = m;
-    setMergeFeedback(m, "err");
-    return;
-  }
-  const store = readStore();
-  const payload = store.slots[key];
-  const text = normalizePastedTableString(payload?.text);
-  if (!text) {
-    const m = "Den sparade månaden saknar data.";
-    els.statusText.textContent = m;
-    setMergeFeedback(m, "err");
-    return;
-  }
-  const parsed = parseTable(text);
-  const ve = validateHeadersForAggregate(parsed.headers);
-  if (ve.length) {
-    const m = ve.join(" ");
-    els.statusText.textContent = m;
-    setMergeFeedback(m, "err");
-    return;
-  }
-  if (!parsed.rows.length) {
-    const m = "Sparad månad har inga datarader.";
-    els.statusText.textContent = m;
-    setMergeFeedback(m, "err");
-    return;
-  }
-  const label = slotLabelFromKey(key);
-  mergeQueue.push({ label, text });
-  renderMergeQueueList();
-  flashMergeQueueList();
-  const ok = `Tillagd sparad «${label}» — ${mergeQueue.length} del${mergeQueue.length === 1 ? "" : "ar"} i kön.`;
   els.statusText.textContent = ok;
   setMergeFeedback(ok, "ok");
 });
@@ -2088,7 +1477,7 @@ els.btnClearMergeQueue?.addEventListener("click", () => {
 els.btnApplyMerge?.addEventListener("click", () => {
   if (mergeQueue.length < 2) {
     const m =
-      "Lägg till minst två delar i listan nedan (samma knapp flera gånger med ny data, eller sparade månader / filer).";
+      "Lägg till minst två delar i listan nedan (samma knapp flera gånger med ny data, eller lägg till filer).";
     els.statusText.textContent = m;
     setMergeFeedback(m, "err");
     return;
@@ -2115,7 +1504,6 @@ els.btnApplyMerge?.addEventListener("click", () => {
     els.analysisModeSelect.value = "normal";
     updateAnalysisPanels();
   }
-  window.__tidrapport_compare = null;
   resetChartFully();
   window.__chart_kind = "normal";
   regenerateFromText(tsv, null);
@@ -2138,35 +1526,34 @@ els.btnDownload.addEventListener("click", () => {
   a.click();
 });
 
-// Boot: try load saved, else show empty chart
+// Boot: rensa gamla sparade månader (localStorage) och visa tomt läge
 (() => {
+  try {
+    localStorage.removeItem("mx_tidrapport_v1");
+    localStorage.removeItem("mx_tidrapport_v2");
+  } catch (e) {
+    console.warn("tidrapport localStorage cleanup", e);
+  }
+  if (els.analysisModeSelect?.value === "compare") els.analysisModeSelect.value = "normal";
   renderMergeQueueList();
   updateForecastMonthInfo();
   updateAnalysisPanels();
-  const store = readStore();
-  refreshSavedSlotSelect(store, store.lastKey);
-  const saved = loadLocal();
-  if (saved?.text) {
-    applyPayloadToUi(saved);
-    regenerateFromText(saved.text, saved.selected || []);
-  } else {
-    if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
-    window.__tidrapport_state = {
-      totals: new Map(),
-      statuses: [],
-      selectedStatuses: new Set(),
-      employeeName: null,
-      stats: null,
-      orientation: "horizontal",
-      verticalNames: "20",
-      layout: "side",
-      seriesMeta: null,
-      mergedSourceSplit: false,
-      baseStatuses: null,
-      mergeSourceOrder: null,
-    };
-    ensureChart();
-    els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
-  }
+  if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
+  window.__tidrapport_state = {
+    totals: new Map(),
+    statuses: [],
+    selectedStatuses: new Set(),
+    employeeName: null,
+    stats: null,
+    orientation: "horizontal",
+    verticalNames: "20",
+    layout: "side",
+    seriesMeta: null,
+    mergedSourceSplit: false,
+    baseStatuses: null,
+    mergeSourceOrder: null,
+  };
+  ensureChart();
+  els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
 })();
 
