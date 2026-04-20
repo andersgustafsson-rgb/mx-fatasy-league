@@ -16,6 +16,8 @@ const els = {
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
   orientationSelect: document.getElementById("orientationSelect"),
+  verticalNamesSelect: document.getElementById("verticalNamesSelect"),
+  layoutSelect: document.getElementById("layoutSelect"),
   statusFilters: document.getElementById("statusFilters"),
   statusText: document.getElementById("statusText"),
   employeeInput: document.getElementById("employeeInput"),
@@ -23,6 +25,7 @@ const els = {
   btnClearEmployee: document.getElementById("btnClearEmployee"),
   tableBody: document.getElementById("tableBody"),
   chartCanvas: document.getElementById("chartCanvas"),
+  layoutGrid: document.getElementById("layoutGrid"),
 };
 
 function cleanStr(v) {
@@ -315,6 +318,7 @@ function showUiError(err) {
 
 function safeRenderAll(state) {
   try {
+    if (state?.layout) applyLayoutMode(state.layout);
     renderAll(state);
   } catch (e) {
     console.error(e);
@@ -386,8 +390,8 @@ function setChartHeightByMode(mode, labelCount) {
   const container = els.chartCanvas?.parentElement;
   if (!container) return;
   if (mode === "vertical") {
-    // Taller for vertical so bars are visible, but keep within a sane range.
-    const h = Math.max(520, Math.min(950, 360 + labelCount * 10));
+    // Vertical needs a lot more height when showing many names (desktop use-case).
+    const h = Math.max(520, Math.min(4200, 320 + labelCount * 22));
     container.style.height = `${h}px`;
     return;
   }
@@ -415,10 +419,12 @@ function applyOrientation(mode) {
   }
 }
 
-function limitForVerticalIfNeeded(mode, sortedPeople, hasEmployeeFilter) {
+function limitForVerticalIfNeeded(mode, sortedPeople, hasEmployeeFilter, verticalLimit) {
   if (mode !== "vertical") return sortedPeople;
   if (hasEmployeeFilter) return sortedPeople;
-  const MAX = 20;
+  if (verticalLimit === "all") return sortedPeople;
+  const maxN = Number(verticalLimit || 20);
+  const MAX = Number.isFinite(maxN) ? maxN : 20;
   if (sortedPeople.length <= MAX) return sortedPeople;
   els.statusText.textContent = `${els.statusText.textContent} • Stående: visar Top ${MAX}`;
   return sortedPeople.slice(0, MAX);
@@ -484,7 +490,12 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
   const c = ensureChart(mode);
   applyOrientation(mode);
 
-  const limitedPeople = limitForVerticalIfNeeded(mode, sortedPeople, !!window.__tidrapport_state?.employeeName);
+  const limitedPeople = limitForVerticalIfNeeded(
+    mode,
+    sortedPeople,
+    !!window.__tidrapport_state?.employeeName,
+    window.__tidrapport_state?.verticalNames || "20"
+  );
   const labels = limitedPeople.map((p) => p.name);
   setChartHeightByMode(mode, labels.length);
 
@@ -539,6 +550,8 @@ function saveLocal(state) {
     title: cleanStr(els.titleInput?.value),
     employee: cleanStr(els.employeeInput?.value),
     orientation: cleanStr(els.orientationSelect?.value) || "horizontal",
+    verticalNames: cleanStr(els.verticalNamesSelect?.value) || "20",
+    layout: cleanStr(els.layoutSelect?.value) || "side",
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -573,7 +586,9 @@ function regenerateFromText(text, selectedOverride) {
   const employeeName = getSelectedEmployeeName(totals);
 
   const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
-  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats, orientation };
+  const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
+  const layout = cleanStr(els.layoutSelect?.value) || "side";
+  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats, orientation, verticalNames, layout };
   // update datalist with names
   if (els.employeeList) {
     els.employeeList.innerHTML = "";
@@ -611,6 +626,8 @@ els.btnLoad.addEventListener("click", () => {
   if (els.titleInput && data.title) els.titleInput.value = data.title;
   if (els.employeeInput && data.employee) els.employeeInput.value = data.employee;
   if (els.orientationSelect && data.orientation) els.orientationSelect.value = data.orientation;
+  if (els.verticalNamesSelect && data.verticalNames) els.verticalNamesSelect.value = data.verticalNames;
+  if (els.layoutSelect && data.layout) els.layoutSelect.value = data.layout;
   regenerateFromText(els.pasteInput.value, data.selected || []);
 });
 
@@ -662,6 +679,28 @@ els.orientationSelect?.addEventListener("change", () => {
   saveLocal(window.__tidrapport_state);
 });
 
+els.verticalNamesSelect?.addEventListener("change", () => {
+  if (!window.__tidrapport_state) return;
+  window.__tidrapport_state.verticalNames = cleanStr(els.verticalNamesSelect.value) || "20";
+  safeRenderAll(window.__tidrapport_state);
+  saveLocal(window.__tidrapport_state);
+});
+
+function applyLayoutMode(mode) {
+  if (!els.layoutGrid) return;
+  const isStack = mode === "stack";
+  els.layoutGrid.classList.toggle("lg:grid-cols-2", !isStack);
+  els.layoutGrid.classList.toggle("lg:grid-cols-1", isStack);
+}
+
+els.layoutSelect?.addEventListener("change", () => {
+  if (!window.__tidrapport_state) return;
+  window.__tidrapport_state.layout = cleanStr(els.layoutSelect.value) || "side";
+  applyLayoutMode(window.__tidrapport_state.layout);
+  safeRenderAll(window.__tidrapport_state);
+  saveLocal(window.__tidrapport_state);
+});
+
 els.btnDownload.addEventListener("click", () => {
   const c = ensureChart();
   const url = c.toBase64Image("image/png", 1);
@@ -686,10 +725,21 @@ els.btnDownload.addEventListener("click", () => {
     if (els.titleInput && saved.title) els.titleInput.value = saved.title;
     if (els.employeeInput && saved.employee) els.employeeInput.value = saved.employee;
     if (els.orientationSelect && saved.orientation) els.orientationSelect.value = saved.orientation;
+    if (els.verticalNamesSelect && saved.verticalNames) els.verticalNamesSelect.value = saved.verticalNames;
+    if (els.layoutSelect && saved.layout) els.layoutSelect.value = saved.layout;
     regenerateFromText(saved.text, saved.selected || []);
   } else {
     if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
-    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null, orientation: "horizontal" };
+    window.__tidrapport_state = {
+      totals: new Map(),
+      statuses: [],
+      selectedStatuses: new Set(),
+      employeeName: null,
+      stats: null,
+      orientation: "horizontal",
+      verticalNames: "20",
+      layout: "side",
+    };
     ensureChart();
     els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
   }

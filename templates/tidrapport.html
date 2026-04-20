@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div id="layoutGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-lg font-semibold">1) Klistra in</h2>
@@ -77,6 +77,27 @@
           </div>
           <div class="md:col-span-2 text-xs text-slate-400 flex items-end">
             Tips: Stående läge passar om du filtrerar på enstaka anställd eller få namn.
+          </div>
+        </div>
+
+        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1" for="verticalNamesSelect">Stående: hur många namn</label>
+            <select id="verticalNamesSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+              <option value="20">Top 20</option>
+              <option value="50">Top 50</option>
+              <option value="all">Alla (kan bli väldigt högt)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Layout</label>
+            <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+              <option value="side">Sida vid sida</option>
+              <option value="stack">Diagram under (mer plats)</option>
+            </select>
+          </div>
+          <div class="text-xs text-slate-400 flex items-end">
+            “Diagram under” ger mer plats för många namn.
           </div>
         </div>
 
