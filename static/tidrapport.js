@@ -14,6 +14,7 @@ const els = {
   yearInput: document.getElementById("yearInput"),
   titleInput: document.getElementById("titleInput"),
   titlePreview: document.getElementById("titlePreview"),
+  colorLegend: document.getElementById("colorLegend"),
   statusFilters: document.getElementById("statusFilters"),
   statusText: document.getElementById("statusText"),
   employeeInput: document.getElementById("employeeInput"),
@@ -247,12 +248,15 @@ function ensureChart() {
       maintainAspectRatio: false,
       indexAxis: "y",
       plugins: {
-        legend: { position: "right", labels: { color: "#e2e8f0" } },
-        title: { display: true, text: "Timmar per person (per status)", color: "#e2e8f0" },
+        legend: {
+          position: "right",
+          labels: { color: "#e2e8f0", boxWidth: 14, boxHeight: 14, padding: 14, font: { size: 12 } },
+        },
+        title: { display: true, text: "Timmar per person (per status)", color: "#e2e8f0", font: { size: 14 } },
       },
       scales: {
-        x: { stacked: true, ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.15)" } },
-        y: { stacked: true, ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.10)" } },
+        x: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
+        y: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.10)" } },
       },
     },
   });
@@ -295,19 +299,52 @@ function buildTitleText(state) {
 }
 
 function palette(i) {
+  // High-contrast, colorblind-friendlier palette
   const colors = [
-    "#34d399",
-    "#60a5fa",
-    "#fbbf24",
-    "#f87171",
-    "#a78bfa",
-    "#22c55e",
-    "#38bdf8",
-    "#fb7185",
-    "#c084fc",
-    "#f59e0b",
+    "#22c55e", // green
+    "#3b82f6", // blue
+    "#f59e0b", // amber
+    "#ef4444", // red
+    "#a855f7", // purple
+    "#06b6d4", // cyan
+    "#f97316", // orange
+    "#14b8a6", // teal
+    "#eab308", // yellow
+    "#ec4899", // pink
   ];
   return colors[i % colors.length];
+}
+
+function setChartHeightByLabels(labelCount) {
+  const container = els.chartCanvas?.parentElement;
+  if (!container) return;
+  const h = Math.max(360, Math.min(1200, 140 + labelCount * 26));
+  container.style.height = `${h}px`;
+}
+
+function renderColorLegend(datasets) {
+  if (!els.colorLegend) return;
+  if (!datasets || datasets.length === 0) {
+    els.colorLegend.innerHTML = "";
+    return;
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "flex flex-wrap gap-2";
+  for (const ds of datasets) {
+    const pill = document.createElement("div");
+    pill.className = "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700";
+    const sw = document.createElement("span");
+    sw.className = "inline-block w-3.5 h-3.5 rounded-sm border border-slate-900";
+    sw.style.background = ds.backgroundColor;
+    const tx = document.createElement("span");
+    tx.className = "text-xs text-slate-100";
+    tx.textContent = ds.label;
+    pill.appendChild(sw);
+    pill.appendChild(tx);
+    wrap.appendChild(pill);
+  }
+  els.colorLegend.innerHTML = "";
+  els.colorLegend.appendChild(wrap);
 }
 
 function computePeopleSorted(totals, selectedStatuses) {
@@ -342,6 +379,8 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
   const c = ensureChart();
   const labels = sortedPeople.map((p) => p.name);
 
+  setChartHeightByLabels(labels.length);
+
   const datasets = [];
   let idx = 0;
   for (const st of statuses) {
@@ -362,6 +401,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
     c.options.plugins.title.text = titleText;
     if (els.titlePreview) els.titlePreview.textContent = titleText;
   }
+  renderColorLegend(datasets);
   c.update();
 }
 
