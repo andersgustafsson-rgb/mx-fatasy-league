@@ -24,6 +24,7 @@ const els = {
   btnGenerate: document.getElementById("btnGenerate"),
   btnDownload: document.getElementById("btnDownload"),
   btnClear: document.getElementById("btnClear"),
+  btnClearNearGenerate: document.getElementById("btnClearNearGenerate"),
   btnLoad: document.getElementById("btnLoad"),
   btnAll: document.getElementById("btnAll"),
   btnNone: document.getElementById("btnNone"),
@@ -67,6 +68,24 @@ const els = {
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
 const mergeQueue = [];
+
+let __slotFeedbackTimer = null;
+/** Synlig bekräftelse under «Spara flera månader» (användaren scrollar ofta inte till statusraden). */
+function setSlotFeedback(msg) {
+  const el = document.getElementById("slotActionFeedback");
+  if (!el) return;
+  el.textContent = msg || "";
+  if (__slotFeedbackTimer) {
+    clearTimeout(__slotFeedbackTimer);
+    __slotFeedbackTimer = null;
+  }
+  if (msg) {
+    __slotFeedbackTimer = setTimeout(() => {
+      el.textContent = "";
+      __slotFeedbackTimer = null;
+    }, 14000);
+  }
+}
 
 function getAnalysisMode() {
   return cleanStr(els.analysisModeSelect?.value) || "normal";
@@ -1306,12 +1325,24 @@ els.btnGenerate.addEventListener("click", () => {
   const text = els.pasteInput.value || "";
   regenerateFromText(text, null);
   saveLocal(window.__tidrapport_state);
+  const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
+  if (key && cleanStr(text) && window.__tidrapport_state?.totals?.size) {
+    setSlotFeedback(
+      `Automatiskt sparat lokalt som «${slotLabelFromKey(key)}». (Samma innehåll som om du tryckte «Spara vald månad».)`
+    );
+  } else if (!cleanStr(text)) {
+    setSlotFeedback("");
+  }
 });
 
-els.btnClear.addEventListener("click", () => {
+function clearPasteAndChart() {
   els.pasteInput.value = "";
+  setSlotFeedback("");
   regenerateFromText("", null);
-});
+}
+
+els.btnClear.addEventListener("click", clearPasteAndChart);
+els.btnClearNearGenerate?.addEventListener("click", clearPasteAndChart);
 
 els.btnLoad.addEventListener("click", () => {
   const store = readStore();
@@ -1325,32 +1356,56 @@ els.btnLoad.addEventListener("click", () => {
 els.btnLoadSlot?.addEventListener("click", () => {
   const key = cleanStr(els.savedSlotSelect?.value);
   if (!key) {
-    els.statusText.textContent = "Välj en sparad rapport i listan.";
+    const m = "Välj en sparad rapport i listan.";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
     return;
   }
-  if (!loadFromStoreKey(key)) els.statusText.textContent = "Kunde inte ladda (saknas).";
+  if (!loadFromStoreKey(key)) {
+    const m = "Kunde inte ladda (saknas).";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
+  } else {
+    const ok = `Laddade «${slotLabelFromKey(key)}» från sparade rapporter.`;
+    els.statusText.textContent = ok;
+    setSlotFeedback(ok);
+  }
 });
 
 els.btnSaveSlot?.addEventListener("click", () => {
   const key = slotKeyFromMonthYear(cleanStr(els.monthSelect?.value), cleanStr(els.yearInput?.value));
   if (!key) {
-    els.statusText.textContent = "Välj månad och år innan du sparar.";
+    const m = "Välj månad och år ovan innan du sparar — de styr nyckeln (t.ex. Februari 2026).";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
+    return;
+  }
+  if (!cleanStr(els.pasteInput?.value)) {
+    const m = "Inklistringsrutan är tom — inget att spara. Klistra in data eller ladda en rapport först.";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
     return;
   }
   const stub = window.__tidrapport_state || { selectedStatuses: new Set() };
   saveLocal(stub);
-  els.statusText.textContent = `Sparat under «${slotLabelFromKey(key)}».`;
+  const ok = `Sparat under «${slotLabelFromKey(key)}» i denna webbläsare. Du ser den i listan «Sparade rapporter».`;
+  els.statusText.textContent = ok;
+  setSlotFeedback(ok);
 });
 
 els.btnDeleteSlot?.addEventListener("click", () => {
   const key = cleanStr(els.savedSlotSelect?.value);
   if (!key) {
-    els.statusText.textContent = "Välj en sparad rapport att ta bort.";
+    const m = "Välj en sparad rapport att ta bort.";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
     return;
   }
   const store = readStore();
   if (!store.slots[key]) {
-    els.statusText.textContent = "Finns inte i sparade listan.";
+    const m = "Finns inte i sparade listan.";
+    els.statusText.textContent = m;
+    setSlotFeedback(m);
     return;
   }
   delete store.slots[key];
@@ -1360,7 +1415,9 @@ els.btnDeleteSlot?.addEventListener("click", () => {
   }
   writeStore(store);
   refreshSavedSlotSelect(store, store.lastKey);
-  els.statusText.textContent = `Tog bort «${slotLabelFromKey(key)}».`;
+  const ok = `Tog bort «${slotLabelFromKey(key)}» från sparade rapporter.`;
+  els.statusText.textContent = ok;
+  setSlotFeedback(ok);
 });
 
 els.btnAll.addEventListener("click", () => {
