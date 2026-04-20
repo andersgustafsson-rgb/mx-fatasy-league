@@ -388,7 +388,6 @@ function setChartHeightByMode(mode, labelCount) {
 }
 
 function applyOrientation(mode) {
-  resetChartIfOrientationChanged(mode);
   const c = ensureChart();
   const isVertical = mode === "vertical";
   c.options.indexAxis = desiredIndexAxis(mode);
@@ -473,8 +472,12 @@ function renderTable(sortedPeople) {
 }
 
 function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
-  const c = ensureChart();
   const mode = window.__tidrapport_state?.orientation || "horizontal";
+  // If the user changed orientation, recreate chart BEFORE we set data.
+  resetChartIfOrientationChanged(mode);
+  const c = ensureChart();
+  applyOrientation(mode);
+
   const limitedPeople = limitForVerticalIfNeeded(mode, sortedPeople, !!window.__tidrapport_state?.employeeName);
   const labels = limitedPeople.map((p) => p.name);
   setChartHeightByMode(mode, labels.length);
@@ -499,7 +502,6 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
     if (els.titlePreview) els.titlePreview.textContent = titleText;
   }
   renderColorLegend(datasets);
-  applyOrientation(mode);
   c.update();
 }
 
