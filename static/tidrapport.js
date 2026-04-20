@@ -15,6 +15,7 @@ const els = {
   titleInput: document.getElementById("titleInput"),
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
+  orientationSelect: document.getElementById("orientationSelect"),
   statusFilters: document.getElementById("statusFilters"),
   statusText: document.getElementById("statusText"),
   employeeInput: document.getElementById("employeeInput"),
@@ -350,6 +351,23 @@ function setChartHeightByLabels(labelCount) {
   container.style.height = `${h}px`;
 }
 
+function setChartHeightByMode(mode, labelCount) {
+  // In vertical mode, height should be stable; in horizontal mode, scale with number of names.
+  const container = els.chartCanvas?.parentElement;
+  if (!container) return;
+  if (mode === "vertical") {
+    container.style.height = "520px";
+    return;
+  }
+  setChartHeightByLabels(labelCount);
+}
+
+function applyOrientation(mode) {
+  const c = ensureChart();
+  const isVertical = mode === "vertical";
+  c.options.indexAxis = isVertical ? "x" : "y";
+}
+
 function renderColorLegend(datasets) {
   if (!els.colorLegend) return;
   if (!datasets || datasets.length === 0) {
@@ -407,7 +425,8 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
   const c = ensureChart();
   const labels = sortedPeople.map((p) => p.name);
 
-  setChartHeightByLabels(labels.length);
+  const mode = window.__tidrapport_state?.orientation || "horizontal";
+  setChartHeightByMode(mode, labels.length);
 
   const colorByStatus = buildStatusColorMap(statuses);
   const datasets = [];
@@ -429,6 +448,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople) {
     if (els.titlePreview) els.titlePreview.textContent = titleText;
   }
   renderColorLegend(datasets);
+  applyOrientation(mode);
   c.update();
 }
 
@@ -459,6 +479,7 @@ function saveLocal(state) {
     year: cleanStr(els.yearInput?.value),
     title: cleanStr(els.titleInput?.value),
     employee: cleanStr(els.employeeInput?.value),
+    orientation: cleanStr(els.orientationSelect?.value) || "horizontal",
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
@@ -492,7 +513,8 @@ function regenerateFromText(text, selectedOverride) {
 
   const employeeName = getSelectedEmployeeName(totals);
 
-  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats };
+  const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
+  window.__tidrapport_state = { totals, statuses, selectedStatuses, employeeName, stats, orientation };
   // update datalist with names
   if (els.employeeList) {
     els.employeeList.innerHTML = "";
@@ -529,6 +551,7 @@ els.btnLoad.addEventListener("click", () => {
   if (els.yearInput && data.year) els.yearInput.value = data.year;
   if (els.titleInput && data.title) els.titleInput.value = data.title;
   if (els.employeeInput && data.employee) els.employeeInput.value = data.employee;
+  if (els.orientationSelect && data.orientation) els.orientationSelect.value = data.orientation;
   regenerateFromText(els.pasteInput.value, data.selected || []);
 });
 
@@ -573,6 +596,13 @@ for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
   });
 }
 
+els.orientationSelect?.addEventListener("change", () => {
+  if (!window.__tidrapport_state) return;
+  window.__tidrapport_state.orientation = cleanStr(els.orientationSelect.value) || "horizontal";
+  safeRenderAll(window.__tidrapport_state);
+  saveLocal(window.__tidrapport_state);
+});
+
 els.btnDownload.addEventListener("click", () => {
   const c = ensureChart();
   const url = c.toBase64Image("image/png", 1);
@@ -596,10 +626,11 @@ els.btnDownload.addEventListener("click", () => {
     if (els.yearInput && saved.year) els.yearInput.value = saved.year;
     if (els.titleInput && saved.title) els.titleInput.value = saved.title;
     if (els.employeeInput && saved.employee) els.employeeInput.value = saved.employee;
+    if (els.orientationSelect && saved.orientation) els.orientationSelect.value = saved.orientation;
     regenerateFromText(saved.text, saved.selected || []);
   } else {
     if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
-    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null };
+    window.__tidrapport_state = { totals: new Map(), statuses: [], selectedStatuses: new Set(), employeeName: null, stats: null, orientation: "horizontal" };
     ensureChart();
     els.statusText.textContent = "Klistra in data och klicka på «Skapa / uppdatera diagram».";
   }
