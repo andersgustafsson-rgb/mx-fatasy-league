@@ -72,10 +72,32 @@ function getAnalysisMode() {
   return cleanStr(els.analysisModeSelect?.value) || "normal";
 }
 
+function updateFilterContextBanner() {
+  const el = document.getElementById("filterContextBanner");
+  if (!el) return;
+  const mode = getAnalysisMode();
+  const base =
+    "ring-1 ring-inset transition-colors";
+  if (mode === "compare") {
+    el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-amber-950/50 border-amber-700/60 text-amber-100/95`;
+    el.textContent =
+      "Jämförelseläge: kryssrutorna väljer vilka statusar (Orsak) som summeras för varje person — en stapel för månad A och en för månad B. Namnfilter nedan begränsar vilka personer som visas i båda.";
+  } else if (mode === "forecast") {
+    el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-sky-950/40 border-sky-800/70 text-sky-100/95`;
+    el.textContent =
+      "Prognosläge: samma status- och namnfilter som nedan används först; därefter skalas timmarna upp mot hela månaden enligt «Data till dag» under Prognos ovan.";
+  } else {
+    el.className = `text-xs rounded-lg px-3 py-2.5 mb-4 border ${base} bg-emerald-950/35 border-emerald-800/50 text-emerald-50/95`;
+    el.textContent =
+      "Vanlig vy: välj vilka statusar som ska ingå i staplarna och valfritt ett namn. Gäller den data som finns i rutan (en månad eller redan sammanslagen period).";
+  }
+}
+
 function updateAnalysisPanels() {
   const m = getAnalysisMode();
   els.comparePanel?.classList.toggle("hidden", m !== "compare");
   els.forecastPanel?.classList.toggle("hidden", m !== "forecast");
+  updateFilterContextBanner();
 }
 
 function cleanStr(v) {

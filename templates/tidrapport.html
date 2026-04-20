@@ -30,8 +30,8 @@
                 <li>Välj <strong class="text-slate-200 font-medium">Månad</strong> och <strong class="text-slate-200 font-medium">År</strong> (bra för rubrik och om du sparar lokalt).</li>
                 <li>Klistra in data i den stora rutan längre ner på sidan.</li>
                 <li>Klicka <strong class="text-slate-200 font-medium">Skapa / uppdatera diagram</strong>. Diagram och tabell visas till höger (eller under om du valt layout «Diagram under»).</li>
-                <li>Under <strong class="text-slate-200 font-medium">2) Status att visa</strong>: bocka i de statusar som ska ingå i staplarna. Färgen i rutan = färg i diagrammet.</li>
-                <li>Valfritt: skriv ett namn under <strong class="text-slate-200 font-medium">3) Filtrera på namn</strong> för att bara se en person.</li>
+                <li>I rutan <strong class="text-slate-200 font-medium">Filter</strong> längre ner: bocka vilka <strong class="text-slate-200 font-medium">statusar</strong> som ska ingå. Färgen på rutan = färg i diagrammet.</li>
+                <li>Valfritt: under <strong class="text-slate-200 font-medium">En viss person</strong> skriver du exakt namn för att bara se den personen.</li>
                 <li>Ladda ner bilden med <strong class="text-slate-200 font-medium">Spara PNG</strong>.</li>
               </ol>
             </section>
@@ -65,7 +65,7 @@
               <ol class="list-decimal ml-4 space-y-1 text-slate-300">
                 <li>Välj <strong class="text-slate-200 font-medium">Vy / analys → Jämför två sparade månader</strong>.</li>
                 <li>Du måste ha minst två månader under <strong class="text-slate-200 font-medium">C</strong> (sparade rapporter). Välj <strong class="text-slate-200 font-medium">Månad A</strong> och <strong class="text-slate-200 font-medium">Månad B</strong>.</li>
-                <li>Bocka vilka <strong class="text-slate-200 font-medium">statusar</strong> som ska summeras (listan under «2) Status» uppdateras för jämförelsen).</li>
+                <li>Bocka vilka <strong class="text-slate-200 font-medium">statusar</strong> som ska summeras (krysslistan under <strong class="text-slate-200 font-medium">Filter</strong> uppdateras för jämförelsen).</li>
                 <li>Diagrammet visar två staplar per person (A mot B); tabellen visar skillnad (B−A). <strong class="text-slate-200 font-medium">Uppdatera jämförelse</strong> om du bytt val.</li>
               </ol>
             </section>
@@ -172,11 +172,17 @@
         </div>
 
         <div class="mt-3 rounded-xl border border-slate-800 bg-slate-950/40 p-3">
-          <label class="block text-xs font-semibold text-slate-200 mb-2" for="analysisModeSelect">Vy / analys</label>
-          <select id="analysisModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm mb-3">
-            <option value="normal">Vanlig vy (aktuell inklistring)</option>
-            <option value="compare">Jämför två sparade månader</option>
-            <option value="forecast">Prognos för hel månad (linjär skalning)</option>
+          <div class="flex items-baseline justify-between gap-2 flex-wrap">
+            <label class="block text-xs font-semibold text-slate-200" for="analysisModeSelect">Vy-läge (vad diagrammet ska visa)</label>
+            <span class="text-[10px] uppercase tracking-wide text-slate-500">Påverkar inte inklistrad data</span>
+          </div>
+          <p id="analysisModeHelp" class="text-xs text-slate-500 mt-1 mb-2">
+            Här väljer du om du tittar på en vanlig månad, jämför två sparade månader eller skalar upp till prognos. Själva filter för status och namn finns längre ner under «Filter».
+          </p>
+          <select id="analysisModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm mb-3" aria-describedby="analysisModeHelp">
+            <option value="normal">Vanlig vy — en månad / sammanslagen period i rutan</option>
+            <option value="compare">Jämför två sparade månader (A mot B)</option>
+            <option value="forecast">Prognos — skala upp till hel månad</option>
           </select>
 
           <div id="comparePanel" class="hidden space-y-2">
@@ -195,7 +201,9 @@
               </div>
             </div>
             <button type="button" id="btnRefreshCompare" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Uppdatera jämförelse</button>
-            <p class="text-xs text-slate-500">Kräver minst två sparade månader. Använd kryssrutorna under <span class="text-slate-400">2) Status att visa</span> — listan byts ut när du väljer nya månader A/B.</p>
+            <p class="text-xs text-slate-500">
+              Kräver två sparade månader (se «Spara flera månader»). Vilka <strong class="text-slate-400 font-medium">statusar</strong> som räknas väljer du i avsnittet <strong class="text-slate-400 font-medium">Filter</strong> nedan — där uppdateras krysslistan när du byter A/B.
+            </p>
           </div>
 
           <div id="forecastPanel" class="hidden space-y-2">
@@ -212,37 +220,34 @@
           </div>
         </div>
 
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="orientationSelect">Diagramläge</label>
-            <select id="orientationSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-              <option value="horizontal">Liggande staplar (rekommenderat)</option>
-              <option value="vertical">Stående staplar</option>
-            </select>
-          </div>
-          <div class="md:col-span-2 text-xs text-slate-400 flex items-end">
-            Tips: Stående läge passar om du filtrerar på enstaka anställd eller få namn.
-          </div>
-        </div>
-
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="verticalNamesSelect">Stående: hur många namn</label>
-            <select id="verticalNamesSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-              <option value="20">Top 20</option>
-              <option value="50">Top 50</option>
-              <option value="all">Alla (kan bli väldigt högt)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Layout</label>
-            <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-              <option value="side">Sida vid sida</option>
-              <option value="stack">Diagram under (mer plats)</option>
-            </select>
-          </div>
-          <div class="text-xs text-slate-400 flex items-end">
-            “Diagram under” ger mer plats för många namn.
+        <div class="mt-3 rounded-xl border border-violet-900/40 bg-violet-950/20 p-3">
+          <h3 class="text-xs font-semibold text-violet-200">Diagramutseende (endast layout)</h3>
+          <p class="text-[11px] text-slate-500 mt-0.5 mb-3">
+            Här ändrar du hur diagrammet <em>rits</em>. Det ändrar inte vilka timmar som räknats — bara staplarnas riktning, hur många namn som får plats och om diagrammet ligger bredvid eller under inmatningen.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="orientationSelect">Staplarnas riktning</label>
+              <select id="orientationSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Liggande = namn på vänster sida. Stående = namn längs botten.">
+                <option value="horizontal">Liggande (namn till vänster)</option>
+                <option value="vertical">Stående (namn längs botten)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="verticalNamesSelect">Vid stående läge: hur många namn</label>
+              <select id="verticalNamesSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Gäller bara när «Stående» är valt ovan.">
+                <option value="20">Top 20 (mest timmar)</option>
+                <option value="50">Top 50</option>
+                <option value="all">Alla namn (mycket högt diagram)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Var diagrammet sitter på sidan</label>
+              <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="side">Bredvid inmatning (två kolumner)</option>
+                <option value="stack">Under inmatning (full bredd)</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -263,37 +268,55 @@
           <div id="statusText" class="text-sm text-slate-300"></div>
         </div>
 
-        <div class="mt-4">
-          <h3 class="text-sm font-semibold text-slate-200 mb-2">2) Status att visa</h3>
-          <div class="flex flex-wrap gap-2 mb-2">
-            <button id="btnAll" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">Alla</button>
-            <button id="btnNone" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs">Ingen</button>
-          </div>
-          <div id="statusFilters" class="flex flex-wrap gap-2"></div>
-        </div>
+        <div class="mt-5 rounded-xl border border-emerald-900/50 bg-emerald-950/15 p-4">
+          <h2 class="text-sm font-semibold text-emerald-100 mb-1">Filter — vad som visas i diagram och tabell</h2>
+          <p class="text-xs text-slate-500 mb-3">
+            Här bestämmer du <strong class="text-slate-400 font-medium">vilka timmar som räknas med i staplarna</strong> (per vald status) och om du bara vill se <strong class="text-slate-400 font-medium">en person</strong>. Det påverkar inte din inklistrade text — bara uträkningen och bilden.
+          </p>
 
-        <div class="mt-4">
-          <h3 class="text-sm font-semibold text-slate-200 mb-2">3) Filtrera på namn (valfritt)</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="md:col-span-2">
-              <label class="block text-xs text-slate-300 mb-1" for="employeeInput">Sök/val av anställd</label>
-              <input
-                id="employeeInput"
-                list="employeeList"
-                class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
-                placeholder="Skriv t.ex. Johansson, Helen (tomt = alla)"
-                autocomplete="off"
-              />
-              <datalist id="employeeList"></datalist>
-            </div>
-            <div class="flex items-end">
-              <button id="btnClearEmployee" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">
-                Rensa namnfilter
-              </button>
-            </div>
+          <div id="filterContextBanner" class="text-xs rounded-lg px-3 py-2.5 mb-4 border bg-slate-900/80 border-slate-700 text-slate-300" role="status">
+            Välj vy-läge ovan för att se en kort förklaring av vad filtren gör just nu.
           </div>
-          <div class="mt-2 text-xs text-slate-400">
-            När du väljer ett namn visas bara den personens statusar i diagrammet.
+
+          <div class="border-t border-slate-800/80 pt-4">
+            <h3 class="text-sm font-semibold text-slate-100 mb-1">Statusar (Orsak / typ)</h3>
+            <p class="text-xs text-slate-500 mb-2">
+              Varje ruta motsvarar en <strong class="text-slate-400 font-medium">Orsak</strong> från datan. <strong class="text-slate-400 font-medium">Bara ibockade</strong> statusar adderas i staplarna. Färgen på rutan = färg i diagrammet.
+              <span class="text-slate-600"> · </span>
+              <strong class="text-slate-400 font-medium">Alla</strong> / <strong class="text-slate-400 font-medium">Ingen</strong> sätter snabbt alla kryssrutor.
+            </p>
+            <div class="flex flex-wrap gap-2 mb-2">
+              <button type="button" id="btnAll" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka i alla statusar">Alla statusar</button>
+              <button type="button" id="btnNone" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs" title="Bocka ur alla">Ingen status</button>
+            </div>
+            <div id="statusFilters" class="flex flex-wrap gap-2" aria-label="Välj statusar att visa i diagrammet"></div>
+          </div>
+
+          <div class="border-t border-slate-800/80 pt-4 mt-4">
+            <h3 class="text-sm font-semibold text-slate-100 mb-1">En viss person (valfritt)</h3>
+            <p class="text-xs text-slate-500 mb-2">
+              Skriv ett <strong class="text-slate-400 font-medium">exakt namn</strong> som i kolumnen «Namn» i datan (du kan välja från listan när du skriver). <strong class="text-slate-400 font-medium">Tomt fält</strong> = alla personer visas. I jämförelseläge gäller samma namnfilter för båda månaderna.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <label class="block text-xs text-slate-400 mb-1" for="employeeInput">Namn</label>
+                <input
+                  id="employeeInput"
+                  list="employeeList"
+                  class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                  placeholder="Lämna tomt för alla — eller skriv exakt namn"
+                  autocomplete="off"
+                  aria-describedby="employeeHelp"
+                />
+                <datalist id="employeeList"></datalist>
+                <p id="employeeHelp" class="text-[11px] text-slate-600 mt-1">Matchar exakt mot namn i aktuell data (efter «Skapa diagram» uppdateras förslagen).</p>
+              </div>
+              <div class="flex items-end">
+                <button type="button" id="btnClearEmployee" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">
+                  Visa alla igen
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
