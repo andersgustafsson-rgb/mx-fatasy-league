@@ -210,6 +210,24 @@ class RacePick(db.Model):
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
     predicted_position = db.Column(db.Integer)
 
+class PicksSnapshot(db.Model):
+    """
+    Immutable snapshot of a user's picks for a competition.
+    Created automatically when picks become locked (deadline passed), so we can always
+    show what was submitted even if live pick rows are later changed/duplicated/deleted.
+    """
+    __tablename__ = "picks_snapshots"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    payload_json = db.Column(db.Text, nullable=False)  # JSON string (race/holeshot/wildcard)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    source = db.Column(db.String(30), default="auto_lock", nullable=False)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "competition_id", name="uq_picks_snapshot_user_comp"),
+        db.Index("idx_picks_snapshot_comp_created", "competition_id", "created_at"),
+    )
+
 class CompetitionScore(db.Model):
     __tablename__ = "competition_scores"
     score_id = db.Column(db.Integer, primary_key=True)

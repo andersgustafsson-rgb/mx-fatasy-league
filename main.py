@@ -27,7 +27,120 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats
+
+
+def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
+    """
+    Normalize current picks into a stable JSON payload.
+    Keeps only latest rows if duplicates exist (by PK), and sorts race picks by position.
+    """
+    # Race picks: dedupe by (rider_id, predicted_position) preferring latest pick_id
+    picks = (
+        RacePick.query.filter_by(user_id=user_id, competition_id=competition_id)
+        .order_by(RacePick.predicted_position.asc())
+        .all()
+    )
+    by_key = {}
+    for p in picks:
+        k = (int(p.rider_id or 0), int(p.predicted_position or 0))
+        prev = by_key.get(k)
+        if prev is None or int(p.pick_id or 0) > int(prev.pick_id or 0):
+            by_key[k] = p
+    unique_picks = sorted(by_key.values(), key=lambda p: int(p.predicted_position or 0))
+
+    holos = HoleshotPick.query.filter_by(user_id=user_id, competition_id=competition_id).all()
+    # Dedupe holeshot by class_name, prefer latest id
+    holo_by_class = {}
+    for h in holos:
+        cls = (h.class_name or "").strip()
+        prev = holo_by_class.get(cls)
+        if prev is None or int(h.id or 0) > int(prev.id or 0):
+            holo_by_class[cls] = h
+
+    wc = WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+
+    payload = {
+        "user_id": int(user_id),
+        "competition_id": int(competition_id),
+        "race_picks": [
+            {"rider_id": int(p.rider_id), "predicted_position": int(p.predicted_position)}
+            for p in unique_picks
+            if p.rider_id is not None and p.predicted_position is not None
+        ],
+        "holeshot_picks": {cls: int(h.rider_id) for cls, h in holo_by_class.items() if h.rider_id is not None},
+        "wildcard_pick": (int(wc.rider_id) if wc and wc.rider_id is not None else None),
+        "wildcard_pos": (int(wc.position) if wc and wc.position is not None else None),
+    }
+    return payload
+
+
+def ensure_picks_snapshots_for_competition(competition_id: int, source: str = "auto_lock") -> int:
+    """
+    Create missing PicksSnapshot rows for users who have any picks for this competition.
+    Safe to call multiple times (unique constraint prevents duplicates).
+    Returns number of snapshots created.
+    """
+    import json
+
+    user_ids = set()
+    user_ids.update(
+        uid
+        for (uid,) in db.session.query(RacePick.user_id)
+        .filter(RacePick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if uid is not None
+    )
+    user_ids.update(
+        uid
+        for (uid,) in db.session.query(HoleshotPick.user_id)
+        .filter(HoleshotPick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if uid is not None
+    )
+    user_ids.update(
+        uid
+        for (uid,) in db.session.query(WildcardPick.user_id)
+        .filter(WildcardPick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if uid is not None
+    )
+    if not user_ids:
+        return 0
+
+    existing = {
+        int(uid)
+        for (uid,) in db.session.query(PicksSnapshot.user_id)
+        .filter(PicksSnapshot.competition_id == competition_id)
+        .filter(PicksSnapshot.user_id.in_(list(user_ids)))
+        .all()
+    }
+
+    created = 0
+    for uid in user_ids:
+        uid_i = int(uid)
+        if uid_i in existing:
+            continue
+        payload = _build_picks_snapshot_payload(uid_i, int(competition_id))
+        snap = PicksSnapshot(
+            user_id=uid_i,
+            competition_id=int(competition_id),
+            payload_json=json.dumps(payload, ensure_ascii=False),
+            source=source,
+        )
+        db.session.add(snap)
+        created += 1
+
+    if created:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            created = 0
+    return created
 
 # -------------------------------------------------
 # Flask app & config
@@ -8228,37 +8341,69 @@ def get_my_picks(competition_id):
     # Force session refresh to ensure we see latest data
     db.session.expire_all()
     
-    picks = (
-        RacePick.query.filter_by(user_id=uid, competition_id=competition_id)
-        .order_by(RacePick.predicted_position)
-        .all()
-    )
-    holos = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
-
-    # Check if this is a WSX competition
     comp = Competition.query.get(competition_id)
     is_wsx = comp and getattr(comp, 'series', None) == 'WSX'
+    picks_locked = bool(comp) and is_picks_locked(comp)
+
+    # Self-heal: when locked, ensure snapshots exist so we can always show picks later
+    if picks_locked:
+        try:
+            ensure_picks_snapshots_for_competition(int(competition_id), source="auto_lock")
+        except Exception:
+            pass
+
+    snap = None
+    if picks_locked:
+        snap = PicksSnapshot.query.filter_by(user_id=uid, competition_id=competition_id).first()
+
+    if snap:
+        import json
+
+        payload = json.loads(snap.payload_json or "{}")
+        race_picks = payload.get("race_picks", []) or []
+        holeshot_map = payload.get("holeshot_picks", {}) or {}
+        wc_rider = payload.get("wildcard_pick")
+        wc_pos = payload.get("wildcard_pos")
+        picks = race_picks
+        holos_map = holeshot_map
+    else:
+        picks_rows = (
+            RacePick.query.filter_by(user_id=uid, competition_id=competition_id)
+            .order_by(RacePick.predicted_position)
+            .all()
+        )
+        holos_rows = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
+        wc_row = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+
+        picks = [
+            {"rider_id": p.rider_id, "predicted_position": p.predicted_position}
+            for p in picks_rows
+            if p.rider_id is not None and p.predicted_position is not None
+        ]
+        holos_map = {h.class_name: h.rider_id for h in holos_rows if h.class_name and h.rider_id is not None}
+        wc_rider = wc_row.rider_id if wc_row else None
+        wc_pos = wc_row.position if wc_row else None
 
     result = {
         "top6_picks": [
             {
-                "rider_id": p.rider_id,
-                "predicted_position": p.predicted_position,
-                "class": Rider.query.get(p.rider_id).class_name if p.rider_id else "",
+                "rider_id": p.get("rider_id"),
+                "predicted_position": p.get("predicted_position"),
+                "class": Rider.query.get(p.get("rider_id")).class_name if p.get("rider_id") else "",
             }
             for p in picks
         ],
         "holeshot_picks": {
             # For WSX, check both regular and WSX classes
-            "450cc": next((h.rider_id for h in holos if h.class_name in ("450cc", "wsx_sx1")), None),
-            "250cc": next((h.rider_id for h in holos if h.class_name in ("250cc", "wsx_sx2")), None),
+            "450cc": next((rid for cls, rid in holos_map.items() if cls in ("450cc", "wsx_sx1")), None),
+            "250cc": next((rid for cls, rid in holos_map.items() if cls in ("250cc", "wsx_sx2")), None),
             # Also include WSX keys if it's a WSX competition
-            **({"wsx_sx1": next((h.rider_id for h in holos if h.class_name == "wsx_sx1"), None),
-                "wsx_sx2": next((h.rider_id for h in holos if h.class_name == "wsx_sx2"), None)} if is_wsx else {})
+            **({"wsx_sx1": holos_map.get("wsx_sx1"),
+                "wsx_sx2": holos_map.get("wsx_sx2")} if is_wsx else {})
         },
-        "wildcard_pick": wc.rider_id if wc else None,
-        "wildcard_pos": wc.position if wc else None,
+        "wildcard_pick": wc_rider,
+        "wildcard_pos": wc_pos,
+        "snapshot_used": bool(snap),
     }
     
     return jsonify(result)
@@ -8282,6 +8427,13 @@ def get_other_users_picks(competition_id):
             error_msg = f"Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks (picks_locked={picks_locked}, has_results={has_results})"
             print(f"DEBUG: get_other_users_picks - Access denied: {error_msg}")
             return jsonify({"error": error_msg}), 403
+
+        # When locked, take snapshots (best-effort) and prefer snapshot data for stability.
+        if picks_locked:
+            try:
+                ensure_picks_snapshots_for_competition(int(competition_id), source="auto_lock")
+            except Exception:
+                pass
         
         is_wsx = getattr(comp, 'series', None) == 'WSX'
         
@@ -8298,15 +8450,31 @@ def get_other_users_picks(competition_id):
     
         users_picks = []
         for user in other_users:
+            snapshot_payload = None
+            if picks_locked:
+                snap = PicksSnapshot.query.filter_by(user_id=user.id, competition_id=competition_id).first()
+                if snap:
+                    import json
+
+                    try:
+                        snapshot_payload = json.loads(snap.payload_json or "{}")
+                    except Exception:
+                        snapshot_payload = None
+
             # Get race picks for this user (only top 6 per class)
-            race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+            if snapshot_payload:
+                race_picks = snapshot_payload.get("race_picks", []) or []
+            else:
+                race_picks = RacePick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
             
             picks = []
             picks_450 = []
             picks_250 = []
             
             for pick in race_picks:
-                rider = riders_dict.get(pick.rider_id)
+                rider_id = pick.get("rider_id") if snapshot_payload else pick.rider_id
+                pos = pick.get("predicted_position") if snapshot_payload else pick.predicted_position
+                rider = riders_dict.get(rider_id)
                 if rider:
                     # Ensure we have valid rider data
                     rider_number = getattr(rider, 'rider_number', '?') or '?'
@@ -8314,7 +8482,7 @@ def get_other_users_picks(competition_id):
                     bike_brand = getattr(rider, 'bike_brand', 'Unknown') or 'Unknown'
                     
                     pick_data = {
-                        "position": pick.predicted_position,
+                        "position": pos,
                         "class": rider.class_name,
                         "rider_name": f"#{rider_number} {rider_name} ({bike_brand})"
                     }
@@ -8341,33 +8509,39 @@ def get_other_users_picks(competition_id):
             picks = picks_450 + picks_250
             
             # Get holeshot picks
-            holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
+            if snapshot_payload:
+                holeshot_map = snapshot_payload.get("holeshot_picks", {}) or {}
+                holeshot_picks = [{"class_name": k, "rider_id": v} for k, v in holeshot_map.items()]
+            else:
+                holeshot_picks = HoleshotPick.query.filter_by(user_id=user.id, competition_id=competition_id).all()
             holeshot_450 = None
             holeshot_250 = None
             
             for holeshot in holeshot_picks:
-                rider = riders_dict.get(holeshot.rider_id)
+                cls = holeshot.get("class_name") if snapshot_payload else holeshot.class_name
+                rid = holeshot.get("rider_id") if snapshot_payload else holeshot.rider_id
+                rider = riders_dict.get(rid)
                 if rider:
                     if is_wsx:
                         # WSX: check for wsx_sx1 and wsx_sx2, or legacy 450cc/250cc mapping
-                        if (holeshot.class_name == '450cc' or holeshot.class_name == 'wsx_sx1') and not holeshot_450:
+                        if (cls == '450cc' or cls == 'wsx_sx1') and not holeshot_450:
                             holeshot_450 = {
                                 "rider_number": getattr(rider, 'rider_number', '?') or '?',
                                 "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                             }
-                        elif (holeshot.class_name == '250cc' or holeshot.class_name == 'wsx_sx2') and not holeshot_250:
+                        elif (cls == '250cc' or cls == 'wsx_sx2') and not holeshot_250:
                             holeshot_250 = {
                                 "rider_number": getattr(rider, 'rider_number', '?') or '?',
                                 "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                             }
                     else:
                         # Regular series
-                        if holeshot.class_name == '450cc' and not holeshot_450:
+                        if cls == '450cc' and not holeshot_450:
                             holeshot_450 = {
                                 "rider_number": getattr(rider, 'rider_number', '?') or '?',
                                 "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
                             }
-                        elif holeshot.class_name == '250cc' and not holeshot_250:
+                        elif cls == '250cc' and not holeshot_250:
                             holeshot_250 = {
                                 "rider_number": getattr(rider, 'rider_number', '?') or '?',
                                 "rider_name": getattr(rider, 'name', 'Unknown') or 'Unknown'
@@ -8377,7 +8551,13 @@ def get_other_users_picks(competition_id):
             wildcard = None
             wildcard_pick = None
             if not is_wsx:
-                wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
+                if snapshot_payload:
+                    wc_rider_id = snapshot_payload.get("wildcard_pick")
+                    wc_pos = snapshot_payload.get("wildcard_pos")
+                    if wc_rider_id is not None or wc_pos is not None:
+                        wildcard_pick = type("WCPick", (), {"rider_id": wc_rider_id, "position": wc_pos})()
+                else:
+                    wildcard_pick = WildcardPick.query.filter_by(user_id=user.id, competition_id=competition_id).first()
             if wildcard_pick:
                 rider = riders_dict.get(wildcard_pick.rider_id)
                 if rider:
