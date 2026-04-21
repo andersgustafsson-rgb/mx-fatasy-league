@@ -1084,6 +1084,26 @@ function ensureNormalTableHeader() {
   els.tableHeadRow.appendChild(th2);
 }
 
+function fmtHoursForUi(n) {
+  if (!Number.isFinite(n)) return "0";
+  return round2(n).toFixed(2);
+}
+
+function setTableHeaderTotalsNormal(totalHours) {
+  if (!els.tableHeadRow) return;
+  const th = els.tableHeadRow.children?.[1];
+  if (!th) return;
+  th.textContent = `Summa (h) · Totalt: ${fmtHoursForUi(totalHours)}`;
+}
+
+function setTableHeaderTotalsForecast(totalAck, totalForecast) {
+  if (!els.tableHeadRow) return;
+  const thAck = els.tableHeadRow.children?.[1];
+  const thFor = els.tableHeadRow.children?.[2];
+  if (thAck) thAck.textContent = `Ack. (h) · Totalt: ${fmtHoursForUi(totalAck)}`;
+  if (thFor) thFor.textContent = `Prognos (h) · Totalt: ${fmtHoursForUi(totalForecast)}`;
+}
+
 function renderTable(sortedPeople) {
   els.tableBody.innerHTML = "";
   for (const r of sortedPeople) {
@@ -1269,6 +1289,8 @@ function renderForecastAll(state) {
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
+  const totalAck = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
+  const totalForecast = totalAck * factor;
 
   if (!els.tableHeadRow) return;
   els.tableHeadRow.innerHTML = "";
@@ -1284,6 +1306,7 @@ function renderForecastAll(state) {
   els.tableHeadRow.appendChild(th1);
   els.tableHeadRow.appendChild(th2);
   els.tableHeadRow.appendChild(th3);
+  setTableHeaderTotalsForecast(totalAck, totalForecast);
 
   els.tableBody.innerHTML = "";
   for (const r of sortedPeople) {
@@ -1333,7 +1356,9 @@ function renderAll(state) {
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
+  const totalHours = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   renderTable(sortedPeople);
+  setTableHeaderTotalsNormal(totalHours);
   renderChart(totalsView, statuses, selectedStatuses, sortedPeople);
 
   const totalNames = totals.size;
