@@ -688,6 +688,125 @@ let chart = null;
   });
 })();
 
+(() => {
+  if (typeof Chart === "undefined" || window.__tidrapport_value_labels_plugin) return;
+  window.__tidrapport_value_labels_plugin = true;
+  Chart.register({
+    id: "tidrapportValueLabels",
+    afterDatasetsDraw(chart) {
+      const plug = chart.options.plugins?.tidrapportValueLabels;
+      if (!plug?.enabled) return;
+      const mode = plug.mode === "each" ? "each" : "total";
+
+      const { ctx } = chart;
+      const ix = chart.options.indexAxis || "y";
+      const isHorizontal = ix === "y";
+
+      const fontSize = Number(plug.fontSize) > 0 ? Number(plug.fontSize) : 11;
+      const fill = cleanStr(plug.color) || "#f8fafc";
+      const stroke = cleanStr(plug.strokeColor) || "rgba(15, 23, 42, 0.85)";
+      const pad = Number(plug.pad) >= 0 ? Number(plug.pad) : 6;
+
+      ctx.save();
+      ctx.font = `700 ${fontSize}px system-ui, Segoe UI, sans-serif`;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = stroke;
+      ctx.fillStyle = fill;
+
+      const fmt = (n) => {
+        if (!(Number(n) > 0)) return "";
+        // Hours can be decimals; keep it readable.
+        const s = n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2);
+        return s.replace(/\.0$/, "");
+      };
+
+      const visibleDatasetIndices = chart.data.datasets
+        .map((_, di) => di)
+        .filter((di) => !chart.getDatasetMeta(di)?.hidden);
+
+      const labelCount = Array.isArray(chart.data.labels) ? chart.data.labels.length : 0;
+      for (let i = 0; i < labelCount; i += 1) {
+        if (mode === "each") {
+          for (const di of visibleDatasetIndices) {
+            const meta = chart.getDatasetMeta(di);
+            const el = meta?.data?.[i];
+            const vRaw = chart.data.datasets?.[di]?.data?.[i];
+            const v = typeof vRaw === "number" ? vRaw : Number(vRaw);
+            if (!el || typeof el.getProps !== "function" || !(Number(v) > 0)) continue;
+            const props = el.getProps(["x", "y", "base", "horizontal"], true);
+            const txt = fmt(v);
+            if (!txt) continue;
+
+            if (isHorizontal) {
+              const right = Math.max(props.x, props.base) + pad;
+              ctx.textAlign = "left";
+              ctx.textBaseline = "middle";
+              ctx.strokeText(txt, right, props.y);
+              ctx.fillText(txt, right, props.y);
+            } else {
+              const top = Math.min(props.y, props.base) - pad;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "bottom";
+              ctx.strokeText(txt, props.x, top);
+              ctx.fillText(txt, props.x, top);
+            }
+          }
+          continue;
+        }
+
+        // mode === "total": sum stacks per label and place label at stack end.
+        let sum = 0;
+        let anchorEl = null;
+        let anchorProps = null;
+
+        for (const di of visibleDatasetIndices) {
+          const meta = chart.getDatasetMeta(di);
+          const el = meta?.data?.[i];
+          if (!el || typeof el.getProps !== "function") continue;
+          const props = el.getProps(["x", "y", "base", "horizontal"], true);
+          const vRaw = chart.data.datasets?.[di]?.data?.[i];
+          const v = typeof vRaw === "number" ? vRaw : Number(vRaw);
+          if (Number.isFinite(v)) sum += v;
+          if (!anchorEl) {
+            anchorEl = el;
+            anchorProps = props;
+            continue;
+          }
+          if (isHorizontal) {
+            if (Math.max(props.x, props.base) > Math.max(anchorProps.x, anchorProps.base)) {
+              anchorProps = props;
+            }
+          } else {
+            if (Math.min(props.y, props.base) < Math.min(anchorProps.y, anchorProps.base)) {
+              anchorProps = props;
+            }
+          }
+        }
+
+        if (!(Number(sum) > 0) || !anchorProps) continue;
+        const txt = fmt(sum);
+        if (!txt) continue;
+
+        if (isHorizontal) {
+          const right = Math.max(anchorProps.x, anchorProps.base) + pad;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.strokeText(txt, right, anchorProps.y);
+          ctx.fillText(txt, right, anchorProps.y);
+        } else {
+          const top = Math.min(anchorProps.y, anchorProps.base) - pad;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.strokeText(txt, anchorProps.x, top);
+          ctx.fillText(txt, anchorProps.x, top);
+        }
+      }
+
+      ctx.restore();
+    },
+  });
+})();
+
 function resetChartFully() {
   if (chart) {
     try {
@@ -747,6 +866,14 @@ function ensureChart(mode = "horizontal") {
         tooltip: { enabled: false },
         title: { display: true, text: "Timmar per person (per status)", color: "#e2e8f0", font: { size: 14 } },
         tidrapportMergeBarLabels: { enabled: false, shortLabels: [] },
+        tidrapportValueLabels: {
+          enabled: true,
+          mode: "total",
+          fontSize: 11,
+          pad: 6,
+          color: "#f8fafc",
+          strokeColor: "rgba(15, 23, 42, 0.85)",
+        },
       },
       scales: {
         x: { stacked: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
@@ -1075,6 +1202,12 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
   c.options.plugins.tidrapportMergeBarLabels.enabled = useMergedGrouped;
   c.options.plugins.tidrapportMergeBarLabels.shortLabels = useMergedGrouped ? shortLabelsForPlugin : [];
+
+  if (!c.options.plugins.tidrapportValueLabels) {
+    c.options.plugins.tidrapportValueLabels = { enabled: true, mode: "total" };
+  }
+  c.options.plugins.tidrapportValueLabels.enabled = true;
+  c.options.plugins.tidrapportValueLabels.mode = useMergedGrouped ? "each" : "total";
 
   if (state) {
     let titleText = buildTitleText(state);
