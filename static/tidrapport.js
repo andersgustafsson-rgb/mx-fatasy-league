@@ -1111,7 +1111,29 @@ function renderTable(sortedPeople) {
     tr.className = "border-b border-slate-800";
     const tdName = document.createElement("td");
     tdName.className = "px-3 py-2 whitespace-nowrap";
-    tdName.textContent = r.name;
+    const wrap = document.createElement("label");
+    wrap.className = "inline-flex items-center gap-2 cursor-pointer select-none";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "accent-emerald-500";
+    const st0 = window.__tidrapport_state;
+    const enabled = !!st0?.chartNameFilterEnabled;
+    const set0 = st0?.chartNameFilter instanceof Set ? st0.chartNameFilter : new Set();
+    cb.checked = enabled ? set0.has(r.name) : true;
+    cb.addEventListener("change", () => {
+      const st = window.__tidrapport_state;
+      if (!st) return;
+      if (!(st.chartNameFilter instanceof Set)) st.chartNameFilter = new Set();
+      st.chartNameFilterEnabled = true;
+      if (cb.checked) st.chartNameFilter.add(r.name);
+      else st.chartNameFilter.delete(r.name);
+      safeRenderAll(st);
+    });
+    const nm = document.createElement("span");
+    nm.textContent = r.name;
+    wrap.appendChild(cb);
+    wrap.appendChild(nm);
+    tdName.appendChild(wrap);
     const tdSum = document.createElement("td");
     tdSum.className = "px-3 py-2 text-right tabular-nums";
     tdSum.textContent = r.sum.toFixed(2);
@@ -1119,6 +1141,15 @@ function renderTable(sortedPeople) {
     tr.appendChild(tdSum);
     els.tableBody.appendChild(tr);
   }
+}
+
+function filterTotalsByNames(totalsView, namesSet) {
+  if (!(namesSet instanceof Set) || namesSet.size === 0) return totalsView;
+  const out = new Map();
+  for (const name of namesSet) {
+    if (totalsView.has(name)) out.set(name, totalsView.get(name));
+  }
+  return out;
 }
 
 function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts = {}) {
@@ -1289,6 +1320,10 @@ function renderForecastAll(state) {
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
+  const chartEnabled = !!state.chartNameFilterEnabled;
+  const chartNameFilter = state.chartNameFilter instanceof Set ? state.chartNameFilter : new Set();
+  const chartTotalsView = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
+  const chartPeople = chartEnabled ? sortedPeople.filter((r) => chartNameFilter.has(r.name)) : sortedPeople;
   const totalAck = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   const totalForecast = totalAck * factor;
 
@@ -1314,7 +1349,24 @@ function renderForecastAll(state) {
     tr.className = "border-b border-slate-800";
     const tdN = document.createElement("td");
     tdN.className = "px-3 py-2 whitespace-nowrap";
-    tdN.textContent = r.name;
+    const wrap = document.createElement("label");
+    wrap.className = "inline-flex items-center gap-2 cursor-pointer select-none";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "accent-emerald-500";
+    cb.checked = chartEnabled ? chartNameFilter.has(r.name) : true;
+    cb.addEventListener("change", () => {
+      if (!(state.chartNameFilter instanceof Set)) state.chartNameFilter = new Set();
+      state.chartNameFilterEnabled = true;
+      if (cb.checked) state.chartNameFilter.add(r.name);
+      else state.chartNameFilter.delete(r.name);
+      safeRenderAll(state);
+    });
+    const nm = document.createElement("span");
+    nm.textContent = r.name;
+    wrap.appendChild(cb);
+    wrap.appendChild(nm);
+    tdN.appendChild(wrap);
     const tdA = document.createElement("td");
     tdA.className = "px-3 py-2 text-right tabular-nums";
     tdA.textContent = r.sum.toFixed(2);
@@ -1328,7 +1380,7 @@ function renderForecastAll(state) {
   }
 
   const titleSuffix = `Prognos linjär till dag ${through}/${dim} (×${round2(factor)})`;
-  renderChart(totalsView, statuses, selectedStatuses, sortedPeople, {
+  renderChart(chartTotalsView, statuses, selectedStatuses, chartPeople, {
     scale: factor,
     titleSuffix,
     previewNote: note,
@@ -1340,7 +1392,8 @@ function renderForecastAll(state) {
     ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
     : "";
   const emp = state.employeeName ? ` • Anställd: ${state.employeeName}` : "";
-  els.statusText.textContent = `Prognos • Namn: ${totalNames} • Visar: ${selectedStatuses.size}${emp}${statsText}`;
+  const chartNote = chartEnabled && chartPeople.length === 0 ? " • Diagram: 0 markerade namn" : "";
+  els.statusText.textContent = `Prognos • Namn: ${totalNames} • Visar: ${selectedStatuses.size}${emp}${statsText}${chartNote}`;
 }
 
 function renderAll(state) {
@@ -1356,10 +1409,14 @@ function renderAll(state) {
     ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
     : totals;
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
+  const chartEnabled = !!state.chartNameFilterEnabled;
+  const chartNameFilter = state.chartNameFilter instanceof Set ? state.chartNameFilter : new Set();
+  const chartTotalsView = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
+  const chartPeople = chartEnabled ? sortedPeople.filter((r) => chartNameFilter.has(r.name)) : sortedPeople;
   const totalHours = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   renderTable(sortedPeople);
   setTableHeaderTotalsNormal(totalHours);
-  renderChart(totalsView, statuses, selectedStatuses, sortedPeople);
+  renderChart(chartTotalsView, statuses, selectedStatuses, chartPeople);
 
   const totalNames = totals.size;
   const totalStatusKinds =
@@ -1379,7 +1436,8 @@ function renderAll(state) {
   const mergeHint = state.mergedSourceSplit
     ? ` · Samlat: ${nSrc} staplar sida-vid-sida per person · ${totalStatusKinds} orsak-typer i filter · kort månad på stapeln.`
     : "";
-  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}`;
+  const chartNote = chartEnabled && chartPeople.length === 0 ? " • Diagram: 0 markerade namn" : "";
+  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}${chartNote}`;
 }
 
 function regenerateFromText(text, selectedOverride) {
