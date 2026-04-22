@@ -1525,19 +1525,24 @@ def _position_form_points(position: int | None) -> float:
 
 
 def _past_races_for_form(target: Competition, limit: int = 5) -> list[Competition]:
-    """Most recent completed races (have results) strictly before target date."""
-    ids_with_results = [
-        row[0]
-        for row in db.session.query(CompetitionResult.competition_id).distinct().all()
-    ]
+    """
+    Completed races (have results) in the same series as target, strictly before target date.
+    If limit is None, return all prior completed races (season-to-date).
+    """
+    ids_with_results = [row[0] for row in db.session.query(CompetitionResult.competition_id).distinct().all()]
     if not ids_with_results:
         return []
     q = Competition.query.filter(Competition.id.in_(ids_with_results))
+    if getattr(target, "series", None):
+        q = q.filter(Competition.series == target.series)
     if target.event_date:
         q = q.filter(Competition.event_date < target.event_date)
     else:
         q = q.filter(Competition.id != target.id)
-    return q.order_by(Competition.event_date.desc()).limit(limit).all()
+    q = q.order_by(Competition.event_date.desc().nullslast(), Competition.id.desc())
+    if limit is None:
+        return q.all()
+    return q.limit(int(limit)).all()
 
 
 def _form_scores_for_riders(
@@ -1552,17 +1557,49 @@ def _form_scores_for_riders(
     return dict(scores)
 
 
-def _crowd_scores_for_competition(competition_id: int, rider_ids: set[int]) -> dict[int, float]:
+def _crowd_scores_for_competition(target: Competition, rider_ids: set[int]) -> dict[int, float]:
     scores = defaultdict(float)
-    picks = RacePick.query.filter_by(competition_id=competition_id).all()
-    for p in picks:
-        if p.rider_id not in rider_ids:
-            continue
-        pred = p.predicted_position
-        if pred is None or pred < 1:
-            continue
-        # Higher weight for better predicted finishes (Borda-style, cap at top 10)
-        scores[p.rider_id] += max(0.0, 11.0 - float(min(pred, 10)))
+    comp_id = int(target.id)
+
+    # Prefer snapshots once picks are locked (stable even if live rows change later)
+    try:
+        locked = is_picks_locked(target)
+    except Exception:
+        locked = False
+
+    if locked:
+        try:
+            ensure_picks_snapshots_for_competition(comp_id, source="auto_lock")
+        except Exception:
+            pass
+        import json
+
+        snaps = PicksSnapshot.query.filter_by(competition_id=comp_id).all()
+        for s in snaps:
+            try:
+                payload = json.loads(s.payload_json or "{}")
+            except Exception:
+                continue
+            for p in payload.get("race_picks", []) or []:
+                rid = p.get("rider_id")
+                pred = p.get("predicted_position")
+                if rid is None or pred is None:
+                    continue
+                if rid not in rider_ids:
+                    continue
+                if int(pred) < 1:
+                    continue
+                scores[int(rid)] += max(0.0, 11.0 - float(min(int(pred), 10)))
+    else:
+        picks = RacePick.query.filter_by(competition_id=comp_id).all()
+        for p in picks:
+            if p.rider_id not in rider_ids:
+                continue
+            pred = p.predicted_position
+            if pred is None or pred < 1:
+                continue
+            # Higher weight for better predicted finishes (Borda-style, cap at top 10)
+            scores[p.rider_id] += max(0.0, 11.0 - float(min(pred, 10)))
     return dict(scores)
 
 
@@ -1642,7 +1679,7 @@ def _rank_bucket(
         return []
     rids = {r.id for r in riders}
     form_raw = _form_scores_for_riders(rids, past_comps)
-    crowd_raw = _crowd_scores_for_competition(target.id, rids)
+    crowd_raw = _crowd_scores_for_competition(target, rids)
     form_n = _min_max_normalize(form_raw)
     crowd_n = _min_max_normalize(crowd_raw)
 
@@ -1694,11 +1731,16 @@ def api_power_ranking():
         if not target:
             return jsonify({"ok": False, "error": "no_competition"}), 404
 
-        past = _past_races_for_form(target, limit=5)
+        # Form: season-to-date (alla avklarade race före target i samma serie)
+        past = _past_races_for_form(target, limit=None)
         out_ids = _out_rider_ids(target.id)
 
         riders_450 = _riders_450_scope(out_ids)
-        single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
+        # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
+        if getattr(target, "series", None) == "SX":
+            single_250, split_250 = _riders_250_scope(out_ids, "both")
+        else:
+            single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
 
         top_450 = _rank_bucket(riders_450, target, past, out_ids)
 
@@ -1711,8 +1753,9 @@ def api_power_ranking():
                 "coast_250": target.coast_250,
                 "event_date": target.event_date.isoformat() if target.event_date else None,
             },
-            "method": "55% senaste resultat · 45% spelarnas picks till denna tävling",
+            "method": "55% resultat (hela säsongen hittills) · 45% spelarnas picks till denna tävling (snapshot efter låsning)",
             "past_races_used": len(past),
+            "form_scope_label": "hela säsongen hittills",
             "riders_450": top_450,
             "riders_250": None,
             "riders_250_east": None,

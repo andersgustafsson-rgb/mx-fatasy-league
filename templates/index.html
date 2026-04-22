@@ -3140,7 +3140,8 @@
         }
         wrap.classList.remove('hidden');
         const c = data.competition || {};
-        sub.textContent = [c.name, c.series, data.past_races_used != null ? `${data.past_races_used} senaste race i form` : '']
+        const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : (data.past_races_used != null ? `${data.past_races_used} senaste race i form` : '');
+        sub.textContent = [c.name, c.series, scopeLabel]
           .filter(Boolean).join(' · ');
         let html = '';
         html += renderPowerRankingRows(data.riders_450, '450cc — topp 3');
