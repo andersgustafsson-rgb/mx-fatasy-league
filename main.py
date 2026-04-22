@@ -1704,6 +1704,10 @@ def _rank_bucket(
         r = id_to_rider.get(rid)
         if not r:
             continue
+        # Expose component contributions so the UI (and we) can explain surprising ranks.
+        f_n = form_n.get(rid, 0.0 if form_raw else 0.5)
+        c_n = crowd_n.get(rid, 0.0 if crowd_raw else 0.5)
+        combined_score = combined.get(rid, 0.0)
         rows.append(
             {
                 "rank": i + 1,
@@ -1712,7 +1716,15 @@ def _rank_bucket(
                 "number": r.rider_number,
                 "coast_250": r.coast_250,
                 "strength_pct": pcts[i] if i < len(pcts) else 0.0,
-                "score": round(combined[rid], 4),
+                "score": round(combined_score, 4),
+                "score_parts": {
+                    "form_weight": form_weight,
+                    "crowd_weight": crowd_weight,
+                    "form_norm": round(float(f_n), 4),
+                    "crowd_norm": round(float(c_n), 4),
+                    "form_raw": round(float(form_raw.get(rid, 0.0)), 4) if form_raw else None,
+                    "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4) if crowd_raw else None,
+                },
                 "image_url": _rider_portrait_url(r),
             }
         )
