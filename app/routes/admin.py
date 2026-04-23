@@ -280,14 +280,15 @@ def admin_rider_recent_results():
 
 		comp_q = Competition.query.filter(Competition.series == series).filter(Competition.event_date.isnot(None))
 		if class_name == "250cc" and coast in ("east", "west"):
-			comp_q = comp_q.filter(Competition.coast_250 == coast)
+			# DB kan ha "West"/"west" — jämför case-insensitive
+			comp_q = comp_q.filter(
+				db.func.lower(db.func.trim(Competition.coast_250)) == coast
+			)
 		comps = comp_q.order_by(Competition.event_date.desc(), Competition.id.desc()).limit(limit).all()
 
 		out = []
 		for c in comps:
 			res = CompetitionResult.query.filter_by(competition_id=c.id, rider_id=rider.id).first()
-			if not res:
-				continue
 			out.append(
 				{
 					"competition_id": c.id,
@@ -295,9 +296,12 @@ def admin_rider_recent_results():
 					"event_date": c.event_date.isoformat() if c.event_date else None,
 					"series": c.series,
 					"coast_250": getattr(c, "coast_250", None),
-					"position": res.position,
+					"position": int(res.position) if res and res.position is not None else None,
+					"has_result_in_db": res is not None,
 				}
 			)
+
+		with_pos = sum(1 for r in out if r.get("has_result_in_db"))
 
 		return jsonify(
 			{
@@ -308,8 +312,19 @@ def admin_rider_recent_results():
 					"coast_250": rider.coast_250,
 				},
 				"filters": {"series": series, "class": class_name, "coast": coast, "limit": limit},
-				"result_count": len(out),
+				"competition_count": len(comps),
+				"with_result_count": with_pos,
+				"result_count": with_pos,
 				"results": out,
+				"hint": (
+					"Inga tävlingar matchade filter (kolla series/coast i DB)."
+					if len(comps) == 0
+					else (
+						"Ingen CompetitionResult-rad för denna förare i dessa race — resultat saknas i DB eller fel rider_id."
+						if with_pos == 0
+						else None
+					)
+				),
 			}
 		)
 	except Exception as e:
