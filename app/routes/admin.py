@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, render_template, redirect, url_for, session, jsonify
+from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request
 
-from models import db, Competition, Rider, User
+from models import db, Competition, CompetitionResult, Rider, User
 
 bp = Blueprint('admin', __name__, url_prefix='')  # keep same absolute paths
 
@@ -246,3 +246,71 @@ def bulk_update_rider_numbers():
 		import traceback
 		traceback.print_exc()
 		return jsonify({'error': str(e)}), 500
+
+
+@bp.get("/admin/diagnostics/rider_recent_results")
+@login_required
+def admin_rider_recent_results():
+	"""
+	Admin: senaste resultat för en förare i en scope (t.ex. SX 250 West).
+	Samma path som i main.py — behövs på Render där wsgi använder create_app().
+	Exempel:
+	  /admin/diagnostics/rider_recent_results?name=romano&series=SX&class=250cc&coast=west&limit=10
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		name_q = (request.args.get("name") or "").strip().lower()
+		series = (request.args.get("series") or "SX").strip()
+		class_name = (request.args.get("class") or "250cc").strip().lower()
+		coast = (request.args.get("coast") or "west").strip().lower()
+		limit = int(request.args.get("limit") or 8)
+		limit = max(1, min(limit, 30))
+
+		if not name_q:
+			return jsonify({"error": "missing_name"}), 400
+
+		rider = (
+			Rider.query.filter(db.func.lower(Rider.name).like(f"%{name_q}%"))
+			.filter(Rider.class_name == class_name)
+			.first()
+		)
+		if not rider:
+			return jsonify({"error": "rider_not_found"}), 404
+
+		comp_q = Competition.query.filter(Competition.series == series).filter(Competition.event_date.isnot(None))
+		if class_name == "250cc" and coast in ("east", "west"):
+			comp_q = comp_q.filter(Competition.coast_250 == coast)
+		comps = comp_q.order_by(Competition.event_date.desc(), Competition.id.desc()).limit(limit).all()
+
+		out = []
+		for c in comps:
+			res = CompetitionResult.query.filter_by(competition_id=c.id, rider_id=rider.id).first()
+			if not res:
+				continue
+			out.append(
+				{
+					"competition_id": c.id,
+					"competition_name": c.name,
+					"event_date": c.event_date.isoformat() if c.event_date else None,
+					"series": c.series,
+					"coast_250": getattr(c, "coast_250", None),
+					"position": res.position,
+				}
+			)
+
+		return jsonify(
+			{
+				"rider": {
+					"id": rider.id,
+					"name": rider.name,
+					"class": rider.class_name,
+					"coast_250": rider.coast_250,
+				},
+				"filters": {"series": series, "class": class_name, "coast": coast, "limit": limit},
+				"result_count": len(out),
+				"results": out,
+			}
+		)
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
