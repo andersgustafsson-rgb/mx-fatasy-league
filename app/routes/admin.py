@@ -5,7 +5,17 @@ from functools import wraps
 
 from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request
 
-from models import db, Competition, CompetitionResult, Rider, User
+from models import (
+	db,
+	Competition,
+	CompetitionResult,
+	HoleshotPick,
+	PicksSnapshot,
+	RacePick,
+	Rider,
+	User,
+	WildcardPick,
+)
 
 bp = Blueprint('admin', __name__, url_prefix='')  # keep same absolute paths
 
@@ -364,5 +374,143 @@ def admin_db_fingerprint():
 			info["postgres_error"] = str(e)
 
 		return jsonify({"ok": True, "fingerprint": info})
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@bp.get("/admin/diagnostics/picks_snapshots")
+@login_required
+def admin_picks_snapshots_diagnostics():
+	"""
+	Admin: verifiera att snapshots finns när picks är låsta.
+
+	- GET /admin/diagnostics/picks_snapshots?competition_id=123
+	- Lägg till &create_missing=1 för att skapa saknade snapshots (best-effort).
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		comp_id = int(request.args.get("competition_id") or 0)
+		if comp_id <= 0:
+			return jsonify({"error": "missing_competition_id"}), 400
+		create_missing = str(request.args.get("create_missing") or "").strip() in ("1", "true", "yes")
+
+		comp = Competition.query.get(comp_id)
+		if not comp:
+			return jsonify({"error": "competition_not_found"}), 404
+
+		# Users with any picks (live tables)
+		user_ids = set()
+		user_ids.update(
+			uid
+			for (uid,) in db.session.query(RacePick.user_id)
+			.filter(RacePick.competition_id == comp_id)
+			.distinct()
+			.all()
+			if uid is not None
+		)
+		user_ids.update(
+			uid
+			for (uid,) in db.session.query(HoleshotPick.user_id)
+			.filter(HoleshotPick.competition_id == comp_id)
+			.distinct()
+			.all()
+			if uid is not None
+		)
+		user_ids.update(
+			uid
+			for (uid,) in db.session.query(WildcardPick.user_id)
+			.filter(WildcardPick.competition_id == comp_id)
+			.distinct()
+			.all()
+			if uid is not None
+		)
+
+		existing = {
+			int(uid)
+			for (uid,) in db.session.query(PicksSnapshot.user_id)
+			.filter(PicksSnapshot.competition_id == comp_id)
+			.all()
+		}
+		missing = sorted(int(uid) for uid in user_ids if int(uid) not in existing)
+
+		created = 0
+		create_errors: list[str] = []
+
+		if create_missing and missing:
+			import json
+
+			for uid in missing:
+				try:
+					# Minimal snapshot payload (same shape as in main.py)
+					rp = (
+						RacePick.query.filter_by(user_id=uid, competition_id=comp_id)
+						.order_by(RacePick.predicted_position.asc())
+						.all()
+					)
+					race_picks = [
+						{"rider_id": int(p.rider_id), "predicted_position": int(p.predicted_position)}
+						for p in rp
+						if p.rider_id is not None and p.predicted_position is not None
+					]
+
+					hp = HoleshotPick.query.filter_by(user_id=uid, competition_id=comp_id).all()
+					holeshot_picks = {
+						(str(p.class_name).strip() if p.class_name else ""): int(p.rider_id)
+						for p in hp
+						if p.rider_id is not None
+					}
+					holeshot_picks = {k: v for k, v in holeshot_picks.items() if k}
+
+					wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
+					payload = {
+						"user_id": int(uid),
+						"competition_id": int(comp_id),
+						"race_picks": race_picks,
+						"holeshot_picks": holeshot_picks,
+						"wildcard_pick": int(wc.rider_id) if wc and wc.rider_id is not None else None,
+						"wildcard_pos": int(wc.position) if wc and wc.position is not None else None,
+					}
+
+					db.session.add(
+						PicksSnapshot(
+							user_id=int(uid),
+							competition_id=int(comp_id),
+							payload_json=json.dumps(payload, ensure_ascii=False),
+							source="admin_diagnostics",
+						)
+					)
+					created += 1
+				except Exception as e:
+					create_errors.append(f"user_id={uid}: {e}")
+
+			try:
+				db.session.commit()
+			except Exception as e:
+				db.session.rollback()
+				create_errors.append(f"commit_failed: {e}")
+				created = 0
+
+			# recompute missing after create
+			existing2 = {
+				int(uid)
+				for (uid,) in db.session.query(PicksSnapshot.user_id)
+				.filter(PicksSnapshot.competition_id == comp_id)
+				.all()
+			}
+			missing = sorted(int(uid) for uid in user_ids if int(uid) not in existing2)
+
+		return jsonify(
+			{
+				"ok": True,
+				"competition": {"id": comp.id, "name": comp.name, "series": comp.series, "event_date": str(comp.event_date)},
+				"users_with_any_live_picks": len(user_ids),
+				"snapshots_existing": len(existing),
+				"snapshots_missing": len(missing),
+				"missing_user_ids": missing[:50],
+				"created": created,
+				"create_errors": create_errors[:20],
+			}
+		)
 	except Exception as e:
 		return jsonify({"ok": False, "error": str(e)}), 500
