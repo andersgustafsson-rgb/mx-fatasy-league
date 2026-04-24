@@ -329,3 +329,40 @@ def admin_rider_recent_results():
 		)
 	except Exception as e:
 		return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/admin/diagnostics/db_fingerprint")
+@login_required
+def admin_db_fingerprint():
+	"""
+	Admin: visa vilken DB instansen faktiskt är kopplad mot (utan hemligheter).
+	Använd för att verifiera att tjänsten kör på Frankfurt-DB efter migration.
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		# Generic SQLAlchemy engine URL (redacted)
+		try:
+			engine_url = str(db.engine.url)
+			# SQLAlchemy already hides password in most str() representations, but be safe:
+			engine_url = engine_url.replace(str(db.engine.url.password or ""), "***") if getattr(db.engine.url, "password", None) else engine_url
+		except Exception:
+			engine_url = None
+
+		info = {"engine_url": engine_url}
+
+		# Postgres-specific fingerprint
+		try:
+			row = db.session.execute(
+				db.text(
+					"select current_database() as db, inet_server_addr()::text as addr, inet_server_port() as port, version() as version"
+				)
+			).mappings().first()
+			if row:
+				info["postgres"] = dict(row)
+		except Exception as e:
+			info["postgres_error"] = str(e)
+
+		return jsonify({"ok": True, "fingerprint": info})
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
