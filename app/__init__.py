@@ -90,6 +90,6 @@ def create_app() -> Flask:
 	@app.get("/favicon.ico")
 	def favicon():
 		# Browsers request /favicon.ico by default; point at site logo (SVG).
-		return redirect(url_for("static", filename="images/mx_fantasy_logo.png"))
+		return redirect(url_for("static", filename="images/mx_fantasy_favicon.png"))
 
 	return app
