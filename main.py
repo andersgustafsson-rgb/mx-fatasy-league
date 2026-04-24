@@ -264,6 +264,12 @@ try:
 except Exception:
     pass
 
+
+@app.get("/favicon.ico")
+def favicon():
+    return redirect(url_for("static", filename="images/mx_fantasy_logo.png"))
+
+
 # Debug: Print database configuration
 # Database configuration loaded
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import timedelta
-from flask import Flask
+from flask import Flask, redirect, url_for
 from dotenv import load_dotenv
 
 # Load environment variables early
@@ -86,5 +86,10 @@ def create_app() -> Flask:
 			app.add_url_rule('/admin', endpoint='admin_page', view_func=app.view_functions['admin.admin_page'])
 	except Exception:
 		pass
+
+	@app.get("/favicon.ico")
+	def favicon():
+		# Browsers request /favicon.ico by default; point at site logo (SVG).
+		return redirect(url_for("static", filename="images/mx_fantasy_logo.png"))
 
 	return app
