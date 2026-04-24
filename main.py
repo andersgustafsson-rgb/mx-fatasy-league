@@ -1557,6 +1557,56 @@ def _form_scores_for_riders(
     return dict(scores)
 
 
+def _result_median_scores_for_riders(
+    rider_ids: set[int],
+    past_comps: list[Competition],
+    *,
+    min_results: int,
+) -> tuple[dict[int, float], dict[int, dict]]:
+    """
+    Resultatstyrka: medianplacering (lägre bättre) + bonus för fler körda race i listan.
+    Endast förare med minst min_results giltiga placeringar får ett värde.
+    """
+    from statistics import median
+
+    positions_by_rider: dict[int, list[int]] = defaultdict(list)
+    for comp in past_comps:
+        for res in CompetitionResult.query.filter_by(competition_id=comp.id).all():
+            rid = int(res.rider_id)
+            if rid not in rider_ids:
+                continue
+            if res.position is None or int(res.position) < 1:
+                continue
+            positions_by_rider[rid].append(int(res.position))
+
+    score_raw: dict[int, float] = {}
+    meta: dict[int, dict] = {}
+    need = max(1, int(min_results))
+
+    for rid, poss in positions_by_rider.items():
+        n = len(poss)
+        if n < need:
+            continue
+        med = float(median(poss))
+        avg = float(sum(poss) / n)
+        base = max(0.0, 26.0 - med)
+        stability = min(10.0, float(n)) / 10.0
+        score_raw[rid] = base + 2.0 * stability
+        meta[rid] = {"count": n, "median": round(med, 2), "avg": round(avg, 2)}
+
+    return score_raw, meta
+
+
+def _past_comps_for_250_coast(past_all: list[Competition], coast: str) -> list[Competition]:
+    c = (coast or "").strip().lower()
+    out = []
+    for comp in past_all:
+        cc = str(getattr(comp, "coast_250", None) or "").strip().lower()
+        if cc == c:
+            out.append(comp)
+    return out
+
+
 def _crowd_scores_for_competition(target: Competition, rider_ids: set[int]) -> dict[int, float]:
     scores = defaultdict(float)
     comp_id = int(target.id)
@@ -1678,18 +1728,24 @@ def _rank_bucket(
     if not riders:
         return []
     rids = {r.id for r in riders}
-    form_raw = _form_scores_for_riders(rids, past_comps)
-    crowd_raw = _crowd_scores_for_competition(target, rids)
-    form_n = _min_max_normalize(form_raw)
+    # Kräv minst 2 resultat i aktuell scope om det finns minst två tävlingar; annars 1.
+    min_res = 2 if len(past_comps) >= 2 else 1
+    form_raw, form_meta = _result_median_scores_for_riders(rids, past_comps, min_results=min_res)
+    eligible = set(form_raw.keys())
+    if not eligible:
+        return []
+
+    crowd_raw_all = _crowd_scores_for_competition(target, rids)
+    crowd_raw = {rid: float(crowd_raw_all.get(rid, 0.0)) for rid in eligible}
+    form_raw_e = {rid: form_raw[rid] for rid in eligible}
+    form_n = _min_max_normalize(form_raw_e)
     crowd_n = _min_max_normalize(crowd_raw)
 
     combined: dict[int, float] = {}
-    for rid in rids:
-        f = form_n.get(rid, 0.0 if form_raw else 0.5)
-        c = crowd_n.get(rid, 0.0 if crowd_raw else 0.5)
-        if not form_raw and crowd_raw:
-            combined[rid] = c
-        elif form_raw and not crowd_raw:
+    for rid in eligible:
+        f = form_n.get(rid, 0.5)
+        c = crowd_n.get(rid, 0.5)
+        if not crowd_raw or max(crowd_raw.values()) <= 1e-9:
             combined[rid] = f
         else:
             combined[rid] = form_weight * f + crowd_weight * c
@@ -1704,10 +1760,10 @@ def _rank_bucket(
         r = id_to_rider.get(rid)
         if not r:
             continue
-        # Expose component contributions so the UI (and we) can explain surprising ranks.
-        f_n = form_n.get(rid, 0.0 if form_raw else 0.5)
-        c_n = crowd_n.get(rid, 0.0 if crowd_raw else 0.5)
+        f_n = form_n.get(rid, 0.5)
+        c_n = crowd_n.get(rid, 0.5)
         combined_score = combined.get(rid, 0.0)
+        fm = form_meta.get(rid) or {}
         rows.append(
             {
                 "rank": i + 1,
@@ -1723,6 +1779,8 @@ def _rank_bucket(
                     "form_norm": round(float(f_n), 4),
                     "crowd_norm": round(float(c_n), 4),
                     "form_raw": round(float(form_raw.get(rid, 0.0)), 4) if form_raw else None,
+                    "form_median_pos": fm.get("median"),
+                    "form_result_count": fm.get("count"),
                     "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4) if crowd_raw else None,
                 },
                 "image_url": _rider_portrait_url(r),
@@ -1756,6 +1814,9 @@ def api_power_ranking():
 
         top_450 = _rank_bucket(riders_450, target, past, out_ids)
 
+        past_east = _past_comps_for_250_coast(past, "east")
+        past_west = _past_comps_for_250_coast(past, "west")
+
         payload: dict = {
             "ok": True,
             "competition": {
@@ -1765,7 +1826,7 @@ def api_power_ranking():
                 "coast_250": target.coast_250,
                 "event_date": target.event_date.isoformat() if target.event_date else None,
             },
-            "method": "55% resultat (hela säsongen hittills) · 45% spelarnas picks till denna tävling (snapshot efter låsning)",
+            "method": "Resultat: medianplacering + antal West/East-race (säsong hittills) · + spelarnas picks (snapshot efter låsning)",
             "past_races_used": len(past),
             "form_scope_label": "hela säsongen hittills",
             "riders_450": top_450,
@@ -1776,10 +1837,12 @@ def api_power_ranking():
 
         if split_250:
             east_r, west_r = split_250
-            payload["riders_250_east"] = _rank_bucket(east_r, target, past, out_ids)
-            payload["riders_250_west"] = _rank_bucket(west_r, target, past, out_ids)
+            payload["riders_250_east"] = _rank_bucket(east_r, target, past_east, out_ids)
+            payload["riders_250_west"] = _rank_bucket(west_r, target, past_west, out_ids)
         else:
-            payload["riders_250"] = _rank_bucket(single_250, target, past, out_ids)
+            coast = str(getattr(target, "coast_250", None) or "").strip().lower()
+            past_250 = _past_comps_for_250_coast(past, coast) if coast in ("east", "west") else past
+            payload["riders_250"] = _rank_bucket(single_250, target, past_250, out_ids)
 
         return jsonify(payload)
     except Exception as e:
