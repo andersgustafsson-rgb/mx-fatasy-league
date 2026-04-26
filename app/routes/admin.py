@@ -514,3 +514,79 @@ def admin_picks_snapshots_diagnostics():
 		)
 	except Exception as e:
 		return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@bp.get("/admin/diagnostics/picks_snapshots_preview")
+@login_required
+def admin_picks_snapshots_preview():
+	"""
+	Admin: visa snapshot-innehåll (summerat) för att verifiera att inga picks "försvunnit".
+
+	- GET /admin/diagnostics/picks_snapshots_preview?competition_id=123
+	- Valfritt: &limit=20
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		import json
+
+		comp_id = int(request.args.get("competition_id") or 0)
+		if comp_id <= 0:
+			return jsonify({"error": "missing_competition_id"}), 400
+
+		limit = int(request.args.get("limit") or 20)
+		limit = max(1, min(limit, 200))
+
+		comp = Competition.query.get(comp_id)
+		if not comp:
+			return jsonify({"error": "competition_not_found"}), 404
+
+		rows = (
+			PicksSnapshot.query.filter_by(competition_id=comp_id)
+			.order_by(PicksSnapshot.created_at.desc())
+			.limit(limit)
+			.all()
+		)
+
+		previews = []
+		for s in rows:
+			try:
+				payload = json.loads(s.payload_json or "{}")
+			except Exception:
+				payload = {}
+
+			user = User.query.get(int(s.user_id)) if s.user_id is not None else None
+			username = user.username if user else None
+
+			race_picks = payload.get("race_picks") or []
+			holeshot_picks = payload.get("holeshot_picks") or {}
+			wildcard_pick = payload.get("wildcard_pick", None)
+			wildcard_pos = payload.get("wildcard_pos", None)
+
+			previews.append(
+				{
+					"user_id": int(s.user_id),
+					"username": username,
+					"snapshot_id": int(s.id),
+					"created_at": (s.created_at.isoformat() if getattr(s, "created_at", None) else None),
+					"source": getattr(s, "source", None),
+					"counts": {
+						"race_picks": (len(race_picks) if isinstance(race_picks, list) else None),
+						"holeshot_picks": (len(holeshot_picks) if isinstance(holeshot_picks, dict) else None),
+						"has_wildcard": (wildcard_pick is not None),
+					},
+					"wildcard": {"rider_id": wildcard_pick, "position": wildcard_pos},
+				}
+			)
+
+		return jsonify(
+			{
+				"ok": True,
+				"competition": {"id": comp.id, "name": comp.name, "series": comp.series, "event_date": str(comp.event_date)},
+				"limit": limit,
+				"snapshots_returned": len(previews),
+				"previews": previews,
+			}
+		)
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
