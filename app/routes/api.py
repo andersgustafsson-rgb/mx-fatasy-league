@@ -125,7 +125,7 @@ def user_achievements(username: str):
 				if hr and int(getattr(hr, "rider_id", 0) or 0) == int(getattr(hp, "rider_id", 0) or 0):
 					hs_correct += 1
 
-		# --- 150p streak (per competition total points) ---
+		# --- 200p streak (per competition total points) ---
 		comp_dates = {
 			int(c.id): c.event_date
 			for c in Competition.query.filter(Competition.id.in_(comp_ids_with_results)).all()
@@ -149,12 +149,12 @@ def user_achievements(username: str):
 			series_points.append((dt, int(cid), int(s.total_points or 0)))
 		series_points.sort(key=lambda t: (t[0], t[1]))
 
-		max_streak_150 = 0
+		max_streak_200 = 0
 		cur = 0
 		for _, __, pts in series_points:
-			if pts >= 150:
+			if pts >= 200:
 				cur += 1
-				max_streak_150 = max(max_streak_150, cur)
+				max_streak_200 = max(max_streak_200, cur)
 			else:
 				cur = 0
 
@@ -205,10 +205,10 @@ def user_achievements(username: str):
 				[("Brons", 5), ("Silver", 25), ("Guld", 50)],
 			),
 			tier_badge(
-				"streak_150",
-				"Streak ≥150p",
+				"streak_200",
+				"Streak ≥200p",
 				"🔥",
-				max_streak_150,
+				max_streak_200,
 				[("Brons", 3), ("Silver", 5), ("Guld", 8)],
 			),
 		]
@@ -220,7 +220,7 @@ def user_achievements(username: str):
 				"stats": {
 					"perfect_picks": perfect_picks,
 					"holeshot_correct": hs_correct,
-					"max_streak_150": max_streak_150,
+					"max_streak_200": max_streak_200,
 					"scored_competitions": len(series_points),
 				},
 				"badges": badges,
