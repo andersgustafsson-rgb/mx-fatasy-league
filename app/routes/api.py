@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request, session, current_app as app
-from models import db, CrossDinoHighScore, Rider, Competition, User
+from models import (
+	db,
+	CrossDinoHighScore,
+	Rider,
+	Competition,
+	User,
+	RacePick,
+	CompetitionResult,
+	CompetitionScore,
+	HoleshotPick,
+	HoleshotResult,
+)
 from datetime import datetime
 
 def is_admin_user() -> bool:
@@ -19,6 +30,178 @@ def is_admin_user() -> bool:
 	return username == "test"
 
 bp = Blueprint('api', __name__, url_prefix='/api')
+
+
+def _holeshot_bucket(pick_class: str | None) -> str:
+	c = (pick_class or "").strip().lower().replace(" ", "")
+	if c in ("wsx_sx1", "450cc", "450", "sx450", "sx1"):
+		return "450cc"
+	if c in ("wsx_sx2", "250cc", "250", "sx250", "sx2", "250east", "250west"):
+		return "250cc"
+	return (pick_class or "").strip()
+
+
+@bp.get("/users/<string:username>/achievements")
+def user_achievements(username: str):
+	"""
+	Public: summera retro-achievements baserat på picks + resultat/poäng.
+	Används i profilen för att visa progress (inte hemligt efter att resultat finns).
+	"""
+	try:
+		user = User.query.filter_by(username=username).first()
+		if not user:
+			return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+		uid = int(user.id)
+
+		# Competitions that actually have results
+		comp_ids_with_results = [
+			row[0]
+			for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+			if row and row[0] is not None
+		]
+		if not comp_ids_with_results:
+			return jsonify({"ok": True, "user": {"id": uid, "username": username}, "badges": [], "stats": {}})
+
+		# --- Perfect picks (predicted == actual) ---
+		all_picks = (
+			RacePick.query.filter(RacePick.user_id == uid, RacePick.competition_id.in_(comp_ids_with_results))
+			.all()
+		)
+		# Dedupe: one pick per (competition, rider) using latest pick_id
+		by_key: dict[tuple[int, int], RacePick] = {}
+		for p in all_picks:
+			k = (int(p.competition_id), int(p.rider_id))
+			prev = by_key.get(k)
+			if prev is None or int(p.pick_id or 0) > int(prev.pick_id or 0):
+				by_key[k] = p
+
+		# Latest result per (competition, rider) using highest result_id if duplicates exist
+		all_results = CompetitionResult.query.filter(CompetitionResult.competition_id.in_(comp_ids_with_results)).all()
+		res_by_key: dict[tuple[int, int], CompetitionResult] = {}
+		for r in all_results:
+			k = (int(r.competition_id), int(r.rider_id))
+			prev = res_by_key.get(k)
+			if prev is None or int(r.result_id or 0) > int(prev.result_id or 0):
+				res_by_key[k] = r
+
+		perfect_picks = 0
+		for (cid, rid), p in by_key.items():
+			res = res_by_key.get((cid, rid))
+			if not res or res.position is None or p.predicted_position is None:
+				continue
+			if int(p.predicted_position) == int(res.position):
+				perfect_picks += 1
+
+		# --- Holeshot correctness ---
+		hs_comp_ids = [
+			row[0]
+			for row in db.session.query(HoleshotResult.competition_id).distinct().all()
+			if row and row[0] is not None
+		]
+		hs_correct = 0
+		if hs_comp_ids:
+			hs_results = HoleshotResult.query.filter(HoleshotResult.competition_id.in_(hs_comp_ids)).all()
+			hs_res_by_comp_bucket: dict[tuple[int, str], HoleshotResult] = {}
+			for hr in hs_results:
+				b = _holeshot_bucket(getattr(hr, "class_name", None))
+				hs_res_by_comp_bucket[(int(hr.competition_id), b)] = hr
+
+			hs_picks = (
+				HoleshotPick.query.filter(HoleshotPick.user_id == uid, HoleshotPick.competition_id.in_(hs_comp_ids))
+				.all()
+			)
+			# Latest holeshot pick per (competition, bucket) using highest id
+			hs_pick_by_comp_bucket: dict[tuple[int, str], HoleshotPick] = {}
+			for hp in hs_picks:
+				b = _holeshot_bucket(getattr(hp, "class_name", None))
+				k = (int(hp.competition_id), b)
+				prev = hs_pick_by_comp_bucket.get(k)
+				if prev is None or int(hp.id or 0) > int(prev.id or 0):
+					hs_pick_by_comp_bucket[k] = hp
+
+			for k, hp in hs_pick_by_comp_bucket.items():
+				hr = hs_res_by_comp_bucket.get(k)
+				if hr and int(getattr(hr, "rider_id", 0) or 0) == int(getattr(hp, "rider_id", 0) or 0):
+					hs_correct += 1
+
+		# --- 150p streak (per competition total points) ---
+		comp_dates = {
+			int(c.id): c.event_date
+			for c in Competition.query.filter(Competition.id.in_(comp_ids_with_results)).all()
+			if c and c.id is not None
+		}
+		all_scores = CompetitionScore.query.filter(
+			CompetitionScore.user_id == uid, CompetitionScore.competition_id.in_(comp_ids_with_results)
+		).all()
+		latest_by_comp: dict[int, CompetitionScore] = {}
+		for s in all_scores:
+			cid = int(s.competition_id)
+			prev = latest_by_comp.get(cid)
+			if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+				latest_by_comp[cid] = s
+
+		series_points = []
+		for cid, s in latest_by_comp.items():
+			dt = comp_dates.get(int(cid))
+			if not dt:
+				continue
+			series_points.append((dt, int(cid), int(s.total_points or 0)))
+		series_points.sort(key=lambda t: (t[0], t[1]))
+
+		max_streak_150 = 0
+		cur = 0
+		for _, __, pts in series_points:
+			if pts >= 150:
+				cur += 1
+				max_streak_150 = max(max_streak_150, cur)
+			else:
+				cur = 0
+
+		badges = [
+			{
+				"key": "perfect_10",
+				"title": "Perfekt pick ×10",
+				"emoji": "🎯",
+				"progress": perfect_picks,
+				"goal": 10,
+				"completed": perfect_picks >= 10,
+			},
+			{
+				"key": "holeshot_5",
+				"title": "Holeshot-rätt ×5",
+				"emoji": "⚡",
+				"progress": hs_correct,
+				"goal": 5,
+				"completed": hs_correct >= 5,
+			},
+			{
+				"key": "streak_150_3",
+				"title": "3 race i rad ≥150p",
+				"emoji": "🔥",
+				"progress": max_streak_150,
+				"goal": 3,
+				"completed": max_streak_150 >= 3,
+			},
+		]
+
+		return jsonify(
+			{
+				"ok": True,
+				"user": {"id": uid, "username": user.username, "display_name": getattr(user, "display_name", None)},
+				"stats": {
+					"perfect_picks": perfect_picks,
+					"holeshot_correct": hs_correct,
+					"max_streak_150": max_streak_150,
+					"scored_competitions": len(series_points),
+				},
+				"badges": badges,
+			}
+		)
+	except Exception as e:
+		print(f"Error in user_achievements: {e}")
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @bp.get('/cross_dino/highscores')

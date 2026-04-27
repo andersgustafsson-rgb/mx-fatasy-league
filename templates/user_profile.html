@@ -278,6 +278,21 @@
       </div>
       {% endif %}
 
+      <!-- Achievements -->
+      <div class="mt-6">
+        <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-2xl font-bold text-yellow-500">🏅 Achievements</h2>
+            <span id="achievements-meta" class="text-xs text-gray-600 dark:text-gray-400"></span>
+          </div>
+          <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+              <p class="text-sm text-gray-700 dark:text-gray-200">Laddar…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Race Resultat -->
       {% if race_results is defined and race_results %}
       <div class="mt-8">
@@ -411,6 +426,51 @@
 
   <script>
     const viewingUser = '{{ target_user.username }}';
+
+    async function loadAchievements() {
+      const grid = document.getElementById("achievements-grid");
+      const meta = document.getElementById("achievements-meta");
+      if (!grid) return;
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(viewingUser)}/achievements`);
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "fail");
+
+        if (meta) {
+          const n = Number(data.stats?.scored_competitions || 0);
+          meta.textContent = n ? `Baserat på ${n} körda tävlingar` : "";
+        }
+
+        const badges = Array.isArray(data.badges) ? data.badges : [];
+        if (!badges.length) {
+          grid.innerHTML = '<div class="col-span-full text-sm text-gray-600 dark:text-gray-300">Inga achievements ännu.</div>';
+          return;
+        }
+
+        grid.innerHTML = badges.map(b => {
+          const done = !!b.completed;
+          const prog = Number(b.progress || 0);
+          const goal = Number(b.goal || 0);
+          const pct = goal > 0 ? Math.max(0, Math.min(100, Math.round(100 * prog / goal))) : 0;
+          return `
+            <div class="rounded-lg p-4 border ${done ? 'border-emerald-300 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700'}">
+              <div class="flex items-center gap-2">
+                <div class="text-xl">${b.emoji || '🏅'}</div>
+                <div class="min-w-0">
+                  <div class="text-sm font-bold text-gray-900 dark:text-white truncate">${b.title || ''}</div>
+                  <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${goal}${done ? ' · Klar' : ''}</div>
+                </div>
+              </div>
+              <div class="mt-3 h-2 rounded bg-gray-200 dark:bg-gray-600 overflow-hidden">
+                <div class="h-2 ${done ? 'bg-emerald-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        grid.innerHTML = '<div class="col-span-full text-sm text-red-500 dark:text-red-400">Kunde inte ladda achievements.</div>';
+      }
+    }
     
     async function showDetails(compId){
       try{
@@ -547,6 +607,7 @@
     
     // Navigation sound
     document.addEventListener('DOMContentLoaded', function() {
+      loadAchievements();
       const navSound = document.getElementById('navSound');
       const navLinks = document.querySelectorAll('.nav-sound');
       
