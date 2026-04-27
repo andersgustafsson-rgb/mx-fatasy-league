@@ -454,6 +454,21 @@
           const tier = b.tier || null;
           const pct = nextGoal > 0 ? Math.max(0, Math.min(100, Math.round(100 * prog / nextGoal))) : 0;
           const tierText = tier ? ` · ${tier}` : '';
+
+          let tierChip = '';
+          if (tier) {
+            const t = String(tier).toLowerCase();
+            const isBronze = t.includes('brons');
+            const isSilver = t.includes('silver');
+            const isGold = t.includes('guld');
+            const medal = isGold ? '🥇' : (isSilver ? '🥈' : '🥉');
+            const chipClass = isGold
+              ? 'bg-amber-200 text-amber-950 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/40'
+              : isSilver
+                ? 'bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-500/20 dark:text-slate-200 dark:border-slate-500/40'
+                : 'bg-orange-200 text-orange-950 border-orange-300 dark:bg-orange-500/20 dark:text-orange-200 dark:border-orange-500/40';
+            tierChip = `<span class="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-extrabold ${chipClass}">${medal}<span>${tier}</span></span>`;
+          }
           return `
             <div class="rounded-lg p-4 border ${done ? 'border-emerald-300 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700'}">
               <div class="flex items-center gap-2">
@@ -462,6 +477,7 @@
                   <div class="text-sm font-bold text-gray-900 dark:text-white truncate">${b.title || ''}</div>
                   <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${nextGoal}${tierText}</div>
                 </div>
+                ${tierChip}
               </div>
               <div class="mt-3 h-2 rounded bg-gray-200 dark:bg-gray-600 overflow-hidden">
                 <div class="h-2 ${done ? 'bg-emerald-500' : 'bg-blue-500'}" style="width: ${pct}%"></div>
