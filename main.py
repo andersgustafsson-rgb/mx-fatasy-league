@@ -2553,27 +2553,44 @@ def get_weekly_fun_stats():
                 rocket_uid, rocket_pts = max(positive.items(), key=lambda x: x[1])
                 anchor_uid, anchor_pts = min(positive.items(), key=lambda x: x[1])
 
+                # Behåll rank-delta om det finns, så UI kan visa "klättrade/sjönk" även när
+                # vinnaren väljs via veckopoäng.
+                delta_by_uid = {
+                    int(u.get("user_id")): int(u.get("delta") or 0)
+                    for u in leaderboard_data
+                    if u.get("user_id") is not None
+                }
+                rank_by_uid = {
+                    int(u.get("user_id")): u.get("rank")
+                    for u in leaderboard_data
+                    if u.get("user_id") is not None
+                }
+
                 ru = User.query.get(rocket_uid)
                 au = User.query.get(anchor_uid)
                 if ru:
+                    r_delta = int(delta_by_uid.get(int(rocket_uid), 0))
+                    r_rank = rank_by_uid.get(int(rocket_uid))
                     rocket = {
                         'user_id': rocket_uid,
                         'username': ru.username,
                         'display_name': getattr(ru, 'display_name', None) or ru.username,
-                        'delta': 0,
-                        'current_rank': next((u['rank'] for u in leaderboard_data if u['user_id'] == rocket_uid), None),
-                        'previous_rank': None,
+                        'delta': r_delta,
+                        'current_rank': r_rank,
+                        'previous_rank': (int(r_rank) - int(r_delta)) if (r_rank is not None) else None,
                         'weekly_points': int(rocket_pts),
                         'basis': 'weekly_points',
                     }
                 if au:
+                    a_delta = int(delta_by_uid.get(int(anchor_uid), 0))
+                    a_rank = rank_by_uid.get(int(anchor_uid))
                     anchor = {
                         'user_id': anchor_uid,
                         'username': au.username,
                         'display_name': getattr(au, 'display_name', None) or au.username,
-                        'delta': 0,
-                        'current_rank': next((u['rank'] for u in leaderboard_data if u['user_id'] == anchor_uid), None),
-                        'previous_rank': None,
+                        'delta': a_delta,
+                        'current_rank': a_rank,
+                        'previous_rank': (int(a_rank) - int(a_delta)) if (a_rank is not None) else None,
                         'weekly_points': int(anchor_pts),
                         'basis': 'weekly_points',
                     }

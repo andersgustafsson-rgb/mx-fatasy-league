@@ -1867,14 +1867,18 @@
 
         const weeklyWinnerLine = (w, verb) => {
           if (!w) return '';
-          if (w.basis === 'weekly_points' && (w.weekly_points !== null && w.weekly_points !== undefined)) {
-            return `<p class="text-xs text-gray-200 mt-1">Veckopoäng: ${Number(w.weekly_points)}p</p>`;
+          const lines = [];
+          if (w.weekly_points !== null && w.weekly_points !== undefined) {
+            lines.push(`<p class="text-xs text-gray-200 mt-1">Veckopoäng: ${Number(w.weekly_points)}p</p>`);
           }
-          if (w.delta === null || w.delta === undefined) return '';
-          const d = Number(w.delta);
-          if (!Number.isFinite(d) || d === 0) return '';
-          const abs = Math.abs(d);
-          return `<p class="text-xs ${verb === 'up' ? 'text-green-100' : 'text-red-100'} mt-1">${verb === 'up' ? 'Klättrade' : 'Sjönk'} ${abs} platser</p>`;
+          if (w.delta !== null && w.delta !== undefined) {
+            const d = Number(w.delta);
+            if (Number.isFinite(d) && d !== 0) {
+              const abs = Math.abs(d);
+              lines.push(`<p class="text-xs ${verb === 'up' ? 'text-green-100' : 'text-red-100'} mt-1">${verb === 'up' ? 'Klättrade' : 'Sjönk'} ${abs} platser</p>`);
+            }
+          }
+          return lines.join('');
         };
 
         const weeklyRankLine = (w) => {
