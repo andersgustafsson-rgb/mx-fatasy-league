@@ -158,31 +158,59 @@ def user_achievements(username: str):
 			else:
 				cur = 0
 
+		def tier_badge(
+			key: str,
+			title: str,
+			emoji: str,
+			value: int,
+			tiers: list[tuple[str, int]],
+		) -> dict:
+			# tiers: list of (label, goal) in ascending order
+			current_label = None
+			next_goal = tiers[0][1] if tiers else 0
+			for label, goal in tiers:
+				if value >= int(goal):
+					current_label = label
+				else:
+					next_goal = int(goal)
+					break
+			else:
+				# already above highest tier
+				next_goal = int(tiers[-1][1]) if tiers else 0
+
+			return {
+				"key": key,
+				"title": title,
+				"emoji": emoji,
+				"progress": int(value),
+				"tier": current_label,  # "Brons"/"Silver"/"Guld" or None
+				"tiers": [{"label": lbl, "goal": int(g)} for (lbl, g) in tiers],
+				"next_goal": int(next_goal),
+				"completed": current_label is not None,
+			}
+
 		badges = [
-			{
-				"key": "perfect_10",
-				"title": "Perfekt pick ×10",
-				"emoji": "🎯",
-				"progress": perfect_picks,
-				"goal": 10,
-				"completed": perfect_picks >= 10,
-			},
-			{
-				"key": "holeshot_5",
-				"title": "Holeshot-rätt ×5",
-				"emoji": "⚡",
-				"progress": hs_correct,
-				"goal": 5,
-				"completed": hs_correct >= 5,
-			},
-			{
-				"key": "streak_150_3",
-				"title": "3 race i rad ≥150p",
-				"emoji": "🔥",
-				"progress": max_streak_150,
-				"goal": 3,
-				"completed": max_streak_150 >= 3,
-			},
+			tier_badge(
+				"perfect_picks",
+				"Perfekta picks",
+				"🎯",
+				perfect_picks,
+				[("Brons", 10), ("Silver", 50), ("Guld", 100)],
+			),
+			tier_badge(
+				"holeshot_correct",
+				"Holeshot-rätt",
+				"⚡",
+				hs_correct,
+				[("Brons", 5), ("Silver", 25), ("Guld", 50)],
+			),
+			tier_badge(
+				"streak_150",
+				"Streak ≥150p",
+				"🔥",
+				max_streak_150,
+				[("Brons", 3), ("Silver", 5), ("Guld", 8)],
+			),
 		]
 
 		return jsonify(

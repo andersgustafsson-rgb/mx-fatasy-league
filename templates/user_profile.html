@@ -450,15 +450,17 @@
         grid.innerHTML = badges.map(b => {
           const done = !!b.completed;
           const prog = Number(b.progress || 0);
-          const goal = Number(b.goal || 0);
-          const pct = goal > 0 ? Math.max(0, Math.min(100, Math.round(100 * prog / goal))) : 0;
+          const nextGoal = Number(b.next_goal || b.goal || 0);
+          const tier = b.tier || null;
+          const pct = nextGoal > 0 ? Math.max(0, Math.min(100, Math.round(100 * prog / nextGoal))) : 0;
+          const tierText = tier ? ` · ${tier}` : '';
           return `
             <div class="rounded-lg p-4 border ${done ? 'border-emerald-300 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700'}">
               <div class="flex items-center gap-2">
                 <div class="text-xl">${b.emoji || '🏅'}</div>
                 <div class="min-w-0">
                   <div class="text-sm font-bold text-gray-900 dark:text-white truncate">${b.title || ''}</div>
-                  <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${goal}${done ? ' · Klar' : ''}</div>
+                  <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${nextGoal}${tierText}</div>
                 </div>
               </div>
               <div class="mt-3 h-2 rounded bg-gray-200 dark:bg-gray-600 overflow-hidden">
