@@ -2460,6 +2460,21 @@ def get_weekly_fun_stats():
         
         # Use shared function to calculate deltas - ensures consistency
         leaderboard_data = calculate_leaderboard_deltas()
+
+        # Tävlingar senaste 7 dagarna (endast datum som passerat, undvik framtida race i samma lista)
+        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+        today_utc = datetime.utcnow().date()
+        recent_competitions = Competition.query.filter(
+            Competition.event_date.isnot(None),
+            Competition.event_date >= week_ago_date,
+            Competition.event_date <= today_utc,
+            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+        ).all()
+        comp_ids = [c.id for c in recent_competitions]
+
+        # Om vi är i en "veckovy" vill vi att Raket/Ankare speglar faktisk veckoprestation,
+        # inte bara rankförändring p.g.a. t.ex. poängkorrigeringar för andra användare.
+        require_week_points_for_delta = bool(comp_ids)
         
         # Calculate ranking changes (rocket and anchor)
         rocket = None  # Biggest negative delta (climbed most)
@@ -2471,7 +2486,9 @@ def get_weekly_fun_stats():
         
         for user in leaderboard_data:
             delta = user.get('delta')
-            if delta is not None:
+            if delta is not None and delta != 0:
+                if require_week_points_for_delta and int(user.get("recent_week_points") or 0) <= 0:
+                    continue
                 users_with_delta += 1
                 if delta < 0:  # Climbed (negative delta means better ranking)
                     users_climbed.append({
@@ -2512,18 +2529,6 @@ def get_weekly_fun_stats():
                             'previous_rank': user['rank'] - delta
                         }
         
-        # Tävlingar senaste 7 dagarna (endast datum som passerat, undvik framtida race i samma lista)
-        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
-        today_utc = datetime.utcnow().date()
-        recent_competitions = Competition.query.filter(
-            Competition.event_date.isnot(None),
-            Competition.event_date >= week_ago_date,
-            Competition.event_date <= today_utc,
-            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
-        ).all()
-        
-        comp_ids = [c.id for c in recent_competitions]
-
         # Fallback om delta-baserad raket/ankare saknar signal (vanligt när poäng/omräkning inte
         # skett i rätt ordning eller tidigt i säsongen): använd veckopoäng från CompetitionScore.
         if comp_ids and rocket is None and anchor is None:
