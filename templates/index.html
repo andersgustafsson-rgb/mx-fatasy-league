@@ -7,6 +7,11 @@
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" />
   <script src="https://cdn.tailwindcss.com"></script>
+  {% if is_logged_in %}
+  <script>
+    window.currentUsername = "{{ username|e }}";
+  </script>
+  {% endif %}
   <script>
     // Suppress Tailwind CDN warning in production
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -345,13 +350,25 @@
                   <span class="text-yellow-400 text-sm font-bold">{{ username[0].upper() }}</span>
                 </div>
               {% endif %}
-              <p class="text-base md:text-lg text-gray-200">
-            {% if is_logged_in %}
-            Välkommen, <strong>{{ username }}</strong>!
-            {% else %}
-              Välkommen, <strong>Gäst</strong>!
-            {% endif %}
-          </p>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-base md:text-lg text-gray-200 truncate">
+                  {% if is_logged_in %}
+                    Välkommen, <strong id="welcome-username">{{ username }}</strong>!
+                  {% else %}
+                    Välkommen, <strong>Gäst</strong>!
+                  {% endif %}
+                  </p>
+                  {% if is_logged_in %}
+                    <span id="welcome-rank-chip" class="hidden inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold border border-cyan-400/40 bg-cyan-500/10 text-cyan-200">
+                      #—
+                    </span>
+                  {% endif %}
+                </div>
+                {% if is_logged_in %}
+                  <div id="welcome-chips" class="mt-1 flex flex-wrap items-center gap-2 text-xs"></div>
+                {% endif %}
+              </div>
             </div>
         </header>
         
@@ -1603,6 +1620,72 @@
         } else {
           // Store leaderboard data globally for expand/collapse
           window.seasonLeaderboardData = leaderboard;
+
+          // Populate header chips for current user (if logged in)
+          try {
+            const currentUsername = (window.currentUsername || '').toString().trim().toLowerCase();
+            if (currentUsername) {
+              const me = leaderboard.find(r => (r.username || '').toString().trim().toLowerCase() === currentUsername);
+              if (me) {
+                window._meLeaderboardRow = me;
+                const chip = document.getElementById('welcome-rank-chip');
+                if (chip) {
+                  chip.textContent = `#${me.rank || '—'}`;
+                  chip.classList.remove('hidden');
+                }
+                const chips = document.getElementById('welcome-chips');
+                if (chips) {
+                  const total = Number(me.total_points || 0);
+                  chips.innerHTML = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
+                    <span id="welcome-latest-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold">Senast: —</span>
+                    <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 —</span>
+                  `;
+
+                  // Latest completed race points
+                  try {
+                    const r2 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/latest_points`);
+                    const d2 = await r2.json();
+                    const latestChip = document.getElementById('welcome-latest-chip');
+                    if (latestChip && r2.ok && d2 && d2.ok && d2.latest) {
+                      const pts = Number(d2.latest.points || 0);
+                      const name = (d2.latest.name || '').toString();
+                      latestChip.textContent = `Senast: +${pts}p (${name})`;
+                      latestChip.className = `inline-flex items-center px-2 py-0.5 rounded-full border ${pts > 0 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-gray-500/30 bg-gray-500/10 text-gray-200'} font-bold`;
+                    } else if (latestChip) {
+                      latestChip.textContent = `Senast: —`;
+                    }
+                  } catch (e) {}
+
+                  // Medal based on best tier in achievements
+                  try {
+                    const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
+                    const d3 = await r3.json();
+                    const medalChip = document.getElementById('welcome-medal-chip');
+                    if (medalChip && r3.ok && d3 && d3.ok && Array.isArray(d3.badges)) {
+                      const tierOrder = {'Brons': 1, 'Silver': 2, 'Guld': 3};
+                      let best = null;
+                      for (const b of d3.badges) {
+                        const t = b && b.tier ? String(b.tier) : '';
+                        if (!t) continue;
+                        const v = tierOrder[t] || 0;
+                        if (!best || v > best.v) best = {t, v, title: b.title || ''};
+                      }
+                      if (best) {
+                        const medal = best.t === 'Guld' ? '🥇' : (best.t === 'Silver' ? '🥈' : '🥉');
+                        medalChip.textContent = `${medal} ${best.t}`;
+                        medalChip.title = best.title ? `Högsta nivå: ${best.title}` : '';
+                      } else {
+                        medalChip.textContent = `🏅 —`;
+                      }
+                    }
+                  } catch (e) {}
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('welcome chips: leaderboard parse failed', e);
+          }
           
           // Show first 15 entries
           const initialCount = Math.min(15, leaderboard.length);

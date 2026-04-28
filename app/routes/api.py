@@ -32,6 +32,72 @@ def is_admin_user() -> bool:
 bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+@bp.get("/users/<string:username>/latest_points")
+def user_latest_points(username: str):
+	"""Public: senaste körda tävlingens totalpoäng för användaren."""
+	try:
+		user = User.query.filter_by(username=username).first()
+		if not user:
+			return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+		uid = int(user.id)
+
+		# Competitions with any results = "körda"
+		comp_ids_with_results = {
+			row[0]
+			for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+			if row and row[0] is not None
+		}
+		if not comp_ids_with_results:
+			return jsonify({"ok": True, "latest": None})
+
+		# Latest CompetitionScore row per competition for user
+		scores = CompetitionScore.query.filter(
+			CompetitionScore.user_id == uid,
+			CompetitionScore.competition_id.in_(list(comp_ids_with_results)),
+		).all()
+		latest_by_comp: dict[int, CompetitionScore] = {}
+		for s in scores:
+			cid = int(s.competition_id)
+			prev = latest_by_comp.get(cid)
+			if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+				latest_by_comp[cid] = s
+
+		if not latest_by_comp:
+			return jsonify({"ok": True, "latest": None})
+
+		comps = Competition.query.filter(Competition.id.in_(list(latest_by_comp.keys()))).all()
+		# latest by event_date (fallback to id)
+		comps_sorted = sorted(
+			comps,
+			key=lambda c: (
+				c.event_date or datetime.min.date(),
+				int(c.id or 0),
+			),
+			reverse=True,
+		)
+		latest_comp = comps_sorted[0] if comps_sorted else None
+		if not latest_comp:
+			return jsonify({"ok": True, "latest": None})
+
+		s = latest_by_comp.get(int(latest_comp.id))
+		return jsonify(
+			{
+				"ok": True,
+				"latest": {
+					"competition_id": int(latest_comp.id),
+					"name": latest_comp.name,
+					"event_date": latest_comp.event_date.isoformat() if latest_comp.event_date else None,
+					"points": int(s.total_points or 0) if s else 0,
+				},
+			}
+		)
+	except Exception as e:
+		print(f"Error in user_latest_points: {e}")
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
 def _holeshot_bucket(pick_class: str | None) -> str:
 	c = (pick_class or "").strip().lower().replace(" ", "")
 	if c in ("wsx_sx1", "450cc", "450", "sx450", "sx1"):
