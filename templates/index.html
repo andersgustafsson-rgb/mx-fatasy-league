@@ -1639,7 +1639,7 @@
                   chips.innerHTML = `
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
                     <span id="welcome-latest-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold">Senast: —</span>
-                    <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 —</span>
+                    <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 Nivå: —</span>
                   `;
 
                   // Latest completed race points
@@ -1673,10 +1673,11 @@
                       }
                       if (best) {
                         const medal = best.t === 'Guld' ? '🥇' : (best.t === 'Silver' ? '🥈' : '🥉');
-                        medalChip.textContent = `${medal} ${best.t}`;
-                        medalChip.title = best.title ? `Högsta nivå: ${best.title}` : '';
+                        medalChip.textContent = `🏅 Nivå: ${best.t} ${medal}`;
+                        medalChip.title = `Din högsta achievement-nivå just nu.${best.title ? `\nHögsta badge: ${best.title}` : ''}`;
                       } else {
-                        medalChip.textContent = `🏅 —`;
+                        medalChip.textContent = `🏅 Nivå: —`;
+                        medalChip.title = `Din högsta achievement-nivå just nu.`;
                       }
                     }
                   } catch (e) {}
