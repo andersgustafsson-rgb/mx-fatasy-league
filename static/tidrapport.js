@@ -460,12 +460,15 @@ function aggregateParsed(headers, rows) {
   let usedRows = 0;
   let skippedNoName = 0;
   let skippedNoTime = 0;
+  const debugSamples = [];
+  const DEBUG_LIMIT = 5;
 
   if (colMerge) {
     const seriesMeta = new Map();
     const baseStatusSet = new Set();
 
-    for (const row of rows) {
+    for (let ri = 0; ri < rows.length; ri += 1) {
+      const row = rows[ri];
       const name = cleanStr(row[colName]);
       if (!name) {
         skippedNoName += 1;
@@ -474,6 +477,21 @@ function aggregateParsed(headers, rows) {
       const net = resolveRowNetHours(row, hourCols);
       if (!(Number(net) > 0)) {
         skippedNoTime += 1;
+        if (debugSamples.length < DEBUG_LIMIT) {
+          debugSamples.push({
+            row: ri + 1,
+            name,
+            fomRaw: colFom ? row[colFom] : "",
+            tomRaw: colTom ? row[colTom] : "",
+            timDagRaw: hourCols.colTimDag ? row[hourCols.colTimDag] : "",
+            omfRaw: hourCols.colOmf ? row[hourCols.colOmf] : "",
+            // parsed fallbacks
+            timDagParsed: hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null,
+            omfParsed: hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null,
+            fomParsed: colFom ? parseTimeToHours(row[colFom]) : null,
+            tomParsed: colTom ? parseTimeToHours(row[colTom]) : null,
+          });
+        }
         continue;
       }
       const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
@@ -512,15 +530,30 @@ function aggregateParsed(headers, rows) {
   }
 
   const statusSet = new Set();
-  for (const row of rows) {
+    for (let ri = 0; ri < rows.length; ri += 1) {
+      const row = rows[ri];
     const name = cleanStr(row[colName]);
     if (!name) {
       skippedNoName += 1;
       continue;
     }
-    const net = resolveRowNetHours(row, hourCols);
-    if (!(Number(net) > 0)) {
+      const net = resolveRowNetHours(row, hourCols);
+      if (!(Number(net) > 0)) {
       skippedNoTime += 1;
+        if (debugSamples.length < DEBUG_LIMIT) {
+          debugSamples.push({
+            row: ri + 1,
+            name,
+            fomRaw: colFom ? row[colFom] : "",
+            tomRaw: colTom ? row[colTom] : "",
+            timDagRaw: hourCols.colTimDag ? row[hourCols.colTimDag] : "",
+            omfRaw: hourCols.colOmf ? row[hourCols.colOmf] : "",
+            timDagParsed: hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null,
+            omfParsed: hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null,
+            fomParsed: colFom ? parseTimeToHours(row[colFom]) : null,
+            tomParsed: colTom ? parseTimeToHours(row[colTom]) : null,
+          });
+        }
       continue;
     }
     const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
@@ -548,6 +581,7 @@ function aggregateParsed(headers, rows) {
       skippedNoTime,
     },
     ...emptyMeta,
+    debug: { debugSamples },
   };
 }
 
@@ -1525,7 +1559,42 @@ function regenerateFromText(text, selectedOverride) {
     mergedSourceSplit,
     baseStatuses,
     mergeSourceOrder,
+    debug,
   } = agg;
+
+  if (stats && stats.usedRows === 0) {
+    const samples = debug?.debugSamples || [];
+    const s0 = samples[0];
+    const ex =
+      s0
+        ? ` Exempel rad ${s0.row}: Namn="${s0.name}" • Omf="${s0.omfRaw}"→${s0.omfParsed} • Tim/dag="${s0.timDagRaw}"→${s0.timDagParsed} • Kl Fom="${s0.fomRaw}"→${s0.fomParsed} • Kl Tom="${s0.tomRaw}"→${s0.tomParsed}`
+        : "";
+    const msg = `Hittade tabellen, men kunde inte räkna ut timmar. Rader: ${stats.rawRows} • Använda: ${stats.usedRows} • Skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName}.${ex} ` +
+      `Kontrollera att «Omf»/«Tim/dag» innehåller tal (t.ex. 1.000) eller att «Kl Fom»/«Kl Tom» har klockslag. Klicka sedan «Skapa / uppdatera diagram».`;
+
+    const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
+    const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
+    const layout = cleanStr(els.layoutSelect?.value) || "side";
+
+    window.__tidrapport_state = {
+      totals: new Map(),
+      statuses: [],
+      selectedStatuses: new Set(),
+      employeeName: null,
+      stats,
+      seriesMeta,
+      orientation,
+      verticalNames,
+      layout,
+      mergedSourceSplit: !!mergedSourceSplit,
+      baseStatuses,
+      mergeSourceOrder,
+    };
+    buildStatusFilters([], new Set());
+    safeRenderAll(window.__tidrapport_state);
+    els.statusText.textContent = msg;
+    return;
+  }
 
   const filterStatuses =
     mergedSourceSplit && baseStatuses?.length ? baseStatuses : statuses;
