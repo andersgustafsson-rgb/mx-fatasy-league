@@ -1545,6 +1545,17 @@ function renderAll(state) {
 }
 
 function regenerateFromText(text, selectedOverride) {
+  try {
+    console.log("[tidrapport] regenerateFromText() start", {
+      textLen: String(text ?? "").length,
+      analysisMode: getAnalysisMode(),
+      textPreview: String(text ?? "")
+        .replace(/\s+/g, " ")
+        .slice(0, 140),
+    });
+  } catch {
+    // ignore console issues
+  }
   const agg = aggregate(text);
   if (agg.errors.length) {
     const errMsg = agg.errors.join(" ");
@@ -1588,20 +1599,26 @@ function regenerateFromText(text, selectedOverride) {
       `Kontrollera att «Omf»/«Tim/dag» innehåller tal (t.ex. 1.000) eller att «Kl Fom»/«Kl Tom» har klockslag. Klicka sedan «Skapa / uppdatera diagram».`;
 
     // Devtools log: gör det lätt att se i konsolen exakt vad som inte parsades.
+    const debugMeta = debug?.debugMeta || null;
     try {
-      const debugMeta = debug?.debugMeta || null;
-      console.groupCollapsed("Tidrapport debug: kunde inte räkna timmar (usedRows=0)");
-      console.warn(msg);
-      console.log("stats:", stats);
-      console.log("detected hour columns:", debugMeta);
-      if (samples?.length) {
-        console.table(samples);
-      } else {
-        console.log("No samples captured (unexpected).");
-      }
-      console.groupEnd();
+      console.warn("[tidrapport] usedRows=0", {
+        rawRows: stats.rawRows,
+        skippedNoTime: stats.skippedNoTime,
+        skippedNoName: stats.skippedNoName,
+        debugMeta,
+        ex,
+        sample0: s0 || null,
+      });
     } catch {
-      // Ignore console errors in older browsers.
+      // ignore console issues
+    }
+    // Extra: logga rubriker + första rad så vi kan se exakt vilka kolumner texten gav oss.
+    try {
+      const parsed = parseTable(text);
+      console.log("[tidrapport] parseTable(headers)", parsed?.headers?.slice?.(0, 40));
+      if (parsed?.rows?.[0]) console.log("[tidrapport] parseTable(firstRow)", parsed.rows[0]);
+    } catch {
+      // ignore parse issues
     }
 
     const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
