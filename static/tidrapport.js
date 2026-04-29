@@ -1535,7 +1535,8 @@ function renderAll(state) {
 function regenerateFromText(text, selectedOverride) {
   const agg = aggregate(text);
   if (agg.errors.length) {
-    els.statusText.textContent = agg.errors.join(" ");
+    const errMsg = agg.errors.join(" ");
+    els.statusText.textContent = errMsg;
     window.__tidrapport_state = {
       totals: new Map(),
       statuses: [],
@@ -1548,6 +1549,8 @@ function regenerateFromText(text, selectedOverride) {
       mergeSourceOrder: null,
     };
     safeRenderAll(window.__tidrapport_state);
+    // safeRenderAll() renderar och kan annars överstyra feltexten.
+    els.statusText.textContent = errMsg;
     return;
   }
 
