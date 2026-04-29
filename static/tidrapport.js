@@ -311,8 +311,9 @@ function resolveRowNetHours(row, cols) {
 
   const omf = cols.colOmf ? parseOmfFactor(row[cols.colOmf]) : null;
   if (omf != null && omf > 0) {
-    // Some leave exports have no clock times; Omf then acts as day fraction (1.0 = full day).
-    return omf * DEFAULT_HOURS_PER_DAY;
+    // Some leave exports have no clock times; Omf is often the duration (hours) even when shown as 01.00.
+    // Treat Omf as hours to avoid inflating totals (e.g. 1.00 should be 1 hour, not 1 day).
+    return omf;
   }
 
   return null;
