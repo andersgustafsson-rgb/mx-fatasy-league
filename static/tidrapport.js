@@ -570,7 +570,7 @@ function aggregateParsed(headers, rows) {
     ...[...statusSet].filter((s) => !ORSAK_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "sv")),
   ];
 
-  return {
+    return {
     totals,
     statuses,
     errors: [],
@@ -581,7 +581,19 @@ function aggregateParsed(headers, rows) {
       skippedNoTime,
     },
     ...emptyMeta,
-    debug: { debugSamples },
+      debug: {
+        debugSamples,
+        debugMeta: {
+          colFom: colFom || null,
+          colTom: colTom || null,
+          colRast: colRast || null,
+          colTimDag: colTimDag || null,
+          colOmf: colOmf || null,
+          hadClockTimes: !!(colFom && colTom),
+          hadTimDag: !!colTimDag,
+          hadOmf: !!colOmf,
+        },
+      },
   };
 }
 
@@ -1574,6 +1586,23 @@ function regenerateFromText(text, selectedOverride) {
         : "";
     const msg = `Hittade tabellen, men kunde inte räkna ut timmar. Rader: ${stats.rawRows} • Använda: ${stats.usedRows} • Skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName}.${ex} ` +
       `Kontrollera att «Omf»/«Tim/dag» innehåller tal (t.ex. 1.000) eller att «Kl Fom»/«Kl Tom» har klockslag. Klicka sedan «Skapa / uppdatera diagram».`;
+
+    // Devtools log: gör det lätt att se i konsolen exakt vad som inte parsades.
+    try {
+      const debugMeta = debug?.debugMeta || null;
+      console.groupCollapsed("Tidrapport debug: kunde inte räkna timmar (usedRows=0)");
+      console.warn(msg);
+      console.log("stats:", stats);
+      console.log("detected hour columns:", debugMeta);
+      if (samples?.length) {
+        console.table(samples);
+      } else {
+        console.log("No samples captured (unexpected).");
+      }
+      console.groupEnd();
+    } catch {
+      // Ignore console errors in older browsers.
+    }
 
     const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
     const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
