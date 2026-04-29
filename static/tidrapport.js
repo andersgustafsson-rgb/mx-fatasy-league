@@ -258,6 +258,42 @@ function parseTimeToHours(raw) {
   return null;
 }
 
+function parseHourNumber(raw) {
+  const s = cleanStr(raw).replace(",", ".");
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseOmfFactor(raw) {
+  const n = parseHourNumber(raw);
+  if (n == null || n < 0) return null;
+  return n;
+}
+
+const DEFAULT_HOURS_PER_DAY = 8;
+
+function resolveRowNetHours(row, cols) {
+  const fom = parseTimeToHours(row[cols.colFom]);
+  const tom = parseTimeToHours(row[cols.colTom]);
+  if (fom != null && tom != null) {
+    const rastMin = cols.colRast ? parseRastMinutes(row[cols.colRast]) : 0;
+    const gross = durationHours(fom, tom);
+    return Math.max(0, gross - rastMin / 60);
+  }
+
+  const timDag = cols.colTimDag ? parseHourNumber(row[cols.colTimDag]) : null;
+  if (timDag != null && timDag > 0) return timDag;
+
+  const omf = cols.colOmf ? parseOmfFactor(row[cols.colOmf]) : null;
+  if (omf != null && omf > 0) {
+    // Some leave exports have no clock times; Omf then acts as day fraction (1.0 = full day).
+    return omf * DEFAULT_HOURS_PER_DAY;
+  }
+
+  return null;
+}
+
 function durationHours(fom, tom) {
   if (fom == null || tom == null) return 0;
   let delta = tom - fom;
@@ -363,10 +399,13 @@ function validateHeadersForAggregate(headers) {
   const colName = pickCol(headers, ["Namn", "Name"]);
   const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
   const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
+  const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
+  const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   if (!colName) errors.push("Hittar inte kolumnen «Namn».");
-  if (!colFom) errors.push("Hittar inte kolumnen «Kl Fom» (starttid).");
-  if (!colTom) errors.push("Hittar inte kolumnen «Kl Tom» (sluttid).");
+  if ((!colFom || !colTom) && !colTimDag && !colOmf) {
+    errors.push("Hittar inte tidkolumner. Kräver antingen «Kl Fom» + «Kl Tom», eller «Tim/dag», eller «Omf».");
+  }
   if (!colOrsak) errors.push("Hittar inte kolumnen «Orsak»/«Status» (t.ex. Bemanningstyp).");
   return errors;
 }
@@ -387,8 +426,11 @@ function aggregateParsed(headers, rows) {
   const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
   const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
   const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
+  const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
+  const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
+  const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
   const totals = new Map();
   let usedRows = 0;
@@ -405,15 +447,11 @@ function aggregateParsed(headers, rows) {
         skippedNoName += 1;
         continue;
       }
-      const fom = parseTimeToHours(row[colFom]);
-      const tom = parseTimeToHours(row[colTom]);
-      if (fom == null || tom == null) {
+      const net = resolveRowNetHours(row, hourCols);
+      if (!(Number(net) > 0)) {
         skippedNoTime += 1;
         continue;
       }
-      const rastMin = colRast ? parseRastMinutes(row[colRast]) : 0;
-      const gross = durationHours(fom, tom);
-      const net = Math.max(0, gross - rastMin / 60);
       const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
       const source = cleanStr(row[colMerge]) || "Okänd del";
       const seriesKey = `${source} — ${status}`;
@@ -456,15 +494,11 @@ function aggregateParsed(headers, rows) {
       skippedNoName += 1;
       continue;
     }
-    const fom = parseTimeToHours(row[colFom]);
-    const tom = parseTimeToHours(row[colTom]);
-    if (fom == null || tom == null) {
+    const net = resolveRowNetHours(row, hourCols);
+    if (!(Number(net) > 0)) {
       skippedNoTime += 1;
       continue;
     }
-    const rastMin = colRast ? parseRastMinutes(row[colRast]) : 0;
-    const gross = durationHours(fom, tom);
-    const net = Math.max(0, gross - rastMin / 60);
     const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
 
     statusSet.add(status);
