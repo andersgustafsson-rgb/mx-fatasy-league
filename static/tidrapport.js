@@ -1596,6 +1596,18 @@ function regenerateFromText(text, selectedOverride) {
     buildStatusFilters([], new Set());
     safeRenderAll(window.__tidrapport_state);
     els.statusText.textContent = msg;
+    // Lägg även en tydlig felrad i tabellen (så den inte kan döljas/överskrivas av render-flödet).
+    if (els.tableBody) {
+      els.tableBody.innerHTML = "";
+      const tr = document.createElement("tr");
+      tr.className = "border-b border-slate-800";
+      const td = document.createElement("td");
+      td.colSpan = 2;
+      td.className = "px-3 py-3 text-sm text-slate-300";
+      td.textContent = msg;
+      tr.appendChild(td);
+      els.tableBody.appendChild(tr);
+    }
     return;
   }
 
