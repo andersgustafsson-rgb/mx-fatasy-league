@@ -1559,6 +1559,14 @@ function regenerateFromText(text, selectedOverride) {
   const agg = aggregate(text);
   if (agg.errors.length) {
     const errMsg = agg.errors.join(" ");
+    try {
+      console.error("[tidrapport] aggregate() errors", errMsg);
+      const parsed = parseTable(text);
+      console.log("[tidrapport] parseTable(headers)", parsed?.headers?.slice?.(0, 40));
+      if (parsed?.rows?.[0]) console.log("[tidrapport] parseTable(firstRow)", parsed.rows[0]);
+    } catch {
+      // ignore console issues
+    }
     els.statusText.textContent = errMsg;
     window.__tidrapport_state = {
       totals: new Map(),
