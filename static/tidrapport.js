@@ -108,6 +108,7 @@ const els = {
   monthSelect: document.getElementById("monthSelect"),
   yearInput: document.getElementById("yearInput"),
   titleInput: document.getElementById("titleInput"),
+  omfModeSelect: document.getElementById("omfModeSelect"),
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
   orientationSelect: document.getElementById("orientationSelect"),
@@ -297,6 +298,11 @@ function parseOmfFactor(raw) {
 
 const DEFAULT_HOURS_PER_DAY = 8;
 
+function getOmfMode() {
+  const v = cleanStr(els.omfModeSelect?.value);
+  return v === "hours" ? "hours" : "days";
+}
+
 function resolveRowNetHours(row, cols) {
   const fom = parseTimeToHours(row[cols.colFom]);
   const tom = parseTimeToHours(row[cols.colTom]);
@@ -311,9 +317,9 @@ function resolveRowNetHours(row, cols) {
 
   const omf = cols.colOmf ? parseOmfFactor(row[cols.colOmf]) : null;
   if (omf != null && omf > 0) {
-    // Some leave exports have no clock times; Omf is often the duration (hours) even when shown as 01.00.
-    // Treat Omf as hours to avoid inflating totals (e.g. 1.00 should be 1 hour, not 1 day).
-    return omf;
+    // Some leave exports have no clock times; Omf can mean either day-fraction or hours.
+    // Let user choose how it should be interpreted.
+    return getOmfMode() === "hours" ? omf : omf * DEFAULT_HOURS_PER_DAY;
   }
 
   return null;
@@ -1745,6 +1751,10 @@ els.employeeInput?.addEventListener("input", () => {
   const nm = getSelectedEmployeeName(window.__tidrapport_state.totals);
   window.__tidrapport_state.employeeName = nm;
   safeRenderAll(window.__tidrapport_state);
+});
+
+els.omfModeSelect?.addEventListener("change", () => {
+  if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
 
 for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {

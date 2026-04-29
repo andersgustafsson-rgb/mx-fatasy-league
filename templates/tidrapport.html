@@ -102,7 +102,7 @@
             </div>
           </div>
 
-          <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label class="block text-xs text-slate-300 mb-1" for="monthSelect">Månad</label>
               <select id="monthSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
@@ -127,6 +127,13 @@
             <div>
               <label class="block text-xs text-slate-300 mb-1" for="titleInput">Rubrik (valfri)</label>
               <input id="titleInput" type="text" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Ex: Februari 2026 — Övertid" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="omfModeSelect">Omf-tolkning (utan Kl Fom/Kl Tom)</label>
+              <select id="omfModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="days">Omf = dagar (× 8h)</option>
+                <option value="hours">Omf = timmar</option>
+              </select>
             </div>
           </div>
 
