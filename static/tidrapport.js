@@ -259,8 +259,32 @@ function parseTimeToHours(raw) {
 }
 
 function parseHourNumber(raw) {
-  const s = cleanStr(raw).replace(",", ".");
+  let s = cleanStr(raw);
   if (!s) return null;
+
+  // Extract the first number-like token (supports: 1.000, 1,5, 1 000, 1.000,5, etc.)
+  const m = s.match(/-?\d[\d\s.,]*/);
+  if (!m) return null;
+  s = m[0].replace(/\s+/g, "");
+
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+
+  if (hasComma && hasDot) {
+    // Assume: dot = thousands, comma = decimal
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma && !hasDot) {
+    // Assume comma = decimal
+    s = s.replace(",", ".");
+  } else if (!hasComma && hasDot) {
+    // Swedish often uses dot as thousands separator: e.g. 1.000
+    const parts = s.split(".");
+    if (parts.length === 2 && parts[1].length === 3) {
+      s = parts[0] + parts[1];
+    }
+    // else: keep dot as decimal separator (e.g. 1.5)
+  }
+
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
