@@ -29,6 +29,27 @@ const ORSAK_HEADER_ALIASES = [
 const MERGE_SOURCE_COL = "Samlad del";
 const MERGE_SOURCE_COL_FALLBACK = "__MxKälla";
 
+/** Rubrikföljd vid vertikal klistring från vissa beslutslistor (en cell per rad, rader avgränsas ofta med «.....»). */
+const BESLUTS_VERTICAL_HEADERS = [
+  "Namn",
+  "Datum Fom",
+  "Datum Tom",
+  "Kl Fom",
+  "Kl Tom",
+  "Tim/dag",
+  "Orsak",
+  "Omf",
+  "Kto",
+  "Avs",
+  "Tst",
+  "Bev",
+  "Bvä",
+  "BerM",
+  "KvAn",
+  "1:a Sjdag",
+  "Med",
+];
+
 function sortStatusesLikeOrder(statusSet) {
   const arr = [...statusSet];
   const head = ORSAK_ORDER.filter((s) => arr.includes(s));
@@ -303,6 +324,98 @@ function getOmfMode() {
   return v === "hours" ? "hours" : "days";
 }
 
+/** yyyy-mm-dd → lokalt datum (midnatt) */
+function parseIsoDate(raw) {
+  const s = cleanStr(raw);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+  const dt = new Date(y, mo - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  return dt;
+}
+
+function dateAtMidnight(y, month1to12, day) {
+  return new Date(y, month1to12 - 1, day);
+}
+
+function daysInclusiveUtc(d0, d1) {
+  if (!d0 || !d1) return 0;
+  const t0 = Date.UTC(d0.getFullYear(), d0.getMonth(), d0.getDate());
+  const t1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+  return Math.floor((t1 - t0) / 86400000) + 1;
+}
+
+function overlapDaysInMonth(dStart, dEnd, year, month1to12) {
+  if (!dStart || !dEnd) return 0;
+  const ms = dateAtMidnight(year, month1to12, 1);
+  const me = dateAtMidnight(year, month1to12 + 1, 0);
+  const a = Math.max(Date.UTC(dStart.getFullYear(), dStart.getMonth(), dStart.getDate()), Date.UTC(ms.getFullYear(), ms.getMonth(), ms.getDate()));
+  const b = Math.min(Date.UTC(dEnd.getFullYear(), dEnd.getMonth(), dEnd.getDate()), Date.UTC(me.getFullYear(), me.getMonth(), me.getDate()));
+  if (a > b) return 0;
+  const da = new Date(a);
+  const db = new Date(b);
+  return daysInclusiveUtc(da, db);
+}
+
+function dateInSelectedMonth(d, year, month1to12) {
+  return d.getFullYear() === year && d.getMonth() === month1to12 - 1;
+}
+
+function getUiMonthYearFilter() {
+  const y = parseInt(cleanStr(els.yearInput?.value), 10);
+  const mIdx = SWEDISH_MONTHS.indexOf(cleanStr(els.monthSelect?.value));
+  if (!Number.isFinite(y) || mIdx < 0) return null;
+  return { year: y, month: mIdx + 1 };
+}
+
+function perDayHoursFromRow(row, hourCols) {
+  const timDag = hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null;
+  if (timDag != null && timDag > 0) return timDag;
+  const omf = hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null;
+  if (omf != null && omf > 0) return getOmfMode() === "hours" ? omf : omf * DEFAULT_HOURS_PER_DAY;
+  return null;
+}
+
+/**
+ * Timmar som ska räknas in i diagrammet för en rad.
+ * Om UI har vald månad/år: klipper långa datumintervall till den månaden.
+ * Klockrader räknas bara om startdatum ligger i vald månad (om filter finns).
+ */
+function rowContributionHours(row, hourCols, colDatumFom, colDatumTom) {
+  const filt = getUiMonthYearFilter();
+
+  let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
+  let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
+  if (d0 && !d1) d1 = d0;
+  if (!d0 && d1) d0 = d1;
+
+  const tf = hourCols.colFom ? parseTimeToHours(row[hourCols.colFom]) : null;
+  const tt = hourCols.colTom ? parseTimeToHours(row[hourCols.colTom]) : null;
+
+  if (tf != null && tt != null) {
+    const h = resolveRowNetHours(row, hourCols);
+    if (!(Number(h) > 0)) return null;
+    if (!filt || !d0) return h;
+    return dateInSelectedMonth(d0, filt.year, filt.month) ? h : 0;
+  }
+
+  const pd = perDayHoursFromRow(row, hourCols);
+  if (!(Number(pd) > 0)) return null;
+
+  if (!filt) {
+    if (d0 && d1) return pd * Math.max(1, daysInclusiveUtc(d0, d1));
+    return pd;
+  }
+
+  if (!d0 || !d1) return pd;
+  const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
+  return pd * ov;
+}
+
 function resolveRowNetHours(row, cols) {
   const fom = parseTimeToHours(row[cols.colFom]);
   const tom = parseTimeToHours(row[cols.colTom]);
@@ -388,8 +501,120 @@ function buildTableFromHeaderRow(lines, headerRowIndex, delim, headers) {
   return { headers, rows };
 }
 
+function parseBeslutslistaVerticalChunk(linesIn) {
+  const lines = linesIn.map(cleanStr).filter((l) => l && !/^\.{3,}$/.test(l));
+  if (lines.length < 2) return null;
+
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  const timeRe = /^\d{1,2}:\d{2}$/;
+
+  let i = 0;
+  const name = cleanStr(lines[i++]);
+  if (!name) return null;
+
+  const dates = [];
+  while (i < lines.length && dateRe.test(lines[i])) {
+    dates.push(lines[i]);
+    i += 1;
+  }
+  if (dates.length === 0) return null;
+  const dFom = dates[0];
+  const dTom = dates.length >= 2 ? dates[1] : dates[0];
+
+  const times = [];
+  while (i < lines.length && timeRe.test(lines[i])) {
+    times.push(lines[i]);
+    i += 1;
+  }
+
+  let timDag = "";
+  if (i < lines.length) {
+    const t = lines[i];
+    const onlyNum = /^[\d\s.,]+$/.test(cleanStr(t).replace(/\s/g, ""));
+    if (onlyNum && parseHourNumber(t) != null) {
+      timDag = t;
+      i += 1;
+    }
+  }
+
+  const orsakParts = [];
+  while (i < lines.length) {
+    const l = lines[i];
+    const onlyNum = /^[\d\s.,]+$/.test(cleanStr(l).replace(/\s/g, ""));
+    if (onlyNum && parseOmfFactor(l) != null) break;
+    orsakParts.push(l);
+    i += 1;
+  }
+
+  let omf = "";
+  if (i < lines.length) {
+    omf = lines[i];
+    i += 1;
+  }
+
+  if (i < lines.length && lines.length - i === 1 && dateRe.test(lines[i])) {
+    i += 1;
+  }
+
+  return {
+    Namn: name,
+    "Datum Fom": dFom,
+    "Datum Tom": dTom,
+    "Kl Fom": times[0] || "",
+    "Kl Tom": times[1] || "",
+    "Tim/dag": timDag,
+    Orsak: orsakParts.join(" ").trim(),
+    Omf: omf,
+  };
+}
+
+function tryParseVerticalBeslutslista(raw) {
+  const lines = String(raw ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l) => cleanStr(l));
+
+  if (lines.length < BESLUTS_VERTICAL_HEADERS.length + 3) return null;
+
+  for (let h = 0; h < BESLUTS_VERTICAL_HEADERS.length; h += 1) {
+    if (normHeader(lines[h]) !== normHeader(BESLUTS_VERTICAL_HEADERS[h])) return null;
+  }
+
+  const headers = [...BESLUTS_VERTICAL_HEADERS];
+  let i = BESLUTS_VERTICAL_HEADERS.length;
+  const rows = [];
+
+  const isSep = (s) => /^\.{4,}$/.test(cleanStr(s));
+
+  while (i < lines.length) {
+    while (i < lines.length && !lines[i]) i += 1;
+    if (i >= lines.length) break;
+    if (isSep(lines[i])) {
+      i += 1;
+      continue;
+    }
+    const chunk = [];
+    while (i < lines.length && !isSep(lines[i])) {
+      if (lines[i]) chunk.push(lines[i]);
+      i += 1;
+    }
+    const parsed = parseBeslutslistaVerticalChunk(chunk);
+    if (parsed) {
+      const row = {};
+      for (const k of headers) row[k] = parsed[k] ?? "";
+      rows.push(row);
+    }
+  }
+
+  return rows.length ? { headers, rows } : null;
+}
+
 function parseTable(text) {
   const raw = String(text ?? "").replace(/^\uFEFF/, "");
+  const vert = tryParseVerticalBeslutslista(raw);
+  if (vert?.headers?.length && vert.rows?.length) return vert;
+
   const lines = splitRows(raw);
   if (lines.length === 0) return { headers: [], rows: [] };
 
@@ -461,6 +686,8 @@ function aggregateParsed(headers, rows) {
   const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
+  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum"]);
+  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
   const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
   const totals = new Map();
@@ -481,13 +708,16 @@ function aggregateParsed(headers, rows) {
         skippedNoName += 1;
         continue;
       }
-      const net = resolveRowNetHours(row, hourCols);
-      if (!(Number(net) > 0)) {
+      const net = rowContributionHours(row, hourCols, colDatumFom, colDatumTom);
+      if (net === 0) continue;
+      if (net == null || !(Number(net) > 0)) {
         skippedNoTime += 1;
         if (debugSamples.length < DEBUG_LIMIT) {
           debugSamples.push({
             row: ri + 1,
             name,
+            datumFomRaw: colDatumFom ? row[colDatumFom] : "",
+            datumTomRaw: colDatumTom ? row[colDatumTom] : "",
             fomRaw: colFom ? row[colFom] : "",
             tomRaw: colTom ? row[colTom] : "",
             timDagRaw: hourCols.colTimDag ? row[hourCols.colTimDag] : "",
@@ -537,30 +767,33 @@ function aggregateParsed(headers, rows) {
   }
 
   const statusSet = new Set();
-    for (let ri = 0; ri < rows.length; ri += 1) {
-      const row = rows[ri];
+  for (let ri = 0; ri < rows.length; ri += 1) {
+    const row = rows[ri];
     const name = cleanStr(row[colName]);
     if (!name) {
       skippedNoName += 1;
       continue;
     }
-      const net = resolveRowNetHours(row, hourCols);
-      if (!(Number(net) > 0)) {
+    const net = rowContributionHours(row, hourCols, colDatumFom, colDatumTom);
+    if (net === 0) continue;
+    if (net == null || !(Number(net) > 0)) {
       skippedNoTime += 1;
-        if (debugSamples.length < DEBUG_LIMIT) {
-          debugSamples.push({
-            row: ri + 1,
-            name,
-            fomRaw: colFom ? row[colFom] : "",
-            tomRaw: colTom ? row[colTom] : "",
-            timDagRaw: hourCols.colTimDag ? row[hourCols.colTimDag] : "",
-            omfRaw: hourCols.colOmf ? row[hourCols.colOmf] : "",
-            timDagParsed: hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null,
-            omfParsed: hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null,
-            fomParsed: colFom ? parseTimeToHours(row[colFom]) : null,
-            tomParsed: colTom ? parseTimeToHours(row[colTom]) : null,
-          });
-        }
+      if (debugSamples.length < DEBUG_LIMIT) {
+        debugSamples.push({
+          row: ri + 1,
+          name,
+          datumFomRaw: colDatumFom ? row[colDatumFom] : "",
+          datumTomRaw: colDatumTom ? row[colDatumTom] : "",
+          fomRaw: colFom ? row[colFom] : "",
+          tomRaw: colTom ? row[colTom] : "",
+          timDagRaw: hourCols.colTimDag ? row[hourCols.colTimDag] : "",
+          omfRaw: hourCols.colOmf ? row[hourCols.colOmf] : "",
+          timDagParsed: hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null,
+          omfParsed: hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null,
+          fomParsed: colFom ? parseTimeToHours(row[colFom]) : null,
+          tomParsed: colTom ? parseTimeToHours(row[colTom]) : null,
+        });
+      }
       continue;
     }
     const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
@@ -577,7 +810,7 @@ function aggregateParsed(headers, rows) {
     ...[...statusSet].filter((s) => !ORSAK_ORDER.includes(s)).sort((a, b) => a.localeCompare(b, "sv")),
   ];
 
-    return {
+  return {
     totals,
     statuses,
     errors: [],
@@ -588,19 +821,21 @@ function aggregateParsed(headers, rows) {
       skippedNoTime,
     },
     ...emptyMeta,
-      debug: {
-        debugSamples,
-        debugMeta: {
-          colFom: colFom || null,
-          colTom: colTom || null,
-          colRast: colRast || null,
-          colTimDag: colTimDag || null,
-          colOmf: colOmf || null,
-          hadClockTimes: !!(colFom && colTom),
-          hadTimDag: !!colTimDag,
-          hadOmf: !!colOmf,
-        },
+    debug: {
+      debugSamples,
+      debugMeta: {
+        colDatumFom: colDatumFom || null,
+        colDatumTom: colDatumTom || null,
+        colFom: colFom || null,
+        colTom: colTom || null,
+        colRast: colRast || null,
+        colTimDag: colTimDag || null,
+        colOmf: colOmf || null,
+        hadClockTimes: !!(colFom && colTom),
+        hadTimDag: !!colTimDag,
+        hadOmf: !!colOmf,
       },
+    },
   };
 }
 
