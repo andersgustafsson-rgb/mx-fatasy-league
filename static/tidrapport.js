@@ -287,7 +287,8 @@ function parseHourNumber(raw) {
   // Extract the first number-like token (supports: 1.000, 1,5, 1 000, 1.000,5, etc.)
   const m = s.match(/-?\d[\d\s.,]*/);
   if (!m) return null;
-  s = m[0].replace(/\s+/g, "");
+  const token = m[0];
+  s = token.replace(/\s+/g, "");
 
   const hasComma = s.includes(",");
   const hasDot = s.includes(".");
@@ -299,21 +300,49 @@ function parseHourNumber(raw) {
     // Assume comma = decimal
     s = s.replace(",", ".");
   } else if (!hasComma && hasDot) {
-    // Swedish often uses dot as thousands separator: e.g. 1.000
+    // Dot can be thousands (12.500 → 12500) or decimal (0.500, 1.000 dagar, 10.5 tim).
     const parts = s.split(".");
     if (parts.length === 2 && parts[1].length === 3) {
-      s = parts[0] + parts[1];
+      const dec = parts[1];
+      const intPart = parts[0];
+      const decIsOnlyZeros = /^0+$/.test(dec);
+      if (decIsOnlyZeros || intPart === "0") {
+        s = `${intPart}.${dec}`;
+      } else {
+        s = parts[0] + parts[1];
+      }
     }
-    // else: keep dot as decimal separator (e.g. 1.5)
   }
 
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
+  let n = Number(s);
+  if (!Number.isFinite(n)) return null;
+  // Tusentals-tolkning kan ge absurda timmar; prova decimal om token ser ut som tidsdecimal.
+  if (n > 48 && hasDot && !hasComma) {
+    const parts = token.replace(/\s+/g, "").split(".");
+    if (parts.length === 2) {
+      const alt = Number(`${parts[0]}.${parts[1]}`);
+      if (Number.isFinite(alt) && alt > 0 && alt <= 24) return alt;
+    }
+  }
+  return n;
 }
 
+/**
+ * Omf / dagsandel från beslutslista: punkt är nästan alltid decimal (1.000 = en hel dag), aldrig tusental.
+ */
 function parseOmfFactor(raw) {
-  const n = parseHourNumber(raw);
-  if (n == null || n < 0) return null;
+  let s = cleanStr(raw);
+  if (!s) return null;
+  const m = s.match(/-?\d[\d\s.,]*/);
+  if (!m) return null;
+  s = m[0].replace(/\s+/g, "");
+  if (s.includes(",") && s.includes(".")) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (s.includes(",")) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return null;
   return n;
 }
 
