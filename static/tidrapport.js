@@ -130,6 +130,7 @@ const els = {
   yearInput: document.getElementById("yearInput"),
   titleInput: document.getElementById("titleInput"),
   omfModeSelect: document.getElementById("omfModeSelect"),
+  chartMeasureSelect: document.getElementById("chartMeasureSelect"),
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
   orientationSelect: document.getElementById("orientationSelect"),
@@ -353,6 +354,13 @@ function getOmfMode() {
   return v === "hours" ? "hours" : "days";
 }
 
+/** Vad staplar och tabell summerar: timmar | kalenderdagar i vald månad | antal rader/tillfällen */
+function getChartMeasureMode() {
+  const v = cleanStr(els.chartMeasureSelect?.value);
+  if (v === "days" || v === "occasions") return v;
+  return "hours";
+}
+
 /** yyyy-mm-dd → lokalt datum (midnatt) */
 function parseIsoDate(raw) {
   const s = cleanStr(raw);
@@ -410,11 +418,10 @@ function perDayHoursFromRow(row, hourCols) {
 }
 
 /**
- * Timmar som ska räknas in i diagrammet för en rad.
- * Om UI har vald månad/år: klipper långa datumintervall till den månaden.
- * Klockrader räknas bara om startdatum ligger i vald månad (om filter finns).
+ * En rad ger timmar, kalenderdagar (inom vald månad / intervall) och antal tillfällen (1 om raden räknas).
+ * Klockrader: 1 dag + 1 tillfälle när timmar räknas in.
  */
-function rowContributionHours(row, hourCols, colDatumFom, colDatumTom) {
+function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom) {
   const filt = getUiMonthYearFilter();
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
@@ -427,22 +434,39 @@ function rowContributionHours(row, hourCols, colDatumFom, colDatumTom) {
 
   if (tf != null && tt != null) {
     const h = resolveRowNetHours(row, hourCols);
-    if (!(Number(h) > 0)) return null;
-    if (!filt || !d0) return h;
-    return dateInSelectedMonth(d0, filt.year, filt.month) ? h : 0;
+    if (!(Number(h) > 0)) return { hours: null, days: 0, occ: 0 };
+    if (!filt || !d0) return { hours: h, days: 1, occ: 1 };
+    return dateInSelectedMonth(d0, filt.year, filt.month)
+      ? { hours: h, days: 1, occ: 1 }
+      : { hours: 0, days: 0, occ: 0 };
   }
 
   const pd = perDayHoursFromRow(row, hourCols);
-  if (!(Number(pd) > 0)) return null;
+  if (!(Number(pd) > 0)) return { hours: null, days: 0, occ: 0 };
 
   if (!filt) {
-    if (d0 && d1) return pd * Math.max(1, daysInclusiveUtc(d0, d1));
-    return pd;
+    if (d0 && d1) {
+      const span = Math.max(1, daysInclusiveUtc(d0, d1));
+      return { hours: pd * span, days: span, occ: 1 };
+    }
+    return { hours: pd, days: 1, occ: 1 };
   }
 
-  if (!d0 || !d1) return pd;
+  if (!d0 || !d1) return { hours: pd, days: 1, occ: 1 };
   const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
-  return pd * ov;
+  if (ov <= 0) return { hours: 0, days: 0, occ: 0 };
+  return { hours: pd * ov, days: ov, occ: 1 };
+}
+
+/**
+ * Timmar som ska räknas in i diagrammet för en rad.
+ * Om UI har vald månad/år: klipper långa datumintervall till den månaden.
+ * Klockrader räknas bara om startdatum ligger i vald månad (om filter finns).
+ */
+function rowContributionHours(row, hourCols, colDatumFom, colDatumTom) {
+  const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
+  if (b.hours == null) return null;
+  return b.hours;
 }
 
 function resolveRowNetHours(row, cols) {
@@ -704,7 +728,15 @@ function aggregateParsed(headers, rows) {
   };
   const errors = validateHeadersForAggregate(headers);
   if (errors.length) {
-    return { totals: new Map(), statuses: [], errors, stats: null, ...emptyMeta };
+    return {
+      totals: new Map(),
+      totalsDays: new Map(),
+      totalsOcc: new Map(),
+      statuses: [],
+      errors,
+      stats: null,
+      ...emptyMeta,
+    };
   }
 
   const colName = pickCol(headers, ["Namn", "Name"]);
@@ -720,6 +752,8 @@ function aggregateParsed(headers, rows) {
   const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
   const totals = new Map();
+  const totalsDays = new Map();
+  const totalsOcc = new Map();
   let usedRows = 0;
   let skippedNoName = 0;
   let skippedNoTime = 0;
@@ -737,9 +771,9 @@ function aggregateParsed(headers, rows) {
         skippedNoName += 1;
         continue;
       }
-      const net = rowContributionHours(row, hourCols, colDatumFom, colDatumTom);
-      if (net === 0) continue;
-      if (net == null || !(Number(net) > 0)) {
+      const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
+      if (b.hours === 0) continue;
+      if (b.hours == null || !(Number(b.hours) > 0)) {
         skippedNoTime += 1;
         if (debugSamples.length < DEBUG_LIMIT) {
           debugSamples.push({
@@ -769,7 +803,11 @@ function aggregateParsed(headers, rows) {
 
       if (!totals.has(name)) totals.set(name, new Map());
       const bySeries = totals.get(name);
-      bySeries.set(seriesKey, (bySeries.get(seriesKey) || 0) + net);
+      bySeries.set(seriesKey, (bySeries.get(seriesKey) || 0) + b.hours);
+      if (!totalsDays.has(name)) totalsDays.set(name, new Map());
+      totalsDays.get(name).set(seriesKey, (totalsDays.get(name).get(seriesKey) || 0) + b.days);
+      if (!totalsOcc.has(name)) totalsOcc.set(name, new Map());
+      totalsOcc.get(name).set(seriesKey, (totalsOcc.get(name).get(seriesKey) || 0) + b.occ);
       usedRows += 1;
     }
 
@@ -780,6 +818,8 @@ function aggregateParsed(headers, rows) {
 
     return {
       totals,
+      totalsDays,
+      totalsOcc,
       statuses,
       errors: [],
       stats: {
@@ -803,9 +843,9 @@ function aggregateParsed(headers, rows) {
       skippedNoName += 1;
       continue;
     }
-    const net = rowContributionHours(row, hourCols, colDatumFom, colDatumTom);
-    if (net === 0) continue;
-    if (net == null || !(Number(net) > 0)) {
+    const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
+    if (b.hours === 0) continue;
+    if (b.hours == null || !(Number(b.hours) > 0)) {
       skippedNoTime += 1;
       if (debugSamples.length < DEBUG_LIMIT) {
         debugSamples.push({
@@ -830,7 +870,11 @@ function aggregateParsed(headers, rows) {
     statusSet.add(status);
     if (!totals.has(name)) totals.set(name, new Map());
     const byStatus = totals.get(name);
-    byStatus.set(status, (byStatus.get(status) || 0) + net);
+    byStatus.set(status, (byStatus.get(status) || 0) + b.hours);
+    if (!totalsDays.has(name)) totalsDays.set(name, new Map());
+    totalsDays.get(name).set(status, (totalsDays.get(name).get(status) || 0) + b.days);
+    if (!totalsOcc.has(name)) totalsOcc.set(name, new Map());
+    totalsOcc.get(name).set(status, (totalsOcc.get(name).get(status) || 0) + b.occ);
     usedRows += 1;
   }
 
@@ -841,6 +885,8 @@ function aggregateParsed(headers, rows) {
 
   return {
     totals,
+    totalsDays,
+    totalsOcc,
     statuses,
     errors: [],
     stats: {
@@ -873,6 +919,8 @@ function aggregate(text) {
   if (!headers.length) {
     return {
       totals: new Map(),
+      totalsDays: new Map(),
+      totalsOcc: new Map(),
       statuses: [],
       errors: ["Ingen data."],
       stats: null,
@@ -1088,8 +1136,10 @@ let chart = null;
       ctx.strokeStyle = stroke;
       ctx.fillStyle = fill;
 
+      const intLabels = !!plug.integerLabels;
       const fmt = (n) => {
         if (!(Number(n) > 0)) return "";
+        if (intLabels) return String(Math.round(n));
         // Hours can be decimals; keep it readable.
         const s = n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2);
         return s.replace(/\.0$/, "");
@@ -1428,22 +1478,38 @@ function renderColorLegend(datasets) {
 }
 
 function computePeopleSorted(totals, selectedStatuses, splitState) {
+  let measure = getChartMeasureMode();
+  if (getAnalysisMode() === "forecast") measure = "hours";
+  const totalsDays = splitState?.totalsDays;
+  const totalsOcc = splitState?.totalsOcc;
   const rows = [];
   const merged = splitState?.mergedSourceSplit && splitState?.seriesMeta;
-  for (const [name, byStatus] of totals.entries()) {
+  for (const [name, byHours] of totals.entries()) {
+    const byDays = totalsDays?.get(name);
+    const byOcc = totalsOcc?.get(name);
+    const by =
+      measure === "hours" ? byHours : measure === "days" ? byDays || byHours : byOcc || byHours;
     let sum = 0;
     if (merged) {
-      for (const [seriesKey, hours] of byStatus.entries()) {
+      for (const [seriesKey, val] of by.entries()) {
         const meta = splitState.seriesMeta.get(seriesKey);
-        if (meta && selectedStatuses.has(meta.status)) sum += hours;
+        if (meta && selectedStatuses.has(meta.status)) sum += val;
       }
     } else {
-      for (const st of selectedStatuses) sum += byStatus.get(st) || 0;
+      for (const st of selectedStatuses) sum += by.get(st) || 0;
     }
-    rows.push({ name, sum: round2(sum) });
+    const sumOut = measure === "hours" ? round2(sum) : Math.round(sum);
+    rows.push({ name, sum: sumOut });
   }
   rows.sort((a, b) => (b.sum - a.sum) || a.name.localeCompare(b.name, "sv"));
   return rows;
+}
+
+function tableSumColumnLabel() {
+  const m = getChartMeasureMode();
+  if (m === "days") return "Summa (dagar)";
+  if (m === "occasions") return "Summa (tillfällen)";
+  return "Summa (h)";
 }
 
 function ensureNormalTableHeader() {
@@ -1454,7 +1520,7 @@ function ensureNormalTableHeader() {
   th1.textContent = "Namn";
   const th2 = document.createElement("th");
   th2.className = "text-right px-3 py-2";
-  th2.textContent = "Summa (h)";
+  th2.textContent = tableSumColumnLabel();
   els.tableHeadRow.appendChild(th1);
   els.tableHeadRow.appendChild(th2);
 }
@@ -1464,11 +1530,15 @@ function fmtHoursForUi(n) {
   return round2(n).toFixed(2);
 }
 
-function setTableHeaderTotalsNormal(totalHours) {
+function setTableHeaderTotalsNormal(totalSum) {
   if (!els.tableHeadRow) return;
   const th = els.tableHeadRow.children?.[1];
   if (!th) return;
-  th.textContent = `Summa (h) · Totalt: ${fmtHoursForUi(totalHours)}`;
+  const m = getChartMeasureMode();
+  th.textContent =
+    m === "hours"
+      ? `${tableSumColumnLabel()} · Totalt: ${fmtHoursForUi(totalSum)}`
+      : `${tableSumColumnLabel()} · Totalt: ${Math.round(totalSum)}`;
 }
 
 function setTableHeaderTotalsForecast(totalAck, totalForecast) {
@@ -1511,7 +1581,8 @@ function renderTable(sortedPeople) {
     tdName.appendChild(wrap);
     const tdSum = document.createElement("td");
     tdSum.className = "px-3 py-2 text-right tabular-nums";
-    tdSum.textContent = r.sum.toFixed(2);
+    const tm = getChartMeasureMode();
+    tdSum.textContent = tm === "hours" ? r.sum.toFixed(2) : String(r.sum);
     tr.appendChild(tdName);
     tr.appendChild(tdSum);
     els.tableBody.appendChild(tr);
@@ -1527,10 +1598,16 @@ function filterTotalsByNames(totalsView, namesSet) {
   return out;
 }
 
+function sliceTotalsByEmployee(fullTotals, employeeName) {
+  if (!employeeName) return fullTotals;
+  return new Map([[employeeName, fullTotals.get(employeeName) || new Map()]]);
+}
+
 function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts = {}) {
   const scale = typeof chartOpts.scale === "number" && chartOpts.scale > 0 ? chartOpts.scale : 1;
   const titleSuffix = chartOpts.titleSuffix || "";
   const previewNote = chartOpts.previewNote;
+  const measure = chartOpts.measure || getChartMeasureMode();
 
   const state = window.__tidrapport_state;
   const mode = state?.orientation || "horizontal";
@@ -1634,10 +1711,16 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   }
   c.options.plugins.tidrapportValueLabels.enabled = true;
   c.options.plugins.tidrapportValueLabels.mode = useMergedGrouped ? "each" : "total";
+  c.options.plugins.tidrapportValueLabels.integerLabels = measure !== "hours";
+
+  const valueAxis = desiredIndexAxis(mode) === "y" ? c.options.scales.x : c.options.scales.y;
+  valueAxis.ticks.precision = measure === "hours" ? undefined : 0;
 
   if (state) {
     let titleText = buildTitleText(state);
     if (titleSuffix) titleText = `${titleText} — ${titleSuffix}`;
+    else if (measure === "days") titleText = `${titleText} · Kalenderdagar (vald månad)`;
+    else if (measure === "occasions") titleText = `${titleText} · Antal tillfällen (rader)`;
     c.options.plugins.title.text = titleText;
     if (els.titlePreview) els.titlePreview.textContent = previewNote != null ? previewNote : titleText;
   }
@@ -1691,13 +1774,15 @@ function renderForecastAll(state) {
 
   const { factor, through, dim, note } = getForecastParams();
   const { totals, statuses, selectedStatuses } = state;
-  const totalsView = state.employeeName
-    ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
-    : totals;
+  const totalsDaysAll = state.totalsDays instanceof Map ? state.totalsDays : new Map();
+  const totalsOccAll = state.totalsOcc instanceof Map ? state.totalsOcc : new Map();
+  const totalsView = sliceTotalsByEmployee(totals, state.employeeName);
+  const totalsDaysView = sliceTotalsByEmployee(totalsDaysAll, state.employeeName);
+  const totalsOccView = sliceTotalsByEmployee(totalsOccAll, state.employeeName);
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
   const chartEnabled = !!state.chartNameFilterEnabled;
   const chartNameFilter = state.chartNameFilter instanceof Set ? state.chartNameFilter : new Set();
-  const chartTotalsView = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
+  const chartTotalsH = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
   const chartPeople = chartEnabled ? sortedPeople.filter((r) => chartNameFilter.has(r.name)) : sortedPeople;
   const totalAck = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   const totalForecast = totalAck * factor;
@@ -1755,10 +1840,11 @@ function renderForecastAll(state) {
   }
 
   const titleSuffix = `Prognos linjär till dag ${through}/${dim} (×${round2(factor)})`;
-  renderChart(chartTotalsView, statuses, selectedStatuses, chartPeople, {
+  renderChart(chartTotalsH, statuses, selectedStatuses, chartPeople, {
     scale: factor,
     titleSuffix,
     previewNote: note,
+    measure: "hours",
   });
 
   const totalNames = totals.size;
@@ -1780,18 +1866,24 @@ function renderAll(state) {
 
   ensureNormalTableHeader();
   const { totals, statuses, selectedStatuses } = state;
-  const totalsView = state.employeeName
-    ? new Map([[state.employeeName, totals.get(state.employeeName) || new Map()]])
-    : totals;
+  const totalsDaysAll = state.totalsDays instanceof Map ? state.totalsDays : new Map();
+  const totalsOccAll = state.totalsOcc instanceof Map ? state.totalsOcc : new Map();
+  const totalsView = sliceTotalsByEmployee(totals, state.employeeName);
+  const totalsDaysView = sliceTotalsByEmployee(totalsDaysAll, state.employeeName);
+  const totalsOccView = sliceTotalsByEmployee(totalsOccAll, state.employeeName);
   const sortedPeople = computePeopleSorted(totalsView, selectedStatuses, state);
   const chartEnabled = !!state.chartNameFilterEnabled;
   const chartNameFilter = state.chartNameFilter instanceof Set ? state.chartNameFilter : new Set();
-  const chartTotalsView = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
+  const chartTotalsH = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
+  const chartTotalsD = chartEnabled ? filterTotalsByNames(totalsDaysView, chartNameFilter) : totalsDaysView;
+  const chartTotalsO = chartEnabled ? filterTotalsByNames(totalsOccView, chartNameFilter) : totalsOccView;
+  const measure = getChartMeasureMode();
+  const chartData = measure === "hours" ? chartTotalsH : measure === "days" ? chartTotalsD : chartTotalsO;
   const chartPeople = chartEnabled ? sortedPeople.filter((r) => chartNameFilter.has(r.name)) : sortedPeople;
-  const totalHours = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
+  const totalSum = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   renderTable(sortedPeople);
-  setTableHeaderTotalsNormal(totalHours);
-  renderChart(chartTotalsView, statuses, selectedStatuses, chartPeople);
+  setTableHeaderTotalsNormal(totalSum);
+  renderChart(chartData, statuses, selectedStatuses, chartPeople, { measure });
 
   const totalNames = totals.size;
   const totalStatusKinds =
@@ -1841,6 +1933,8 @@ function regenerateFromText(text, selectedOverride) {
     els.statusText.textContent = errMsg;
     window.__tidrapport_state = {
       totals: new Map(),
+      totalsDays: new Map(),
+      totalsOcc: new Map(),
       statuses: [],
       selectedStatuses: new Set(),
       employeeName: null,
@@ -1858,6 +1952,8 @@ function regenerateFromText(text, selectedOverride) {
 
   const {
     totals,
+    totalsDays,
+    totalsOcc,
     statuses,
     stats,
     seriesMeta,
@@ -1906,6 +2002,8 @@ function regenerateFromText(text, selectedOverride) {
 
     window.__tidrapport_state = {
       totals: new Map(),
+      totalsDays: new Map(),
+      totalsOcc: new Map(),
       statuses: [],
       selectedStatuses: new Set(),
       employeeName: null,
@@ -1949,6 +2047,8 @@ function regenerateFromText(text, selectedOverride) {
   const layout = cleanStr(els.layoutSelect?.value) || "side";
   window.__tidrapport_state = {
     totals,
+    totalsDays: totalsDays instanceof Map ? totalsDays : new Map(),
+    totalsOcc: totalsOcc instanceof Map ? totalsOcc : new Map(),
     statuses,
     selectedStatuses,
     employeeName,
@@ -2018,6 +2118,10 @@ els.employeeInput?.addEventListener("input", () => {
 });
 
 els.omfModeSelect?.addEventListener("change", () => {
+  if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+});
+
+els.chartMeasureSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
 
@@ -2228,6 +2332,8 @@ els.btnDownload.addEventListener("click", () => {
   if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
   window.__tidrapport_state = {
     totals: new Map(),
+    totalsDays: new Map(),
+    totalsOcc: new Map(),
     statuses: [],
     selectedStatuses: new Set(),
     employeeName: null,

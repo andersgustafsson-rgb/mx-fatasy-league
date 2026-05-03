@@ -102,7 +102,7 @@
             </div>
           </div>
 
-          <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div>
               <label class="block text-xs text-slate-300 mb-1" for="monthSelect">Månad</label>
               <select id="monthSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
@@ -133,6 +133,14 @@
               <select id="omfModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
                 <option value="days">Omf = dagar (× 8h)</option>
                 <option value="hours">Omf = timmar</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="chartMeasureSelect">Stapel &amp; tabell visar</label>
+              <select id="chartMeasureSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                <option value="hours">Timmar</option>
+                <option value="days">Kalenderdagar (vald månad)</option>
+                <option value="occasions">Antal tillfällen (rader)</option>
               </select>
             </div>
           </div>
@@ -171,7 +179,7 @@
           </summary>
           <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
             <p class="text-xs text-slate-500 mt-3 mb-3">
-              Här styr du <strong class="text-slate-400 font-medium">vilka timmar som syns i staplarna</strong> och om du bara vill se <strong class="text-slate-400 font-medium">en person</strong>. Ändrar inte inklistrad text.
+              Här styr du <strong class="text-slate-400 font-medium">vilka timmar som syns i staplarna</strong> (eller växla till dagar / antal tillfällen ovan vid «Stapel &amp; tabell visar») och om du bara vill se <strong class="text-slate-400 font-medium">en person</strong>. Ändrar inte inklistrad text.
             </p>
             <div id="filterContextBanner" class="text-xs rounded-lg px-3 py-2.5 mb-4 border bg-slate-900/80 border-slate-700 text-slate-300" role="status">
               Välj vy-läge under «Vy-läge» för prognos.
