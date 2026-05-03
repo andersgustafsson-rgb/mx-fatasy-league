@@ -131,6 +131,9 @@ const els = {
   titleInput: document.getElementById("titleInput"),
   omfModeSelect: document.getElementById("omfModeSelect"),
   chartMeasureSelect: document.getElementById("chartMeasureSelect"),
+  fullTimeWeekHoursInput: document.getElementById("fullTimeWeekHoursInput"),
+  workdaysPerWeekInput: document.getElementById("workdaysPerWeekInput"),
+  nominalDayHoursHint: document.getElementById("nominalDayHoursHint"),
   titlePreview: document.getElementById("titlePreview"),
   colorLegend: document.getElementById("colorLegend"),
   orientationSelect: document.getElementById("orientationSelect"),
@@ -347,7 +350,35 @@ function parseOmfFactor(raw) {
   return n;
 }
 
-const DEFAULT_HOURS_PER_DAY = 8;
+/** Om veckoarvode/arbetsdagar saknas eller är ogiltiga. */
+const FALLBACK_HOURS_PER_WORKDAY = 8;
+
+/**
+ * Timmar per «heltidsarbetsdag» när Omf tolkas som dagdel (inte när Omf = rena timmar).
+ * Standard: veckoarvode heltid ÷ arbetsdagar (t.ex. 36,33 / 5 ≈ 7,27 h), i linje med många kollektivavtal.
+ */
+function getNominalHoursPerWorkday() {
+  const rawW = cleanStr(els.fullTimeWeekHoursInput?.value).replace(",", ".");
+  const w = parseFloat(rawW);
+  const d = parseInt(cleanStr(els.workdaysPerWeekInput?.value), 10);
+  if (!Number.isFinite(w) || w <= 0 || !Number.isFinite(d) || d < 1 || d > 7) return FALLBACK_HOURS_PER_WORKDAY;
+  return w / d;
+}
+
+function updateNominalDayHoursHint() {
+  const el = els.nominalDayHoursHint;
+  if (!el) return;
+  const rawW = cleanStr(els.fullTimeWeekHoursInput?.value).replace(",", ".");
+  const ww = parseFloat(rawW);
+  const dd = parseInt(cleanStr(els.workdaysPerWeekInput?.value), 10);
+  const h = getNominalHoursPerWorkday();
+  if (Number.isFinite(ww) && ww > 0 && Number.isFinite(dd) && dd >= 1 && dd <= 7) {
+    const wLabel = String(ww).replace(".", ",");
+    el.textContent = `Heltidsdag ≈ ${round2(h)} h (${wLabel} ÷ ${dd} dgr/vecka). Gäller «Omf = dagdel».`;
+  } else {
+    el.textContent = `Ogiltig veckoarvode/dagar — använder ${FALLBACK_HOURS_PER_WORKDAY} h/dag tills vidare.`;
+  }
+}
 
 function getOmfMode() {
   const v = cleanStr(els.omfModeSelect?.value);
@@ -413,7 +444,7 @@ function perDayHoursFromRow(row, hourCols) {
   const timDag = hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null;
   if (timDag != null && timDag > 0) return timDag;
   const omf = hourCols.colOmf ? parseOmfFactor(row[hourCols.colOmf]) : null;
-  if (omf != null && omf > 0) return getOmfMode() === "hours" ? omf : omf * DEFAULT_HOURS_PER_DAY;
+  if (omf != null && omf > 0) return getOmfMode() === "hours" ? omf : omf * getNominalHoursPerWorkday();
   return null;
 }
 
@@ -485,7 +516,7 @@ function resolveRowNetHours(row, cols) {
   if (omf != null && omf > 0) {
     // Some leave exports have no clock times; Omf can mean either day-fraction or hours.
     // Let user choose how it should be interpreted.
-    return getOmfMode() === "hours" ? omf : omf * DEFAULT_HOURS_PER_DAY;
+    return getOmfMode() === "hours" ? omf : omf * getNominalHoursPerWorkday();
   }
 
   return null;
@@ -2125,6 +2156,13 @@ els.chartMeasureSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
 
+for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput]) {
+  el?.addEventListener("input", () => {
+    updateNominalDayHoursHint();
+    if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  });
+}
+
 for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
   el?.addEventListener("input", () => {
     updateForecastMonthInfo();
@@ -2330,6 +2368,9 @@ els.btnDownload.addEventListener("click", () => {
   updateForecastMonthInfo();
   updateAnalysisPanels();
   if (els.yearInput && !els.yearInput.value) els.yearInput.value = String(new Date().getFullYear());
+  if (els.fullTimeWeekHoursInput && !els.fullTimeWeekHoursInput.value) els.fullTimeWeekHoursInput.value = "36.33";
+  if (els.workdaysPerWeekInput && !els.workdaysPerWeekInput.value) els.workdaysPerWeekInput.value = "5";
+  updateNominalDayHoursHint();
   window.__tidrapport_state = {
     totals: new Map(),
     totalsDays: new Map(),

@@ -131,7 +131,7 @@
             <div>
               <label class="block text-xs text-slate-300 mb-1" for="omfModeSelect">Omf-tolkning (utan Kl Fom/Kl Tom)</label>
               <select id="omfModeSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
-                <option value="days">Omf = dagar (× 8h)</option>
+                <option value="days">Omf = dagdel (× heltidsdag nedan)</option>
                 <option value="hours">Omf = timmar</option>
               </select>
             </div>
@@ -145,6 +145,36 @@
             </div>
           </div>
 
+          <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg border border-slate-800/80 bg-slate-900/40 px-3 py-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="fullTimeWeekHoursInput">Heltid tim/vecka</label>
+              <input
+                id="fullTimeWeekHoursInput"
+                type="text"
+                inputmode="decimal"
+                class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                placeholder="36,33"
+                value="36.33"
+                autocomplete="off"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1" for="workdaysPerWeekInput">Arbetsdagar/vecka</label>
+              <input
+                id="workdaysPerWeekInput"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max="7"
+                class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm"
+                value="5"
+              />
+            </div>
+            <div class="flex flex-col justify-end">
+              <p id="nominalDayHoursHint" class="text-[11px] text-slate-400 leading-snug"></p>
+            </div>
+          </div>
+
           <textarea
             id="pasteInput"
             class="mt-3 w-full h-64 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
@@ -152,7 +182,7 @@
           ></textarea>
 
           <p class="text-[11px] text-slate-500 mt-2">
-            Tips: kopiera från Excel eller Google Sheets — tabb-separerat brukar fungera direkt. Vissa beslutslistor klistras en kolumn i taget (rubriker under varandra); då ska blocket börja exakt med «Namn» på första raden. Välj månad/år så klipps långa datumintervall till rätt månad.
+            Tips: kopiera från Excel eller Google Sheets — tabb-separerat brukar fungera direkt. Vissa beslutslistor klistras en kolumn i taget (rubriker under varandra); då ska blocket börja exakt med «Namn» på första raden. Välj månad/år så klipps långa datumintervall till rätt månad. «Omf» i listan är frånvarons omfattning per dag — för dagdel används heltids veckoarvode (t.ex. 36,33 h) delat på arbetsdagar; personlig tjänstgöringsgrad finns oftast inte i exporten (justera vid behov mot Visma).
           </p>
 
           <div class="mt-3 flex flex-wrap items-center gap-2">
