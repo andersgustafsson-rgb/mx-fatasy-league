@@ -1969,6 +1969,9 @@
           if (!w) return '';
           if (w.previous_rank === null || w.previous_rank === undefined) return '';
           if (w.current_rank === null || w.current_rank === undefined) return '';
+          const pr = Number(w.previous_rank);
+          const cr = Number(w.current_rank);
+          if (Number.isFinite(pr) && Number.isFinite(cr) && pr === cr) return '';
           return `<p class="text-xs text-gray-200">#${w.previous_rank} → #${w.current_rank}</p>`;
         };
         

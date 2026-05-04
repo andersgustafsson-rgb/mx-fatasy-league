@@ -2472,128 +2472,113 @@ def get_weekly_fun_stats():
         ).all()
         comp_ids = [c.id for c in recent_competitions]
 
-        # Om vi är i en "veckovy" vill vi att Raket/Ankare speglar faktisk veckoprestation,
-        # inte bara rankförändring p.g.a. t.ex. poängkorrigeringar för andra användare.
-        require_week_points_for_delta = bool(comp_ids)
-        
-        # Calculate ranking changes (rocket and anchor)
-        rocket = None  # Biggest negative delta (climbed most)
-        anchor = None  # Biggest positive delta (dropped most)
-        
-        users_with_delta = 0
-        users_climbed = []
-        users_dropped = []
-        
-        for user in leaderboard_data:
-            delta = user.get('delta')
-            if delta is not None and delta != 0:
-                if require_week_points_for_delta and int(user.get("recent_week_points") or 0) <= 0:
-                    continue
-                users_with_delta += 1
-                if delta < 0:  # Climbed (negative delta means better ranking)
-                    users_climbed.append({
-                        'user_id': user['user_id'],
-                        'username': user['username'],
-                        'display_name': user.get('display_name') or user['username'],
-                        'delta': delta,
-                        'current_rank': user['rank'],
-                        'previous_rank': user['rank'] - delta
-                    })
-                    # Find the user with the most negative delta (biggest climb)
-                    if rocket is None or delta < rocket['delta']:
-                        rocket = {
-                            'user_id': user['user_id'],
-                            'username': user['username'],
-                            'display_name': user.get('display_name') or user['username'],
-                            'delta': delta,
-                            'current_rank': user['rank'],
-                            'previous_rank': user['rank'] - delta
-                        }
-                elif delta > 0:  # Dropped (positive delta means worse ranking)
-                    users_dropped.append({
-                        'user_id': user['user_id'],
-                        'username': user['username'],
-                        'display_name': user.get('display_name') or user['username'],
-                        'delta': delta,
-                        'current_rank': user['rank'],
-                        'previous_rank': user['rank'] - delta
-                    })
-                    # Find the user with the biggest positive delta (biggest drop)
-                    if anchor is None or delta > anchor['delta']:
-                        anchor = {
-                            'user_id': user['user_id'],
-                            'username': user['username'],
-                            'display_name': user.get('display_name') or user['username'],
-                            'delta': delta,
-                            'current_rank': user['rank'],
-                            'previous_rank': user['rank'] - delta
-                        }
-        
-        # Fallback om delta-baserad raket/ankare saknar signal (vanligt när poäng/omräkning inte
-        # skett i rätt ordning eller tidigt i säsongen): använd veckopoäng från CompetitionScore.
-        if comp_ids and rocket is None and anchor is None:
-            scores = CompetitionScore.query.filter(
-                CompetitionScore.competition_id.in_(comp_ids)
-            ).all()
-
-            # Senaste score-rad per (user, tävling)
+        # Veckopoäng i samma fönster som weekly fun stats (för att kunna kombinera med rank-delta)
+        weekly_points_by_user: dict[int, int] = defaultdict(int)
+        if comp_ids:
+            scores = CompetitionScore.query.filter(CompetitionScore.competition_id.in_(comp_ids)).all()
             by_uc = {}
             for s in scores:
                 k = (s.user_id, s.competition_id)
                 if k not in by_uc or s.score_id > by_uc[k].score_id:
                     by_uc[k] = s
-
-            weekly_points_by_user: dict[int, int] = defaultdict(int)
             for s in by_uc.values():
                 weekly_points_by_user[int(s.user_id)] += int(s.total_points or 0)
 
-            # Endast användare med >0 poäng (annars blir det alltid "någon" även när inget hänt)
-            positive = {uid: pts for uid, pts in weekly_points_by_user.items() if pts > 0}
-            if positive:
-                rocket_uid, rocket_pts = max(positive.items(), key=lambda x: x[1])
-                anchor_uid, anchor_pts = min(positive.items(), key=lambda x: x[1])
+        def _pick_weekly_fun_winner(
+            *,
+            want_climb: bool,
+        ) -> dict | None:
+            """
+            Välj raket/ankare i veckofönstret:
+            - Kräv veckopoäng > 0 (annars blir rank-delta ofta "andra ändrade sig" utan egen prestation)
+            - Prioritera störst rankförändring (delta)
+            - Tie-break på veckopoäng
+            Om inga kandidater med delta!=0: fall tillbaka till ren veckopoäng (max/min).
+            """
+            positive_pts = {uid: pts for uid, pts in weekly_points_by_user.items() if int(pts or 0) > 0}
+            if not positive_pts:
+                return None
 
-                # Behåll rank-delta om det finns, så UI kan visa "klättrade/sjönk" även när
-                # vinnaren väljs via veckopoäng.
-                delta_by_uid = {
-                    int(u.get("user_id")): int(u.get("delta") or 0)
-                    for u in leaderboard_data
-                    if u.get("user_id") is not None
-                }
-                rank_by_uid = {
-                    int(u.get("user_id")): u.get("rank")
-                    for u in leaderboard_data
-                    if u.get("user_id") is not None
+            ranked_rows = []
+            for u in leaderboard_data:
+                uid = int(u.get("user_id") or 0)
+                if uid <= 0:
+                    continue
+                if uid not in positive_pts:
+                    continue
+                d = int(u.get("delta") or 0)
+                if d == 0:
+                    continue
+                if want_climb and d >= 0:
+                    continue
+                if (not want_climb) and d <= 0:
+                    continue
+                ranked_rows.append(
+                    {
+                        "user_id": uid,
+                        "username": u.get("username"),
+                        "display_name": u.get("display_name") or u.get("username"),
+                        "delta": d,
+                        "current_rank": u.get("rank"),
+                        "weekly_points": int(positive_pts.get(uid, 0)),
+                    }
+                )
+
+            def _row_to_payload(row: dict, basis: str) -> dict:
+                uid = int(row["user_id"])
+                d = int(row.get("delta") or 0)
+                r_rank = row.get("current_rank")
+                ru = User.query.get(uid)
+                if not ru:
+                    return {}
+                prev = (int(r_rank) - int(d)) if (r_rank is not None and d != 0) else None
+                return {
+                    "user_id": uid,
+                    "username": ru.username,
+                    "display_name": getattr(ru, "display_name", None) or ru.username,
+                    "delta": d,
+                    "current_rank": r_rank,
+                    "previous_rank": prev,
+                    "weekly_points": int(positive_pts.get(uid, 0)),
+                    "basis": basis,
                 }
 
-                ru = User.query.get(rocket_uid)
-                au = User.query.get(anchor_uid)
-                if ru:
-                    r_delta = int(delta_by_uid.get(int(rocket_uid), 0))
-                    r_rank = rank_by_uid.get(int(rocket_uid))
-                    rocket = {
-                        'user_id': rocket_uid,
-                        'username': ru.username,
-                        'display_name': getattr(ru, 'display_name', None) or ru.username,
-                        'delta': r_delta,
-                        'current_rank': r_rank,
-                        'previous_rank': (int(r_rank) - int(r_delta)) if (r_rank is not None) else None,
-                        'weekly_points': int(rocket_pts),
-                        'basis': 'weekly_points',
-                    }
-                if au:
-                    a_delta = int(delta_by_uid.get(int(anchor_uid), 0))
-                    a_rank = rank_by_uid.get(int(anchor_uid))
-                    anchor = {
-                        'user_id': anchor_uid,
-                        'username': au.username,
-                        'display_name': getattr(au, 'display_name', None) or au.username,
-                        'delta': a_delta,
-                        'current_rank': a_rank,
-                        'previous_rank': (int(a_rank) - int(a_delta)) if (a_rank is not None) else None,
-                        'weekly_points': int(anchor_pts),
-                        'basis': 'weekly_points',
-                    }
+            if ranked_rows:
+                if want_climb:
+                    # Störst klättring: minst delta (mest negativt)
+                    ranked_rows.sort(key=lambda r: (int(r["delta"]), -int(r["weekly_points"])))
+                else:
+                    # Störst tapp: störst positivt delta, tie-break lägst veckopoäng (ankare)
+                    ranked_rows.sort(key=lambda r: (-int(r["delta"]), int(r["weekly_points"])))
+                return _row_to_payload(ranked_rows[0], "weekly_points+delta")
+
+            # Fallback: ingen hade delta!=0 trots veckopoäng → använd ren veckopoäng
+            if want_climb:
+                uid, pts = max(positive_pts.items(), key=lambda x: x[1])
+            else:
+                uid, pts = min(positive_pts.items(), key=lambda x: x[1])
+
+            # Hitta leaderboard-rad för delta/rank (kan vara 0)
+            urow = next((x for x in leaderboard_data if int(x.get("user_id") or 0) == int(uid)), None)
+            d = int(urow.get("delta") or 0) if urow else 0
+            r_rank = urow.get("rank") if urow else None
+            ru = User.query.get(int(uid))
+            if not ru:
+                return None
+            prev = (int(r_rank) - int(d)) if (r_rank is not None and d != 0) else None
+            return {
+                "user_id": int(uid),
+                "username": ru.username,
+                "display_name": getattr(ru, "display_name", None) or ru.username,
+                "delta": d,
+                "current_rank": r_rank,
+                "previous_rank": prev,
+                "weekly_points": int(pts),
+                "basis": "weekly_points",
+            }
+
+        rocket = _pick_weekly_fun_winner(want_climb=True) if comp_ids else None
+        anchor = _pick_weekly_fun_winner(want_climb=False) if comp_ids else None
         
         # Perfect picks - count users with most perfect picks (25p) this week
         # A perfect pick is when predicted_position == actual_position
