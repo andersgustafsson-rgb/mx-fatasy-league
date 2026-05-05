@@ -636,7 +636,9 @@ function parseBeslutslistaVerticalChunk(linesIn) {
     i += 1;
   }
 
+  let firstSickDay = "";
   if (i < lines.length && lines.length - i === 1 && dateRe.test(lines[i])) {
+    firstSickDay = lines[i];
     i += 1;
   }
 
@@ -649,6 +651,7 @@ function parseBeslutslistaVerticalChunk(linesIn) {
     "Tim/dag": timDag,
     Orsak: orsakParts.join(" ").trim(),
     Omf: omf,
+    "1:a Sjdag": firstSickDay,
   };
 }
 
@@ -780,6 +783,7 @@ function aggregateParsed(headers, rows) {
   const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
   const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum"]);
   const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+  const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
   const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
   const totals = new Map();
@@ -790,6 +794,10 @@ function aggregateParsed(headers, rows) {
   let skippedNoTime = 0;
   const debugSamples = [];
   const DEBUG_LIMIT = 5;
+
+  const filt = getUiMonthYearFilter();
+  const isSickLikeStatus = (s) => cleanStr(s).toLowerCase().includes("sjuk");
+  const occSeen = new Set();
 
   if (colMerge) {
     const seriesMeta = new Map();
@@ -838,7 +846,21 @@ function aggregateParsed(headers, rows) {
       if (!totalsDays.has(name)) totalsDays.set(name, new Map());
       totalsDays.get(name).set(seriesKey, (totalsDays.get(name).get(seriesKey) || 0) + b.days);
       if (!totalsOcc.has(name)) totalsOcc.set(name, new Map());
-      totalsOcc.get(name).set(seriesKey, (totalsOcc.get(name).get(seriesKey) || 0) + b.occ);
+      let occAdd = b.occ;
+      if (occAdd > 0 && colFirstSickDay && isSickLikeStatus(status)) {
+        const dFirst = parseIsoDate(row[colFirstSickDay]);
+        if (dFirst) {
+          if (filt && !dateInSelectedMonth(dFirst, filt.year, filt.month)) {
+            occAdd = 0;
+          } else {
+            const firstIso = `${dFirst.getFullYear()}-${String(dFirst.getMonth() + 1).padStart(2, "0")}-${String(dFirst.getDate()).padStart(2, "0")}`;
+            const k = `${name}\u0000${seriesKey}\u0000${firstIso}`;
+            if (occSeen.has(k)) occAdd = 0;
+            else occSeen.add(k);
+          }
+        }
+      }
+      totalsOcc.get(name).set(seriesKey, (totalsOcc.get(name).get(seriesKey) || 0) + occAdd);
       usedRows += 1;
     }
 
@@ -905,7 +927,21 @@ function aggregateParsed(headers, rows) {
     if (!totalsDays.has(name)) totalsDays.set(name, new Map());
     totalsDays.get(name).set(status, (totalsDays.get(name).get(status) || 0) + b.days);
     if (!totalsOcc.has(name)) totalsOcc.set(name, new Map());
-    totalsOcc.get(name).set(status, (totalsOcc.get(name).get(status) || 0) + b.occ);
+    let occAdd = b.occ;
+    if (occAdd > 0 && colFirstSickDay && isSickLikeStatus(status)) {
+      const dFirst = parseIsoDate(row[colFirstSickDay]);
+      if (dFirst) {
+        if (filt && !dateInSelectedMonth(dFirst, filt.year, filt.month)) {
+          occAdd = 0;
+        } else {
+          const firstIso = `${dFirst.getFullYear()}-${String(dFirst.getMonth() + 1).padStart(2, "0")}-${String(dFirst.getDate()).padStart(2, "0")}`;
+          const k = `${name}\u0000${status}\u0000${firstIso}`;
+          if (occSeen.has(k)) occAdd = 0;
+          else occSeen.add(k);
+        }
+      }
+    }
+    totalsOcc.get(name).set(status, (totalsOcc.get(name).get(status) || 0) + occAdd);
     usedRows += 1;
   }
 
