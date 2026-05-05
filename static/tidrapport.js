@@ -457,14 +457,6 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom) {
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
   let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
-  // Vissa exporter använder "TV" = "tills vidare" som slutdatum.
-  // Om användaren valt månad/år kan vi klippa pågående perioder till månadens slut för rimliga timmar/dagar.
-  if (!d1 && filt && colDatumTom) {
-    const tomRaw = cleanStr(row[colDatumTom]).toUpperCase();
-    if (tomRaw === "TV") {
-      d1 = dateAtMidnight(filt.year, filt.month + 1, 0); // sista dagen i vald månad
-    }
-  }
   if (d0 && !d1) d1 = d0;
   if (!d0 && d1) d0 = d1;
 
