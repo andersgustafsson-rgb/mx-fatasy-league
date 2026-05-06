@@ -440,6 +440,18 @@ function getUiMonthYearFilter() {
   return { year: y, month: mIdx + 1 };
 }
 
+function parseMonthYearFromLabel(label) {
+  const s = cleanStr(label);
+  if (!s) return null;
+  const yMatch = s.match(/\b(19\d{2}|20\d{2})\b/);
+  if (!yMatch) return null;
+  const year = parseInt(yMatch[1], 10);
+  const low = s.toLowerCase();
+  const mIdx = SWEDISH_MONTHS.map((m) => m.toLowerCase()).findIndex((m) => low.includes(m));
+  if (mIdx < 0) return null;
+  return { year, month: mIdx + 1 };
+}
+
 function perDayHoursFromRow(row, hourCols) {
   const timDag = hourCols.colTimDag ? parseHourNumber(row[hourCols.colTimDag]) : null;
   if (timDag != null && timDag > 0) return timDag;
@@ -452,8 +464,8 @@ function perDayHoursFromRow(row, hourCols) {
  * En rad ger timmar, kalenderdagar (inom vald månad / intervall) och antal tillfällen (1 om raden räknas).
  * Klockrader: 1 dag + 1 tillfälle när timmar räknas in.
  */
-function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom) {
-  const filt = getUiMonthYearFilter();
+function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtOverride = null) {
+  const filt = filtOverride || getUiMonthYearFilter();
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
   let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
@@ -813,7 +825,10 @@ function aggregateParsed(headers, rows) {
         skippedNoName += 1;
         continue;
       }
-      const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
+      const source = cleanStr(row[colMerge]) || "Okänd del";
+      // IMPORTANT: vid «Samlad period» klipper vi per del/månad (label), inte efter UI:s nuvarande Månad/År.
+      const rowFilt = parseMonthYearFromLabel(source) || filt;
+      const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, rowFilt);
       if (b.hours === 0) continue;
       if (b.hours == null || !(Number(b.hours) > 0)) {
         skippedNoTime += 1;
@@ -837,7 +852,6 @@ function aggregateParsed(headers, rows) {
         continue;
       }
       const status = normalizeOrsak(colOrsak ? row[colOrsak] : "");
-      const source = cleanStr(row[colMerge]) || "Okänd del";
       const seriesKey = `${source} — ${status}`;
 
       baseStatusSet.add(status);
@@ -857,7 +871,7 @@ function aggregateParsed(headers, rows) {
         const dOcc = dFirst || dFallback;
         if (!dOcc) {
           occAdd = 0;
-        } else if (filt && !dateInSelectedMonth(dOcc, filt.year, filt.month)) {
+        } else if (rowFilt && !dateInSelectedMonth(dOcc, rowFilt.year, rowFilt.month)) {
           occAdd = 0;
         } else {
           const occIso = `${dOcc.getFullYear()}-${String(dOcc.getMonth() + 1).padStart(2, "0")}-${String(dOcc.getDate()).padStart(2, "0")}`;
