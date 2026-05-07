@@ -7,6 +7,7 @@
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" />
+  <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
   <meta name="theme-color" content="#06b6d4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -311,11 +312,10 @@
   <!-- iOS PWA splash overlay -->
   <div id="ios-splash" class="hidden fixed inset-0 z-[999999] items-center justify-center" style="background: radial-gradient(1200px 600px at 50% 30%, rgba(6,182,212,0.18), rgba(0,0,0,0.92));">
     <div class="flex flex-col items-center gap-4 px-6">
-      <div class="w-20 h-20 rounded-2xl shadow-2xl border border-cyan-400/25 bg-cyan-500/10 flex items-center justify-center overflow-hidden">
-        <img src="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" alt="MX Fantasy" class="w-full h-full object-cover" onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').classList.remove('hidden');" />
-        <div class="fallback hidden text-cyan-200 font-extrabold text-xl">MX</div>
+      <div class="w-[260px] max-w-[80vw] rounded-2xl shadow-2xl border border-cyan-400/25 bg-black/20 flex items-center justify-center overflow-hidden p-4">
+        <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="w-full h-auto object-contain" onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').classList.remove('hidden');" />
+        <div class="fallback hidden text-cyan-200 font-extrabold text-xl tracking-widest">MX FANTASY</div>
       </div>
-      <div class="text-cyan-200 font-extrabold tracking-wide text-base" style="text-shadow: 0 0 18px rgba(34,211,238,.25);">MX Fantasy</div>
       <div class="w-36 h-1.5 rounded-full overflow-hidden bg-white/10 border border-white/10">
         <div class="h-1.5 w-1/2 bg-cyan-400 animate-pulse"></div>
       </div>
