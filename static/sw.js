@@ -12,6 +12,8 @@ self.addEventListener("install", (event) => {
           "/static/manifest.webmanifest",
           OFFLINE_URL,
           "/static/images/mx_fantasy_favicon.png",
+          "/static/icons/mx_fantasy_app_icon_192.png",
+          "/static/icons/mx_fantasy_app_icon_512.png",
         ])
       )
       .then(() => self.skipWaiting())
