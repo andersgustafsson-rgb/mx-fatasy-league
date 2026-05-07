@@ -3589,6 +3589,20 @@
       setupForgotPasswordLink();
     }
 
+    // Login modal: password visibility toggle
+    (function(){
+      const input = document.getElementById('modal_password');
+      const btn = document.getElementById('toggleModalPassword');
+      const icon = document.getElementById('toggleModalPasswordIcon');
+      if (!input || !btn) return;
+      btn.addEventListener('click', () => {
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        if (icon) icon.textContent = showing ? '👁️' : '🙈';
+        btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
+      });
+    })();
+
     // PWA install prompt (Android/Chrome) + iOS instructions
     (function(){
       const banner = document.getElementById('pwa-install-banner');
@@ -3708,7 +3722,12 @@
         </div>
         <div class="mb-4">
           <label for="modal_password" class="block text-gray-700 dark:text-gray-300 mb-2">Lösenord</label>
-          <input type="password" id="modal_password" name="password" class="w-full p-3 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          <div class="relative">
+            <input type="password" id="modal_password" name="password" class="w-full p-3 pr-12 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+            <button type="button" id="toggleModalPassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white" aria-label="Visa lösenord">
+              <span id="toggleModalPasswordIcon">👁️</span>
+            </button>
+          </div>
         </div>
         <div id="loginError" class="mb-4 hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
         <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">
