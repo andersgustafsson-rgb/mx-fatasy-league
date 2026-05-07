@@ -103,8 +103,9 @@
       pointer-events: auto !important;
     }
     
-    /* Prevent scroll jumping on mobile */
-    * {
+    /* Prevent scroll jumping on mobile
+       NOTE: Don't apply transforms to html/body on iOS; it breaks position:fixed (PWA splash). */
+    *:not(html):not(body):not(#ios-splash):not(#ios-splash *) {
       -webkit-transform: translateZ(0);
       transform: translateZ(0);
     }
