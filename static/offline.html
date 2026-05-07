@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline – MX Fantasy League</title>
+    <style>
+      body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#050a12;color:#e5e7eb}
+      .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+      .card{max-width:520px;width:100%;background:rgba(17,24,39,.85);border:1px solid rgba(34,211,238,.25);border-radius:16px;padding:20px}
+      h1{margin:0 0 8px;font-size:22px}
+      p{margin:0 0 12px;opacity:.9;line-height:1.45}
+      button{appearance:none;border:0;border-radius:12px;padding:12px 14px;font-weight:700;background:#06b6d4;color:#001018;cursor:pointer}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>Du är offline</h1>
+        <p>Ingen uppkoppling just nu. Försök igen när du har internet.</p>
+        <button onclick="location.reload()">Försök igen</button>
+      </div>
+    </div>
+  </body>
+</html>

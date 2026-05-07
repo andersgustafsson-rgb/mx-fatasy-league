@@ -6,6 +6,8 @@
   <title>MX Fantasy League - Motocross Fantasy Sports</title>
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+  <meta name="theme-color" content="#06b6d4" />
   <script src="https://cdn.tailwindcss.com"></script>
   {% if is_logged_in %}
   <script>
@@ -16,6 +18,14 @@
     // Suppress Tailwind CDN warning in production
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       console.warn = function() {}; // Suppress console warnings in production
+    }
+  </script>
+  <script>
+    // PWA: register service worker (safe no-op if unsupported)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+      });
     }
   </script>
   <style>
