@@ -45,6 +45,11 @@
     }
   </script>
   <style>
+    /* iOS PWA splash: show immediately via CSS */
+    #ios-splash { display: none; }
+    html.ios-pwa-standalone #ios-splash { display: flex; }
+    html.ios-splash-done #ios-splash { display: none; }
+
     /* Mobile Scroll Fix */
     html, body {
       -webkit-overflow-scrolling: touch;
@@ -310,7 +315,7 @@
 </head>
 <body class="relative font-sans min-h-screen text-gray-200">
   <!-- iOS PWA splash overlay -->
-  <div id="ios-splash" class="hidden fixed inset-0 z-[999999] items-center justify-center" style="background: radial-gradient(1200px 600px at 50% 30%, rgba(6,182,212,0.18), rgba(0,0,0,0.92));">
+  <div id="ios-splash" class="fixed inset-0 z-[999999] items-center justify-center" style="background: radial-gradient(1200px 600px at 50% 30%, rgba(6,182,212,0.18), rgba(0,0,0,0.92));">
     <div class="flex flex-col items-center gap-4 px-6">
       <div class="w-[260px] max-w-[80vw] rounded-2xl shadow-2xl border border-cyan-400/25 bg-black/20 flex items-center justify-center overflow-hidden p-4">
         <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="w-full h-auto object-contain" onerror="this.style.display='none'; this.parentElement.querySelector('.fallback').classList.remove('hidden');" />
@@ -3661,23 +3666,17 @@
       }
     })();
 
-    // iOS PWA splash overlay control
+    // iOS PWA splash overlay control (display is CSS-controlled for instant show)
     (function(){
       const isIOSStandalone = document.documentElement.classList.contains('ios-pwa-standalone');
-      const el = document.getElementById('ios-splash');
-      if (!isIOSStandalone || !el) return;
-      // show immediately
-      el.classList.remove('hidden');
-      el.classList.add('flex');
-      const hide = () => {
-        try { el.classList.add('hidden'); el.classList.remove('flex'); } catch (_) {}
-      };
-      // hide on first paint-ish, with a minimum time so it feels intentional
+      if (!isIOSStandalone) return;
       const t0 = Date.now();
       const minMs = 650;
       const done = () => {
         const dt = Date.now() - t0;
-        setTimeout(hide, Math.max(0, minMs - dt));
+        setTimeout(() => {
+          try { document.documentElement.classList.add('ios-splash-done'); } catch (_) {}
+        }, Math.max(0, minMs - dt));
       };
       if (document.readyState === 'complete') done();
       else window.addEventListener('load', done, { once: true });
