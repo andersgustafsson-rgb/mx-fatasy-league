@@ -270,6 +270,19 @@ def favicon():
     return redirect(url_for("static", filename="images/mx_fantasy_favicon.png"))
 
 
+@app.get("/sw.js")
+def service_worker():
+    """
+    PWA: service worker must be served at the origin root to control '/'.
+    """
+    from flask import send_from_directory, make_response
+
+    resp = make_response(send_from_directory(app.static_folder, "sw.js"))
+    resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
+
+
 # Debug: Print database configuration
 # Database configuration loaded
 

@@ -92,4 +92,18 @@ def create_app() -> Flask:
 		# Browsers request /favicon.ico by default; point at site logo (SVG).
 		return redirect(url_for("static", filename="images/mx_fantasy_favicon.png"))
 
+	@app.get("/sw.js")
+	def service_worker():
+		"""
+		PWA: service worker must live at origin root to control '/'.
+		Serve the file from /static, but expose it at /sw.js.
+		"""
+		from flask import send_from_directory, make_response
+
+		resp = make_response(send_from_directory(app.static_folder, "sw.js"))
+		resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
+		# Allow root scope even though file is served from static folder.
+		resp.headers["Service-Worker-Allowed"] = "/"
+		return resp
+
 	return app

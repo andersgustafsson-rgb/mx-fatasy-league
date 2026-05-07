@@ -24,7 +24,7 @@
     // PWA: register service worker (safe no-op if unsupported)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
       });
     }
   </script>
