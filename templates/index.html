@@ -3574,6 +3574,22 @@
       const show = () => banner.classList.remove('hidden');
       const hide = () => banner.classList.add('hidden');
 
+      const toast = (msg, kind) => {
+        try {
+          const el = document.createElement('div');
+          el.className = `fixed bottom-4 left-1/2 -translate-x-1/2 z-[99999] px-4 py-2 rounded-xl text-sm font-extrabold shadow-2xl border ${
+            kind === 'ok'
+              ? 'bg-emerald-500/90 text-emerald-950 border-emerald-200/40'
+              : kind === 'warn'
+                ? 'bg-amber-400/95 text-amber-950 border-amber-200/50'
+                : 'bg-rose-500/90 text-rose-50 border-rose-200/30'
+          }`;
+          el.textContent = msg;
+          document.body.appendChild(el);
+          setTimeout(() => el.remove(), 2600);
+        } catch (_) {}
+      };
+
       closeBtn.addEventListener('click', () => {
         localStorage.setItem(DISMISS_KEY, '1');
         hide();
@@ -3584,13 +3600,29 @@
         deferredPrompt = e;
         btn.classList.remove('hidden');
         btn.onclick = async () => {
+          if (!deferredPrompt) return;
           try {
+            btn.disabled = true;
+            btn.textContent = 'Installerar…';
             await deferredPrompt.prompt();
+            // userChoice gives explicit feedback in Chrome/Android
+            const choice = await deferredPrompt.userChoice;
+            if (choice && choice.outcome === 'accepted') {
+              toast('Installerad! Hitta den i app-listan.', 'ok');
+            } else {
+              toast('Installeringen avbröts.', 'warn');
+            }
           } catch (_) {}
           deferredPrompt = null;
           hide();
         };
         show();
+      });
+
+      // Some browsers fire this when installation completes
+      window.addEventListener('appinstalled', () => {
+        toast('Installerad! Hitta den i app-listan.', 'ok');
+        hide();
       });
 
       // iOS: no beforeinstallprompt → show instructions banner
