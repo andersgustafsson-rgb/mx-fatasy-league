@@ -45,10 +45,14 @@
     }
   </script>
   <style>
-    /* iOS PWA splash: show immediately via CSS */
+    /* iOS PWA splash: show immediately via CSS and hide app until ready */
     #ios-splash { display: none; }
     html.ios-pwa-standalone #ios-splash { display: flex; }
     html.ios-splash-done #ios-splash { display: none; }
+
+    /* Hide underlying UI while splash is active (more app-like) */
+    html.ios-pwa-standalone:not(.ios-splash-done) body { overflow: hidden; }
+    html.ios-pwa-standalone:not(.ios-splash-done) #app-shell { visibility: hidden; }
 
     /* Mobile Scroll Fix */
     html, body {
@@ -362,7 +366,7 @@
   <div class="absolute inset-0 bg-black bg-opacity-70"></div>
 
   <!-- Innehåll -->
-  <div class="relative z-10">
+  <div id="app-shell" class="relative z-10">
     <div class="container mx-auto p-4 md:p-8">
 
       <!-- Header - Responsiv layout -->
