@@ -182,6 +182,7 @@ const els = {
   overtimePaste: document.getElementById("overtimePaste"),
   btnOvertimePasteApply: document.getElementById("btnOvertimePasteApply"),
   btnOvertimePasteClear: document.getElementById("btnOvertimePasteClear"),
+  overtimeChartMode: document.getElementById("overtimeChartMode"),
 };
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
@@ -249,6 +250,9 @@ const OVERTIME_LS_KEY = "mx_overtime_v1";
 let overtimeChart = null;
 let overtimeRows = [];
 
+const OVERTIME_SETTINGS_LS_KEY = "mx_overtime_settings_v1";
+let overtimeChartMode = "timeline";
+
 function overtimeLabelFromParts(year, month1to12) {
   const m = SWEDISH_MONTHS[month1to12 - 1] || "";
   const abbr = m ? m.slice(0, 3) : "?";
@@ -260,9 +264,36 @@ function overtimeKey(year, month1to12) {
   return `${year}-${String(month1to12).padStart(2, "0")}`;
 }
 
+function overtimeMonthAbbr(month1to12) {
+  const m = SWEDISH_MONTHS[month1to12 - 1] || "";
+  const abbr = m ? m.slice(0, 3) : "?";
+  return abbr ? abbr.charAt(0).toUpperCase() + abbr.slice(1).toLowerCase() : "?";
+}
+
 function parseOvertimeHours(raw) {
   const n = parseHourNumber(raw);
   return n != null && Number.isFinite(n) ? n : null;
+}
+
+function loadOvertimeSettings() {
+  try {
+    const raw = localStorage.getItem(OVERTIME_SETTINGS_LS_KEY);
+    if (!raw) return { chartMode: "timeline" };
+    const obj = JSON.parse(raw);
+    const cm = cleanStr(obj?.chartMode);
+    if (cm === "compare_years_by_month" || cm === "timeline") return { chartMode: cm };
+    return { chartMode: "timeline" };
+  } catch {
+    return { chartMode: "timeline" };
+  }
+}
+
+function saveOvertimeSettings() {
+  try {
+    localStorage.setItem(OVERTIME_SETTINGS_LS_KEY, JSON.stringify({ chartMode: overtimeChartMode }));
+  } catch {
+    // ignore
+  }
 }
 
 function loadOvertimeFromStorage() {
@@ -339,7 +370,7 @@ function ensureOvertimeChart() {
       events: [],
       animation: false,
       plugins: {
-        legend: { display: false },
+        legend: { display: false, labels: { color: "#e2e8f0", font: { size: 12 } } },
         tooltip: { enabled: false },
         title: { display: true, text: "Övertid per månad (manuell)", color: "#e2e8f0", font: { size: 14 } },
         tidrapportValueLabels: { enabled: true, mode: "each", integerLabels: false, fontSize: 11, pad: 6, color: "#f8fafc", strokeColor: "rgba(15, 23, 42, 0.85)" },
@@ -357,6 +388,57 @@ function renderOvertimeChart() {
   const c = ensureOvertimeChart();
   if (!c) return;
   const rows = sortOvertimeRows(overtimeRows);
+
+  const mode = overtimeChartMode === "compare_years_by_month" ? "compare_years_by_month" : "timeline";
+  if (mode === "compare_years_by_month") {
+    // X = months, datasets = years; bars side-by-side per month.
+    const parsed = rows
+      .map((r) => {
+        const m = /^(\d{4})-(\d{2})$/.exec(r.key);
+        if (!m) return null;
+        const y = parseInt(m[1], 10);
+        const mo = parseInt(m[2], 10);
+        if (!Number.isFinite(y) || !Number.isFinite(mo) || mo < 1 || mo > 12) return null;
+        return { y, mo, hours: round2(r.hours) };
+      })
+      .filter(Boolean);
+
+    const years = [...new Set(parsed.map((p) => p.y))].sort((a, b) => a - b);
+    const monthHas = new Array(12).fill(false);
+    for (const p of parsed) monthHas[p.mo - 1] = true;
+    const monthIdxs = monthHas
+      .map((has, idx) => ({ has, idx }))
+      .filter((x) => x.has)
+      .map((x) => x.idx);
+    const labels = monthIdxs.map((idx) => overtimeMonthAbbr(idx + 1));
+    c.data.labels = labels;
+
+    const datasets = years.map((y, yi) => {
+      const bg = rgbaFromHex(palette(yi), 0.78);
+      const bd = rgbaFromHex(palette(yi), 1);
+      const data = monthIdxs.map((idx) => {
+        const mo = idx + 1;
+        const hit = parsed.find((p) => p.y === y && p.mo === mo);
+        return hit ? hit.hours : 0;
+      });
+      return { label: String(y), data, backgroundColor: bg, borderColor: bd, borderWidth: 1 };
+    });
+
+    c.data.datasets = datasets;
+    c.options.plugins.legend.display = true;
+    c.options.plugins.tidrapportValueLabels.mode = "each";
+    c.options.plugins.tidrapportValueLabels.integerLabels = false;
+    c.options.scales.x.stacked = false;
+    c.options.scales.y.stacked = false;
+
+    const ttl = rows.length ? `Övertid per månad — jämför år (staplar: ${rows.length})` : "Övertid per månad — jämför år";
+    c.options.plugins.title.text = ttl;
+    if (els.overtimeTitlePreview) els.overtimeTitlePreview.textContent = ttl;
+    c.update();
+    return;
+  }
+
+  // timeline mode: one bar per row, unique color per bar
   const labels = rows.map((r) => r.label);
   const data = rows.map((r) => round2(r.hours));
   const barColors = rows.map((_, i) => palette(i));
@@ -370,10 +452,15 @@ function renderOvertimeChart() {
       borderWidth: 1,
     },
   ];
+  c.options.plugins.legend.display = false;
+  c.options.plugins.tidrapportValueLabels.mode = "each";
+  c.options.plugins.tidrapportValueLabels.integerLabels = false;
+  c.options.scales.x.stacked = false;
+  c.options.scales.y.stacked = false;
+
   const ttl = rows.length ? `Övertid per månad (manuell) · Staplar: ${rows.length}` : "Övertid per månad (manuell)";
   c.options.plugins.title.text = ttl;
   c.options.plugins.tidrapportValueLabels.enabled = true;
-  c.options.plugins.tidrapportValueLabels.integerLabels = false;
   if (els.overtimeTitlePreview) els.overtimeTitlePreview.textContent = ttl;
   c.update();
 }
@@ -2468,6 +2555,11 @@ els.tabOvertime?.addEventListener("click", () => {
 });
 
 // Overtime: actions
+els.overtimeChartMode?.addEventListener("change", () => {
+  overtimeChartMode = cleanStr(els.overtimeChartMode.value) || "timeline";
+  saveOvertimeSettings();
+  renderOvertimeChart();
+});
 els.btnOvertimeAdd?.addEventListener("click", addOvertimeRowFromInputs);
 els.btnOvertimeGenerate?.addEventListener("click", () => {
   renderOvertimeTable();
@@ -2721,6 +2813,9 @@ els.btnDownload.addEventListener("click", () => {
   }
   // Overtime (manual): load saved rows
   overtimeRows = loadOvertimeFromStorage();
+  const s = loadOvertimeSettings();
+  overtimeChartMode = s.chartMode || "timeline";
+  if (els.overtimeChartMode) els.overtimeChartMode.value = overtimeChartMode;
   if (els.overtimeYear && !els.overtimeYear.value) els.overtimeYear.value = String(new Date().getFullYear());
   // Default tab = tidrapport
   setActiveTab("tidrapport");

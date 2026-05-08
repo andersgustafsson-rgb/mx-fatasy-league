@@ -471,6 +471,21 @@
               </div>
             </div>
 
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="overtimeChartMode">Diagramläge</label>
+                <select id="overtimeChartMode" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
+                  <option value="timeline">Kronologiskt (en stapel per rad)</option>
+                  <option value="compare_years_by_month">Jämför år per månad (staplar bredvid varandra)</option>
+                </select>
+              </div>
+              <div class="flex items-end">
+                <p class="text-[11px] text-slate-500 leading-snug">
+                  Tips: använd jämförelseläget för att se t.ex. Januari 2025 vs Januari 2026 bredvid varandra.
+                </p>
+              </div>
+            </div>
+
             <div class="mt-3 flex flex-wrap items-center gap-2">
               <button type="button" id="btnOvertimeAdd" class="px-5 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-base font-semibold shadow-md shadow-amber-900/30">
                 Lägg till stapel
