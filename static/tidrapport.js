@@ -359,13 +359,14 @@ function renderOvertimeChart() {
   const rows = sortOvertimeRows(overtimeRows);
   const labels = rows.map((r) => r.label);
   const data = rows.map((r) => round2(r.hours));
+  const barColors = rows.map((_, i) => palette(i));
   c.data.labels = labels;
   c.data.datasets = [
     {
       label: "Övertid",
       data,
-      backgroundColor: "rgba(245, 158, 11, 0.78)",
-      borderColor: "rgba(245, 158, 11, 1)",
+      backgroundColor: barColors.map((hex) => rgbaFromHex(hex, 0.78)),
+      borderColor: barColors.map((hex) => rgbaFromHex(hex, 1)),
       borderWidth: 1,
     },
   ];
