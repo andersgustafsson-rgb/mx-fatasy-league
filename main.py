@@ -3706,6 +3706,16 @@ def series_page(series_id):
         if next_race:
             # Use simple date comparison instead of complex is_picks_locked function
             picks_open = next_race.event_date and next_race.event_date > current_time.date()
+
+            # Gate: Motocross picks open only after Supercross ends
+            try:
+                is_mx_series = (getattr(series, "name", None) == "Motocross") or (getattr(next_race, "series", None) == "MX")
+                if is_mx_series:
+                    sx = Series.query.filter_by(name="Supercross", year=2026).first()
+                    if sx and sx.end_date and get_today() <= sx.end_date:
+                        picks_open = False
+            except Exception:
+                pass
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -18931,6 +18941,16 @@ def is_picks_locked(competition):
         competition_obj = competition
         competition_name = competition.name if hasattr(competition, 'name') else f"ID {competition.id}"
         competition_id = competition.id
+
+    # Gate: Motocross picks should not open until Supercross ends (season transition).
+    # Prevents MX picks being available while SX season is still running.
+    try:
+        if getattr(competition_obj, "series", None) == "MX":
+            sx = Series.query.filter_by(name="Supercross", year=2026).first()
+            if sx and sx.end_date and get_today() <= sx.end_date:
+                return True
+    except Exception:
+        pass
     
     # Check if we're in simulation mode (use only global database state for consistency)
     simulation_active = False
