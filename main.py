@@ -5751,7 +5751,7 @@ def admin_get_results(competition_id):
                 CompetitionResult.rider_id,
                 CompetitionResult.position,
                 CompetitionResult.rider_points,
-                Rider.class_name.label("class_name"),
+                db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label("class_name"),
                 Rider.name.label("rider_name"),
                 Rider.rider_number.label("rider_number"),
             )
@@ -5842,13 +5842,13 @@ def admin_debug_results(competition_id):
                 CompetitionResult.rider_id,
                 CompetitionResult.position,
                 CompetitionResult.rider_points,
-                Rider.class_name.label("class_name"),
+                db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label("class_name"),
                 Rider.name.label("rider_name"),
                 Rider.rider_number.label("rider_number"),
             )
             .join(Rider, Rider.id == CompetitionResult.rider_id)
             .filter(CompetitionResult.competition_id == competition_id)
-            .order_by(Rider.class_name.asc(), CompetitionResult.position.asc())
+            .order_by(db.func.coalesce(CompetitionResult.class_name, Rider.class_name).asc(), CompetitionResult.position.asc())
             .all()
         )
         
@@ -6799,7 +6799,8 @@ def submit_results():
                             competition_id=comp_id, 
                             rider_id=rid, 
                             position=pos,
-                            rider_points=rider_points
+                            rider_points=rider_points,
+                            class_name=rider_class,
                         )
                         db.session.add(new_result)
                         print(f"✅ COMPLEMENT SX1/450: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
@@ -6820,7 +6821,8 @@ def submit_results():
                         competition_id=comp_id, 
                         rider_id=rid, 
                         position=pos,
-                        rider_points=rider_points
+                        rider_points=rider_points,
+                        class_name=(Rider.query.get(rid).class_name if Rider.query.get(rid) else None),
                     ))
     
     # Save 250cc/SX2 results
@@ -6879,7 +6881,8 @@ def submit_results():
                             competition_id=comp_id, 
                             rider_id=rid, 
                             position=pos,
-                            rider_points=rider_points
+                            rider_points=rider_points,
+                            class_name=rider_class,
                         )
                         db.session.add(new_result)
                         print(f"✅ COMPLEMENT SX2/250: Added new result - {rider_name} (ID: {rid}) at position {pos} (class: {rider_class}, points: {rider_points})")
@@ -6900,7 +6903,8 @@ def submit_results():
                         competition_id=comp_id, 
                         rider_id=rid, 
                         position=pos,
-                        rider_points=rider_points
+                        rider_points=rider_points,
+                        class_name=(Rider.query.get(rid).class_name if Rider.query.get(rid) else None),
                     ))
 
     try:
@@ -7965,14 +7969,16 @@ def compute_series_championship_totals():
         else:
             pts = float(get_smx_qualification_points(cr.position))
 
+        rider_class = getattr(cr, "class_name", None) or rider.class_name
+
         if s == "WSX":
-            if rider.class_name not in ("wsx_sx1", "wsx_sx2"):
+            if rider_class not in ("wsx_sx1", "wsx_sx2"):
                 continue
-            bucket = ("wsx", rider.class_name)
+            bucket = ("wsx", rider_class)
         else:
-            if rider.class_name == "450cc":
+            if rider_class == "450cc":
                 bucket = (s.lower(), "450")
-            elif rider.class_name == "250cc":
+            elif rider_class == "250cc":
                 rc = (rider.coast_250 or "").strip().lower()
                 if rc not in ("east", "west"):
                     continue
@@ -8121,7 +8127,7 @@ def race_results_page():
                     CompetitionResult.position,
                     CompetitionResult.rider_points,
                     Rider.name.label('rider_name'),
-                    Rider.class_name,
+                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label("class_name"),
                     Rider.rider_number,
                     Rider.image_url,
                     Rider.rider_image_data,
@@ -8129,7 +8135,7 @@ def race_results_page():
                 )
                 .join(Rider, Rider.id == CompetitionResult.rider_id)
                 .filter(CompetitionResult.competition_id == comp.id)
-                .order_by(Rider.class_name.asc(), CompetitionResult.position.asc())
+                .order_by(db.func.coalesce(CompetitionResult.class_name, Rider.class_name).asc(), CompetitionResult.position.asc())
                 .all()
             )
             
@@ -14832,6 +14838,46 @@ def init_database():
             except Exception as e:
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
+
+            # Snapshot rider class on CompetitionResult rows so class switches don't rewrite history
+            try:
+                if 'postgresql' in str(db.engine.url):
+                    # Ensure column exists
+                    result = db.session.execute(db.text("""
+                        SELECT column_name
+                        FROM information_schema.columns
+                        WHERE table_name = 'competition_results' AND column_name = 'class'
+                    """))
+                    has_col = bool(result.fetchall())
+                    if not has_col:
+                        print('Adding "class" column to competition_results table...')
+                        db.session.execute(db.text('ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS "class" VARCHAR(10)'))
+                        db.session.commit()
+                    # Backfill any missing class snapshots from current Rider.class_name
+                    db.session.execute(db.text("""
+                        UPDATE competition_results cr
+                        SET "class" = r.class_name
+                        FROM riders r
+                        WHERE cr.rider_id = r.id
+                          AND cr."class" IS NULL
+                    """))
+                    db.session.commit()
+                else:
+                    # SQLite fallback
+                    result = db.session.execute(db.text("PRAGMA table_info(competition_results)"))
+                    columns = [row[1] for row in result.fetchall()]
+                    if "class" not in columns:
+                        print('Adding "class" column to competition_results table...')
+                        db.session.execute(db.text('ALTER TABLE competition_results ADD COLUMN "class" VARCHAR(10)'))
+                        db.session.commit()
+                    db.session.execute(db.text("""
+                        UPDATE competition_results
+                        SET "class" = (SELECT class_name FROM riders WHERE riders.id = competition_results.rider_id)
+                        WHERE "class" IS NULL
+                    """))
+                    db.session.commit()
+            except Exception as e:
+                print(f'Warning: Could not migrate competition_results."class": {e}')
             
             # Only create test data if database is completely empty AND we're in development
             try:
