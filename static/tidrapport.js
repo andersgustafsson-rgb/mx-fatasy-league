@@ -159,6 +159,29 @@ const els = {
   btnClearMergeQueue: document.getElementById("btnClearMergeQueue"),
   btnApplyMerge: document.getElementById("btnApplyMerge"),
   mergeQueueFeedback: document.getElementById("mergeQueueFeedback"),
+
+  // Tabs
+  tabTidrapport: document.getElementById("tabTidrapport"),
+  tabOvertime: document.getElementById("tabOvertime"),
+  panelTidrapport: document.getElementById("panelTidrapport"),
+  panelOvertime: document.getElementById("panelOvertime"),
+
+  // Overtime (manual) tab
+  overtimeMonth: document.getElementById("overtimeMonth"),
+  overtimeYear: document.getElementById("overtimeYear"),
+  overtimeHours: document.getElementById("overtimeHours"),
+  btnOvertimeAdd: document.getElementById("btnOvertimeAdd"),
+  btnOvertimeGenerate: document.getElementById("btnOvertimeGenerate"),
+  btnOvertimeClear: document.getElementById("btnOvertimeClear"),
+  overtimeStatusText: document.getElementById("overtimeStatusText"),
+  overtimeTableBody: document.getElementById("overtimeTableBody"),
+  btnOvertimeRemoveSelected: document.getElementById("btnOvertimeRemoveSelected"),
+  overtimeChartCanvas: document.getElementById("overtimeChartCanvas"),
+  btnOvertimeDownload: document.getElementById("btnOvertimeDownload"),
+  overtimeTitlePreview: document.getElementById("overtimeTitlePreview"),
+  overtimePaste: document.getElementById("overtimePaste"),
+  btnOvertimePasteApply: document.getElementById("btnOvertimePasteApply"),
+  btnOvertimePasteClear: document.getElementById("btnOvertimePasteClear"),
 };
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
@@ -200,6 +223,227 @@ function normalizePastedTableString(raw) {
 
 function rawPasteFromInput() {
   return normalizePastedTableString(els.pasteInput?.value);
+}
+
+function setActiveTab(tab) {
+  const isOvertime = tab === "overtime";
+  if (els.panelTidrapport) els.panelTidrapport.classList.toggle("hidden", isOvertime);
+  if (els.panelOvertime) els.panelOvertime.classList.toggle("hidden", !isOvertime);
+
+  const setBtn = (btn, active) => {
+    if (!btn) return;
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+    btn.className = active
+      ? "px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-100"
+      : "px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800/70";
+  };
+  setBtn(els.tabTidrapport, !isOvertime);
+  setBtn(els.tabOvertime, isOvertime);
+}
+
+// -----------------------
+// Overtime (manual) tab
+// -----------------------
+
+const OVERTIME_LS_KEY = "mx_overtime_v1";
+let overtimeChart = null;
+let overtimeRows = [];
+
+function overtimeLabelFromParts(year, month1to12) {
+  const m = SWEDISH_MONTHS[month1to12 - 1] || "";
+  const abbr = m ? m.slice(0, 3) : "?";
+  const nice = abbr ? abbr.charAt(0).toUpperCase() + abbr.slice(1).toLowerCase() : "?";
+  return `${nice} ${year}`;
+}
+
+function overtimeKey(year, month1to12) {
+  return `${year}-${String(month1to12).padStart(2, "0")}`;
+}
+
+function parseOvertimeHours(raw) {
+  const n = parseHourNumber(raw);
+  return n != null && Number.isFinite(n) ? n : null;
+}
+
+function loadOvertimeFromStorage() {
+  try {
+    const raw = localStorage.getItem(OVERTIME_LS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((r) => ({
+        key: cleanStr(r?.key),
+        label: cleanStr(r?.label),
+        hours: typeof r?.hours === "number" ? r.hours : Number(r?.hours),
+      }))
+      .filter((r) => r.key && r.label && Number.isFinite(r.hours));
+  } catch {
+    return [];
+  }
+}
+
+function saveOvertimeToStorage(rows) {
+  try {
+    localStorage.setItem(OVERTIME_LS_KEY, JSON.stringify(rows));
+  } catch {
+    // ignore
+  }
+}
+
+function sortOvertimeRows(rows) {
+  return [...rows].sort((a, b) => a.key.localeCompare(b.key, "sv"));
+}
+
+function renderOvertimeTable() {
+  if (!els.overtimeTableBody) return;
+  els.overtimeTableBody.innerHTML = "";
+  const rows = sortOvertimeRows(overtimeRows);
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.className = "border-b border-slate-800";
+    const tdCb = document.createElement("td");
+    tdCb.className = "px-3 py-2";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "accent-amber-500";
+    cb.dataset.key = r.key;
+    tdCb.appendChild(cb);
+
+    const tdP = document.createElement("td");
+    tdP.className = "px-3 py-2 whitespace-nowrap";
+    tdP.textContent = r.label;
+
+    const tdH = document.createElement("td");
+    tdH.className = "px-3 py-2 text-right tabular-nums";
+    tdH.textContent = round2(r.hours).toFixed(2).replace(/\.00$/, "");
+
+    tr.appendChild(tdCb);
+    tr.appendChild(tdP);
+    tr.appendChild(tdH);
+    els.overtimeTableBody.appendChild(tr);
+  }
+}
+
+function ensureOvertimeChart() {
+  if (!els.overtimeChartCanvas) return null;
+  if (overtimeChart) return overtimeChart;
+  if (typeof Chart === "undefined") return null;
+  const ctx = els.overtimeChartCanvas.getContext("2d");
+  overtimeChart = new Chart(ctx, {
+    type: "bar",
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      events: [],
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        title: { display: true, text: "Övertid per månad (manuell)", color: "#e2e8f0", font: { size: 14 } },
+        tidrapportValueLabels: { enabled: true, mode: "each", integerLabels: false, fontSize: 11, pad: 6, color: "#f8fafc", strokeColor: "rgba(15, 23, 42, 0.85)" },
+      },
+      scales: {
+        x: { ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.12)" } },
+        y: { beginAtZero: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.10)" } },
+      },
+    },
+  });
+  return overtimeChart;
+}
+
+function renderOvertimeChart() {
+  const c = ensureOvertimeChart();
+  if (!c) return;
+  const rows = sortOvertimeRows(overtimeRows);
+  const labels = rows.map((r) => r.label);
+  const data = rows.map((r) => round2(r.hours));
+  c.data.labels = labels;
+  c.data.datasets = [
+    {
+      label: "Övertid",
+      data,
+      backgroundColor: "rgba(245, 158, 11, 0.78)",
+      borderColor: "rgba(245, 158, 11, 1)",
+      borderWidth: 1,
+    },
+  ];
+  const ttl = rows.length ? `Övertid per månad (manuell) · Staplar: ${rows.length}` : "Övertid per månad (manuell)";
+  c.options.plugins.title.text = ttl;
+  c.options.plugins.tidrapportValueLabels.enabled = true;
+  c.options.plugins.tidrapportValueLabels.integerLabels = false;
+  if (els.overtimeTitlePreview) els.overtimeTitlePreview.textContent = ttl;
+  c.update();
+}
+
+function setOvertimeStatus(msg) {
+  if (els.overtimeStatusText) els.overtimeStatusText.textContent = msg || "";
+}
+
+function addOvertimeRowFromInputs() {
+  const y = parseInt(cleanStr(els.overtimeYear?.value), 10);
+  const mIdx = SWEDISH_MONTHS.indexOf(cleanStr(els.overtimeMonth?.value));
+  const h = parseOvertimeHours(els.overtimeHours?.value);
+  if (!Number.isFinite(y) || y < 1900 || y > 2100 || mIdx < 0 || h == null) {
+    setOvertimeStatus("Fyll i månad, år och timmar.");
+    return;
+  }
+  const month = mIdx + 1;
+  const key = overtimeKey(y, month);
+  const label = overtimeLabelFromParts(y, month);
+
+  const existingIdx = overtimeRows.findIndex((r) => r.key === key);
+  const row = { key, label, hours: h };
+  if (existingIdx >= 0) overtimeRows[existingIdx] = row;
+  else overtimeRows.push(row);
+
+  saveOvertimeToStorage(overtimeRows);
+  renderOvertimeTable();
+  renderOvertimeChart();
+  setOvertimeStatus(existingIdx >= 0 ? `Uppdaterade ${label}.` : `Lade till ${label}.`);
+}
+
+function applyOvertimePaste() {
+  const raw = normalizePastedTableString(els.overtimePaste?.value || "");
+  if (!raw) {
+    setOvertimeStatus("Klistringsrutan är tom.");
+    return;
+  }
+  const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
+  let added = 0;
+  let skipped = 0;
+  for (const line of lines) {
+    const parts = line.split(/\t|;|,|\s{2,}/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length < 2) {
+      skipped += 1;
+      continue;
+    }
+    const ym = parts[0];
+    const m = ym.match(/^(\d{4})-(\d{2})$/);
+    if (!m) {
+      skipped += 1;
+      continue;
+    }
+    const y = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    const h = parseOvertimeHours(parts[1]);
+    if (!Number.isFinite(y) || y < 1900 || y > 2100 || !Number.isFinite(month) || month < 1 || month > 12 || h == null) {
+      skipped += 1;
+      continue;
+    }
+    const key = overtimeKey(y, month);
+    const label = overtimeLabelFromParts(y, month);
+    const existingIdx = overtimeRows.findIndex((r) => r.key === key);
+    const row = { key, label, hours: h };
+    if (existingIdx >= 0) overtimeRows[existingIdx] = row;
+    else overtimeRows.push(row);
+    added += 1;
+  }
+  saveOvertimeToStorage(overtimeRows);
+  renderOvertimeTable();
+  renderOvertimeChart();
+  setOvertimeStatus(`Klart: ${added} rad(er) inlagda${skipped ? `, ${skipped} hoppades över` : ""}.`);
 }
 
 function flashMergeQueueList() {
@@ -2214,6 +2458,59 @@ els.chartMeasureSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
 
+// Tabs
+els.tabTidrapport?.addEventListener("click", () => setActiveTab("tidrapport"));
+els.tabOvertime?.addEventListener("click", () => {
+  setActiveTab("overtime");
+  renderOvertimeTable();
+  renderOvertimeChart();
+});
+
+// Overtime: actions
+els.btnOvertimeAdd?.addEventListener("click", addOvertimeRowFromInputs);
+els.btnOvertimeGenerate?.addEventListener("click", () => {
+  renderOvertimeTable();
+  renderOvertimeChart();
+  setOvertimeStatus("Uppdaterade diagrammet.");
+});
+els.btnOvertimeClear?.addEventListener("click", () => {
+  overtimeRows = [];
+  saveOvertimeToStorage(overtimeRows);
+  renderOvertimeTable();
+  renderOvertimeChart();
+  setOvertimeStatus("Rensat.");
+});
+els.btnOvertimeRemoveSelected?.addEventListener("click", () => {
+  if (!els.overtimeTableBody) return;
+  const keys = [...els.overtimeTableBody.querySelectorAll("input[type='checkbox']")]
+    .filter((cb) => cb.checked)
+    .map((cb) => cb.dataset.key)
+    .filter(Boolean);
+  if (!keys.length) {
+    setOvertimeStatus("Inget markerat.");
+    return;
+  }
+  overtimeRows = overtimeRows.filter((r) => !keys.includes(r.key));
+  saveOvertimeToStorage(overtimeRows);
+  renderOvertimeTable();
+  renderOvertimeChart();
+  setOvertimeStatus(`Tog bort ${keys.length} rad(er).`);
+});
+els.btnOvertimePasteApply?.addEventListener("click", applyOvertimePaste);
+els.btnOvertimePasteClear?.addEventListener("click", () => {
+  if (els.overtimePaste) els.overtimePaste.value = "";
+  setOvertimeStatus("Tömt klistringsrutan.");
+});
+els.btnOvertimeDownload?.addEventListener("click", () => {
+  const c = ensureOvertimeChart();
+  if (!c) return;
+  const url = c.toBase64Image("image/png", 1);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `overtid_${new Date().toISOString().slice(0, 10)}.png`;
+  a.click();
+});
+
 for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput]) {
   el?.addEventListener("input", () => {
     updateNominalDayHoursHint();
@@ -2421,6 +2718,11 @@ els.btnDownload.addEventListener("click", () => {
   } catch (e) {
     console.warn("tidrapport localStorage cleanup", e);
   }
+  // Overtime (manual): load saved rows
+  overtimeRows = loadOvertimeFromStorage();
+  if (els.overtimeYear && !els.overtimeYear.value) els.overtimeYear.value = String(new Date().getFullYear());
+  // Default tab = tidrapport
+  setActiveTab("tidrapport");
   if (els.analysisModeSelect?.value === "compare") els.analysisModeSelect.value = "normal";
   renderMergeQueueList();
   updateForecastMonthInfo();
