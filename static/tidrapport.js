@@ -131,6 +131,7 @@ const els = {
   titleInput: document.getElementById("titleInput"),
   omfModeSelect: document.getElementById("omfModeSelect"),
   chartMeasureSelect: document.getElementById("chartMeasureSelect"),
+  chartGroupSelect: document.getElementById("chartGroupSelect"),
   fullTimeWeekHoursInput: document.getElementById("fullTimeWeekHoursInput"),
   workdaysPerWeekInput: document.getElementById("workdaysPerWeekInput"),
   nominalDayHoursHint: document.getElementById("nominalDayHoursHint"),
@@ -724,6 +725,11 @@ function getChartMeasureMode() {
   return "hours";
 }
 
+function getChartGroupMode() {
+  const v = cleanStr(els.chartGroupSelect?.value);
+  return v === "month" ? "month" : "person";
+}
+
 /** yyyy-mm-dd → lokalt datum (midnatt) */
 function parseIsoDate(raw) {
   const s = cleanStr(raw);
@@ -782,6 +788,12 @@ function parseMonthYearFromLabel(label) {
   const mIdx = SWEDISH_MONTHS.map((m) => m.toLowerCase()).findIndex((m) => low.includes(m));
   if (mIdx < 0) return null;
   return { year, month: mIdx + 1 };
+}
+
+function monthLabelShort(month1to12) {
+  const m = SWEDISH_MONTHS[month1to12 - 1] || "?";
+  const abbr = m.slice(0, 3);
+  return abbr.charAt(0).toUpperCase() + abbr.slice(1).toLowerCase();
 }
 
 function perDayHoursFromRow(row, hourCols) {
@@ -2024,6 +2036,48 @@ function sliceTotalsByEmployee(fullTotals, employeeName) {
   return new Map([[employeeName, fullTotals.get(employeeName) || new Map()]]);
 }
 
+function renderMonthChart(monthTotals, statuses, selectedStatuses, year, measure) {
+  const mode = "vertical";
+  resetChartIfOrientationChanged(mode);
+  const c = ensureChart(mode);
+  applyOrientation(mode);
+  c.options.plugins.legend.position = "top";
+  c.options.plugins.legend.labels.font = { size: 11 };
+  c.options.scales.x.ticks.maxRotation = 0;
+  c.options.scales.x.ticks.minRotation = 0;
+  c.options.scales.x.ticks.autoSkip = false;
+
+  const labels = SWEDISH_MONTHS.map((_, i) => monthLabelShort(i + 1));
+  const colorByStatus = buildStatusColorMap(statuses);
+  const datasets = [];
+  for (const st of statuses) {
+    if (!selectedStatuses.has(st)) continue;
+    datasets.push({
+      label: st,
+      data: labels.map((_, mi) => {
+        const by = monthTotals.get(mi + 1);
+        const v = by ? (by.get(st) || 0) : 0;
+        return measure === "hours" ? round2(v) : Math.round(v);
+      }),
+      backgroundColor: colorByStatus.get(st) || "#94a3b8",
+      borderWidth: 0,
+    });
+  }
+
+  c.data.labels = labels;
+  c.data.datasets = datasets;
+  c.options.scales.x.stacked = true;
+  c.options.scales.y.stacked = true;
+  c.options.plugins.tidrapportValueLabels.enabled = true;
+  c.options.plugins.tidrapportValueLabels.mode = "total";
+  c.options.plugins.tidrapportValueLabels.integerLabels = measure !== "hours";
+  const ttlSuffix = measure === "days" ? "dagar" : measure === "occasions" ? "tillfällen" : "timmar";
+  c.options.plugins.title.text = `Helår ${year} — per månad (${ttlSuffix})`;
+  renderColorLegend(datasets);
+  c.update();
+  window.__chart_kind = "normal";
+}
+
 function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts = {}) {
   const scale = typeof chartOpts.scale === "number" && chartOpts.scale > 0 ? chartOpts.scale : 1;
   const titleSuffix = chartOpts.titleSuffix || "";
@@ -2285,10 +2339,117 @@ function renderAll(state) {
     return;
   }
 
+  const groupMode = getChartGroupMode();
   ensureNormalTableHeader();
   const { totals, statuses, selectedStatuses } = state;
   const totalsDaysAll = state.totalsDays instanceof Map ? state.totalsDays : new Map();
   const totalsOccAll = state.totalsOcc instanceof Map ? state.totalsOcc : new Map();
+  const measure = getChartMeasureMode();
+
+  if (groupMode === "month") {
+    // Aggregation per month across all people (or a single person if employee filter is set).
+    const year = parseInt(cleanStr(els.yearInput?.value), 10) || new Date().getFullYear();
+    const monthTotals = new Map(); // month1to12 -> Map(status -> value)
+    const isSickLikeStatus = (s) => {
+      const low = cleanStr(s).toLowerCase();
+      return low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj");
+    };
+    const occSeen = new Set();
+
+    for (const [name, by] of totals.entries()) {
+      if (state.employeeName && name !== state.employeeName) continue;
+      for (const [st] of by.entries()) {
+        // Iterate rows is required for proper month overlap; we reuse raw rows via parsed data not kept.
+        // Fallback: use the already aggregated maps for hours/days when possible is not safe for month splits.
+      }
+    }
+    // Re-parse from current paste input to compute month splits deterministically.
+    const text = rawPasteFromInput();
+    const parsed = parseTable(text);
+    const headers = parsed.headers;
+    const rows = parsed.rows;
+    const colName = pickCol(headers, ["Namn", "Name"]);
+    const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
+    const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
+    const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
+    const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
+    const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
+    const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
+    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum"]);
+    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+    const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
+    const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
+
+    for (const row of rows) {
+      const nm = cleanStr(colName ? row[colName] : "");
+      if (!nm) continue;
+      if (state.employeeName && nm !== state.employeeName) continue;
+      const st = normalizeOrsak(colOrsak ? row[colOrsak] : "");
+      if (!selectedStatuses.has(st)) continue;
+
+      if (measure === "occasions") {
+        const dFirst = colFirstSickDay ? parseIsoDate(row[colFirstSickDay]) : null;
+        const dFallback = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
+        const dOcc = isSickLikeStatus(st) ? (dFirst || dFallback) : dFallback;
+        if (!dOcc || dOcc.getFullYear() !== year) continue;
+        const m1 = dOcc.getMonth() + 1;
+        const k = `${nm}\u0000${st}\u0000${dOcc.toISOString().slice(0, 10)}`;
+        if (occSeen.has(k)) continue;
+        occSeen.add(k);
+        if (!monthTotals.has(m1)) monthTotals.set(m1, new Map());
+        monthTotals.get(m1).set(st, (monthTotals.get(m1).get(st) || 0) + 1);
+        continue;
+      }
+
+      for (let m1 = 1; m1 <= 12; m1 += 1) {
+        const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, { year, month: m1 });
+        const v = measure === "days" ? b.days : b.hours;
+        if (!(Number(v) > 0)) continue;
+        if (!monthTotals.has(m1)) monthTotals.set(m1, new Map());
+        monthTotals.get(m1).set(st, (monthTotals.get(m1).get(st) || 0) + v);
+      }
+    }
+
+    // Table: show months as rows
+    if (els.tableHeadRow) {
+      els.tableHeadRow.innerHTML = "";
+      const th1 = document.createElement("th");
+      th1.className = "text-left px-3 py-2";
+      th1.textContent = "Månad";
+      const th2 = document.createElement("th");
+      th2.className = "text-right px-3 py-2";
+      th2.textContent = measure === "days" ? "Summa (dagar)" : measure === "occasions" ? "Summa (tillfällen)" : "Summa (h)";
+      els.tableHeadRow.appendChild(th1);
+      els.tableHeadRow.appendChild(th2);
+    }
+    if (els.tableBody) {
+      els.tableBody.innerHTML = "";
+      let totalSum = 0;
+      for (let m1 = 1; m1 <= 12; m1 += 1) {
+        const by = monthTotals.get(m1) || new Map();
+        let sum = 0;
+        for (const st of selectedStatuses) sum += by.get(st) || 0;
+        totalSum += sum;
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-slate-800";
+        const tdM = document.createElement("td");
+        tdM.className = "px-3 py-2 whitespace-nowrap";
+        tdM.textContent = `${monthLabelShort(m1)} ${year}`;
+        const tdS = document.createElement("td");
+        tdS.className = "px-3 py-2 text-right tabular-nums";
+        tdS.textContent = measure === "hours" ? round2(sum).toFixed(2) : String(Math.round(sum));
+        tr.appendChild(tdM);
+        tr.appendChild(tdS);
+        els.tableBody.appendChild(tr);
+      }
+      setTableHeaderTotalsNormal(totalSum);
+    }
+
+    renderMonthChart(monthTotals, statuses, selectedStatuses, year, measure);
+    els.statusText.textContent = `Helår ${year} • Statusar: ${statuses.length} • Visar: ${selectedStatuses.size}`;
+    return;
+  }
+
   const totalsView = sliceTotalsByEmployee(totals, state.employeeName);
   const totalsDaysView = sliceTotalsByEmployee(totalsDaysAll, state.employeeName);
   const totalsOccView = sliceTotalsByEmployee(totalsOccAll, state.employeeName);
@@ -2298,7 +2459,6 @@ function renderAll(state) {
   const chartTotalsH = chartEnabled ? filterTotalsByNames(totalsView, chartNameFilter) : totalsView;
   const chartTotalsD = chartEnabled ? filterTotalsByNames(totalsDaysView, chartNameFilter) : totalsDaysView;
   const chartTotalsO = chartEnabled ? filterTotalsByNames(totalsOccView, chartNameFilter) : totalsOccView;
-  const measure = getChartMeasureMode();
   const chartData = measure === "hours" ? chartTotalsH : measure === "days" ? chartTotalsD : chartTotalsO;
   const chartPeople = chartEnabled ? sortedPeople.filter((r) => chartNameFilter.has(r.name)) : sortedPeople;
   const totalSum = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
@@ -2543,6 +2703,10 @@ els.omfModeSelect?.addEventListener("change", () => {
 });
 
 els.chartMeasureSelect?.addEventListener("change", () => {
+  if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+});
+
+els.chartGroupSelect?.addEventListener("change", () => {
   if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
 });
 
