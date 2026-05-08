@@ -414,9 +414,14 @@ function renderOvertimeChart() {
     const labels = monthIdxs.map((idx) => overtimeMonthAbbr(idx + 1));
     c.data.labels = labels;
 
+    const singleYear = years.length === 1;
     const datasets = years.map((y, yi) => {
-      const bg = rgbaFromHex(palette(yi), 0.78);
-      const bd = rgbaFromHex(palette(yi), 1);
+      const bg = singleYear
+        ? monthIdxs.map((idx) => rgbaFromHex(palette(idx), 0.78))
+        : rgbaFromHex(palette(yi), 0.78);
+      const bd = singleYear
+        ? monthIdxs.map((idx) => rgbaFromHex(palette(idx), 1))
+        : rgbaFromHex(palette(yi), 1);
       const data = monthIdxs.map((idx) => {
         const mo = idx + 1;
         const hit = parsed.find((p) => p.y === y && p.mo === mo);
@@ -426,7 +431,7 @@ function renderOvertimeChart() {
     });
 
     c.data.datasets = datasets;
-    c.options.plugins.legend.display = true;
+    c.options.plugins.legend.display = !singleYear;
     c.options.plugins.tidrapportValueLabels.mode = "each";
     c.options.plugins.tidrapportValueLabels.integerLabels = false;
     c.options.scales.x.stacked = false;
