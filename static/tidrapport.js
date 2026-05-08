@@ -1137,8 +1137,8 @@ function aggregateParsed(headers, rows) {
   const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
   const colMerge = pickCol(headers, [MERGE_SOURCE_COL, MERGE_SOURCE_COL_FALLBACK]);
-  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum"]);
-  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
+  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
   const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
   const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
 
@@ -2375,10 +2375,16 @@ function renderAll(state) {
     const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
     const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
     const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
-    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum"]);
-    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
+    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
     const colFirstSickDay = pickCol(headers, ["1:a Sjdag", "1:a sjukdag", "Första sjukdag", "Forsta sjukdag", "1a sjdag"]);
     const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
+
+    if (!colDatumFom && !colDatumTom) {
+      els.statusText.textContent =
+        "Helår-läget behöver en datumkolumn (t.ex. «Datum Fom»/«Datum Tom» eller «Datum»). Byt tillbaka till «Per person» eller klistra in exporten som innehåller datum.";
+      return;
+    }
 
     for (const row of rows) {
       const nm = cleanStr(colName ? row[colName] : "");
