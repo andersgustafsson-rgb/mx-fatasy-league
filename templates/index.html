@@ -965,6 +965,22 @@
                       </div>
           {% endif %}
                 </div>
+                {% if upcoming_race %}
+                <div id="crowd-picks-teaser-wrap" class="hidden mt-5 rounded-2xl border border-emerald-400/40 bg-black/50 backdrop-blur-md p-4 shadow-lg ring-1 ring-white/10">
+                  <div class="flex items-start justify-between gap-2 mb-1">
+                    <div>
+                      <p class="text-emerald-300 font-bold text-xs sm:text-sm uppercase tracking-wide">🔮 Fältets favoriter</p>
+                      <p id="crowd-teaser-race" class="text-white/80 text-xs mt-0.5"></p>
+                    </div>
+                    <span id="crowd-teaser-n" class="text-[10px] sm:text-xs font-semibold text-emerald-200/90 whitespace-nowrap bg-emerald-900/40 px-2 py-1 rounded-lg border border-emerald-500/30"></span>
+                  </div>
+                  <p class="text-white/50 text-[10px] sm:text-xs mb-3 leading-snug">Så här röstar ligan per plats (andel av alla som lagt top 6) — inte bookmakers.</p>
+                  <div id="crowd-teaser-body" class="space-y-2 text-xs"></div>
+                  <button type="button" id="crowd-teaser-open-modal" class="mt-3 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm shadow-md active:scale-[0.99] transition-transform border border-white/10">
+                    Se alla lineups & jämför →
+                  </button>
+                </div>
+                {% endif %}
                 </div>
               </div>
               <!-- Weekly Fun Stats -->
@@ -2346,6 +2362,7 @@
       const openStatus = document.getElementById('real-picks-open-status');
       const raceResultsButton = document.getElementById('race-results-button');
       const picksDeadlineStatus = document.getElementById('picks-deadline-status');
+      const andrasHighlight = ['ring-2', 'ring-amber-300', 'shadow-lg', 'shadow-amber-500/25'];
       
       // Check if race has results (is completed)
       const hasResults = data.has_results || false;
@@ -2356,15 +2373,18 @@
       
       if (hasResults) {
         // Race is completed - show "Race färdigt" instead of picks status
-        lockedStatus.classList.add('hidden');
-        openStatus.classList.remove('hidden');
-        openStatus.textContent = '🏁 Race färdigt';
-        openStatus.href = '/race_results';
-        openStatus.className = 'inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+        if (lockedStatus) lockedStatus.classList.add('hidden');
+        if (openStatus) {
+          openStatus.classList.remove('hidden');
+          openStatus.textContent = '🏁 Race färdigt';
+          openStatus.href = '/race_results';
+          openStatus.className = 'inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+        }
         
         // Show "Se Andras Picks" button when race is completed
         if (seAndrasPicksBtn) {
           seAndrasPicksBtn.classList.remove('hidden');
+          seAndrasPicksBtn.classList.add(...andrasHighlight);
         }
         if (picksLockedDisabledBtn) {
           picksLockedDisabledBtn.classList.add('hidden');
@@ -2382,12 +2402,13 @@
         }
       } else if (data.picks_locked) {
         // Picks are locked but race not completed yet
-        lockedStatus.classList.remove('hidden');
-        openStatus.classList.add('hidden');
+        if (lockedStatus) lockedStatus.classList.remove('hidden');
+        if (openStatus) openStatus.classList.add('hidden');
         
         // Show "Se Andras Picks" button when picks are locked
         if (seAndrasPicksBtn) {
           seAndrasPicksBtn.classList.remove('hidden');
+          seAndrasPicksBtn.classList.add(...andrasHighlight);
         }
         if (picksLockedDisabledBtn) {
           picksLockedDisabledBtn.classList.add('hidden');
@@ -2403,18 +2424,22 @@
           picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300">🔒 <strong>Picks låsta.</strong> Du kan inte längre ändra dina val.</p>';
           picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
         }
+        maybeLoadCrowdTeaser();
       } else {
         // Picks are still open
-        lockedStatus.classList.add('hidden');
-        openStatus.classList.remove('hidden');
-        // Restore original link and text based on picks_status from server
-        openStatus.href = '/race_picks_active';
-        openStatus.className = 'inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
+        if (lockedStatus) lockedStatus.classList.add('hidden');
+        if (openStatus) {
+          openStatus.classList.remove('hidden');
+          // Restore original link and text based on picks_status from server
+          openStatus.href = '/race_picks_active';
+          openStatus.className = 'inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
+        }
         // Text is set from server-side template, so we don't change it here
         
         // Hide "Se Andras Picks" button when picks are still open
         if (seAndrasPicksBtn) {
           seAndrasPicksBtn.classList.add('hidden');
+          seAndrasPicksBtn.classList.remove(...andrasHighlight);
         }
         if (picksLockedDisabledBtn) {
           picksLockedDisabledBtn.classList.remove('hidden');
@@ -2430,6 +2455,12 @@
           picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">⏰ <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.</p>';
           picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
         }
+        const crowdWrap = document.getElementById('crowd-picks-teaser-wrap');
+        if (crowdWrap) crowdWrap.classList.add('hidden');
+        window._crowdTeaserLoadedFor = null;
+      }
+      if (hasResults) {
+        maybeLoadCrowdTeaser();
       }
     }
     
@@ -3398,12 +3429,150 @@
       // Set race picks URL for dynamic updates
       {% if upcoming_race %}
         window.racePicksUrl = "{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}";
+        const crowdTeaserBtn = document.getElementById('crowd-teaser-open-modal');
+        if (crowdTeaserBtn) {
+          crowdTeaserBtn.addEventListener('click', function() {
+            if (typeof showOtherUsersPicksFromMain === 'function') showOtherUsersPicksFromMain();
+          });
+        }
       {% endif %}
     });
     
     // Clean up on page unload
     window.addEventListener('beforeunload', stopCountdown);
     
+    function _crowdBarRowHtml(label, pct) {
+      const w = Math.min(100, Math.max(6, pct || 0));
+      return `<div class="mb-2 last:mb-0">
+        <div class="flex justify-between text-white/95 text-xs gap-2"><span class="truncate">${label}</span><span class="text-emerald-300 font-mono shrink-0">${pct}%</span></div>
+        <div class="h-2 bg-white/10 rounded-full overflow-hidden mt-0.5"><div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" style="width:${w}%"></div></div>
+      </div>`;
+    }
+
+    function _renderCrowdSummaryHtml(crowd, classLabel450, classLabel250, isWSX) {
+      if (!crowd || (!crowd.n_lineups && !(crowd.holeshot_450 || []).length && !(crowd.holeshot_250 || []).length && !(crowd.wildcard_top || []).length)) return '';
+      const n = crowd.n_users_with_snapshots_or_picks || 0;
+      const s450 = crowd.slots_450 && crowd.slots_450['1'] && crowd.slots_450['1'][0];
+      const s250 = crowd.slots_250 && crowd.slots_250['1'] && crowd.slots_250['1'][0];
+      let inner = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">`;
+      if (s450) {
+        inner += `<div class="rounded-xl bg-gray-900/90 p-3 border border-yellow-500/25">
+          <p class="text-yellow-300 text-[10px] font-bold uppercase tracking-wide mb-2">P1 ${classLabel450} — störst stöd</p>
+          ${_crowdBarRowHtml(s450.short, s450.pct)}`;
+        if (crowd.slots_450['1'][1]) {
+          const r2 = crowd.slots_450['1'][1];
+          inner += `<p class="text-white/50 text-[10px] mt-2">2:a: ${r2.short} (${r2.pct}%)</p>`;
+        }
+        inner += `</div>`;
+      }
+      if (s250) {
+        inner += `<div class="rounded-xl bg-gray-900/90 p-3 border border-blue-500/25">
+          <p class="text-blue-300 text-[10px] font-bold uppercase tracking-wide mb-2">P1 ${classLabel250} — störst stöd</p>
+          ${_crowdBarRowHtml(s250.short, s250.pct)}`;
+        if (crowd.slots_250['1'][1]) {
+          const r2 = crowd.slots_250['1'][1];
+          inner += `<p class="text-white/50 text-[10px] mt-2">2:a: ${r2.short} (${r2.pct}%)</p>`;
+        }
+        inner += `</div>`;
+      }
+      inner += `</div>`;
+      const h450 = (crowd.holeshot_450 || [])[0];
+      const h250 = (crowd.holeshot_250 || [])[0];
+      if (h450 || h250) {
+        inner += `<div class="mt-3 rounded-xl bg-gray-900/60 p-3 border border-green-500/20">
+          <p class="text-green-300 text-[10px] font-bold uppercase mb-2">Holeshot — crowd</p>
+          <div class="flex flex-wrap gap-2 text-xs text-white/90">`;
+        if (h450) inner += `<span class="bg-white/5 px-2 py-1 rounded-lg border border-white/10">${classLabel450}: ${h450.short} <span class="text-emerald-300">${h450.pct}%</span></span>`;
+        if (h250) inner += `<span class="bg-white/5 px-2 py-1 rounded-lg border border-white/10">${classLabel250}: ${h250.short} <span class="text-emerald-300">${h250.pct}%</span></span>`;
+        inner += `</div></div>`;
+      }
+      if (!isWSX && (crowd.wildcard_top || []).length) {
+        const w = crowd.wildcard_top[0];
+        inner += `<div class="mt-3 rounded-xl bg-gray-900/60 p-3 border border-purple-500/20">
+          <p class="text-purple-300 text-[10px] font-bold uppercase mb-1">Wildcard — vanligast</p>
+          <p class="text-white text-sm">Plats ${w.position}: ${w.short} <span class="text-emerald-300 font-mono">${w.pct}%</span></p>
+        </div>`;
+      }
+      return `<div class="mb-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-gray-900/80 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <h4 class="text-emerald-200 font-bold text-sm">🔮 Fältets “odds”</h4>
+          ${n ? `<span class="text-[10px] text-emerald-100/80 bg-black/30 px-2 py-0.5 rounded-full border border-emerald-500/20">${n} spelare i underlaget</span>` : ''}
+        </div>
+        <p class="text-white/45 text-[10px] mb-3">Andelar per plats bland alla som låst lineups — jämför med dina val nedan.</p>
+        ${inner}
+      </div>`;
+    }
+
+    window._crowdTeaserLoadedFor = window._crowdTeaserLoadedFor || null;
+    async function maybeLoadCrowdTeaser() {
+      {% if upcoming_race %}
+      const wrap = document.getElementById('crowd-picks-teaser-wrap');
+      const openBtn = document.getElementById('se-andras-picks-btn');
+      if (!wrap || !openBtn || openBtn.classList.contains('hidden')) return;
+      const compId = {{ upcoming_race.id }};
+      if (window._crowdTeaserLoadedFor === compId) return;
+      window._crowdTeaserLoadedFor = compId;
+      try {
+        const r = await fetch('/crowd_picks_summary/' + compId);
+        const data = await r.json();
+        if (!r.ok || !data.ok || !data.crowd) {
+          wrap.classList.add('hidden');
+          window._crowdTeaserLoadedFor = null;
+          return;
+        }
+        const c = data.crowd;
+        const hasAny = (c.n_lineups > 0) || ((c.holeshot_450 || []).length + (c.holeshot_250 || []).length + (c.wildcard_top || []).length) > 0;
+        if (!hasAny) {
+          wrap.classList.add('hidden');
+          return;
+        }
+        wrap.classList.remove('hidden');
+        const raceEl = document.getElementById('crowd-teaser-race');
+        const nEl = document.getElementById('crowd-teaser-n');
+        const body = document.getElementById('crowd-teaser-body');
+        if (raceEl) raceEl.textContent = data.competition && data.competition.name ? data.competition.name : '';
+        if (nEl) {
+          const n = c.n_users_with_snapshots_or_picks || 0;
+          nEl.textContent = n ? `${n} spelare` : '';
+        }
+        const isWSX = data.competition && data.competition.series === 'WSX';
+        const L450 = isWSX ? 'SX1' : '450';
+        const L250 = isWSX ? 'SX2' : '250';
+        const s450 = c.slots_450 && c.slots_450['1'] && c.slots_450['1'][0];
+        const s250 = c.slots_250 && c.slots_250['1'] && c.slots_250['1'][0];
+        const maxP = Math.max(s450 ? s450.pct : 0, s250 ? s250.pct : 0, 1);
+        let html = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
+        if (s450) {
+          html += `<div class="rounded-lg bg-white/5 p-2 border border-yellow-500/20">
+            <p class="text-yellow-300 text-[10px] font-bold uppercase mb-1">P1 ${L450}</p>
+            <div class="flex justify-between text-white text-xs"><span class="truncate">${s450.short}</span><span class="text-emerald-300 font-mono">${s450.pct}%</span></div>
+            <div class="mt-1 h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" style="width:${Math.min(100, Math.max(8, (s450.pct / maxP) * 100))}%"></div></div>
+          </div>`;
+        }
+        if (s250) {
+          html += `<div class="rounded-lg bg-white/5 p-2 border border-blue-500/20">
+            <p class="text-blue-300 text-[10px] font-bold uppercase mb-1">P1 ${L250}</p>
+            <div class="flex justify-between text-white text-xs"><span class="truncate">${s250.short}</span><span class="text-emerald-300 font-mono">${s250.pct}%</span></div>
+            <div class="mt-1 h-1.5 bg-white/10 rounded-full overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" style="width:${Math.min(100, Math.max(8, (s250.pct / maxP) * 100))}%"></div></div>
+          </div>`;
+        }
+        html += '</div>';
+        const h450 = (c.holeshot_450 || [])[0];
+        const h250 = (c.holeshot_250 || [])[0];
+        if (h450 || h250) {
+          html += '<div class="flex flex-wrap gap-1.5 mt-2 text-[10px] text-white/85">';
+          if (h450) html += `<span class="bg-green-900/30 px-2 py-1 rounded border border-green-500/20">HS ${L450}: ${h450.short} ${h450.pct}%</span>`;
+          if (h250) html += `<span class="bg-green-900/30 px-2 py-1 rounded border border-green-500/20">HS ${L250}: ${h250.short} ${h250.pct}%</span>`;
+          html += '</div>';
+        }
+        if (body) body.innerHTML = html;
+      } catch (e) {
+        console.warn('crowd teaser', e);
+        window._crowdTeaserLoadedFor = null;
+      }
+      {% endif %}
+    }
+
     // Show other users' picks from main page
     async function showOtherUsersPicksFromMain() {
       {% if upcoming_race %}
@@ -3415,80 +3584,84 @@
           throw new Error(errorData.error || `HTTP ${response.status}: Kunde inte hämta andra användares picks`);
         }
         
-        const usersPicks = await response.json();
-        console.log('DEBUG: Received users picks:', usersPicks);
+        const raw = await response.json();
+        console.log('DEBUG: Received picks payload:', raw);
         
-        // Check if we got an error response
-        if (usersPicks.error) {
-          throw new Error(usersPicks.error);
+        if (raw.error) {
+          throw new Error(raw.error);
         }
+        const usersPicks = Array.isArray(raw) ? raw : (raw.users || []);
+        const crowd = (!Array.isArray(raw) && raw.crowd) ? raw.crowd : null;
         
-        // Determine if WSX series (check first user or use upcoming_race series)
         const isWSX = (usersPicks.length > 0 && usersPicks[0].is_wsx) || {% if upcoming_race and upcoming_race.series == 'WSX' %}true{% else %}false{% endif %};
         const classLabel450 = isWSX ? 'SX1' : '450cc';
         const classLabel250 = isWSX ? 'SX2' : '250cc';
+        const crowdBlock = _renderCrowdSummaryHtml(crowd, classLabel450, classLabel250, isWSX);
         
-        // Create modal to display picks
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4';
         modal.innerHTML = `
-          <div class="bg-gray-800 rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-xl font-bold text-white">Andra Användares Picks</h3>
-              <button onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-3xl font-bold bg-gray-700 hover:bg-gray-600 rounded-full w-10 h-10 flex items-center justify-center transition-colors">&times;</button>
+          <div class="bg-gray-900 rounded-2xl p-4 sm:p-6 max-w-5xl w-full max-h-[92vh] overflow-y-auto border border-white/10 shadow-2xl">
+            <div class="flex justify-between items-start gap-3 mb-4 sticky top-0 bg-gray-900/95 pb-3 border-b border-white/10 z-10">
+              <div>
+                <h3 class="text-lg sm:text-xl font-bold text-white">Andra användares picks</h3>
+                <p class="text-white/50 text-xs mt-1">Jämför lineups — scrolla för alla spelare.</p>
+              </div>
+              <button type="button" onclick="this.closest('.fixed').remove()" class="text-gray-400 hover:text-white text-2xl font-bold bg-gray-800 hover:bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center transition-colors shrink-0" aria-label="Stäng">&times;</button>
             </div>
-            <div class="space-y-4">
+            ${crowdBlock}
+            <div class="space-y-3">
               ${usersPicks.length === 0 ? `
-                <div class="bg-gray-700 rounded-lg p-4 text-center">
-                  <p class="text-white">Inga andra användare har gjort sina picks ännu.</p>
+                <div class="bg-gray-800/80 rounded-xl p-6 text-center border border-white/5">
+                  <p class="text-white/90">Inga andra användare har synliga picks ännu.</p>
                 </div>
               ` : usersPicks.map(user => `
-                <div class="bg-gray-700 rounded-lg p-4">
-                  <h4 class="text-lg font-semibold text-white mb-3">${user.display_name || user.username}</h4>
+                <div class="bg-gray-800/90 rounded-xl p-4 border border-white/5 hover:border-emerald-500/20 transition-colors">
+                  <h4 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-full bg-emerald-600/30 items-center justify-center text-sm">👤</span>${user.display_name || user.username}</h4>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div>
-                      <h5 class="text-sm font-medium text-yellow-400 mb-2">${classLabel450} Picks</h5>
-                      <div class="space-y-1">
+                    <div class="rounded-lg bg-black/20 p-3 border border-yellow-500/15">
+                      <h5 class="text-xs font-bold text-yellow-300 uppercase tracking-wide mb-2">${classLabel450}</h5>
+                      <div class="space-y-1.5">
                         ${user.picks_450.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
-                            <span class="text-gray-400 w-6">${index + 1}.</span>
-                            <span class="text-white">${pick.rider_name}</span>
+                            <span class="text-gray-500 w-6 font-mono text-xs">${index + 1}.</span>
+                            <span class="text-white/95">${pick.rider_name}</span>
                           </div>
                         `).join('')}
                       </div>
                     </div>
-                    <div>
-                      <h5 class="text-sm font-medium text-blue-400 mb-2">${classLabel250} Picks</h5>
-                      <div class="space-y-1">
+                    <div class="rounded-lg bg-black/20 p-3 border border-blue-500/15">
+                      <h5 class="text-xs font-bold text-blue-300 uppercase tracking-wide mb-2">${classLabel250}</h5>
+                      <div class="space-y-1.5">
                         ${user.picks_250.map((pick, index) => `
                           <div class="flex items-center gap-2 text-sm">
-                            <span class="text-gray-400 w-6">${index + 1}.</span>
-                            <span class="text-white">${pick.rider_name}</span>
+                            <span class="text-gray-500 w-6 font-mono text-xs">${index + 1}.</span>
+                            <span class="text-white/95">${pick.rider_name}</span>
                           </div>
                         `).join('')}
                       </div>
                     </div>
                   </div>
                   ${user.holeshot_450 || user.holeshot_250 ? `
-                    <div class="mt-3 pt-3 border-t border-gray-600">
-                      <h5 class="text-sm font-medium text-green-400 mb-2">Holeshot Picks</h5>
-                      <div class="flex gap-4 text-sm">
-                        ${user.holeshot_450 ? `<span class="text-white">${classLabel450}: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
-                        ${user.holeshot_250 ? `<span class="text-white">${classLabel250}: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
+                    <div class="mt-3 pt-3 border-t border-white/10">
+                      <h5 class="text-xs font-bold text-green-400 uppercase mb-2">Holeshot</h5>
+                      <div class="flex flex-wrap gap-3 text-sm">
+                        ${user.holeshot_450 ? `<span class="text-white bg-green-900/20 px-2 py-1 rounded-lg">${classLabel450}: #${user.holeshot_450.rider_number} ${user.holeshot_450.rider_name}</span>` : ''}
+                        ${user.holeshot_250 ? `<span class="text-white bg-green-900/20 px-2 py-1 rounded-lg">${classLabel250}: #${user.holeshot_250.rider_number} ${user.holeshot_250.rider_name}</span>` : ''}
                       </div>
                     </div>
                   ` : ''}
                   ${user.wildcard && !isWSX ? `
-                    <div class="mt-3 pt-3 border-t border-gray-600">
-                      <h5 class="text-sm font-medium text-purple-400 mb-2">Wildcard</h5>
-                      <span class="text-white text-sm">Position ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
+                    <div class="mt-3 pt-3 border-t border-white/10">
+                      <h5 class="text-xs font-bold text-purple-300 uppercase mb-1">Wildcard</h5>
+                      <span class="text-white text-sm">Plats ${user.wildcard.position}: #${user.wildcard.rider_number} ${user.wildcard.rider_name}</span>
                     </div>
                   ` : ''}
                 </div>
               `).join('')}
             </div>
-            <div class="mt-6 flex justify-end">
-              <button onclick="this.closest('.fixed').remove()" class="bg-gray-600 hover:bg-gray-500 text-white px-6 py-2 rounded-lg transition-colors">Stäng</button>
+            <div class="mt-6 flex justify-end sticky bottom-0 bg-gray-900/95 pt-3 border-t border-white/10">
+              <button type="button" onclick="this.closest('.fixed').remove()" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2.5 rounded-xl transition-colors font-semibold">Stäng</button>
             </div>
           </div>
         `;

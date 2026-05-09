@@ -8648,6 +8648,243 @@ def get_my_picks(competition_id):
     
     return jsonify(result)
 
+
+def _iter_crowd_pick_payloads(competition_id: int, ensure_snapshots: bool):
+    """Yield (user_id, payload_dict) for users with any pick rows for this competition."""
+    import json
+
+    if ensure_snapshots:
+        try:
+            ensure_picks_snapshots_for_competition(int(competition_id), source="auto_lock")
+        except Exception:
+            pass
+
+    snap_rows = PicksSnapshot.query.filter_by(competition_id=competition_id).all()
+    snap_by_uid = {int(s.user_id): s for s in snap_rows}
+
+    uid_sources: set[int] = set()
+    for model in (RacePick, HoleshotPick, WildcardPick):
+        uid_sources.update(
+            int(uid)
+            for (uid,) in db.session.query(model.user_id)
+            .filter(model.competition_id == competition_id)
+            .distinct()
+            .all()
+            if uid is not None
+        )
+
+    for uid in sorted(set(snap_by_uid.keys()) | uid_sources):
+        snap = snap_by_uid.get(uid)
+        if snap:
+            try:
+                payload = json.loads(snap.payload_json or "{}")
+            except Exception:
+                payload = {}
+        else:
+            payload = _build_picks_snapshot_payload(uid, competition_id)
+        yield uid, payload
+
+
+def _build_crowd_picks_summary(competition_id: int, comp: Competition, ensure_snapshots: bool) -> dict:
+    """
+    Aggregate locked picks into per-slot popularity (pseudo-'odds' / crowd share).
+    Uses snapshots when available so results stay stable after lock.
+    """
+    is_wsx = getattr(comp, "series", None) == "WSX"
+    riders_dict = {r.id: r for r in Rider.query.all()}
+
+    slot_450: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    slot_250: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+    holo_450: dict[int, int] = defaultdict(int)
+    holo_250: dict[int, int] = defaultdict(int)
+    wc_key: dict[tuple[int, int], int] = defaultdict(int)
+
+    n_lineups = 0
+
+    for _uid, payload in _iter_crowd_pick_payloads(competition_id, ensure_snapshots):
+        race_picks = payload.get("race_picks") or []
+        has_race = False
+        for p in race_picks:
+            try:
+                rid = int(p.get("rider_id"))
+                pos = int(p.get("predicted_position"))
+            except (TypeError, ValueError):
+                continue
+            rider = riders_dict.get(rid)
+            if not rider:
+                continue
+            if is_wsx:
+                if rider.class_name == "wsx_sx1":
+                    slot_450[pos][rid] += 1
+                    has_race = True
+                elif rider.class_name == "wsx_sx2":
+                    slot_250[pos][rid] += 1
+                    has_race = True
+            else:
+                if rider.class_name == "450cc":
+                    slot_450[pos][rid] += 1
+                    has_race = True
+                elif rider.class_name == "250cc":
+                    slot_250[pos][rid] += 1
+                    has_race = True
+        if has_race:
+            n_lineups += 1
+
+        holos = payload.get("holeshot_picks") or {}
+        for cls, rid in holos.items():
+            if rid is None:
+                continue
+            try:
+                rid_i = int(rid)
+            except (TypeError, ValueError):
+                continue
+            cls_s = str(cls)
+            if is_wsx:
+                if cls_s in ("450cc", "wsx_sx1"):
+                    holo_450[rid_i] += 1
+                elif cls_s in ("250cc", "wsx_sx2"):
+                    holo_250[rid_i] += 1
+            else:
+                if cls_s == "450cc":
+                    holo_450[rid_i] += 1
+                elif cls_s == "250cc":
+                    holo_250[rid_i] += 1
+
+        if not is_wsx:
+            wcr = payload.get("wildcard_pick")
+            wcp = payload.get("wildcard_pos")
+            if wcr is not None and wcp is not None:
+                try:
+                    wc_key[(int(wcp), int(wcr))] += 1
+                except (TypeError, ValueError):
+                    pass
+
+    def rider_row(rid: int) -> dict:
+        r = riders_dict.get(rid)
+        if not r:
+            return {"rider_id": rid, "short": "?", "name": "?"}
+        num = getattr(r, "rider_number", None)
+        return {
+            "rider_id": rid,
+            "short": f"#{num or '?'} {r.name}",
+            "name": r.name,
+            "num": num,
+        }
+
+    def top_for_slot(counter_by_rid: dict[int, int], topn: int = 3) -> list:
+        tot = sum(counter_by_rid.values())
+        if tot <= 0:
+            return []
+        items = sorted(counter_by_rid.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rid, c in items[:topn]:
+            o = rider_row(rid)
+            o["count"] = c
+            o["pct"] = round(100.0 * c / tot, 1)
+            out.append(o)
+        return out
+
+    def slots_to_dict(slot_map: dict[int, dict[int, int]]) -> dict:
+        return {str(pos): top_for_slot(dict(slot_map.get(pos, {}))) for pos in range(1, 7)}
+
+    def top_holeshot(hcounter: dict[int, int], topn: int = 5) -> list:
+        tot = sum(hcounter.values())
+        if tot <= 0:
+            return []
+        items = sorted(hcounter.items(), key=lambda x: (-x[1], x[0]))
+        out = []
+        for rid, c in items[:topn]:
+            o = rider_row(rid)
+            o["count"] = c
+            o["pct"] = round(100.0 * c / tot, 1)
+            out.append(o)
+        return out
+
+    wc_list: list = []
+    if wc_key:
+        tot_wc = sum(wc_key.values())
+        items = sorted(wc_key.items(), key=lambda x: (-x[1], x[0]))[:8]
+        for (pos, rid), c in items:
+            o = rider_row(rid)
+            o["position"] = pos
+            o["count"] = c
+            o["pct"] = round(100.0 * c / tot_wc, 1)
+            wc_list.append(o)
+
+    snap_uids = {
+        int(u)
+        for (u,) in db.session.query(PicksSnapshot.user_id)
+        .filter(PicksSnapshot.competition_id == competition_id)
+        .distinct()
+        .all()
+        if u is not None
+    }
+    pick_uids = {
+        int(u)
+        for (u,) in db.session.query(RacePick.user_id)
+        .filter(RacePick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if u is not None
+    }
+    holo_uids = {
+        int(u)
+        for (u,) in db.session.query(HoleshotPick.user_id)
+        .filter(HoleshotPick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if u is not None
+    }
+    wc_uids = {
+        int(u)
+        for (u,) in db.session.query(WildcardPick.user_id)
+        .filter(WildcardPick.competition_id == competition_id)
+        .distinct()
+        .all()
+        if u is not None
+    }
+    n_users = len(snap_uids | pick_uids | holo_uids | wc_uids)
+
+    return {
+        "n_lineups": n_lineups,
+        "n_users_with_snapshots_or_picks": n_users,
+        "slots_450": slots_to_dict(slot_450),
+        "slots_250": slots_to_dict(slot_250),
+        "holeshot_450": top_holeshot(holo_450),
+        "holeshot_250": top_holeshot(holo_250),
+        "wildcard_top": wc_list,
+    }
+
+
+@app.route("/crowd_picks_summary/<int:competition_id>")
+def crowd_picks_summary(competition_id):
+    """Lightweight crowd / 'field' popularity for teaser widgets (requires login + locked or results)."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    comp = Competition.query.get_or_404(competition_id)
+    picks_locked = is_picks_locked(comp)
+    has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
+
+    if not picks_locked and not has_results:
+        return jsonify({"error": "Picks måste vara låsta eller race färdigt."}), 403
+
+    try:
+        summary = _build_crowd_picks_summary(
+            competition_id, comp, ensure_snapshots=picks_locked or has_results
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "competition": {"id": comp.id, "name": comp.name, "series": comp.series},
+                "crowd": summary,
+            }
+        )
+    except Exception as e:
+        print(f"ERROR crowd_picks_summary: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/get_other_users_picks/<int:competition_id>")
 def get_other_users_picks(competition_id):
     try:
@@ -8828,7 +9065,25 @@ def get_other_users_picks(competition_id):
                 print(f"DEBUG: Excluding user {user.username} - no picks found")
         
         print(f"DEBUG: Returning {len(users_picks)} users with picks")
-        return jsonify(users_picks)
+        crowd_payload = None
+        try:
+            crowd_payload = _build_crowd_picks_summary(
+                competition_id, comp, ensure_snapshots=picks_locked or has_results
+            )
+        except Exception as ex_crowd:
+            print(f"WARNING: crowd summary skipped in get_other_users_picks: {ex_crowd}")
+
+        return jsonify(
+            {
+                "users": users_picks,
+                "crowd": crowd_payload,
+                "competition": {
+                    "id": comp.id,
+                    "name": comp.name,
+                    "series": comp.series,
+                },
+            }
+        )
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
