@@ -1394,13 +1394,12 @@ def compute_sx_rider_podiums_for_year(year: int) -> dict:
         rid = rider.id
 
         if rid not in rider_meta:
-            merged_img = getattr(rider, "rider_image_data", None) or rider.image_url
             rider_meta[rid] = {
                 "rider_id": rid,
                 "rider_name": rider.name,
                 "rider_number": rider.rider_number,
                 "bike_brand": rider.bike_brand or "",
-                "image_url": merged_img,
+                "image_url": _resolve_rider_headshot_for_display(rider),
             }
 
         if rider_class == "450cc":
@@ -1475,13 +1474,12 @@ def compute_wsx_rider_podiums_for_series(series_id: int) -> dict:
         rid = rider.id
 
         if rid not in rider_meta:
-            merged_img = getattr(rider, "rider_image_data", None) or rider.image_url
             rider_meta[rid] = {
                 "rider_id": rid,
                 "rider_name": rider.name,
                 "rider_number": rider.rider_number,
                 "bike_brand": rider.bike_brand or "",
-                "image_url": merged_img,
+                "image_url": _resolve_rider_headshot_for_display(rider),
             }
 
         if rider_class == "wsx_sx1":
@@ -2052,6 +2050,61 @@ def _rider_portrait_url(r: Rider) -> str | None:
         return None
     s = str(raw).strip()
     return s or None
+
+
+def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
+    """
+    Bild för mallar (recap / färdiga serier): samma ordning som race_picks imgSrcFor
+    och race_results — DB först, sedan WSX-mappen riders/wsx/<namn>(1).jpg, sedan generiska riders/*.
+    """
+    if not rider:
+        return None
+    for attr in ("rider_image_data", "image_url"):
+        v = getattr(rider, attr, None)
+        if not v:
+            continue
+        s = str(v).strip()
+        if not s:
+            continue
+        if s.startswith("data:"):
+            return s
+        if s.startswith("http://") or s.startswith("https://"):
+            return s
+        if not s.startswith(("riders/", "uploads/", "trackmaps/")):
+            s = "riders/" + s
+        return s
+
+    cls = (getattr(rider, "class_name", None) or "").strip()
+    sp = (getattr(rider, "series_participation", None) or "").strip().lower()
+    if cls in ("wsx_sx1", "wsx_sx2") or sp == "wsx":
+        if rider.name:
+            nl = (rider.name or "").lower().strip().replace(".", "")
+            slug = "".join(c for c in nl if c.isalnum())
+            if slug:
+                return f"riders/wsx/{slug} (1).jpg"
+
+    coast = (getattr(rider, "coast_250", None) or "").strip().lower()
+    if cls == "250cc" and rider.rider_number is not None and rider.name and coast in (
+        "east",
+        "west",
+    ):
+        name_slug = re.sub(
+            r"[^a-z0-9_]",
+            "",
+            re.sub(r"\s+", "_", rider.name.lower().strip()),
+        )
+        sub = "250east" if coast == "east" else "250west"
+        return f"riders/{sub}/{int(rider.rider_number)}_{name_slug}.png"
+
+    if rider.rider_number is not None and rider.name:
+        name_slug = re.sub(
+            r"[^a-z0-9_]",
+            "",
+            re.sub(r"\s+", "_", rider.name.lower().strip()),
+        )
+        return f"riders/{int(rider.rider_number)}_{name_slug}.png"
+
+    return None
 
 
 def _rank_bucket(
