@@ -68,7 +68,7 @@
       cursor: not-allowed;
     }
     /* Supercross season wrap: allow resultat / serier / MX-länkar även för gäst */
-    .readonly-mode .sx-season-hero a {
+    .readonly-mode a.sx-season-hero-link {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -638,44 +638,6 @@
             </div>
           </div>
 
-          {% if sx_season_wrap %}
-          <!-- Supercross säsong klar: bridge till utomhus (försvinner när nästa MX-race är idag eller passerat) -->
-          <div class="sx-season-hero sx-season-hero-animate mb-4 rounded-2xl overflow-hidden border-2 border-amber-400/70 relative">
-            <div class="absolute inset-0 bg-gradient-to-br from-red-950/85 via-slate-900/92 to-emerald-950/80 pointer-events-none"></div>
-            <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
-            <div class="relative z-10 p-4 sm:p-6">
-              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
-                <div class="max-w-xl">
-                  <p class="text-amber-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] mb-1">Supercross {{ sx_season_wrap.last_race_date.year if sx_season_wrap.last_race_date else '' }} — säsongsklar</p>
-                  <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-white font-rajdhani leading-tight" style="text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);">{{ sx_season_wrap.headline }}</h2>
-                  <p class="text-white/85 text-sm sm:text-base mt-3 leading-relaxed">
-                    {{ sx_season_wrap.tagline }}
-                    Sista rundan: <strong class="text-white">{{ sx_season_wrap.last_race_name }}</strong>
-                    {% if sx_season_wrap.last_race_date %}<span class="text-white/60">({{ sx_season_wrap.last_race_date.strftime('%Y-%m-%d') }})</span>{% endif %}.
-                  </p>
-                </div>
-                <div class="flex flex-col items-stretch lg:items-end gap-3 w-full lg:w-auto lg:min-w-[280px]">
-                  <div class="rounded-xl bg-black/50 border border-emerald-500/30 px-4 py-3 backdrop-blur-sm w-full lg:text-right">
-                    <p class="text-emerald-300 text-[10px] font-bold uppercase tracking-wide">Nästa: Pro Motocross</p>
-                    <p class="text-white font-bold text-lg sm:text-xl">{{ sx_season_wrap.next_mx_name }}</p>
-                    <p class="text-white/70 text-sm">
-                      {{ sx_season_wrap.next_mx_date.strftime('%Y-%m-%d') if sx_season_wrap.next_mx_date else '' }}
-                      {% if sx_season_wrap.days_until_mx and sx_season_wrap.days_until_mx > 0 %}
-                        <span class="text-amber-200 font-semibold"> · om {{ sx_season_wrap.days_until_mx }} {% if sx_season_wrap.days_until_mx == 1 %}dag{% else %}dagar{% endif %}</span>
-                      {% endif %}
-                    </p>
-                  </div>
-                  <div class="flex flex-wrap gap-2 justify-center lg:justify-end">
-                    <a href="{{ sx_season_wrap.race_results_url }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold border border-red-400/30 transition-colors">📊 Alla resultat</a>
-                    <a href="{{ sx_season_wrap.finished_series_url }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold border border-purple-400/30 transition-colors">📜 Färdiga serier</a>
-                    <a href="{{ sx_season_wrap.next_mx_picks_url }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold border border-emerald-400/30 transition-colors">🌄 Nästa: MX-picks</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {% endif %}
-          
           <!-- Countdown Widgets Container -->
           <div class="flex flex-col lg:flex-row gap-4 min-w-[280px] sm:min-w-[400px] lg:min-w-[1000px]">
             
@@ -927,6 +889,42 @@
                 </div>
               </div>
             </div>
+
+            {% if sx_season_wrap %}
+            <a href="{{ sx_season_wrap.recap_url }}" class="sx-season-hero-link sx-season-hero sx-season-hero-animate mb-6 rounded-2xl overflow-hidden border-2 border-amber-400/70 relative block no-underline text-inherit hover:border-amber-300 transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-950">
+              <div class="absolute inset-0 bg-gradient-to-br from-red-950/85 via-slate-900/92 to-emerald-950/80 pointer-events-none"></div>
+              <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
+              <div class="relative z-10 p-4 sm:p-6">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                  <div class="max-w-xl">
+                    <p class="text-amber-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] mb-1">Supercross {{ sx_season_wrap.season_year }} — säsongsklar</p>
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-white font-rajdhani leading-tight" style="text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);">{{ sx_season_wrap.headline }}</h2>
+                    <p class="text-white/85 text-sm sm:text-base mt-3 leading-relaxed">
+                      {{ sx_season_wrap.tagline }}
+                      Sista rundan: <strong class="text-white">{{ sx_season_wrap.last_race_name }}</strong>
+                      {% if sx_season_wrap.last_race_date %}<span class="text-white/60">({{ sx_season_wrap.last_race_date.strftime('%Y-%m-%d') }})</span>{% endif %}.
+                    </p>
+                    <p class="text-amber-200/90 text-sm font-bold mt-3 flex items-center gap-2">
+                      <span>Tryck här för pallen (AMA + fantasy-ligan)</span>
+                      <span aria-hidden="true">→</span>
+                    </p>
+                  </div>
+                  <div class="flex flex-col items-stretch lg:items-end gap-3 w-full lg:w-auto lg:min-w-[260px]">
+                    <div class="rounded-xl bg-black/50 border border-emerald-500/30 px-4 py-3 backdrop-blur-sm w-full lg:text-right">
+                      <p class="text-emerald-300 text-[10px] font-bold uppercase tracking-wide">Nästa: Pro Motocross</p>
+                      <p class="text-white font-bold text-lg sm:text-xl">{{ sx_season_wrap.next_mx_name }}</p>
+                      <p class="text-white/70 text-sm">
+                        {{ sx_season_wrap.next_mx_date.strftime('%Y-%m-%d') if sx_season_wrap.next_mx_date else '' }}
+                        {% if sx_season_wrap.days_until_mx and sx_season_wrap.days_until_mx > 0 %}
+                          <span class="text-amber-200 font-semibold"> · om {{ sx_season_wrap.days_until_mx }} {% if sx_season_wrap.days_until_mx == 1 %}dag{% else %}dagar{% endif %}</span>
+                        {% endif %}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </a>
+            {% endif %}
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Quick Actions -->

@@ -334,6 +334,7 @@ def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None
             "tagline": "Inomhussäsongen är färdigspelad — utomhus väntar runt hörnet.",
             "last_race_name": last_sx.name,
             "last_race_date": last_sx.event_date,
+            "season_year": last_sx.event_date.year,
             "next_mx_id": next_mx.id,
             "next_mx_name": next_mx.name,
             "next_mx_date": next_mx.event_date,
@@ -1290,6 +1291,9 @@ def index():
     if sx_season_wrap:
         sx_season_wrap = {
             **sx_season_wrap,
+            "recap_url": url_for(
+                "sx_season_recap", year=sx_season_wrap["season_year"]
+            ),
             "race_results_url": url_for("race_results_page"),
             "finished_series_url": url_for("finished_series_page"),
             "next_mx_picks_url": url_for(
@@ -1359,6 +1363,188 @@ def index():
     )
 
 
+def compute_sx_rider_podiums_for_year(year: int) -> dict:
+    """AMA Supercross top 3 per klass för ett kalenderår (samma coast-/poänglogik som championship totals)."""
+    from collections import defaultdict
+
+    sx_ids = [
+        c.id
+        for c in Competition.query.filter(Competition.series == "SX").all()
+        if c.event_date and c.event_date.year == year
+    ]
+    if not sx_ids:
+        return {"450": [], "250_east": [], "250_west": []}
+
+    slot_450: dict[int, float] = defaultdict(float)
+    slot_east: dict[int, float] = defaultdict(float)
+    slot_west: dict[int, float] = defaultdict(float)
+    rider_meta: dict[int, dict] = {}
+
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.id.in_(sx_ids))
+        .all()
+    )
+
+    for cr, comp, rider in rows:
+        pts = float(get_smx_qualification_points(cr.position))
+        rider_class = getattr(cr, "class_name", None) or rider.class_name
+        rid = rider.id
+
+        if rid not in rider_meta:
+            merged_img = getattr(rider, "rider_image_data", None) or rider.image_url
+            rider_meta[rid] = {
+                "rider_id": rid,
+                "rider_name": rider.name,
+                "rider_number": rider.rider_number,
+                "bike_brand": rider.bike_brand or "",
+                "image_url": merged_img,
+            }
+
+        if rider_class == "450cc":
+            slot_450[rid] += pts
+        elif rider_class == "250cc":
+            rc = (rider.coast_250 or "").strip().lower()
+            if rc not in ("east", "west"):
+                continue
+            cc = (comp.coast_250 or "").strip().lower()
+            if cc in ("both", "showdown"):
+                if rc == "east":
+                    slot_east[rid] += pts
+                elif rc == "west":
+                    slot_west[rid] += pts
+            elif cc in ("east", "west") and cc == rc:
+                if rc == "east":
+                    slot_east[rid] += pts
+                else:
+                    slot_west[rid] += pts
+
+    def topn(counter: dict[int, float], n: int = 3) -> list:
+        items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))[:n]
+        out = []
+        for r_id, p in items:
+            row = dict(rider_meta.get(r_id, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            out.append(row)
+        return out
+
+    return {
+        "450": topn(slot_450),
+        "250_east": topn(slot_east),
+        "250_west": topn(slot_west),
+    }
+
+
+def fantasy_supercross_leaderboard_for_year(year: int) -> list:
+    """Summerad fantasy-poäng över alla SX-tävlingar under ett år."""
+    from collections import defaultdict
+
+    sx_ids = [
+        c.id
+        for c in Competition.query.filter(Competition.series == "SX").all()
+        if c.event_date and c.event_date.year == year
+    ]
+    if not sx_ids:
+        return []
+
+    agg: dict[int, int] = defaultdict(int)
+    for s in CompetitionScore.query.filter(
+        CompetitionScore.competition_id.in_(sx_ids)
+    ).all():
+        agg[s.user_id] += int(s.total_points or 0)
+
+    ranked = sorted(agg.items(), key=lambda x: (-x[1], x[0]))
+    if not ranked:
+        return []
+
+    uids = [u for u, _ in ranked]
+    users = User.query.filter(User.id.in_(uids)).all()
+    uid_map = {u.id: u for u in users}
+
+    out = []
+    for rank, (u_id, pts) in enumerate(ranked, start=1):
+        u = uid_map.get(u_id)
+        out.append(
+            {
+                "rank": rank,
+                "user_id": u_id,
+                "username": u.username if u else "?",
+                "display_name": getattr(u, "display_name", None)
+                or (u.username if u else "?"),
+                "points": pts,
+            }
+        )
+    return out
+
+
+@app.get("/supercross/sasong/<int:year>")
+def sx_season_recap(year: int):
+    """Säsongssammanfattning: AMA-pall + fantasy-leaderboard enbart Supercross."""
+    today = get_today()
+    sx_comps = [
+        c
+        for c in Competition.query.filter(Competition.series == "SX").all()
+        if c.event_date and c.event_date.year == year
+    ]
+    if not sx_comps:
+        flash("Ingen Supercross hittades för det året.", "warning")
+        return redirect(url_for("index"))
+    last_sx = max(sx_comps, key=lambda c: c.event_date)
+    if not CompetitionResult.query.filter_by(competition_id=last_sx.id).first():
+        flash("Sista rundan saknar resultat än — kom tillbaka snart.", "info")
+        return redirect(url_for("index"))
+
+    rider_podiums = compute_sx_rider_podiums_for_year(year)
+    fantasy_leaderboard = fantasy_supercross_leaderboard_for_year(year)
+
+    uid = session.get("user_id")
+    is_logged_in = uid is not None
+    current_username = session.get("username")
+
+    competitions = Competition.query.order_by(Competition.event_date).all()
+    wrap = build_sx_season_wrap_context(competitions, today)
+    footer_links = None
+    if wrap and wrap.get("season_year") == year:
+        footer_links = {
+            "race_results_url": url_for("race_results_page"),
+            "finished_series_url": url_for("finished_series_page"),
+            "next_mx_picks_url": url_for(
+                "race_picks_page", competition_id=wrap["next_mx_id"]
+            ),
+            "next_mx_name": wrap["next_mx_name"],
+            "next_mx_date": wrap["next_mx_date"],
+        }
+    if not footer_links:
+        future_mx = [
+            c
+            for c in Competition.query.filter(Competition.series == "MX").all()
+            if c.event_date and c.event_date > today
+        ]
+        if future_mx:
+            nx = min(future_mx, key=lambda c: c.event_date)
+            footer_links = {
+                "race_results_url": url_for("race_results_page"),
+                "finished_series_url": url_for("finished_series_page"),
+                "next_mx_picks_url": url_for("race_picks_page", competition_id=nx.id),
+                "next_mx_name": nx.name,
+                "next_mx_date": nx.event_date,
+            }
+
+    return render_template(
+        "sx_season_recap.html",
+        year=year,
+        last_race_name=last_sx.name,
+        last_race_date=last_sx.event_date,
+        sx_race_count=len(sx_comps),
+        rider_podiums=rider_podiums,
+        fantasy_leaderboard=fantasy_leaderboard,
+        is_logged_in=is_logged_in,
+        current_username=current_username,
+        current_user_id=uid,
+        footer_links=footer_links,
+    )
 
 
 
