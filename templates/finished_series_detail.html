@@ -3,161 +3,373 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ series.name }} {{ series.year }} - Färdiga Serier</title>
+  <title>{{ series.name }} {{ series.year }} — Färdig serie | MX Fantasy</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --gold-a: #fde68a;
+      --gold-b: #b45309;
+      --silver-a: #e2e8f0;
+      --silver-b: #475569;
+      --bronze-a: #fdba74;
+      --bronze-b: #7c2d12;
+    }
     body {
       font-family: 'Rajdhani', sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      background: radial-gradient(ellipse 120% 80% at 50% -20%, {% if is_wsx %}rgba(251, 191, 36, 0.1){% else %}rgba(34, 211, 238, 0.1){% endif %}, transparent 50%),
+        linear-gradient(165deg, #070b14 0%, #121a2e 45%, #0a1620 100%);
       background-attachment: fixed;
       min-height: 100vh;
     }
-    .cyberpunk-header {
+    .font-orbit { font-family: 'Orbitron', monospace; }
+    .checkered {
+      background-color: rgba(15, 23, 42, 0.5);
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.04) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.04) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+    }
+    .glass-panel {
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.72) 0%, rgba(30, 41, 59, 0.45) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+    }
+    .series-wordmark {
       font-family: 'Orbitron', monospace;
-      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      background: linear-gradient(90deg, #22d3ee, #fbbf24, #f97316, #22d3ee);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: wordmark-shine 8s linear infinite;
     }
-    .leaderboard-row {
-      transition: all 0.2s ease;
+    .series-wordmark--generic {
+      background: linear-gradient(90deg, #22d3ee, #a78bfa, #22d3ee);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: wordmark-shine 8s linear infinite;
     }
-    .leaderboard-row:hover {
-      background-color: rgba(34, 211, 238, 0.1);
-      transform: translateX(4px);
+    @keyframes wordmark-shine {
+      to { background-position: 200% center; }
     }
-    .medal-gold { color: #fbbf24; }
-    .medal-silver { color: #9ca3af; }
-    .medal-bronze { color: #d97706; }
+    .podium-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.35rem;
+      padding-top: 1.5rem;
+      min-height: 200px;
+    }
+    @media (min-width: 640px) {
+      .podium-row { gap: 0.65rem; min-height: 240px; }
+    }
+    @media (max-width: 639px) {
+      .podium-row--stack {
+        flex-direction: column;
+        align-items: stretch;
+        min-height: 0;
+        padding-top: 0.5rem;
+        gap: 1rem;
+      }
+      .podium-row--stack .podium-slot { max-width: none !important; width: 100% !important; }
+      .podium-row--stack .podium-slot--1 { order: 1; }
+      .podium-row--stack .podium-slot--2 { order: 2; }
+      .podium-row--stack .podium-slot--3 { order: 3; }
+    }
+    .podium-slot { width: 32%; max-width: 138px; display: flex; flex-direction: column; align-items: center; }
+    .podium-slot--1 { max-width: 155px; }
+    .pedestal {
+      width: 100%;
+      border-radius: 10px 10px 0 0;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-bottom: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0.5rem 0.35rem 0.65rem;
+    }
+    .pedestal--gold {
+      height: 132px;
+      background: linear-gradient(180deg, var(--gold-a) 0%, #d97706 38%, var(--gold-b) 100%);
+      box-shadow: 0 -12px 40px rgba(251, 191, 36, 0.35), inset 0 2px 0 rgba(255,255,255,0.35);
+    }
+    .pedestal--silver {
+      height: 96px;
+      background: linear-gradient(180deg, var(--silver-a) 0%, #64748b 45%, var(--silver-b) 100%);
+      box-shadow: 0 -8px 28px rgba(148, 163, 184, 0.25), inset 0 2px 0 rgba(255,255,255,0.3);
+    }
+    .pedestal--bronze {
+      height: 76px;
+      background: linear-gradient(180deg, var(--bronze-a) 0%, #c2410c 42%, var(--bronze-b) 100%);
+      box-shadow: 0 -6px 24px rgba(234, 88, 12, 0.28), inset 0 2px 0 rgba(255,255,255,0.22);
+    }
+    .pedestal-foot {
+      width: 88%;
+      height: 8px;
+      background: linear-gradient(180deg, #020617, #0f172a);
+      border-radius: 0 0 4px 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .medal-badge {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      margin-top: 0.35rem;
+      opacity: 0.95;
+    }
+    .name-bubble {
+      max-width: min(100%, 11rem);
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0.2rem 0.65rem;
+      border-radius: 9999px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.88));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .name-bubble span {
+      display: block;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #ecfeff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lb-table tbody tr:nth-child(even) { background: rgba(15, 23, 42, 0.35); }
+    .lb-table tbody tr:hover { background: rgba(34, 211, 238, 0.08); }
+    .race-card {
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      background: rgba(15, 23, 42, 0.55);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .race-card:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      transform: translateY(-2px);
+    }
   </style>
 </head>
-<body class="text-gray-200">
-  <div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">{{ series.name }} {{ series.year }}</h1>
-      <p class="text-gray-300 text-lg">Slutlig statistik och resultat</p>
-      <div class="mt-4 flex justify-center gap-4">
-        <a href="{{ url_for('finished_series_page') }}" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg inline-block">
-          ⬅ Tillbaka till färdiga serier
-        </a>
-        <a href="{{ url_for('index') }}" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg inline-block">
-          🏠 Huvudsidan
-        </a>
-      </div>
-    </div>
+<body class="text-gray-100">
+{% macro user_name_bubble(name) %}
+<div class="name-bubble mb-1.5" title="{{ name }}">
+  <span class="text-[10px] sm:text-xs font-orbit tracking-tight">{{ name }}</span>
+</div>
+{% endmacro %}
 
-    <!-- Series Info -->
-    <div class="bg-gray-800 rounded-lg p-6 mb-6 border-2 border-cyan-500">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-        <div>
-          <p class="text-gray-400 text-sm mb-1">Tävlingar</p>
-          <p class="text-2xl font-bold text-white">{{ competitions|length }}</p>
-        </div>
-        <div>
-          <p class="text-gray-400 text-sm mb-1">Deltagare</p>
-          <p class="text-2xl font-bold text-white">{{ total_users }}</p>
-        </div>
-        <div>
-          <p class="text-gray-400 text-sm mb-1">Period</p>
-          <p class="text-sm font-semibold text-white">
-            {% if series.start_date and series.end_date %}
-              {{ series.start_date.strftime('%d/%m/%Y') }} - {{ series.end_date.strftime('%d/%m/%Y') }}
+{% macro user_face(row, box) %}
+<div class="relative inline-block {{ box }} shrink-0">
+  <div class="absolute inset-0 rounded-full bg-gradient-to-br from-violet-600/90 via-fuchsia-600/90 to-cyan-600/90 shadow-lg ring-2 ring-white/20 z-0" aria-hidden="true"></div>
+  {% set pic = row.profile_picture_url %}
+  {% if pic and pic.startswith('data:') %}
+    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10">
+  {% elif pic and not pic.startswith('uploaded_') %}
+    <img src="{{ url_for('static', filename=pic) }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10" onerror="this.remove()">
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro finished_podium_three(rows) %}
+  {% set f2 = rows[1] if rows|length > 1 else none %}
+  {% set f1 = rows[0] if rows|length > 0 else none %}
+  {% set f3 = rows[2] if rows|length > 2 else none %}
+  <div class="podium-row podium-row--stack">
+    {% if f2 %}
+    <div class="podium-slot podium-slot--2">
+      {{ user_name_bubble(f2.display_name) }}
+      <div class="-mb-2 relative z-20">{{ user_face(f2, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
+      <div class="medal-badge text-slate-200">2 · LIGAN</div>
+      <div class="pedestal pedestal--silver mt-2 w-full">
+        <span class="font-orbit text-sm font-black text-white drop-shadow-md">{{ f2.total_points }}p</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+    {% if f1 %}
+    <div class="podium-slot podium-slot--1">
+      {{ user_name_bubble(f1.display_name) }}
+      <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ user_face(f1, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
+      <div class="text-2xl mt-1" aria-hidden="true">🏆</div>
+      <div class="medal-badge text-amber-100">1 · MÄSTARE</div>
+      {% if is_logged_in and f1.user_id == current_user_id %}
+      <span class="text-[10px] text-amber-300 font-bold mt-0.5">Det är du!</span>
+      {% endif %}
+      <div class="pedestal pedestal--gold mt-2 w-full">
+        <span class="font-orbit text-base sm:text-lg font-black text-amber-950 drop-shadow-sm">{{ f1.total_points }}p</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+    {% if f3 %}
+    <div class="podium-slot podium-slot--3">
+      {{ user_name_bubble(f3.display_name) }}
+      <div class="-mb-2 relative z-20">{{ user_face(f3, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
+      <div class="medal-badge text-orange-100">3 · LIGAN</div>
+      <div class="pedestal pedestal--bronze mt-2 w-full">
+        <span class="font-orbit text-sm font-black text-white drop-shadow-md">{{ f3.total_points }}p</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+  <div class="relative overflow-hidden min-h-screen">
+    <div class="absolute inset-0 checkered pointer-events-none opacity-60"></div>
+    <div class="container mx-auto px-4 py-8 max-w-6xl relative z-10">
+      <header class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 glass-panel rounded-2xl px-5 py-5 sm:px-8">
+        <div class="flex items-center gap-4">
+          <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy" class="h-12 sm:h-14 w-auto object-contain drop-shadow-lg" onerror="this.style.display='none'" />
+          <div class="h-10 w-px bg-white/15 hidden sm:block" aria-hidden="true"></div>
+          <div class="text-center sm:text-left">
+            {% if is_wsx %}
+            <div class="series-wordmark text-lg sm:text-xl leading-tight">WORLD SUPERCROSS</div>
+            <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">WSX {{ series.year }} · Säsong klar</p>
             {% else %}
-              -
+            <div class="series-wordmark--generic text-lg sm:text-xl leading-tight">{{ series.name }}</div>
+            <p class="text-[10px] sm:text-xs text-gray-500 font-orbit tracking-[0.28em] uppercase mt-1">{{ series.year }} · Färdig serie</p>
             {% endif %}
-          </p>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <a href="{{ url_for('finished_series_page') }}" class="text-center text-sm font-bold text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 rounded-lg px-4 py-2 bg-cyan-950/30">← Färdiga serier</a>
+          <a href="{{ url_for('index') }}" class="text-center text-sm font-bold text-white/90 border border-white/15 rounded-lg px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50">Hem</a>
+        </div>
+      </header>
+
+      <div class="text-center mb-10">
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-2 font-orbit" style="text-shadow: 0 0 32px rgba(34, 211, 238, 0.2);">{{ series.name }} {{ series.year }}</h1>
+        <p class="text-gray-400">Slutlig statistik · {{ total_users }} deltagare · {{ competitions|length }} tävlingar</p>
+      </div>
+
+      <div class="glass-panel rounded-2xl p-5 sm:p-6 mb-10">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+          <div>
+            <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Tävlingar</p>
+            <p class="text-3xl font-black text-white font-orbit">{{ competitions|length }}</p>
+          </div>
+          <div>
+            <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Deltagare</p>
+            <p class="text-3xl font-black text-cyan-300 font-orbit">{{ total_users }}</p>
+          </div>
+          <div>
+            <p class="text-gray-500 text-xs font-orbit uppercase tracking-wider mb-1">Period</p>
+            <p class="text-sm font-bold text-white mt-1">
+              {% if series.start_date and series.end_date %}
+                {{ series.start_date.strftime('%d/%m/%Y') }} – {{ series.end_date.strftime('%d/%m/%Y') }}
+              {% else %}—{% endif %}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Competitions List -->
-    {% if competitions %}
-      <div class="mb-6">
-        <h2 class="text-2xl font-bold text-cyan-400 mb-4">📅 Tävlingar</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% if competitions %}
+      <section class="mb-12">
+        <h2 class="text-xl md:text-2xl font-black text-cyan-300 font-orbit mb-4 flex items-center gap-2">
+          <span class="text-amber-400" aria-hidden="true">📅</span> Tävlingar
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {% for comp in competitions %}
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <p class="font-semibold text-white">{{ comp.name }}</p>
-              <p class="text-sm text-gray-400">
-                {% if comp.event_date %}
-                  {{ comp.event_date.strftime('%d/%m/%Y') }}
-                {% endif %}
-                {% if competition_details[comp.id].location %}
-                  - {{ competition_details[comp.id].location }}
-                {% endif %}
-              </p>
-            </div>
+          <div class="race-card rounded-xl p-4">
+            <p class="font-bold text-white leading-snug">{{ comp.name }}</p>
+            <p class="text-sm text-cyan-200/80 mt-1">
+              {% if comp.event_date %}{{ comp.event_date.strftime('%d/%m/%Y') }}{% endif %}
+              {% if competition_details[comp.id].location %}
+                <span class="text-gray-500"> · </span>{{ competition_details[comp.id].location }}
+              {% endif %}
+            </p>
+          </div>
           {% endfor %}
         </div>
-      </div>
-    {% endif %}
+      </section>
+      {% endif %}
 
-    <!-- Leaderboard -->
-    {% if leaderboard %}
-      <div>
-        <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏆 Slutlig Leaderboard</h2>
-        <div class="bg-gray-800 rounded-lg overflow-hidden border-2 border-cyan-500">
+      {% if leaderboard %}
+      <section class="mb-12">
+        <h2 class="text-xl md:text-2xl font-black text-amber-200 font-orbit mb-6 text-center flex items-center justify-center gap-2">
+          <span aria-hidden="true">🏁</span> Slutlig leaderboard
+        </h2>
+        {% set top3 = leaderboard[:3] %}
+        <div class="glass-panel rounded-2xl p-6 sm:p-8 mb-10 max-w-xl mx-auto border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-slate-900/40">
+          <p class="text-center text-xs font-orbit tracking-[0.2em] text-cyan-400/80 uppercase mb-2">Top 3</p>
+          {{ finished_podium_three(top3) }}
+        </div>
+
+        <div class="glass-panel rounded-2xl overflow-hidden border border-white/10">
+          <div class="px-4 py-3 bg-gradient-to-r from-cyan-950/50 to-slate-900/80 border-b border-white/10 flex items-center justify-between">
+            <span class="font-orbit text-xs tracking-wider text-cyan-300/90 uppercase">Alla placeringar</span>
+            <span class="text-[10px] text-gray-500">{{ leaderboard|length }} spelare</span>
+          </div>
           <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-900">
-                <tr>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-300">Plats</th>
-                  <th class="px-4 py-3 text-left text-sm font-semibold text-gray-300">Användare</th>
-                  <th class="px-4 py-3 text-center text-sm font-semibold text-gray-300">Tävlingar</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-300">Race</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-300">Holeshot</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-gray-300">Wildcard</th>
-                  <th class="px-4 py-3 text-right text-sm font-semibold text-cyan-400">Totalt</th>
+            <table class="lb-table w-full text-sm min-w-[640px]">
+              <thead>
+                <tr class="text-left text-gray-400 bg-black/35">
+                  <th class="px-3 py-3 w-12 text-center font-orbit text-[10px]">#</th>
+                  <th class="px-3 py-3">Spelare</th>
+                  <th class="px-2 py-3 text-center hidden sm:table-cell">Race</th>
+                  <th class="px-2 py-3 text-center hidden md:table-cell">Holeshot</th>
+                  <th class="px-2 py-3 text-center hidden md:table-cell">Wildcard</th>
+                  <th class="px-2 py-3 text-center">Omg.</th>
+                  <th class="px-4 py-3 text-right font-orbit text-[10px] tracking-wider">TOTALT</th>
                 </tr>
               </thead>
               <tbody>
-                {% for user in leaderboard %}
-                  <tr class="leaderboard-row border-t border-gray-700 {% if loop.index <= 3 %}bg-gray-900/50{% endif %}">
-                    <td class="px-4 py-3">
-                      <span class="font-bold text-lg
-                        {% if loop.index == 1 %}medal-gold
-                        {% elif loop.index == 2 %}medal-silver
-                        {% elif loop.index == 3 %}medal-bronze
-                        {% else %}text-gray-400{% endif %}">
-                        {% if loop.index == 1 %}🥇
-                        {% elif loop.index == 2 %}🥈
-                        {% elif loop.index == 3 %}🥉
-                        {% else %}{{ loop.index }}{% endif %}
-                      </span>
-                    </td>
-                    <td class="px-4 py-3">
-                      <a href="{{ url_for('user_race_results', user_id=user.user_id) }}" 
-                         class="text-white hover:text-cyan-400 font-semibold transition-colors">
-                        {{ user.display_name }}
-                      </a>
-                    </td>
-                    <td class="px-4 py-3 text-center text-gray-300">
-                      {{ user.competitions_participated }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-300">
-                      {{ user.race_points }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-300">
-                      {{ user.holeshot_points }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-gray-300">
-                      {{ user.wildcard_points }}
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                      <span class="font-bold text-lg text-green-400">{{ user.total_points }}</span>
-                    </td>
-                  </tr>
+                {% for row in leaderboard %}
+                <tr class="border-t border-white/5 {% if is_logged_in and row.user_id == current_user_id %}bg-cyan-500/10 ring-1 ring-inset ring-cyan-400/20{% endif %}">
+                  <td class="px-3 py-2.5 align-middle text-center">
+                    {% if row.rank <= 3 %}
+                      <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-orbit font-black
+                        {% if row.rank == 1 %}bg-gradient-to-br from-amber-300 to-amber-700 text-amber-950 shadow-lg shadow-amber-500/20
+                        {% elif row.rank == 2 %}bg-gradient-to-br from-slate-200 to-slate-600 text-slate-900
+                        {% else %}bg-gradient-to-br from-orange-300 to-orange-800 text-white{% endif %}">{{ row.rank }}</span>
+                    {% else %}
+                      <span class="text-gray-500 font-orbit text-xs">{{ row.rank }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-2 py-2.5 align-middle">
+                    <div class="flex items-center gap-3 min-w-0">
+                      {{ user_face(row, 'w-10 h-10') }}
+                      <div class="min-w-0">
+                        {% if is_logged_in and current_user_id is not none and row.user_id != current_user_id %}
+                          <a href="{{ url_for('view_user_profile', user_id=row.user_id) }}" class="font-semibold text-white hover:text-cyan-300 transition-colors block truncate">{{ row.display_name }}</a>
+                        {% else %}
+                          <a href="{{ url_for('user_race_results', user_id=row.user_id) }}" class="font-semibold text-white hover:text-cyan-300 transition-colors block truncate">{{ row.display_name }}</a>
+                        {% endif %}
+                        <span class="text-[10px] text-gray-500 truncate block">@{{ row.username }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden sm:table-cell">{{ row.race_points }}</td>
+                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden md:table-cell">{{ row.holeshot_points }}</td>
+                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-300 hidden md:table-cell">{{ row.wildcard_points }}</td>
+                  <td class="px-2 py-2.5 text-center tabular-nums text-gray-400">{{ row.competitions_participated }}</td>
+                  <td class="px-4 py-2.5 text-right tabular-nums font-orbit font-bold text-cyan-300">{{ row.total_points }}</td>
+                </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
+      </section>
+      {% else %}
+      <div class="glass-panel rounded-2xl p-12 text-center text-gray-500">
+        Ingen statistik tillgänglig för denna serie.
       </div>
-    {% else %}
-      <div class="text-center py-12 bg-gray-800 rounded-lg border-2 border-gray-700">
-        <p class="text-gray-400 text-xl">Ingen statistik tillgänglig för denna serie.</p>
-      </div>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
 </body>
 </html>
-

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Färdiga Serier - MX Fantasy League</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -18,35 +19,113 @@
       text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
     }
     .series-card {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border: 2px solid #22d3ee;
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 2px solid rgba(34, 211, 238, 0.45);
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.2);
       transition: all 0.3s ease;
     }
     .series-card:hover {
       transform: translateY(-4px);
-      box-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
+      box-shadow: 0 0 36px rgba(34, 211, 238, 0.35);
     }
-    .podium-wrap {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr 1fr;
-      gap: 10px;
-      align-items: end;
+    @keyframes sx-hero-glow {
+      0%, 100% { box-shadow: 0 0 18px rgba(251, 191, 36, 0.2), 0 0 36px rgba(220, 38, 38, 0.12); }
+      50% { box-shadow: 0 0 26px rgba(251, 191, 36, 0.4), 0 0 48px rgba(220, 38, 38, 0.22); }
     }
-    .podium-slot {
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      background: rgba(15, 23, 42, 0.55);
-      backdrop-filter: blur(6px);
+    .sx-season-hero-animate {
+      animation: sx-hero-glow 5s ease-in-out infinite;
     }
-    .podium-rank {
-      font-family: 'Orbitron', monospace;
-      letter-spacing: 0.06em;
+    .font-orbit { font-family: 'Orbitron', monospace; }
+    .card-podium-row {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.35rem;
+      padding-top: 0.75rem;
+      min-height: 140px;
+    }
+    @media (max-width: 639px) {
+      .card-podium-row--stack {
+        flex-direction: column;
+        align-items: stretch;
+        min-height: 0;
+        gap: 0.75rem;
+      }
+      .card-podium-row--stack .card-podium-slot { max-width: none !important; width: 100% !important; }
+      .card-podium-row--stack .card-podium-slot--1 { order: 1; }
+      .card-podium-row--stack .card-podium-slot--2 { order: 2; }
+      .card-podium-row--stack .card-podium-slot--3 { order: 3; }
+    }
+    .card-podium-slot { width: 32%; max-width: 100px; display: flex; flex-direction: column; align-items: center; }
+    .card-podium-slot--1 { max-width: 112px; }
+    .card-pedestal {
+      width: 100%;
+      border-radius: 8px 8px 0 0;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-bottom: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0.35rem 0.25rem 0.45rem;
+    }
+    .card-pedestal--gold {
+      height: 72px;
+      background: linear-gradient(180deg, #fde68a 0%, #b45309 100%);
+      box-shadow: 0 -6px 20px rgba(251, 191, 36, 0.3);
+    }
+    .card-pedestal--silver {
+      height: 54px;
+      background: linear-gradient(180deg, #e2e8f0 0%, #475569 100%);
+    }
+    .card-pedestal--bronze {
+      height: 44px;
+      background: linear-gradient(180deg, #fdba74 0%, #7c2d12 100%);
+    }
+    .card-pedestal-foot {
+      width: 86%;
+      height: 5px;
+      background: linear-gradient(180deg, #020617, #0f172a);
+      border-radius: 0 0 3px 3px;
+    }
+    .name-bubble-mini {
+      max-width: min(100%, 6.5rem);
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0.1rem 0.45rem;
+      border-radius: 9999px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      margin-bottom: 0.25rem;
+    }
+    .name-bubble-mini span {
+      display: block;
+      text-align: center;
+      font-weight: 800;
+      font-size: 9px;
+      line-height: 1.2;
+      color: #ecfeff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body class="text-gray-200">
+{% macro card_user_face(row, box) %}
+<div class="relative inline-block {{ box }} shrink-0">
+  <div class="absolute inset-0 rounded-full bg-gradient-to-br from-violet-600/90 via-fuchsia-600/90 to-cyan-600/90 shadow-md ring-2 ring-white/15 z-0" aria-hidden="true"></div>
+  {% set pic = row.profile_picture_url %}
+  {% if pic and pic.startswith('data:') %}
+    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/40 z-10">
+  {% elif pic and not pic.startswith('uploaded_') %}
+    <img src="{{ url_for('static', filename=pic) }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/40 z-10" onerror="this.remove()">
+  {% endif %}
+</div>
+{% endmacro %}
+
   <div class="container mx-auto px-4 py-8">
-    <!-- Header -->
     <div class="text-center mb-8">
       <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">🏆 FÄRDIGA SERIER</h1>
       <p class="text-gray-300 text-lg">Historik och resultat från avslutade serier</p>
@@ -57,20 +136,56 @@
       </div>
     </div>
 
+    {% if sx_season_wrap %}
+    <a href="{{ sx_season_wrap.recap_url }}" class="sx-season-hero-animate mb-8 rounded-2xl overflow-hidden border-2 border-amber-400/70 relative block no-underline text-inherit hover:border-amber-300 transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+      <div class="absolute inset-0 bg-gradient-to-br from-red-950/85 via-slate-900/92 to-emerald-950/80 pointer-events-none"></div>
+      <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
+      <div class="relative z-10 p-4 sm:p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+          <div class="max-w-xl">
+            <p class="text-amber-300 text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.2em] mb-1">Supercross {{ sx_season_wrap.season_year }} — säsongsklar</p>
+            <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight font-orbit" style="text-shadow: 0 0 24px rgba(251, 191, 36, 0.35);">{{ sx_season_wrap.headline }}</h2>
+            <p class="text-white/85 text-sm sm:text-base mt-3 leading-relaxed">
+              {{ sx_season_wrap.tagline }}
+              Sista rundan: <strong class="text-white">{{ sx_season_wrap.last_race_name }}</strong>
+              {% if sx_season_wrap.last_race_date %}<span class="text-white/60">({{ sx_season_wrap.last_race_date.strftime('%Y-%m-%d') }})</span>{% endif %}.
+            </p>
+            <p class="text-amber-200/90 text-sm font-bold mt-3 flex items-center gap-2">
+              <span>Tryck här för pallen (AMA + fantasy-ligan)</span>
+              <span aria-hidden="true">→</span>
+            </p>
+          </div>
+          <div class="flex flex-col items-stretch lg:items-end gap-3 w-full lg:w-auto lg:min-w-[260px]">
+            <div class="rounded-xl bg-black/50 border border-emerald-500/30 px-4 py-3 backdrop-blur-sm w-full lg:text-right">
+              <p class="text-emerald-300 text-[10px] font-bold uppercase tracking-wide">Nästa: Pro Motocross</p>
+              <p class="text-white font-bold text-lg sm:text-xl">{{ sx_season_wrap.next_mx_name }}</p>
+              <p class="text-white/70 text-sm">
+                {{ sx_season_wrap.next_mx_date.strftime('%Y-%m-%d') if sx_season_wrap.next_mx_date else '' }}
+                {% if sx_season_wrap.days_until_mx and sx_season_wrap.days_until_mx > 0 %}
+                  <span class="text-amber-200 font-semibold"> · om {{ sx_season_wrap.days_until_mx }} {% if sx_season_wrap.days_until_mx == 1 %}dag{% else %}dagar{% endif %}</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a>
+    {% endif %}
+
     {% if series_data %}
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for data in series_data %}
-          <div class="series-card rounded-lg p-6">
+          <div class="series-card rounded-xl p-5">
             <div class="flex justify-between items-start mb-4">
               <div>
-                <h2 class="text-2xl font-bold text-cyan-400 mb-1">{{ data.series.name }}</h2>
+                <h2 class="text-2xl font-bold text-cyan-400 mb-1 font-orbit">{{ data.series.name }}</h2>
                 <p class="text-gray-400 text-sm">{{ data.series.year }}</p>
               </div>
-              <span class="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-xs font-semibold">
+              <span class="bg-slate-800 text-gray-300 px-3 py-1 rounded-full text-xs font-semibold border border-cyan-500/30">
                 Avslutad
               </span>
             </div>
-            
+
             <div class="mb-4 space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-gray-400">Tävlingar:</span>
@@ -90,48 +205,51 @@
 
             {% if data.top_10 %}
               <div class="mb-4">
-                <h3 class="text-lg font-semibold text-white mb-2">🏆 Top 3</h3>
+                <h3 class="text-sm font-orbit font-bold text-amber-200/90 mb-2 tracking-wide uppercase">Top 3</h3>
                 {% set p1 = data.top_10[0] if data.top_10|length > 0 else none %}
                 {% set p2 = data.top_10[1] if data.top_10|length > 1 else none %}
                 {% set p3 = data.top_10[2] if data.top_10|length > 2 else none %}
-
-                <div class="podium-wrap">
-                  <div class="podium-slot rounded-lg p-3">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="podium-rank text-xs font-black text-slate-200">#2</span>
-                      <span class="text-xs font-bold text-slate-300 tabular-nums">{% if p2 %}{{ p2.total_points }}p{% else %}—{% endif %}</span>
+                <div class="card-podium-row card-podium-row--stack">
+                  {% if p2 %}
+                  <div class="card-podium-slot card-podium-slot--2">
+                    <div class="name-bubble-mini" title="{{ p2.display_name }}"><span>{{ p2.display_name }}</span></div>
+                    <div class="-mb-1 relative z-10">{{ card_user_face(p2, 'w-10 h-10') }}</div>
+                    <div class="text-[9px] font-orbit text-slate-400 mt-0.5">P2</div>
+                    <div class="card-pedestal card-pedestal--silver mt-1 w-full">
+                      <span class="font-orbit text-xs font-black text-white">{{ p2.total_points }}p</span>
                     </div>
-                    <div class="h-12 rounded-md bg-gradient-to-b from-slate-300/30 to-slate-900/30 border border-slate-400/20 flex items-center justify-center">
-                      <span class="text-sm font-bold text-slate-100 truncate px-2">{% if p2 %}{{ p2.display_name }}{% else %}—{% endif %}</span>
-                    </div>
+                    <div class="card-pedestal-foot"></div>
                   </div>
-
-                  <div class="podium-slot rounded-lg p-3 border-yellow-400/30">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="podium-rank text-xs font-black text-yellow-300">#1</span>
-                      <span class="text-xs font-bold text-emerald-300 tabular-nums">{% if p1 %}{{ p1.total_points }}p{% else %}—{% endif %}</span>
+                  {% endif %}
+                  {% if p1 %}
+                  <div class="card-podium-slot card-podium-slot--1">
+                    <div class="name-bubble-mini" title="{{ p1.display_name }}"><span>{{ p1.display_name }}</span></div>
+                    <div class="-mb-1 relative z-10 scale-105">{{ card_user_face(p1, 'w-12 h-12') }}</div>
+                    <div class="text-[9px] font-orbit text-amber-300 mt-0.5">P1</div>
+                    <div class="card-pedestal card-pedestal--gold mt-1 w-full">
+                      <span class="font-orbit text-sm font-black text-amber-950">{{ p1.total_points }}p</span>
                     </div>
-                    <div class="h-16 rounded-md bg-gradient-to-b from-yellow-400/25 to-slate-900/30 border border-yellow-400/20 flex items-center justify-center">
-                      <span class="text-sm font-black text-white truncate px-2">{% if p1 %}{{ p1.display_name }}{% else %}—{% endif %}</span>
-                    </div>
+                    <div class="card-pedestal-foot"></div>
                   </div>
-
-                  <div class="podium-slot rounded-lg p-3">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="podium-rank text-xs font-black text-orange-300">#3</span>
-                      <span class="text-xs font-bold text-slate-300 tabular-nums">{% if p3 %}{{ p3.total_points }}p{% else %}—{% endif %}</span>
+                  {% endif %}
+                  {% if p3 %}
+                  <div class="card-podium-slot card-podium-slot--3">
+                    <div class="name-bubble-mini" title="{{ p3.display_name }}"><span>{{ p3.display_name }}</span></div>
+                    <div class="-mb-1 relative z-10">{{ card_user_face(p3, 'w-10 h-10') }}</div>
+                    <div class="text-[9px] font-orbit text-orange-300/90 mt-0.5">P3</div>
+                    <div class="card-pedestal card-pedestal--bronze mt-1 w-full">
+                      <span class="font-orbit text-xs font-black text-white">{{ p3.total_points }}p</span>
                     </div>
-                    <div class="h-10 rounded-md bg-gradient-to-b from-orange-500/25 to-slate-900/30 border border-orange-400/20 flex items-center justify-center">
-                      <span class="text-sm font-bold text-slate-100 truncate px-2">{% if p3 %}{{ p3.display_name }}{% else %}—{% endif %}</span>
-                    </div>
+                    <div class="card-pedestal-foot"></div>
                   </div>
+                  {% endif %}
                 </div>
               </div>
             {% endif %}
 
-            <a href="{{ url_for('finished_series_detail_page', series_id=data.series.id) }}" 
-               class="block w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded-lg text-center transition-colors">
-              📊 Visa fullständig statistik
+            <a href="{{ url_for('finished_series_detail_page', series_id=data.series.id) }}"
+               class="block w-full bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold py-2.5 px-4 rounded-xl text-center transition-all border border-cyan-400/30 shadow-lg shadow-cyan-900/30">
+              Visa fullständig statistik
             </a>
           </div>
         {% endfor %}
@@ -147,4 +265,3 @@
   </div>
 </body>
 </html>
-

@@ -127,6 +127,26 @@
     }
     .fantasy-table tbody tr:nth-child(even) { background: rgba(15, 23, 42, 0.35); }
     .fantasy-table tbody tr:hover { background: rgba(34, 211, 238, 0.08); }
+    .name-bubble {
+      max-width: min(100%, 11rem);
+      margin-left: auto;
+      margin-right: auto;
+      padding: 0.2rem 0.65rem;
+      border-radius: 9999px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.88));
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .name-bubble span {
+      display: block;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #ecfeff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body class="text-gray-100">
@@ -143,9 +163,15 @@
 </div>
 {% endmacro %}
 
+{% macro user_name_bubble(name) %}
+<div class="name-bubble mb-1.5" title="{{ name }}">
+  <span class="text-[10px] sm:text-xs font-orbit tracking-tight">{{ name }}</span>
+</div>
+{% endmacro %}
+
 {% macro user_face(row, box) %}
 <div class="relative inline-block {{ box }} shrink-0">
-  <div class="absolute inset-0 flex items-center justify-center rounded-full font-orbit font-black text-white bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-600 shadow-lg ring-2 ring-white/25 text-sm sm:text-base z-0">{{ row.avatar_letter }}</div>
+  <div class="absolute inset-0 rounded-full bg-gradient-to-br from-violet-600/90 via-fuchsia-600/90 to-cyan-600/90 shadow-lg ring-2 ring-white/20 z-0" aria-hidden="true"></div>
   {% set pic = row.profile_picture_url %}
   {% if pic and pic.startswith('data:') %}
     <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10">
@@ -207,9 +233,9 @@
   <div class="podium-row podium-row--fantasy podium-row--stack">
     {% if f2 %}
     <div class="podium-slot podium-slot--2">
+      {{ user_name_bubble(f2.display_name) }}
       <div class="-mb-2 relative z-20">{{ user_face(f2, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
       <div class="medal-badge text-slate-300">2 · FANTASY</div>
-      <div class="text-[11px] sm:text-xs font-bold text-cyan-100 text-center mt-1 px-0.5 truncate max-w-full">{{ f2.display_name }}</div>
       <div class="pedestal pedestal--silver mt-2 w-full">
         <span class="font-orbit text-sm font-black text-white">{{ f2.points }}p</span>
       </div>
@@ -218,10 +244,10 @@
     {% endif %}
     {% if f1 %}
     <div class="podium-slot podium-slot--1">
+      {{ user_name_bubble(f1.display_name) }}
       <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ user_face(f1, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
       <div class="text-2xl mt-1" aria-hidden="true">🎮</div>
       <div class="medal-badge text-cyan-200">1 · ELITE</div>
-      <div class="text-xs sm:text-sm font-extrabold text-white text-center mt-0.5 px-0.5">{{ f1.display_name }}</div>
       {% if is_logged_in and f1.user_id == current_user_id %}
       <span class="text-[10px] text-amber-300 font-bold mt-0.5">Det är du!</span>
       {% endif %}
@@ -233,9 +259,9 @@
     {% endif %}
     {% if f3 %}
     <div class="podium-slot podium-slot--3">
+      {{ user_name_bubble(f3.display_name) }}
       <div class="-mb-2 relative z-20">{{ user_face(f3, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
       <div class="medal-badge text-orange-100">3 · FANTASY</div>
-      <div class="text-[11px] sm:text-xs font-bold text-cyan-100 text-center mt-1 px-0.5 truncate max-w-full">{{ f3.display_name }}</div>
       <div class="pedestal pedestal--bronze mt-2 w-full">
         <span class="font-orbit text-sm font-black text-white">{{ f3.points }}p</span>
       </div>

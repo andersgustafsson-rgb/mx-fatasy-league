@@ -3651,10 +3651,13 @@ def finished_series_page():
                         'user_id': user_id,
                         'username': user.username,
                         'display_name': getattr(user, 'display_name', None) or user.username,
+                        'profile_picture_url': getattr(user, 'profile_picture_url', None),
                         **stats
                     })
             
             leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
+            for i, row in enumerate(leaderboard, start=1):
+                row["rank"] = i
             
             series_data.append({
                 'series': series,
@@ -3665,7 +3668,26 @@ def finished_series_page():
                 'all_users': leaderboard
             })
         
-        return render_template("finished_series.html", series_data=series_data)
+        competitions_for_wrap = Competition.query.order_by(Competition.event_date).all()
+        sx_season_wrap = build_sx_season_wrap_context(competitions_for_wrap, current_date)
+        if sx_season_wrap:
+            sx_season_wrap = {
+                **sx_season_wrap,
+                "recap_url": url_for(
+                    "sx_season_recap", year=sx_season_wrap["season_year"]
+                ),
+                "race_results_url": url_for("race_results_page"),
+                "finished_series_url": url_for("finished_series_page"),
+                "next_mx_picks_url": url_for(
+                    "race_picks_page", competition_id=sx_season_wrap["next_mx_id"]
+                ),
+            }
+        
+        return render_template(
+            "finished_series.html",
+            series_data=series_data,
+            sx_season_wrap=sx_season_wrap,
+        )
         
     except Exception as e:
         import traceback
@@ -3758,17 +3780,29 @@ def finished_series_detail_page(series_id):
                     'user_id': user_id,
                     'username': user.username,
                     'display_name': getattr(user, 'display_name', None) or user.username,
+                    'profile_picture_url': getattr(user, 'profile_picture_url', None),
                     **stats
                 })
         
         leaderboard.sort(key=lambda x: x['total_points'], reverse=True)
-        
-        return render_template("finished_series_detail.html", 
-                             series=series,
-                             competitions=competitions,
-                             competition_details=competition_details,
-                             leaderboard=leaderboard,
-                             total_users=len(leaderboard))
+        for i, row in enumerate(leaderboard, start=1):
+            row["rank"] = i
+
+        uid = session.get("user_id")
+        is_logged_in = uid is not None
+        is_wsx = (series.name or "").strip().upper() == "WSX"
+
+        return render_template(
+            "finished_series_detail.html",
+            series=series,
+            competitions=competitions,
+            competition_details=competition_details,
+            leaderboard=leaderboard,
+            total_users=len(leaderboard),
+            is_logged_in=is_logged_in,
+            current_user_id=uid,
+            is_wsx=is_wsx,
+        )
         
     except Exception as e:
         import traceback
