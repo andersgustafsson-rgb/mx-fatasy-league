@@ -147,6 +147,11 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    /* Rund pall: object-cover + center klipper ofta bort pannan; lyft fokus mot övre tredjedelen */
+    .rider-podium-photo {
+      object-fit: cover;
+      object-position: center 12%;
+    }
   </style>
 </head>
 <body class="text-gray-100">
@@ -167,7 +172,7 @@
   <div class="absolute inset-0 flex items-center justify-center rounded-full font-orbit font-black text-amber-100 bg-gradient-to-br from-zinc-700 to-zinc-900 shadow-xl ring-4 ring-amber-500/25 text-sm sm:text-base z-0">#{{ r.rider_number }}</div>
   {% set src = rider_img_src(r) %}
   {% if src %}
-    <img src="{{ src }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-4 ring-amber-400/45 shadow-2xl z-10" onerror="this.remove()">
+    <img src="{{ src }}" alt="" class="rider-podium-photo absolute inset-0 w-full h-full rounded-full ring-4 ring-amber-400/45 shadow-2xl z-10" onerror="this.remove()">
   {% endif %}
 </div>
 {% endmacro %}
