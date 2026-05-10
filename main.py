@@ -294,6 +294,56 @@ def get_today():
     today = date.today()
     return today
 
+
+def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None:
+    """
+    Homepage hero between Supercross finale (last SX has results) and the next MX race day.
+    Disappears automatically when the next MX event date arrives (today >= next_mx.event_date).
+    """
+    try:
+        sx_comps = [
+            c
+            for c in competitions
+            if getattr(c, "series", None) == "SX" and c.event_date
+        ]
+        mx_comps = [
+            c
+            for c in competitions
+            if getattr(c, "series", None) == "MX" and c.event_date
+        ]
+        if not sx_comps or not mx_comps:
+            return None
+
+        last_sx = max(sx_comps, key=lambda c: c.event_date)
+        if last_sx.event_date > today:
+            return None
+        if not CompetitionResult.query.filter_by(competition_id=last_sx.id).first():
+            return None
+
+        next_mx = None
+        for c in sorted(mx_comps, key=lambda x: x.event_date):
+            if c.event_date and c.event_date > today:
+                next_mx = c
+                break
+        if not next_mx:
+            return None
+
+        days = (next_mx.event_date - today).days
+        return {
+            "headline": "Supercrossen är i mål!",
+            "tagline": "Inomhussäsongen är färdigspelad — utomhus väntar runt hörnet.",
+            "last_race_name": last_sx.name,
+            "last_race_date": last_sx.event_date,
+            "next_mx_id": next_mx.id,
+            "next_mx_name": next_mx.name,
+            "next_mx_date": next_mx.event_date,
+            "days_until_mx": int(days),
+        }
+    except Exception as e:
+        print(f"build_sx_season_wrap_context: {e}")
+        return None
+
+
 def ensure_wsx_series_and_competitions():
     """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns."""
     from datetime import date as _date
@@ -1236,6 +1286,17 @@ def index():
     races_participated = 0
     best_position = None
     
+    sx_season_wrap = build_sx_season_wrap_context(competitions, today)
+    if sx_season_wrap:
+        sx_season_wrap = {
+            **sx_season_wrap,
+            "race_results_url": url_for("race_results_page"),
+            "finished_series_url": url_for("finished_series_page"),
+            "next_mx_picks_url": url_for(
+                "race_picks_page", competition_id=sx_season_wrap["next_mx_id"]
+            ),
+        }
+
     if is_logged_in:
         try:
             # Get all scores for this user
@@ -1294,6 +1355,7 @@ def index():
         user_total_points=user_total_points,
         races_participated=races_participated,
         best_position=best_position,
+        sx_season_wrap=sx_season_wrap,
     )
 
 
