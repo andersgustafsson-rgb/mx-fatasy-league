@@ -1437,6 +1437,73 @@ def compute_sx_rider_podiums_for_year(year: int) -> dict:
     }
 
 
+def compute_wsx_rider_podiums_for_series(series_id: int) -> dict:
+    """
+    WSX top 3 per klass (SX1 / SX2) över alla tävlingar i en Series.
+    Poäng: rider_points om satt, annars AMA/SMX-skala från position — samma som race results.
+    """
+    from collections import defaultdict
+
+    comp_ids = [
+        c.id
+        for c in Competition.query.filter_by(
+            series_id=series_id, series="WSX"
+        ).all()
+    ]
+    if not comp_ids:
+        return {"wsx_sx1": [], "wsx_sx2": []}
+
+    slot_sx1: dict[int, float] = defaultdict(float)
+    slot_sx2: dict[int, float] = defaultdict(float)
+    rider_meta: dict[int, dict] = {}
+
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.id.in_(comp_ids))
+        .all()
+    )
+
+    for cr, _comp, rider in rows:
+        if cr.rider_points is not None:
+            pts = float(cr.rider_points)
+        else:
+            pts = float(get_smx_qualification_points(cr.position))
+
+        rider_class = getattr(cr, "class_name", None) or rider.class_name
+        rid = rider.id
+
+        if rid not in rider_meta:
+            merged_img = getattr(rider, "rider_image_data", None) or rider.image_url
+            rider_meta[rid] = {
+                "rider_id": rid,
+                "rider_name": rider.name,
+                "rider_number": rider.rider_number,
+                "bike_brand": rider.bike_brand or "",
+                "image_url": merged_img,
+            }
+
+        if rider_class == "wsx_sx1":
+            slot_sx1[rid] += pts
+        elif rider_class == "wsx_sx2":
+            slot_sx2[rid] += pts
+
+    def topn(counter: dict[int, float], n: int = 3) -> list:
+        items = sorted(counter.items(), key=lambda x: (-x[1], x[0]))[:n]
+        out = []
+        for r_id, p in items:
+            row = dict(rider_meta.get(r_id, {}))
+            row["points"] = int(p) if abs(p - round(p)) < 0.001 else round(p, 1)
+            out.append(row)
+        return out
+
+    return {
+        "wsx_sx1": topn(slot_sx1),
+        "wsx_sx2": topn(slot_sx2),
+    }
+
+
 def fantasy_supercross_leaderboard_for_year(year: int) -> list:
     """Summerad fantasy-poäng över alla SX-tävlingar under ett år."""
     from collections import defaultdict
@@ -3791,6 +3858,9 @@ def finished_series_detail_page(series_id):
         uid = session.get("user_id")
         is_logged_in = uid is not None
         is_wsx = (series.name or "").strip().upper() == "WSX"
+        wsx_rider_podiums = (
+            compute_wsx_rider_podiums_for_series(series_id) if is_wsx else None
+        )
 
         return render_template(
             "finished_series_detail.html",
@@ -3802,6 +3872,7 @@ def finished_series_detail_page(series_id):
             is_logged_in=is_logged_in,
             current_user_id=uid,
             is_wsx=is_wsx,
+            wsx_rider_podiums=wsx_rider_podiums,
         )
         
     except Exception as e:

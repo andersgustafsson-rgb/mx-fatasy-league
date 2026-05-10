@@ -182,6 +182,64 @@
 </div>
 {% endmacro %}
 
+{% macro rider_face(r, box) %}
+<div class="relative inline-block {{ box }} shrink-0">
+  <div class="absolute inset-0 flex items-center justify-center rounded-full font-orbit font-black text-amber-100 bg-gradient-to-br from-zinc-700 to-zinc-900 shadow-xl ring-4 ring-amber-500/25 text-sm sm:text-base z-0">#{{ r.rider_number }}</div>
+  {% if r.image_url %}
+    {% if r.image_url.startswith('data:') %}
+      <img src="{{ r.image_url }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-4 ring-amber-400/45 shadow-2xl z-10">
+    {% else %}
+      <img src="{{ url_for('static', filename=r.image_url) }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-4 ring-amber-400/45 shadow-2xl z-10" onerror="this.remove()">
+    {% endif %}
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro rider_podium_three(rows) %}
+  {% set second = rows[1] if rows|length > 1 else none %}
+  {% set first = rows[0] if rows|length > 0 else none %}
+  {% set third = rows[2] if rows|length > 2 else none %}
+  <div class="podium-row podium-row--stack">
+    {% if second %}
+    <div class="podium-slot podium-slot--2">
+      <div class="-mb-2 relative z-20">{{ rider_face(second, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
+      <div class="medal-badge text-slate-200">P2 · SILVER</div>
+      <div class="text-[11px] sm:text-xs font-bold text-white text-center leading-tight mt-1 px-0.5 line-clamp-2">{{ second.rider_name }}</div>
+      <div class="pedestal pedestal--silver mt-2 w-full">
+        <span class="font-orbit text-sm font-black text-white drop-shadow-md">{{ second.points }}p</span>
+        <span class="text-[10px] text-white/75">#{{ second.rider_number }}</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+    {% if first %}
+    <div class="podium-slot podium-slot--1">
+      <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ rider_face(first, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
+      <div class="text-2xl leading-none mt-1 drop-shadow-lg" aria-hidden="true">🏆</div>
+      <div class="medal-badge text-amber-100">P1 · CHAMP</div>
+      <div class="text-xs sm:text-sm font-extrabold text-white text-center mt-0.5 px-0.5 leading-tight">{{ first.rider_name }}</div>
+      <div class="pedestal pedestal--gold mt-2 w-full">
+        <span class="font-orbit text-base sm:text-lg font-black text-amber-950 drop-shadow-sm">{{ first.points }}p</span>
+        <span class="text-[10px] text-amber-950/80 font-semibold">#{{ first.rider_number }}</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+    {% if third %}
+    <div class="podium-slot podium-slot--3">
+      <div class="-mb-2 relative z-20">{{ rider_face(third, 'w-14 h-14 sm:w-[72px] sm:h-[72px]') }}</div>
+      <div class="medal-badge text-orange-100">P3 · BRONZE</div>
+      <div class="text-[11px] sm:text-xs font-bold text-white text-center leading-tight mt-1 px-0.5 line-clamp-2">{{ third.rider_name }}</div>
+      <div class="pedestal pedestal--bronze mt-2 w-full">
+        <span class="font-orbit text-sm font-black text-white drop-shadow-md">{{ third.points }}p</span>
+        <span class="text-[10px] text-white/75">#{{ third.rider_number }}</span>
+      </div>
+      <div class="pedestal-foot"></div>
+    </div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
 {% macro finished_podium_three(rows) %}
   {% set f2 = rows[1] if rows|length > 1 else none %}
   {% set f1 = rows[0] if rows|length > 0 else none %}
@@ -297,10 +355,42 @@
       </section>
       {% endif %}
 
+      {% if is_wsx and wsx_rider_podiums %}
+      <section class="mb-16">
+        <div class="text-center mb-10">
+          <h2 class="text-2xl md:text-3xl font-black text-amber-200 font-orbit inline-flex items-center gap-2">
+            <span class="text-red-500" aria-hidden="true">◆</span> WSX — förartoppen
+          </h2>
+          <p class="text-gray-500 text-sm mt-2 max-w-2xl mx-auto">
+            Summerade poäng över alla WSX-omgångar i {{ series.year }}.
+            Samma regler som under <strong class="text-gray-400">Race resultat</strong>: manuellt inlagda <span class="text-gray-400">rider_points</span> om de finns, annars AMA-poäng från placering.
+          </p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {% set wsx_blocks = [
+            ('SX1 (450)', 'wsx_sx1', 'from-yellow-500/25 to-amber-900/20 border-yellow-500/25'),
+            ('SX2 (250)', 'wsx_sx2', 'from-sky-500/20 to-slate-900/30 border-sky-400/25')
+          ] %}
+          {% for title, key, grad in wsx_blocks %}
+          {% set rrows = wsx_rider_podiums.get(key) or [] %}
+          <div class="glass-panel rounded-2xl p-5 bg-gradient-to-b {{ grad }} border border-white/10">
+            <h3 class="text-center font-orbit font-black text-lg mb-1 tracking-wide text-white drop-shadow">{{ title }}</h3>
+            <div class="h-0.5 w-16 mx-auto rounded-full bg-white/20 mb-6"></div>
+            {% if rrows|length == 0 %}
+              <p class="text-gray-500 text-center text-sm py-8">Ingen förardata för klassen.</p>
+            {% else %}
+              {{ rider_podium_three(rrows) }}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
       {% if leaderboard %}
       <section class="mb-12">
         <h2 class="text-xl md:text-2xl font-black text-amber-200 font-orbit mb-6 text-center flex items-center justify-center gap-2">
-          <span aria-hidden="true">🏁</span> Slutlig leaderboard
+          <span aria-hidden="true">🏁</span> Fantasy — slutlig leaderboard
         </h2>
         {% set top3 = leaderboard[:3] %}
         <div class="glass-panel rounded-2xl p-6 sm:p-8 mb-10 max-w-xl mx-auto border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-slate-900/40">
