@@ -1466,14 +1466,18 @@ def fantasy_supercross_leaderboard_for_year(year: int) -> list:
     out = []
     for rank, (u_id, pts) in enumerate(ranked, start=1):
         u = uid_map.get(u_id)
+        dn = getattr(u, "display_name", None) or (u.username if u else "?")
+        letter = (dn.strip()[:1] or "?").upper()
+        pic = getattr(u, "profile_picture_url", None) if u else None
         out.append(
             {
                 "rank": rank,
                 "user_id": u_id,
                 "username": u.username if u else "?",
-                "display_name": getattr(u, "display_name", None)
-                or (u.username if u else "?"),
+                "display_name": dn,
                 "points": pts,
+                "avatar_letter": letter,
+                "profile_picture_url": pic,
             }
         )
     return out
