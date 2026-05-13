@@ -189,6 +189,35 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
+
+@app.context_processor
+def inject_facebook_social():
+    """FACEBOOK_PAGE_URL + valfri inbäddad tidslinje (Page Plugin)."""
+    from urllib.parse import quote
+
+    url = (os.getenv("FACEBOOK_PAGE_URL") or "").strip()
+    show_feed = (os.getenv("FACEBOOK_SHOW_FEED") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    iframe_src = None
+    if url and show_feed:
+        q = quote(url, safe="")
+        iframe_src = (
+            "https://www.facebook.com/plugins/page.php?"
+            f"href={q}&tabs=timeline&width=500&height=420"
+            "&small_header=false&adapt_container_width=true"
+            "&hide_cover=false&show_facepile=true"
+        )
+    return {
+        "facebook_page_url": url or None,
+        "facebook_show_timeline_embed": bool(iframe_src),
+        "facebook_timeline_iframe_src": iframe_src,
+    }
+
+
 # Security settings
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour session timeout
 app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS in production
