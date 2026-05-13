@@ -207,8 +207,8 @@ def inject_facebook_social():
         q = quote(url, safe="")
         iframe_src = (
             "https://www.facebook.com/plugins/page.php?"
-            f"href={q}&tabs=timeline&width=500&height=420"
-            "&small_header=false&adapt_container_width=true"
+            f"href={q}&tabs=timeline&width=380&height=360"
+            "&small_header=true&adapt_container_width=true"
             "&hide_cover=false&show_facepile=true"
         )
     return {
