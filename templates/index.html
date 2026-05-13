@@ -1193,9 +1193,46 @@
                   <span aria-hidden="true">📣</span> Nyheter &amp; påminnelser
                 </h2>
                 <p class="text-xs text-yellow-100/90 mb-3 text-center sm:text-left">Senaste inlägg från vår Facebook-sida.</p>
-                <div class="overflow-hidden rounded-xl border border-yellow-500/40 bg-black/50 shadow-inner w-full">
-                  <iframe title="MX Fantasy på Facebook" src="{{ facebook_timeline_iframe_src }}" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;min-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy" class="h-[420px] w-full min-h-[280px] max-w-full bg-[#f5f6f7]"></iframe>
+                <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden overflow-hidden rounded-xl border border-yellow-500/40 bg-black/50 shadow-inner">
+                  <script type="application/json" id="fb-plugin-base-url">{{ facebook_timeline_iframe_src | tojson }}</script>
+                  <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy" class="h-[420px] w-full max-w-full bg-[#f5f6f7]"></iframe>
                 </div>
+                <script>
+                (function () {
+                  var iframe = document.getElementById('mx-fb-page-plugin');
+                  var urlNode = document.getElementById('fb-plugin-base-url');
+                  if (!iframe || !urlNode) return;
+                  var baseUrl;
+                  try { baseUrl = JSON.parse(urlNode.textContent || '""'); } catch (e) { return; }
+                  if (!baseUrl) return;
+                  var host = iframe.closest('.fb-page-plugin-host');
+                  var lastW = -1;
+                  function pluginWidthPx() {
+                    var rw = host ? host.getBoundingClientRect().width : window.innerWidth;
+                    return Math.min(500, Math.max(180, Math.floor(rw)));
+                  }
+                  function apply() {
+                    var w = pluginWidthPx();
+                    if (lastW >= 0 && Math.abs(w - lastW) < 6) return;
+                    lastW = w;
+                    try {
+                      var u = new URL(baseUrl);
+                      u.searchParams.set('width', String(w));
+                      iframe.src = u.toString();
+                    } catch (err) {}
+                  }
+                  apply();
+                  if (window.ResizeObserver && host) {
+                    var ro = new ResizeObserver(function () { apply(); });
+                    ro.observe(host);
+                  }
+                  var deb;
+                  window.addEventListener('resize', function () {
+                    clearTimeout(deb);
+                    deb = setTimeout(apply, 200);
+                  });
+                })();
+                </script>
                 <p class="mt-2 text-[10px] leading-snug text-yellow-100/70 text-center sm:text-left">Syns inte inlägg? Prova utloggat eller privat fönster — begränsningar hos Facebook.</p>
                 <a href="{{ facebook_page_url }}" target="_blank" rel="noopener noreferrer" class="mt-auto pt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-yellow-400/50 bg-yellow-500/15 px-3 py-2 text-sm font-semibold text-yellow-100 transition hover:bg-yellow-500/25">
                   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
