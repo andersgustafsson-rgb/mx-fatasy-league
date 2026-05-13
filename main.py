@@ -196,16 +196,12 @@ DEFAULT_FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61586769893
 
 @app.context_processor
 def inject_facebook_social():
-    """FACEBOOK_PAGE_URL + valfri inbäddad tidslinje (Page Plugin)."""
+    """FACEBOOK_PAGE_URL + inbäddad tidslinje (Page Plugin), på som standard."""
     from urllib.parse import quote
 
     url = (os.getenv("FACEBOOK_PAGE_URL") or "").strip() or DEFAULT_FACEBOOK_PAGE_URL
-    show_feed = (os.getenv("FACEBOOK_SHOW_FEED") or "").strip().lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
+    feed_env = (os.getenv("FACEBOOK_SHOW_FEED") or "").strip().lower()
+    show_feed = feed_env not in ("0", "false", "no", "off")
     iframe_src = None
     if url and show_feed:
         q = quote(url, safe="")
