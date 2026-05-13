@@ -993,10 +993,15 @@ def index():
     upcoming_race = None
     try:
         global_sim = GlobalSimulation.query.first()
-        if global_sim and global_sim.active and global_sim.active_race_id:
-            # Use the active race from admin panel
+        # Föredra explicit active_race_id om tävlingen fortfarande är nästa utan resultat
+        # (race_countdown sätter active_race_id även när active=False — undvik split mot serie-kort / timer)
+        if global_sim and getattr(global_sim, "active_race_id", None):
+            ac = Competition.query.get(global_sim.active_race_id)
+            if ac and ac.event_date and ac.event_date >= today:
+                if not CompetitionResult.query.filter_by(competition_id=ac.id).first():
+                    upcoming_race = ac
+        if not upcoming_race and global_sim and global_sim.active and global_sim.active_race_id:
             upcoming_race = Competition.query.get(global_sim.active_race_id)
-            pass
     except Exception as e:
         pass
     

@@ -3190,11 +3190,38 @@
           return 0;
         });
         
+        // Kalenderdagar till ett YYYY-MM-DD (samma som Python date-date, undviker TZ-fel från new Date('YYYY-MM-DD'))
+        function calendarDaysUntilIsoDate(iso) {
+          if (!iso) return null;
+          const datePart = String(iso).split('T')[0];
+          const parts = datePart.split('-').map(Number);
+          if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return null;
+          const [Y, M, D] = parts;
+          const now = new Date();
+          const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const t1 = new Date(Y, M - 1, D);
+          return Math.round((t1 - t0) / 86400000);
+        }
+        function formatIsoDateSv(iso) {
+          if (!iso) return '';
+          const datePart = String(iso).split('T')[0];
+          const [y, m, d] = datePart.split('-');
+          if (!y || !m || !d) return String(iso);
+          return `${d}/${m}/${y}`;
+        }
+
         const seriesHTML = sortedSeries.map(serie => {
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
-          const startDate = serie.start_date ? new Date(serie.start_date) : null;
-          const daysUntilStart = startDate ? Math.ceil((startDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
+          const daysFromNextRace = nextRace && nextRace.date ? calendarDaysUntilIsoDate(nextRace.date) : null;
+          const daysFromSeriesStart = serie.start_date ? calendarDaysUntilIsoDate(serie.start_date) : null;
+          // Matcha nedräkning / SX-hero: föredra nästa tävlings datum, annars seriens startdatum
+          const daysUntilStart =
+            daysFromNextRace != null && daysFromNextRace > 0
+              ? daysFromNextRace
+              : daysFromSeriesStart != null && daysFromSeriesStart > 0
+                ? daysFromSeriesStart
+                : null;
           
           let statusText = '';
           let statusColor = '';
@@ -3266,7 +3293,7 @@
             <div class="relative z-10 text-center">
               <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2">${statusText}</p>
-              ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${new Date(nextRace.date).toLocaleDateString('sv-SE')}</p>` : ''}
+              ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-400 mt-2">${buttonText}</div>
             </div>
           `;
