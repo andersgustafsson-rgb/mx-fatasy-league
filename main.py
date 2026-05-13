@@ -190,12 +190,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 
+# Offentlig Facebook-sida / profil (Miljövariabeln FACEBOOK_PAGE_URL åsidosätter).
+DEFAULT_FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61586769893903"
+
+
 @app.context_processor
 def inject_facebook_social():
     """FACEBOOK_PAGE_URL + valfri inbäddad tidslinje (Page Plugin)."""
     from urllib.parse import quote
 
-    url = (os.getenv("FACEBOOK_PAGE_URL") or "").strip()
+    url = (os.getenv("FACEBOOK_PAGE_URL") or "").strip() or DEFAULT_FACEBOOK_PAGE_URL
     show_feed = (os.getenv("FACEBOOK_SHOW_FEED") or "").strip().lower() in (
         "1",
         "true",
@@ -212,7 +216,7 @@ def inject_facebook_social():
             "&hide_cover=false&show_facepile=true"
         )
     return {
-        "facebook_page_url": url or None,
+        "facebook_page_url": url,
         "facebook_show_timeline_embed": bool(iframe_src),
         "facebook_timeline_iframe_src": iframe_src,
     }
