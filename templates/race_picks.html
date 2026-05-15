@@ -312,15 +312,15 @@
     </div>
     {% endif %}
 
-    <!-- Trackmap Section with Side Info -->
-    {% if _trackmap_urls|length > 0 %}
+    <!-- Trackmap + Bra att veta (MX alltid synlig; SX om bild i DB) -->
+    {% if _trackmap_urls|length > 0 or competition.series == 'MX' or _good_to_know %}
     <div class="mb-6 bg-gray-800 rounded-lg p-4 border-2 {% if competition.series == 'MX' %}border-emerald-500{% else %}border-cyan-500{% endif %}">
       <h2 class="text-xl font-bold {% if competition.series == 'MX' %}text-emerald-400{% else %}text-cyan-400{% endif %} mb-4 flex items-center">
-        🗺️ Banlayout
+        {% if _trackmap_urls|length > 0 %}🗺️ Banlayout{% else %}📌 Inför racet{% endif %}
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <!-- Track Map - Smaller -->
+        {% if _trackmap_urls|length > 0 %}
         <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border {% if competition.series == 'MX' %}border-emerald-500/60{% else %}border-cyan-500{% endif %}">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
@@ -337,10 +337,9 @@
           </div>
           {% endif %}
         </div>
+        {% endif %}
         
-        <!-- Race Info Sidebar -->
-        <div class="lg:col-span-2 space-y-4">
-          <!-- Race Details -->
+        <div class="{% if _trackmap_urls|length > 0 %}lg:col-span-2{% else %}lg:col-span-4{% endif %} space-y-4">
           <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4">
             <h3 class="text-lg font-bold text-white mb-3 flex items-center">
               🏁 Race Info

@@ -1368,11 +1368,21 @@ def index():
             best_position = None
 
 
+    upcoming_race_bg_url = None
+    try:
+        from trackmap_utils import race_background_static_url
+
+        if upcoming_race:
+            upcoming_race_bg_url = race_background_static_url(upcoming_race)
+    except Exception:
+        pass
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
         user_profile_picture=user_profile_picture if is_logged_in else None,
         upcoming_race=upcoming_race,
+        upcoming_race_bg_url=upcoming_race_bg_url,
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team if is_logged_in else None,
         team_riders=team_riders if is_logged_in else [],
