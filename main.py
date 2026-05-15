@@ -4282,27 +4282,43 @@ def race_picks_page(competition_id):
     actual_results = []
     holeshot_results = []
 
-    # 5) Get trackmap images for this competition
+    # 5) Track maps: DB (SX) eller static/trackmaps/pro motocross (MX)
     trackmap_images = []
+    picks_good_to_know: list[str] = []
     try:
-        trackmap_images = CompetitionImage.query.filter_by(competition_id=comp.id).order_by(CompetitionImage.sort_order).all()
+        from trackmap_utils import get_picks_good_to_know, get_trackmaps_for_competition
+
+        trackmap_images = get_trackmaps_for_competition(comp)
         # Fix: Daytona bytte från daytona.jpg till daytona.png – uppdatera DB om gamla sökvägen används
         for ci in trackmap_images:
-            if ci.image_url and "daytona.jpg" in ci.image_url:
+            if getattr(ci, "image_url", None) and "daytona.jpg" in ci.image_url:
                 ci.image_url = ci.image_url.replace("daytona.jpg", "daytona.png")
-                db.session.add(ci)
-        # Om Daytona saknar track map-rad, skapa en (daytona.png)
-        if not trackmap_images and comp.name == "Daytona":
-            ci = CompetitionImage(competition_id=comp.id, image_url="trackmaps/compressed/daytona.png", sort_order=0)
+                if hasattr(ci, "id"):
+                    db.session.add(ci)
+        if (
+            not trackmap_images
+            and comp.name == "Daytona"
+            and getattr(comp, "series", None) != "MX"
+        ):
+            ci = CompetitionImage(
+                competition_id=comp.id,
+                image_url="trackmaps/compressed/daytona.png",
+                sort_order=0,
+            )
             db.session.add(ci)
             trackmap_images = [ci]
         try:
             db.session.commit()
         except Exception:
             db.session.rollback()
-    except Exception as e:
+        picks_good_to_know = get_picks_good_to_know(comp)
+    except Exception:
         pass
-    
+
+    trackmap_urls = [
+        ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
+    ]
+
     # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
         "race_picks.html",
@@ -4315,6 +4331,8 @@ def race_picks_page(competition_id):
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
         trackmap_images=trackmap_images,
+        trackmap_urls=trackmap_urls,
+        picks_good_to_know=picks_good_to_know,
         picks_locked=picks_locked,
     )
 

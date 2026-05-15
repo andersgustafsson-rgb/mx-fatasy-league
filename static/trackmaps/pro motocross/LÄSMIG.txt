@@ -1,0 +1,19 @@
+Pro Motocross – banbilder för picks-sidan
+=========================================
+
+Lägg en (eller flera) bilder per tävling här. Filnamn ska innehålla banans namn, t.ex.:
+
+  foxraceway.jpg      → Fox Raceway National
+  hangtown.png        → Hangtown Classic
+  thundervalley.jpg   → Thunder Valley National
+  highpoint.jpg       → High Point National
+  redbud.jpg          → RedBud National
+  southwick.jpg       → Southwick National
+  springcreek.jpg     → Spring Creek National
+  washougal.jpg       → Washougal National
+  unadilla.jpg        → Unadilla National
+  buddscreek.jpg      → Budds Creek National
+  ironman.jpg         → Ironman National
+
+Picks-sidan hittar bilder automatiskt (även utan DB-rad).
+Valfritt: python assign_mx_trackmaps.py — sparar koppling i databasen.
