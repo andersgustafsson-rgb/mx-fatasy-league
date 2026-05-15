@@ -124,12 +124,13 @@
         </p>
         <div class="mt-3 p-3 rounded-lg border border-amber-800/40 bg-amber-950/25 dark:bg-amber-950/30 text-amber-100/95">
           <p class="text-sm leading-snug">
-            <span class="font-semibold text-amber-200">Byte av förare:</span> 50 poäng per förare. Aktivt team: <strong class="text-white">{{ existing_team.team_name }}</strong>
+            <span class="font-semibold text-amber-200">Byte av förare:</span> 50 poäng per förare (MX-klassbyte 250→450 är gratis). Aktivt team: <strong class="text-white">{{ existing_team.team_name }}</strong>
           </p>
           <p class="text-xs mt-1.5 text-amber-200/80">
             Teamnamn kan ändras utan poängstraff.
           </p>
         </div>
+        <div id="mx-promotion-banner" class="mt-3 hidden p-3 rounded-lg border border-emerald-600/50 bg-emerald-950/30 text-emerald-100"></div>
         {% else %}
         <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold header-gradient">Skapa ditt Säsongsteam</h1>
         <p class="text-base sm:text-lg mt-2 text-slate-400">
@@ -312,6 +313,11 @@
     const allRiders = {{ riders | tojson | safe }};
     const hasExistingTeam = {{ has_existing_team | default(false) | tojson | safe }};
     const existingTeamRiders = {{ existing_team_riders | default([]) | tojson | safe }};
+    window.promotionOffers = {{ mx_promotion_offers | default([]) | tojson | safe }};
+    window.promotionPairs = {};
+    for (const o of window.promotionOffers) {
+      window.promotionPairs[String(o.from_id)] = o.to_id;
+    }
 
     // Konfiguration
     const totalBudget = 1500000;
@@ -528,11 +534,15 @@
       if (window.replacingRiderId) {
         const riderToReplace = currentTeam.find(rt => rt.id === window.replacingRiderId);
         if (riderToReplace && r.class === riderToReplace.class) {
-          // In replacement mode, we can replace with any rider of the same class
-          // regardless of price, since we're swapping riders
-          return true; // Allow replacement of same class with any price
+          return true;
         }
-        return false; // Don't allow different class
+        const promo = (window.promotionOffers || []).find(
+          (o) => String(o.from_id) === String(window.replacingRiderId)
+        );
+        if (promo && r.id === promo.to_id) {
+          return true;
+        }
+        return false;
       }
       
       // Normal validation
@@ -562,9 +572,14 @@
           return;
         }
         
+        const promoSwap = (window.promotionOffers || []).find(
+          (o) => String(o.from_id) === String(window.replacingRiderId) && r.id === o.to_id
+        );
+        if (promoSwap) {
+          applyPromotionUpgrade(promoSwap.from_id);
+          return;
+        }
         if (riderToReplace && r.class === riderToReplace.class) {
-          // Check if user has enough points for this change
-          // In replacement mode, we're only changing 1 rider at a time
           const ridersChanged = 1;
           const penaltyPoints = ridersChanged * 50;
           
@@ -754,15 +769,89 @@
       if (!hasExistingTeam || !existingTeamRiders || existingTeamRiders.length === 0) {
         return 0;
       }
-      
-      // Get current team rider IDs (what user has selected)
-      const currentRiderIds = new Set(myTeam.map(r => r.id.toString()));
-      // Get original team rider IDs (what was saved in database)
-      const originalRiderIds = new Set(existingTeamRiders);
-      
-      // Count how many riders are different from the original team
-      const ridersChanged = [...originalRiderIds].filter(id => !currentRiderIds.has(id)).length;
-      return ridersChanged;
+      const currentRiderIds = new Set(myTeam.map((r) => r.id.toString()));
+      const originalRiderIds = existingTeamRiders.map(String);
+      const pairs = window.promotionPairs || {};
+      let penalty = 0;
+      for (const id of originalRiderIds) {
+        if (currentRiderIds.has(id)) continue;
+        const promotedTo = pairs[id];
+        if (promotedTo && currentRiderIds.has(String(promotedTo))) continue;
+        penalty += 1;
+      }
+      return penalty;
+    }
+
+    function renderMxPromotionBanner() {
+      const el = document.getElementById("mx-promotion-banner");
+      if (!el) return;
+      const offers = window.promotionOffers || [];
+      if (!offers.length) {
+        el.classList.add("hidden");
+        el.innerHTML = "";
+        return;
+      }
+      el.innerHTML = offers
+        .map(
+          (o) => `
+        <p class="text-sm font-semibold text-emerald-200 mb-1">MX-klassbyte (gratis)</p>
+        <p class="text-xs text-emerald-100/90 mb-2">
+          ${o.from_name || "Din förare"} (${o.from_class}, #${o.from_number || "?"}) kör nu 450 som #${o.to_number}.
+          Efter uppgradering: se till att du fortfarande har 2×450 och 2×250 innan du sparar.
+        </p>
+        <button type="button" class="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg"
+                onclick="applyPromotionUpgrade(${o.from_id})">
+          Uppgradera till ${o.to_name} (#${o.to_number})
+        </button>`
+        )
+        .join("");
+      el.classList.remove("hidden");
+    }
+
+    function ensureDraftFromCurrentTeam() {
+      if (myTeam.length === 0 && currentTeam.length > 0) {
+        myTeam = currentTeam.map((r) => ({ ...r }));
+        const cost = myTeam.reduce((s, r) => s + (r.price || 0), 0);
+        budget = totalBudget - cost;
+      }
+    }
+
+    function applyPromotionUpgrade(fromId) {
+      const offer = (window.promotionOffers || []).find(
+        (o) => String(o.from_id) === String(fromId)
+      );
+      if (!offer) {
+        showToast("Klassbytet hittades inte.", false);
+        return;
+      }
+      const toRider = allRiders.find((r) => r.id === offer.to_id);
+      if (!toRider) {
+        showToast("450-föraren finns inte i listan — ladda om sidan.", false);
+        return;
+      }
+      ensureDraftFromCurrentTeam();
+      const idx = myTeam.findIndex((r) => String(r.id) === String(fromId));
+      if (idx > -1) {
+        budget += myTeam[idx].price || 0;
+        myTeam.splice(idx, 1);
+      }
+      if (!myTeam.some((r) => r.id === toRider.id)) {
+        myTeam.push(toRider);
+        budget -= toRider.price || 0;
+      }
+      window.replacingRiderId = null;
+      const c450 = myTeam.filter((x) => x.class === "450cc").length;
+      const c250 = myTeam.filter((x) => x.class === "250cc").length;
+      validateAndRender();
+      renderCurrentTeam();
+      if (c450 !== 2 || c250 !== 2) {
+        showToast(
+          `Uppgradering i utkastet (${c450}×450, ${c250}×250). Byt en till 450 mot en 250 om det behövs — MX-klassbytet är gratis vid sparning.`,
+          true
+        );
+      } else {
+        showToast("Deegan 450 i utkastet — spara när du är klar (gratis byte).", true);
+      }
     }
 
     function updateSaveButtonText() {
@@ -807,6 +896,7 @@
       console.log("✅ Loaded existing team into myTeam for editing");
       
       renderCurrentTeam();
+      renderMxPromotionBanner();
     }
 
     // Load user's current points
@@ -917,11 +1007,19 @@
               <div class="text-[10px] text-slate-400">${rider.class}</div>
             </div>
           </div>
-          <button type="button" class="w-full ${isBeingReplaced ? 'bg-cyan-700 hover:bg-cyan-600' : 'bg-slate-700 hover:bg-slate-600 border border-slate-500'} text-white px-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors" 
-                  onclick="event.stopPropagation(); replaceRider(${rider.id})" 
+          <button type="button" class="w-full ${isBeingReplaced ? 'bg-cyan-700 hover:bg-cyan-600' : 'bg-slate-700 hover:bg-slate-600 border border-slate-500'} text-white px-1 py-1.5 rounded-lg text-[11px] font-semibold transition-colors"
+                  onclick="event.stopPropagation(); replaceRider(${rider.id})"
                   title="Byt ut denna förare">
             ${isBeingReplaced ? 'Välj ersättare…' : 'Byt ut'}
           </button>
+          ${
+            (window.promotionOffers || []).some((o) => String(o.from_id) === String(rider.id))
+              ? `<button type="button" class="w-full mt-1 bg-emerald-700 hover:bg-emerald-600 text-white px-1 py-1.5 rounded-lg text-[10px] font-bold"
+                  onclick="event.stopPropagation(); applyPromotionUpgrade(${rider.id})">
+                  ↑ Gratis MX-klassbyte
+                </button>`
+              : ""
+          }
         `;
         list.appendChild(card);
       });
@@ -1131,10 +1229,20 @@
 
 
     // Init
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", async () => {
       setFilter("all");
-      loadCurrentTeam(); // Load existing team if it exists
-      loadUserPoints(); // Load user's current points
+      try {
+        const pr = await fetch("/season_team_mx_promotions");
+        if (pr.ok) {
+          const data = await pr.json();
+          if (data.offers) window.promotionOffers = data.offers;
+          window.promotionPairs = data.promotion_pairs || window.promotionPairs;
+        }
+      } catch (e) {
+        console.warn("MX promotions:", e);
+      }
+      loadCurrentTeam();
+      loadUserPoints();
       validateAndRender();
       
       // Ensure team name input is always editable

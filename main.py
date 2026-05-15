@@ -3592,7 +3592,10 @@ def season_team_builder():
                 'coast_250': rider.coast_250
             })
         
+        from season_team_promotions import get_user_promotion_offers
+
         user = User.query.get(user_id)
+        mx_promotion_offers = get_user_promotion_offers(user_id)
         html = render_template(
             "season_team_builder.html",
             username=user.username if user else "",
@@ -3600,6 +3603,7 @@ def season_team_builder():
             has_existing_team=has_existing_team,
             existing_team=existing_team,
             existing_team_riders=existing_team_riders,
+            mx_promotion_offers=mx_promotion_offers,
         )
         resp = make_response(html)
         resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
@@ -4640,8 +4644,11 @@ def save_season_team():
             current_rider_ids = set(tr.rider_id for tr in current_riders)
             new_rider_ids = set(rider_ids)
             
-            # Calculate how many riders changed
-            riders_changed = len(current_rider_ids - new_rider_ids)
+            from season_team_promotions import count_penalized_rider_changes
+
+            riders_changed = count_penalized_rider_changes(
+                current_rider_ids, new_rider_ids
+            )
             penalty_points = riders_changed * 50  # 50 points per changed rider
             
             # Check if user has enough points for the penalty
@@ -4685,6 +4692,8 @@ def save_season_team():
         if is_team_change:
             if penalty_points > 0:
                 return jsonify({"message": f"Team uppdaterat! -{penalty_points} poäng för {riders_changed} bytade förare."}), 200
+            elif len(current_rider_ids - new_rider_ids) > 0:
+                return jsonify({"message": "Team uppdaterat! MX-klassbyte utan poängstraff."}), 200
             else:
                 # Check if name changed
                 old_name = SeasonTeam.query.filter_by(user_id=uid).first()
@@ -4701,6 +4710,25 @@ def save_season_team():
         traceback.print_exc()
         db.session.rollback()
         return jsonify({"message": f"Ett fel uppstod: {str(e)}"}), 500
+
+
+@app.get("/season_team_mx_promotions")
+def season_team_mx_promotions():
+    """Gratis 250→450-byte för spelare som fortfarande har gamla föraren på säsongsteamet."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    from season_team_promotions import (
+        get_user_promotion_offers,
+        promotion_pairs_for_json,
+    )
+
+    uid = session["user_id"]
+    return jsonify(
+        {
+            "offers": get_user_promotion_offers(uid),
+            "promotion_pairs": promotion_pairs_for_json(),
+        }
+    )
 
 
 # -------------------------------------------------
