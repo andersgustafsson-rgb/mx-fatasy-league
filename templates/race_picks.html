@@ -298,6 +298,8 @@
     {% set _trackmap_urls = trackmap_urls | default([]) %}
     {% set _good_to_know = picks_good_to_know | default([]) %}
     {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
+    {# MX-filer är banfoton, inte layouter — visa bara riktiga layouter för SX/WSX tills MX-layout finns #}
+    {% set _show_layout_images = (not _is_mx) and (_trackmap_urls|length > 0) %}
 
     {% if _is_mx and _trackmap_urls|length > 0 %}
     <div class="mb-6 rounded-lg shadow-lg relative overflow-hidden border-2 border-emerald-500"
@@ -317,12 +319,12 @@
     {% if _trackmap_urls|length > 0 or _is_mx or _good_to_know %}
     <div class="mb-6 bg-gray-800 rounded-lg p-4 border-2 {% if _is_mx %}border-emerald-500{% else %}border-cyan-500{% endif %}">
       <h2 class="text-xl font-bold {% if _is_mx %}text-emerald-400{% else %}text-cyan-400{% endif %} mb-4 flex items-center">
-        {% if _trackmap_urls|length > 0 %}🗺️ Banlayout{% else %}📌 Inför racet{% endif %}
+        {% if _show_layout_images %}🗺️ Banlayout{% else %}📌 Inför racet{% endif %}
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {% if _trackmap_urls|length > 0 %}
-        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border {% if _is_mx %}border-emerald-500/60{% else %}border-cyan-500{% endif %}">
+        {% if _show_layout_images %}
+        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border border-cyan-500">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
                alt="Banlayout {{ competition.name }}"
@@ -332,7 +334,7 @@
           <div class="flex flex-wrap gap-2 justify-center">
             {% for turl in _trackmap_urls[:5] %}
               <img src="{{ url_for('static', filename=turl) }}"
-                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 {% if _is_mx %}ring-emerald-400{% else %}ring-cyan-400{% endif %}{% endif %}"
+                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 ring-cyan-400{% endif %}"
                    onclick="setMainTrackmap(this.src, this)">
             {% endfor %}
           </div>
@@ -340,7 +342,7 @@
         </div>
         {% endif %}
         
-        <div class="{% if _trackmap_urls|length > 0 %}lg:col-span-2{% else %}lg:col-span-4{% endif %} space-y-4">
+        <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} space-y-4">
           <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4">
             <h3 class="text-lg font-bold text-white mb-3 flex items-center">
               🏁 Race Info
