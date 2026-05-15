@@ -297,8 +297,9 @@
     {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
     {% set _trackmap_urls = trackmap_urls | default([]) %}
     {% set _good_to_know = picks_good_to_know | default([]) %}
+    {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
 
-    {% if competition.series == "MX" and _trackmap_urls|length > 0 %}
+    {% if _is_mx and _trackmap_urls|length > 0 %}
     <div class="mb-6 rounded-lg shadow-lg relative overflow-hidden border-2 border-emerald-500"
          style="background-image: url('{{ url_for("static", filename=_trackmap_urls[0]) }}'); background-size: cover; background-position: center; min-height: 200px;">
       <div class="absolute inset-0 bg-black bg-opacity-50"></div>
@@ -313,15 +314,15 @@
     {% endif %}
 
     <!-- Trackmap + Bra att veta (MX alltid synlig; SX om bild i DB) -->
-    {% if _trackmap_urls|length > 0 or competition.series == 'MX' or _good_to_know %}
-    <div class="mb-6 bg-gray-800 rounded-lg p-4 border-2 {% if competition.series == 'MX' %}border-emerald-500{% else %}border-cyan-500{% endif %}">
-      <h2 class="text-xl font-bold {% if competition.series == 'MX' %}text-emerald-400{% else %}text-cyan-400{% endif %} mb-4 flex items-center">
+    {% if _trackmap_urls|length > 0 or _is_mx or _good_to_know %}
+    <div class="mb-6 bg-gray-800 rounded-lg p-4 border-2 {% if _is_mx %}border-emerald-500{% else %}border-cyan-500{% endif %}">
+      <h2 class="text-xl font-bold {% if _is_mx %}text-emerald-400{% else %}text-cyan-400{% endif %} mb-4 flex items-center">
         {% if _trackmap_urls|length > 0 %}🗺️ Banlayout{% else %}📌 Inför racet{% endif %}
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {% if _trackmap_urls|length > 0 %}
-        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border {% if competition.series == 'MX' %}border-emerald-500/60{% else %}border-cyan-500{% endif %}">
+        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border {% if _is_mx %}border-emerald-500/60{% else %}border-cyan-500{% endif %}">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
                alt="Banlayout {{ competition.name }}"
@@ -331,7 +332,7 @@
           <div class="flex flex-wrap gap-2 justify-center">
             {% for turl in _trackmap_urls[:5] %}
               <img src="{{ url_for('static', filename=turl) }}"
-                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 {% if competition.series == 'MX' %}ring-emerald-400{% else %}ring-cyan-400{% endif %}{% endif %}"
+                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 {% if _is_mx %}ring-emerald-400{% else %}ring-cyan-400{% endif %}{% endif %}"
                    onclick="setMainTrackmap(this.src, this)">
             {% endfor %}
           </div>
@@ -353,7 +354,7 @@
                 <span class="text-blue-200">Datum:</span>
                 <span class="text-white font-semibold">{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span>
               </div>
-              {% if competition.series == 'MX' %}
+              {% if _is_mx %}
               <div class="flex justify-between">
                 <span class="text-blue-200">Serie:</span>
                 <span class="text-white font-semibold">Pro Motocross</span>

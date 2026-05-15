@@ -4292,12 +4292,18 @@ def race_picks_page(competition_id):
     actual_results = []
     holeshot_results = []
 
-    # 5) Track maps: DB (SX) eller static/trackmaps/pro motocross (MX)
+    # 5) Track maps: DB (SX) eller static/trackmaps/pro_motocross (MX)
     trackmap_images = []
     picks_good_to_know: list[str] = []
+    is_mx_race = False
     try:
-        from trackmap_utils import get_picks_good_to_know, get_trackmaps_for_competition
+        from trackmap_utils import (
+            get_picks_good_to_know,
+            get_trackmaps_for_competition,
+            is_mx_competition,
+        )
 
+        is_mx_race = is_mx_competition(comp)
         trackmap_images = get_trackmaps_for_competition(comp)
         # Fix: Daytona bytte från daytona.jpg till daytona.png – uppdatera DB om gamla sökvägen används
         for ci in trackmap_images:
@@ -4323,7 +4329,15 @@ def race_picks_page(competition_id):
             db.session.rollback()
         picks_good_to_know = get_picks_good_to_know(comp)
     except Exception:
-        pass
+        app.logger.exception(
+            "race_picks trackmap/tips failed for competition_id=%s", competition_id
+        )
+        if is_mx_race and not picks_good_to_know:
+            picks_good_to_know = [
+                "Utomhus-MX: banprofil och underlag påverkar ofta resultatet.",
+                "250 kör som en gemensam klass under Pro Motocross.",
+                "Deadline är 2 timmar före start.",
+            ]
 
     trackmap_urls = [
         ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
@@ -4343,6 +4357,7 @@ def race_picks_page(competition_id):
         trackmap_images=trackmap_images,
         trackmap_urls=trackmap_urls,
         picks_good_to_know=picks_good_to_know,
+        is_mx_race=is_mx_race,
         picks_locked=picks_locked,
     )
 

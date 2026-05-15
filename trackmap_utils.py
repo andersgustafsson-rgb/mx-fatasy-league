@@ -22,11 +22,11 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
     "Ironman National": ["ironman"],
 }
 
-# Prefer folders that actually contain images (user files often in "trackmaps pro motocross")
+# URL-safe path first (Render/nginx struggle with spaces in static paths)
 MX_TRACKMAP_DIR_CANDIDATES = (
+    Path("static/trackmaps/pro_motocross"),
     Path("static/trackmaps pro motocross"),
     Path("static/trackmaps/pro motocross"),
-    Path("static/trackmaps/pro_motocross"),
     Path("static/trackmaps/promotocross"),
     Path("static/trackmaps/mx"),
 )
@@ -93,6 +93,30 @@ def _score_file(fname: str, tokens: Sequence[str]) -> int:
     return best
 
 
+def is_mx_competition(competition) -> bool:
+    """MX by series flag or known Pro Motocross venue name."""
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "MX":
+        return True
+    name = (getattr(competition, "name", None) or "").strip()
+    if not name:
+        return False
+    if name in MX_NAME_MATCH_TOKENS:
+        return True
+    slug = _normalize_slug(
+        name.lower().replace(" national", "").replace(" classic", "")
+    )
+    lower = name.lower()
+    for key, tokens in MX_NAME_MATCH_TOKENS.items():
+        key_slug = _normalize_slug(key)
+        if slug == key_slug or (slug and (slug in key_slug or key_slug in slug)):
+            return True
+        for tok in tokens:
+            if tok in lower:
+                return True
+    return False
+
+
 def resolve_mx_trackmap_urls(competition_name: str) -> List[str]:
     """
     Return static-relative paths (e.g. trackmaps pro motocross/fox.webp)
@@ -140,7 +164,7 @@ def race_background_static_url(competition) -> Optional[str]:
     name = getattr(competition, "name", None) or ""
     series = getattr(competition, "series", None)
 
-    if series == "MX":
+    if is_mx_competition(competition):
         urls = resolve_mx_trackmap_urls(name)
         return urls[0] if urls else None
 
@@ -177,10 +201,15 @@ def get_trackmaps_for_competition(competition) -> list:
         .order_by(CompetitionImage.sort_order)
         .all()
     )
-    if images:
-        return images
+    valid_db = [
+        i
+        for i in images
+        if (getattr(i, "image_url", None) or "").strip()
+    ]
+    if valid_db:
+        return valid_db
 
-    if getattr(competition, "series", None) != "MX":
+    if not is_mx_competition(competition):
         return []
 
     urls = resolve_mx_trackmap_urls(competition.name or "")
@@ -192,7 +221,7 @@ def get_picks_good_to_know(competition) -> list[str]:
     series = getattr(competition, "series", None) or ""
     tips: list[str] = []
 
-    if series == "MX":
+    if is_mx_competition(competition):
         tips.extend(
             [
                 "Utomhus-MX: banprofil och underlag (sand, lera, hårdpack) påverkar ofta resultatet mer än på SX.",
