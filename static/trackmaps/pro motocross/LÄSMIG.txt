@@ -1,7 +1,8 @@
 Pro Motocross – banbilder för picks-sidan
 =========================================
 
-Lägg en (eller flera) bilder per tävling här. Filnamn ska innehålla banans namn, t.ex.:
+Lägg en (eller flera) bilder per tävling här (denna mapp ELLER static/trackmaps pro motocross/).
+Filnamn ska innehålla banans namn, t.ex.:
 
   foxraceway.jpg      → Fox Raceway National
   hangtown.png        → Hangtown Classic

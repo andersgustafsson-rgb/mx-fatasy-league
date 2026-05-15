@@ -24,6 +24,7 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
 
 MX_TRACKMAP_DIR_CANDIDATES = (
     Path("static/trackmaps/pro motocross"),
+    Path("static/trackmaps pro motocross"),  # alternativ mapp (mellanslag)
     Path("static/trackmaps/pro_motocross"),
     Path("static/trackmaps/promotocross"),
     Path("static/trackmaps/mx"),
