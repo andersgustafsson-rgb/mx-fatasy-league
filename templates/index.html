@@ -1195,7 +1195,7 @@
                 <p class="text-xs text-yellow-100/90 mb-3 text-center sm:text-left">Senaste inlägg från vår Facebook-sida.</p>
                 <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden overflow-hidden rounded-xl border border-yellow-500/40 bg-black/50 shadow-inner">
                   <script type="application/json" id="fb-plugin-base-url">{{ facebook_timeline_iframe_src | tojson }}</script>
-                  <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy" class="h-[420px] w-full max-w-full bg-[#f5f6f7]"></iframe>
+                  <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" class="h-[420px] w-full max-w-full bg-[#f5f6f7]"></iframe>
                 </div>
                 <script>
                 (function () {
@@ -1206,30 +1206,60 @@
                   try { baseUrl = JSON.parse(urlNode.textContent || '""'); } catch (e) { return; }
                   if (!baseUrl) return;
                   var host = iframe.closest('.fb-page-plugin-host');
-                  var lastW = -1;
+                  var lastApplied = '';
+                  var retryTimer = null;
+                  function rawHostWidth() {
+                    return host ? host.getBoundingClientRect().width : 0;
+                  }
                   function pluginWidthPx() {
-                    var rw = host ? host.getBoundingClientRect().width : window.innerWidth;
+                    var rw = rawHostWidth();
+                    if (!rw || rw < 8) {
+                      rw = Math.min(500, Math.max(200, (window.innerWidth || 360) - 48));
+                    }
                     return Math.min(500, Math.max(180, Math.floor(rw)));
                   }
-                  function apply() {
-                    var w = pluginWidthPx();
-                    if (lastW >= 0 && Math.abs(w - lastW) < 6) return;
-                    lastW = w;
-                    try {
-                      var u = new URL(baseUrl);
-                      u.searchParams.set('width', String(w));
-                      iframe.src = u.toString();
-                    } catch (err) {}
+                  function buildUrl(w) {
+                    var u = new URL(baseUrl);
+                    u.searchParams.set('width', String(w));
+                    return u.toString();
                   }
-                  apply();
+                  function apply(force) {
+                    var w = pluginWidthPx();
+                    var next = buildUrl(w);
+                    if (!force && next === lastApplied) return;
+                    lastApplied = next;
+                    iframe.src = next;
+                  }
+                  function scheduleRetries() {
+                    clearTimeout(retryTimer);
+                    retryTimer = setTimeout(function () { apply(false); }, 280);
+                    setTimeout(function () { apply(false); }, 900);
+                  }
+                  function boot() {
+                    requestAnimationFrame(function () {
+                      requestAnimationFrame(function () {
+                        apply(true);
+                        scheduleRetries();
+                      });
+                    });
+                  }
+                  boot();
                   if (window.ResizeObserver && host) {
-                    var ro = new ResizeObserver(function () { apply(); });
-                    ro.observe(host);
+                    new ResizeObserver(function () { apply(false); }).observe(host);
                   }
                   var deb;
                   window.addEventListener('resize', function () {
                     clearTimeout(deb);
-                    deb = setTimeout(apply, 200);
+                    deb = setTimeout(function () { apply(false); }, 220);
+                  });
+                  window.addEventListener('pageshow', function (e) {
+                    if (e.persisted) {
+                      lastApplied = '';
+                      boot();
+                    }
+                  });
+                  document.addEventListener('visibilitychange', function () {
+                    if (!document.hidden) setTimeout(function () { apply(false); }, 350);
                   });
                 })();
                 </script>
