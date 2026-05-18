@@ -2369,124 +2369,178 @@ def league_detail_page(league_id):
     )
 
 
-@app.route("/season_team")
-def season_team_page():
+def _resolve_season_team_user_id() -> int | None:
+    """Aktuell användare eller ?user_id= för att visa annans säsongsteam."""
     if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    user_id = session["user_id"]
-    team = SeasonTeam.query.filter_by(user_id=user_id).first()
-    riders = []
-    
-    # Calculate user's total points (same as leaderboard)
-    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
-    user_total_points = sum(score.total_points or 0 for score in user_scores)
-    
-    if team:
-        riders = (
-            Rider.query.join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
-            .filter(SeasonTeamRider.season_team_id == team.id)
-            .all()
-        )
-    
-    return render_template("season_team.html", team=team, riders=riders, user_total_points=user_total_points)
+        return None
+    raw = request.args.get("user_id", type=int)
+    if raw is not None:
+        return raw
+    return session["user_id"]
 
-@app.get("/get_season_team_competition_points")
-def get_season_team_competition_points():
-    """Get season team points breakdown per competition for current user"""
-    if "user_id" not in session:
-        return jsonify({"error": "not_logged_in"}), 401
-    
-    user_id = session["user_id"]
+
+def build_season_team_competition_points(user_id: int) -> tuple[dict | None, str | None]:
+    """Returnerar {competitions: [...]} eller felkod."""
     team = SeasonTeam.query.filter_by(user_id=user_id).first()
-    
     if not team:
-        return jsonify({"error": "no_team"}), 404
-    
-    # Get all team riders
+        return None, "no_team"
+
     team_riders = SeasonTeamRider.query.filter_by(season_team_id=team.id).all()
     rider_ids = [tr.rider_id for tr in team_riders]
-    
-    # Get all competitions
     competitions = Competition.query.order_by(Competition.event_date.asc().nulls_last()).all()
-    
+
     competition_points = []
     for comp in competitions:
         comp_points = 0
         rider_breakdown = []
         bonus_points = 0
-        
-        # Get results for each rider in this competition
+
         for rider_id in rider_ids:
             result = CompetitionResult.query.filter_by(
-                rider_id=rider_id,
-                competition_id=comp.id
+                rider_id=rider_id, competition_id=comp.id
             ).first()
-            
             if result:
                 rider = Rider.query.get(rider_id)
                 points = calculate_rider_points_for_position(result.position)
                 comp_points += points
-                rider_breakdown.append({
-                    "rider_name": rider.name if rider else f"Rider {rider_id}",
-                    "rider_number": rider.rider_number if rider else None,
-                    "class_name": rider.class_name if rider else None,
-                    "position": result.position,
-                    "points": points
-                })
-        
-        # Check for bonus (only SMX)
-        if comp.series == 'SMX' or comp.series is None:
+                rider_breakdown.append(
+                    {
+                        "rider_name": rider.name if rider else f"Rider {rider_id}",
+                        "rider_number": rider.rider_number if rider else None,
+                        "class_name": rider.class_name if rider else None,
+                        "position": result.position,
+                        "points": points,
+                    }
+                )
+
+        if comp.series == "SMX" or comp.series is None:
             riders_by_class = {}
             for tr in team_riders:
                 rider = Rider.query.get(tr.rider_id)
                 if rider:
-                    class_name = rider.class_name
-                    if class_name not in riders_by_class:
-                        riders_by_class[class_name] = []
-                    riders_by_class[class_name].append(rider.id)
-            
-            competition_bonuses = {'450cc': [], '250cc': []}
+                    riders_by_class.setdefault(rider.class_name, []).append(rider.id)
+
+            competition_bonuses = {"450cc": [], "250cc": []}
             for rider_id in rider_ids:
                 result = CompetitionResult.query.filter_by(
-                    rider_id=rider_id,
-                    competition_id=comp.id
+                    rider_id=rider_id, competition_id=comp.id
                 ).first()
                 if result:
                     rider = Rider.query.get(rider_id)
                     if rider and result.position and result.position <= 6:
                         competition_bonuses[rider.class_name].append(rider_id)
-            
-            for class_name in ['450cc', '250cc']:
+
+            for class_name in ("450cc", "250cc"):
                 if class_name in riders_by_class:
                     team_riders_in_class = set(riders_by_class[class_name])
                     top6_riders_in_class = set(competition_bonuses[class_name])
-                    if team_riders_in_class and team_riders_in_class.issubset(top6_riders_in_class):
+                    if team_riders_in_class and team_riders_in_class.issubset(
+                        top6_riders_in_class
+                    ):
                         bonus_points += 50
-        
-        has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
-        
-        competition_points.append({
-            "competition_id": comp.id,
-            "name": comp.name,
-            "event_date": comp.event_date.strftime("%Y-%m-%d") if comp.event_date else "",
-            "series": comp.series,
-            "total_points": comp_points + bonus_points,
-            "rider_points": comp_points,
-            "bonus_points": bonus_points,
-            "has_results": has_results,
-            "rider_breakdown": rider_breakdown
-        })
-    
-    return jsonify({"competitions": competition_points})
+
+        has_results = (
+            CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+        )
+        competition_points.append(
+            {
+                "competition_id": comp.id,
+                "name": comp.name,
+                "event_date": comp.event_date.strftime("%Y-%m-%d")
+                if comp.event_date
+                else "",
+                "series": comp.series,
+                "total_points": comp_points + bonus_points,
+                "rider_points": comp_points,
+                "bonus_points": bonus_points,
+                "has_results": has_results,
+                "rider_breakdown": rider_breakdown,
+            }
+        )
+
+    return {"competitions": competition_points}, None
+
+
+def _season_team_riders_for_user(user_id: int):
+    team = SeasonTeam.query.filter_by(user_id=user_id).first()
+    if not team:
+        return None, []
+    riders = (
+        Rider.query.join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
+        .filter(SeasonTeamRider.season_team_id == team.id)
+        .all()
+    )
+    return team, riders
+
+
+@app.route("/season_team")
+def season_team_page():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    team, riders = _season_team_riders_for_user(user_id)
+
+    user_scores = CompetitionScore.query.filter_by(user_id=user_id).all()
+    user_total_points = sum(score.total_points or 0 for score in user_scores)
+
+    return render_template(
+        "season_team.html",
+        team=team,
+        riders=riders,
+        user_total_points=user_total_points,
+        is_own_team=True,
+        viewing_user=None,
+        season_team_user_id=user_id,
+    )
+
+
+@app.route("/season_team/view/<int:user_id>")
+def view_user_season_team(user_id: int):
+    """Andras säsongsteam: poäng per tävling (från leaderboard)."""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    if user_id == session["user_id"]:
+        return redirect(url_for("season_team_page"))
+
+    target_user = User.query.get_or_404(user_id)
+    team, riders = _season_team_riders_for_user(user_id)
+
+    return render_template(
+        "season_team.html",
+        team=team,
+        riders=riders,
+        user_total_points=None,
+        is_own_team=False,
+        viewing_user=target_user,
+        season_team_user_id=user_id,
+    )
+
+
+@app.get("/get_season_team_competition_points")
+def get_season_team_competition_points():
+    """Säsongsteam-poäng per tävling — egen eller ?user_id=."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    target_id = _resolve_season_team_user_id()
+    if target_id is None:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    payload, err = build_season_team_competition_points(target_id)
+    if err:
+        return jsonify({"error": err}), 404
+    return jsonify(payload)
 
 @app.get("/get_season_team_competition_details/<int:competition_id>")
 def get_season_team_competition_details(competition_id: int):
-    """Get detailed breakdown for a specific competition"""
+    """Detaljer för en tävling — egen eller ?user_id=."""
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
-    
-    user_id = session["user_id"]
+
+    user_id = _resolve_season_team_user_id()
+    if user_id is None:
+        return jsonify({"error": "not_logged_in"}), 401
     team = SeasonTeam.query.filter_by(user_id=user_id).first()
     
     if not team:
@@ -3596,6 +3650,7 @@ def season_team_builder():
 
         user = User.query.get(user_id)
         mx_promotion_offers = get_user_promotion_offers(user_id)
+        team_slot_count = len(existing_team_riders) if existing_team else 0
         html = render_template(
             "season_team_builder.html",
             username=user.username if user else "",
@@ -3603,6 +3658,7 @@ def season_team_builder():
             has_existing_team=has_existing_team,
             existing_team=existing_team,
             existing_team_riders=existing_team_riders,
+            team_slot_count=team_slot_count,
             mx_promotion_offers=mx_promotion_offers,
         )
         resp = make_response(html)

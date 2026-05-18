@@ -13,6 +13,8 @@ from models import (
 	PicksSnapshot,
 	RacePick,
 	Rider,
+	SeasonTeamClassPromotion,
+	SeasonTeamRider,
 	User,
 	WildcardPick,
 )
@@ -590,3 +592,186 @@ def admin_picks_snapshots_preview():
 		)
 	except Exception as e:
 		return jsonify({"ok": False, "error": str(e)}), 500
+
+
+def _rider_option(r: Rider) -> dict:
+	return {
+		"id": r.id,
+		"name": r.name,
+		"class_name": r.class_name,
+		"rider_number": r.rider_number,
+		"bike_brand": r.bike_brand,
+	}
+
+
+@bp.route("/rider_management/class_promotions", methods=["GET"])
+@login_required
+def list_class_promotions():
+	"""Lista MX-klassbyten (gratis säsongsteam-byte) + förare för dropdown."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	from season_team_promotions import ensure_promotions_table
+
+	ensure_promotions_table()
+	promotions = []
+	for row in (
+		SeasonTeamClassPromotion.query.order_by(
+			SeasonTeamClassPromotion.created_at.desc()
+		).all()
+	):
+		fr = Rider.query.get(row.from_rider_id)
+		tr = Rider.query.get(row.to_rider_id)
+		teams = SeasonTeamRider.query.filter_by(rider_id=row.from_rider_id).count()
+		promotions.append(
+			{
+				"id": row.id,
+				"from_rider_id": row.from_rider_id,
+				"to_rider_id": row.to_rider_id,
+				"from_name": fr.name if fr else f"ID {row.from_rider_id}",
+				"from_number": fr.rider_number if fr else None,
+				"from_class": fr.class_name if fr else "250cc",
+				"to_name": tr.name if tr else f"ID {row.to_rider_id}",
+				"to_number": tr.rider_number if tr else None,
+				"to_class": tr.class_name if tr else "450cc",
+				"is_active": row.is_active,
+				"note": row.note,
+				"teams_with_250": teams,
+				"created_at": row.created_at.isoformat() if row.created_at else None,
+			}
+		)
+
+	riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.name).all()
+	riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.name).all()
+	return jsonify(
+		{
+			"promotions": promotions,
+			"riders_250": [_rider_option(r) for r in riders_250],
+			"riders_450": [_rider_option(r) for r in riders_450],
+		}
+	)
+
+
+@bp.route("/rider_management/class_promotions/setup", methods=["POST"])
+@login_required
+def setup_class_promotion():
+	"""
+	Aktivera klassbyte: koppla 250-förare → 450-förare och uppdatera 450 startnummer.
+	JSON: from_rider_id, new_450_number, to_rider_id (valfritt), note (valfritt)
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+
+	from season_team_promotions import ensure_promotions_table
+
+	ensure_promotions_table()
+	data = request.get_json(silent=True) or {}
+	try:
+		from_rider_id = int(data.get("from_rider_id"))
+		new_number = int(data.get("new_450_number"))
+	except (TypeError, ValueError):
+		return jsonify({"error": "from_rider_id och new_450_number krävs"}), 400
+
+	to_rider_id = data.get("to_rider_id")
+	note = (data.get("note") or "").strip() or None
+
+	from_rider = Rider.query.get(from_rider_id)
+	if not from_rider:
+		return jsonify({"error": "250-föraren hittades inte"}), 404
+	if from_rider.class_name != "250cc":
+		return jsonify({"error": "from_rider_id måste vara en 250cc-förare"}), 400
+
+	if to_rider_id:
+		try:
+			to_rider_id = int(to_rider_id)
+		except (TypeError, ValueError):
+			return jsonify({"error": "Ogiltigt to_rider_id"}), 400
+		to_rider = Rider.query.get(to_rider_id)
+	else:
+		to_rider = (
+			Rider.query.filter(
+				Rider.name.ilike(from_rider.name.strip()),
+				Rider.class_name == "450cc",
+			)
+			.order_by(Rider.id.desc())
+			.first()
+		)
+
+	if not to_rider:
+		return jsonify(
+			{
+				"error": "Ingen 450-förare hittades med samma namn. Skapa 450-raden först under förarlistan."
+			}
+		), 400
+	if to_rider.class_name != "450cc":
+		return jsonify({"error": "to_rider_id måste vara 450cc"}), 400
+
+	conflict = (
+		Rider.query.filter_by(class_name="450cc", rider_number=new_number)
+		.filter(Rider.id != to_rider.id)
+		.first()
+	)
+	if conflict:
+		return jsonify(
+			{
+				"error": "nummer_upptaget",
+				"message": f"#{new_number} i 450 är redan {conflict.name}. Byt nummer på den föraren först.",
+				"existing_rider_id": conflict.id,
+				"existing_rider_name": conflict.name,
+			}
+		), 409
+
+	old_450_number = to_rider.rider_number
+	to_rider.rider_number = new_number
+
+	row = SeasonTeamClassPromotion.query.filter_by(from_rider_id=from_rider_id).first()
+	if not row:
+		row = SeasonTeamClassPromotion(
+			from_rider_id=from_rider_id,
+			to_rider_id=to_rider.id,
+			is_active=True,
+			note=note,
+		)
+		db.session.add(row)
+	else:
+		row.to_rider_id = to_rider.id
+		row.is_active = True
+		row.note = note
+
+	db.session.commit()
+	teams = SeasonTeamRider.query.filter_by(rider_id=from_rider_id).count()
+	return jsonify(
+		{
+			"success": True,
+			"message": (
+				f"Klassbyte aktivt: {from_rider.name} (#{from_rider.rider_number} 250) → "
+				f"{to_rider.name} (#{old_450_number} → #{new_number} 450). "
+				f"{teams} säsongsteam har fortfarande 250-versionen (gratis byte)."
+			),
+			"promotion_id": row.id,
+			"teams_with_250": teams,
+		}
+	)
+
+
+@bp.route("/rider_management/class_promotions/<int:promo_id>", methods=["PATCH", "DELETE"])
+@login_required
+def manage_class_promotion(promo_id: int):
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	from season_team_promotions import ensure_promotions_table
+
+	ensure_promotions_table()
+	row = SeasonTeamClassPromotion.query.get_or_404(promo_id)
+
+	if request.method == "DELETE":
+		db.session.delete(row)
+		db.session.commit()
+		return jsonify({"success": True, "message": "Klassbyte borttaget"})
+
+	data = request.get_json(silent=True) or {}
+	if "is_active" in data:
+		row.is_active = bool(data["is_active"])
+	if "note" in data:
+		row.note = (data.get("note") or "").strip() or None
+	db.session.commit()
+	return jsonify({"success": True, "is_active": row.is_active})

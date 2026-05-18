@@ -636,11 +636,14 @@ def delete_rider(rider_id: int):
 		except Exception:
 			pass
 		rider = Rider.query.get_or_404(rider_id)
+		from models import SeasonTeamRider
 		from sqlalchemy import text
+
+		teams_with_rider = SeasonTeamRider.query.filter_by(rider_id=rider_id).count()
 		try:
 			db.session.execute(text("DELETE FROM competition_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
 			db.session.execute(text("DELETE FROM holeshot_results WHERE rider_id = :rider_id"), {'rider_id': rider_id})
-			db.session.execute(text("DELETE FROM season_team_riders WHERE rider_id = :rider_id"), {'rider_id': rider_id})
+			# Behåll säsongsteam-raden (spelaren ser "saknad plats" + kan få MX-klassbyte)
 			db.session.execute(text("DELETE FROM race_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
 			db.session.execute(text("DELETE FROM holeshot_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
 			db.session.execute(text("DELETE FROM wildcard_picks WHERE rider_id = :rider_id"), {'rider_id': rider_id})
@@ -652,9 +655,14 @@ def delete_rider(rider_id: int):
 			raise
 		db.session.delete(rider)
 		db.session.commit()
-		response = {'success': True}
+		response = {"success": True, "season_teams_kept_slot": teams_with_rider}
+		if teams_with_rider:
+			response["info"] = (
+				f"Föraren är borttagen från listan men platsen finns kvar på "
+				f"{teams_with_rider} säsongsteam. Spelarna kan fylla platsen eller göra MX-klassbyte."
+			)
 		if season_warning:
-			response['warning'] = season_warning
+			response["warning"] = season_warning
 		return jsonify(response)
 	except Exception as e:
 		print(f"Error deleting rider {rider_id}: {e}")

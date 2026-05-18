@@ -3,21 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ team.team_name if team else 'Mitt Säsongsteam' }}</title>
+  <title>{% if is_own_team %}{{ team.team_name if team else 'Mitt Säsongsteam' }}{% else %}{{ team.team_name if team else 'Säsongsteam' }} — {{ viewing_user.display_name or viewing_user.username }}{% endif %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
     <!-- Header - Responsiv layout -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-4">
-      <h1 class="text-2xl sm:text-3xl font-bold text-blue-500">Mitt Säsongsteam</h1>
-      <div class="flex gap-2">
+      <h1 class="text-2xl sm:text-3xl font-bold text-blue-500">
+        {% if is_own_team | default(true) %}Mitt Säsongsteam{% else %}Säsongsteam — {{ viewing_user.display_name or viewing_user.username }}{% endif %}
+      </h1>
+      <div class="flex gap-2 flex-wrap">
+        {% if is_own_team | default(true) %}
         <a
           href="{{ url_for('profile_page') }}"
           class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
         >
           👤 Profil
         </a>
+        {% else %}
+        <a
+          href="{{ url_for('view_user_profile', user_id=season_team_user_id) }}"
+          class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
+        >
+          👤 Profil
+        </a>
+        {% endif %}
         <a
           href="{{ url_for('index') }}"
           class="bg-gray-600 hover:bg-gray-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
@@ -30,18 +41,18 @@
     {% if team %}
       <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-6">
         <h2 class="text-xl sm:text-2xl font-semibold mb-2 break-words">{{ team.team_name }}</h2>
+        {% if is_own_team and user_total_points is not none %}
         <p class="text-base sm:text-lg mb-3 sm:mb-4">
-          Dina totala poäng:
+          Dina totala poäng (race picks):
           <span class="font-bold text-green-400">{{ user_total_points or 0 }}</span>
         </p>
-        {% if team %}
+        {% endif %}
         <p class="text-sm text-gray-400 mb-3">
           Säsongsteam poäng: <span class="font-bold text-blue-400">{{ team.total_points or 0 }}</span>
         </p>
-        {% endif %}
 
         <h3 class="text-lg sm:text-xl font-semibold mb-3 border-b border-gray-700 pb-2">
-          Ditt team:
+          {% if is_own_team %}Ditt team{% else %}Lag{% endif %}:
         </h3>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -87,6 +98,7 @@
           {% endfor %}
         </div>
 
+        {% if is_own_team | default(true) %}
         <div class="mt-4 sm:mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a
             href="{{ url_for('my_scores') }}"
@@ -101,6 +113,7 @@
             Ändra team
           </a>
         </div>
+        {% endif %}
 
         <!-- Säsongsteam Poäng per Tävling -->
         <div class="mt-6 bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
@@ -109,8 +122,8 @@
           </h3>
           <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-4">
             <p class="text-sm text-blue-800 dark:text-blue-200">
-              💡 <strong>Tips:</strong> Klicka på en tävling här för att se detaljerad <strong>säsongsteam</strong> poängfördelning - vilka förare i ditt säsongsteam som gav poäng och hur mycket.<br>
-              <span class="text-xs mt-1 block">⚠️ OBS: Detta är INTE race picks-poäng. Detta är poäng från dina 4 valda säsongsteam-förare.</span>
+              💡 <strong>Tips:</strong> Klicka på en tävling för detaljerad <strong>säsongsteam</strong>-poängfördelning per förare.<br>
+              <span class="text-xs mt-1 block">⚠️ OBS: Inte race picks — poäng från lagets 4 säsongsteam-förare.</span>
             </p>
           </div>
           <div id="season-team-competitions" class="overflow-x-auto">
@@ -120,6 +133,7 @@
       </div>
     {% else %}
       <div class="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
+        {% if is_own_team %}
         <p class="mb-3 sm:mb-4 text-sm sm:text-base">Du har inte skapat något säsongsteam ännu.</p>
         <a
           href="{{ url_for('season_team_builder') }}"
@@ -127,6 +141,9 @@
         >
           Skapa team
         </a>
+        {% else %}
+        <p class="mb-3 sm:mb-4 text-sm sm:text-base">{{ viewing_user.display_name or viewing_user.username }} har inget säsongsteam.</p>
+        {% endif %}
       </div>
     {% endif %}
   </div>
@@ -141,12 +158,15 @@
   </div>
 
   <script>
+    const SEASON_TEAM_USER_ID = {{ season_team_user_id | tojson }};
+    const seasonTeamApiQuery = '?user_id=' + encodeURIComponent(SEASON_TEAM_USER_ID);
+
     async function loadSeasonTeamCompetitions() {
       const container = document.getElementById('season-team-competitions');
       if (!container) return;
       
       try {
-        const res = await fetch('/get_season_team_competition_points');
+        const res = await fetch('/get_season_team_competition_points' + seasonTeamApiQuery);
         const data = await res.json();
         
         if (data.error) {
@@ -300,7 +320,7 @@
     
     async function showSeasonTeamDetails(compId) {
       try {
-        const res = await fetch(`/get_season_team_competition_details/${compId}`);
+        const res = await fetch(`/get_season_team_competition_details/${compId}${seasonTeamApiQuery}`);
         const data = await res.json();
         
         if (data.error) {

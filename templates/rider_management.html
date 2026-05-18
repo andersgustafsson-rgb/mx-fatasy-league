@@ -76,6 +76,35 @@
             <div id="bulkUpdateStatus" class="mt-4 hidden"></div>
         </div>
 
+        <!-- MX klassbyte: gratis säsongsteam-byte + nytt 450-nummer -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">⬆️ MX-klassbyte (säsongsteam)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                När en förare går 250 → 450: koppla rätt rader, sätt <strong>nytt startnummer i 450</strong>, och aktivera gratis byte för spelare som fortfarande har 250-versionen på säsongsteamet.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                    <h4 class="text-sm font-semibold text-gray-200 mb-2">Nytt klassbyte</h4>
+                    <label class="block text-xs text-gray-400 mb-1">250-förare (gammal klass)</label>
+                    <select id="cp-from-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm" onchange="onClassPromoFromChange()"></select>
+                    <label class="block text-xs text-gray-400 mb-1">450-förare (samma person)</label>
+                    <select id="cp-to-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm"></select>
+                    <label class="block text-xs text-gray-400 mb-1">Nytt startnummer i 450</label>
+                    <input id="cp-new-number" type="number" min="1" max="999" placeholder="t.ex. 28" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                    <label class="block text-xs text-gray-400 mb-1">Anteckning (valfritt)</label>
+                    <input id="cp-note" type="text" placeholder="MX 2026" class="w-full mb-3 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
+                    <button type="button" onclick="setupClassPromotion()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-sm">
+                        Aktivera klassbyte + uppdatera nummer
+                    </button>
+                </div>
+                <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                    <h4 class="text-sm font-semibold text-gray-200 mb-2">Aktiva klassbyten</h4>
+                    <div id="cp-list" class="text-sm text-gray-400">Laddar...</div>
+                </div>
+            </div>
+            <div id="cp-status" class="hidden text-sm"></div>
+        </div>
+
         <!-- Entry List Import Section -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📋 Entry List Import - Förare</h3>
@@ -914,6 +943,135 @@
         function clearSearch() {
             document.getElementById('riderSearch').value = '';
             document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        let cpData = { riders_250: [], riders_450: [], promotions: [] };
+
+        function cpShowStatus(html, ok) {
+            const el = document.getElementById('cp-status');
+            if (!el) return;
+            el.classList.remove('hidden');
+            el.innerHTML = html;
+            el.className = ok
+                ? 'mt-3 p-3 rounded-lg border border-green-500 bg-green-900/30 text-green-300 text-sm'
+                : 'mt-3 p-3 rounded-lg border border-red-500 bg-red-900/30 text-red-300 text-sm';
+        }
+
+        function normCpName(n) {
+            return (n || '').trim().toLowerCase();
+        }
+
+        function fillCpSelects() {
+            const fromSel = document.getElementById('cp-from-rider');
+            const toSel = document.getElementById('cp-to-rider');
+            if (!fromSel || !toSel) return;
+            fromSel.innerHTML = '<option value="">— välj 250-förare —</option>' +
+                cpData.riders_250.map(r =>
+                    `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
+                ).join('');
+            toSel.innerHTML = '<option value="">— välj 450-förare —</option>' +
+                cpData.riders_450.map(r =>
+                    `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
+                ).join('');
+        }
+
+        function onClassPromoFromChange() {
+            const fromSel = document.getElementById('cp-from-rider');
+            const toSel = document.getElementById('cp-to-rider');
+            const numInput = document.getElementById('cp-new-number');
+            if (!fromSel || !toSel) return;
+            const fromId = parseInt(fromSel.value, 10);
+            const fromR = cpData.riders_250.find(r => r.id === fromId);
+            if (!fromR) return;
+            const matches = cpData.riders_450.filter(r => normCpName(r.name) === normCpName(fromR.name));
+            if (matches.length === 1) {
+                toSel.value = String(matches[0].id);
+                if (numInput && !numInput.value) numInput.value = matches[0].rider_number || '';
+            } else if (matches.length > 1) {
+                toSel.innerHTML = '<option value="">— flera 450 med samma namn —</option>' +
+                    matches.map(r => `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`).join('');
+            }
+        }
+
+        function renderCpList() {
+            const list = document.getElementById('cp-list');
+            if (!list) return;
+            if (!cpData.promotions.length) {
+                list.innerHTML = '<p class="text-gray-500">Inga aktiva klassbyten ännu.</p>';
+                return;
+            }
+            list.innerHTML = cpData.promotions.map(p => `
+                <div class="mb-3 p-2 rounded border border-gray-600 bg-gray-900/40 ${p.is_active ? '' : 'opacity-50'}">
+                    <div class="font-semibold text-emerald-200">${p.from_name} #${p.from_number} (250) → ${p.to_name} #${p.to_number} (450)</div>
+                    <div class="text-xs text-gray-400 mt-1">${p.teams_with_250} säsongsteam med 250-versionen · ${p.is_active ? 'Aktiv' : 'Pausad'}</div>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="toggleClassPromotion(${p.id}, ${!p.is_active})" class="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600">${p.is_active ? 'Pausa' : 'Aktivera'}</button>
+                        <button type="button" onclick="deleteClassPromotion(${p.id})" class="text-xs px-2 py-1 rounded bg-red-800 hover:bg-red-700">Ta bort</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadClassPromotions() {
+            try {
+                const res = await fetch('/rider_management/class_promotions');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Kunde inte ladda');
+                cpData = data;
+                fillCpSelects();
+                renderCpList();
+            } catch (e) {
+                const list = document.getElementById('cp-list');
+                if (list) list.innerHTML = `<p class="text-red-400">${e.message}</p>`;
+            }
+        }
+
+        async function setupClassPromotion() {
+            const fromId = document.getElementById('cp-from-rider')?.value;
+            const toId = document.getElementById('cp-to-rider')?.value;
+            const newNum = document.getElementById('cp-new-number')?.value;
+            const note = document.getElementById('cp-note')?.value || '';
+            if (!fromId || !newNum) {
+                cpShowStatus('Välj 250-förare och ange nytt 450-nummer.', false);
+                return;
+            }
+            if (!confirm('Aktivera klassbyte och uppdatera 450-numret? Spelare med 250-versionen får gratis byte.')) return;
+            try {
+                const res = await fetch('/rider_management/class_promotions/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        from_rider_id: parseInt(fromId, 10),
+                        to_rider_id: toId ? parseInt(toId, 10) : null,
+                        new_450_number: parseInt(newNum, 10),
+                        note: note
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    cpShowStatus(data.message || data.error || 'Fel', false);
+                    return;
+                }
+                cpShowStatus(`✅ ${data.message}`, true);
+                await loadClassPromotions();
+            } catch (e) {
+                cpShowStatus(e.message, false);
+            }
+        }
+
+        async function toggleClassPromotion(id, active) {
+            await fetch(`/rider_management/class_promotions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: active })
+            });
+            await loadClassPromotions();
+        }
+
+        async function deleteClassPromotion(id) {
+            if (!confirm('Ta bort klassbytet? Gratis byte slutar gälla.')) return;
+            await fetch(`/rider_management/class_promotions/${id}`, { method: 'DELETE' });
+            await loadClassPromotions();
         }
         
         // Bulk update rider numbers
@@ -1941,6 +2099,7 @@
 
         // Load competitions on page load
         document.addEventListener('DOMContentLoaded', function() {
+            loadClassPromotions();
             loadCompetitions();
             loadRidersForPicks();
             

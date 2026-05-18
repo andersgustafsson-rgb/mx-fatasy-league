@@ -1,0 +1,115 @@
+TIDRAPPORT — VAR LIGGER FILerna OCH VAD GÖR JAG?
+=================================================
+
+FÖR DIG SOM SKA GE EN FÄRDIG FIL TILL ANDRA (utan Python för dem)
+-------------------------------------------------------------------
+1) I projektet: kör EN gång (du eller någon med Python):
+     python scripts\feb_overtime_bar_charts.py --mall
+   Då skapas excel\Tidrapport_mall_mottagare.xlsx med alla månadsflikar och Klistra_in.
+
+2) Öppna den i Excel → Spara som .xlsm → lägg in makrot ModulTidrapport.bas (steg nedan).
+
+3) Skicka bara .xlsm till kollegorna. De: väljer månad, klistrar in, Alt+F8 → FlyttaTillValdManad.
+   Ingen Python hos mottagaren.
+
+
+VAR FILerna LIGGER (i projektet MittFantasySpel)
+-------------------------------------------------
+Allt som behövs för Excel-delen ligger i EN mapp:
+
+    MittFantasySpel\excel\
+
+Innehåll:
+  • LAS_MIG_FORST.txt     ← den här filen (instruktioner + VBA att kopiera)
+  • ModulTidrapport.bas   ← samma makro som nedan (kan importeras i Excel)
+  • Skapa_makro_aktiverad_bok.ps1  ← valfritt: försöker lägga in makrot åt dig om Excel finns
+
+Mellan två datorer: kopiera hela mappen «excel» (t.ex. på USB eller i molnet).
+Du behöver inte hela git-projektet om du bara vill ha makrot + instruktioner.
+
+
+VARFÖR INTE «helt färdigt» i en enda knapptryckning?
+----------------------------------------------------
+Excel tillåter inte att man sparar vanlig .xlsx med inbäddad VBA-kod utan att
+antingen:
+  • du klistrar in / importerar makrot en gång (nedan), ELLER
+  • du kör det lilla skriptet Skapa_makro_aktiverad_bok.ps1 på en dator som har
+    Excel installerat (då skapas en .xlsm med makrot redan i).
+
+Jag kan inte leverera en färdig .xlsm-fil direkt i chatten som binär nedladdning
+härifrån — men mappen ovan + valfritt PS1 är så «färdigt» det kan bli utanför Excel.
+
+
+GÖR SÅ HÄR (rekommenderat — manuellt, funkar överallt)
+------------------------------------------------------
+1) Öppna din tidrapport-arbetsbok i Excel.
+
+2) Arkiv → Spara som → filtyp «Excel-arbetsbok med makro (*.xlsm)» → Spara.
+
+3) Alt+F11 → Infoga → Modul.
+
+4) Kopiera in makrokoden: öppna **ModulTidrapport.bas** (samma mapp som den här
+   filen) i Anteckningar eller VS Code → markera från **Option Explicit** till
+   sista raden → klistra in i modulen. (Första raden `Attribute VB_Name` kan du
+   hoppa över om du klistrar manuellt — den följer ofta med vid import av .bas.)
+
+5) Ctrl+S i VBA-fönstret, stäng VBA (Alt+Q).
+
+6) Köra makrot — VÄLJ ETT SÄTT (du behöver INTE fliken Utvecklare)
+
+   A) ENKLAST för vanliga användare (ingen Utvecklare-flik):
+      • Gå till fliken «Klistra_in» (så du ser B1 och inklistrat).
+      • Tryck **Alt+F8** (öppnar dialogen «Makro»).
+      • Markera **FlyttaTillValdManad** (flyttar data + bygger diagram) eller
+        **UppdateraSammanstallningOchDiagram** (bara diagram från vald månadsflik).
+      • Klicka **Kör**.
+
+   B) Valfritt — knapp utan Utvecklare-flik:
+      • Fliken **Infoga** → **Former** (eller «Illustrationer» → Former) → välj t.ex. en rektangel.
+      • Rita en ruta på «Klistra_in».
+      • **Högerklicka** på formen → **Tilldela makro** → välj **FlyttaTillValdManad** → OK.
+      • Högerklicka igen → **Redigera text** om du vill skriva «Flytta till vald månad».
+
+   C) Om ni har fliken Utvecklare: Utvecklare → Infoga → Knapp (formkontroll)
+      fungerar också — samma makro.
+
+7) Aktivera innehåll/makron när Excel frågar.
+
+Klar. Efter det: välj månad i B1, klistra in data, kör makrot (**Alt+F8** → Kör) eller klicka på knappen/formen.
+
+
+VALFRITT — automatik med PowerShell (om Excel finns på den datorn)
+------------------------------------------------------------------
+1) Högerklicka Skapa_makro_aktiverad_bok.ps1 → Kör med PowerShell
+   (eller öppna PowerShell i mappen «excel» och kör enligt kommentaren överst i .ps1)
+
+2) Om det misslyckas: Excel kräver ibland «Lita på åtkomst till VBA-projektsmodellen»
+   (Fil → Alternativ → Säkerhetscenter → Makroinställningar). Då: använd manuella
+   stegen ovan i stället.
+
+
+ARBETSFLÖDE (kort)
+------------------
+• «Klistra_in»: B1 = månad, rad 8 = rubriker, rad 9+ = data → kör makrot.
+• Vald månadsflik fylls; **Diagram_timmar** (tabell) och **Graf_timmar**
+  (stapeldiagram per person/or­sak) skapas eller uppdateras automatiskt.
+• Om namn ändå saknas i diagrammet: Diagramdesign → Markera data → kategori­etiketter
+  från **Diagram_timmar** kolumn A (datapersoner, inte rubrikraden).
+
+
+NAMN SYNS INTE I DIAGRAMMET
+----------------------------
+1) Öppna «Graf_timmar».
+2) Markera diagrammet → Diagramdesign → Markera data.
+3) Kategori­etiketter / vågrät axel → Redigera → markera A-kolumnen med namnen
+   på «Diagram_timmar» (utan rubrikraden om den ligger ovanför första namnet).
+4) OK.
+
+
+VBA-KOD
+=======
+Se **ModulTidrapport.bas** i samma mapp — kopiera in hela modulen i Excel (steg 4).
+Där finns:
+  • **FlyttaTillValdManad** — flyttar inklistrat till månadsflik och uppdaterar diagram.
+  • **UppdateraSammanstallningOchDiagram** — läser data från månaden i B1 och bygger om
+    tabell/diagram utan att flytta rader från Klistra_in (t.ex. efter manuell ändring).

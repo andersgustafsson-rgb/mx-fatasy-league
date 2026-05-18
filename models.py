@@ -146,6 +146,24 @@ class SeasonTeamRider(db.Model):
     season_team_id = db.Column(db.Integer, db.ForeignKey("season_teams.id"))
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
 
+
+class SeasonTeamClassPromotion(db.Model):
+    """Gratis säsongsteam-byte när förare går 250 → 450 (MX)."""
+    __tablename__ = "season_team_class_promotions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    from_rider_id = db.Column(
+        db.Integer, db.ForeignKey("riders.id"), nullable=False, unique=True
+    )
+    to_rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    note = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    from_rider = db.relationship("Rider", foreign_keys=[from_rider_id])
+    to_rider = db.relationship("Rider", foreign_keys=[to_rider_id])
+
+
 class League(db.Model):
     __tablename__ = "leagues"
     id = db.Column(db.Integer, primary_key=True)
