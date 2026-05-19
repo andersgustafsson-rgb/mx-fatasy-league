@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request
+from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request, Response
 
 from models import (
 	db,
@@ -57,6 +57,81 @@ def login_required(f):
 				pass
 		return f(*args, **kwargs)
 	return decorated_function
+
+
+@bp.route("/admin/social-recap")
+@login_required
+def social_recap_page():
+	if not is_admin_user():
+		return redirect(url_for("index"))
+	return render_template("admin_social_recap.html")
+
+
+@bp.get("/admin/api/social-recap")
+@login_required
+def social_recap_api():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	if not comp_id:
+		return jsonify({"error": "competition_id_required"}), 400
+	race_top = request.args.get("race_top", default=3, type=int)
+	season_top = request.args.get("season_top", default=5, type=int)
+	include_race = request.args.get("include_race", "1") not in ("0", "false", "no")
+	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
+	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
+	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
+	try:
+		from social_recap_service import build_social_recap_data
+
+		data = build_social_recap_data(
+			comp_id,
+			race_top=race_top,
+			season_top=season_top,
+			include_race=include_race,
+			include_season=include_season,
+			include_facts=include_facts,
+			include_rank_delta=include_rank_delta,
+		)
+		return jsonify(data)
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.get("/admin/api/social-recap.png")
+@login_required
+def social_recap_png():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	if not comp_id:
+		return jsonify({"error": "competition_id_required"}), 400
+	race_top = request.args.get("race_top", default=3, type=int)
+	season_top = request.args.get("season_top", default=5, type=int)
+	include_race = request.args.get("include_race", "1") not in ("0", "false", "no")
+	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
+	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
+	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
+	try:
+		from social_recap_service import build_social_recap_data, render_social_recap_png
+
+		data = build_social_recap_data(
+			comp_id,
+			race_top=race_top,
+			season_top=season_top,
+			include_race=include_race,
+			include_season=include_season,
+			include_facts=include_facts,
+			include_rank_delta=include_rank_delta,
+		)
+		png_bytes = render_social_recap_png(data)
+		return Response(png_bytes, mimetype="image/png")
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		return jsonify({"error": str(e)}), 500
 
 
 @bp.route("/admin")

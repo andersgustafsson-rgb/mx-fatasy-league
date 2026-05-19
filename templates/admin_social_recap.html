@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Recap Studio — Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background-attachment: fixed;
+        }
+        .cyberpunk-header { font-family: 'Orbitron', monospace; text-shadow: 0 0 10px rgba(34, 211, 238, 0.8); }
+        .section-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 2px solid #22d3ee;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-secondary {
+            background: #374151;
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+        }
+        .btn-secondary:hover { background: #4b5563; }
+    </style>
+</head>
+<body class="min-h-screen text-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-8">
+            <h1 class="cyberpunk-header text-3xl md:text-4xl font-bold text-cyan-400 mb-2">RACE RECAP STUDIO</h1>
+            <p class="text-gray-300">Skapa delningsbild + Facebook-text efter race</p>
+            <div class="mt-4 flex flex-wrap justify-center gap-3">
+                <a href="/admin" class="btn-secondary px-5 py-2 rounded-lg inline-block">← Admin</a>
+                <a href="/" class="btn-secondary px-5 py-2 rounded-lg inline-block">Hem</a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="section-card rounded-lg p-6">
+                <h2 class="text-xl font-bold text-cyan-400 mb-4">Inställningar</h2>
+
+                <label class="block text-sm text-gray-300 mb-1">Tävling</label>
+                <select id="competition-select" class="w-full mb-4 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                    <option value="">Laddar…</option>
+                </select>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">Topp race</label>
+                        <select id="race-top" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                            <option value="3" selected>3</option>
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 mb-1">Topp säsong</label>
+                        <select id="season-top" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
+                            <option value="3">3</option>
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+                </div>
+
+                <fieldset class="space-y-2 mb-4 text-sm">
+                    <legend class="text-gray-300 mb-2">Moduler</legend>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="mod-race" checked class="rounded">
+                        <span>Tävlingspodium (fantasipoäng)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="mod-season" checked class="rounded">
+                        <span>Säsongstoppen</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="mod-facts" checked class="rounded">
+                        <span>Fältets fakta (alla tipsare, inga namnlistor)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="mod-delta" checked class="rounded">
+                        <span>Rank-pilar på säsong</span>
+                    </label>
+                </fieldset>
+
+                <button type="button" id="btn-preview" class="btn-primary w-full py-3 rounded-lg mb-2">Uppdatera förhandsgranskning</button>
+                <p id="status-msg" class="text-sm text-gray-400 min-h-[1.25rem]"></p>
+            </div>
+
+            <div class="section-card rounded-lg p-6">
+                <h2 class="text-xl font-bold text-cyan-400 mb-4">Förhandsgranskning</h2>
+                <div class="bg-gray-900 rounded-lg p-2 flex justify-center mb-4 min-h-[200px]">
+                    <img id="preview-img" alt="Recap preview" class="max-w-full h-auto rounded hidden" style="max-height: 520px;">
+                    <p id="preview-placeholder" class="text-gray-500 self-center py-16">Välj tävling och klicka Uppdatera</p>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <a id="btn-download" href="#" download="mx-recap.png" class="btn-primary px-4 py-2 rounded-lg opacity-50 pointer-events-none">Ladda ner PNG</a>
+                    <button type="button" id="btn-copy" class="btn-secondary px-4 py-2 rounded-lg" disabled>Kopiera FB-text</button>
+                </div>
+                <label class="block text-sm text-gray-300 mb-1">Facebook-caption</label>
+                <textarea id="caption-text" rows="12" readonly
+                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-gray-200 text-sm font-mono"
+                    placeholder="Caption visas här…"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const compSelect = document.getElementById('competition-select');
+        const statusMsg = document.getElementById('status-msg');
+        const previewImg = document.getElementById('preview-img');
+        const previewPlaceholder = document.getElementById('preview-placeholder');
+        const captionText = document.getElementById('caption-text');
+        const btnDownload = document.getElementById('btn-download');
+        const btnCopy = document.getElementById('btn-copy');
+
+        function queryParams() {
+            const id = compSelect.value;
+            if (!id) return null;
+            const p = new URLSearchParams();
+            p.set('competition_id', id);
+            p.set('race_top', document.getElementById('race-top').value);
+            p.set('season_top', document.getElementById('season-top').value);
+            p.set('include_race', document.getElementById('mod-race').checked ? '1' : '0');
+            p.set('include_season', document.getElementById('mod-season').checked ? '1' : '0');
+            p.set('include_facts', document.getElementById('mod-facts').checked ? '1' : '0');
+            p.set('include_rank_delta', document.getElementById('mod-delta').checked ? '1' : '0');
+            return p;
+        }
+
+        async function loadCompetitions() {
+            try {
+                const res = await fetch('/get_competitions_for_import');
+                const data = await res.json();
+                const comps = data.competitions || (Array.isArray(data) ? data : []);
+                comps.sort((a, b) => {
+                    const da = a.event_date || '';
+                    const db = b.event_date || '';
+                    return db.localeCompare(da);
+                });
+                compSelect.innerHTML = '<option value="">— Välj tävling —</option>';
+                let firstWithResults = null;
+                for (const c of comps) {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    const label = `${c.name || 'Race'}${c.event_date ? ' · ' + c.event_date : ''}`;
+                    opt.textContent = label;
+                    compSelect.appendChild(opt);
+                    if (!firstWithResults && c.has_results) firstWithResults = String(c.id);
+                }
+                if (firstWithResults) compSelect.value = firstWithResults;
+                else if (comps.length) compSelect.value = String(comps[0].id);
+            } catch (e) {
+                compSelect.innerHTML = '<option value="">Kunde inte ladda tävlingar</option>';
+                statusMsg.textContent = String(e);
+            }
+        }
+
+        async function refreshPreview() {
+            const p = queryParams();
+            if (!p) {
+                statusMsg.textContent = 'Välj en tävling.';
+                return;
+            }
+            statusMsg.textContent = 'Genererar…';
+            btnCopy.disabled = true;
+            try {
+                const apiUrl = '/admin/api/social-recap?' + p.toString();
+                const res = await fetch(apiUrl);
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || res.statusText);
+
+                captionText.value = json.caption || '';
+                btnCopy.disabled = !json.caption;
+
+                const pngUrl = '/admin/api/social-recap.png?' + p.toString() + '&_=' + Date.now();
+                previewImg.src = pngUrl;
+                previewImg.classList.remove('hidden');
+                previewPlaceholder.classList.add('hidden');
+
+                btnDownload.href = pngUrl;
+                btnDownload.classList.remove('opacity-50', 'pointer-events-none');
+
+                if (!json.has_results) {
+                    statusMsg.textContent = 'Obs: inga resultat i DB än — fältfakta kan vara begränsade.';
+                } else {
+                    statusMsg.textContent = 'Klar.';
+                }
+            } catch (e) {
+                statusMsg.textContent = 'Fel: ' + e.message;
+            }
+        }
+
+        document.getElementById('btn-preview').addEventListener('click', refreshPreview);
+        btnCopy.addEventListener('click', async () => {
+            const t = captionText.value;
+            if (!t) return;
+            try {
+                await navigator.clipboard.writeText(t);
+                statusMsg.textContent = 'Text kopierad!';
+            } catch {
+                captionText.select();
+                document.execCommand('copy');
+                statusMsg.textContent = 'Text kopierad (fallback).';
+            }
+        });
+
+        ['race-top', 'season-top', 'mod-race', 'mod-season', 'mod-facts', 'mod-delta'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (compSelect.value) refreshPreview();
+            });
+        });
+
+        loadCompetitions().then(() => {
+            if (compSelect.value) refreshPreview();
+        });
+    </script>
+</body>
+</html>
