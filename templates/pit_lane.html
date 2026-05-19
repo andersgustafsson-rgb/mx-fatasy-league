@@ -33,7 +33,14 @@
         </div>
       </section>
       <section>
-        <h2 class="text-lg font-bold text-green-300 mb-3">💬 Konversationer</h2>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h2 class="text-lg font-bold text-green-300">💬 Konversationer</h2>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button type="button" id="pit-mark-all-read" class="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">Markera alla lästa</button>
+            <button type="button" id="pit-toggle-read-threads" class="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-cyan-300 hidden">Visa lästa</button>
+          </div>
+        </div>
+        <p id="pit-threads-hint" class="text-xs text-gray-500 mb-2 hidden"></p>
         <div id="threads-list" class="space-y-2">
           <p class="text-gray-500 text-sm">Laddar…</p>
         </div>
@@ -45,6 +52,11 @@
     </div>
 
     <div id="pit-panel-messages" class="pit-panel hidden">
+      <div class="flex flex-wrap gap-2 mb-3 text-xs">
+        <button type="button" id="pit-mark-all-read-msg" class="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">Markera alla lästa</button>
+        <button type="button" id="pit-toggle-read-threads-msg" class="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-cyan-300 hidden">Visa lästa</button>
+      </div>
+      <p id="pit-threads-hint-msg" class="text-xs text-gray-500 mb-2 hidden"></p>
       <div class="grid md:grid-cols-2 gap-4">
         <div id="threads-sidebar" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
         <div id="thread-view" class="bg-gray-800 rounded-lg p-4 min-h-[280px] flex flex-col hidden md:flex">
@@ -74,6 +86,6 @@
       composeToLabel: {{ compose_to_label|tojson }}
     };
   </script>
-  <script src="{{ url_for('static', filename='pit_lane.js') }}"></script>
+  <script src="{{ url_for('static', filename='pit_lane.js') }}?v=2"></script>
 </body>
 </html>

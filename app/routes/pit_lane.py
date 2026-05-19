@@ -102,17 +102,26 @@ def api_threads():
     uid = _require_login()
     if uid is None:
         return jsonify({"error": "not_logged_in"}), 401
-    threads = (
-        MessageThread.query.filter(
-            db.or_(
-                MessageThread.user_a_id == uid,
-                MessageThread.user_b_id == uid,
-            )
-        )
-        .order_by(MessageThread.updated_at.desc())
-        .all()
+    unread_only = request.args.get("unread_only", "1") not in ("0", "false", "False")
+    threads = pls.list_threads_for_user(uid, unread_only=unread_only)
+    all_threads = pls.list_threads_for_user(uid, unread_only=False)
+    read_count = sum(1 for t in all_threads if t["unread_count"] == 0)
+    return jsonify(
+        {
+            "threads": threads,
+            "read_count": read_count,
+            "unread_only": unread_only,
+        }
     )
-    return jsonify({"threads": [pls.thread_to_dict(t, uid) for t in threads]})
+
+
+@bp.post("/api/pit-lane/threads/mark-all-read")
+def api_mark_all_threads_read():
+    uid = _require_login()
+    if uid is None:
+        return jsonify({"error": "not_logged_in"}), 401
+    n = pls.mark_all_dm_threads_read(uid)
+    return jsonify({"success": True, "marked": n})
 
 
 @bp.get("/api/pit-lane/threads/<int:thread_id>")

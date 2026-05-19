@@ -319,3 +319,48 @@ def recent_items_for_dropdown(user_id: int, limit: int = 6) -> list[dict]:
                 }
             )
     return items[:limit]
+
+
+def list_threads_for_user(user_id: int, unread_only: bool = False) -> list[dict]:
+    threads = (
+        MessageThread.query.filter(
+            db.or_(
+                MessageThread.user_a_id == user_id,
+                MessageThread.user_b_id == user_id,
+            )
+        )
+        .order_by(MessageThread.updated_at.desc())
+        .all()
+    )
+    rows = [thread_to_dict(t, user_id) for t in threads]
+    if unread_only:
+        rows = [r for r in rows if r["unread_count"] > 0]
+    return rows
+
+
+def mark_all_dm_threads_read(user_id: int) -> int:
+    """Markera alla inkomna DM som lästa. Returnerar antal uppdaterade meddelanden."""
+    now = datetime.utcnow()
+    thread_ids = [
+        t.id
+        for t in MessageThread.query.filter(
+            db.or_(
+                MessageThread.user_a_id == user_id,
+                MessageThread.user_b_id == user_id,
+            )
+        ).all()
+    ]
+    if not thread_ids:
+        return 0
+    n = (
+        Message.query.filter(
+            Message.thread_id.in_(thread_ids),
+            Message.from_user_id != user_id,
+            Message.read_at.is_(None),
+        ).update({"read_at": now}, synchronize_session=False)
+    )
+    InboxNotification.query.filter_by(user_id=user_id, kind="dm").filter(
+        InboxNotification.read_at.is_(None)
+    ).update({"read_at": now}, synchronize_session=False)
+    db.session.commit()
+    return int(n or 0)
