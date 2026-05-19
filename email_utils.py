@@ -1,6 +1,7 @@
 """
 Email utilities for sending emails via Gmail SMTP
 """
+import html
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -325,25 +326,104 @@ def send_password_reset_email(
     return send_email(user_email, subject, html_content)
 
 
+def _pit_lane_email_shell(
+    user_name: str,
+    headline: str,
+    body_html: str,
+    cta_label: str,
+    cta_url: str,
+    base_url: Optional[str] = None,
+) -> str:
+    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
+    logo_html = (
+        f'<img src="{logo_url}" alt="MX Fantasy League" width="160" style="display:block;margin:0 auto 10px;" />'
+        if logo_url
+        else '<div style="font-size:28px;margin-bottom:8px;">🏁</div>'
+    )
+    safe_name = html.escape(user_name)
+    safe_headline = html.escape(headline)
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;">
+        <div style="background:#0f172a;padding:32px 20px;">
+            <div style="max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;border:1px solid #334155;">
+                <div style="background:linear-gradient(135deg,#0e7490,#1e3a8a);padding:28px;text-align:center;color:#fff;">
+                    {logo_html}
+                    <h1 style="margin:0;font-size:20px;">Pit Lane</h1>
+                </div>
+                <div style="background:#1e293b;padding:28px;color:#e2e8f0;">
+                    <p style="margin:0 0 16px;font-size:16px;">Hej {safe_name}!</p>
+                    <p style="margin:0 0 20px;font-size:18px;font-weight:600;color:#fff;">{safe_headline}</p>
+                    <div style="background:#0f172a;border-radius:12px;padding:16px;margin-bottom:24px;font-size:15px;line-height:1.6;color:#cbd5e1;">
+                        {body_html}
+                    </div>
+                    <div style="text-align:center;">
+                        <a href="{html.escape(cta_url)}" style="display:inline-block;background:#22d3ee;color:#0f172a;padding:14px 28px;border-radius:999px;font-weight:700;text-decoration:none;">{html.escape(cta_label)}</a>
+                    </div>
+                    <p style="margin:24px 0 0;font-size:12px;color:#64748b;word-break:break-all;">{html.escape(cta_url)}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+
+def send_pit_lane_dm_email(
+    user_email: str,
+    user_name: str,
+    sender_name: str,
+    message_preview: str,
+    pit_lane_url: str,
+    base_url: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
+    preview = html.escape((message_preview or "")[:500]).replace("\n", "<br>")
+    body = f"<strong>{html.escape(sender_name)}</strong> skrev:<br><br>{preview}"
+    html_content = _pit_lane_email_shell(
+        user_name,
+        "Du har fått ett nytt privat meddelande",
+        body,
+        "Öppna Pit Lane",
+        pit_lane_url,
+        base_url,
+    )
+    subject = f"💬 Nytt meddelande från {sender_name} — MX Fantasy"
+    return send_email(user_email, subject, html_content)
+
+
+def send_pit_lane_race_control_email(
+    user_email: str,
+    user_name: str,
+    announcement_body: str,
+    pit_lane_url: str,
+    *,
+    important: bool = False,
+    base_url: Optional[str] = None,
+) -> tuple[bool, Optional[str]]:
+    body = html.escape((announcement_body or "")[:2000]).replace("\n", "<br>")
+    html_content = _pit_lane_email_shell(
+        user_name,
+        "Nytt meddelande från Race Control",
+        body,
+        "Läs i Pit Lane",
+        pit_lane_url,
+        base_url,
+    )
+    prefix = "❗ " if important else "📢 "
+    subject = f"{prefix}Race Control — MX Fantasy League"
+    return send_email(user_email, subject, html_content)
+
+
 def send_bulk_emails(emails: List[str], subject: str, html_content: str) -> dict:
-    """
-    Send emails to multiple recipients
-    
-    Args:
-        emails: List of email addresses
-        subject: Email subject
-        html_content: HTML content of the email
-    
-    Returns:
-        Dictionary with 'success' count and 'failed' count
-    """
-    results = {'success': 0, 'failed': 0}
-    
+    """Send emails to multiple recipients."""
+    results = {"success": 0, "failed": 0}
     for email in emails:
         success, _error_msg = send_email(email, subject, html_content)
         if success:
-            results['success'] += 1
+            results["success"] += 1
         else:
-            results['failed'] += 1
-    
+            results["failed"] += 1
     return results
+

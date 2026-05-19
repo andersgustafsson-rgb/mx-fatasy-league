@@ -85,6 +85,12 @@ def publish_admin_announcement(
     db.session.add(ann)
     sync_global_sim_announcement(body, ann.priority, True)
     db.session.commit()
+    try:
+        import pit_lane_notify as pln
+
+        pln.notify_race_control_published(body, ann.priority or "info")
+    except Exception as ex:
+        print(f"Pit Lane: kunde inte köa Race Control-e-post: {ex}")
     return ann
 
 
@@ -203,6 +209,12 @@ def send_direct_message(from_user_id: int, to_user_id: int, body: str) -> Messag
         )
     )
     db.session.commit()
+    try:
+        import pit_lane_notify as pln
+
+        pln.notify_dm_received(to_user_id, from_user_id, body, thread.id)
+    except Exception as ex:
+        print(f"Pit Lane: kunde inte köa DM-e-post: {ex}")
     return msg
 
 
