@@ -56,8 +56,8 @@
                     <div>
                         <label class="block text-sm text-gray-300 mb-1">Topp race</label>
                         <select id="race-top" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
-                            <option value="3" selected>3</option>
-                            <option value="5">5</option>
+                            <option value="3">3 (endast podium)</option>
+                            <option value="5" selected>5 (podium + 4–5)</option>
                             <option value="10">10</option>
                         </select>
                     </div>
@@ -74,12 +74,16 @@
                 <fieldset class="space-y-2 mb-4 text-sm">
                     <legend class="text-gray-300 mb-2">Moduler</legend>
                     <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="mod-riders" checked class="rounded">
+                        <span>Förarpall (450/250 resultat)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="mod-race" checked class="rounded">
-                        <span>Tävlingspodium (fantasipoäng)</span>
+                        <span>Fantasy-podium denna tävling</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="mod-season" checked class="rounded">
-                        <span>Säsongstoppen</span>
+                        <span>Fantasy-podium säsong</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="mod-facts" checked class="rounded">
@@ -98,7 +102,7 @@
             <div class="section-card rounded-lg p-6">
                 <h2 class="text-xl font-bold text-cyan-400 mb-4">Förhandsgranskning</h2>
                 <div class="bg-gray-900 rounded-lg p-2 flex justify-center mb-4 min-h-[200px]">
-                    <img id="preview-img" alt="Recap preview" class="max-w-full h-auto rounded hidden" style="max-height: 520px;">
+                    <img id="preview-img" alt="Recap preview" class="max-w-full h-auto rounded hidden" style="max-height: 720px;">
                     <p id="preview-placeholder" class="text-gray-500 self-center py-16">Välj tävling och klicka Uppdatera</p>
                 </div>
                 <div class="flex flex-wrap gap-2 mb-4">
@@ -133,6 +137,7 @@
             p.set('include_season', document.getElementById('mod-season').checked ? '1' : '0');
             p.set('include_facts', document.getElementById('mod-facts').checked ? '1' : '0');
             p.set('include_rank_delta', document.getElementById('mod-delta').checked ? '1' : '0');
+            p.set('include_rider_podium', document.getElementById('mod-riders').checked ? '1' : '0');
             return p;
         }
 
@@ -213,7 +218,7 @@
             }
         });
 
-        ['race-top', 'season-top', 'mod-race', 'mod-season', 'mod-facts', 'mod-delta'].forEach(id => {
+        ['race-top', 'season-top', 'mod-riders', 'mod-race', 'mod-season', 'mod-facts', 'mod-delta'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => {
                 if (compSelect.value) refreshPreview();
             });

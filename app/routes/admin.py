@@ -81,6 +81,7 @@ def social_recap_api():
 	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
 	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
 	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
+	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
 	try:
 		from social_recap_service import build_social_recap_data
 
@@ -92,6 +93,7 @@ def social_recap_api():
 			include_season=include_season,
 			include_facts=include_facts,
 			include_rank_delta=include_rank_delta,
+			include_rider_podium=include_rider_podium,
 		)
 		return jsonify(data)
 	except ValueError as e:
@@ -114,6 +116,7 @@ def social_recap_png():
 	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
 	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
 	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
+	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
 
@@ -125,6 +128,7 @@ def social_recap_png():
 			include_season=include_season,
 			include_facts=include_facts,
 			include_rank_delta=include_rank_delta,
+			include_rider_podium=include_rider_podium,
 		)
 		png_bytes = render_social_recap_png(data)
 		return Response(png_bytes, mimetype="image/png")
