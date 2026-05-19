@@ -433,10 +433,11 @@
               </div>
             </div>
         </header>
-          {% if is_logged_in %}
+        {% if is_logged_in %}
+        <div class="flex-shrink-0 self-start sm:self-center">
           {% include 'includes/pit_lane_bell.html' %}
-          {% endif %}
         </div>
+        {% endif %}
 
         <!-- PWA Install banner (mobile) -->
         <div id="pwa-install-banner" class="hidden max-w-md mx-auto w-full mb-4">
