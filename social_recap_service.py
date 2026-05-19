@@ -40,6 +40,16 @@ ACCENT_ORANGE = (251, 146, 60)
 W, H = 1080, 1920
 _ROOT = Path(__file__).resolve().parent
 
+AVATAR_BG = [
+    (14, 116, 144),
+    (37, 99, 235),
+    (124, 58, 237),
+    (219, 39, 119),
+    (234, 88, 12),
+    (22, 163, 74),
+    (6, 182, 212),
+]
+
 
 def _display_name(user: User | None, fallback: str = "?") -> str:
     if not user:
@@ -60,6 +70,25 @@ def _short_rider_name(name: str, max_len: int = 16) -> str:
 def _short_user_name(name: str, max_len: int = 14) -> str:
     s = (name or "?").strip()
     return (s[: max_len - 1] + "…") if len(s) > max_len else s
+
+
+def _user_initials(display_name: str) -> str:
+    parts = (display_name or "?").strip().split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    s = (display_name or "?").strip()
+    return (s[:2] or "?").upper()
+
+
+def _attach_user_meta(row: dict[str, Any]) -> dict[str, Any]:
+    uid = row.get("user_id")
+    if not uid:
+        return row
+    user = User.query.get(int(uid))
+    if user:
+        row["display_name"] = _display_name(user)
+        row["username"] = user.username
+    return row
 
 
 def _class_config(comp: Competition) -> dict[str, Any]:
@@ -101,34 +130,185 @@ def _race_leaderboard(competition_id: int, limit: int) -> list[dict[str, Any]]:
     rows.sort(key=lambda r: (-r["points"], r["display_name"].lower()))
     for i, r in enumerate(rows[: max(1, limit)], 1):
         r["rank"] = i
+        _attach_user_meta(r)
     return rows[: max(1, limit)]
 
 
-def _season_leaderboard(limit: int, include_delta: bool) -> list[dict[str, Any]]:
+def _season_top_snippet(limit: int = 5) -> list[dict[str, Any]]:
     from main import calculate_leaderboard_deltas
 
-    leaderboard = calculate_leaderboard_deltas()
     out = []
-    for row in leaderboard[: max(1, limit)]:
+    for row in calculate_leaderboard_deltas()[: max(1, limit)]:
         item = {
             "user_id": row["user_id"],
             "username": row["username"],
             "display_name": row.get("display_name") or row["username"],
-            "team_name": row.get("team_name"),
             "points": int(row["total_points"]),
             "rank": row["rank"],
         }
-        if include_delta:
-            d = int(row.get("delta") or 0)
-            item["delta"] = d
-            if d < 0:
-                item["delta_label"] = f"↑{abs(d)}"
-            elif d > 0:
-                item["delta_label"] = f"↓{d}"
-            else:
-                item["delta_label"] = "—"
+        _attach_user_meta(item)
         out.append(item)
     return out
+
+
+def _get_weekly_highlights() -> list[dict[str, Any]]:
+    """Veckans raket, ankare, perfekt gissning, holeshot — samma logik som get_weekly_fun_stats."""
+    from datetime import datetime, timedelta
+    from main import calculate_leaderboard_deltas, aggregate_weekly_holeshot_points_from_picks
+
+    week_ago = (datetime.utcnow() - timedelta(days=7)).date()
+    today = datetime.utcnow().date()
+    recent = Competition.query.filter(
+        Competition.event_date.isnot(None),
+        Competition.event_date >= week_ago,
+        Competition.event_date <= today,
+        db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+    ).all()
+    comp_ids = [c.id for c in recent]
+    if not comp_ids:
+        return []
+
+    leaderboard_data = calculate_leaderboard_deltas()
+    weekly_pts: dict[int, int] = defaultdict(int)
+    scores = CompetitionScore.query.filter(CompetitionScore.competition_id.in_(comp_ids)).all()
+    by_uc: dict[tuple[int, int], CompetitionScore] = {}
+    for s in scores:
+        k = (s.user_id, s.competition_id)
+        if k not in by_uc or s.score_id > by_uc[k].score_id:
+            by_uc[k] = s
+    for s in by_uc.values():
+        weekly_pts[int(s.user_id)] += int(s.total_points or 0)
+
+    def pick_winner(*, want_climb: bool) -> dict | None:
+        positive = {uid: pts for uid, pts in weekly_pts.items() if pts > 0}
+        if not positive:
+            return None
+        ranked = []
+        for u in leaderboard_data:
+            uid = int(u.get("user_id") or 0)
+            if uid not in positive:
+                continue
+            d = int(u.get("delta") or 0)
+            if d == 0:
+                continue
+            if want_climb and d >= 0:
+                continue
+            if (not want_climb) and d <= 0:
+                continue
+            ranked.append(
+                {
+                    "user_id": uid,
+                    "delta": d,
+                    "weekly_points": positive[uid],
+                    "current_rank": u.get("rank"),
+                }
+            )
+        if ranked:
+            ranked.sort(
+                key=lambda r: (int(r["delta"]), -int(r["weekly_points"]))
+                if want_climb
+                else (-int(r["delta"]), int(r["weekly_points"]))
+            )
+            row = ranked[0]
+        else:
+            uid, pts = (
+                max(positive.items(), key=lambda x: x[1])
+                if want_climb
+                else min(positive.items(), key=lambda x: x[1])
+            )
+            urow = next(
+                (x for x in leaderboard_data if int(x.get("user_id") or 0) == uid),
+                None,
+            )
+            row = {
+                "user_id": uid,
+                "delta": int(urow.get("delta") or 0) if urow else 0,
+                "weekly_points": pts,
+                "current_rank": urow.get("rank") if urow else None,
+            }
+        user = User.query.get(int(row["user_id"]))
+        if not user:
+            return None
+        d = int(row["delta"])
+        climb_txt = f"↑{abs(d)} platser" if d < 0 else (f"↓{d}" if d > 0 else "stabil vecka")
+        return {
+            "user_id": int(row["user_id"]),
+            "display_name": _display_name(user),
+            "detail": f"{climb_txt} · {row['weekly_points']} p i veckan",
+        }
+
+    cards: list[dict[str, Any]] = []
+    rocket = pick_winner(want_climb=True)
+    if rocket:
+        cards.append(
+            {
+                "icon": "🚀",
+                "title": "Veckans raket",
+                **rocket,
+            }
+        )
+    anchor = pick_winner(want_climb=False)
+    if anchor:
+        cards.append(
+            {
+                "icon": "⚓",
+                "title": "Veckans ankare",
+                **anchor,
+            }
+        )
+
+    picks_raw = RacePick.query.filter(RacePick.competition_id.in_(comp_ids)).all()
+    by_pick: dict[tuple, RacePick] = {}
+    for p in picks_raw:
+        pk = (p.user_id, p.competition_id, p.rider_id)
+        if pk not in by_pick or p.pick_id > by_pick[pk].pick_id:
+            by_pick[pk] = p
+    actual_rows = CompetitionResult.query.filter(
+        CompetitionResult.competition_id.in_(comp_ids)
+    ).all()
+    results_lookup: dict[tuple[int, int], tuple[int, int]] = {}
+    for res in actual_rows:
+        k = (res.competition_id, res.rider_id)
+        if k not in results_lookup or res.result_id > results_lookup[k][0]:
+            results_lookup[k] = (res.result_id, res.position)
+    perfect_stats: dict[int, dict] = {}
+    for p in by_pick.values():
+        res_row = results_lookup.get((p.competition_id, p.rider_id))
+        act = res_row[1] if res_row else None
+        if act is not None and act == p.predicted_position:
+            uid = int(p.user_id)
+            if uid not in perfect_stats:
+                u = User.query.get(uid)
+                perfect_stats[uid] = {"user_id": uid, "display_name": _display_name(u), "count": 0}
+            perfect_stats[uid]["count"] += 1
+    if perfect_stats:
+        best = max(perfect_stats.values(), key=lambda x: x["count"])
+        cards.append(
+            {
+                "icon": "🎯",
+                "title": "Perfekt gissning",
+                "user_id": best["user_id"],
+                "display_name": best["display_name"],
+                "detail": f"{best['count']} fullträffar denna vecka",
+            }
+        )
+
+    hs_totals = aggregate_weekly_holeshot_points_from_picks(comp_ids)
+    if hs_totals:
+        uid, pts = max(hs_totals.items(), key=lambda x: x[1])
+        u = User.query.get(int(uid))
+        if u and pts:
+            cards.append(
+                {
+                    "icon": "🏁",
+                    "title": "Holeshot-kung",
+                    "user_id": int(uid),
+                    "display_name": _display_name(u),
+                    "detail": f"{int(pts)} holeshot-poäng i veckan",
+                }
+            )
+
+    return cards[:4]
 
 
 def _actual_positions(competition_id: int) -> dict[int, int]:
@@ -348,9 +528,9 @@ def build_social_recap_data(
     race_top: int = 3,
     season_top: int = 5,
     include_race: bool = True,
-    include_season: bool = True,
+    include_weekly: bool = True,
+    include_season_snippet: bool = True,
     include_facts: bool = True,
-    include_rank_delta: bool = True,
     include_rider_podium: bool = True,
 ) -> dict[str, Any]:
     comp = Competition.query.get(competition_id)
@@ -378,9 +558,9 @@ def build_social_recap_data(
         "season_top": max(1, min(int(season_top), 15)),
         "modules": {
             "race": include_race,
-            "season": include_season,
+            "weekly": include_weekly,
+            "season_snippet": include_season_snippet,
             "facts": include_facts,
-            "rank_delta": include_rank_delta,
             "rider_podium": include_rider_podium,
         },
     }
@@ -401,12 +581,15 @@ def build_social_recap_data(
     else:
         data["race_leaderboard"] = []
 
-    if include_season:
-        data["season_leaderboard"] = _season_leaderboard(
-            data["season_top"], include_rank_delta
-        )
+    if include_weekly:
+        data["weekly_highlights"] = _get_weekly_highlights()
     else:
-        data["season_leaderboard"] = []
+        data["weekly_highlights"] = []
+
+    if include_season_snippet:
+        data["season_top_snippet"] = _season_top_snippet(data["season_top"])
+    else:
+        data["season_top_snippet"] = []
 
     if include_facts:
         data["fun_facts"] = _compute_fun_facts(comp, competition_id)
@@ -440,15 +623,18 @@ def build_facebook_caption(data: dict[str, Any]) -> str:
             lines.append(f"{row['rank']}. {row['display_name']} — {row['points']} p")
         lines.append("")
 
-    if data.get("modules", {}).get("season") and data.get("season_leaderboard"):
-        lines.append("📊 Säsong:")
-        for row in data["season_leaderboard"][:5]:
-            delta = ""
-            if data.get("modules", {}).get("rank_delta") and row.get("delta_label"):
-                dl = row["delta_label"]
-                if dl and dl != "—":
-                    delta = f" ({dl})"
-            lines.append(f"{row['rank']}. {row['display_name']} — {row['points']} p{delta}")
+    highlights = data.get("weekly_highlights") or []
+    if data.get("modules", {}).get("weekly") and highlights:
+        lines.append("⭐ Veckans prestationer:")
+        for h in highlights:
+            lines.append(f"{h.get('icon', '')} {h.get('title', '')}: {h.get('display_name', '?')} — {h.get('detail', '')}")
+        lines.append("")
+
+    snippet = data.get("season_top_snippet") or []
+    if data.get("modules", {}).get("season_snippet") and snippet:
+        lines.append("📊 Säsongstoppen:")
+        for row in snippet:
+            lines.append(f"{row['rank']}. {row['display_name']} — {row['points']} p")
         lines.append("")
 
     for fact in (data.get("fun_facts") or [])[:4]:
@@ -542,6 +728,85 @@ def _load_rider_thumb(rider_id: int, size: int = 72):
         return None
 
 
+def _load_user_profile_image(user_id: int, size: int = 72):
+    from PIL import Image
+
+    user = User.query.get(user_id)
+    if not user:
+        return None
+    raw = getattr(user, "profile_picture_url", None)
+    if not raw:
+        return None
+    s = str(raw).strip()
+    try:
+        if s.startswith("data:"):
+            b64 = s.split(",", 1)[-1]
+            data = base64.b64decode(b64)
+            img = Image.open(io.BytesIO(data)).convert("RGBA")
+        elif s.startswith("http"):
+            return None
+        else:
+            if not s.startswith(("uploads/", "riders/", "trackmaps/")):
+                s = "uploads/" + s.lstrip("/")
+            p = _ROOT / "static" / s.lstrip("/")
+            if not p.exists():
+                p = _ROOT / s.lstrip("/")
+            if not p.exists():
+                return None
+            img = Image.open(p).convert("RGBA")
+        img.thumbnail((size, size), Image.Resampling.LANCZOS)
+        return img
+    except Exception:
+        return None
+
+
+def _make_initials_avatar(display_name: str, user_id: int, size: int):
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    bg = AVATAR_BG[int(user_id or 0) % len(AVATAR_BG)]
+    draw.ellipse([0, 0, size - 1, size - 1], fill=bg)
+    ini = _user_initials(display_name)
+    f = _load_font(max(14, size // 3), bold=True)
+    draw.text((size // 2, size // 2), ini, font=f, fill=WHITE, anchor="mm")
+    return img
+
+
+def _paste_user_avatar(
+    base,
+    cx: int,
+    cy: int,
+    radius: int,
+    user_id: int | None,
+    display_name: str,
+):
+    from PIL import Image, ImageDraw
+
+    ring = Image.new("RGBA", (radius * 2 + 8, radius * 2 + 8), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(ring)
+    rd.ellipse([0, 0, radius * 2 + 7, radius * 2 + 7], fill=(*CYAN, 200))
+
+    inner = Image.new("RGBA", (radius * 2, radius * 2), (0, 0, 0, 0))
+    thumb = None
+    if user_id:
+        thumb = _load_user_profile_image(int(user_id), radius * 2)
+    if thumb is None:
+        thumb = _make_initials_avatar(display_name, int(user_id or 0), radius * 2)
+
+    mask = Image.new("L", (radius * 2, radius * 2), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, radius * 2 - 1, radius * 2 - 1], fill=255)
+    inner.paste(
+        thumb,
+        ((radius * 2 - thumb.width) // 2, (radius * 2 - thumb.height) // 2),
+        thumb if thumb.mode == "RGBA" else None,
+    )
+    inner.putalpha(mask)
+
+    base.paste(ring, (cx - radius - 4, cy - radius - 4), ring)
+    base.paste(inner, (cx - radius, cy - radius), inner)
+
+
 def _paste_circle_avatar(base, cx: int, cy: int, radius: int, rider_id: int | None, initials: str):
     from PIL import Image, ImageDraw
 
@@ -558,9 +823,12 @@ def _paste_circle_avatar(base, cx: int, cy: int, radius: int, rider_id: int | No
         inner.paste(thumb, ((radius * 2 - thumb.width) // 2, (radius * 2 - thumb.height) // 2), thumb)
         inner.putalpha(mask)
     else:
-        idraw.ellipse([0, 0, radius * 2 - 1, radius * 2 - 1], fill=PANEL)
-        f = _load_font(max(18, radius - 8), bold=True)
-        idraw.text((radius, radius), initials[:2].upper(), font=f, fill=CYAN, anchor="mm")
+        fallback = _make_initials_avatar(str(initials), int(rider_id or 0), radius * 2)
+        inner.paste(
+            fallback,
+            ((radius * 2 - fallback.width) // 2, (radius * 2 - fallback.height) // 2),
+            fallback,
+        )
 
     base.paste(ring, (cx - radius - 4, cy - radius - 4), ring)
     base.paste(inner, (cx - radius, cy - radius), inner)
@@ -626,9 +894,10 @@ def _draw_podium_block(
         name = entry.get("short_name") or "?"
         num_s = f"#{num}" if num else ""
     else:
-        initials = (entry.get("display_name") or "?")[:1]
-        _paste_circle_avatar(base_img, cx, y0 - 36, 32, None, initials)
-        name = _short_user_name(entry.get("display_name") or "?")
+        uid = entry.get("user_id")
+        name_full = entry.get("display_name") or "?"
+        _paste_user_avatar(base_img, cx, y0 - 36, 34, uid, name_full)
+        name = _short_user_name(name_full)
         num_s = ""
 
     nf = _load_font(24, bold=True)
@@ -691,12 +960,11 @@ def _draw_user_podium_section(
     y0: int,
     title: str,
     leaderboard: list[dict],
-    show_delta: bool = False,
 ) -> int:
     """Podium for top 3 + optional rows 4+."""
     top3 = [r for r in leaderboard if int(r.get("rank", 99)) <= 3]
     extras = [r for r in leaderboard if int(r.get("rank", 99)) > 3]
-    panel_h = 300 if not extras else 300 + min(len(extras), 3) * 36 + 8
+    panel_h = 300 if not extras else 300 + min(len(extras), 3) * 44 + 8
     _draw_panel(draw, (48, y0, W - 48, y0 + panel_h), title)
 
     by_pos = {int(r["rank"]): r for r in top3}
@@ -705,9 +973,6 @@ def _draw_user_podium_section(
     spacing = 155
     for pos, color, bh in [(2, SILVER, 72), (1, GOLD, 98), (3, BRONZE, 60)]:
         entry = by_pos.get(pos)
-        if entry and show_delta and entry.get("delta_label") and entry["delta_label"] != "—":
-            entry = dict(entry)
-            entry["display_name"] = f"{entry['display_name']} {entry['delta_label']}"
         _draw_podium_block(
             draw,
             base_img,
@@ -722,16 +987,99 @@ def _draw_user_podium_section(
         )
 
     if extras:
-        ey = y0 + panel_h - 16 - len(extras[:3]) * 34
+        ey = y0 + panel_h - 20 - len(extras[:3]) * 44
         bf = _load_font(22)
         for row in extras[:3]:
             name = _short_user_name(row.get("display_name") or "?")
             pts = int(row.get("points", 0))
-            draw.text((72, ey), f"{row['rank']}.", font=bf, fill=MUTED)
-            draw.text((110, ey), name, font=bf, fill=WHITE)
-            draw.text((W - 72, ey), f"{pts} p", font=bf, fill=CYAN, anchor="rt")
-            ey += 34
+            rank = int(row.get("rank", 0))
+            ax = 78
+            _paste_user_avatar(
+                base_img, ax + 18, ey + 18, 18, row.get("user_id"), row.get("display_name") or "?"
+            )
+            draw.text((ax + 44, ey + 8), f"{rank}.", font=bf, fill=MUTED)
+            draw.text((ax + 72, ey + 8), name, font=bf, fill=WHITE)
+            draw.text((W - 72, ey + 8), f"{pts} p", font=bf, fill=CYAN, anchor="rt")
+            ey += 44
 
+    return y0 + panel_h
+
+
+def _draw_weekly_highlights_section(draw, base_img, y0: int, cards: list[dict]) -> int:
+    if not cards:
+        return y0
+    cols = 2
+    rows_n = (len(cards) + cols - 1) // cols
+    card_h = 88
+    gap = 12
+    panel_h = 52 + rows_n * (card_h + gap)
+    _draw_panel(draw, (48, y0, W - 48, y0 + panel_h), "Veckans prestationer")
+    for i, card in enumerate(cards[:4]):
+        col = i % cols
+        row_i = i // cols
+        x0 = 64 + col * ((W - 128) // 2 + 8)
+        y = y0 + 52 + row_i * (card_h + gap)
+        draw.rounded_rectangle(
+            [x0, y, x0 + (W - 128) // 2 - 8, y + card_h],
+            radius=12,
+            fill=(15, 25, 45),
+            outline=PANEL_EDGE,
+            width=1,
+        )
+        _paste_user_avatar(
+            base_img,
+            x0 + 36,
+            y + card_h // 2,
+            28,
+            card.get("user_id"),
+            card.get("display_name") or "?",
+        )
+        tf = _load_font(20, bold=True)
+        df = _load_font(18)
+        title = f"{card.get('icon', '')} {card.get('title', '')}"
+        draw.text((x0 + 72, y + 16), title[:28], font=tf, fill=CYAN)
+        draw.text(
+            (x0 + 72, y + 42),
+            _short_user_name(card.get("display_name") or "?"),
+            font=tf,
+            fill=WHITE,
+        )
+        detail = (card.get("detail") or "")[:36]
+        draw.text((x0 + 72, y + 64), detail, font=df, fill=MUTED)
+    return y0 + panel_h
+
+
+def _draw_season_top_snippet(draw, base_img, y0: int, rows: list[dict]) -> int:
+    if not rows:
+        return y0
+    row_h = 52
+    panel_h = 52 + len(rows) * row_h + 8
+    _draw_panel(draw, (48, y0, W - 48, y0 + panel_h), "Säsongstoppen")
+    bf = _load_font(22)
+    bf_b = _load_font(22, bold=True)
+    for i, row in enumerate(rows):
+        y = y0 + 52 + i * row_h
+        rank = int(row.get("rank", i + 1))
+        medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
+        _paste_user_avatar(
+            base_img, 92, y + 26, 22, row.get("user_id"), row.get("display_name") or "?"
+        )
+        draw.text((120, y + 14), f"{rank}.", font=bf_b, fill=medal)
+        draw.text(
+            (152, y + 14),
+            _short_user_name(row.get("display_name") or "?"),
+            font=bf,
+            fill=WHITE,
+        )
+        draw.text(
+            (W - 72, y + 14),
+            f"{int(row.get('points', 0)):,} p".replace(",", " "),
+            font=bf_b,
+            fill=CYAN,
+            anchor="rt",
+        )
+        if i < len(rows) - 1:
+            draw.line([(72, y + row_h - 2), (W - 72, y + row_h - 2)], fill=PANEL_EDGE, width=1)
     return y0 + panel_h
 
 
@@ -840,18 +1188,13 @@ def render_social_recap_png(data: dict[str, Any]) -> bytes:
             y,
             "Fantasy — denna tävling",
             data["race_leaderboard"],
-            show_delta=False,
         ) + 16
 
-    if mods.get("season") and data.get("season_leaderboard"):
-        y = _draw_user_podium_section(
-            draw,
-            img,
-            y,
-            "Fantasy — säsong",
-            data["season_leaderboard"],
-            show_delta=bool(mods.get("rank_delta")),
-        ) + 16
+    if mods.get("weekly") and data.get("weekly_highlights"):
+        y = _draw_weekly_highlights_section(draw, img, y, data["weekly_highlights"]) + 16
+
+    if mods.get("season_snippet") and data.get("season_top_snippet"):
+        y = _draw_season_top_snippet(draw, img, y, data["season_top_snippet"]) + 16
 
     if mods.get("facts") and data.get("fun_facts"):
         y = _draw_fact_cards(draw, y, data["fun_facts"]) + 12

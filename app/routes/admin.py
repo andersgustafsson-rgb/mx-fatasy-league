@@ -78,10 +78,19 @@ def social_recap_api():
 	race_top = request.args.get("race_top", default=3, type=int)
 	season_top = request.args.get("season_top", default=5, type=int)
 	include_race = request.args.get("include_race", "1") not in ("0", "false", "no")
-	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
+	include_weekly = request.args.get("include_weekly", "1") not in ("0", "false", "no")
+	include_season_snippet = request.args.get("include_season_snippet", "1") not in (
+		"0",
+		"false",
+		"no",
+	)
 	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
-	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
 	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
+	# Bakåtkompatibilitet
+	if request.args.get("include_season", "1") in ("0", "false", "no"):
+		include_season_snippet = False
+	if request.args.get("include_weekly") is None and request.args.get("include_season") == "1":
+		include_weekly = True
 	try:
 		from social_recap_service import build_social_recap_data
 
@@ -90,9 +99,9 @@ def social_recap_api():
 			race_top=race_top,
 			season_top=season_top,
 			include_race=include_race,
-			include_season=include_season,
+			include_weekly=include_weekly,
+			include_season_snippet=include_season_snippet,
 			include_facts=include_facts,
-			include_rank_delta=include_rank_delta,
 			include_rider_podium=include_rider_podium,
 		)
 		return jsonify(data)
@@ -113,10 +122,16 @@ def social_recap_png():
 	race_top = request.args.get("race_top", default=3, type=int)
 	season_top = request.args.get("season_top", default=5, type=int)
 	include_race = request.args.get("include_race", "1") not in ("0", "false", "no")
-	include_season = request.args.get("include_season", "1") not in ("0", "false", "no")
+	include_weekly = request.args.get("include_weekly", "1") not in ("0", "false", "no")
+	include_season_snippet = request.args.get("include_season_snippet", "1") not in (
+		"0",
+		"false",
+		"no",
+	)
 	include_facts = request.args.get("include_facts", "1") not in ("0", "false", "no")
-	include_rank_delta = request.args.get("include_rank_delta", "1") not in ("0", "false", "no")
 	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
+	if request.args.get("include_season", "1") in ("0", "false", "no"):
+		include_season_snippet = False
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
 
@@ -125,9 +140,9 @@ def social_recap_png():
 			race_top=race_top,
 			season_top=season_top,
 			include_race=include_race,
-			include_season=include_season,
+			include_weekly=include_weekly,
+			include_season_snippet=include_season_snippet,
 			include_facts=include_facts,
-			include_rank_delta=include_rank_delta,
 			include_rider_podium=include_rider_podium,
 		)
 		png_bytes = render_social_recap_png(data)
