@@ -937,71 +937,90 @@ def _draw_styled_text(
     draw.text(pos, text, font=font, **kw)
 
 
+def _font_height(font, text: str = "Ay") -> int:
+    bbox = font.getbbox(text or "A")
+    return max(8, int(bbox[3] - bbox[1]))
+
+
+def _header_event_lines(data: dict[str, Any]) -> tuple[str, str]:
+    """Tävlingsnamn och datum på separata rader."""
+    name = (data.get("competition_name") or "").strip()
+    date_line = ""
+    raw_date = data.get("event_date")
+    if raw_date:
+        try:
+            from datetime import datetime
+
+            d = datetime.fromisoformat(str(raw_date).replace("Z", "")).date()
+            date_line = d.strftime("%d %b %Y")
+        except Exception:
+            date_line = str(raw_date)[:16]
+    label = (data.get("event_label") or "").strip()
+    if not name and label:
+        if "·" in label:
+            parts = [p.strip() for p in label.split("·", 1)]
+            name = parts[0]
+            if len(parts) > 1 and not date_line:
+                date_line = parts[1]
+        else:
+            name = label
+    if not name:
+        name = "Race"
+    return name[:40], date_line[:32]
+
+
 def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
-    """Hero-header med tydlig typografi — returnerar y under headern."""
-    band_y0 = 24
-    band_y1 = 292
-    draw.rounded_rectangle(
-        [32, band_y0, W - 32, band_y1],
-        radius=24,
-        fill=(14, 24, 48),
-        outline=CYAN,
-        width=2,
-    )
-    draw.rectangle([32, band_y0, W - 32, band_y0 + 6], fill=CYAN)
-    draw.line([(48, band_y1 - 2), (W - 48, band_y1 - 2)], fill=CYAN_DIM, width=2)
+    """Fullbredds-header utan box — logo, titlar, tävling + datum."""
+    header_h = 300
+    # Top band (ingen ram-box)
+    draw.rectangle([0, 0, W, 10], fill=CYAN)
+    for row in range(10, header_h):
+        t = (row - 10) / max(header_h - 11, 1)
+        r = int(10 + 8 * (1 - t))
+        g = int(18 + 10 * (1 - t))
+        b = int(38 + 12 * (1 - t))
+        draw.line([(0, row), (W, row)], fill=(r, g, b))
+    draw.line([(0, header_h - 1), (W, header_h - 1)], fill=CYAN_DIM, width=2)
 
     cx = W // 2
-    y = band_y0 + 18
-    logo = _load_brand_logo(104)
+    y = 22
+    logo = _load_brand_logo(84)
     if logo:
         img.paste(logo, (cx - logo.width // 2, y), logo)
-        y += logo.height + 14
-    else:
-        y += 8
+        y += logo.height + 10
 
-    brand_f = _load_display_font(56, bold=True)
-    recap_f = _load_display_font(82, bold=True)
-    event_f = _load_display_font(36, bold=True)
-
-    _draw_styled_text(
-        draw,
-        (cx, y),
-        "MX FANTASY",
-        brand_f,
-        CYAN,
-        anchor="mt",
-        stroke=(6, 40, 62),
-        stroke_width=4,
-        glow=(0, 0, 0),
-    )
-    y += 64
+    brand_f = _load_display_font(46, bold=True)
+    recap_f = _load_display_font(62, bold=True)
+    race_f = _load_display_font(38, bold=True)
+    date_f = _load_display_font(30, bold=True)
 
     _draw_styled_text(
-        draw,
-        (cx, y),
-        "RACE RECAP",
-        recap_f,
-        WHITE,
-        anchor="mt",
-        stroke=CYAN,
-        stroke_width=5,
-        glow=(0, 15, 30),
+        draw, (cx, y), "MX FANTASY", brand_f, CYAN, anchor="mt",
+        stroke=(4, 30, 50), stroke_width=3, glow=(0, 0, 0),
     )
-    y += 92
+    y += _font_height(brand_f) + 8
 
-    event = (data.get("event_label") or "Race")[:44]
     _draw_styled_text(
-        draw,
-        (cx, y),
-        event,
-        event_f,
-        GOLD,
-        anchor="mt",
-        stroke=(40, 32, 8),
-        stroke_width=2,
+        draw, (cx, y), "RACE RECAP", recap_f, WHITE, anchor="mt",
+        stroke=CYAN, stroke_width=4, glow=(0, 12, 28),
     )
-    return band_y1 + 20
+    y += _font_height(recap_f) + 14
+
+    race_name, race_date = _header_event_lines(data)
+    _draw_styled_text(
+        draw, (cx, y), race_name, race_f, WHITE, anchor="mt",
+        stroke=(20, 28, 45), stroke_width=2,
+    )
+    y += _font_height(race_f) + 6
+
+    if race_date:
+        _draw_styled_text(
+            draw, (cx, y), race_date, date_f, CYAN, anchor="mt",
+            stroke=(0, 0, 0), stroke_width=2,
+        )
+        y += _font_height(date_f) + 4
+
+    return max(y + 18, header_h + 8)
 
 
 def _load_brand_logo(size: int = 96):
@@ -1452,8 +1471,6 @@ def render_social_recap_png(data: dict[str, Any]) -> bytes:
     img = Image.new("RGB", (W, H), BG_TOP)
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
-
-    draw.rectangle([0, 0, W, 8], fill=CYAN)
 
     y = _draw_recap_header(img, draw, data)
 
