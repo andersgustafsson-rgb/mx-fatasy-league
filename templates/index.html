@@ -4115,5 +4115,8 @@
       </div>
     </div>
   </div>
+  {% if is_logged_in %}
+  <script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=4"></script>
+  {% endif %}
 </body>
 </html>
