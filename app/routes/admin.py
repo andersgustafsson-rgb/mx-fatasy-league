@@ -132,9 +132,11 @@ def social_recap_png():
 	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
 	if request.args.get("include_season", "1") in ("0", "false", "no"):
 		include_season_snippet = False
-	layout = request.args.get("layout", "feed")
-	if layout not in ("feed", "story"):
-		layout = "feed"
+	layout = request.args.get("layout", "square")
+	if layout == "feed":
+		layout = "square"
+	if layout not in ("square", "portrait", "story"):
+		layout = "square"
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
 

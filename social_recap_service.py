@@ -37,10 +37,13 @@ GREEN = (52, 211, 153)
 RED = (248, 113, 113)
 ACCENT_ORANGE = (251, 146, 60)
 
-W = 1080
-H_FEED_MIN = 1350  # minhöjd för Facebook-flöde (4:5)
+W_PORTRAIT = 1080
+W_SQUARE = 1200  # 1:1 — visas mycket större i Facebooks bildvisare än hög porträtt
+H_SQUARE = 1200
+H_FEED_MIN = 1350  # minhöjd porträtt-flöde
 H_STORY = 1920
-H_WORK = 2400  # ritbuffer så inget klipps under layout
+H_WORK = 2400  # ritbuffer porträtt
+W = W_PORTRAIT  # bakåtkompatibilitet
 # Större typsnitt/ikoner så texten är läsbar när FB krymper bilden
 FONT_SCALE = 1.48
 LAYOUT_SCALE = 1.26
@@ -56,7 +59,11 @@ def _sz(size: int) -> int:
 
 
 def _compact(data: dict[str, Any]) -> bool:
-    return (data.get("layout") or "feed") == "feed"
+    return (data.get("layout") or "square") in ("feed", "portrait")
+
+
+def _canvas_w(img) -> int:
+    return img.size[0]
 
 
 def _section_gap(data: dict[str, Any]) -> int:
@@ -1027,18 +1034,19 @@ def _draw_recap_pill(
 
 def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
     """Horisontell header: logga vänster, text på en rad."""
-    header_h = _sz(148)
+    cw = _canvas_w(img)
+    header_h = _sz(118) if data.get("layout") == "square" else _sz(148)
     pad_x = _sz(32)
     race_name, race_date = _header_event_lines(data)
 
-    draw.rectangle([0, 0, W, 8], fill=CYAN)
+    draw.rectangle([0, 0, cw, 8], fill=CYAN)
     for row in range(8, header_h):
         t = (row - 8) / max(header_h - 9, 1)
         r = int(10 + 6 * (1 - t))
         g = int(18 + 8 * (1 - t))
         b = int(38 + 10 * (1 - t))
-        draw.line([(0, row), (W, row)], fill=(r, g, b))
-    draw.line([(0, header_h - 1), (W, header_h - 1)], fill=CYAN_DIM, width=2)
+        draw.line([(0, row), (cw, row)], fill=(r, g, b))
+    draw.line([(0, header_h - 1), (cw, header_h - 1)], fill=CYAN_DIM, width=2)
 
     logo = _load_brand_logo(_sz(108))
     logo_w = 0
@@ -1049,7 +1057,7 @@ def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
         img.paste(logo, (pad_x, ly), logo)
 
     text_x = pad_x + logo_w + (28 if logo_w else 0)
-    max_x = W - pad_x
+    max_x = cw - pad_x
 
     def _row_width(brand_f, recap_f, race_f, date_f) -> int:
         w = text_x
@@ -1346,9 +1354,11 @@ def _draw_rider_podium_row(
     width: int,
     title: str,
     podium: list[dict],
+    *,
+    panel_h: int | None = None,
 ) -> int:
     """Draw class podium inside panel; return bottom y."""
-    panel_h = _sz(290)
+    panel_h = panel_h or _sz(290)
     _draw_panel(draw, (x0, y0, x0 + width, y0 + panel_h), title)
     if not podium:
         draw.text(
@@ -1391,19 +1401,28 @@ def _draw_user_podium_section(
     title: str,
     leaderboard: list[dict],
     data: dict[str, Any],
+    *,
+    x0: int | None = None,
+    x1: int | None = None,
+    base_panel: int | None = None,
+    max_extras: int | None = None,
 ) -> int:
     """Podium for top 3 + optional rows 4+."""
+    cw = _canvas_w(base_img)
     top3 = [r for r in leaderboard if int(r.get("rank", 99)) <= 3]
     extras = [r for r in leaderboard if int(r.get("rank", 99)) > 3]
+    if max_extras is not None:
+        extras = extras[:max_extras]
     row_extra_h = _sz(48)
-    base_panel = _sz(300)
+    base_panel = base_panel or _sz(300)
     panel_h = base_panel if not extras else base_panel + len(extras) * row_extra_h + _sz(8)
-    margin = _sz(36)
-    _draw_panel(draw, (margin, y0, W - margin, y0 + panel_h), title)
+    margin = x0 if x0 is not None else _sz(36)
+    right = x1 if x1 is not None else cw - _sz(36)
+    _draw_panel(draw, (margin, y0, right, y0 + panel_h), title)
 
     by_pos = {int(r["rank"]): r for r in top3}
     floor_y = y0 + (_sz(248) if not extras else _sz(218))
-    cx_mid = W // 2
+    cx_mid = (margin + right) // 2
     spacing = _sz(162)
     for pos, color, bh in [(2, SILVER, 78), (1, GOLD, 108), (3, BRONZE, 66)]:
         entry = by_pos.get(pos)
@@ -1434,25 +1453,35 @@ def _draw_user_podium_section(
             )
             draw.text((ax + _sz(48), ey + _sz(10)), f"{rank}.", font=bf, fill=MUTED)
             draw.text((ax + _sz(76), ey + _sz(10)), name, font=bf, fill=WHITE)
-            draw.text((W - margin, ey + _sz(10)), f"{pts} p", font=bf, fill=CYAN, anchor="rt")
+            draw.text((right, ey + _sz(10)), f"{pts} p", font=bf, fill=CYAN, anchor="rt")
             ey += row_extra_h
 
     return y0 + panel_h
 
 
 def _draw_weekly_highlights_section(
-    draw, base_img, y0: int, cards: list[dict], data: dict[str, Any]
+    draw,
+    base_img,
+    y0: int,
+    cards: list[dict],
+    data: dict[str, Any],
+    *,
+    x0: int | None = None,
+    x1: int | None = None,
+    card_h: int | None = None,
 ) -> int:
     if not cards:
         return y0
+    cw = _canvas_w(base_img)
     cols = 2
     rows_n = (len(cards) + cols - 1) // cols
-    card_h = _sz(96)
+    card_h = card_h or _sz(96)
     gap = _sz(12)
-    margin = _sz(36)
-    inner = W - margin * 2
+    margin = x0 if x0 is not None else _sz(36)
+    right = x1 if x1 is not None else cw - _sz(36)
+    inner = right - margin
     panel_h = _sz(52) + rows_n * (card_h + gap)
-    _draw_panel(draw, (margin, y0, W - margin, y0 + panel_h), "Veckans prestationer")
+    _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Veckans prestationer")
     col_w = (inner - gap) // 2
     for i, card in enumerate(cards[:4]):
         col = i % cols
@@ -1492,14 +1521,24 @@ def _draw_weekly_highlights_section(
 
 
 def _draw_season_top_snippet(
-    draw, base_img, y0: int, rows: list[dict], data: dict[str, Any]
+    draw,
+    base_img,
+    y0: int,
+    rows: list[dict],
+    data: dict[str, Any],
+    *,
+    x0: int | None = None,
+    x1: int | None = None,
+    row_h: int | None = None,
 ) -> int:
     if not rows:
         return y0
-    row_h = _sz(56)
-    margin = _sz(36)
+    cw = _canvas_w(base_img)
+    row_h = row_h or _sz(56)
+    margin = x0 if x0 is not None else _sz(36)
+    right = x1 if x1 is not None else cw - _sz(36)
     panel_h = _sz(52) + len(rows) * row_h + _sz(8)
-    _draw_panel(draw, (margin, y0, W - margin, y0 + panel_h), "Säsongstoppen")
+    _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Säsongstoppen")
     bf = _load_font(26)
     bf_b = _load_font(26, bold=True)
     av = _sz(26)
@@ -1518,7 +1557,7 @@ def _draw_season_top_snippet(
             fill=WHITE,
         )
         draw.text(
-            (W - margin, y + _sz(14)),
+            (right, y + _sz(14)),
             f"{int(row.get('points', 0)):,} p".replace(",", " "),
             font=bf_b,
             fill=CYAN,
@@ -1526,22 +1565,31 @@ def _draw_season_top_snippet(
         )
         if i < len(rows) - 1:
             draw.line(
-                [(margin + _sz(24), y + row_h - 2), (W - margin - _sz(24), y + row_h - 2)],
+                [(margin + _sz(24), y + row_h - 2), (right - _sz(24), y + row_h - 2)],
                 fill=PANEL_EDGE,
                 width=1,
             )
     return y0 + panel_h
 
 
-def _draw_fact_cards(draw, y0: int, facts: list[dict], data: dict[str, Any]) -> int:
+def _draw_fact_cards(
+    draw,
+    y0: int,
+    facts: list[dict],
+    data: dict[str, Any],
+    *,
+    img_width: int | None = None,
+    compact: bool = False,
+) -> int:
     shown = [f for f in facts if f.get("text")][:3]
     if not shown:
         return y0
-    card_h = _sz(64)
-    gap = _sz(10)
+    cw = img_width or W_PORTRAIT
+    card_h = _sz(52) if compact else _sz(64)
+    gap = _sz(8) if compact else _sz(10)
     margin = _sz(36)
     total_h = len(shown) * (card_h + gap) + _sz(50)
-    _draw_panel(draw, (margin, y0, W - margin, y0 + total_h), "Fältet säger")
+    _draw_panel(draw, (margin, y0, cw - margin, y0 + total_h), "Fältet säger")
     y = y0 + _sz(52)
     sf = _load_font(26)
     line_h = _sz(30)
@@ -1549,7 +1597,7 @@ def _draw_fact_cards(draw, y0: int, facts: list[dict], data: dict[str, Any]) -> 
     for fact in shown:
         text = fact.get("text", "")
         draw.rounded_rectangle(
-            [margin + _sz(16), y, W - margin - _sz(16), y + card_h],
+            [margin + _sz(16), y, cw - margin - _sz(16), y + card_h],
             radius=_sz(12),
             fill=(15, 25, 45),
             outline=CYAN_DIM,
@@ -1575,16 +1623,100 @@ def _draw_fact_cards(draw, y0: int, facts: list[dict], data: dict[str, Any]) -> 
     return y0 + total_h
 
 
+def _render_square_recap_png(data: dict[str, Any]) -> bytes:
+    """Kvadrat 1200×1200 — fyller Facebooks bildvisare (bredare = större)."""
+    from PIL import Image, ImageDraw
+
+    data = {**data, "layout": "square"}
+    img = Image.new("RGB", (W_SQUARE, H_SQUARE), BG_TOP)
+    _draw_vertical_gradient(img)
+    draw = ImageDraw.Draw(img)
+
+    y = _draw_recap_header(img, draw, data)
+    gap = _sz(8)
+    margin = _sz(24)
+    col_gap = _sz(10)
+    half = (W_SQUARE - margin * 2 - col_gap) // 2
+    mods = data.get("modules") or {}
+    labels = data.get("class_labels") or {}
+
+    if mods.get("rider_podium") and data.get("has_results"):
+        rp = data.get("rider_podium_primary") or []
+        rs = data.get("rider_podium_secondary") or []
+        if rp or rs:
+            ph = _sz(200)
+            y1 = _draw_rider_podium_row(
+                draw, img, margin, y, half,
+                f"{labels.get('primary', '450')} SX", rp, panel_h=ph,
+            )
+            y2 = _draw_rider_podium_row(
+                draw, img, margin + half + col_gap, y, half,
+                f"{labels.get('secondary', '250')} SX", rs, panel_h=ph,
+            )
+            y = max(y1, y2) + gap
+
+    if mods.get("race") and data.get("race_leaderboard"):
+        y = _draw_user_podium_section(
+            draw, img, y, "Fantasy — denna tävling", data["race_leaderboard"], data,
+            base_panel=_sz(220), max_extras=0,
+        ) + gap
+
+    row_y = y
+    row_bottom = row_y
+    if mods.get("weekly"):
+        highlights = data.get("weekly_highlights") or []
+        if highlights:
+            row_bottom = max(
+                row_bottom,
+                _draw_weekly_highlights_section(
+                    draw, img, row_y, highlights, data,
+                    x0=margin, x1=margin + half, card_h=_sz(70),
+                ),
+            )
+    if mods.get("season_snippet") and data.get("season_top_snippet"):
+        row_bottom = max(
+            row_bottom,
+            _draw_season_top_snippet(
+                draw, img, row_y, data["season_top_snippet"], data,
+                x0=margin + half + col_gap, x1=W_SQUARE - margin, row_h=_sz(46),
+            ),
+        )
+    if row_bottom > row_y:
+        y = row_bottom + gap
+
+    if mods.get("facts") and data.get("fun_facts"):
+        facts = [f for f in data["fun_facts"] if f.get("text")][:2]
+        if facts:
+            y = _draw_fact_cards(
+                draw, y, facts, data, img_width=W_SQUARE, compact=True
+            ) + gap
+
+    foot_f = _load_font(24)
+    foot_y = H_SQUARE - _sz(40)
+    draw.text((W_SQUARE // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
+    draw.rectangle([0, H_SQUARE - _sz(6), W_SQUARE, H_SQUARE], fill=CYAN)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) -> bytes:
     from PIL import Image, ImageDraw
 
-    layout = (layout or data.get("layout") or "feed").lower()
-    if layout not in ("feed", "story"):
-        layout = "feed"
-    data = {**data, "layout": layout}
-    work_h = H_WORK if layout == "feed" else H_STORY
+    layout = (layout or data.get("layout") or "square").lower()
+    if layout == "feed":
+        layout = "square"
+    if layout == "square":
+        return _render_square_recap_png(data)
+    if layout not in ("portrait", "story"):
+        layout = "square"
+        return _render_square_recap_png(data)
 
-    img = Image.new("RGB", (W, work_h), BG_TOP)
+    data = {**data, "layout": layout}
+    work_h = H_WORK if layout == "portrait" else H_STORY
+
+    img = Image.new("RGB", (W_PORTRAIT, work_h), BG_TOP)
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
 
@@ -1600,7 +1732,7 @@ def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) 
         rs = data.get("rider_podium_secondary") or []
         if rp or rs:
             col_gap = _sz(14)
-            half = (W - margin * 2 - col_gap) // 2
+            half = (W_PORTRAIT - margin * 2 - col_gap) // 2
             bottom_left = _draw_rider_podium_row(
                 draw,
                 img,
@@ -1644,19 +1776,19 @@ def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) 
 
     footer_pad = _sz(56)
     content_h = y + footer_pad
-    if layout == "feed":
+    if layout == "portrait":
         final_h = min(H_WORK, max(H_FEED_MIN, content_h))
     else:
         final_h = H_STORY
 
     if final_h < work_h:
-        img = img.crop((0, 0, W, final_h))
+        img = img.crop((0, 0, W_PORTRAIT, final_h))
         draw = ImageDraw.Draw(img)
 
     foot_f = _load_font(24)
     foot_y = final_h - _sz(40)
-    draw.text((W // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, final_h - _sz(6), W, final_h], fill=CYAN)
+    draw.text((W_PORTRAIT // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
+    draw.rectangle([0, final_h - _sz(6), W_PORTRAIT, final_h], fill=CYAN)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
