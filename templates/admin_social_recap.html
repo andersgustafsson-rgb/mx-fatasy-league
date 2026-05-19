@@ -166,7 +166,7 @@
             const p = new URLSearchParams();
             p.set('competition_id', id);
             p.set('race_top', document.getElementById('race-top').value);
-            p.set('season-top', document.getElementById('season-top').value);
+            p.set('season_top', document.getElementById('season-top').value);
             p.set('include_race', document.getElementById('mod-race').checked ? '1' : '0');
             p.set('include_weekly', document.getElementById('mod-weekly').checked ? '1' : '0');
             p.set('include_season_snippet', document.getElementById('mod-season-snippet').checked ? '1' : '0');
@@ -233,7 +233,7 @@
                     previewStats.src = sUrl;
                     btnDownloadGraphic.href = gUrl;
                     btnDownloadStats.href = sUrl;
-                    statusMsg.textContent = 'Klar. 2 bilder: pallar (1620×1040) + statistik.';
+                    statusMsg.textContent = 'Klar. 2 bilder (stor text): pallar ~1620×1120 + statistik.';
                 } else {
                     dualPreview.classList.add('hidden');
                     singlePreview.classList.remove('hidden');
