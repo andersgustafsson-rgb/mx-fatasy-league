@@ -23,12 +23,21 @@
       document.body.appendChild(e.dd);
     }
     var r = e.btn.getBoundingClientRect();
+    var margin = 8;
+    var panelW = Math.min(288, window.innerWidth - margin * 2);
+    var left = r.left;
+    if (left + panelW > window.innerWidth - margin) {
+      left = window.innerWidth - margin - panelW;
+    }
+    if (left < margin) {
+      left = margin;
+    }
     e.dd.style.position = 'fixed';
     e.dd.style.top = Math.round(r.bottom + 8) + 'px';
-    e.dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
-    e.dd.style.left = 'auto';
-    e.dd.style.width = '18rem';
-    e.dd.style.maxWidth = 'min(18rem, calc(100vw - 16px))';
+    e.dd.style.left = Math.round(left) + 'px';
+    e.dd.style.right = 'auto';
+    e.dd.style.width = panelW + 'px';
+    e.dd.style.maxWidth = panelW + 'px';
     e.dd.style.zIndex = '99999';
   }
 

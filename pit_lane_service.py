@@ -134,9 +134,13 @@ def unread_dm_count(user_id: int) -> int:
 
 
 def unread_inbox_notification_count(user_id: int) -> int:
-    return InboxNotification.query.filter_by(user_id=user_id).filter(
-        InboxNotification.read_at.is_(None)
-    ).count()
+    """Icke-DM-notiser (DM räknas via olästa meddelanden)."""
+    return (
+        InboxNotification.query.filter_by(user_id=user_id)
+        .filter(InboxNotification.read_at.is_(None))
+        .filter(InboxNotification.kind != "dm")
+        .count()
+    )
 
 
 def total_unread_count(user_id: int) -> int:
@@ -191,7 +195,7 @@ def send_direct_message(from_user_id: int, to_user_id: int, body: str) -> Messag
         InboxNotification(
             user_id=to_user_id,
             kind="dm",
-            title=f"Meddelande från {_display_name(sender)}",
+            title=_display_name(sender),
             preview=preview,
             link_url=f"/pit-lane?thread={thread.id}",
             ref_type="thread",
@@ -277,6 +281,7 @@ def recent_items_for_dropdown(user_id: int, limit: int = 6) -> list[dict]:
     for n in (
         InboxNotification.query.filter_by(user_id=user_id)
         .filter(InboxNotification.read_at.is_(None))
+        .filter(InboxNotification.kind != "dm")
         .order_by(InboxNotification.created_at.desc())
         .limit(limit)
         .all()
@@ -303,9 +308,7 @@ def recent_items_for_dropdown(user_id: int, limit: int = 6) -> list[dict]:
     )
     for t in threads:
         td = thread_to_dict(t, user_id)
-        if td["unread_count"] > 0 and not any(
-            i.get("kind") == "dm" and i.get("thread_id") == t.id for i in items
-        ):
+        if td["unread_count"] > 0:
             items.append(
                 {
                     "kind": "dm",
