@@ -22,3 +22,18 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
+
+#thread-view,
+#pit-thread-full {
+  position: relative;
+  z-index: 2;
+}
+
+.pit-reply-form {
+  position: relative;
+  z-index: 5;
+}
+
+.pit-reply-input {
+  touch-action: manipulation;
+}

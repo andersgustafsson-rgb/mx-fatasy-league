@@ -6,6 +6,8 @@
   let showDismissedAnnouncements = false;
   let allAnnouncements = [];
   let readThreadCount = 0;
+  let openThreadSeq = 0;
+  let threadDomMountedId = null;
 
   function esc(s) {
     const d = document.createElement('div');
@@ -185,9 +187,12 @@
     container.innerHTML = threads
       .map((t) => {
         const unread = t.unread_count > 0;
+        const active = openThreadId === t.id;
         return (
-          '<button type="button" class="thread-row w-full text-left p-3 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 ' +
-          (unread ? 'border-cyan-500/50' : 'opacity-75') +
+          '<button type="button" class="thread-row w-full text-left p-3 rounded-lg border ' +
+          (active
+            ? 'bg-cyan-900/40 border-cyan-500 ring-1 ring-cyan-500/50'
+            : 'bg-gray-800 hover:bg-gray-700 border-gray-700 ' + (unread ? 'border-cyan-500/50' : 'opacity-75')) +
           '" data-thread="' +
           t.id +
           '">' +
@@ -204,14 +209,39 @@
       })
       .join('');
     container.querySelectorAll('.thread-row').forEach((btn) => {
-      btn.addEventListener('click', () => onSelect(parseInt(btn.getAttribute('data-thread'), 10)));
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const id = parseInt(btn.getAttribute('data-thread'), 10);
+        if (id === openThreadId && threadDomMountedId === id) return;
+        onSelect(id);
+      });
     });
   }
 
-  async function openThread(threadId) {
+  async function refreshThreadLists() {
+    const q = showReadThreads ? 'unread_only=0' : 'unread_only=1';
+    const res = await fetch('/api/pit-lane/threads?' + q);
+    const data = await res.json();
+    const threads = data.threads || [];
+    readThreadCount = data.read_count || 0;
+    updateThreadToolbar();
+    const onSelectSidebar = (id) => openThread(id);
+    const onSelectAll = (id) => {
+      setTab('messages');
+      openThread(id);
+    };
+    renderThreadsList(document.getElementById('threads-list'), threads, onSelectAll);
+    renderThreadsList(document.getElementById('threads-sidebar'), threads, onSelectSidebar);
+  }
+
+  async function openThread(threadId, opts) {
+    opts = opts || {};
+    const seq = ++openThreadSeq;
     openThreadId = threadId;
     const res = await fetch('/api/pit-lane/threads/' + threadId);
     const data = await res.json();
+    if (seq !== openThreadSeq) return;
+
     const html = buildThreadView(data);
     const desktop = document.getElementById('thread-view');
     const mobile = document.getElementById('pit-thread-full');
@@ -225,8 +255,27 @@
       mobile.innerHTML = html;
       wireReply(mobile, threadId);
     }
+    threadDomMountedId = threadId;
+
+    if (opts.focusReply !== false) {
+      const focusTa = () => {
+        const root = window.matchMedia('(min-width: 768px)').matches ? desktop : mobile;
+        const ta = root && root.querySelector('.pit-reply-form textarea[name="body"]');
+        if (ta) {
+          ta.focus();
+          try {
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+          } catch (_e) {}
+        }
+      };
+      requestAnimationFrame(focusTa);
+    }
+
+    if (seq !== openThreadSeq) return;
+    if (!opts.skipSidebarRefresh) {
+      await refreshThreadLists();
+    }
     if (window.PitLaneBell) window.PitLaneBell.refresh();
-    await loadThreads();
   }
 
   function buildThreadView(data) {
@@ -257,8 +306,8 @@
       '<div class="flex-1 overflow-y-auto mb-3 max-h-[40vh]">' +
       (msgs || '<p class="text-gray-500 text-sm">Inga meddelanden</p>') +
       '</div>' +
-      '<form class="pit-reply-form flex gap-2">' +
-      '<textarea name="body" rows="2" class="flex-1 rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv svar…" required maxlength="2000"></textarea>' +
+      '<form class="pit-reply-form flex gap-2 items-end">' +
+      '<textarea name="body" rows="2" class="pit-reply-input flex-1 rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv svar…" required maxlength="2000" autocomplete="off"></textarea>' +
       '<button type="submit" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-gray-900 font-bold text-sm">Skicka</button>' +
       '</form>'
     );
@@ -267,8 +316,19 @@
   function wireReply(root, threadId) {
     const form = root.querySelector('.pit-reply-form');
     if (!form) return;
+    const ta = form.querySelector('textarea[name="body"]');
+    const stop = (ev) => ev.stopPropagation();
+    form.addEventListener('mousedown', stop);
+    form.addEventListener('click', stop);
+    form.addEventListener('touchstart', stop, { passive: true });
+    if (ta) {
+      ta.addEventListener('mousedown', stop);
+      ta.addEventListener('click', stop);
+      ta.addEventListener('touchstart', stop, { passive: true });
+    }
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const body = form.body.value.trim();
       if (!body) return;
       const res = await fetch('/api/pit-lane/send', {
@@ -281,27 +341,14 @@
         alert(data.error || 'Kunde inte skicka');
         return;
       }
-      form.body.value = '';
-      await openThread(threadId);
+      await openThread(threadId, { skipSidebarRefresh: false, focusReply: true });
     });
   }
 
   async function loadThreads() {
-    const q = showReadThreads ? 'unread_only=0' : 'unread_only=1';
-    const res = await fetch('/api/pit-lane/threads?' + q);
-    const data = await res.json();
-    const threads = data.threads || [];
-    readThreadCount = data.read_count || 0;
-    updateThreadToolbar();
-    const onSelectSidebar = (id) => openThread(id);
-    const onSelectAll = (id) => {
-      setTab('messages');
-      openThread(id);
-    };
-    renderThreadsList(document.getElementById('threads-list'), threads, onSelectAll);
-    renderThreadsList(document.getElementById('threads-sidebar'), threads, onSelectSidebar);
-    if (openThreadId) {
-      await openThread(openThreadId);
+    await refreshThreadLists();
+    if (openThreadId && threadDomMountedId !== openThreadId) {
+      await openThread(openThreadId, { skipSidebarRefresh: true });
     }
   }
 
@@ -314,6 +361,7 @@
     }
     showReadThreads = false;
     openThreadId = null;
+    threadDomMountedId = null;
     const tv = document.getElementById('thread-view');
     const tf = document.getElementById('pit-thread-full');
     if (tv) {
@@ -390,7 +438,10 @@
     );
     if (openThreadId) showReadThreads = true;
     await loadAnnouncements();
-    await loadThreads();
+    await refreshThreadLists();
+    if (openThreadId) {
+      await openThread(openThreadId, { skipSidebarRefresh: true });
+    }
     if (cfg.composeToUserId) showComposeToUser(cfg.composeToUserId);
   });
 })();
