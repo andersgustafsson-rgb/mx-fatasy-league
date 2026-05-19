@@ -34,7 +34,15 @@
           </header>
           
           <!-- Navigation -->
-          <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
+          <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4 items-center">
+            {% set is_logged_in = true %}
+            {% include 'includes/pit_lane_bell.html' %}
+            <a
+              href="{{ url_for('pit_lane.pit_lane_page') }}?to={{ target_user.id }}&tab=messages"
+              class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"
+            >
+              ✉️ Skicka meddelande
+            </a>
             <a
               href="{{ url_for('index') }}"
               class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow nav-sound text-sm sm:text-base"

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pit Lane — Meddelanden</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='pit_lane.css') }}">
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
+  <div class="container mx-auto p-4 md:p-6 max-w-4xl">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-cyan-400">🏁 Pit Lane</h1>
+        <p class="text-sm text-gray-400 mt-1">Race Control &amp; privata meddelanden</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <a href="{{ url_for('index') }}" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm font-semibold">⬅ Startsidan</a>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4 border-b border-gray-700 pb-3">
+      <button type="button" data-tab="all" class="pit-tab px-3 py-1.5 rounded-lg text-sm font-semibold bg-cyan-600 text-gray-900">Allt</button>
+      <button type="button" data-tab="race-control" class="pit-tab px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-800 hover:bg-gray-700">📢 Race Control</button>
+      <button type="button" data-tab="messages" class="pit-tab px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-800 hover:bg-gray-700">💬 Meddelanden</button>
+    </div>
+
+    <div id="pit-panel-all" class="pit-panel space-y-6">
+      <section>
+        <h2 class="text-lg font-bold text-cyan-300 mb-3">📢 Race Control</h2>
+        <div id="announcements-list" class="space-y-3">
+          <p class="text-gray-500 text-sm">Laddar…</p>
+        </div>
+      </section>
+      <section>
+        <h2 class="text-lg font-bold text-green-300 mb-3">💬 Konversationer</h2>
+        <div id="threads-list" class="space-y-2">
+          <p class="text-gray-500 text-sm">Laddar…</p>
+        </div>
+      </section>
+    </div>
+
+    <div id="pit-panel-race-control" class="pit-panel hidden">
+      <div id="announcements-list-rc" class="space-y-3"></div>
+    </div>
+
+    <div id="pit-panel-messages" class="pit-panel hidden">
+      <div class="grid md:grid-cols-2 gap-4">
+        <div id="threads-sidebar" class="space-y-2 max-h-[60vh] overflow-y-auto"></div>
+        <div id="thread-view" class="bg-gray-800 rounded-lg p-4 min-h-[280px] flex flex-col hidden md:flex">
+          <p class="text-gray-500 text-sm">Välj en konversation</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="pit-thread-full" class="hidden mt-4 bg-gray-800 rounded-lg p-4 flex flex-col min-h-[320px] md:hidden">
+    </div>
+
+    <div id="pit-compose-box" class="hidden mt-6 bg-gray-800 rounded-lg p-4 border border-cyan-600/40">
+      <h3 class="font-bold text-cyan-300 mb-2">Nytt meddelande</h3>
+      <p id="pit-compose-to-label" class="text-sm text-gray-400 mb-3"></p>
+      <form id="pit-compose-form" class="flex flex-col gap-2">
+        <textarea id="pit-compose-body" rows="4" maxlength="2000" class="rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv ditt meddelande…" required></textarea>
+        <button type="submit" class="self-end px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-gray-900 font-bold text-sm">Skicka</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    window.PIT_LANE_CONFIG = {
+      initialTab: {{ initial_tab|tojson }},
+      threadId: {{ thread_id|tojson }},
+      composeToUserId: {{ compose_to_user_id|tojson }},
+      composeToLabel: {{ compose_to_label|tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='pit_lane.js') }}"></script>
+</body>
+</html>

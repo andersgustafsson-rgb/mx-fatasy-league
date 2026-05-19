@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -285,6 +285,12 @@ try:
     app.register_blueprint(admin_bp)
 except Exception:
     pass
+
+try:
+    from app.routes.pit_lane import bp as pit_lane_bp  # type: ignore
+    app.register_blueprint(pit_lane_bp)
+except Exception as e:
+    print(f"Pit Lane blueprint not loaded: {e}")
 
 # Endpoint alias to preserve url_for('admin_page') in templates
 try:
@@ -1304,14 +1310,26 @@ def index():
         print(f"Error checking league requests: {e}")
         league_requests_count = 0
 
-    # Get admin announcement message
+    # Get admin announcement message (popup + Pit Lane historik)
     admin_message = None
     admin_message_priority = None
+    admin_announcement_id = None
     try:
-        global_sim = GlobalSimulation.query.first()
-        if global_sim and global_sim.admin_message_active and global_sim.admin_message:
-            admin_message = global_sim.admin_message
-            admin_message_priority = global_sim.admin_message_priority or 'info'
+        import pit_lane_service as pls
+
+        pls.ensure_pit_lane_tables()
+        ann = AdminAnnouncement.query.filter_by(is_active=True).order_by(
+            AdminAnnouncement.created_at.desc()
+        ).first()
+        if ann and ann.body:
+            admin_message = ann.body
+            admin_message_priority = ann.priority or "info"
+            admin_announcement_id = ann.id
+        else:
+            global_sim = GlobalSimulation.query.first()
+            if global_sim and global_sim.admin_message_active and global_sim.admin_message:
+                admin_message = global_sim.admin_message
+                admin_message_priority = global_sim.admin_message_priority or "info"
     except Exception as e:
         print(f"Error fetching admin message: {e}")
         admin_message = None
@@ -1400,6 +1418,7 @@ def index():
         is_logged_in=is_logged_in,
         admin_message=admin_message,
         admin_message_priority=admin_message_priority,
+        admin_announcement_id=admin_announcement_id,
         user_total_points=user_total_points,
         races_participated=races_participated,
         best_position=best_position,
@@ -6566,40 +6585,39 @@ def admin_picks_stats(competition_id):
 
 @app.post("/admin/set_announcement")
 def set_admin_announcement():
-    """Set or update admin announcement message"""
+    """Set or update admin announcement message (popup + Pit Lane historik)."""
     if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
-    
+
     try:
+        import pit_lane_service as pls
+
         data = request.get_json()
-        message = data.get('message', '').strip()
-        priority = data.get('priority', 'info')  # 'important' or 'info'
-        active = data.get('active', False)
-        
-        # Get or create global_simulation record
-        global_sim = GlobalSimulation.query.first()
-        if not global_sim:
-            global_sim = GlobalSimulation(id=1, active=False)
-            db.session.add(global_sim)
-        
+        message = data.get("message", "").strip()
+        priority = data.get("priority", "info")
+        active = data.get("active", False)
+        pls.ensure_pit_lane_tables()
+
         if active and message:
-            global_sim.admin_message = message
-            global_sim.admin_message_priority = priority
-            global_sim.admin_message_active = True
-        else:
-            # Deactivate if no message or active=false
-            global_sim.admin_message_active = False
-            if not message:
-                global_sim.admin_message = None
-                global_sim.admin_message_priority = None
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": "Announcement updated successfully",
-            "active": global_sim.admin_message_active
-        })
+            ann = pls.publish_admin_announcement(
+                message, priority, session.get("user_id")
+            )
+            return jsonify(
+                {
+                    "success": True,
+                    "message": "Announcement updated successfully",
+                    "active": True,
+                    "announcement_id": ann.id,
+                }
+            )
+        pls.deactivate_admin_announcements()
+        return jsonify(
+            {
+                "success": True,
+                "message": "Announcement updated successfully",
+                "active": False,
+            }
+        )
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

@@ -356,3 +356,65 @@ class FinishedSeriesStats(db.Model):
         db.Index('idx_finished_series_stats_series', 'series_id'),
         db.Index('idx_finished_series_stats_user', 'user_id'),
     )
+
+
+class AdminAnnouncement(db.Model):
+    """Race Control — admin broadcast med historik."""
+    __tablename__ = "admin_announcements"
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text, nullable=False)
+    priority = db.Column(db.String(20), nullable=False, default="info")
+    is_active = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+
+class UserAnnouncementDismissal(db.Model):
+    """Användare stängde popup / markerade announcement som läst."""
+    __tablename__ = "user_announcement_dismissals"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    announcement_id = db.Column(
+        db.Integer, db.ForeignKey("admin_announcements.id"), primary_key=True
+    )
+    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class MessageThread(db.Model):
+    __tablename__ = "message_threads"
+    id = db.Column(db.Integer, primary_key=True)
+    user_a_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_b_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    messages = db.relationship(
+        "Message", backref="thread", lazy="dynamic", cascade="all, delete-orphan"
+    )
+    __table_args__ = (
+        db.UniqueConstraint("user_a_id", "user_b_id", name="uq_message_thread_pair"),
+    )
+
+
+class Message(db.Model):
+    __tablename__ = "messages"
+    id = db.Column(db.Integer, primary_key=True)
+    thread_id = db.Column(
+        db.Integer, db.ForeignKey("message_threads.id"), nullable=False, index=True
+    )
+    from_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+
+class InboxNotification(db.Model):
+    """Notisrad för klockan (DM m.m.)."""
+    __tablename__ = "inbox_notifications"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    kind = db.Column(db.String(30), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    preview = db.Column(db.String(500), nullable=True)
+    link_url = db.Column(db.String(300), nullable=True)
+    ref_type = db.Column(db.String(30), nullable=True)
+    ref_id = db.Column(db.Integer, nullable=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

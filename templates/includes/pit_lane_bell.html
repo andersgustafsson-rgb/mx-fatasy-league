@@ -1,0 +1,30 @@
+{% if is_logged_in %}
+<div class="relative" id="pit-lane-bell-wrap">
+  <button
+    type="button"
+    id="pit-lane-bell-btn"
+    class="relative p-2 rounded-lg bg-gray-800 border border-gray-600 hover:bg-gray-700 text-lg leading-none"
+    title="Pit Lane — meddelanden"
+    aria-label="Meddelanden"
+  >
+    🔔
+    <span
+      id="pit-lane-badge"
+      class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center"
+    >0</span>
+  </button>
+  <div
+    id="pit-lane-dropdown"
+    class="hidden absolute right-0 mt-2 w-72 max-w-[90vw] bg-gray-900 border border-gray-600 rounded-lg shadow-xl z-50 overflow-hidden"
+  >
+    <div class="px-3 py-2 border-b border-gray-700 flex justify-between items-center">
+      <span class="text-sm font-bold text-cyan-400">Pit Lane</span>
+      <a href="{{ url_for('pit_lane.pit_lane_page') }}" class="text-xs text-cyan-300 hover:underline">Öppna alla →</a>
+    </div>
+    <div id="pit-lane-dropdown-list" class="max-h-64 overflow-y-auto">
+      <p class="px-3 py-2 text-xs text-gray-500">Laddar…</p>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='pit_lane_bell.js') }}"></script>
+{% endif %}

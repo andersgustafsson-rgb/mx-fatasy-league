@@ -80,6 +80,12 @@ def create_app() -> Flask:
 	except Exception:
 		pass
 
+	try:
+		from .routes.pit_lane import bp as pit_lane_bp  # noqa: F401
+		app.register_blueprint(pit_lane_bp)
+	except Exception:
+		pass
+
 	# Backward-compat endpoint alias so templates using url_for('admin_page') still work
 	try:
 		if 'admin.admin_page' in app.view_functions and 'admin_page' not in app.view_functions:

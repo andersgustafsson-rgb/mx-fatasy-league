@@ -1,0 +1,12 @@
+.pit-tab-active {
+  background-color: rgb(8 145 178);
+  color: rgb(17 24 39);
+}
+
+.pit-announce-important {
+  border-color: rgb(239 68 68);
+}
+
+.pit-announce-info {
+  border-color: rgb(59 130 246);
+}

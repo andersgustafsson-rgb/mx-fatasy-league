@@ -28,6 +28,7 @@
   {% if is_logged_in %}
   <script>
     window.currentUsername = "{{ username|e }}";
+    {% if admin_announcement_id %}window.ADMIN_ANNOUNCEMENT_ID = {{ admin_announcement_id }};{% endif %}
   </script>
   {% endif %}
   <script>
@@ -432,6 +433,10 @@
               </div>
             </div>
         </header>
+          {% if is_logged_in %}
+          {% include 'includes/pit_lane_bell.html' %}
+          {% endif %}
+        </div>
 
         <!-- PWA Install banner (mobile) -->
         <div id="pwa-install-banner" class="hidden max-w-md mx-auto w-full mb-4">
@@ -3452,15 +3457,16 @@
       const modal = document.getElementById('admin-announcement-modal');
       if (modal) {
         modal.classList.add('hidden');
-        // Save to localStorage that user has seen this message
-        // Use message content hash to reset if message changes
         try {
           const messageText = modal.querySelector('.text-gray-200').textContent.trim();
-          // Create simple hash from first 30 chars of message
           const messageHash = messageText.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
           localStorage.setItem('admin_announcement_seen_' + messageHash, 'true');
+          if (window.ADMIN_ANNOUNCEMENT_ID) {
+            fetch('/api/pit-lane/announcements/' + window.ADMIN_ANNOUNCEMENT_ID + '/dismiss', { method: 'POST' });
+            if (window.PitLaneBell) window.PitLaneBell.refresh();
+          }
         } catch (e) {
-          console.error('Error saving to localStorage:', e);
+          console.error('Error saving announcement dismiss:', e);
         }
       }
     }
