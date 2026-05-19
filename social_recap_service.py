@@ -901,6 +901,8 @@ def _load_font_px(size: int, bold: bool = False):
             [
                 "C:/Windows/Fonts/arialbd.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
             ]
         )
     else:
@@ -908,6 +910,8 @@ def _load_font_px(size: int, bold: bool = False):
             [
                 "C:/Windows/Fonts/arial.ttf",
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/TTF/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
             ]
         )
     for path in candidates:
@@ -915,6 +919,7 @@ def _load_font_px(size: int, bold: bool = False):
             return ImageFont.truetype(path, size)
         except OSError:
             continue
+    # load_default() ignorerar size — ger alltid ~10px text (vanlig orsak på Render utan fonts)
     return ImageFont.load_default()
 
 
@@ -1008,6 +1013,35 @@ def _font_height(font, text: str = "Ay") -> int:
 def _text_width(font, text: str) -> int:
     bbox = font.getbbox(text or "")
     return max(0, int(bbox[2] - bbox[0]))
+
+
+def _wrap_text_width(text: str, font, max_width: int) -> list[str]:
+    """Radbrytning efter faktisk pixelbredd — inte antal tecken."""
+    words = (text or "").split()
+    if not words:
+        return []
+    lines: list[str] = []
+    line = ""
+    for w in words:
+        test = f"{line} {w}".strip()
+        if _text_width(font, test) <= max_width:
+            line = test
+        else:
+            if line:
+                lines.append(line)
+            line = w
+    if line:
+        lines.append(line)
+    return lines
+
+
+def _fit_font_px(text: str, max_width: int, *, bold: bool = True, min_px: int = 36, max_px: int = 58) -> Any:
+    """Välj största typsnitt som får plats på en rad (fältfakta-rader)."""
+    for px in range(max_px, min_px - 1, -2):
+        font = _load_font_px(px, bold=bold)
+        if _text_width(font, text) <= max_width:
+            return font
+    return _load_font_px(min_px, bold=bold)
 
 
 def _header_event_lines(data: dict[str, Any]) -> tuple[str, str]:
@@ -1675,44 +1709,54 @@ def _draw_fact_cards(
     if not shown:
         return y0
     cw = img_width or W_PORTRAIT
-    card_h = 92 if large else (_sz(52) if compact else _sz(64))
     gap = 12 if large else (_sz(8) if compact else _sz(10))
     margin = 36 if large else _sz(36)
     title_h = 64 if large else _sz(52)
-    total_h = len(shown) * (card_h + gap) + title_h + (10 if large else 0)
-    _draw_panel(draw, (margin, y0, cw - margin, y0 + total_h), "Fältet säger", large=large)
-    y = y0 + title_h
-    sf = _load_font_px(42) if large else _load_font(26)
-    line_h = 44 if large else _sz(30)
-    max_chars = 42 if large else 38
+    box_x0 = margin + (24 if large else _sz(16))
+    box_x1 = cw - margin - (24 if large else _sz(16))
+    box_w = box_x1 - box_x0
+
+    # Förberäkna radhöjd per faktum (storlek anpassas till rutebredd)
+    rows: list[tuple[list[str], Any, int]] = []
+    total_body = 0
     for fact in shown:
         text = fact.get("text", "")
+        if large:
+            font = _fit_font_px(text, box_w - 48, bold=True, min_px=40, max_px=56)
+            lines = _wrap_text_width(text, font, box_w - 48)
+            if not lines:
+                lines = [text]
+            line_h = max(44, int(_font_height(font) * 1.25))
+        else:
+            font = _load_font(26)
+            lines = _wrap_text_width(text, font, box_w - 32)[:2]
+            line_h = _sz(30)
+        card_h = max(72 if large else _sz(52), len(lines) * line_h + (28 if large else 20))
+        rows.append((lines, font, card_h))
+        total_body += card_h + gap
+
+    total_h = title_h + total_body + (6 if large else 0)
+    _draw_panel(draw, (margin, y0, cw - margin, y0 + total_h), "Fältet säger", large=large)
+    y = y0 + title_h
+
+    for lines, font, card_h in rows:
         draw.rounded_rectangle(
-            [margin + _sz(16), y, cw - margin - _sz(16), y + card_h],
-            radius=_sz(12),
+            [box_x0, y, box_x1, y + card_h],
+            radius=12 if large else _sz(12),
             fill=(15, 25, 45),
             outline=CYAN_DIM,
             width=1,
         )
-        words = text.split()
-        line, lines = "", []
-        for w in words:
-            test = f"{line} {w}".strip()
-            if len(test) > max_chars:
-                if line:
-                    lines.append(line)
-                line = w
-            else:
-                line = test
-        if line:
-            lines.append(line)
-        ty = y + max(12, (card_h - len(lines) * line_h) // 2)
-        tx = margin + (32 if large else _sz(28))
-        for ln in lines[:2]:
+        line_h = max(36, int(_font_height(font) * 1.2))
+        block_h = len(lines) * line_h
+        ty = y + max(8, (card_h - block_h) // 2)
+        for ln in lines:
+            tw = _text_width(font, ln)
+            tx = box_x0 + max(12, (box_w - tw) // 2)
             if large:
                 for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
-                    draw.text((tx + dx, ty + dy), ln, font=sf, fill=(0, 0, 0))
-            draw.text((tx, ty), ln, font=sf, fill=WHITE)
+                    draw.text((tx + dx, ty + dy), ln, font=font, fill=(0, 0, 0))
+            draw.text((tx, ty), ln, font=font, fill=WHITE)
             ty += line_h
         y += card_h + gap
     return y0 + total_h
