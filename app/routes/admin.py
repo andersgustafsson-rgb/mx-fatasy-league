@@ -104,6 +104,10 @@ def social_recap_api():
 			include_facts=include_facts,
 			include_rider_podium=include_rider_podium,
 		)
+		layout = request.args.get("layout", "facebook")
+		if layout == "feed":
+			layout = "facebook"
+		data["export_dual"] = layout == "facebook"
 		return jsonify(data)
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
@@ -151,7 +155,10 @@ def social_recap_png():
 			include_rider_podium=include_rider_podium,
 		)
 		data["layout"] = layout
-		png_bytes = render_social_recap_png(data, layout=layout)
+		part = request.args.get("part", "graphic")
+		if layout != "facebook":
+			part = "graphic"
+		png_bytes = render_social_recap_png(data, layout=layout, part=part)
 		return Response(png_bytes, mimetype="image/png")
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404

@@ -1832,61 +1832,109 @@ def _draw_fb_season_strip(
         )
 
 
-def _render_facebook_landscape_png(data: dict[str, Any]) -> bytes:
-    """Enkel Facebook-bild: stor text, förare + fantasy (+ valfri säsong)."""
+def _footer(img, draw, final_h: int) -> None:
+    cw = _canvas_w(img)
+    draw.text(
+        (cw // 2, final_h - 34),
+        "mxfantasy.se · Spela med oss",
+        font=_load_font_px(22),
+        fill=MUTED,
+        anchor="mt",
+    )
+    draw.rectangle([0, final_h - 5, cw, final_h], fill=CYAN)
+
+
+def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
+    """Bild 1 — grafik: header, förarpall, fantasy-podium."""
     from PIL import Image, ImageDraw
 
     data = {**data, "layout": "facebook"}
-    h = 900
+    h = 1040
     img = Image.new("RGB", (W_FB, h), BG_TOP)
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
 
-    y = _draw_fb_header(img, draw, data) + 12
-    margin = 32
-    gap = 12
-    inner_w = W_FB - margin * 2
-    half = (inner_w - gap) // 2
+    y = _draw_recap_header(img, draw, data) + 14
+    margin = 36
+    gap = 14
+    half = (W_FB - margin * 2 - gap) // 2
     mods = data.get("modules") or {}
     labels = data.get("class_labels") or {}
 
-    has_riders = mods.get("rider_podium") and data.get("has_results")
-    has_race = mods.get("race") and data.get("race_leaderboard")
-    has_season = mods.get("season_snippet") and data.get("season_top_snippet")
-
-    if has_riders:
+    if mods.get("rider_podium") and data.get("has_results"):
         rp = data.get("rider_podium_primary") or []
         rs = data.get("rider_podium_secondary") or []
-        rh = 300
+        ph = 320
+        y1 = y2 = y
         if rp:
-            _draw_fb_rider_class(
-                draw, img, margin, y, half, rh,
-                f"{labels.get('primary', '450')} SX", rp,
+            y1 = _draw_rider_podium_row(
+                draw, img, margin, y, half,
+                f"{labels.get('primary', '450')} SX", rp, panel_h=ph,
             )
         if rs:
-            _draw_fb_rider_class(
-                draw, img, margin + half + gap, y, half, rh,
-                f"{labels.get('secondary', '250')} SX", rs,
+            y2 = _draw_rider_podium_row(
+                draw, img, margin + half + gap, y, half,
+                f"{labels.get('secondary', '250')} SX", rs, panel_h=ph,
             )
-        y += rh + gap
+        y = max(y1, y2) + gap
 
-    if has_race:
-        fh = 260
-        _draw_fb_fantasy_top3(draw, img, margin, y, inner_w, fh, data["race_leaderboard"])
-        y += fh + gap
+    if mods.get("race") and data.get("race_leaderboard"):
+        lb = data["race_leaderboard"]
+        extras_n = max(0, min(2, len([r for r in lb if int(r.get("rank", 99)) > 3])))
+        y = _draw_user_podium_section(
+            draw, img, y, "Fantasy — denna tävling", lb, data,
+            base_panel=310, max_extras=extras_n,
+        ) + gap
 
-    if has_season:
-        sh = 150
-        _draw_fb_season_strip(draw, img, margin, y, inner_w, sh, data["season_top_snippet"])
-        y += sh + gap
+    _footer(img, draw, h)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
-    foot_f = _load_font_px(22)
-    draw.text((W_FB // 2, h - 32), "mxfantasy.se", font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, h - 5, W_FB, h], fill=CYAN)
+
+def _render_recap_stats_png(data: dict[str, Any]) -> bytes:
+    """Bild 2 — statistik: veckan, säsong, fältfakta."""
+    from PIL import Image, ImageDraw
+
+    data = {**data, "layout": "facebook"}
+    work_h = 1300
+    img = Image.new("RGB", (W_FB, work_h), BG_TOP)
+    _draw_vertical_gradient(img)
+    draw = ImageDraw.Draw(img)
+
+    y = _draw_fb_header(img, draw, data) + 14
+    margin = 36
+    gap = 14
+    mods = data.get("modules") or {}
+
+    if mods.get("weekly"):
+        highlights = data.get("weekly_highlights") or []
+        if highlights:
+            y = _draw_weekly_highlights_section(draw, img, y, highlights, data, card_h=100) + gap
+
+    if mods.get("season_snippet") and data.get("season_top_snippet"):
+        y = _draw_season_top_snippet(
+            draw, img, y, data["season_top_snippet"], data, row_h=54,
+        ) + gap
+
+    if mods.get("facts") and data.get("fun_facts"):
+        y = _draw_fact_cards(draw, y, data["fun_facts"], data, img_width=W_FB) + gap
+
+    final_h = min(work_h, max(720, y + 52))
+    if final_h < work_h:
+        img = img.crop((0, 0, W_FB, final_h))
+        draw = ImageDraw.Draw(img)
+    _footer(img, draw, final_h)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
+
+
+def _render_facebook_landscape_png(data: dict[str, Any], *, part: str = "graphic") -> bytes:
+    if part == "stats":
+        return _render_recap_stats_png(data)
+    return _render_recap_graphic_png(data)
 
 
 def _render_square_recap_png(data: dict[str, Any]) -> bytes:
@@ -1967,14 +2015,22 @@ def _render_square_recap_png(data: dict[str, Any]) -> bytes:
     return buf.getvalue()
 
 
-def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) -> bytes:
+def render_social_recap_png(
+    data: dict[str, Any],
+    *,
+    layout: str | None = None,
+    part: str | None = None,
+) -> bytes:
     from PIL import Image, ImageDraw
 
     layout = (layout or data.get("layout") or "facebook").lower()
     if layout == "feed":
         layout = "facebook"
     if layout == "facebook":
-        return _render_facebook_landscape_png(data)
+        p = (part or "graphic").lower()
+        if p not in ("graphic", "stats"):
+            p = "graphic"
+        return _render_facebook_landscape_png(data, part=p)
     if layout == "square":
         return _render_square_recap_png(data)
     if layout not in ("portrait", "story"):
