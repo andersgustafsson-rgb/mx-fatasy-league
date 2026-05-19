@@ -480,19 +480,76 @@ def _iter_pick_payloads(competition_id: int) -> list[tuple[int, dict]]:
     return out
 
 
+def _winner_pick_stats(
+    competition_id: int,
+    winner_id: int,
+    class_names: tuple[str, ...],
+    picker_n: int,
+) -> tuple[int, int]:
+    """Andel som hade vinnaren som P1 respektive topp 3 (450/250)."""
+    riders = {r.id: r for r in Rider.query.all()}
+    p1_count = top3_count = 0
+    for _uid, payload in _iter_pick_payloads(competition_id):
+        for p in payload.get("race_picks") or []:
+            try:
+                rid = int(p.get("rider_id"))
+                pos = int(p.get("predicted_position"))
+            except (TypeError, ValueError):
+                continue
+            rider = riders.get(rid)
+            if not rider or rider.class_name not in class_names:
+                continue
+            if rid == winner_id:
+                if pos == 1:
+                    p1_count += 1
+                if 1 <= pos <= 3:
+                    top3_count += 1
+    if picker_n <= 0:
+        return 0, 0
+    p1_pct = round(100.0 * p1_count / picker_n, 0)
+    top3_pct = round(100.0 * top3_count / picker_n, 0)
+    return int(p1_pct), int(top3_pct)
+
+
+def _select_fun_facts_for_display(
+    candidates: list[dict[str, str]], competition_id: int, limit: int = 3
+) -> list[dict[str, str]]:
+    """Välj fakta per tävling (stabilt men olika mellan race — inte samma mall varje gång)."""
+    import random
+
+    pinned = [f for f in candidates if f.get("id") == "picker_count"]
+    pool = [f for f in candidates if f.get("id") not in ("picker_count", "no_picks")]
+    rng = random.Random(int(competition_id) * 1009 + 17)
+    rng.shuffle(pool)
+
+    out: list[dict[str, str]] = []
+    used_groups: set[str] = set()
+    for f in pinned:
+        out.append(f)
+    for f in pool:
+        if len(out) >= limit:
+            break
+        grp = str(f.get("group") or f.get("id") or "")
+        if grp in used_groups:
+            continue
+        used_groups.add(grp)
+        out.append(f)
+    return out[:limit]
+
+
 def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str, str]]:
     from main import _build_crowd_picks_summary
 
-    facts: list[dict[str, str]] = []
     crowd = _build_crowd_picks_summary(competition_id, comp, ensure_snapshots=True)
     n_lineups = int(crowd.get("n_lineups") or 0)
     n_users = int(crowd.get("n_users_with_snapshots_or_picks") or 0)
     picker_n = n_lineups or n_users
     if picker_n <= 0:
-        facts.append({"id": "no_picks", "text": "Inga tips inlämnade för detta race ännu."})
-        return facts
+        return [{"id": "no_picks", "text": "Inga tips inlämnade för detta race ännu."}]
 
-    facts.append({"id": "picker_count", "text": f"{picker_n} spelare lämnade tips"})
+    candidates: list[dict[str, str]] = [
+        {"id": "picker_count", "group": "meta", "text": f"{picker_n} spelare lämnade tips"}
+    ]
 
     actual = _actual_positions(competition_id)
     riders = {r.id: r for r in Rider.query.all()}
@@ -512,68 +569,115 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
 
     win450_id, win450_label = winner_for_class(cls450)
     slots450 = crowd.get("slots_450") or {}
-    if win450_id and slots450.get("1"):
-        top_slot = slots450["1"]
-        if top_slot:
-            fav = top_slot[0]
-            fav_pct = fav.get("pct", 0)
-            fav_name = fav.get("name") or fav.get("short", "?")
-            if int(fav.get("rider_id", 0)) == win450_id:
-                facts.append(
+
+    def slot_top(class_slots: dict, pos: int) -> dict | None:
+        raw = class_slots.get(str(pos)) or class_slots.get(pos)
+        return raw[0] if raw else None
+
+    if win450_id and slot_top(slots450, 1):
+        fav = slot_top(slots450, 1)
+        fav_pct = float(fav.get("pct", 0) or 0)
+        fav_name = fav.get("name") or fav.get("short", "?")
+        p1_pct, top3_pct = _winner_pick_stats(competition_id, win450_id, cls450, picker_n)
+        if int(fav.get("rider_id", 0)) == win450_id:
+            candidates.append(
+                {
+                    "id": "p1_crowd_correct",
+                    "group": "p1_450",
+                    "text": f"{fav_pct:.0f}% hade {win450_label} som P1 — fältet hade rätt!",
+                }
+            )
+        else:
+            candidates.append(
+                {
+                    "id": "p1_upset",
+                    "group": "p1_450",
+                    "text": (
+                        f"Fältets P1-favorit var {fav_name} ({fav_pct:.0f}%) "
+                        f"men {win450_label} vann — {p1_pct:.0f}% hade honom P1"
+                    ),
+                }
+            )
+            if top3_pct >= 40:
+                candidates.append(
                     {
-                        "id": "p1_crowd_correct",
-                        "text": f"{fav_pct:.0f}% hade {win450_label} som P1 — fältet hade rätt!",
-                    }
-                )
-            else:
-                facts.append(
-                    {"id": "p1_crowd_fav", "text": f"Fältets P1-favorit: {fav_name} ({fav_pct:.0f}%)"}
-                )
-                p1_winner_count = 0
-                top3_winner_count = 0
-                for _uid, payload in _iter_pick_payloads(competition_id):
-                    for p in payload.get("race_picks") or []:
-                        try:
-                            rid = int(p.get("rider_id"))
-                            pos = int(p.get("predicted_position"))
-                        except (TypeError, ValueError):
-                            continue
-                        rider = riders.get(rid)
-                        if not rider or rider.class_name not in cls450:
-                            continue
-                        if rid == win450_id:
-                            if pos == 1:
-                                p1_winner_count += 1
-                            if 1 <= pos <= 3:
-                                top3_winner_count += 1
-                p1_pct = round(100.0 * p1_winner_count / picker_n, 0) if picker_n else 0
-                top3_pct = round(100.0 * top3_winner_count / picker_n, 0) if picker_n else 0
-                facts.append(
-                    {
-                        "id": "p1_winner_share",
-                        "text": f"{p1_pct:.0f}% hade {win450_label} P1 · {top3_pct:.0f}% topp 3",
+                        "id": "winner_top3_share",
+                        "group": "winner_top3",
+                        "text": f"{top3_pct:.0f}% hade vinnaren {win450_label} i topp 3",
                     }
                 )
 
-    win250_id, _ = winner_for_class(cls250)
+    for pos, plabel in ((2, "P2"), (3, "P3")):
+        top = slot_top(slots450, pos)
+        if top:
+            candidates.append(
+                {
+                    "id": f"slot_{pos}_450",
+                    "group": f"slot_{pos}",
+                    "text": f"Fältets {plabel}-val 450: {top.get('name', '?')} ({top.get('pct', 0):.0f}%)",
+                }
+            )
+
+    win250_id, win250_label = winner_for_class(cls250)
     slots250 = crowd.get("slots_250") or {}
-    if win250_id and slots250.get("1"):
-        top_slot = slots250["1"]
-        if top_slot and int(top_slot[0].get("rider_id", 0)) != win250_id:
-            facts.append(
+    if win250_id:
+        p1_250, top3_250 = _winner_pick_stats(competition_id, win250_id, cls250, picker_n)
+        fav250 = slot_top(slots250, 1)
+        if fav250 and int(fav250.get("rider_id", 0)) == win250_id:
+            candidates.append(
+                {
+                    "id": "250_crowd_correct",
+                    "group": "p1_250",
+                    "text": f"{cfg['secondary'][1]}: {win250_label} vann — fältet hade rätt P1",
+                }
+            )
+        elif fav250:
+            candidates.append(
                 {
                     "id": "250_upset",
-                    "text": f"{cfg['secondary'][1]}: vinnaren var inte fältets P1-favorit",
+                    "group": "p1_250",
+                    "text": (
+                        f"{cfg['secondary'][1]}: {win250_label} vann, "
+                        f"fältet gissade {fav250.get('name', '?')} P1"
+                    ),
+                }
+            )
+        else:
+            candidates.append(
+                {
+                    "id": "250_winner",
+                    "group": "p1_250",
+                    "text": f"{cfg['secondary'][1]}: {win250_label} tog segern",
+                }
+            )
+        if top3_250 > 0:
+            candidates.append(
+                {
+                    "id": "250_top3",
+                    "group": "winner_top3_250",
+                    "text": f"{top3_250:.0f}% hade {win250_label} topp 3 i {cfg['secondary'][1]}",
                 }
             )
 
     holo450 = crowd.get("holeshot_450") or []
     if holo450:
         top_h = holo450[0]
-        facts.append(
+        candidates.append(
             {
                 "id": "holeshot_crowd",
+                "group": "holeshot",
                 "text": f"Holeshot {cfg['primary'][1]}: {top_h.get('name', '?')} ({top_h.get('pct', 0):.0f}%)",
+            }
+        )
+
+    holo250 = crowd.get("holeshot_250") or []
+    if holo250:
+        top_h = holo250[0]
+        candidates.append(
+            {
+                "id": "holeshot_250",
+                "group": "holeshot_250",
+                "text": f"Holeshot {cfg['secondary'][1]}: {top_h.get('name', '?')} ({top_h.get('pct', 0):.0f}%)",
             }
         )
 
@@ -595,9 +699,10 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
             if user_perfect > 0:
                 pickers_with_perfect += 1
         if perfect_total > 0:
-            facts.append(
+            candidates.append(
                 {
                     "id": "perfect_aggregate",
+                    "group": "perfect",
                     "text": f"{perfect_total} perfekta gissningar · {pickers_with_perfect} spelare med fullträff",
                 }
             )
@@ -606,14 +711,15 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
         wc_top = crowd.get("wildcard_top") or []
         if wc_top:
             w = wc_top[0]
-            facts.append(
+            candidates.append(
                 {
                     "id": "wildcard",
+                    "group": "wildcard",
                     "text": f"Wildcard: P{w.get('position', '?')} {w.get('name', '?')} ({w.get('pct', 0):.0f}%)",
                 }
             )
 
-    return facts[:6]
+    return _select_fun_facts_for_display(candidates, competition_id, limit=3)
 
 
 def build_social_recap_data(
