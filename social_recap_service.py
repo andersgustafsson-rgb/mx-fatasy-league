@@ -151,22 +151,109 @@ def _season_top_snippet(limit: int = 5) -> list[dict[str, Any]]:
     return out
 
 
-def _get_weekly_highlights() -> list[dict[str, Any]]:
-    """Veckans raket, ankare, perfekt gissning, holeshot — samma logik som get_weekly_fun_stats."""
-    from datetime import datetime, timedelta
+def _comp_ids_for_recap_week(comp: Competition | None) -> list[int]:
+    """Tävlingar i samma vecka som den valda tävlingen (för recap — inte bara 'senaste 7 dagar från idag')."""
+    from datetime import timedelta
+
+    if not comp:
+        return []
+    if comp.event_date:
+        end = comp.event_date
+        start = end - timedelta(days=6)
+        recent = Competition.query.filter(
+            Competition.event_date.isnot(None),
+            Competition.event_date >= start,
+            Competition.event_date <= end,
+            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+        ).all()
+        ids = [int(c.id) for c in recent]
+        if int(comp.id) not in ids:
+            ids.append(int(comp.id))
+        return ids
+    return [int(comp.id)]
+
+
+def _fallback_race_highlights(
+    competition_id: int, race_leaderboard: list[dict] | None
+) -> list[dict[str, Any]]:
+    """Minst en prestation från själva tävlingen om veckofönstret saknar data."""
+    cards: list[dict[str, Any]] = []
+    if race_leaderboard:
+        top = race_leaderboard[0]
+        cards.append(
+            {
+                "icon": "🏆",
+                "title": "Tävlingsvinnare",
+                "user_id": top.get("user_id"),
+                "display_name": top.get("display_name") or "?",
+                "detail": f"{int(top.get('points', 0))} p denna tävling",
+            }
+        )
+    picks_raw = RacePick.query.filter_by(competition_id=competition_id).all()
+    by_pick: dict[tuple, RacePick] = {}
+    for p in picks_raw:
+        pk = (p.user_id, p.rider_id)
+        if pk not in by_pick or p.pick_id > by_pick[pk].pick_id:
+            by_pick[pk] = p
+    actual = _actual_positions(competition_id)
+    perfect_stats: dict[int, dict] = {}
+    for p in by_pick.values():
+        act = actual.get(p.rider_id)
+        if act is not None and act == p.predicted_position:
+            uid = int(p.user_id)
+            if uid not in perfect_stats:
+                u = User.query.get(uid)
+                perfect_stats[uid] = {
+                    "user_id": uid,
+                    "display_name": _display_name(u),
+                    "count": 0,
+                }
+            perfect_stats[uid]["count"] += 1
+    if perfect_stats:
+        best = max(perfect_stats.values(), key=lambda x: x["count"])
+        cards.append(
+            {
+                "icon": "🎯",
+                "title": "Perfekt gissning",
+                "user_id": best["user_id"],
+                "display_name": best["display_name"],
+                "detail": f"{best['count']} fullträffar i tävlingen",
+            }
+        )
+    try:
+        from main import aggregate_weekly_holeshot_points_from_picks
+
+        hs = aggregate_weekly_holeshot_points_from_picks([competition_id])
+        if hs:
+            uid, pts = max(hs.items(), key=lambda x: x[1])
+            u = User.query.get(int(uid))
+            if u and pts:
+                cards.append(
+                    {
+                        "icon": "🏁",
+                        "title": "Holeshot-kung",
+                        "user_id": int(uid),
+                        "display_name": _display_name(u),
+                        "detail": f"{int(pts)} holeshot-poäng",
+                    }
+                )
+    except Exception:
+        pass
+    return cards[:4]
+
+
+def _get_weekly_highlights(
+    competition_id: int,
+    race_leaderboard: list[dict] | None = None,
+) -> list[dict[str, Any]]:
+    """Veckans raket, ankare, perfekt gissning, holeshot — vecka kring vald tävling."""
+    from datetime import timedelta
     from main import calculate_leaderboard_deltas, aggregate_weekly_holeshot_points_from_picks
 
-    week_ago = (datetime.utcnow() - timedelta(days=7)).date()
-    today = datetime.utcnow().date()
-    recent = Competition.query.filter(
-        Competition.event_date.isnot(None),
-        Competition.event_date >= week_ago,
-        Competition.event_date <= today,
-        db.or_(Competition.series.is_(None), Competition.series != "WSX"),
-    ).all()
-    comp_ids = [c.id for c in recent]
+    comp = Competition.query.get(competition_id)
+    comp_ids = _comp_ids_for_recap_week(comp)
     if not comp_ids:
-        return []
+        return _fallback_race_highlights(competition_id, race_leaderboard)
 
     leaderboard_data = calculate_leaderboard_deltas()
     weekly_pts: dict[int, int] = defaultdict(int)
@@ -307,6 +394,13 @@ def _get_weekly_highlights() -> list[dict[str, Any]]:
                     "detail": f"{int(pts)} holeshot-poäng i veckan",
                 }
             )
+
+    if len(cards) < 2:
+        for fb in _fallback_race_highlights(competition_id, race_leaderboard):
+            if not any(c.get("title") == fb.get("title") for c in cards):
+                cards.append(fb)
+            if len(cards) >= 4:
+                break
 
     return cards[:4]
 
@@ -582,7 +676,9 @@ def build_social_recap_data(
         data["race_leaderboard"] = []
 
     if include_weekly:
-        data["weekly_highlights"] = _get_weekly_highlights()
+        data["weekly_highlights"] = _get_weekly_highlights(
+            competition_id, data.get("race_leaderboard")
+        )
     else:
         data["weekly_highlights"] = []
 
@@ -1190,8 +1286,10 @@ def render_social_recap_png(data: dict[str, Any]) -> bytes:
             data["race_leaderboard"],
         ) + 16
 
-    if mods.get("weekly") and data.get("weekly_highlights"):
-        y = _draw_weekly_highlights_section(draw, img, y, data["weekly_highlights"]) + 16
+    if mods.get("weekly"):
+        highlights = data.get("weekly_highlights") or []
+        if highlights:
+            y = _draw_weekly_highlights_section(draw, img, y, highlights) + 16
 
     if mods.get("season_snippet") and data.get("season_top_snippet"):
         y = _draw_season_top_snippet(draw, img, y, data["season_top_snippet"]) + 16
