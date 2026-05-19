@@ -38,8 +38,9 @@ RED = (248, 113, 113)
 ACCENT_ORANGE = (251, 146, 60)
 
 W = 1080
-H_FEED = 1350  # 4:5 — Facebook visar detta större i flödet än 9:16-story
+H_FEED_MIN = 1350  # minhöjd för Facebook-flöde (4:5)
 H_STORY = 1920
+H_WORK = 2400  # ritbuffer så inget klipps under layout
 # Större typsnitt/ikoner så texten är läsbar när FB krymper bilden
 FONT_SCALE = 1.48
 LAYOUT_SCALE = 1.26
@@ -1394,8 +1395,6 @@ def _draw_user_podium_section(
     """Podium for top 3 + optional rows 4+."""
     top3 = [r for r in leaderboard if int(r.get("rank", 99)) <= 3]
     extras = [r for r in leaderboard if int(r.get("rank", 99)) > 3]
-    if _compact(data):
-        extras = extras[:2]
     row_extra_h = _sz(48)
     base_panel = _sz(300)
     panel_h = base_panel if not extras else base_panel + len(extras) * row_extra_h + _sz(8)
@@ -1497,8 +1496,6 @@ def _draw_season_top_snippet(
 ) -> int:
     if not rows:
         return y0
-    if _compact(data):
-        rows = rows[:3]
     row_h = _sz(56)
     margin = _sz(36)
     panel_h = _sz(52) + len(rows) * row_h + _sz(8)
@@ -1537,8 +1534,7 @@ def _draw_season_top_snippet(
 
 
 def _draw_fact_cards(draw, y0: int, facts: list[dict], data: dict[str, Any]) -> int:
-    limit = 2 if _compact(data) else 3
-    shown = [f for f in facts if f.get("text")][:limit]
+    shown = [f for f in facts if f.get("text")][:3]
     if not shown:
         return y0
     card_h = _sz(64)
@@ -1549,7 +1545,7 @@ def _draw_fact_cards(draw, y0: int, facts: list[dict], data: dict[str, Any]) -> 
     y = y0 + _sz(52)
     sf = _load_font(26)
     line_h = _sz(30)
-    max_chars = 34 if _compact(data) else 38
+    max_chars = 38
     for fact in shown:
         text = fact.get("text", "")
         draw.rounded_rectangle(
@@ -1586,9 +1582,9 @@ def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) 
     if layout not in ("feed", "story"):
         layout = "feed"
     data = {**data, "layout": layout}
-    img_h = H_FEED if layout == "feed" else H_STORY
+    work_h = H_WORK if layout == "feed" else H_STORY
 
-    img = Image.new("RGB", (W, img_h), BG_TOP)
+    img = Image.new("RGB", (W, work_h), BG_TOP)
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
 
@@ -1646,10 +1642,22 @@ def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) 
     if mods.get("facts") and data.get("fun_facts"):
         y = _draw_fact_cards(draw, y, data["fun_facts"], data) + gap
 
+    footer_pad = _sz(56)
+    content_h = y + footer_pad
+    if layout == "feed":
+        final_h = min(H_WORK, max(H_FEED_MIN, content_h))
+    else:
+        final_h = H_STORY
+
+    if final_h < work_h:
+        img = img.crop((0, 0, W, final_h))
+        _draw_vertical_gradient(img)
+        draw = ImageDraw.Draw(img)
+
     foot_f = _load_font(24)
-    foot_y = img_h - _sz(40)
+    foot_y = final_h - _sz(40)
     draw.text((W // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, img_h - _sz(6), W, img_h], fill=CYAN)
+    draw.rectangle([0, final_h - _sz(6), W, final_h], fill=CYAN)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
