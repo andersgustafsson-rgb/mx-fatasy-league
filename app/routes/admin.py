@@ -132,6 +132,9 @@ def social_recap_png():
 	include_rider_podium = request.args.get("include_rider_podium", "1") not in ("0", "false", "no")
 	if request.args.get("include_season", "1") in ("0", "false", "no"):
 		include_season_snippet = False
+	layout = request.args.get("layout", "feed")
+	if layout not in ("feed", "story"):
+		layout = "feed"
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
 
@@ -145,7 +148,8 @@ def social_recap_png():
 			include_facts=include_facts,
 			include_rider_podium=include_rider_podium,
 		)
-		png_bytes = render_social_recap_png(data)
+		data["layout"] = layout
+		png_bytes = render_social_recap_png(data, layout=layout)
 		return Response(png_bytes, mimetype="image/png")
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
