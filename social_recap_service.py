@@ -883,6 +883,127 @@ def _load_font(size: int, bold: bool = False):
     return ImageFont.load_default()
 
 
+def _load_display_font(size: int, bold: bool = True):
+    """Större display-rubriker (Impact/Arial Black när det finns)."""
+    from PIL import ImageFont
+
+    candidates = []
+    if bold:
+        candidates.extend(
+            [
+                "C:/Windows/Fonts/impact.ttf",
+                "C:/Windows/Fonts/ariblk.ttf",
+                "C:/Windows/Fonts/segoeuib.ttf",
+                "C:/Windows/Fonts/arialbd.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            ]
+        )
+    else:
+        candidates.extend(
+            [
+                "C:/Windows/Fonts/segoeui.ttf",
+                "C:/Windows/Fonts/arial.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            ]
+        )
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return _load_font(size, bold=bold)
+
+
+def _draw_styled_text(
+    draw,
+    pos: tuple[int, int],
+    text: str,
+    font,
+    fill: tuple[int, int, int],
+    *,
+    anchor: str = "mt",
+    stroke: tuple[int, int, int] | None = None,
+    stroke_width: int = 3,
+    glow: tuple[int, int, int] | None = None,
+) -> None:
+    x, y = pos
+    if glow:
+        for dx, dy in ((-3, 0), (3, 0), (0, -3), (0, 3), (-2, -2), (2, 2)):
+            draw.text((x + dx, y + dy), text, font=font, fill=glow, anchor=anchor)
+    kw: dict = {"fill": fill, "anchor": anchor}
+    if stroke:
+        kw["stroke_width"] = stroke_width
+        kw["stroke_fill"] = stroke
+    draw.text(pos, text, font=font, **kw)
+
+
+def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
+    """Hero-header med tydlig typografi — returnerar y under headern."""
+    band_y0 = 24
+    band_y1 = 292
+    draw.rounded_rectangle(
+        [32, band_y0, W - 32, band_y1],
+        radius=24,
+        fill=(14, 24, 48),
+        outline=CYAN,
+        width=2,
+    )
+    draw.rectangle([32, band_y0, W - 32, band_y0 + 6], fill=CYAN)
+    draw.line([(48, band_y1 - 2), (W - 48, band_y1 - 2)], fill=CYAN_DIM, width=2)
+
+    cx = W // 2
+    y = band_y0 + 18
+    logo = _load_brand_logo(104)
+    if logo:
+        img.paste(logo, (cx - logo.width // 2, y), logo)
+        y += logo.height + 14
+    else:
+        y += 8
+
+    brand_f = _load_display_font(56, bold=True)
+    recap_f = _load_display_font(82, bold=True)
+    event_f = _load_display_font(36, bold=True)
+
+    _draw_styled_text(
+        draw,
+        (cx, y),
+        "MX FANTASY",
+        brand_f,
+        CYAN,
+        anchor="mt",
+        stroke=(6, 40, 62),
+        stroke_width=4,
+        glow=(0, 0, 0),
+    )
+    y += 64
+
+    _draw_styled_text(
+        draw,
+        (cx, y),
+        "RACE RECAP",
+        recap_f,
+        WHITE,
+        anchor="mt",
+        stroke=CYAN,
+        stroke_width=5,
+        glow=(0, 15, 30),
+    )
+    y += 92
+
+    event = (data.get("event_label") or "Race")[:44]
+    _draw_styled_text(
+        draw,
+        (cx, y),
+        event,
+        event_f,
+        GOLD,
+        anchor="mt",
+        stroke=(40, 32, 8),
+        stroke_width=2,
+    )
+    return band_y1 + 20
+
+
 def _load_brand_logo(size: int = 96):
     from PIL import Image
 
@@ -1332,27 +1453,9 @@ def render_social_recap_png(data: dict[str, Any]) -> bytes:
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
 
-    # decorative top stripe
-    draw.rectangle([0, 0, W, 6], fill=CYAN)
-    draw.rectangle([0, 6, W, 10], fill=CYAN_DIM)
+    draw.rectangle([0, 0, W, 8], fill=CYAN)
 
-    y = 36
-    logo = _load_brand_logo(88)
-    if logo:
-        img.paste(logo, (W // 2 - 44, y), logo)
-        y += 96
-    else:
-        y += 8
-
-    title_f = _load_font(44, bold=True)
-    sub_f = _load_font(28, bold=True)
-    event_f = _load_font(26)
-    draw.text((W // 2, y), "MX FANTASY", font=title_f, fill=CYAN, anchor="mt")
-    y += 48
-    draw.text((W // 2, y), "RACE RECAP", font=sub_f, fill=WHITE, anchor="mt")
-    y += 40
-    draw.text((W // 2, y), (data.get("event_label") or "Race")[:44], font=event_f, fill=MUTED, anchor="mt")
-    y += 52
+    y = _draw_recap_header(img, draw, data)
 
     mods = data.get("modules") or {}
     labels = data.get("class_labels") or {}
