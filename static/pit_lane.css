@@ -10,3 +10,11 @@
 .pit-announce-info {
   border-color: rgb(59 130 246);
 }
+
+#pit-lane-bell-wrap {
+  isolation: isolate;
+}
+
+.pit-lane-dropdown-panel {
+  z-index: 99990;
+}

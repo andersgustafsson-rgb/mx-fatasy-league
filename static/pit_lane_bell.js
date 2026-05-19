@@ -5,6 +5,25 @@
     return d.innerHTML;
   }
 
+  function positionDropdown() {
+    const btn = document.getElementById('pit-lane-bell-btn');
+    const dd = document.getElementById('pit-lane-dropdown');
+    if (!btn || !dd) return;
+    const r = btn.getBoundingClientRect();
+    dd.style.position = 'fixed';
+    dd.style.top = Math.round(r.bottom + 8) + 'px';
+    dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+    dd.style.left = 'auto';
+    dd.style.width = '18rem';
+    dd.style.maxWidth = 'min(18rem, calc(100vw - 16px))';
+    dd.style.zIndex = '99990';
+  }
+
+  function closeDropdown() {
+    const dd = document.getElementById('pit-lane-dropdown');
+    if (dd) dd.classList.add('hidden');
+  }
+
   async function refresh() {
     const badge = document.getElementById('pit-lane-badge');
     const list = document.getElementById('pit-lane-dropdown-list');
@@ -41,8 +60,14 @@
   function toggleDropdown() {
     const dd = document.getElementById('pit-lane-dropdown');
     if (!dd) return;
-    dd.classList.toggle('hidden');
-    if (!dd.classList.contains('hidden')) refresh();
+    const opening = dd.classList.contains('hidden');
+    if (opening) {
+      positionDropdown();
+      dd.classList.remove('hidden');
+      refresh();
+    } else {
+      closeDropdown();
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -52,15 +77,20 @@
       e.stopPropagation();
       toggleDropdown();
     });
-    document.addEventListener('click', () => {
+    document.addEventListener('click', closeDropdown);
+    window.addEventListener('resize', () => {
       const dd = document.getElementById('pit-lane-dropdown');
-      if (dd) dd.classList.add('hidden');
+      if (dd && !dd.classList.contains('hidden')) positionDropdown();
     });
+    window.addEventListener('scroll', () => {
+      const dd = document.getElementById('pit-lane-dropdown');
+      if (dd && !dd.classList.contains('hidden')) positionDropdown();
+    }, true);
     const dd = document.getElementById('pit-lane-dropdown');
     if (dd) dd.addEventListener('click', (e) => e.stopPropagation());
     refresh();
     setInterval(refresh, 60000);
   });
 
-  window.PitLaneBell = { refresh };
+  window.PitLaneBell = { refresh, closeDropdown };
 })();

@@ -1,5 +1,5 @@
 {% if is_logged_in %}
-<div class="relative" id="pit-lane-bell-wrap">
+<div class="relative z-[100]" id="pit-lane-bell-wrap">
   <button
     type="button"
     id="pit-lane-bell-btn"
@@ -15,7 +15,7 @@
   </button>
   <div
     id="pit-lane-dropdown"
-    class="hidden absolute right-0 mt-2 w-72 max-w-[90vw] bg-gray-900 border border-gray-600 rounded-lg shadow-xl z-50 overflow-hidden"
+    class="hidden w-72 max-w-[90vw] bg-gray-900 border border-gray-600 rounded-lg shadow-2xl overflow-hidden pit-lane-dropdown-panel"
   >
     <div class="px-3 py-2 border-b border-gray-700 flex justify-between items-center">
       <span class="text-sm font-bold text-cyan-400">Pit Lane</span>
