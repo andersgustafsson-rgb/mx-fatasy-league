@@ -890,6 +890,34 @@ def build_facebook_caption(data: dict[str, Any]) -> str:
 # --- Rendering ---
 
 
+def _load_font_px(size: int, bold: bool = False):
+    """Fast pixelstorlek (Facebook-enkel layout) — ingen FONT_SCALE."""
+    from PIL import ImageFont
+
+    size = max(12, int(size))
+    candidates = []
+    if bold:
+        candidates.extend(
+            [
+                "C:/Windows/Fonts/arialbd.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            ]
+        )
+    else:
+        candidates.extend(
+            [
+                "C:/Windows/Fonts/arial.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            ]
+        )
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
 def _load_font(size: int, bold: bool = False):
     from PIL import ImageFont
 
@@ -1276,7 +1304,7 @@ def _draw_vertical_gradient(img) -> None:
         r = int(BG_TOP[0] + (BG_BOTTOM[0] - BG_TOP[0]) * t)
         g = int(BG_TOP[1] + (BG_BOTTOM[1] - BG_TOP[1]) * t)
         b = int(BG_TOP[2] + (BG_BOTTOM[2] - BG_TOP[2]) * t)
-        draw.line([(0, y), (W, y)], fill=(r, g, b))
+        draw.line([(0, y), (img.size[0], y)], fill=(r, g, b))
 
 
 def _draw_panel(draw, xy: tuple[int, int, int, int], title: str | None = None) -> None:
@@ -1628,92 +1656,233 @@ def _draw_fact_cards(
     return y0 + total_h
 
 
+def _draw_fb_header(img, draw, data: dict[str, Any]) -> int:
+    """Enkel header — stor text, inga pills."""
+    cw = _canvas_w(img)
+    h = 108
+    race_name, race_date = _header_event_lines(data)
+    draw.rectangle([0, 0, cw, 5], fill=CYAN)
+    for row in range(5, h):
+        t = (row - 5) / max(h - 6, 1)
+        col = (
+            int(12 + 8 * (1 - t)),
+            int(20 + 10 * (1 - t)),
+            int(40 + 12 * (1 - t)),
+        )
+        draw.line([(0, row), (cw, row)], fill=col)
+
+    logo = _load_brand_logo(80)
+    tx = 36
+    if logo:
+        img.paste(logo, (32, 18), logo)
+        tx = 32 + logo.width + 20
+
+    f_brand = _load_font_px(40, bold=True)
+    f_event = _load_font_px(34, bold=True)
+    draw.text((tx, 22), "MX FANTASY  ·  RACE RECAP", font=f_brand, fill=CYAN)
+    sub = race_name
+    if race_date:
+        sub = f"{race_name}  ·  {race_date}"
+    draw.text((tx, 64), sub, font=f_event, fill=WHITE)
+    draw.line([(0, h - 1), (cw, h - 1)], fill=CYAN_DIM, width=2)
+    return h
+
+
+def _draw_fb_rider_class(
+    draw,
+    base_img,
+    x0: int,
+    y0: int,
+    width: int,
+    height: int,
+    title: str,
+    podium: list[dict],
+) -> None:
+    """Topp 3 som stor lista — inga podieblock."""
+    x1 = x0 + width
+    y1 = y0 + height
+    draw.rounded_rectangle([x0, y0, x1, y1], radius=14, fill=PANEL, outline=PANEL_EDGE, width=2)
+    draw.text((x0 + 18, y0 + 14), title.upper(), font=_load_font_px(30, bold=True), fill=CYAN)
+
+    by_pos = {int(p["position"]): p for p in podium}
+    medals = {1: GOLD, 2: SILVER, 3: BRONZE}
+    row_top = y0 + 52
+    row_h = (height - 58) // 3
+    f_rank = _load_font_px(32, bold=True)
+    f_name = _load_font_px(34, bold=True)
+    f_num = _load_font_px(28)
+
+    for i, pos in enumerate((1, 2, 3)):
+        ry = row_top + i * row_h + row_h // 2
+        entry = by_pos.get(pos)
+        col = medals[pos]
+        draw.text((x0 + 22, ry), f"P{pos}", font=f_rank, fill=col, anchor="lm")
+        if not entry:
+            continue
+        _paste_circle_avatar(
+            base_img,
+            x0 + 100,
+            ry,
+            38,
+            entry.get("rider_id"),
+            str(entry.get("number") or (entry.get("short_name") or "?")[:1]),
+        )
+        name = entry.get("short_name") or "?"
+        draw.text((x0 + 155, ry), name, font=f_name, fill=WHITE, anchor="lm")
+        num = entry.get("number")
+        if num:
+            draw.text((x1 - 22, ry), f"#{num}", font=f_num, fill=MUTED, anchor="rm")
+
+
+def _draw_fb_fantasy_top3(
+    draw,
+    base_img,
+    x0: int,
+    y0: int,
+    width: int,
+    height: int,
+    leaderboard: list[dict],
+) -> None:
+    x1 = x0 + width
+    y1 = y0 + height
+    draw.rounded_rectangle([x0, y0, x1, y1], radius=14, fill=PANEL, outline=PANEL_EDGE, width=2)
+    draw.text(
+        (x0 + 18, y0 + 14),
+        "FANTASY — DENNA TÄVLING",
+        font=_load_font_px(30, bold=True),
+        fill=CYAN,
+    )
+
+    top3 = sorted(
+        [r for r in leaderboard if int(r.get("rank", 99)) <= 3],
+        key=lambda r: int(r.get("rank", 99)),
+    )
+    col_w = width // 3
+    medals = {1: GOLD, 2: SILVER, 3: BRONZE}
+    f_rank = _load_font_px(36, bold=True)
+    f_name = _load_font_px(32, bold=True)
+    f_pts = _load_font_px(30, bold=True)
+
+    for row in top3:
+        rank = int(row.get("rank", 0))
+        ci = rank - 1
+        cx = x0 + col_w * ci + col_w // 2
+        cy = y0 + height // 2 + 8
+        _paste_user_avatar(
+            base_img, cx, cy - 50, 44, row.get("user_id"), row.get("display_name") or "?"
+        )
+        draw.text((cx, cy + 8), str(rank), font=f_rank, fill=medals.get(rank, MUTED), anchor="mt")
+        draw.text(
+            (cx, cy + 44),
+            _short_user_name(row.get("display_name") or "?"),
+            font=f_name,
+            fill=WHITE,
+            anchor="mt",
+        )
+        draw.text(
+            (cx, cy + 78),
+            f"{int(row.get('points', 0))} p",
+            font=f_pts,
+            fill=CYAN,
+            anchor="mt",
+        )
+
+
+def _draw_fb_season_strip(
+    draw,
+    base_img,
+    x0: int,
+    y0: int,
+    width: int,
+    height: int,
+    rows: list[dict],
+) -> None:
+    x1 = x0 + width
+    y1 = y0 + height
+    draw.rounded_rectangle([x0, y0, x1, y1], radius=14, fill=PANEL, outline=PANEL_EDGE, width=2)
+    draw.text((x0 + 18, y0 + 12), "SÄSONGSTOPPEN", font=_load_font_px(28, bold=True), fill=CYAN)
+    shown = rows[:5]
+    if not shown:
+        return
+    col_w = width // len(shown)
+    f_name = _load_font_px(26, bold=True)
+    f_pts = _load_font_px(24, bold=True)
+    cy = y0 + height // 2 + 10
+    for i, row in enumerate(shown):
+        rank = int(row.get("rank", i + 1))
+        cx = x0 + col_w * i + col_w // 2
+        medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
+        _paste_user_avatar(
+            base_img, cx, cy - 42, 32, row.get("user_id"), row.get("display_name") or "?"
+        )
+        draw.text((cx, cy + 2), f"{rank}.", font=f_name, fill=medal, anchor="mt")
+        draw.text(
+            (cx, cy + 30),
+            _short_user_name(row.get("display_name") or "?")[:14],
+            font=f_name,
+            fill=WHITE,
+            anchor="mt",
+        )
+        draw.text(
+            (cx, cy + 58),
+            f"{int(row.get('points', 0)):,}".replace(",", " "),
+            font=f_pts,
+            fill=CYAN,
+            anchor="mt",
+        )
+
+
 def _render_facebook_landscape_png(data: dict[str, Any]) -> bytes:
-    """Liggande Facebook-bild — bred, luftig layout (rekommenderad)."""
+    """Enkel Facebook-bild: stor text, förare + fantasy (+ valfri säsong)."""
     from PIL import Image, ImageDraw
 
     data = {**data, "layout": "facebook"}
-    img = Image.new("RGB", (W_FB, H_FB_WORK), BG_TOP)
+    h = 900
+    img = Image.new("RGB", (W_FB, h), BG_TOP)
     _draw_vertical_gradient(img)
     draw = ImageDraw.Draw(img)
 
-    y = _draw_recap_header(img, draw, data)
-    gap = 14
-    margin = 28
-    col_gap = 14
-    half = (W_FB - margin * 2 - col_gap) // 2
+    y = _draw_fb_header(img, draw, data) + 12
+    margin = 32
+    gap = 12
+    inner_w = W_FB - margin * 2
+    half = (inner_w - gap) // 2
     mods = data.get("modules") or {}
     labels = data.get("class_labels") or {}
 
-    if mods.get("rider_podium") and data.get("has_results"):
+    has_riders = mods.get("rider_podium") and data.get("has_results")
+    has_race = mods.get("race") and data.get("race_leaderboard")
+    has_season = mods.get("season_snippet") and data.get("season_top_snippet")
+
+    if has_riders:
         rp = data.get("rider_podium_primary") or []
         rs = data.get("rider_podium_secondary") or []
-        if rp or rs:
-            ph = 248
-            y1 = _draw_rider_podium_row(
-                draw, img, margin, y, half,
-                f"{labels.get('primary', '450')} SX", rp, panel_h=ph,
+        rh = 300
+        if rp:
+            _draw_fb_rider_class(
+                draw, img, margin, y, half, rh,
+                f"{labels.get('primary', '450')} SX", rp,
             )
-            y2 = _draw_rider_podium_row(
-                draw, img, margin + half + col_gap, y, half,
-                f"{labels.get('secondary', '250')} SX", rs, panel_h=ph,
+        if rs:
+            _draw_fb_rider_class(
+                draw, img, margin + half + gap, y, half, rh,
+                f"{labels.get('secondary', '250')} SX", rs,
             )
-            y = max(y1, y2) + gap
+        y += rh + gap
 
-    if mods.get("race") and data.get("race_leaderboard"):
-        y = _draw_user_podium_section(
-            draw, img, y, "Fantasy — denna tävling", data["race_leaderboard"], data,
-            base_panel=236, max_extras=2,
-        ) + gap
+    if has_race:
+        fh = 260
+        _draw_fb_fantasy_top3(draw, img, margin, y, inner_w, fh, data["race_leaderboard"])
+        y += fh + gap
 
-    row_y = y
-    row_bottom = row_y
-    has_weekly = bool(mods.get("weekly") and data.get("weekly_highlights"))
-    has_season = bool(mods.get("season_snippet") and data.get("season_top_snippet"))
+    if has_season:
+        sh = 150
+        _draw_fb_season_strip(draw, img, margin, y, inner_w, sh, data["season_top_snippet"])
+        y += sh + gap
 
-    if has_weekly and has_season:
-        highlights = data["weekly_highlights"]
-        rows = data["season_top_snippet"]
-        row_bottom = max(
-            row_bottom,
-            _draw_weekly_highlights_section(
-                draw, img, row_y, highlights, data,
-                x0=margin, x1=margin + half, card_h=72,
-            ),
-            _draw_season_top_snippet(
-                draw, img, row_y, rows, data,
-                x0=margin + half + col_gap, x1=W_FB - margin, row_h=48,
-            ),
-        )
-    elif has_weekly:
-        row_bottom = _draw_weekly_highlights_section(
-            draw, img, row_y, data["weekly_highlights"], data, card_h=80,
-        )
-    elif has_season:
-        row_bottom = _draw_season_top_snippet(
-            draw, img, row_y, data["season_top_snippet"], data, row_h=50,
-        )
-
-    if row_bottom > row_y:
-        y = row_bottom + gap
-
-    if mods.get("facts") and data.get("fun_facts"):
-        facts = [f for f in data["fun_facts"] if f.get("text")][:1]
-        if facts and y < H_FB_WORK - 120:
-            y = _draw_fact_cards(
-                draw, y, facts, data, img_width=W_FB, compact=True
-            ) + gap
-
-    footer_pad = 48
-    final_h = min(H_FB_MAX, max(H_FB_MIN, y + footer_pad))
-    if final_h < H_FB_WORK:
-        img = img.crop((0, 0, W_FB, final_h))
-        draw = ImageDraw.Draw(img)
-
-    foot_f = _load_font(24)
-    foot_y = final_h - 36
-    draw.text((W_FB // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, final_h - 5, W_FB, final_h], fill=CYAN)
+    foot_f = _load_font_px(22)
+    draw.text((W_FB // 2, h - 32), "mxfantasy.se", font=foot_f, fill=MUTED, anchor="mt")
+    draw.rectangle([0, h - 5, W_FB, h], fill=CYAN)
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)

@@ -135,7 +135,7 @@ def social_recap_png():
 	layout = request.args.get("layout", "facebook")
 	if layout == "feed":
 		layout = "facebook"
-	if layout not in ("facebook", "square", "portrait", "story"):
+	if layout not in ("facebook", "portrait", "story"):
 		layout = "facebook"
 	try:
 		from social_recap_service import build_social_recap_data, render_social_recap_png
