@@ -5,6 +5,53 @@
     return d.innerHTML;
   }
 
+  function getEls() {
+    return {
+      btn: document.getElementById('pit-lane-bell-btn'),
+      dd: document.getElementById('pit-lane-dropdown'),
+    };
+  }
+
+  function isOpen(dd) {
+    return dd && !dd.classList.contains('hidden');
+  }
+
+  function positionDropdown() {
+    var e = getEls();
+    if (!e.btn || !e.dd) return;
+    if (e.dd.parentNode !== document.body) {
+      document.body.appendChild(e.dd);
+    }
+    var r = e.btn.getBoundingClientRect();
+    e.dd.style.position = 'fixed';
+    e.dd.style.top = Math.round(r.bottom + 8) + 'px';
+    e.dd.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + 'px';
+    e.dd.style.left = 'auto';
+    e.dd.style.width = '18rem';
+    e.dd.style.maxWidth = 'min(18rem, calc(100vw - 16px))';
+    e.dd.style.zIndex = '99999';
+  }
+
+  function closeDropdown() {
+    var dd = getEls().dd;
+    if (dd) dd.classList.add('hidden');
+  }
+
+  function openDropdown() {
+    var e = getEls();
+    if (!e.dd) return;
+    positionDropdown();
+    e.dd.classList.remove('hidden');
+    refresh();
+  }
+
+  function toggleDropdown() {
+    var dd = getEls().dd;
+    if (!dd) return;
+    if (isOpen(dd)) closeDropdown();
+    else openDropdown();
+  }
+
   function refresh() {
     var badge = document.getElementById('pit-lane-badge');
     var list = document.getElementById('pit-lane-dropdown-list');
@@ -42,38 +89,45 @@
           })
           .join('');
       })
-      .catch(function (e) {
-        console.warn('Pit Lane bell:', e);
+      .catch(function (err) {
+        console.warn('Pit Lane bell:', err);
       });
   }
 
-  function toggleDropdown() {
-    var dd = document.getElementById('pit-lane-dropdown');
-    if (!dd) return;
-    dd.classList.toggle('hidden');
-    if (!dd.classList.contains('hidden')) refresh();
+  function onOutsideClick(ev) {
+    var e = getEls();
+    if (!e.dd || !isOpen(e.dd)) return;
+    var t = ev.target;
+    if (e.btn && (e.btn === t || e.btn.contains(t))) return;
+    if (e.dd.contains(t)) return;
+    closeDropdown();
   }
 
   function init() {
-    var btn = document.getElementById('pit-lane-bell-btn');
-    var dd = document.getElementById('pit-lane-dropdown');
-    var wrap = document.getElementById('pit-lane-bell-wrap');
-    if (!btn || !dd) return;
+    var e = getEls();
+    if (!e.btn || !e.dd) return;
 
-    btn.addEventListener('click', function (e) {
-      e.stopPropagation();
+    e.btn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
       toggleDropdown();
     });
 
-    dd.addEventListener('click', function (e) {
-      e.stopPropagation();
+    e.dd.addEventListener('click', function (ev) {
+      ev.stopPropagation();
     });
 
-    document.addEventListener('click', function (e) {
-      if (!dd || dd.classList.contains('hidden')) return;
-      if (wrap && wrap.contains(e.target)) return;
-      dd.classList.add('hidden');
+    document.addEventListener('click', onOutsideClick);
+
+    window.addEventListener('resize', function () {
+      if (isOpen(e.dd)) positionDropdown();
     });
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (isOpen(e.dd)) positionDropdown();
+      },
+      true
+    );
 
     refresh();
     setInterval(refresh, 60000);
