@@ -54,11 +54,12 @@
 
                 <label class="block text-sm text-gray-300 mb-1">Format (Facebook)</label>
                 <select id="layout-select" class="w-full mb-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white">
-                    <option value="square" selected>Facebook (kvadrat 1200×1200, rekommenderas)</option>
-                    <option value="portrait">Porträtt (hög, allt med — liten i FB-visaren)</option>
+                    <option value="facebook" selected>Facebook liggande (rekommenderas)</option>
+                    <option value="portrait">Porträtt — alla moduler (liten i FB-visaren)</option>
+                    <option value="square">Kvadrat — kompakt (trångt med alla moduler)</option>
                     <option value="story">Story (9:16)</option>
                 </select>
-                <p class="text-xs text-gray-400 mb-4">Bredare bild = större i Facebooks bildvisare (som nyhetsbilder). Kvadrat är bäst för inlägg.</p>
+                <p class="text-xs text-gray-400 mb-4">Liggande fyller skärmen i Facebook (som nyhetsbilder). Vill du ha allt med? Välj <strong>Porträtt</strong>.</p>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
@@ -205,7 +206,9 @@
                 if (!json.has_results) {
                     statusMsg.textContent = 'Obs: inga resultat i DB än — fältfakta kan vara begränsade.';
                 } else {
-                    statusMsg.textContent = 'Klar.';
+                    const lay = document.getElementById('layout-select').value;
+                    const fmt = lay === 'facebook' ? '1620×~900' : lay === 'square' ? '1200×1200' : lay === 'story' ? '1080×1920' : '1080×variabel';
+                    statusMsg.textContent = 'Klar. Export: ' + fmt + ' px.';
                 }
             } catch (e) {
                 statusMsg.textContent = 'Fel: ' + e.message;

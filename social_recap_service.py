@@ -38,8 +38,12 @@ RED = (248, 113, 113)
 ACCENT_ORANGE = (251, 146, 60)
 
 W_PORTRAIT = 1080
-W_SQUARE = 1200  # 1:1 — visas mycket större i Facebooks bildvisare än hög porträtt
+W_SQUARE = 1200
 H_SQUARE = 1200
+W_FB = 1620  # liggande — fyller FB-bildvisaren (som nyhetsbilder)
+H_FB_MIN = 900
+H_FB_MAX = 1180
+H_FB_WORK = 1220
 H_FEED_MIN = 1350  # minhöjd porträtt-flöde
 H_STORY = 1920
 H_WORK = 2400  # ritbuffer porträtt
@@ -1035,7 +1039,8 @@ def _draw_recap_pill(
 def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
     """Horisontell header: logga vänster, text på en rad."""
     cw = _canvas_w(img)
-    header_h = _sz(118) if data.get("layout") == "square" else _sz(148)
+    compact_header = data.get("layout") in ("square", "facebook")
+    header_h = _sz(118) if compact_header else _sz(148)
     pad_x = _sz(32)
     race_name, race_date = _header_event_lines(data)
 
@@ -1623,6 +1628,98 @@ def _draw_fact_cards(
     return y0 + total_h
 
 
+def _render_facebook_landscape_png(data: dict[str, Any]) -> bytes:
+    """Liggande Facebook-bild — bred, luftig layout (rekommenderad)."""
+    from PIL import Image, ImageDraw
+
+    data = {**data, "layout": "facebook"}
+    img = Image.new("RGB", (W_FB, H_FB_WORK), BG_TOP)
+    _draw_vertical_gradient(img)
+    draw = ImageDraw.Draw(img)
+
+    y = _draw_recap_header(img, draw, data)
+    gap = 14
+    margin = 28
+    col_gap = 14
+    half = (W_FB - margin * 2 - col_gap) // 2
+    mods = data.get("modules") or {}
+    labels = data.get("class_labels") or {}
+
+    if mods.get("rider_podium") and data.get("has_results"):
+        rp = data.get("rider_podium_primary") or []
+        rs = data.get("rider_podium_secondary") or []
+        if rp or rs:
+            ph = 248
+            y1 = _draw_rider_podium_row(
+                draw, img, margin, y, half,
+                f"{labels.get('primary', '450')} SX", rp, panel_h=ph,
+            )
+            y2 = _draw_rider_podium_row(
+                draw, img, margin + half + col_gap, y, half,
+                f"{labels.get('secondary', '250')} SX", rs, panel_h=ph,
+            )
+            y = max(y1, y2) + gap
+
+    if mods.get("race") and data.get("race_leaderboard"):
+        y = _draw_user_podium_section(
+            draw, img, y, "Fantasy — denna tävling", data["race_leaderboard"], data,
+            base_panel=236, max_extras=2,
+        ) + gap
+
+    row_y = y
+    row_bottom = row_y
+    has_weekly = bool(mods.get("weekly") and data.get("weekly_highlights"))
+    has_season = bool(mods.get("season_snippet") and data.get("season_top_snippet"))
+
+    if has_weekly and has_season:
+        highlights = data["weekly_highlights"]
+        rows = data["season_top_snippet"]
+        row_bottom = max(
+            row_bottom,
+            _draw_weekly_highlights_section(
+                draw, img, row_y, highlights, data,
+                x0=margin, x1=margin + half, card_h=72,
+            ),
+            _draw_season_top_snippet(
+                draw, img, row_y, rows, data,
+                x0=margin + half + col_gap, x1=W_FB - margin, row_h=48,
+            ),
+        )
+    elif has_weekly:
+        row_bottom = _draw_weekly_highlights_section(
+            draw, img, row_y, data["weekly_highlights"], data, card_h=80,
+        )
+    elif has_season:
+        row_bottom = _draw_season_top_snippet(
+            draw, img, row_y, data["season_top_snippet"], data, row_h=50,
+        )
+
+    if row_bottom > row_y:
+        y = row_bottom + gap
+
+    if mods.get("facts") and data.get("fun_facts"):
+        facts = [f for f in data["fun_facts"] if f.get("text")][:1]
+        if facts and y < H_FB_WORK - 120:
+            y = _draw_fact_cards(
+                draw, y, facts, data, img_width=W_FB, compact=True
+            ) + gap
+
+    footer_pad = 48
+    final_h = min(H_FB_MAX, max(H_FB_MIN, y + footer_pad))
+    if final_h < H_FB_WORK:
+        img = img.crop((0, 0, W_FB, final_h))
+        draw = ImageDraw.Draw(img)
+
+    foot_f = _load_font(24)
+    foot_y = final_h - 36
+    draw.text((W_FB // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
+    draw.rectangle([0, final_h - 5, W_FB, final_h], fill=CYAN)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 def _render_square_recap_png(data: dict[str, Any]) -> bytes:
     """Kvadrat 1200×1200 — fyller Facebooks bildvisare (bredare = större)."""
     from PIL import Image, ImageDraw
@@ -1704,14 +1801,15 @@ def _render_square_recap_png(data: dict[str, Any]) -> bytes:
 def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) -> bytes:
     from PIL import Image, ImageDraw
 
-    layout = (layout or data.get("layout") or "square").lower()
+    layout = (layout or data.get("layout") or "facebook").lower()
     if layout == "feed":
-        layout = "square"
+        layout = "facebook"
+    if layout == "facebook":
+        return _render_facebook_landscape_png(data)
     if layout == "square":
         return _render_square_recap_png(data)
     if layout not in ("portrait", "story"):
-        layout = "square"
-        return _render_square_recap_png(data)
+        return _render_facebook_landscape_png(data)
 
     data = {**data, "layout": layout}
     work_h = H_WORK if layout == "portrait" else H_STORY
