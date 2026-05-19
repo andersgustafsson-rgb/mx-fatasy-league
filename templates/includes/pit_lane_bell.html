@@ -3,7 +3,7 @@
   <button
     type="button"
     id="pit-lane-bell-btn"
-    class="relative p-2 rounded-lg bg-gray-800 border border-gray-600 hover:bg-gray-700 text-lg leading-none"
+    class="relative z-[101] p-2 rounded-lg bg-gray-800 border border-gray-600 hover:bg-gray-700 text-lg leading-none cursor-pointer pointer-events-auto"
     title="Pit Lane — meddelanden"
     aria-label="Meddelanden"
   >
@@ -26,5 +26,5 @@
     </div>
   </div>
 </div>
-<script src="{{ url_for('static', filename='pit_lane_bell.js') }}"></script>
+<script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=3"></script>
 {% endif %}
