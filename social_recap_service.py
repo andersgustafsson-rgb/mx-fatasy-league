@@ -1651,7 +1651,6 @@ def render_social_recap_png(data: dict[str, Any], *, layout: str | None = None) 
 
     if final_h < work_h:
         img = img.crop((0, 0, W, final_h))
-        _draw_vertical_gradient(img)
         draw = ImageDraw.Draw(img)
 
     foot_f = _load_font(24)
