@@ -108,6 +108,25 @@ def _short_user_name(name: str, max_len: int = 14) -> str:
     return (s[: max_len - 1] + "…") if len(s) > max_len else s
 
 
+def _leaderboard_rank(row: dict[str, Any], default: int = 99) -> int:
+    """Säker int(rank) — None/värden från API ska inte ge TypeError."""
+    v = row.get("rank", default)
+    if v is None:
+        return default
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _pct_num(x: Any) -> float:
+    """Crowd-summary kan ge pct som str — undvik ValueError i f-strängar med :.0f."""
+    try:
+        return float(x if x is not None else 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _plain_draw_text(text: str) -> str:
     """Ta bort emoji — DejaVu kan inte rita dem (visas som □)."""
     s = re.sub(
@@ -184,13 +203,13 @@ def _season_top_snippet(limit: int = 5) -> list[dict[str, Any]]:
     from main import calculate_leaderboard_deltas
 
     out = []
-    for row in calculate_leaderboard_deltas()[: max(1, limit)]:
+    for i, row in enumerate(calculate_leaderboard_deltas()[: max(1, limit)]):
         item = {
             "user_id": row["user_id"],
             "username": row["username"],
             "display_name": row.get("display_name") or row["username"],
-            "points": int(row["total_points"]),
-            "rank": row["rank"],
+            "points": int(row.get("total_points") or 0),
+            "rank": _leaderboard_rank(row, i + 1),
         }
         _attach_user_meta(item)
         out.append(item)
@@ -660,7 +679,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
                 {
                     "id": f"slot_{pos}_450",
                     "group": f"slot_{pos}",
-                    "text": f"Fältets {plabel}-val 450: {top.get('name', '?')} ({top.get('pct', 0):.0f}%)",
+                    "text": f"Fältets {plabel}-val 450: {top.get('name', '?')} ({_pct_num(top.get('pct')):.0f}%)",
                 }
             )
 
@@ -712,7 +731,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
             {
                 "id": "holeshot_crowd",
                 "group": "holeshot",
-                "text": f"Holeshot {cfg['primary'][1]}: {top_h.get('name', '?')} ({top_h.get('pct', 0):.0f}%)",
+                "text": f"Holeshot {cfg['primary'][1]}: {top_h.get('name', '?')} ({_pct_num(top_h.get('pct')):.0f}%)",
             }
         )
 
@@ -723,7 +742,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
             {
                 "id": "holeshot_250",
                 "group": "holeshot_250",
-                "text": f"Holeshot {cfg['secondary'][1]}: {top_h.get('name', '?')} ({top_h.get('pct', 0):.0f}%)",
+                "text": f"Holeshot {cfg['secondary'][1]}: {top_h.get('name', '?')} ({_pct_num(top_h.get('pct')):.0f}%)",
             }
         )
 
@@ -761,7 +780,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
                 {
                     "id": "wildcard",
                     "group": "wildcard",
-                    "text": f"Wildcard: P{w.get('position', '?')} {w.get('name', '?')} ({w.get('pct', 0):.0f}%)",
+                    "text": f"Wildcard: P{w.get('position', '?')} {w.get('name', '?')} ({_pct_num(w.get('pct')):.0f}%)",
                 }
             )
 
@@ -882,7 +901,10 @@ def build_facebook_caption(data: dict[str, Any]) -> str:
     if data.get("modules", {}).get("season_snippet") and snippet:
         lines.append("📊 Säsongstoppen:")
         for row in snippet:
-            lines.append(f"{row['rank']}. {row['display_name']} — {row['points']} p")
+            rk = row.get("rank", "?")
+            nm = row.get("display_name") or "?"
+            pts = row.get("points", 0)
+            lines.append(f"{rk}. {nm} — {pts} p")
         lines.append("")
 
     for fact in (data.get("fun_facts") or [])[:4]:
@@ -1582,8 +1604,8 @@ def _draw_user_podium_section(
 ) -> int:
     """Podium for top 3 + optional rows 4+."""
     cw = _canvas_w(base_img)
-    top3 = [r for r in leaderboard if int(r.get("rank", 99)) <= 3]
-    extras = [r for r in leaderboard if int(r.get("rank", 99)) > 3]
+    top3 = [r for r in leaderboard if _leaderboard_rank(r) <= 3]
+    extras = [r for r in leaderboard if _leaderboard_rank(r) > 3]
     if max_extras is not None:
         extras = extras[:max_extras]
     row_extra_h = 62 if large else _sz(48)
@@ -1607,7 +1629,7 @@ def _draw_user_podium_section(
         label_w = None
     _draw_panel(draw, (margin, y0, right, y0 + panel_h), None if large else title, large=large)
 
-    by_pos = {int(r["rank"]): r for r in top3}
+    by_pos = {_leaderboard_rank(r): r for r in top3}
     if large:
         floor_y = y0 + title_pad + under_title + max_bh
         blocks = [(2, SILVER, 100), (1, GOLD, 125), (3, BRONZE, 90)]
@@ -1680,7 +1702,7 @@ def _draw_user_podium_section(
                 nf = bf
                 name = _short_user_name(name)
             pts = int(row.get("points", 0))
-            rank = int(row.get("rank", 0))
+            rank = _leaderboard_rank(row, 0)
             _paste_user_avatar(
                 base_img, av_cx, row_cy,
                 av, row.get("user_id"), row.get("display_name") or "?",
@@ -1802,7 +1824,7 @@ def _draw_season_top_snippet(
     name_avail = right - name_x - pts_reserve
     for i, row in enumerate(rows):
         y_base = y0 + title_h + list_top_pad + i * row_h
-        rank = int(row.get("rank", i + 1))
+        rank = _leaderboard_rank(row, i + 1)
         medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
         row_mid = y_base + row_h // 2
         _paste_user_avatar(
@@ -2020,8 +2042,8 @@ def _draw_fb_fantasy_top3(
     )
 
     top3 = sorted(
-        [r for r in leaderboard if int(r.get("rank", 99)) <= 3],
-        key=lambda r: int(r.get("rank", 99)),
+        [r for r in leaderboard if _leaderboard_rank(r) <= 3],
+        key=_leaderboard_rank,
     )
     col_w = width // 3
     medals = {1: GOLD, 2: SILVER, 3: BRONZE}
@@ -2029,9 +2051,8 @@ def _draw_fb_fantasy_top3(
     f_name = _load_font_px(32, bold=True)
     f_pts = _load_font_px(30, bold=True)
 
-    for row in top3:
-        rank = int(row.get("rank", 0))
-        ci = rank - 1
+    for ci, row in enumerate(top3):
+        rank = _leaderboard_rank(row, ci + 1)
         cx = x0 + col_w * ci + col_w // 2
         cy = y0 + height // 2 + 8
         _paste_user_avatar(
@@ -2075,7 +2096,7 @@ def _draw_fb_season_strip(
     f_pts = _load_font_px(24, bold=True)
     cy = y0 + height // 2 + 10
     for i, row in enumerate(shown):
-        rank = int(row.get("rank", i + 1))
+        rank = _leaderboard_rank(row, i + 1)
         cx = x0 + col_w * i + col_w // 2
         medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
         _paste_user_avatar(
@@ -2178,7 +2199,7 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
 
     if mods.get("race") and data.get("race_leaderboard"):
         lb = data["race_leaderboard"]
-        extras_n = max(0, min(2, len([r for r in lb if int(r.get("rank", 99)) > 3])))
+        extras_n = max(0, min(2, len([r for r in lb if _leaderboard_rank(r) > 3])))
         y = _draw_user_podium_section(
             draw, img, y, "Fantasy — denna tävling", lb, data,
             max_extras=extras_n, large=True,

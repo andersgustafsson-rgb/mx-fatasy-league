@@ -176,13 +176,23 @@
             const errLabel = which === 'g' ? 'Bild 1 (pallar)' : 'Bild 2 (statistik)';
             if (!res.ok) {
                 const t = await res.text();
+                let detail = t.slice(0, 300);
+                try {
+                    const j = JSON.parse(t);
+                    if (j.error) detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                } catch (_) { /* plain text */ }
                 imgEl.removeAttribute('src');
-                throw new Error(errLabel + ' API ' + res.status + ': ' + t.slice(0, 200));
+                throw new Error(errLabel + ' API ' + res.status + ': ' + detail);
             }
             if (!ct.includes('image/png')) {
                 const t = await res.text();
+                let detail = t.slice(0, 300);
+                try {
+                    const j = JSON.parse(t);
+                    if (j.error) detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                } catch (_) { /* plain text */ }
                 imgEl.removeAttribute('src');
-                throw new Error(errLabel + ' — servern skickade inte PNG: ' + t.slice(0, 200));
+                throw new Error(errLabel + ' — servern skickade inte PNG: ' + detail);
             }
             const blob = await res.blob();
             const u = URL.createObjectURL(blob);

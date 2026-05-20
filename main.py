@@ -15697,10 +15697,10 @@ def init_database():
                         print('Adding "class" column to competition_results table...')
                         db.session.execute(db.text('ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS "class" VARCHAR(10)'))
                         db.session.commit()
-                    # Backfill any missing class snapshots from current Rider.class_name
+                    # Backfill: riders.class is the real column name (not class_name).
                     db.session.execute(db.text("""
                         UPDATE competition_results cr
-                        SET "class" = r.class_name
+                        SET "class" = r."class"
                         FROM riders r
                         WHERE cr.rider_id = r.id
                           AND cr."class" IS NULL
@@ -15716,12 +15716,13 @@ def init_database():
                         db.session.commit()
                     db.session.execute(db.text("""
                         UPDATE competition_results
-                        SET "class" = (SELECT class_name FROM riders WHERE riders.id = competition_results.rider_id)
+                        SET "class" = (SELECT "class" FROM riders WHERE riders.id = competition_results.rider_id)
                         WHERE "class" IS NULL
                     """))
                     db.session.commit()
             except Exception as e:
                 print(f'Warning: Could not migrate competition_results."class": {e}')
+                db.session.rollback()
             
             # Only create test data if database is completely empty AND we're in development
             try:

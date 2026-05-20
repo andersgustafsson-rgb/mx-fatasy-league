@@ -3,7 +3,17 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from functools import wraps
 
-from flask import Blueprint, render_template, redirect, url_for, session, jsonify, request, Response
+from flask import (
+	Blueprint,
+	current_app,
+	jsonify,
+	redirect,
+	render_template,
+	request,
+	Response,
+	session,
+	url_for,
+)
 
 from models import (
 	db,
@@ -112,7 +122,8 @@ def social_recap_api():
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
-		return jsonify({"error": str(e)}), 500
+		current_app.logger.exception("social_recap_api failed: %s", e)
+		return jsonify({"error": str(e) or type(e).__name__, "error_type": type(e).__name__}), 500
 
 
 @bp.get("/admin/api/social-recap.png")
@@ -165,7 +176,10 @@ def social_recap_png():
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
-		return jsonify({"error": str(e)}), 500
+		current_app.logger.exception("social_recap_png failed: %s", e)
+		return jsonify(
+			{"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
+		), 500
 
 
 @bp.route("/admin")
