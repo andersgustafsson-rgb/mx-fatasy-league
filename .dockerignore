@@ -1,0 +1,45 @@
+# Snabbare Docker-build på Render — inget som behövs i containern
+.git
+.github
+.cursor
+__pycache__
+*.pyc
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+instance/
+mx.dump
+_out.txt
+test_out.txt
+*.log
+
+# Lokala verktyg / data / docs
+excel/
+scripts/
+data/
+migrations/
+*.md
+!README.md
+
+# Test & dev-skript
+test_*.py
+debug_*.py
+quick_test.py
+run_simulation.py
+reset_*.py
+import_*.py
+assign_*.py
+copy_*.py
+download_*.py
+dedupe_*.py
+*.bat
+*.ps1
+*.csv
+docker-compose.yml
+render.yaml
+vercel.json
+
+# Duplicerad trackmap-mapp (samma bilder finns under pro_motocross)
+static/trackmaps pro motocross/

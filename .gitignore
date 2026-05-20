@@ -50,9 +50,6 @@ tmp/
 temp/
 *.tmp
 
-# Docker
-.dockerignore
-
 # Coverage reports
 htmlcov/
 .coverage
