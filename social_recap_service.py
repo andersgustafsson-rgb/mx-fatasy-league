@@ -2106,16 +2106,26 @@ def _recap_footer_label() -> str:
     return f"{host} · Spela med oss"
 
 
-def _footer(img, draw, final_h: int) -> None:
+def _footer(img, draw, final_h: int, *, bar_h: int = 5) -> None:
+    """Sidfot för alla recap-bilder: sajt + Powered by MotoAction + cyan kant."""
     cw = _canvas_w(img)
+    f_site = _load_font_px(26)
+    f_pb = _load_font_px(20)
     draw.text(
-        (cw // 2, final_h - 34),
+        (cw // 2, final_h - 52),
         _recap_footer_label(),
-        font=_load_font_px(26),
+        font=f_site,
         fill=MUTED,
         anchor="mt",
     )
-    draw.rectangle([0, final_h - 5, cw, final_h], fill=CYAN)
+    draw.text(
+        (cw // 2, final_h - 22),
+        "Powered by MotoAction.se",
+        font=f_pb,
+        fill=CYAN_DIM,
+        anchor="mt",
+    )
+    draw.rectangle([0, final_h - bar_h, cw, final_h], fill=CYAN)
 
 
 def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
@@ -2160,7 +2170,7 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
             max_extras=extras_n, large=True,
         ) + gap
 
-    final_h = min(work_h, max(1180, y + 52))
+    final_h = min(work_h, max(1180, y + 72))
     if final_h < work_h:
         img = img.crop((0, 0, W_FB, final_h))
         draw = ImageDraw.Draw(img)
@@ -2202,7 +2212,7 @@ def _render_recap_stats_png(data: dict[str, Any]) -> bytes:
             draw, y, data["fun_facts"], data, img_width=W_FB, large=True,
         ) + gap
 
-    final_h = min(work_h, max(1000, y + 56))
+    final_h = min(work_h, max(1000, y + 72))
     if final_h < work_h:
         img = img.crop((0, 0, W_FB, final_h))
         draw = ImageDraw.Draw(img)
