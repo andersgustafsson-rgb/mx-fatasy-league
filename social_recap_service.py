@@ -2297,10 +2297,7 @@ def _render_square_recap_png(data: dict[str, Any]) -> bytes:
                 draw, y, facts, data, img_width=W_SQUARE, compact=True
             ) + gap
 
-    foot_f = _load_font(24)
-    foot_y = H_SQUARE - _sz(40)
-    draw.text((W_SQUARE // 2, foot_y), _recap_footer_label(), font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, H_SQUARE - _sz(6), W_SQUARE, H_SQUARE], fill=CYAN)
+    _footer(img, draw, H_SQUARE, bar_h=max(5, _sz(6)))
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
@@ -2389,7 +2386,7 @@ def render_social_recap_png(
     if mods.get("facts") and data.get("fun_facts"):
         y = _draw_fact_cards(draw, y, data["fun_facts"], data) + gap
 
-    footer_pad = _sz(56)
+    footer_pad = _sz(74)
     content_h = y + footer_pad
     if layout == "portrait":
         final_h = min(H_WORK, max(H_FEED_MIN, content_h))
@@ -2400,10 +2397,7 @@ def render_social_recap_png(
         img = img.crop((0, 0, W_PORTRAIT, final_h))
         draw = ImageDraw.Draw(img)
 
-    foot_f = _load_font(24)
-    foot_y = final_h - _sz(40)
-    draw.text((W_PORTRAIT // 2, foot_y), _recap_footer_label(), font=foot_f, fill=MUTED, anchor="mt")
-    draw.rectangle([0, final_h - _sz(6), W_PORTRAIT, final_h], fill=CYAN)
+    _footer(img, draw, final_h, bar_h=max(5, _sz(6)))
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
