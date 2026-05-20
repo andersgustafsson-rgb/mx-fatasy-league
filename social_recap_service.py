@@ -4,7 +4,9 @@ from __future__ import annotations
 import base64
 import io
 import json
+import os
 import re
+from urllib.parse import urlparse
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -2069,11 +2071,21 @@ def _draw_fb_season_strip(
         )
 
 
+def _recap_footer_label() -> str:
+    """Webbadress i recap-footer — från PUBLIC_BASE_URL/Render, inte mxfantasy.se."""
+    for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
+        v = (os.getenv(key) or "").strip().rstrip("/")
+        if v:
+            host = urlparse(v).netloc or v.split("://", 1)[-1].split("/")[0]
+            return f"{host} · Spela med oss"
+    return "mx-fatasy-league.onrender.com · Spela med oss"
+
+
 def _footer(img, draw, final_h: int) -> None:
     cw = _canvas_w(img)
     draw.text(
         (cw // 2, final_h - 34),
-        "mxfantasy.se · Spela med oss",
+        _recap_footer_label(),
         font=_load_font_px(26),
         fill=MUTED,
         anchor="mt",
@@ -2252,7 +2264,7 @@ def _render_square_recap_png(data: dict[str, Any]) -> bytes:
 
     foot_f = _load_font(24)
     foot_y = H_SQUARE - _sz(40)
-    draw.text((W_SQUARE // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
+    draw.text((W_SQUARE // 2, foot_y), _recap_footer_label(), font=foot_f, fill=MUTED, anchor="mt")
     draw.rectangle([0, H_SQUARE - _sz(6), W_SQUARE, H_SQUARE], fill=CYAN)
 
     buf = io.BytesIO()
