@@ -1,6 +1,7 @@
 """Pit Lane — meddelandecenter, admin-historik och DM."""
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime
 
 from models import (
@@ -16,6 +17,21 @@ from models import (
 
 MAX_MESSAGE_LENGTH = 2000
 _schema_ready = False
+
+
+def normalize_pit_lane_body(body: str) -> str:
+    """Behåll emoji och vanlig text; normalisera Unicode och ta bort kontrolltecken."""
+    text = unicodedata.normalize("NFC", (body or "").strip())
+    out: list[str] = []
+    for ch in text:
+        if ch in "\n\r\t":
+            out.append(ch)
+            continue
+        cat = unicodedata.category(ch)
+        if cat == "Cc":
+            continue
+        out.append(ch)
+    return "".join(out).strip()
 
 
 def _thread_pair(user_id_a: int, user_id_b: int) -> tuple[int, int]:
@@ -74,7 +90,7 @@ def sync_global_sim_announcement(body: str | None, priority: str, active: bool) 
 def publish_admin_announcement(
     body: str, priority: str = "info", created_by_user_id: int | None = None
 ) -> AdminAnnouncement:
-    body = body.strip()
+    body = normalize_pit_lane_body(body)
     AdminAnnouncement.query.filter_by(is_active=True).update({"is_active": False})
     ann = AdminAnnouncement(
         body=body,
@@ -176,7 +192,7 @@ def _display_name(user: User | None) -> str:
 
 
 def send_direct_message(from_user_id: int, to_user_id: int, body: str) -> Message:
-    body = (body or "").strip()
+    body = normalize_pit_lane_body(body)
     if not body:
         raise ValueError("empty_body")
     if len(body) > MAX_MESSAGE_LENGTH:

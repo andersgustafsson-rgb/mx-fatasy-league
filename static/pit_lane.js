@@ -9,10 +9,70 @@
   let openThreadSeq = 0;
   let threadDomMountedId = null;
 
+  const PIT_LANE_EMOJIS = [
+    '😀', '😂', '😍', '😎', '🤔', '😅', '🙌', '👍', '👎', '🔥', '💪', '⭐', '✅', '❌', '❤️',
+    '🏁', '🏆', '🥇', '🥈', '🥉', '🏍️', '🛞', '💨', '🎯', '🤯', '💀', '😤', '🤝', '👏', '🙏',
+    '🇸🇪', '🇺🇸', '🎉', '📢', '⏰', '💬', '📈', '📉',
+  ];
+
   function esc(s) {
     const d = document.createElement('div');
     d.textContent = s == null ? '' : String(s);
     return d.innerHTML;
+  }
+
+  function insertAtCursor(textarea, text) {
+    if (!textarea || !text) return;
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? start;
+    const v = textarea.value;
+    textarea.value = v.slice(0, start) + text + v.slice(end);
+    const pos = start + text.length;
+    textarea.selectionStart = pos;
+    textarea.selectionEnd = pos;
+    textarea.focus();
+  }
+
+  function attachEmojiPicker(textarea) {
+    if (!textarea || textarea.dataset.pitEmoji === '1') return;
+    textarea.dataset.pitEmoji = '1';
+    textarea.classList.add('pit-lane-text');
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'pit-emoji-toolbar';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'pit-emoji-toggle';
+    toggle.setAttribute('aria-label', 'Välj emoji');
+    toggle.title = 'Emoji';
+    toggle.textContent = '😀';
+
+    const panel = document.createElement('div');
+    panel.className = 'pit-emoji-panel hidden';
+    PIT_LANE_EMOJIS.forEach((em) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pit-emoji-pick';
+      b.textContent = em;
+      b.setAttribute('aria-label', em);
+      b.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        insertAtCursor(textarea, em);
+      });
+      panel.appendChild(b);
+    });
+
+    toggle.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      panel.classList.toggle('hidden');
+    });
+
+    toolbar.appendChild(toggle);
+    toolbar.appendChild(panel);
+    textarea.parentNode.insertBefore(toolbar, textarea);
   }
 
   function setTab(tab) {
@@ -124,7 +184,7 @@
           ' ' +
           dismissed +
           '</div></div>' +
-          '<div class="text-sm whitespace-pre-wrap text-gray-200">' +
+          '<div class="text-sm whitespace-pre-wrap text-gray-200 pit-lane-text">' +
           esc(a.body) +
           '</div></article>'
         );
@@ -290,7 +350,7 @@
           '<div class="max-w-[85%] px-3 py-2 rounded-lg text-sm ' +
           (mine ? 'bg-cyan-700 text-white' : 'bg-gray-700 text-gray-100') +
           '">' +
-          '<div class="whitespace-pre-wrap">' +
+          '<div class="whitespace-pre-wrap pit-lane-text">' +
           esc(m.body) +
           '</div>' +
           '<div class="text-[10px] opacity-70 mt-1">' +
@@ -307,7 +367,7 @@
       (msgs || '<p class="text-gray-500 text-sm">Inga meddelanden</p>') +
       '</div>' +
       '<form class="pit-reply-form flex gap-2 items-end">' +
-      '<textarea name="body" rows="2" class="pit-reply-input flex-1 rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv svar…" required maxlength="2000" autocomplete="off"></textarea>' +
+      '<textarea name="body" rows="2" class="pit-reply-input pit-lane-text flex-1 rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv svar…" required maxlength="2000" autocomplete="off"></textarea>' +
       '<button type="submit" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-gray-900 font-bold text-sm">Skicka</button>' +
       '</form>'
     );
@@ -317,6 +377,7 @@
     const form = root.querySelector('.pit-reply-form');
     if (!form) return;
     const ta = form.querySelector('textarea[name="body"]');
+    attachEmojiPicker(ta);
     const stop = (ev) => ev.stopPropagation();
     form.addEventListener('mousedown', stop);
     form.addEventListener('click', stop);
@@ -429,6 +490,11 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     bindThreadControls();
+    const composeTa = document.getElementById('pit-compose-body');
+    if (composeTa) {
+      composeTa.classList.add('pit-lane-text');
+      attachEmojiPicker(composeTa);
+    }
     setTab(
       activeTab === 'race-control'
         ? 'race-control'

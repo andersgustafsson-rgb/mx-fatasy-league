@@ -91,7 +91,7 @@
               '<div class="text-xs font-bold text-cyan-300">' +
               esc(it.title) +
               '</div>' +
-              '<div class="text-xs text-gray-400 truncate">' +
+              '<div class="text-xs text-gray-400 truncate pit-lane-text">' +
               esc(it.preview || '') +
               '</div></a>'
             );

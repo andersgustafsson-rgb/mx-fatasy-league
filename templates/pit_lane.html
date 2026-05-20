@@ -72,7 +72,7 @@
       <h3 class="font-bold text-cyan-300 mb-2">Nytt meddelande</h3>
       <p id="pit-compose-to-label" class="text-sm text-gray-400 mb-3"></p>
       <form id="pit-compose-form" class="flex flex-col gap-2">
-        <textarea id="pit-compose-body" rows="4" maxlength="2000" class="rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv ditt meddelande…" required></textarea>
+        <textarea id="pit-compose-body" rows="4" maxlength="2000" class="pit-lane-text rounded-lg bg-gray-900 border border-gray-600 px-3 py-2 text-sm" placeholder="Skriv ditt meddelande…" required></textarea>
         <button type="submit" class="self-end px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-gray-900 font-bold text-sm">Skicka</button>
       </form>
     </div>
@@ -86,6 +86,6 @@
       composeToLabel: {{ compose_to_label|tojson }}
     };
   </script>
-  <script src="{{ url_for('static', filename='pit_lane.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='pit_lane.js') }}?v=4"></script>
 </body>
 </html>
