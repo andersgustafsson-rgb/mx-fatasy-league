@@ -1053,17 +1053,19 @@ def _large_podium_layout(usable_width: int) -> tuple[int, int]:
     return block_w, spacing
 
 
-def _fit_podium_name(name: str, max_width: int) -> tuple[str, Any]:
-    """Korta vid behov och välj font som ryms inom podieblocket."""
+def _fit_podium_name(
+    name: str, max_width: int, *, min_px: int = 17, max_px: int = 30
+) -> tuple[str, Any]:
+    """Korta vid behov och välj font som ryms inom given bredd."""
     text = (name or "?").strip()
     for _ in range(5):
-        font = _fit_font_px(text, max_width, bold=True, min_px=17, max_px=30)
+        font = _fit_font_px(text, max_width, bold=True, min_px=min_px, max_px=max_px)
         if _text_width(font, text) <= max_width:
             return text, font
         if len(text) <= 5:
             return text, font
         text = text[: max(4, len(text) - 2)].rstrip(".") + "…"
-    return text, _load_font_px(17, bold=True)
+    return text, _load_font_px(min_px, bold=True)
 
 
 def _draw_text_shadow_mt(
@@ -1395,6 +1397,7 @@ def _draw_podium_block(
     is_rider: bool,
     *,
     large: bool = False,
+    label_max_width: int | None = None,
 ) -> None:
     if not entry:
         return
@@ -1417,8 +1420,8 @@ def _draw_podium_block(
     text_max = block_w - 14
 
     if large:
-        av_r = 64
-        av_above = 54
+        av_r = 52 if is_rider else 48
+        av_above = 44 if is_rider else 40
         rank_f = _fit_font_px(rank_label, text_max, bold=True, min_px=20, max_px=28)
     else:
         av_r = _sz(44)
@@ -1444,17 +1447,29 @@ def _draw_podium_block(
         num_s = ""
 
     if large:
-        name, nf = _fit_podium_name(name, text_max)
-        name_y = floor_y - (66 if (num_s or not is_rider) else 54)
-        _draw_text_shadow_mt(draw, cx, name_y, name, nf)
-        if num_s and is_rider:
-            sub_f = _fit_font_px(num_s, text_max, bold=True, min_px=16, max_px=22)
-            draw.text((cx, floor_y - 14), num_s, font=sub_f, fill=(230, 230, 230), anchor="mt")
-        elif not is_rider:
+        label_w = label_max_width or text_max
+        if is_rider:
+            name, nf = _fit_podium_name(name, text_max, min_px=20, max_px=34)
+            name_y = floor_y - (66 if num_s else 54)
+            _draw_text_shadow_mt(draw, cx, name_y, name, nf)
+            if num_s:
+                sub_f = _fit_font_px(num_s, text_max, bold=True, min_px=18, max_px=24)
+                draw.text((cx, floor_y - 14), num_s, font=sub_f, fill=(230, 230, 230), anchor="mt")
+        else:
+            # Fantasy: namn under pallen — samma läsbarhet som rad 4–5
+            name, nf = _fit_podium_name(name, label_w, min_px=26, max_px=40)
+            name_y = floor_y + 10
+            _draw_text_shadow_mt(draw, cx, name_y, name, nf)
             pts = entry.get("points", 0)
             pts_line = f"{pts} p"
-            pts_f = _fit_font_px(pts_line, text_max, bold=True, min_px=16, max_px=24)
-            draw.text((cx, floor_y - 14), pts_line, font=pts_f, fill=WHITE, anchor="mt")
+            pts_f = _fit_font_px(pts_line, label_w, bold=True, min_px=22, max_px=32)
+            draw.text(
+                (cx, name_y + int(_font_height(nf) * 1.15)),
+                pts_line,
+                font=pts_f,
+                fill=CYAN,
+                anchor="mt",
+            )
     else:
         draw.text((cx, floor_y + _sz(12)), name, font=nf, fill=WHITE, anchor="mt")
         if num_s and is_rider:
@@ -1545,17 +1560,23 @@ def _draw_user_podium_section(
     if max_extras is not None:
         extras = extras[:max_extras]
     row_extra_h = 58 if large else _sz(48)
-    base_panel = base_panel or _sz(300)
-    panel_h = base_panel if not extras else base_panel + len(extras) * row_extra_h + (10 if large else _sz(8))
+    title_pad = 64 if large else _sz(52)
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
+    if large:
+        pod_h = 198
+        label_h = 76
+        panel_h = title_pad + pod_h + label_h + len(extras) * row_extra_h + (18 if extras else 10)
+    else:
+        base_panel = base_panel or _sz(300)
+        panel_h = base_panel if not extras else base_panel + len(extras) * row_extra_h + _sz(8)
     _draw_panel(draw, (margin, y0, right, y0 + panel_h), title, large=large)
 
     by_pos = {int(r["rank"]): r for r in top3}
     if large:
         inner_w = right - margin
         bw, spacing = _large_podium_layout(inner_w)
-        floor_y = y0 + (290 if not extras else 255)
+        floor_y = y0 + title_pad + pod_h - 24
         blocks = [(2, SILVER, 115), (1, GOLD, 150), (3, BRONZE, 100)]
     else:
         floor_y = y0 + (_sz(248) if not extras else _sz(218))
@@ -1578,6 +1599,7 @@ def _draw_user_podium_section(
             rank_label=str(pos),
             is_rider=False,
             large=large,
+            label_max_width=max(bw + 24, spacing - 12),
         )
 
     if extras:
@@ -1618,7 +1640,7 @@ def _draw_weekly_highlights_section(
     cw = _canvas_w(base_img)
     cols = 2
     rows_n = (len(cards) + cols - 1) // cols
-    card_h = card_h or (168 if large else _sz(96))
+    card_h = card_h or (176 if large else _sz(96))
     gap = 16 if large else _sz(12)
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
@@ -1627,12 +1649,10 @@ def _draw_weekly_highlights_section(
     panel_h = title_h + rows_n * (card_h + gap)
     _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Veckans prestationer", large=large)
     col_w = (inner - gap) // 2
-    tf = _load_font_px(38, bold=True) if large else _load_font(24, bold=True)
-    nf = _load_font_px(44, bold=True) if large else _load_font(24, bold=True)
-    df = _load_font_px(36) if large else _load_font(22)
-    av = 50 if large else _sz(32)
+    av = 46 if large else _sz(32)
     pad = 20 if large else _sz(16)
-    tx_off = 112 if large else _sz(80)
+    tx_off = 108 if large else _sz(80)
+    text_w = col_w - tx_off - 8
     for i, card in enumerate(cards[:4]):
         col = i % cols
         row_i = i // cols
@@ -1654,16 +1674,28 @@ def _draw_weekly_highlights_section(
             card.get("display_name") or "?",
         )
         tx = card_x + tx_off
-        title = f"{card.get('icon', '')} {card.get('title', '')}"
-        draw.text((tx, y + (20 if large else _sz(16))), title[:28], font=tf, fill=CYAN)
-        draw.text(
-            (tx, y + (58 if large else _sz(44))),
-            _short_user_name(card.get("display_name") or "?"),
-            font=nf,
-            fill=WHITE,
-        )
-        detail = (card.get("detail") or "")[:48]
-        draw.text((tx, y + (104 if large else _sz(68))), detail, font=df, fill=MUTED)
+        title = f"{card.get('icon', '')} {card.get('title', '')}".strip()
+        if large:
+            tf = _fit_font_px(title, text_w, bold=True, min_px=30, max_px=38)
+            disp = (card.get("display_name") or "?").strip()
+            disp, nf = _fit_podium_name(disp, text_w, min_px=32, max_px=44)
+            detail = (card.get("detail") or "")[:56]
+            df = _fit_font_px(detail, text_w, bold=False, min_px=26, max_px=34)
+            draw.text((tx, y + 18), title, font=tf, fill=CYAN)
+            draw.text((tx, y + 56), disp, font=nf, fill=WHITE)
+            draw.text((tx, y + 108), detail, font=df, fill=MUTED)
+        else:
+            tf = _load_font(24, bold=True)
+            nf = _load_font(24, bold=True)
+            df = _load_font(22)
+            draw.text((tx, y + _sz(16)), title[:28], font=tf, fill=CYAN)
+            draw.text(
+                (tx, y + _sz(44)),
+                _short_user_name(card.get("display_name") or "?"),
+                font=nf,
+                fill=WHITE,
+            )
+            draw.text((tx, y + _sz(68)), (card.get("detail") or "")[:48], font=df, fill=MUTED)
     return y0 + panel_h
 
 
@@ -1682,38 +1714,53 @@ def _draw_season_top_snippet(
     if not rows:
         return y0
     cw = _canvas_w(base_img)
-    row_h = row_h or (88 if large else _sz(56))
+    row_h = row_h or (68 if large else _sz(56))
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
     title_h = 64 if large else _sz(52)
     panel_h = title_h + len(rows) * row_h + (10 if large else _sz(8))
     _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Säsongstoppen", large=large)
-    bf = _load_font_px(44, bold=True) if large else _load_font(26)
-    bf_b = _load_font_px(48, bold=True) if large else _load_font(26, bold=True)
-    av = 44 if large else _sz(26)
+    av = 40 if large else _sz(26)
+    name_x = margin + (132 if large else _sz(128))
+    pts_reserve = 150 if large else _sz(120)
+    name_avail = right - name_x - pts_reserve
     for i, row in enumerate(rows):
         y = y0 + title_h + i * row_h
         rank = int(row.get("rank", i + 1))
         medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
-        ty = y + (18 if large else _sz(14))
         _paste_user_avatar(
-            base_img, margin + (60 if large else _sz(56)), y + row_h // 2, av,
+            base_img, margin + (52 if large else _sz(56)), y + row_h // 2, av,
             row.get("user_id"), row.get("display_name") or "?",
         )
-        draw.text((margin + (108 if large else _sz(96)), ty), f"{rank}.", font=bf_b, fill=medal)
-        draw.text(
-            (margin + (148 if large else _sz(128)), ty),
-            _short_user_name(row.get("display_name") or "?"),
-            font=bf,
-            fill=WHITE,
-        )
-        draw.text(
-            (right, ty),
-            f"{int(row.get('points', 0)):,} p".replace(",", " "),
-            font=bf_b,
-            fill=CYAN,
-            anchor="rt",
-        )
+        if large:
+            rank_f = _fit_font_px(f"{rank}.", 52, bold=True, min_px=30, max_px=38)
+            disp = (row.get("display_name") or "?").strip()
+            disp, name_f = _fit_podium_name(disp, name_avail, min_px=30, max_px=42)
+            pts_line = f"{int(row.get('points', 0)):,} p".replace(",", " ")
+            pts_f = _fit_font_px(pts_line, pts_reserve, bold=True, min_px=28, max_px=38)
+            line_h = max(_font_height(name_f), _font_height(rank_f))
+            ty = y + (row_h - line_h) // 2
+            draw.text((margin + (100 if large else _sz(96)), ty), f"{rank}.", font=rank_f, fill=medal)
+            draw.text((name_x, ty), disp, font=name_f, fill=WHITE)
+            draw.text((right - 8, ty), pts_line, font=pts_f, fill=CYAN, anchor="rt")
+        else:
+            bf = _load_font(26)
+            bf_b = _load_font(26, bold=True)
+            ty = y + _sz(14)
+            draw.text((margin + _sz(96), ty), f"{rank}.", font=bf_b, fill=medal)
+            draw.text(
+                (name_x, ty),
+                _short_user_name(row.get("display_name") or "?"),
+                font=bf,
+                fill=WHITE,
+            )
+            draw.text(
+                (right, ty),
+                f"{int(row.get('points', 0)):,} p".replace(",", " "),
+                font=bf_b,
+                fill=CYAN,
+                anchor="rt",
+            )
         if i < len(rows) - 1:
             draw.line(
                 [(margin + _sz(24), y + row_h - 2), (right - _sz(24), y + row_h - 2)],
