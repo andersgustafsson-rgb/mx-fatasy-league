@@ -1044,6 +1044,36 @@ def _fit_font_px(text: str, max_width: int, *, bold: bool = True, min_px: int = 
     return _load_font_px(min_px, bold=bold)
 
 
+def _large_podium_layout(usable_width: int) -> tuple[int, int]:
+    """Blockbredd och avstånd mellan P1/P2/P3 så namn inte krockar."""
+    block_w = min(140, max(118, usable_width // 6))
+    side_pad = 28
+    spacing = (usable_width - block_w - 2 * side_pad) // 2
+    spacing = max(block_w // 2 + 18, spacing)
+    return block_w, spacing
+
+
+def _fit_podium_name(name: str, max_width: int) -> tuple[str, Any]:
+    """Korta vid behov och välj font som ryms inom podieblocket."""
+    text = (name or "?").strip()
+    for _ in range(5):
+        font = _fit_font_px(text, max_width, bold=True, min_px=17, max_px=30)
+        if _text_width(font, text) <= max_width:
+            return text, font
+        if len(text) <= 5:
+            return text, font
+        text = text[: max(4, len(text) - 2)].rstrip(".") + "…"
+    return text, _load_font_px(17, bold=True)
+
+
+def _draw_text_shadow_mt(
+    draw, cx: int, y: int, text: str, font, *, fill: tuple[int, int, int] = WHITE
+) -> None:
+    for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
+        draw.text((cx + dx, y + dy), text, font=font, fill=(0, 0, 0), anchor="mt")
+    draw.text((cx, y), text, font=font, fill=fill, anchor="mt")
+
+
 def _header_event_lines(data: dict[str, Any]) -> tuple[str, str]:
     """Tävlingsnamn och datum på separata rader."""
     name = (data.get("competition_name") or "").strip()
@@ -1384,13 +1414,12 @@ def _draw_podium_block(
         )
         draw.line([(x0 + 5, y0 + i), (x0 + block_w - 5, y0 + i)], fill=col)
 
+    text_max = block_w - 14
+
     if large:
         av_r = 64
         av_above = 54
-        rank_f = _load_font_px(42, bold=True)
-        nf = _load_font_px(52, bold=True)
-        sub_f = _load_font_px(40, bold=True)
-        pts_f = _load_font_px(46, bold=True)
+        rank_f = _fit_font_px(rank_label, text_max, bold=True, min_px=20, max_px=28)
     else:
         av_r = _sz(44)
         av_above = _sz(40)
@@ -1411,21 +1440,21 @@ def _draw_podium_block(
         uid = entry.get("user_id")
         name_full = entry.get("display_name") or "?"
         _paste_user_avatar(base_img, cx, y0 - av_above, av_r, uid, name_full)
-        name = _short_user_name(name_full)
+        name = _short_user_name(name_full, 11 if large else 14)
         num_s = ""
 
     if large:
-        # Namn på själva podieblocket — inte under (där det blir för smått)
-        name_y = floor_y - (70 if (num_s or not is_rider) else 58)
-        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
-            draw.text((cx + dx, name_y + dy), name, font=nf, fill=(0, 0, 0), anchor="mt")
-        draw.text((cx, name_y), name, font=nf, fill=WHITE, anchor="mt")
+        name, nf = _fit_podium_name(name, text_max)
+        name_y = floor_y - (66 if (num_s or not is_rider) else 54)
+        _draw_text_shadow_mt(draw, cx, name_y, name, nf)
         if num_s and is_rider:
-            sub_y = floor_y - 16
-            draw.text((cx, sub_y), num_s, font=sub_f, fill=(230, 230, 230), anchor="mt")
+            sub_f = _fit_font_px(num_s, text_max, bold=True, min_px=16, max_px=22)
+            draw.text((cx, floor_y - 14), num_s, font=sub_f, fill=(230, 230, 230), anchor="mt")
         elif not is_rider:
             pts = entry.get("points", 0)
-            draw.text((cx, floor_y - 16), f"{pts} p", font=pts_f, fill=WHITE, anchor="mt")
+            pts_line = f"{pts} p"
+            pts_f = _fit_font_px(pts_line, text_max, bold=True, min_px=16, max_px=24)
+            draw.text((cx, floor_y - 14), pts_line, font=pts_f, fill=WHITE, anchor="mt")
     else:
         draw.text((cx, floor_y + _sz(12)), name, font=nf, fill=WHITE, anchor="mt")
         if num_s and is_rider:
@@ -1465,9 +1494,8 @@ def _draw_rider_podium_row(
     by_pos = {int(p["position"]): p for p in podium}
     if large:
         order = [(2, SILVER, 115), (1, GOLD, 150), (3, BRONZE, 100)]
-        block_w = 155
+        block_w, spacing = _large_podium_layout(width)
         floor_off = 44
-        spacing = min(175, (width - 48) // 3)
     else:
         order = [(2, SILVER, 78), (1, GOLD, 108), (3, BRONZE, 66)]
         order = [(a, b, _sz(c)) for a, b, c in order]
@@ -1525,10 +1553,10 @@ def _draw_user_podium_section(
 
     by_pos = {int(r["rank"]): r for r in top3}
     if large:
+        inner_w = right - margin
+        bw, spacing = _large_podium_layout(inner_w)
         floor_y = y0 + (290 if not extras else 255)
-        spacing = 185
         blocks = [(2, SILVER, 115), (1, GOLD, 150), (3, BRONZE, 100)]
-        bw = 160
     else:
         floor_y = y0 + (_sz(248) if not extras else _sz(218))
         spacing = _sz(162)
