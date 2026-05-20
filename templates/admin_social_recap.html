@@ -159,6 +159,37 @@
         const btnDownloadGraphic = document.getElementById('btn-download-graphic');
         const btnDownloadStats = document.getElementById('btn-download-stats');
         const btnCopy = document.getElementById('btn-copy');
+        let graphicBlobUrl = null;
+        let statsBlobUrl = null;
+
+        async function setPreviewPng(imgEl, url, which) {
+            if (which === 'g' && graphicBlobUrl) {
+                URL.revokeObjectURL(graphicBlobUrl);
+                graphicBlobUrl = null;
+            }
+            if (which === 's' && statsBlobUrl) {
+                URL.revokeObjectURL(statsBlobUrl);
+                statsBlobUrl = null;
+            }
+            const res = await fetch(url, { credentials: 'same-origin' });
+            const ct = (res.headers.get('content-type') || '').toLowerCase();
+            const errLabel = which === 'g' ? 'Bild 1 (pallar)' : 'Bild 2 (statistik)';
+            if (!res.ok) {
+                const t = await res.text();
+                imgEl.removeAttribute('src');
+                throw new Error(errLabel + ' API ' + res.status + ': ' + t.slice(0, 200));
+            }
+            if (!ct.includes('image/png')) {
+                const t = await res.text();
+                imgEl.removeAttribute('src');
+                throw new Error(errLabel + ' — servern skickade inte PNG: ' + t.slice(0, 200));
+            }
+            const blob = await res.blob();
+            const u = URL.createObjectURL(blob);
+            if (which === 'g') graphicBlobUrl = u;
+            else statsBlobUrl = u;
+            imgEl.src = u;
+        }
 
         function queryParams() {
             const id = compSelect.value;
@@ -229,8 +260,12 @@
                     singlePreview.classList.add('hidden');
                     const gUrl = '/admin/api/social-recap.png?' + p.toString() + '&part=graphic&_=' + ts;
                     const sUrl = '/admin/api/social-recap.png?' + p.toString() + '&part=stats&_=' + ts;
-                    previewGraphic.src = gUrl;
-                    previewStats.src = sUrl;
+                    try {
+                        await setPreviewPng(previewGraphic, gUrl, 'g');
+                        await setPreviewPng(previewStats, sUrl, 's');
+                    } catch (imgErr) {
+                        statusMsg.textContent += ' ' + imgErr.message;
+                    }
                     btnDownloadGraphic.href = gUrl;
                     btnDownloadStats.href = sUrl;
                     statusMsg.textContent = 'Klar. 2 bilder (stor text): pallar ~1620×1120 + statistik.';
@@ -238,9 +273,16 @@
                     dualPreview.classList.add('hidden');
                     singlePreview.classList.remove('hidden');
                     const pngUrl = '/admin/api/social-recap.png?' + p.toString() + '&_=' + ts;
-                    previewImg.src = pngUrl;
-                    previewImg.classList.remove('hidden');
-                    previewPlaceholder.classList.add('hidden');
+                    try {
+                        await setPreviewPng(previewImg, pngUrl, 'g');
+                        previewImg.classList.remove('hidden');
+                        previewPlaceholder.classList.add('hidden');
+                    } catch (imgErr) {
+                        previewImg.classList.add('hidden');
+                        previewPlaceholder.classList.remove('hidden');
+                        previewPlaceholder.textContent = imgErr.message;
+                        statusMsg.textContent += ' ' + imgErr.message;
+                    }
                     btnDownload.href = pngUrl;
                     btnDownload.classList.remove('opacity-50', 'pointer-events-none');
                     const fmt = lay === 'story' ? '1080×1920' : '1080×variabel';

@@ -1146,7 +1146,7 @@ def _draw_recap_pill(
 def _draw_recap_header(img, draw, data: dict[str, Any]) -> int:
     """Horisontell header: logga vänster, text på en rad."""
     cw = _canvas_w(img)
-    compact_header = data.get("layout") in ("square", "facebook")  # stats; graphic använder full header
+    compact_header = data.get("layout") in ("square", "facebook", "facebook_graphic")
     header_h = _sz(118) if compact_header else _sz(148)
     pad_x = _sz(32)
     race_name, race_date = _header_event_lines(data)
@@ -1874,16 +1874,22 @@ def _draw_fact_cards(
     for fact in shown:
         text = fact.get("text", "")
         if large:
-            font = _fit_font_px(text, box_w - 48, bold=True, min_px=40, max_px=56)
-            lines = _wrap_text_width(text, font, box_w - 48)
+            inner_x = 22
+            wrap_w = box_w - 2 * inner_x
+            font = _fit_font_px(text, wrap_w, bold=True, min_px=38, max_px=54)
+            lines = _wrap_text_width(text, font, wrap_w)
             if not lines:
                 lines = [text]
             line_h = max(44, int(_font_height(font) * 1.25))
+            v_pad = 32
         else:
             font = _load_font(26)
-            lines = _wrap_text_width(text, font, box_w - 32)[:2]
+            inner_x = 16
+            wrap_w = box_w - 2 * inner_x
+            lines = _wrap_text_width(text, font, wrap_w)[:2]
             line_h = _sz(30)
-        card_h = max(72 if large else _sz(52), len(lines) * line_h + (28 if large else 20))
+            v_pad = 24
+        card_h = max(88 if large else _sz(56), len(lines) * line_h + v_pad)
         rows.append((lines, font, card_h))
         total_body += card_h + gap
 
@@ -1892,6 +1898,7 @@ def _draw_fact_cards(
     y = y0 + title_h
 
     for lines, font, card_h in rows:
+        inner_x = 22 if large else 16
         draw.rounded_rectangle(
             [box_x0, y, box_x1, y + card_h],
             radius=12 if large else _sz(12),
@@ -1901,10 +1908,11 @@ def _draw_fact_cards(
         )
         line_h = max(36, int(_font_height(font) * 1.2))
         block_h = len(lines) * line_h
-        ty = y + max(8, (card_h - block_h) // 2)
+        v_pad_draw = 18 if large else 12
+        ty = y + v_pad_draw + max(0, (card_h - block_h - 2 * v_pad_draw) // 2)
         for ln in lines:
             tw = _text_width(font, ln)
-            tx = box_x0 + max(12, (box_w - tw) // 2)
+            tx = box_x0 + inner_x + max(0, (box_w - 2 * inner_x - tw) // 2)
             if large:
                 for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
                     draw.text((tx + dx, ty + dy), ln, font=font, fill=(0, 0, 0))
@@ -2093,6 +2101,17 @@ def _draw_fb_season_strip(
 RECAP_FOOTER_HOST = "mx-fatasy-league.eu.onrender.com"
 
 
+def _normalize_recap_host(host: str) -> str:
+    """Rätta vanliga Render-felskrivningar (bindestreck istället för punkt före eu)."""
+    h = (host or "").strip()
+    if not h:
+        return RECAP_FOOTER_HOST
+    # t.ex. mx-fatasy-league-eu.onrender.com → mx-fatasy-league.eu.onrender.com
+    if re.search(r"-eu\.onrender\.com$", h, re.I):
+        h = re.sub(r"-eu\.onrender\.com$", ".eu.onrender.com", h, flags=re.I)
+    return h
+
+
 def _recap_footer_label() -> str:
     """Webbadress i recap-footer — EU Render (eu.onrender.com)."""
     host = ""
@@ -2101,31 +2120,26 @@ def _recap_footer_label() -> str:
         if v:
             host = urlparse(v).netloc or v.split("://", 1)[-1].split("/")[0]
             break
-    if not host or host == "mx-fatasy-league.onrender.com":
+    host = _normalize_recap_host(host)
+    if not host or host.lower() == "mx-fatasy-league.onrender.com":
         host = RECAP_FOOTER_HOST
     return f"{host} · Spela med oss"
 
 
-def _footer(img, draw, final_h: int, *, bar_h: int = 5) -> None:
+def _footer(img, draw, final_h: int, *, bar_h: int = 6) -> None:
     """Sidfot för alla recap-bilder: sajt + Powered by MotoAction + cyan kant."""
     cw = _canvas_w(img)
     f_site = _load_font_px(26)
     f_pb = _load_font_px(20)
-    draw.text(
-        (cw // 2, final_h - 52),
-        _recap_footer_label(),
-        font=f_site,
-        fill=MUTED,
-        anchor="mt",
-    )
-    draw.text(
-        (cw // 2, final_h - 22),
-        "Powered by MotoAction.se",
-        font=f_pb,
-        fill=CYAN_DIM,
-        anchor="mt",
-    )
-    draw.rectangle([0, final_h - bar_h, cw, final_h], fill=CYAN)
+    strip_top = final_h - bar_h
+    gap_above_strip = 16
+    h_pb = _font_height(f_pb)
+    h_site = _font_height(f_site)
+    y_pb = strip_top - gap_above_strip - h_pb
+    y_site = y_pb - 12 - h_site
+    draw.text((cw // 2, y_site), _recap_footer_label(), font=f_site, fill=MUTED, anchor="mt")
+    draw.text((cw // 2, y_pb), "Powered by MotoAction.se", font=f_pb, fill=CYAN_DIM, anchor="mt")
+    draw.rectangle([0, strip_top, cw, final_h], fill=CYAN)
 
 
 def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
@@ -2170,7 +2184,7 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
             max_extras=extras_n, large=True,
         ) + gap
 
-    final_h = min(work_h, max(1180, y + 72))
+    final_h = min(work_h, max(1180, y + 88))
     if final_h < work_h:
         img = img.crop((0, 0, W_FB, final_h))
         draw = ImageDraw.Draw(img)
@@ -2212,7 +2226,7 @@ def _render_recap_stats_png(data: dict[str, Any]) -> bytes:
             draw, y, data["fun_facts"], data, img_width=W_FB, large=True,
         ) + gap
 
-    final_h = min(work_h, max(1000, y + 72))
+    final_h = min(work_h, max(1000, y + 88))
     if final_h < work_h:
         img = img.crop((0, 0, W_FB, final_h))
         draw = ImageDraw.Draw(img)
