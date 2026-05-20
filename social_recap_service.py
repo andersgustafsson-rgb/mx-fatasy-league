@@ -1715,6 +1715,8 @@ def _draw_user_podium_section(
             pts_f = bf if not large else _fit_font_px(f"{pts} p", 120, bold=True, min_px=24, max_px=32)
             draw.text((right - 12, ty), f"{pts} p", font=pts_f, fill=CYAN, anchor="rt")
 
+    return y0 + panel_h
+
 
 def _draw_weekly_highlights_section(
     draw,
