@@ -773,16 +773,39 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
             )
 
     if getattr(comp, "series", None) != "WSX":
-        wc_top = crowd.get("wildcard_top") or []
-        if wc_top:
-            w = wc_top[0]
-            candidates.append(
-                {
-                    "id": "wildcard",
-                    "group": "wildcard",
-                    "text": f"Wildcard: P{w.get('position', '?')} {w.get('name', '?')} ({_pct_num(w.get('pct')):.0f}%)",
-                }
+        # Inte "fältets vanligaste wildcard" (alla väljer olika platser) — visa träff mot resultat.
+        rows = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+        by_pos_450: dict[int, int] = {}
+        for res in rows:
+            rider = Rider.query.get(res.rider_id)
+            if rider and rider.class_name == cfg["primary"][0]:
+                by_pos_450[int(res.position)] = int(res.rider_id)
+        if by_pos_450:
+            wcs = (
+                WildcardPick.query.filter_by(competition_id=competition_id)
+                .filter(
+                    WildcardPick.rider_id.isnot(None),
+                    WildcardPick.position.isnot(None),
+                )
+                .all()
             )
+            if wcs:
+                hits = sum(
+                    1
+                    for wc in wcs
+                    if by_pos_450.get(int(wc.position)) == int(wc.rider_id)
+                )
+                n_wc = len(wcs)
+                if hits <= 0:
+                    txt = (
+                        f"Ingen prickade wildcard — {n_wc} spelade "
+                        f"(rätt {cfg['primary'][1]}-förare på vald plats = +15 p)."
+                    )
+                elif hits == 1:
+                    txt = "1 spelare prickade wildcard — rätt förare på rätt plats (+15 p)!"
+                else:
+                    txt = f"{hits} spelare prickade wildcard — rätt förare på rätt plats (+15 p)!"
+                candidates.append({"id": "wildcard_hits", "group": "wildcard", "text": txt})
 
     return _select_fun_facts_for_display(candidates, competition_id, limit=3)
 
