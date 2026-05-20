@@ -2071,14 +2071,20 @@ def _draw_fb_season_strip(
         )
 
 
+RECAP_FOOTER_HOST = "mx-fatasy-league.eu.onrender.com"
+
+
 def _recap_footer_label() -> str:
-    """Webbadress i recap-footer — från PUBLIC_BASE_URL/Render, inte mxfantasy.se."""
+    """Webbadress i recap-footer — EU Render (eu.onrender.com)."""
+    host = ""
     for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
         v = (os.getenv(key) or "").strip().rstrip("/")
         if v:
             host = urlparse(v).netloc or v.split("://", 1)[-1].split("/")[0]
-            return f"{host} · Spela med oss"
-    return "mx-fatasy-league.onrender.com · Spela med oss"
+            break
+    if not host or host == "mx-fatasy-league.onrender.com":
+        host = RECAP_FOOTER_HOST
+    return f"{host} · Spela med oss"
 
 
 def _footer(img, draw, final_h: int) -> None:
@@ -2367,7 +2373,7 @@ def render_social_recap_png(
 
     foot_f = _load_font(24)
     foot_y = final_h - _sz(40)
-    draw.text((W_PORTRAIT // 2, foot_y), "mxfantasy.se · Spela med oss", font=foot_f, fill=MUTED, anchor="mt")
+    draw.text((W_PORTRAIT // 2, foot_y), _recap_footer_label(), font=foot_f, fill=MUTED, anchor="mt")
     draw.rectangle([0, final_h - _sz(6), W_PORTRAIT, final_h], fill=CYAN)
 
     buf = io.BytesIO()
