@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import traceback
 from datetime import date, datetime, timedelta
 from functools import wraps
 
@@ -123,7 +125,10 @@ def social_recap_api():
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
 		current_app.logger.exception("social_recap_api failed: %s", e)
-		return jsonify({"error": str(e) or type(e).__name__, "error_type": type(e).__name__}), 500
+		payload = {"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
+		if (os.getenv("ADMIN_API_TRACEBACK", "") or "").strip().lower() in ("1", "true", "yes"):
+			payload["traceback"] = traceback.format_exc()
+		return jsonify(payload), 500
 
 
 @bp.get("/admin/api/social-recap.png")
@@ -177,9 +182,10 @@ def social_recap_png():
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
 		current_app.logger.exception("social_recap_png failed: %s", e)
-		return jsonify(
-			{"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
-		), 500
+		payload = {"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
+		if (os.getenv("ADMIN_API_TRACEBACK", "") or "").strip().lower() in ("1", "true", "yes"):
+			payload["traceback"] = traceback.format_exc()
+		return jsonify(payload), 500
 
 
 @bp.route("/admin")

@@ -179,7 +179,10 @@
                 let detail = t.slice(0, 300);
                 try {
                     const j = JSON.parse(t);
-                    if (j.error) detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                    if (j.error) {
+                        detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                        if (j.traceback) detail += '\n---\n' + j.traceback.slice(0, 2500);
+                    }
                 } catch (_) { /* plain text */ }
                 imgEl.removeAttribute('src');
                 throw new Error(errLabel + ' API ' + res.status + ': ' + detail);
@@ -189,7 +192,10 @@
                 let detail = t.slice(0, 300);
                 try {
                     const j = JSON.parse(t);
-                    if (j.error) detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                    if (j.error) {
+                        detail = (j.error_type ? j.error_type + ': ' : '') + j.error;
+                        if (j.traceback) detail += '\n---\n' + j.traceback.slice(0, 2500);
+                    }
                 } catch (_) { /* plain text */ }
                 imgEl.removeAttribute('src');
                 throw new Error(errLabel + ' — servern skickade inte PNG: ' + detail);
