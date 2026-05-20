@@ -1395,6 +1395,17 @@ def _draw_panel(
         draw.text((x0 + (20 if large else _sz(16)), y0 + (14 if large else _sz(12))), title.upper(), font=tf, fill=CYAN)
 
 
+def _draw_panel_title_on_top(
+    draw, x0: int, y0: int, x1: int, title: str, *, large: bool = False
+) -> None:
+    """Paneltitel ovanpå avatarer/innehåll."""
+    bar_h = 58 if large else _sz(50)
+    draw.rectangle([x0 + 2, y0 + 2, x1 - 2, y0 + bar_h], fill=PANEL)
+    draw.line([(x0 + 2, y0 + bar_h), (x1 - 2, y0 + bar_h)], fill=PANEL_EDGE, width=1)
+    tf = _load_font_px(38, bold=True) if large else _load_font(28, bold=True)
+    draw.text((x0 + 20, y0 + 14), title.upper(), font=tf, fill=CYAN)
+
+
 def _draw_podium_block(
     draw,
     base_img,
@@ -1431,9 +1442,11 @@ def _draw_podium_block(
     text_max = block_w - 14
 
     if large:
-        av_r = 52 if is_rider else 48
-        av_above = 44 if is_rider else 40
-        rank_f = _fit_font_px(rank_label, text_max, bold=True, min_px=20, max_px=28)
+        if is_rider:
+            av_r, av_above = 48, 40
+        else:
+            av_r, av_above = 32, 26
+        rank_f = _fit_font_px(rank_label, text_max, bold=True, min_px=18, max_px=24)
     else:
         av_r = _sz(44)
         av_above = _sz(40)
@@ -1469,14 +1482,14 @@ def _draw_podium_block(
         else:
             # Fantasy: namn under pallen, max bredd = ett block (annars krockar P2 med plats 4–5)
             cap_w = min(label_w, text_max + 8)
-            name, nf = _fit_podium_name(name, cap_w, min_px=24, max_px=34)
-            name_y = floor_y + 12
+            name, nf = _fit_podium_name(name, cap_w, min_px=22, max_px=30)
+            name_y = floor_y + 20
             _draw_text_shadow_mt(draw, cx, name_y, name, nf)
             pts = entry.get("points", 0)
             pts_line = f"{pts} p"
-            pts_f = _fit_font_px(pts_line, cap_w, bold=True, min_px=20, max_px=28)
+            pts_f = _fit_font_px(pts_line, cap_w, bold=True, min_px=18, max_px=26)
             draw.text(
-                (cx, name_y + int(_font_height(nf) * 1.12)),
+                (cx, name_y + int(_font_height(nf) * 1.2) + 4),
                 pts_line,
                 font=pts_f,
                 fill=CYAN,
@@ -1571,16 +1584,18 @@ def _draw_user_podium_section(
     extras = [r for r in leaderboard if int(r.get("rank", 99)) > 3]
     if max_extras is not None:
         extras = extras[:max_extras]
-    row_extra_h = 58 if large else _sz(48)
-    title_pad = 64 if large else _sz(52)
+    row_extra_h = 54 if large else _sz(48)
+    title_pad = 92 if large else _sz(52)
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
     if large:
         inner_w = right - margin
         bw, spacing = _large_podium_layout(inner_w)
         label_w = bw + 12
-        pod_blocks_h = 168
-        caption_h = 80
+        under_title = 36
+        max_bh = 125
+        pod_blocks_h = under_title + max_bh
+        caption_h = 88
         list_gap = 16 if extras else 0
         list_h = len(extras) * row_extra_h
         panel_h = title_pad + pod_blocks_h + caption_h + list_gap + list_h + 20
@@ -1591,8 +1606,8 @@ def _draw_user_podium_section(
 
     by_pos = {int(r["rank"]): r for r in top3}
     if large:
-        floor_y = y0 + title_pad + pod_blocks_h - 18
-        blocks = [(2, SILVER, 115), (1, GOLD, 150), (3, BRONZE, 100)]
+        floor_y = y0 + title_pad + under_title + max_bh
+        blocks = [(2, SILVER, 100), (1, GOLD, 125), (3, BRONZE, 90)]
     else:
         floor_y = y0 + (_sz(248) if not extras else _sz(218))
         spacing = _sz(162)
@@ -1616,6 +1631,7 @@ def _draw_user_podium_section(
             large=large,
             label_max_width=label_w,
         )
+        _draw_panel_title_on_top(draw, margin, y0, right, title, large=True)
 
     if extras:
         if large:
@@ -1715,9 +1731,9 @@ def _draw_weekly_highlights_section(
         if large:
             tf = _fit_font_px(title, text_w, bold=True, min_px=32, max_px=40)
             disp = (card.get("display_name") or "?").strip()
-            disp, nf = _fit_podium_name(disp, text_w, min_px=34, max_px=46)
+            disp, nf = _fit_podium_name(disp, text_w, min_px=30, max_px=40)
             detail = _plain_draw_text((card.get("detail") or "")[:64])
-            df = _fit_font_px(detail, text_w, bold=False, min_px=28, max_px=36)
+            df = _fit_font_px(detail, text_w, bold=False, min_px=26, max_px=32)
             draw.text((tx, y + 18), title, font=tf, fill=CYAN)
             draw.text((tx, y + 56), disp, font=nf, fill=WHITE)
             draw.text((tx, y + 108), detail, font=df, fill=MUTED)
@@ -1751,33 +1767,36 @@ def _draw_season_top_snippet(
     if not rows:
         return y0
     cw = _canvas_w(base_img)
-    row_h = row_h or (76 if large else _sz(56))
+    row_h = row_h or (70 if large else _sz(56))
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
     title_h = 64 if large else _sz(52)
     panel_h = title_h + len(rows) * row_h + (10 if large else _sz(8))
     _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Säsongstoppen", large=large)
-    av = 40 if large else _sz(26)
-    name_x = margin + (132 if large else _sz(128))
-    pts_reserve = 150 if large else _sz(120)
+    av = 32 if large else _sz(26)
+    av_x = margin + (44 if large else _sz(56))
+    rank_x = av_x + av + 12
+    name_x = rank_x + 40
+    pts_reserve = 140 if large else _sz(120)
     name_avail = right - name_x - pts_reserve
     for i, row in enumerate(rows):
         y = y0 + title_h + i * row_h
         rank = int(row.get("rank", i + 1))
         medal = GOLD if rank == 1 else SILVER if rank == 2 else BRONZE if rank == 3 else MUTED
+        row_mid = y + row_h // 2
         _paste_user_avatar(
-            base_img, margin + (52 if large else _sz(56)), y + row_h // 2, av,
+            base_img, av_x, row_mid, av,
             row.get("user_id"), row.get("display_name") or "?",
         )
         if large:
-            rank_f = _fit_font_px(f"{rank}.", 52, bold=True, min_px=32, max_px=40)
+            rank_f = _fit_font_px(f"{rank}.", 40, bold=True, min_px=26, max_px=32)
             disp = (row.get("display_name") or "?").strip()
-            disp, name_f = _fit_podium_name(disp, name_avail, min_px=32, max_px=46)
+            disp, name_f = _fit_podium_name(disp, name_avail, min_px=28, max_px=36)
             pts_line = f"{int(row.get('points', 0)):,} p".replace(",", " ")
-            pts_f = _fit_font_px(pts_line, pts_reserve, bold=True, min_px=30, max_px=42)
+            pts_f = _fit_font_px(pts_line, pts_reserve, bold=True, min_px=26, max_px=34)
             line_h = max(_font_height(name_f), _font_height(rank_f))
-            ty = y + (row_h - line_h) // 2
-            draw.text((margin + (100 if large else _sz(96)), ty), f"{rank}.", font=rank_f, fill=medal)
+            ty = row_mid - line_h // 2
+            draw.text((rank_x, ty), f"{rank}.", font=rank_f, fill=medal)
             draw.text((name_x, ty), disp, font=name_f, fill=WHITE)
             draw.text((right - 8, ty), pts_line, font=pts_f, fill=CYAN, anchor="rt")
         else:
