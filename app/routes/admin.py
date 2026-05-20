@@ -159,7 +159,9 @@ def social_recap_png():
 		if layout != "facebook":
 			part = "graphic"
 		png_bytes = render_social_recap_png(data, layout=layout, part=part)
-		return Response(png_bytes, mimetype="image/png")
+		resp = Response(png_bytes, mimetype="image/png")
+		resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+		return resp
 	except ValueError as e:
 		return jsonify({"error": str(e)}), 404
 	except Exception as e:
