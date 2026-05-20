@@ -1491,7 +1491,8 @@ def _draw_podium_block(
         uid = entry.get("user_id")
         name_full = entry.get("display_name") or "?"
         _paste_user_avatar(base_img, cx, y0 - av_above, av_r, uid, name_full)
-        name = _short_user_name(name_full, 11 if large else 14)
+        # Stora fantasy-pallen: låt _fit_podium_name skala font / … — inte hårdbromsa till 11 tecken.
+        name = (name_full or "?").strip() if large else _short_user_name(name_full, 14)
         num_s = ""
 
     if large:
@@ -1504,9 +1505,9 @@ def _draw_podium_block(
                 sub_f = _fit_font_px(num_s, text_max, bold=True, min_px=16, max_px=22)
                 draw.text((cx, floor_y - 26), num_s, font=sub_f, fill=(230, 230, 230), anchor="mt")
         else:
-            # Fantasy: namn under pallen, max bredd = ett block (annars krockar P2 med plats 4–5)
-            cap_w = min(label_w, text_max + 8)
-            name, nf = _fit_podium_name(name, cap_w, min_px=22, max_px=30)
+            # Fantasy: hela namnet om det ryms; mindre min-font = färre onödiga …
+            cap_w = min(label_w, text_max + 18)
+            name, nf = _fit_podium_name(name, cap_w, min_px=15, max_px=28)
             name_y = floor_y + 20
             _draw_text_shadow_mt(draw, cx, name_y, name, nf)
             pts = entry.get("points", 0)
@@ -1608,7 +1609,7 @@ def _draw_user_podium_section(
     extras = [r for r in leaderboard if _leaderboard_rank(r) > 3]
     if max_extras is not None:
         extras = extras[:max_extras]
-    row_extra_h = 62 if large else _sz(48)
+    row_extra_h = 68 if large else _sz(48)
     title_pad = 92 if large else _sz(52)
     margin = x0 if x0 is not None else _sz(36)
     right = x1 if x1 is not None else cw - _sz(36)
@@ -1620,7 +1621,7 @@ def _draw_user_podium_section(
         max_bh = 125
         pod_blocks_h = under_title + max_bh
         caption_h = 88
-        list_gap = 16 if extras else 0
+        list_gap = 22 if extras else 0
         list_h = len(extras) * row_extra_h
         panel_h = title_pad + pod_blocks_h + caption_h + list_gap + list_h + 20
     else:
@@ -1663,7 +1664,7 @@ def _draw_user_podium_section(
         if large:
             extras_top = y0 + title_pad + pod_blocks_h + caption_h + list_gap
             draw.line(
-                [(margin + 24, extras_top - 8), (right - 24, extras_top - 8)],
+                [(margin + 24, extras_top - 11), (right - 24, extras_top - 11)],
                 fill=PANEL_EDGE,
                 width=1,
             )
@@ -1679,7 +1680,7 @@ def _draw_user_podium_section(
                     width=1,
                 )
                 row_cy = row_y + row_extra_h // 2
-                ty = row_cy - 2
+                row_mid = row_cy
                 av = 30
                 # Ring vänsterkant = av_cx - av - 4; håll innanför marginal + luft
                 av_cx = margin + 28 + av + 4
@@ -1688,7 +1689,7 @@ def _draw_user_podium_section(
             else:
                 row_y = y0 + panel_h - _sz(20) - len(extras) * row_extra_h + i * row_extra_h
                 row_cy = row_y + row_extra_h // 2
-                ty = row_cy - 2
+                row_mid = row_cy
                 av = _sz(22)
                 av_cx = margin + _sz(40) + av + 4
                 ring_right = av_cx + av + 4
@@ -1709,11 +1710,11 @@ def _draw_user_podium_section(
             )
             rank_f = bf if not large else _fit_font_px(f"{rank}.", 44, bold=True, min_px=24, max_px=30)
             rank_txt = f"{rank}."
-            draw.text((rank_x, ty), rank_txt, font=rank_f, fill=MUTED)
+            draw.text((rank_x, row_mid), rank_txt, font=rank_f, fill=MUTED, anchor="lm")
             name_x = rank_x + _text_width(rank_f, rank_txt) + 12
-            draw.text((name_x, ty), name, font=nf, fill=WHITE)
+            draw.text((name_x, row_mid), name, font=nf, fill=WHITE, anchor="lm")
             pts_f = bf if not large else _fit_font_px(f"{pts} p", 120, bold=True, min_px=24, max_px=32)
-            draw.text((right - 12, ty), f"{pts} p", font=pts_f, fill=CYAN, anchor="rt")
+            draw.text((right - 12, row_mid), f"{pts} p", font=pts_f, fill=CYAN, anchor="rm")
 
     return y0 + panel_h
 
