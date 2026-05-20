@@ -35,10 +35,6 @@ EXPOSE 5000
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
-
-# Run the application
-# Use PORT environment variable for Railway compatibility
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 main:app"]
+# Render sätter PORT (ofta 10000) — ingen fast healthcheck-port i Dockerfile
+# Run the application (--preload: DB-init i main.py körs bara en gång, inte per worker)
+CMD ["sh", "-c", "gunicorn --preload --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 main:app"]
