@@ -8111,6 +8111,13 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                 rider_field = rider_field.strip()
             
             rider_name = _dedupe_concatenated_name(rider_field)
+            bike_brand = None
+            if len(cols) >= 3:
+                tail = " ".join(cols[2:]).strip()
+                for brand in bike_brands:
+                    if re.search(rf"\b{re.escape(brand)}\b", tail, re.IGNORECASE):
+                        bike_brand = brand
+                        break
             # Remove everything after the name (time, interval, hometown, bike, etc.)
             # Stop at common patterns that indicate end of name
             rider_name = re.sub(r'\s+\d{1,2}:\d{2}\.\d+.*$', '', rider_name)  # Remove time like "22:10.248"
@@ -8121,11 +8128,54 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             rider_name = re.sub(r'\s{2,}.*$', "", rider_name).strip()  # Remove everything after double space
             
             if rider_name:
-                results.append({"position": position, "rider_name": rider_name})
+                entry = {"position": position, "rider_name": rider_name}
+                if bike_brand:
+                    entry["bike_brand"] = bike_brand
+                results.append(entry)
                 print(f"🔍 DEBUG: Motocross/SMX/RacerX match - Position: {position}, Name: '{rider_name}'")
     
     print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
+
+@app.post('/fetch_racerx_results')
+def fetch_racerx_results():
+    """Hämta RacerX-resultat som text (för preview/klistra in). Skriver inte till DB."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        from racerx_results_fetch import (
+            build_racerx_results_url,
+            fetch_racerx_results_paste_text,
+        )
+
+        data = request.get_json(force=True) or {}
+        url = (data.get("url") or "").strip()
+        if not url:
+            competition_id = data.get("competition_id")
+            class_name = data.get("class_name")
+            if not competition_id or not class_name:
+                return jsonify({"error": "Ange URL eller välj tävling + klass"}), 400
+            competition = Competition.query.get(competition_id)
+            if not competition:
+                return jsonify({"error": "Competition not found"}), 400
+            year = competition.event_date.year if competition.event_date else 2026
+            url = build_racerx_results_url(
+                competition.name, year, class_name, competition.series
+            )
+        pasted_text, row_count = fetch_racerx_results_paste_text(url)
+        return jsonify(
+            {
+                "success": True,
+                "pasted_text": pasted_text,
+                "row_count": row_count,
+                "source_url": url,
+            }
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.post('/bulk_preview_results')
 def bulk_preview_results():
@@ -8192,12 +8242,14 @@ def bulk_preview_results():
                 "rider_name": row['rider_name'],
                 "found_in_db": rider is not None,
                 "rider_id": rider.id if rider else None,
-                "db_rider_name": rider.name if rider else None
+                "db_rider_name": rider.name if rider else None,
+                "bike_brand": row.get("bike_brand"),
             })
             if not rider:
                 missing.append({
                     "position": row['position'],
-                    "rider_name": row['rider_name']
+                    "rider_name": row['rider_name'],
+                    "bike_brand": row.get("bike_brand"),
                 })
 
         return jsonify({"success": True, "rows": rows, "missing_riders": missing})

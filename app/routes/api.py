@@ -358,6 +358,93 @@ def reset_cross_dino_highscores():
 
 # --- Riders management ---
 
+def _suggest_rider_number(class_name: str) -> int:
+	used = [
+		r.rider_number
+		for r in Rider.query.filter_by(class_name=class_name).all()
+		if r.rider_number is not None
+	]
+	return (max(used) + 1) if used else 99
+
+
+def _default_rider_price(class_name: str) -> int:
+	if class_name == "450cc" or class_name == "wsx_sx1":
+		return 450000
+	if class_name == "250cc" or class_name == "wsx_sx2":
+		return 50000
+	return 100000
+
+
+@bp.route('/riders/quick-from-result', methods=['POST'])
+def quick_add_rider_from_result():
+	"""Lägg till förare från bulk preview (namn + klass, minimal input)."""
+	if not is_admin_user():
+		return jsonify({'error': 'Unauthorized'}), 401
+	data = request.get_json(force=True) or {}
+	name = (data.get('name') or '').strip()
+	class_name = (data.get('class_name') or '').strip()
+	if not name or not class_name:
+		return jsonify({'error': 'name och class_name krävs'}), 400
+
+	rider_number = data.get('rider_number')
+	if rider_number is not None:
+		try:
+			rider_number = int(rider_number)
+		except (TypeError, ValueError):
+			return jsonify({'error': 'Ogiltigt startnummer'}), 400
+	else:
+		rider_number = _suggest_rider_number(class_name)
+
+	bike_brand = (data.get('bike_brand') or '').strip() or 'Unknown'
+	coast_250 = data.get('coast_250')
+	if class_name == '250cc' and not coast_250:
+		coast_250 = 'west'
+
+	existing = Rider.query.filter_by(name=name, class_name=class_name).first()
+	if existing:
+		return jsonify({
+			'success': True,
+			'id': existing.id,
+			'updated': False,
+			'message': f'{name} finns redan i databasen ({class_name})',
+		})
+
+	number_conflict = Rider.query.filter_by(
+		rider_number=rider_number,
+		class_name=class_name,
+	).first()
+	if number_conflict:
+		return jsonify({
+			'error': 'conflict',
+			'message': f"Nummer {rider_number} används av {number_conflict.name}",
+			'existing_rider': {
+				'id': number_conflict.id,
+				'name': number_conflict.name,
+				'rider_number': number_conflict.rider_number,
+			},
+		}), 409
+
+	rider = Rider(
+		name=name,
+		class_name=class_name,
+		classes=class_name,
+		rider_number=rider_number,
+		bike_brand=bike_brand,
+		coast_250=coast_250 if class_name == '250cc' else None,
+		price=data.get('price') or _default_rider_price(class_name),
+		series_participation=data.get('series_participation') or 'all',
+	)
+	db.session.add(rider)
+	db.session.commit()
+	return jsonify({
+		'success': True,
+		'id': rider.id,
+		'created': True,
+		'rider_number': rider_number,
+		'message': f'Lade till {name} (#{rider_number}, {class_name})',
+	})
+
+
 @bp.route('/riders', methods=['POST'])
 def add_rider():
 	if not is_admin_user():

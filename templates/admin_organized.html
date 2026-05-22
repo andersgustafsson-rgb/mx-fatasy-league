@@ -435,7 +435,7 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <p class="text-gray-300 mb-4">
                             Paste overall results directly from the results website. We use only overall positions and rider names.<br>
-                            <span class="text-yellow-300">💡 Tip:</span> From RacerX (e.g., <a href="https://racerxonline.com/sx/2026/anaheim-1/450sx" target="_blank" class="text-blue-400 underline">racerxonline.com</a>), select the entire results table and copy (Ctrl+C / Cmd+C). The parser will automatically extract positions and rider names.
+                            <span class="text-yellow-300">💡 Tip:</span> Klistra in som tidigare, eller använd <strong>Hämta &amp; Preview</strong> med Racer X-URL (sparar inget förrän Import). Paste fungerar alltid som backup.
                         </p>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -462,10 +462,22 @@
                                     <option value="smx">SMX (SuperMotocross)</option>
                                 </select>
                             </div>
-                            <div class="flex items-end">
-                                <button onclick="bulkPreviewResults()" class="btn-primary px-4 py-2 rounded-lg mr-2">👁️ Preview</button>
+                            <div class="flex items-end flex-wrap gap-2">
+                                <button onclick="bulkPreviewResults()" class="btn-primary px-4 py-2 rounded-lg">👁️ Preview</button>
+                                <button onclick="bulkFetchRacerXAndPreview()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">🌐 Hämta &amp; Preview</button>
                                 <button onclick="bulkImportResults()" class="btn-warning px-4 py-2 rounded-lg">📥 Import</button>
                             </div>
+                        </div>
+
+                        <div class="mb-4 p-3 bg-gray-900/60 border border-gray-700 rounded-lg">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Racer X-URL (test — sparar inget förrän du klickar Import)</label>
+                            <input
+                                id="bulk-racerx-url"
+                                type="url"
+                                class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm"
+                                placeholder="https://racerxonline.com/sx/2026/salt-lake-city/450sx"
+                            />
+                            <p id="bulk-fetch-status" class="text-sm mt-2 hidden"></p>
                         </div>
 
                         <label class="block text-sm font-medium text-gray-300 mb-2">Paste results text here</label>
@@ -480,6 +492,7 @@
                                             <th class="px-2 py-1">Pos</th>
                                             <th class="px-2 py-1">Rider</th>
                                             <th class="px-2 py-1">In database</th>
+                                            <th class="px-2 py-1">Åtgärd</th>
                                         </tr>
                                     </thead>
                                     <tbody id="bulk-preview-rows" class="text-gray-200"></tbody>
@@ -1508,12 +1521,79 @@
                         option.textContent = comp.name;
                         select.appendChild(option);
                     });
+                    if (!select.dataset.racerxListeners) {
+                        select.dataset.racerxListeners = '1';
+                        select.addEventListener('change', bulkSuggestRacerxUrl);
+                        document.getElementById('bulk-class')?.addEventListener('change', bulkSuggestRacerxUrl);
+                        const urlInput = document.getElementById('bulk-racerx-url');
+                        if (urlInput) {
+                            urlInput.addEventListener('input', () => { urlInput.dataset.userEdited = '1'; });
+                        }
+                    }
+                    bulkSuggestRacerxUrl();
                 } else {
                     select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
                 }
             } catch (e) {
                 const select = document.getElementById('bulk-competition');
                 if (select) select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+            }
+        }
+
+        function bulkSuggestRacerxUrl() {
+            const competitionId = document.getElementById('bulk-competition').value;
+            const className = document.getElementById('bulk-class').value;
+            const urlInput = document.getElementById('bulk-racerx-url');
+            if (!urlInput || !competitionId || urlInput.dataset.userEdited === '1') return;
+            const sel = document.getElementById('bulk-competition');
+            const name = sel.options[sel.selectedIndex]?.textContent || '';
+            const slug = name.split(',')[0].trim().toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-');
+            const path = (className || '').includes('450') ? '450sx' : '250sx';
+            const year = new Date().getFullYear();
+            if (slug) urlInput.placeholder = `https://racerxonline.com/sx/${year}/${slug}/${path}`;
+        }
+
+        async function bulkFetchRacerXAndPreview() {
+            const competitionId = document.getElementById('bulk-competition').value;
+            const className = document.getElementById('bulk-class').value;
+            const format = document.getElementById('bulk-format').value;
+            const urlInput = document.getElementById('bulk-racerx-url');
+            const statusEl = document.getElementById('bulk-fetch-status');
+            if (!competitionId || !className || !format) {
+                alert('Välj tävling, klass och format först.');
+                return;
+            }
+            const url = (urlInput?.value || '').trim();
+            statusEl.classList.remove('hidden');
+            statusEl.className = 'text-sm mt-2 text-cyan-300';
+            statusEl.textContent = 'Hämtar från Racer X…';
+            try {
+                const res = await fetch('/fetch_racerx_results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: url || undefined,
+                        competition_id: competitionId,
+                        class_name: className
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    statusEl.className = 'text-sm mt-2 text-red-400';
+                    statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel');
+                    return;
+                }
+                document.getElementById('bulk-text').value = data.pasted_text;
+                if (data.source_url && urlInput && !url) urlInput.value = data.source_url;
+                statusEl.className = 'text-sm mt-2 text-green-400';
+                statusEl.textContent = `Hämtade ${data.row_count} rader från Racer X (ingen import). Kör preview…`;
+                await bulkPreviewResults();
+                statusEl.textContent = `✓ ${data.row_count} rader — preview nedan. Import görs bara om du klickar Import.`;
+            } catch (e) {
+                statusEl.className = 'text-sm mt-2 text-red-400';
+                statusEl.textContent = 'Nätverksfel vid hämtning';
             }
         }
 
@@ -1554,19 +1634,91 @@
             // Populate new results
             data.rows.forEach(r => {
                 const tr = document.createElement('tr');
-                const riderDisplay = r.found_in_db && r.db_rider_name ? 
-                    `${r.rider_name} → ${r.db_rider_name}` : 
-                    r.rider_name;
-                tr.innerHTML = `<td class="px-2 py-1">${r.position}</td><td class="px-2 py-1">${riderDisplay}</td><td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
+                const tdPos = document.createElement('td');
+                tdPos.className = 'px-2 py-1';
+                tdPos.textContent = r.position;
+                const tdRider = document.createElement('td');
+                tdRider.className = 'px-2 py-1';
+                tdRider.textContent = r.found_in_db && r.db_rider_name
+                    ? `${r.rider_name} → ${r.db_rider_name}`
+                    : r.rider_name;
+                const tdDb = document.createElement('td');
+                tdDb.className = 'px-2 py-1';
+                tdDb.textContent = r.found_in_db ? '✅' : '❌';
+                const tdAct = document.createElement('td');
+                tdAct.className = 'px-2 py-1';
+                if (!r.found_in_db) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-xs bg-cyan-700 hover:bg-cyan-600 text-white px-2 py-1 rounded';
+                    btn.textContent = '➕ Lägg till i DB';
+                    btn.onclick = () => bulkQuickAddRider(r);
+                    tdAct.appendChild(btn);
+                } else {
+                    tdAct.textContent = '—';
+                }
+                tr.append(tdPos, tdRider, tdDb, tdAct);
                 tbody.appendChild(tr);
             });
             preview.classList.remove('hidden');
             if (data.missing_riders && data.missing_riders.length) {
                 missing.classList.remove('hidden');
-                missing.textContent = `Saknade förare (${data.missing_riders.length}): ` + data.missing_riders.map(m => `${m.position}. ${m.rider_name}`).join(', ');
+                missing.innerHTML = `Saknade förare (${data.missing_riders.length}): klicka <strong>➕ Lägg till i DB</strong> på raden i tabellen. ` +
+                    data.missing_riders.map(m => `${m.position}. ${m.rider_name}`).join(', ');
             } else {
                 missing.classList.add('hidden');
                 missing.textContent = '';
+            }
+        }
+
+        async function bulkQuickAddRider(row) {
+            const className = document.getElementById('bulk-class').value;
+            if (!className) {
+                alert('Välj klass först.');
+                return;
+            }
+            const bikeHint = row.bike_brand ? ` (märke från resultat: ${row.bike_brand})` : '';
+            let riderNumber = prompt(
+                `Startnummer för ${row.rider_name}?${bikeHint}\n(Lämna tomt = föreslås automatiskt)`,
+                ''
+            );
+            if (riderNumber === null) return;
+            const payload = {
+                name: row.rider_name,
+                class_name: className,
+                bike_brand: row.bike_brand || undefined,
+            };
+            if (riderNumber.trim() !== '') {
+                payload.rider_number = parseInt(riderNumber.trim(), 10);
+                if (Number.isNaN(payload.rider_number)) {
+                    alert('Ogiltigt nummer.');
+                    return;
+                }
+            }
+            if (className === '250cc') {
+                const coast = prompt('Coast för 250cc? (east / west)', 'west');
+                if (coast === null) return;
+                payload.coast_250 = (coast || 'west').toLowerCase();
+            }
+            try {
+                const res = await fetch('/api/riders/quick-from-result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    if (data.error === 'conflict') {
+                        alert(data.message + '\n\nProva ett annat nummer.');
+                    } else {
+                        alert('Fel: ' + (data.error || data.message || 'Okänt fel'));
+                    }
+                    return;
+                }
+                alert('✓ ' + (data.message || 'Förare tillagd'));
+                await bulkPreviewResults();
+            } catch (e) {
+                alert('Nätverksfel vid tillägg av förare');
             }
         }
 
