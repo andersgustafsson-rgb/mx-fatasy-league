@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MX Fantasy League - Motocross Fantasy Sports</title>
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@1,600;1,700;1,800&display=swap" rel="stylesheet" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
@@ -277,25 +278,97 @@
       }
     }
 
-    .mx-wordmark {
-      display: block;
-      width: min(100%, 22rem);
-      max-width: 34rem;
-      height: auto;
-      margin-left: auto;
-      margin-right: auto;
+    /* Startsida: egen wordmark (inspirerad av racing/HUD, inte ChatGPT-export) */
+    .mx-brand {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 0.15rem;
+      font-family: 'Rajdhani', system-ui, sans-serif;
+      font-style: italic;
+      font-weight: 800;
+      text-transform: uppercase;
+      line-height: 0.92;
+      margin: 0 auto;
+      user-select: none;
     }
     @media (min-width: 640px) {
-      .mx-wordmark {
-        margin-left: 0;
-        margin-right: 0;
-        width: min(100%, 28rem);
-      }
+      .mx-brand { margin: 0; }
     }
-    @media (min-width: 768px) {
-      .mx-wordmark {
-        width: min(100%, 32rem);
-      }
+    .mx-brand__mx {
+      font-size: clamp(3.25rem, 11vw, 5.25rem);
+      letter-spacing: -0.06em;
+      color: #f8fafc;
+      transform: skewX(-10deg);
+      text-shadow:
+        0 2px 0 rgba(0, 0, 0, 0.55),
+        0 0 28px rgba(34, 211, 238, 0.18);
+      position: relative;
+      padding-right: 0.05em;
+    }
+    .mx-brand__mx::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        -18deg,
+        transparent 0,
+        transparent 3px,
+        rgba(0, 0, 0, 0.12) 3px,
+        rgba(0, 0, 0, 0.12) 4px
+      );
+      mix-blend-mode: multiply;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .mx-brand__aside {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      transform: skewX(-10deg);
+      margin-bottom: 0.12rem;
+    }
+    .mx-brand__frame {
+      position: relative;
+      margin-left: 0.5rem;
+      padding: 0.28rem 0.85rem 0.38rem 0.6rem;
+      border: 2px solid #22d3ee;
+      border-left: none;
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.12);
+    }
+    .mx-brand__tick {
+      position: absolute;
+      left: -0.5rem;
+      width: 0.5rem;
+      height: 2px;
+      background: #22d3ee;
+      pointer-events: none;
+    }
+    .mx-brand__tick--top { top: -2px; }
+    .mx-brand__tick--bot { bottom: -2px; width: 0.7rem; }
+    .mx-brand__fantasy {
+      display: block;
+      font-size: clamp(1.35rem, 4.2vw, 2.05rem);
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      color: #22d3ee;
+      text-shadow: 0 0 18px rgba(34, 211, 238, 0.45);
+    }
+    .mx-brand__league {
+      display: block;
+      margin-top: 0.05em;
+      font-size: clamp(0.95rem, 2.8vw, 1.35rem);
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: #f8fafc;
+    }
+    .mx-brand__rule {
+      display: block;
+      height: 2px;
+      margin-top: 0.2rem;
+      margin-left: -42%;
+      width: 142%;
+      background: linear-gradient(90deg, #f8fafc 0%, rgba(248, 250, 252, 0.35) 100%);
+      opacity: 0.9;
     }
     
     /* Countdown Widget Animations */
@@ -407,16 +480,18 @@
       <div class="mb-6 md:mb-8">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
           <header class="text-center sm:text-left">
-            <h1 class="sr-only">MX Fantasy League</h1>
-            <img
-              src="{{ url_for('static', filename='images/mx_fantasy_wordmark.png') }}"
-              alt="MX Fantasy League"
-              class="mx-wordmark"
-              width="512"
-              height="128"
-              decoding="async"
-              fetchpriority="high"
-            />
+            <h1 class="mx-brand" aria-label="MX Fantasy League">
+              <span class="mx-brand__mx">MX</span>
+              <span class="mx-brand__aside">
+                <span class="mx-brand__frame">
+                  <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
+                  <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
+                  <span class="mx-brand__fantasy">Fantasy</span>
+                  <span class="mx-brand__league">League</span>
+                </span>
+                <span class="mx-brand__rule" aria-hidden="true"></span>
+              </span>
+            </h1>
             <div class="flex items-center gap-3 mt-2">
               {% if user_profile_picture %}
                 {% if user_profile_picture.startswith('data:') %}
