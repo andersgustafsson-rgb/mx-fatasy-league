@@ -667,24 +667,11 @@
             <div class="section-card rounded-lg p-6 mb-6">
                 <h2 class="text-2xl font-bold text-cyan-400 mb-4">👤 User Management</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Manage Users -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">👥 Manage Users</h3>
-                        <p class="text-gray-300 mb-4">View, edit, or delete user accounts.</p>
-                        <a href="/admin/users" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Manage Users
-                        </a>
-                    </div>
-
-                    <!-- User Statistics -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">📊 User Statistics</h3>
-                        <p class="text-gray-300 mb-4">View user activity and statistics.</p>
-                        <a href="/admin/users" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            View Stats
-                        </a>
-                    </div>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <p class="text-gray-300 mb-4">Visa, redigera och ta bort konton. Statistik och aktivitet finns på samma sida.</p>
+                    <a href="/admin/users" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                        👥 Hantera användare
+                    </a>
                 </div>
             </div>
         </div>
@@ -694,24 +681,27 @@
             <div class="section-card rounded-lg p-6 mb-6">
                 <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏅 League Management</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Manage Leagues -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">🏆 Manage Leagues</h3>
-                        <p class="text-gray-300 mb-4">Create, edit, or delete leagues.</p>
-                        <a href="/admin/leagues" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Manage Leagues
-                        </a>
-                    </div>
+                <div class="bg-gray-800 rounded-lg p-4 mb-6">
+                    <p class="text-gray-300 mb-4">Skapa, redigera och ta bort ligor.</p>
+                    <a href="/admin/leagues" class="btn-primary px-4 py-2 rounded-lg inline-block">
+                        🏆 Hantera ligor
+                    </a>
+                </div>
 
-                    <!-- League Points -->
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <h3 class="text-lg font-semibold text-white mb-3">📊 League Points</h3>
-                        <p class="text-gray-300 mb-4">Calculate and manage league points.</p>
-                        <a href="/admin/leagues" class="btn-primary px-4 py-2 rounded-lg inline-block">
-                            Points Management
-                        </a>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-lg font-semibold text-white mb-3">🏆 League Points</h3>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button onclick="calculateAllLeaguePoints()" class="btn-primary px-4 py-2 rounded-lg">
+                            🏅 Calculate All League Points
+                        </button>
+                        <button onclick="resetAllLeaguePoints()" class="btn-warning px-4 py-2 rounded-lg">
+                            🔄 Nollställ Alla League Points
+                        </button>
                     </div>
+                    <p class="text-gray-400 text-sm">
+                        <strong>Calculate:</strong> Räknar om league points för alla tävlingar<br>
+                        <strong>Nollställ:</strong> Sätter alla league points till 0 (inför nya serier)
+                    </p>
                 </div>
             </div>
         </div>
@@ -778,6 +768,14 @@
                     
                     <div id="announcement-status" class="mt-4 hidden"></div>
                     <p class="text-xs text-gray-500 mt-4">Meddelanden sparas i Pit Lane (Race Control) så spelare kan läsa dem igen. Aktiva meddelanden skickar även e-post till alla spelare med registrerad e-post (kräver GMAIL_PASSWORD på servern).</p>
+                </div>
+
+                <div class="mt-8 bg-gray-800 rounded-lg p-4">
+                    <h3 class="text-xl font-semibold text-white mb-3">📱 Race Recap Studio</h3>
+                    <p class="text-gray-300 mb-4">Skapa delningsbild (PNG) och Facebook-text efter race — topp-listor + fältfakta från alla tipsare.</p>
+                    <a href="/admin/social-recap" class="btn-primary px-6 py-3 rounded-lg inline-block">
+                        Öppna Recap Studio
+                    </a>
                 </div>
                 
                 <!-- Email Section -->
@@ -878,16 +876,6 @@
         <div id="system-tools" class="section-panel hidden">
             <div class="section-card rounded-lg p-6 mb-6">
                 <h2 class="text-2xl font-bold text-cyan-400 mb-4">🔧 System Tools</h2>
-
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">📱 Race Recap Studio</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Skapa delningsbild (PNG) och Facebook-text efter race — topp-listor + fältfakta från alla tipsare.</p>
-                        <a href="/admin/social-recap" class="btn-primary px-6 py-3 rounded-lg inline-block">
-                            Öppna Recap Studio
-                        </a>
-                    </div>
-                </div>
                 
                 <!-- Data Management -->
                 <div class="mb-6">
@@ -924,25 +912,6 @@
                         </div>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
                             Clear Season Teams removes all season teams and riders. Clear Game Highscores removes Cross Jump and Quiz highscores.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- League Points -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">🏆 League Points</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <div class="flex gap-2 mb-4">
-                            <button onclick="calculateAllLeaguePoints()" class="btn-primary px-4 py-2 rounded-lg">
-                                🏅 Calculate All League Points
-                            </button>
-                            <button onclick="resetAllLeaguePoints()" class="btn-warning px-4 py-2 rounded-lg">
-                                🔄 Nollställ Alla League Points
-                            </button>
-                        </div>
-                        <p class="text-gray-400 text-sm mt-2">
-                            <strong>Calculate:</strong> Räknar om league points för alla tävlingar<br>
-                            <strong>Nollställ:</strong> Sätter alla league points till 0 (inför nya serier)
                         </p>
                     </div>
                 </div>
