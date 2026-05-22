@@ -105,8 +105,16 @@
             <div id="cp-status" class="hidden text-sm"></div>
         </div>
 
+        <!-- Legacy verktyg (gömda) — resultat hanteras i Admin → Tävlingsresultat -->
+        <details class="mb-6 rounded-lg border border-gray-500/60 bg-gray-800/50">
+            <summary class="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-400 hover:text-gray-200">
+                ⚙️ Avancerat (legacy) — entry list, CSV-resultat, bilder
+                <span class="ml-2 font-normal text-gray-500">sällan behövs</span>
+            </summary>
+            <div class="space-y-6 border-t border-gray-600/50 p-4">
+
         <!-- Entry List Import Section -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">📋 Entry List Import - Förare</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Upload CSV Files -->
@@ -353,6 +361,13 @@
                 </p>
             </div>
         </div>
+
+            </div>
+        </details>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Veckoresultat och bulk-import: <a href="/admin" class="text-cyan-500 hover:text-cyan-400 underline">Admin → Tävlingsresultat</a>.
+        </p>
 
         <!-- Tab Navigation -->
         <div class="flex flex-wrap gap-2 mb-6">
