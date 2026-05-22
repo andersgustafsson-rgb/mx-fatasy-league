@@ -435,7 +435,7 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <p class="text-gray-300 mb-4">
                             Paste overall results directly from the results website. We use only overall positions and rider names.<br>
-                            <span class="text-yellow-300">💡 Tip:</span> Klistra in som tidigare, eller använd <strong>Hämta &amp; Preview</strong> med Racer X-URL (sparar inget förrän Import). Paste fungerar alltid som backup.
+                            <span class="text-yellow-300">💡 Tip:</span> Klistra in Racer X-URL — tävling och klass fylls i automatiskt. <strong>Hämta &amp; Preview</strong> sparar inget förrän Import. Paste fungerar alltid som backup.
                         </p>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -1526,8 +1526,16 @@
                         select.addEventListener('change', bulkSuggestRacerxUrl);
                         document.getElementById('bulk-class')?.addEventListener('change', bulkSuggestRacerxUrl);
                         const urlInput = document.getElementById('bulk-racerx-url');
-                        if (urlInput) {
-                            urlInput.addEventListener('input', () => { urlInput.dataset.userEdited = '1'; });
+                        if (urlInput && !urlInput.dataset.racerxParseBound) {
+                            urlInput.dataset.racerxParseBound = '1';
+                            urlInput.addEventListener('input', () => {
+                                urlInput.dataset.userEdited = '1';
+                                clearTimeout(bulkUrlParseTimer);
+                                bulkUrlParseTimer = setTimeout(bulkParseRacerxUrlFromField, 450);
+                            });
+                            urlInput.addEventListener('paste', () => {
+                                setTimeout(bulkParseRacerxUrlFromField, 100);
+                            });
                         }
                     }
                     bulkSuggestRacerxUrl();
@@ -1555,17 +1563,62 @@
             if (slug) urlInput.placeholder = `https://racerxonline.com/sx/${year}/${slug}/${path}`;
         }
 
+        function bulkApplyRacerxInferred(inferred) {
+            if (!inferred) return;
+            const classSel = document.getElementById('bulk-class');
+            const formatSel = document.getElementById('bulk-format');
+            const compSel = document.getElementById('bulk-competition');
+            if (inferred.class_name && classSel) {
+                const has = Array.from(classSel.options).some(o => o.value === inferred.class_name);
+                if (has) classSel.value = inferred.class_name;
+            }
+            if (inferred.format && formatSel) formatSel.value = inferred.format;
+            if (inferred.competition_id && compSel) {
+                compSel.value = String(inferred.competition_id);
+            }
+            const statusEl = document.getElementById('bulk-fetch-status');
+            if (!statusEl) return;
+            statusEl.classList.remove('hidden');
+            if (inferred.competition_id) {
+                statusEl.className = 'text-sm mt-2 text-cyan-300';
+                statusEl.textContent = `Från URL: ${inferred.competition_name || 'tävling'} · ${inferred.class_name} (${inferred.year})`;
+            } else if (inferred.warning) {
+                statusEl.className = 'text-sm mt-2 text-yellow-300';
+                statusEl.textContent = inferred.warning;
+            }
+        }
+
+        let bulkUrlParseTimer = null;
+        async function bulkParseRacerxUrlFromField() {
+            const urlInput = document.getElementById('bulk-racerx-url');
+            const url = (urlInput?.value || '').trim();
+            if (!url || !url.includes('racerx')) return;
+            try {
+                const res = await fetch('/parse_racerx_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+                const data = await res.json();
+                if (data.success) bulkApplyRacerxInferred(data.inferred);
+            } catch (_) { /* tyst — användaren kan fortfarande välja manuellt */ }
+        }
+
         async function bulkFetchRacerXAndPreview() {
             const competitionId = document.getElementById('bulk-competition').value;
             const className = document.getElementById('bulk-class').value;
             const format = document.getElementById('bulk-format').value;
             const urlInput = document.getElementById('bulk-racerx-url');
             const statusEl = document.getElementById('bulk-fetch-status');
-            if (!competitionId || !className || !format) {
-                alert('Välj tävling, klass och format först.');
+            const url = (urlInput?.value || '').trim();
+            if (!url && (!competitionId || !className || !format)) {
+                alert('Klistra in Racer X-URL, eller välj tävling, klass och format.');
                 return;
             }
-            const url = (urlInput?.value || '').trim();
+            if (!format) {
+                alert('Välj format.');
+                return;
+            }
             statusEl.classList.remove('hidden');
             statusEl.className = 'text-sm mt-2 text-cyan-300';
             statusEl.textContent = 'Hämtar från Racer X…';
@@ -1575,8 +1628,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         url: url || undefined,
-                        competition_id: competitionId,
-                        class_name: className
+                        competition_id: url ? undefined : competitionId,
+                        class_name: url ? undefined : className,
                     })
                 });
                 const data = await res.json();
@@ -1585,10 +1638,17 @@
                     statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel');
                     return;
                 }
+                if (data.inferred) bulkApplyRacerxInferred(data.inferred);
                 document.getElementById('bulk-text').value = data.pasted_text;
                 if (data.source_url && urlInput && !url) urlInput.value = data.source_url;
+                const compAfter = document.getElementById('bulk-competition').value;
+                if (!compAfter) {
+                    statusEl.className = 'text-sm mt-2 text-yellow-300';
+                    statusEl.textContent = `Hämtade ${data.row_count} rader — välj tävling manuellt för preview mot er DB.`;
+                    return;
+                }
                 statusEl.className = 'text-sm mt-2 text-green-400';
-                statusEl.textContent = `Hämtade ${data.row_count} rader från Racer X (ingen import). Kör preview…`;
+                statusEl.textContent = `Hämtade ${data.row_count} rader. Kör preview…`;
                 await bulkPreviewResults();
                 statusEl.textContent = `✓ ${data.row_count} rader — preview nedan. Import görs bara om du klickar Import.`;
             } catch (e) {

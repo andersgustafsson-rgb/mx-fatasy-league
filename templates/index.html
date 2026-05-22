@@ -278,11 +278,8 @@
       }
     }
 
-    /* Startsida: egen wordmark (inspirerad av racing/HUD, inte ChatGPT-export) */
+    /* Startsida: egen wordmark — en gemensam skew så linjer linjerar */
     .mx-brand {
-      display: inline-flex;
-      align-items: flex-end;
-      gap: 0.15rem;
       font-family: 'Rajdhani', system-ui, sans-serif;
       font-style: italic;
       font-weight: 800;
@@ -294,16 +291,36 @@
     @media (min-width: 640px) {
       .mx-brand { margin: 0; }
     }
+    .mx-brand__skew {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 0.12rem;
+      transform: skewX(-10deg);
+      position: relative;
+      padding-bottom: 3px;
+    }
     .mx-brand__mx {
       font-size: clamp(3.25rem, 11vw, 5.25rem);
       letter-spacing: -0.06em;
       color: #f8fafc;
-      transform: skewX(-10deg);
       text-shadow:
         0 2px 0 rgba(0, 0, 0, 0.55),
         0 0 28px rgba(34, 211, 238, 0.18);
       position: relative;
       padding-right: 0.05em;
+      line-height: 0.85;
+      padding-bottom: 3px;
+    }
+    .mx-brand__mx::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: calc(100% + 0.5rem);
+      height: 2px;
+      background: #f8fafc;
+      z-index: 2;
+      pointer-events: none;
     }
     .mx-brand__mx::after {
       content: '';
@@ -324,27 +341,52 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      transform: skewX(-10deg);
-      margin-bottom: 0.12rem;
+      position: relative;
+      margin-left: 0.35rem;
     }
     .mx-brand__frame {
       position: relative;
-      margin-left: 0.5rem;
-      padding: 0.28rem 0.85rem 0.38rem 0.6rem;
-      border: 2px solid #22d3ee;
-      border-left: none;
+      padding: 0.28rem 0.85rem 0.42rem 0.6rem;
       box-shadow: 0 0 20px rgba(34, 211, 238, 0.12);
     }
-    .mx-brand__tick {
+    /* Ram med pseudo — inga skeva border-boxar */
+    .mx-brand__frame::before {
+      content: '';
       position: absolute;
-      left: -0.5rem;
-      width: 0.5rem;
+      top: 0;
+      left: 0.45rem;
+      right: 0;
+      height: 2px;
+      background: #22d3ee;
+    }
+    .mx-brand__frame::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: 2px;
+      background: #22d3ee;
+    }
+    .mx-brand__frame-border-bottom {
+      position: absolute;
+      left: 0.45rem;
+      right: 0;
+      bottom: 0;
       height: 2px;
       background: #22d3ee;
       pointer-events: none;
     }
-    .mx-brand__tick--top { top: -2px; }
-    .mx-brand__tick--bot { bottom: -2px; width: 0.7rem; }
+    .mx-brand__tick {
+      position: absolute;
+      left: 0;
+      width: 0.45rem;
+      height: 2px;
+      background: #22d3ee;
+      pointer-events: none;
+    }
+    .mx-brand__tick--top { top: 0; }
+    .mx-brand__tick--bot { bottom: 0; width: 0.65rem; }
     .mx-brand__fantasy {
       display: block;
       font-size: clamp(1.35rem, 4.2vw, 2.05rem);
@@ -360,15 +402,6 @@
       font-weight: 700;
       letter-spacing: 0.22em;
       color: #f8fafc;
-    }
-    .mx-brand__rule {
-      display: block;
-      height: 2px;
-      margin-top: 0.2rem;
-      margin-left: -42%;
-      width: 142%;
-      background: linear-gradient(90deg, #f8fafc 0%, rgba(248, 250, 252, 0.35) 100%);
-      opacity: 0.9;
     }
     
     /* Countdown Widget Animations */
@@ -481,15 +514,17 @@
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
           <header class="text-center sm:text-left">
             <h1 class="mx-brand" aria-label="MX Fantasy League">
-              <span class="mx-brand__mx">MX</span>
-              <span class="mx-brand__aside">
-                <span class="mx-brand__frame">
-                  <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
-                  <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
-                  <span class="mx-brand__fantasy">Fantasy</span>
-                  <span class="mx-brand__league">League</span>
+              <span class="mx-brand__skew">
+                <span class="mx-brand__mx">MX</span>
+                <span class="mx-brand__aside">
+                  <span class="mx-brand__frame">
+                    <span class="mx-brand__frame-border-bottom" aria-hidden="true"></span>
+                    <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
+                    <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
+                    <span class="mx-brand__fantasy">Fantasy</span>
+                    <span class="mx-brand__league">League</span>
+                  </span>
                 </span>
-                <span class="mx-brand__rule" aria-hidden="true"></span>
               </span>
             </h1>
             <div class="flex items-center gap-3 mt-2">

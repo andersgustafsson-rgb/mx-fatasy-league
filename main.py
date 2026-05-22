@@ -8146,10 +8146,13 @@ def fetch_racerx_results():
         from racerx_results_fetch import (
             build_racerx_results_url,
             fetch_racerx_results_paste_text,
+            match_competition_for_racerx,
+            parse_racerx_results_url,
         )
 
         data = request.get_json(force=True) or {}
         url = (data.get("url") or "").strip()
+        inferred = None
         if not url:
             competition_id = data.get("competition_id")
             class_name = data.get("class_name")
@@ -8162,15 +8165,68 @@ def fetch_racerx_results():
             url = build_racerx_results_url(
                 competition.name, year, class_name, competition.series
             )
-        pasted_text, row_count = fetch_racerx_results_paste_text(url)
-        return jsonify(
-            {
-                "success": True,
-                "pasted_text": pasted_text,
-                "row_count": row_count,
-                "source_url": url,
+        else:
+            parsed = parse_racerx_results_url(url)
+            all_comps = Competition.query.order_by(Competition.event_date.desc()).all()
+            matched, warn = match_competition_for_racerx(
+                parsed["event_slug"], parsed["year"], all_comps
+            )
+            inferred = {
+                "event_slug": parsed["event_slug"],
+                "year": parsed["year"],
+                "class_segment": parsed["class_segment"],
+                "class_name": parsed["class_name"],
+                "format": parsed["format"],
+                "competition_id": matched.id if matched else None,
+                "competition_name": matched.name if matched else None,
+                "warning": warn,
             }
+        pasted_text, row_count = fetch_racerx_results_paste_text(url)
+        payload = {
+            "success": True,
+            "pasted_text": pasted_text,
+            "row_count": row_count,
+            "source_url": url,
+        }
+        if inferred:
+            payload["inferred"] = inferred
+        return jsonify(payload)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post('/parse_racerx_url')
+def parse_racerx_url():
+    """Läs tävling + klass från Racer X-URL (fyller dropdowns, hämtar inte resultat)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        from racerx_results_fetch import match_competition_for_racerx, parse_racerx_results_url
+
+        data = request.get_json(force=True) or {}
+        url = (data.get("url") or "").strip()
+        if not url:
+            return jsonify({"error": "URL saknas"}), 400
+        parsed = parse_racerx_results_url(url)
+        all_comps = Competition.query.order_by(Competition.event_date.desc()).all()
+        matched, warn = match_competition_for_racerx(
+            parsed["event_slug"], parsed["year"], all_comps
         )
+        return jsonify({
+            "success": True,
+            "inferred": {
+                "event_slug": parsed["event_slug"],
+                "year": parsed["year"],
+                "class_segment": parsed["class_segment"],
+                "class_name": parsed["class_name"],
+                "format": parsed["format"],
+                "competition_id": matched.id if matched else None,
+                "competition_name": matched.name if matched else None,
+                "warning": warn,
+            },
+        })
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
