@@ -41,16 +41,16 @@ def _slug_match_key(text: str) -> str:
 
 
 def racerx_class_segment_to_db_class(segment: str) -> str:
-    """250sx-showdown / 450sx -> 250cc / 450cc"""
+    """250sx-showdown / 450sx / sx1 -> db class_name"""
     seg = (segment or "").lower()
-    if "450" in seg or seg in ("sx1", "wsx1"):
-        return "450cc"
-    if "250" in seg or seg in ("sx2", "wsx2"):
-        return "250cc"
-    if "wsx" in seg and "1" in seg:
+    if seg in ("sx1", "wsx_sx1", "wsx-sx1") or seg == "wsx1":
         return "wsx_sx1"
-    if "wsx" in seg:
+    if seg in ("sx2", "wsx_sx2", "wsx-sx2") or seg == "wsx2":
         return "wsx_sx2"
+    if "450" in seg:
+        return "450cc"
+    if "250" in seg:
+        return "250cc"
     raise ValueError(f"Kände inte igen klass i URL: {segment}")
 
 
@@ -62,8 +62,8 @@ def parse_racerx_results_url(url: str) -> dict:
     url = _validate_racerx_url(url)
     parsed = urlparse(url)
     parts = [p for p in parsed.path.split("/") if p]
-    if len(parts) < 4:
-        raise ValueError("URL:en saknar serie/år/tävling/klass (för få path-delar)")
+    if len(parts) < 3:
+        raise ValueError("URL:en saknar serie/år/tävling (för få path-delar)")
 
     series_key = parts[0].lower()
     try:
@@ -71,8 +71,10 @@ def parse_racerx_results_url(url: str) -> dict:
     except ValueError as e:
         raise ValueError("Kunde inte läsa år från URL") from e
     event_slug = parts[2].lower()
-    class_segment = parts[3].lower()
-    class_name = racerx_class_segment_to_db_class(class_segment)
+    class_segment = parts[3].lower() if len(parts) >= 4 else None
+    class_name = None
+    if class_segment:
+        class_name = racerx_class_segment_to_db_class(class_segment)
 
     # Overall-tabeller från RacerX använder samma parser som Motocross/RacerX
     format_type = "motocross"
@@ -88,6 +90,7 @@ def parse_racerx_results_url(url: str) -> dict:
         "class_segment": class_segment,
         "class_name": class_name,
         "format": format_type,
+        "has_results_path": class_segment is not None,
     }
 
 
@@ -147,14 +150,24 @@ def build_racerx_results_url(
     slug = racerx_event_slug(competition_name)
     if not slug:
         raise ValueError("Kunde inte skapa URL-slug från tävlingsnamnet")
-    path = "450sx" if "450" in (class_name or "") else "250sx"
     series_key = "sx"
     if series:
         s = series.upper()
-        if s in ("MX", "PMX", "MOTOCROSS"):
+        if s == "WSX":
+            series_key = "wsx"
+        elif s in ("MX", "PMX", "MOTOCROSS"):
             series_key = "mx"
         elif s == "SMX":
             series_key = "smx"
+    cn = (class_name or "").lower()
+    if cn == "wsx_sx1":
+        path = "sx1"
+    elif cn == "wsx_sx2":
+        path = "sx2"
+    elif "450" in cn:
+        path = "450sx"
+    else:
+        path = "250sx"
     return f"https://racerxonline.com/{series_key}/{event_year}/{slug}/{path}"
 
 
@@ -221,6 +234,13 @@ def fetch_racerx_results_paste_text(url: str, timeout: int = 30) -> tuple[str, i
     Returns (paste_text, row_count).
     """
     url = _validate_racerx_url(url)
+    meta = parse_racerx_results_url(url)
+    if not meta.get("has_results_path"):
+        raise ValueError(
+            "Den här Racer X-sidan är en event-översikt utan resultattabell "
+            "(vanligt för WSX, t.ex. wsx/2025/wsx-south-africa-gp). "
+            "Använd en SX-URL med klass (…/450sx eller …/250sx) eller klistra in resultat / Manual Results."
+        )
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout)
         resp.raise_for_status()
@@ -232,7 +252,10 @@ def fetch_racerx_results_paste_text(url: str, timeout: int = 30) -> tuple[str, i
     soup = BeautifulSoup(resp.text, "html.parser")
     table = _pick_results_table(soup)
     if not table:
-        raise ValueError("Ingen resultattabell hittades på sidan")
+        raise ValueError(
+            "Ingen resultattabell hittades på sidan. "
+            "WSX publicerar ofta inte fullständiga resultat på samma sätt som SX — klistra in manuellt."
+        )
     pasted = _table_to_paste_text(table)
     row_count = len([ln for ln in pasted.splitlines() if ln.strip()])
     if row_count < 3:

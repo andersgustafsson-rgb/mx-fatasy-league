@@ -182,16 +182,6 @@
                     </div>
                 </div>
 
-                <!-- Recalculate Rider Points Section -->
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">📊 Räkna om förare-poäng</h3>
-                    <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Räkna om poäng för alla förare i alla tävlingar baserat på korrekt poängsystem (position 5 = 17 poäng, position 6 = 16 poäng, etc.).</p>
-                        <button type="button" onclick="recalculateAllRiderPoints()" class="btn-warning px-6 py-2 rounded-lg">📊 Räkna om alla förare-poäng</button>
-                        <div id="recalculate-rider-points-result" class="mt-4 hidden"></div>
-                    </div>
-                </div>
-
                 <!-- Quick Holeshot Update -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">⚡ Snabb Holeshot-uppdatering</h3>
@@ -304,7 +294,7 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <p class="text-gray-300 mb-4">
                             Paste overall results directly from the results website. We use only overall positions and rider names.<br>
-                            <span class="text-yellow-300">💡 Tip:</span> Klistra in Racer X-URL — tävling och klass fylls i automatiskt. <strong>Hämta &amp; Preview</strong> sparar inget förrän Import. Paste fungerar alltid som backup.
+                            <span class="text-yellow-300">💡 Tip:</span> Racer X <strong>SX</strong>-länk med klass fungerar (t.ex. <code class="text-cyan-300">.../450sx</code>). <strong>WSX</strong>-eventsidor har oftast ingen tabell — klistra in eller Manual Results. <strong>Hämta &amp; Preview</strong> sparar inget förrän Import.
                         </p>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -2414,44 +2404,6 @@
                 if (select) {
                     select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
                 }
-            }
-        }
-
-        async function recalculateAllRiderPoints() {
-            if (!confirm('Är du säker på att du vill räkna om poäng för alla förare i alla tävlingar? Detta kommer att uppdatera rider_points baserat på korrekt poängsystem.')) {
-                return;
-            }
-            
-            const resultDiv = document.getElementById('recalculate-rider-points-result');
-            resultDiv.classList.remove('hidden');
-            resultDiv.innerHTML = '<p class="text-yellow-400">🔄 Räknar om förare-poäng...</p>';
-            
-            try {
-                const response = await fetch('/admin/recalculate_all_rider_points', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    resultDiv.innerHTML = `<div class="bg-green-900/30 border border-green-500 rounded-lg p-4">
-                        <p class="text-green-400 font-semibold">✅ Poäng räknade om!</p>
-                        <p class="text-gray-300 text-sm mt-2">${data.message}</p>
-                        <p class="text-gray-300 text-sm">Tävlingar uppdaterade: ${data.competitions_updated}</p>
-                        <p class="text-gray-300 text-sm">Resultat uppdaterade: ${data.results_updated}</p>
-                    </div>`;
-                } else {
-                    resultDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
-                        <p class="text-red-400 font-semibold">❌ Fel</p>
-                        <p class="text-gray-300 text-sm mt-2">${data.error || 'Okänt fel'}</p>
-                    </div>`;
-                }
-            } catch (error) {
-                console.error('Error recalculating rider points:', error);
-                resultDiv.innerHTML = `<div class="bg-red-900/30 border border-red-500 rounded-lg p-4">
-                    <p class="text-red-400 font-semibold">❌ Ett fel uppstod</p>
-                    <p class="text-gray-300 text-sm mt-2">${error.message}</p>
-                </div>`;
             }
         }
 
