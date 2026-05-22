@@ -276,6 +276,27 @@
         transform: translateX(100%);
       }
     }
+
+    .mx-wordmark {
+      display: block;
+      width: min(100%, 22rem);
+      max-width: 34rem;
+      height: auto;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    @media (min-width: 640px) {
+      .mx-wordmark {
+        margin-left: 0;
+        margin-right: 0;
+        width: min(100%, 28rem);
+      }
+    }
+    @media (min-width: 768px) {
+      .mx-wordmark {
+        width: min(100%, 32rem);
+      }
+    }
     
     /* Countdown Widget Animations */
     #countdown-widget {
@@ -371,12 +392,12 @@
   </div>
   {% endif %}
 
-  <!-- Bakgrund -->
+  <!-- Bakgrund (mörk racing-ton; wordmark har egen grafik) -->
+  <div class="absolute inset-0 bg-[#050a14]"></div>
   <div
-    class="absolute inset-0 bg-cover bg-center"
-    style="background-image: url('{{ url_for("static", filename="images/mx_fantasy_logo.png") }}');"
+    class="absolute inset-0 opacity-40"
+    style="background: radial-gradient(ellipse 80% 60% at 85% 40%, rgba(34, 211, 238, 0.12), transparent 55%);"
   ></div>
-  <div class="absolute inset-0 bg-black bg-opacity-70"></div>
 
   <!-- Innehåll -->
   <div id="app-shell" class="relative z-10">
@@ -386,7 +407,16 @@
       <div class="mb-6 md:mb-8">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
           <header class="text-center sm:text-left">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold font-rajdhani racing-logo">MX Fantasy League</h1>
+            <h1 class="sr-only">MX Fantasy League</h1>
+            <img
+              src="{{ url_for('static', filename='images/mx_fantasy_wordmark.png') }}"
+              alt="MX Fantasy League"
+              class="mx-wordmark"
+              width="512"
+              height="128"
+              decoding="async"
+              fetchpriority="high"
+            />
             <div class="flex items-center gap-3 mt-2">
               {% if user_profile_picture %}
                 {% if user_profile_picture.startswith('data:') %}
