@@ -898,12 +898,22 @@ def series_status():
                     Competition.event_date >= current_date
                 ).order_by(Competition.event_date).first()
                 
+            days_until_next_race = None
+            if next_race and next_race.event_date:
+                days_until_next_race = (next_race.event_date - current_date).days
+
+            days_until_start = None
+            if s.start_date:
+                days_until_start = (s.start_date - current_date).days
+
             series_data.append({
                 'id': s.id,
                 'name': s.name,
                 'is_active': is_currently_active,
                 'start_date': s.start_date.isoformat() if s.start_date else None,
                 'end_date': s.end_date.isoformat() if s.end_date else None,
+                'days_until_start': days_until_start,
+                'days_until_next_race': days_until_next_race,
                 'next_race': {
                     'name': next_race.name,
                     'date': next_race.event_date.isoformat()

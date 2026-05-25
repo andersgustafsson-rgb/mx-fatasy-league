@@ -1061,7 +1061,7 @@
                       <p class="text-white/70 text-sm">
                         {{ sx_season_wrap.next_mx_date.strftime('%Y-%m-%d') if sx_season_wrap.next_mx_date else '' }}
                         {% if sx_season_wrap.days_until_mx and sx_season_wrap.days_until_mx > 0 %}
-                          <span class="text-amber-200 font-semibold"> · om {{ sx_season_wrap.days_until_mx }} {% if sx_season_wrap.days_until_mx == 1 %}dag{% else %}dagar{% endif %}</span>
+                          <span id="next-mx-days-label" class="text-amber-200 font-semibold" data-next-mx-name="{{ sx_season_wrap.next_mx_name }}"> · om {{ sx_season_wrap.days_until_mx }} {% if sx_season_wrap.days_until_mx == 1 %}dag{% else %}dagar{% endif %}</span>
                         {% endif %}
                       </p>
                     </div>
@@ -2610,6 +2610,7 @@
         
         // Update race name
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
+        updateNextMxDaysLabel(data);
         
         // Update countdowns
         updateRealCountdowns(data);
@@ -2622,6 +2623,22 @@
         document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
         document.getElementById('real-race-countdown').textContent = '--:--:--';
         document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+      }
+    }
+
+    function updateNextMxDaysLabel(data) {
+      const label = document.getElementById('next-mx-days-label');
+      if (!label || !data.next_race || !data.countdown || !data.countdown.race_start) return;
+
+      const expectedRaceName = (label.dataset.nextMxName || '').trim().toLowerCase();
+      const countdownRaceName = (data.next_race.name || '').trim().toLowerCase();
+      if (expectedRaceName && countdownRaceName && expectedRaceName !== countdownRaceName) return;
+
+      const days = data.countdown.race_start.days;
+      if (days > 0) {
+        label.textContent = ` · om ${days} ${days === 1 ? 'dag' : 'dagar'}`;
+      } else if (data.countdown.race_start.total_seconds > 0) {
+        label.textContent = ' · idag';
       }
     }
     
@@ -3440,18 +3457,6 @@
           return 0;
         });
         
-        // Kalenderdagar till ett YYYY-MM-DD (samma som Python date-date, undviker TZ-fel från new Date('YYYY-MM-DD'))
-        function calendarDaysUntilIsoDate(iso) {
-          if (!iso) return null;
-          const datePart = String(iso).split('T')[0];
-          const parts = datePart.split('-').map(Number);
-          if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return null;
-          const [Y, M, D] = parts;
-          const now = new Date();
-          const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          const t1 = new Date(Y, M - 1, D);
-          return Math.round((t1 - t0) / 86400000);
-        }
         function formatIsoDateSv(iso) {
           if (!iso) return '';
           const datePart = String(iso).split('T')[0];
@@ -3463,9 +3468,9 @@
         const seriesHTML = sortedSeries.map(serie => {
           const isActive = serie.is_active;
           const nextRace = serie.next_race;
-          const daysFromNextRace = nextRace && nextRace.date ? calendarDaysUntilIsoDate(nextRace.date) : null;
-          const daysFromSeriesStart = serie.start_date ? calendarDaysUntilIsoDate(serie.start_date) : null;
-          // Matcha nedräkning / SX-hero: föredra nästa tävlings datum, annars seriens startdatum
+          const daysFromNextRace = Number.isFinite(serie.days_until_next_race) ? serie.days_until_next_race : null;
+          const daysFromSeriesStart = Number.isFinite(serie.days_until_start) ? serie.days_until_start : null;
+          // Matcha serverns countdown: föredra nästa tävlings datum, annars seriens startdatum.
           const daysUntilStart =
             daysFromNextRace != null && daysFromNextRace > 0
               ? daysFromNextRace
