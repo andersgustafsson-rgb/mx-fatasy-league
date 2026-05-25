@@ -2629,7 +2629,7 @@ function regenerateFromText(text, selectedOverride) {
   const filterStatuses =
     mergedSourceSplit && baseStatuses?.length ? baseStatuses : statuses;
   const selectedStatuses = new Set();
-  const preferred = selectedOverride?.length ? selectedOverride : filterStatuses;
+  const preferred = Array.isArray(selectedOverride) ? selectedOverride : filterStatuses;
   for (const st of preferred) if (filterStatuses.includes(st)) selectedStatuses.add(st);
 
   const employeeName = getSelectedEmployeeName(totals);
@@ -2671,6 +2671,26 @@ els.btnGenerate.addEventListener("click", () => {
   regenerateFromText(text, null);
 });
 
+function regenerateCurrentTextPreservingSelection() {
+  const st = window.__tidrapport_state;
+  const text = els.pasteInput?.value || "";
+  if (!String(text).trim()) {
+    if (st) safeRenderAll(st);
+    return;
+  }
+  const selected = st?.selectedStatuses instanceof Set ? [...st.selectedStatuses] : null;
+  const chartNameFilterEnabled = !!st?.chartNameFilterEnabled;
+  const chartNameFilter = st?.chartNameFilter instanceof Set ? new Set(st.chartNameFilter) : new Set();
+
+  regenerateFromText(text, selected);
+
+  if (window.__tidrapport_state && chartNameFilterEnabled) {
+    window.__tidrapport_state.chartNameFilterEnabled = true;
+    window.__tidrapport_state.chartNameFilter = chartNameFilter;
+    safeRenderAll(window.__tidrapport_state);
+  }
+}
+
 function clearPasteAndChart() {
   els.pasteInput.value = "";
   regenerateFromText("", null);
@@ -2710,7 +2730,7 @@ els.employeeInput?.addEventListener("input", () => {
 });
 
 els.omfModeSelect?.addEventListener("change", () => {
-  if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+  if (window.__tidrapport_state) regenerateCurrentTextPreservingSelection();
 });
 
 els.chartMeasureSelect?.addEventListener("change", () => {
@@ -2782,17 +2802,21 @@ els.btnOvertimeDownload?.addEventListener("click", () => {
 for (const el of [els.fullTimeWeekHoursInput, els.workdaysPerWeekInput]) {
   el?.addEventListener("input", () => {
     updateNominalDayHoursHint();
-    if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+    if (window.__tidrapport_state) regenerateCurrentTextPreservingSelection();
   });
 }
 
-for (const el of [els.monthSelect, els.yearInput, els.titleInput]) {
+for (const el of [els.monthSelect, els.yearInput]) {
   el?.addEventListener("input", () => {
     updateForecastMonthInfo();
     if (!window.__tidrapport_state) return;
-    safeRenderAll(window.__tidrapport_state);
+    regenerateCurrentTextPreservingSelection();
   });
 }
+
+els.titleInput?.addEventListener("input", () => {
+  if (window.__tidrapport_state) safeRenderAll(window.__tidrapport_state);
+});
 
 els.analysisModeSelect?.addEventListener("change", () => {
   updateAnalysisPanels();
