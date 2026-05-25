@@ -3120,6 +3120,7 @@
               const colors = accentClasses[card.accent];
               const seriesData = data.leaders[card.key];
               const leader = seriesData && seriesData.leader ? seriesData.leader : null;
+              const top5 = seriesData && seriesData.top_5 ? seriesData.top_5 : [];
               html += `
                 <div class="rounded-xl border ${colors.border} ${colors.bg} p-3 shadow-lg">
                   <div class="flex items-center justify-between mb-2">
@@ -3127,10 +3128,7 @@
                     ${leader ? `<span class="${colors.points} text-xs font-bold">${leader.points}p</span>` : ''}
                   </div>
                   ${leader ? `<div class="text-white font-bold text-sm mb-2 truncate">#${leader.rider_number} ${leader.rider_name}</div>` : '<p class="text-xs text-gray-500 mb-2">Inga resultat ännu</p>'}
-                  <button onclick="toggleSeriesExpansion('${card.key}')" class="w-full text-xs ${colors.title} hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                    📋 ${card.button}
-                  </button>
-                  <div id="${card.key}-full-list" class="hidden mt-2 space-y-1"></div>
+                  <div class="mt-3 space-y-1">${podiumRows(top5, card.accent)}</div>
                 </div>
               `;
             });
@@ -3140,11 +3138,12 @@
             `;
 
             const smx450 = data.smx_overview['450cc_top_5'] || [];
-            const smx250 = data.smx_overview['250cc_top_5'] || [];
+            const smx250East = data.smx_overview['250cc_east_top_5'] || [];
+            const smx250West = data.smx_overview['250cc_west_top_5'] || [];
             html += `
               <div>
                 <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3">🏆 SMX-kval (SX + MX)</h4>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                   <div class="rounded-xl border border-yellow-400/60 bg-yellow-500/10 p-3">
                     <div class="flex items-center justify-between mb-3">
                       <h5 class="text-yellow-300 font-black text-sm">450cc Top 5</h5>
@@ -3158,14 +3157,17 @@
                   </div>
                   <div class="rounded-xl border border-green-400/60 bg-green-500/10 p-3">
                     <div class="flex items-center justify-between mb-3">
-                      <h5 class="text-green-300 font-black text-sm">250cc Top 5</h5>
+                      <h5 class="text-green-300 font-black text-sm">250 East Top 5</h5>
                       <span class="text-[10px] text-gray-400">SX + MX</span>
                     </div>
-                    <div class="space-y-1">${podiumRows(smx250, 'green', true)}</div>
-                    <button onclick="toggleSMXExpansion('250cc')" class="mt-3 w-full text-xs text-green-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                      📋 Visa alla 250cc SMX (Top 20)
-                    </button>
-                    <div id="smx-250cc-full-list" class="hidden mt-2 space-y-1"></div>
+                    <div class="space-y-1">${podiumRows(smx250East, 'green', true)}</div>
+                  </div>
+                  <div class="rounded-xl border border-blue-400/60 bg-blue-500/10 p-3">
+                    <div class="flex items-center justify-between mb-3">
+                      <h5 class="text-blue-300 font-black text-sm">250 West Top 5</h5>
+                      <span class="text-[10px] text-gray-400">SX + MX</span>
+                    </div>
+                    <div class="space-y-1">${podiumRows(smx250West, 'blue', true)}</div>
                   </div>
                 </div>
               </div>

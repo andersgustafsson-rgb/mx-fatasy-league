@@ -8652,6 +8652,7 @@ def compute_series_championship_totals():
 
     totals = defaultdict(lambda: defaultdict(float))
     rider_meta = {}
+    promoted_250_coasts = _promoted_250_coast_by_name()
 
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
@@ -8676,17 +8677,17 @@ def compute_series_championship_totals():
         else:
             pts = float(get_smx_qualification_points(cr.position))
 
-        rider_class = getattr(cr, "class_name", None) or rider.class_name
-
         if s == "WSX":
+            rider_class = getattr(cr, "class_name", None) or rider.class_name
             if rider_class not in ("wsx_sx1", "wsx_sx2"):
                 continue
             bucket = ("wsx", rider_class)
         else:
+            rider_class, result_coast = _standing_class_and_coast(cr, comp, rider, promoted_250_coasts)
             if rider_class == "450cc":
                 bucket = (s.lower(), "450")
             elif rider_class == "250cc":
-                rc = (rider.coast_250 or "").strip().lower()
+                rc = (result_coast or rider.coast_250 or "").strip().lower()
                 if rc not in ("east", "west"):
                     continue
                 cc = (comp.coast_250 or "").strip().lower()
@@ -8827,6 +8828,7 @@ def race_results_page():
         
         # Get results for each competition
         competition_results = {}
+        promoted_250_coasts = _promoted_250_coast_by_name()
         for comp in competitions:
             results = (
                 db.session.query(
@@ -8835,6 +8837,8 @@ def race_results_page():
                     CompetitionResult.rider_points,
                     Rider.name.label('rider_name'),
                     db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label("class_name"),
+                    Rider.class_name.label("rider_current_class"),
+                    Rider.coast_250.label("coast_250"),
                     Rider.rider_number,
                     Rider.image_url,
                     Rider.rider_image_data,
@@ -8881,17 +8885,30 @@ def race_results_page():
                     points = get_smx_qualification_points(result.position)  # Default to SMX points
                 
                 merged_img = getattr(result, "rider_image_data", None) or result.image_url
+                if comp.series == "WSX":
+                    display_class = result.class_name
+                else:
+                    display_class = _standing_class_and_coast(
+                        result, comp, result, promoted_250_coasts
+                    )[0] or result.class_name
                 result_dict = {
                     'rider_id': result.rider_id,
                     'position': result.position,
                     'rider_name': result.rider_name,
-                    'class_name': result.class_name,
+                    'class_name': display_class,
                     'rider_number': result.rider_number,
                     'image_url': merged_img,
                     'bike_brand': result.bike_brand,
                     'points': points,
                 }
                 results_with_points.append(result_dict)
+
+            results_with_points.sort(
+                key=lambda row: (
+                    str(row.get("class_name") or ""),
+                    row.get("position") if row.get("position") is not None else 9999,
+                )
+            )
             
             holeshots = []
             for h in holeshots_rows:
@@ -15744,6 +15761,129 @@ def create_test_data():
     
     db.session.commit()
 
+
+def repair_known_result_anomalies() -> int:
+    """Repair known imported result misses that affected live standings."""
+    repaired = 0
+
+    def norm(value: str | None) -> str:
+        return (value or "").replace(".", "").strip().lower()
+
+    haiden_riders = [
+        rider
+        for rider in Rider.query.all()
+        if (rider.name or "").strip().lower() == "haiden deegan"
+    ]
+    if not haiden_riders:
+        return repaired
+
+    haiden_riders.sort(key=lambda rider: 0 if rider.class_name == "250cc" else 1)
+    haiden_ids = [rider.id for rider in haiden_riders]
+    haiden_rider = haiden_riders[0]
+
+    # 2026 250SX West/Showdown results for Haiden Deegan.
+    # These rows were lost when his rider profile was moved forward to 450cc/WSX.
+    deegan_sx_2026_positions = {
+        "anaheim 1": 4,
+        "san diego": 1,
+        "anaheim 2": 1,
+        "houston": 1,
+        "glendale": 1,
+        "seattle": 1,
+        "birmingham": 2,
+        "st louis": 1,
+        "denver": 1,
+        "salt lake city": 4,
+    }
+
+    competitions_by_name = {
+        norm(comp.name): comp
+        for comp in Competition.query.filter_by(series="SX").all()
+        if comp.event_date and comp.event_date.year == 2026
+    }
+
+    for comp_name, position in deegan_sx_2026_positions.items():
+        comp = competitions_by_name.get(comp_name)
+        if not comp:
+            continue
+
+        existing = (
+            CompetitionResult.query
+            .filter(
+                CompetitionResult.competition_id == comp.id,
+                CompetitionResult.rider_id.in_(haiden_ids),
+            )
+            .first()
+        )
+        if existing:
+            if existing.position != position or existing.class_name != "250cc":
+                existing.position = position
+                existing.class_name = "250cc"
+                existing.rider_points = None
+                repaired += 1
+        else:
+            occupied_at_target = (
+                db.session.query(CompetitionResult)
+                .join(Rider, Rider.id == CompetitionResult.rider_id)
+                .filter(
+                    CompetitionResult.competition_id == comp.id,
+                    CompetitionResult.position == position,
+                    ~CompetitionResult.rider_id.in_(haiden_ids),
+                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == "250cc",
+                )
+                .all()
+            )
+            occupied_at_next = (
+                db.session.query(CompetitionResult.result_id)
+                .join(Rider, Rider.id == CompetitionResult.rider_id)
+                .filter(
+                    CompetitionResult.competition_id == comp.id,
+                    CompetitionResult.position == position + 1,
+                    ~CompetitionResult.rider_id.in_(haiden_ids),
+                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == "250cc",
+                )
+                .first()
+            )
+            if occupied_at_target:
+                if occupied_at_next:
+                    compacted_rows = (
+                        db.session.query(CompetitionResult)
+                        .join(Rider, Rider.id == CompetitionResult.rider_id)
+                        .filter(
+                            CompetitionResult.competition_id == comp.id,
+                            CompetitionResult.position >= position,
+                            ~CompetitionResult.rider_id.in_(haiden_ids),
+                            db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == "250cc",
+                        )
+                        .order_by(CompetitionResult.position.desc())
+                        .all()
+                    )
+                    for row in compacted_rows:
+                        row.position += 1
+                        row.class_name = "250cc"
+                        repaired += 1
+                else:
+                    for row in occupied_at_target:
+                        row.position = position + 1
+                        row.class_name = "250cc"
+                        repaired += 1
+
+            db.session.add(
+                CompetitionResult(
+                    competition_id=comp.id,
+                    rider_id=haiden_rider.id,
+                    position=position,
+                    class_name="250cc",
+                )
+            )
+            repaired += 1
+
+    if repaired:
+        db.session.commit()
+
+    return repaired
+
+
 # Initialize database function
 def init_database():
     """Initialize database with tables and test data"""
@@ -15840,6 +15980,14 @@ def init_database():
                     db.session.commit()
             except Exception as e:
                 print(f'Warning: Could not migrate competition_results."class": {e}')
+                db.session.rollback()
+
+            try:
+                repaired = repair_known_result_anomalies()
+                if repaired:
+                    print(f"Repaired {repaired} known race-result anomaly rows")
+            except Exception as e:
+                print(f"Warning: Could not repair known race-result anomalies: {e}")
                 db.session.rollback()
             
             # Only create test data if database is completely empty AND we're in development
@@ -18689,14 +18837,24 @@ def get_series_leaders():
             else:
                 leaders_data[series] = None
         
-        # Format SMX qualification overview - separate 450cc and 250cc
+        # Format SMX qualification overview - separate 450cc, 250 East and 250 West
         smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '450cc']
         smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '250cc']
+        smx_250cc_east = [
+            item for item in smx_250cc
+            if (item[1].get('coast_250') or item[1]['rider'].coast_250 or '').strip().lower() == 'east'
+        ]
+        smx_250cc_west = [
+            item for item in smx_250cc
+            if (item[1].get('coast_250') or item[1]['rider'].coast_250 or '').strip().lower() == 'west'
+        ]
         
         smx_overview = {
             'total_qualified': len(smx_qualification),
             '450cc_top_5': [],
-            '250cc_top_5': []
+            '250cc_top_5': [],
+            '250cc_east_top_5': [],
+            '250cc_west_top_5': []
         }
         
         # 450cc Top 5
@@ -18712,19 +18870,23 @@ def get_series_leaders():
                 'mx_points': data['mx_points']
             })
         
-        # 250cc Top 5
-        for i, (rider_id, data) in enumerate(smx_250cc[:5], 1):
-            rider = data['rider']
-            smx_overview['250cc_top_5'].append({
-                'position': i,
-                'rider_name': rider.name,
-                'rider_number': rider.rider_number,
-                'class_name': data.get('class_name'),
-                'coast_250': data.get('coast_250') or rider.coast_250,
-                'total_points': data['total_points'],
-                'sx_points': data['sx_points'],
-                'mx_points': data['mx_points']
-            })
+        def append_250cc_top_5(target_key, rows):
+            for i, (rider_id, data) in enumerate(rows[:5], 1):
+                rider = data['rider']
+                smx_overview[target_key].append({
+                    'position': i,
+                    'rider_name': rider.name,
+                    'rider_number': rider.rider_number,
+                    'class_name': data.get('class_name'),
+                    'coast_250': data.get('coast_250') or rider.coast_250,
+                    'total_points': data['total_points'],
+                    'sx_points': data['sx_points'],
+                    'mx_points': data['mx_points']
+                })
+
+        append_250cc_top_5('250cc_top_5', smx_250cc)
+        append_250cc_top_5('250cc_east_top_5', smx_250cc_east)
+        append_250cc_top_5('250cc_west_top_5', smx_250cc_west)
         
         return jsonify({
             'success': True,
@@ -19753,12 +19915,14 @@ def _standing_class_and_coast(
     rider: Rider,
     promoted_250_coasts: dict[str, str],
 ) -> tuple[str | None, str | None]:
-    class_name = _normalize_result_class(result.class_name, rider.class_name)
+    rider_class = getattr(rider, "class_name", None) or getattr(rider, "rider_current_class", None)
+    rider_name = getattr(rider, "name", None) or getattr(rider, "rider_name", "")
+    class_name = _normalize_result_class(getattr(result, "class_name", None), rider_class)
     comp_coast = (competition.coast_250 or "").strip().lower()
 
     # If a rider was later moved to 450, older SX rows may have been backfilled to 450.
     # SX 250 history is identified by the promoted rider name + the SX coast calendar.
-    promoted_coast = promoted_250_coasts.get((rider.name or "").strip().lower())
+    promoted_coast = promoted_250_coasts.get((rider_name or "").strip().lower())
     if competition.series == "SX" and promoted_coast and comp_coast in {"east", "west", "both", "showdown"}:
         class_name = "250cc"
         if comp_coast in {"east", "west"}:
@@ -19766,7 +19930,7 @@ def _standing_class_and_coast(
         return class_name, promoted_coast
 
     if class_name == "250cc":
-        rider_coast = (rider.coast_250 or "").strip().lower()
+        rider_coast = (getattr(rider, "coast_250", None) or "").strip().lower()
         if comp_coast in {"east", "west"}:
             return class_name, comp_coast
         if rider_coast in {"east", "west"}:
