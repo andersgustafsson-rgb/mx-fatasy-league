@@ -109,6 +109,16 @@
         >
           Övertid (manuell)
         </button>
+        <button
+          type="button"
+          id="tabSickManual"
+          class="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800/70"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panelSickManual"
+        >
+          Sjuktimmar (manuell)
+        </button>
       </div>
     </div>
 
@@ -564,6 +574,132 @@
           <div class="mt-2 text-xs text-slate-400" id="overtimeTitlePreview"></div>
           <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
             <canvas id="overtimeChartCanvas" height="360"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Panel: Sjuktimmar (manuell) -->
+    <div id="panelSickManual" class="hidden" role="tabpanel" aria-labelledby="tabSickManual">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-4">
+          <div class="rounded-xl border-2 border-rose-900/40 bg-slate-950/50 p-4 shadow-lg shadow-rose-950/10">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-lg font-semibold text-rose-50 tracking-tight">Sjuktimmar — manuell beräkning</h2>
+                <p class="text-xs text-slate-400 mt-1 max-w-md">
+                  Mata in namn och antal arbetsdagar/frånvarodagar. Välj sysselsättningsgrad och sjukgrad, så räknas sjuktimmar fram.
+                </p>
+              </div>
+              <button type="button" id="btnSickManualClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">
+                Rensa
+              </button>
+            </div>
+
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickManualName">Namn</label>
+                <input id="sickManualName" type="text" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Ex: Norin, Angelika" autocomplete="off" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickManualDays">Antal arbetsdagar / sjukdagar</label>
+                <input id="sickManualDays" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Klistra siffra här, t.ex. 22" autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickEmploymentPct">Sysselsättning %</label>
+                <input id="sickEmploymentPct" type="text" inputmode="decimal" value="100" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickRatePct">Sjukgrad %</label>
+                <input id="sickRatePct" type="text" inputmode="decimal" value="100" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickWeekHours">Heltid tim/vecka</label>
+                <input id="sickWeekHours" type="text" inputmode="decimal" value="36.33" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickWorkdaysPerWeek">Arbetsdagar/vecka</label>
+                <input id="sickWorkdaysPerWeek" type="number" inputmode="numeric" min="1" max="7" value="5" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" />
+              </div>
+            </div>
+
+            <p id="sickManualFormulaHint" class="text-[11px] text-slate-500 mt-2"></p>
+
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" id="btnSickManualAdd" class="px-5 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-base font-semibold shadow-md shadow-rose-900/30">
+                Lägg till person/rad
+              </button>
+              <button type="button" id="btnSickManualGenerate" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600">
+                Skapa / uppdatera diagram
+              </button>
+              <div id="sickManualStatusText" class="text-sm text-slate-300 flex-1 min-w-[12rem]"></div>
+            </div>
+
+            <details class="group mt-4 rounded-xl border border-slate-800 bg-slate-950/30">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden">
+                <span>
+                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra siffror / namn</span>
+                  <span class="block text-xs text-slate-500 mt-0.5">En rad per person: <span class="font-mono">Namn[TAB]dagar</span> eller bara <span class="font-mono">dagar</span></span>
+                </span>
+                <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
+              </summary>
+              <div class="px-4 pb-4 pt-0 border-t border-slate-800/80">
+                <textarea
+                  id="sickManualPaste"
+                  class="mt-3 w-full h-40 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
+                  placeholder="Norin, Angelika&#9;22&#10;Olsson, Lena&#9;10&#10;7"
+                ></textarea>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button type="button" id="btnSickManualPasteApply" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Lägg in rader från klistring
+                  </button>
+                  <button type="button" id="btnSickManualPasteClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
+                    Töm klistringsruta
+                  </button>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2">
+                  Klistrade rader använder sysselsättning/sjukgrad/veckoarvode från rutorna ovan. Om raden bara är en siffra används namnet i namnrutan, annars skapas “Rad 1”, “Rad 2” osv.
+                </p>
+              </div>
+            </details>
+          </div>
+
+          <div class="bg-slate-950/40 border border-slate-800 rounded-xl p-3">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-sm font-semibold text-slate-200">Inmatade sjuktimmar</h3>
+              <button type="button" id="btnSickManualRemoveSelected" class="px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/40 text-sm border border-red-900/40">
+                Ta bort markerade
+              </button>
+            </div>
+            <div class="mt-2 overflow-auto max-h-72 border border-slate-800 rounded-xl">
+              <table class="min-w-full text-sm">
+                <thead class="sticky top-0 bg-slate-950 border-b border-slate-800">
+                  <tr>
+                    <th class="text-left px-3 py-2">Välj</th>
+                    <th class="text-left px-3 py-2">Namn</th>
+                    <th class="text-right px-3 py-2">Dagar</th>
+                    <th class="text-right px-3 py-2">Syss %</th>
+                    <th class="text-right px-3 py-2">Sjuk %</th>
+                    <th class="text-right px-3 py-2">Sjuktimmar</th>
+                  </tr>
+                </thead>
+                <tbody id="sickManualTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-semibold">Diagram</h2>
+            <button id="btnSickManualDownload" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Spara PNG</button>
+          </div>
+          <div class="mt-2 text-xs text-slate-400" id="sickManualTitlePreview"></div>
+          <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
+            <canvas id="sickManualChartCanvas" height="360"></canvas>
           </div>
         </section>
       </div>

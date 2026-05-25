@@ -164,8 +164,10 @@ const els = {
   // Tabs
   tabTidrapport: document.getElementById("tabTidrapport"),
   tabOvertime: document.getElementById("tabOvertime"),
+  tabSickManual: document.getElementById("tabSickManual"),
   panelTidrapport: document.getElementById("panelTidrapport"),
   panelOvertime: document.getElementById("panelOvertime"),
+  panelSickManual: document.getElementById("panelSickManual"),
 
   // Overtime (manual) tab
   overtimeMonth: document.getElementById("overtimeMonth"),
@@ -184,6 +186,27 @@ const els = {
   btnOvertimePasteApply: document.getElementById("btnOvertimePasteApply"),
   btnOvertimePasteClear: document.getElementById("btnOvertimePasteClear"),
   overtimeChartMode: document.getElementById("overtimeChartMode"),
+
+  // Sick hours (manual) tab
+  sickManualName: document.getElementById("sickManualName"),
+  sickManualDays: document.getElementById("sickManualDays"),
+  sickEmploymentPct: document.getElementById("sickEmploymentPct"),
+  sickRatePct: document.getElementById("sickRatePct"),
+  sickWeekHours: document.getElementById("sickWeekHours"),
+  sickWorkdaysPerWeek: document.getElementById("sickWorkdaysPerWeek"),
+  sickManualFormulaHint: document.getElementById("sickManualFormulaHint"),
+  btnSickManualAdd: document.getElementById("btnSickManualAdd"),
+  btnSickManualGenerate: document.getElementById("btnSickManualGenerate"),
+  btnSickManualClear: document.getElementById("btnSickManualClear"),
+  sickManualStatusText: document.getElementById("sickManualStatusText"),
+  sickManualTableBody: document.getElementById("sickManualTableBody"),
+  btnSickManualRemoveSelected: document.getElementById("btnSickManualRemoveSelected"),
+  sickManualChartCanvas: document.getElementById("sickManualChartCanvas"),
+  btnSickManualDownload: document.getElementById("btnSickManualDownload"),
+  sickManualTitlePreview: document.getElementById("sickManualTitlePreview"),
+  sickManualPaste: document.getElementById("sickManualPaste"),
+  btnSickManualPasteApply: document.getElementById("btnSickManualPasteApply"),
+  btnSickManualPasteClear: document.getElementById("btnSickManualPasteClear"),
 };
 
 /** Råtext per del för sammanslagen period (jan–mars m.m.), endast i minnet */
@@ -229,8 +252,11 @@ function rawPasteFromInput() {
 
 function setActiveTab(tab) {
   const isOvertime = tab === "overtime";
-  if (els.panelTidrapport) els.panelTidrapport.classList.toggle("hidden", isOvertime);
+  const isSickManual = tab === "sickManual";
+  const isTidrapport = !isOvertime && !isSickManual;
+  if (els.panelTidrapport) els.panelTidrapport.classList.toggle("hidden", !isTidrapport);
   if (els.panelOvertime) els.panelOvertime.classList.toggle("hidden", !isOvertime);
+  if (els.panelSickManual) els.panelSickManual.classList.toggle("hidden", !isSickManual);
 
   const setBtn = (btn, active) => {
     if (!btn) return;
@@ -239,8 +265,9 @@ function setActiveTab(tab) {
       ? "px-4 py-2 rounded-lg text-sm font-semibold bg-slate-800 text-slate-100"
       : "px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800/70";
   };
-  setBtn(els.tabTidrapport, !isOvertime);
+  setBtn(els.tabTidrapport, isTidrapport);
   setBtn(els.tabOvertime, isOvertime);
+  setBtn(els.tabSickManual, isSickManual);
 }
 
 // -----------------------
@@ -538,6 +565,279 @@ function applyOvertimePaste() {
   renderOvertimeTable();
   renderOvertimeChart();
   setOvertimeStatus(`Klart: ${added} rad(er) inlagda${skipped ? `, ${skipped} hoppades över` : ""}.`);
+}
+
+// ------------------------------
+// Sick hours (manual calculation)
+// ------------------------------
+
+const SICK_MANUAL_LS_KEY = "mx_sick_manual_v1";
+let sickManualChart = null;
+let sickManualRows = [];
+
+function parsePct(raw, fallback = null) {
+  const n = parseHourNumber(raw);
+  if (n == null || !Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, n));
+}
+
+function sickManualDefaults() {
+  const employmentPct = parsePct(els.sickEmploymentPct?.value, 100);
+  const sickPct = parsePct(els.sickRatePct?.value, 100);
+  const weekHours = parseHourNumber(els.sickWeekHours?.value) ?? 36.33;
+  const workdaysPerWeek = parseInt(cleanStr(els.sickWorkdaysPerWeek?.value), 10);
+  return {
+    employmentPct,
+    sickPct,
+    weekHours: Number.isFinite(weekHours) && weekHours > 0 ? weekHours : 36.33,
+    workdaysPerWeek:
+      Number.isFinite(workdaysPerWeek) && workdaysPerWeek >= 1 && workdaysPerWeek <= 7 ? workdaysPerWeek : 5,
+  };
+}
+
+function calculateSickManualHours(days, employmentPct, sickPct, weekHours, workdaysPerWeek) {
+  if (!(Number(days) >= 0) || !(Number(weekHours) > 0) || !(Number(workdaysPerWeek) > 0)) return null;
+  return (days * weekHours / workdaysPerWeek * employmentPct * sickPct) / 10000;
+}
+
+function sickManualRowHours(row) {
+  return calculateSickManualHours(
+    row.days,
+    row.employmentPct,
+    row.sickPct,
+    row.weekHours,
+    row.workdaysPerWeek
+  );
+}
+
+function loadSickManualFromStorage() {
+  try {
+    const raw = localStorage.getItem(SICK_MANUAL_LS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((r) => ({
+        id: cleanStr(r?.id) || `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+        name: cleanStr(r?.name),
+        days: Number(r?.days),
+        employmentPct: Number(r?.employmentPct),
+        sickPct: Number(r?.sickPct),
+        weekHours: Number(r?.weekHours),
+        workdaysPerWeek: Number(r?.workdaysPerWeek),
+      }))
+      .filter((r) => r.name && Number.isFinite(r.days) && Number.isFinite(sickManualRowHours(r)));
+  } catch {
+    return [];
+  }
+}
+
+function saveSickManualToStorage(rows) {
+  try {
+    localStorage.setItem(SICK_MANUAL_LS_KEY, JSON.stringify(rows));
+  } catch {
+    // ignore
+  }
+}
+
+function setSickManualStatus(msg) {
+  if (els.sickManualStatusText) els.sickManualStatusText.textContent = msg || "";
+}
+
+function updateSickManualFormulaHint() {
+  if (!els.sickManualFormulaHint) return;
+  const d = sickManualDefaults();
+  const dayHours = d.weekHours / d.workdaysPerWeek;
+  const sickDayHours = calculateSickManualHours(1, d.employmentPct, d.sickPct, d.weekHours, d.workdaysPerWeek);
+  els.sickManualFormulaHint.textContent =
+    `Formel: dagar × (${String(d.weekHours).replace(".", ",")} ÷ ${d.workdaysPerWeek}) × ${d.employmentPct}% syss × ${d.sickPct}% sjuk = ${round2(sickDayHours || 0)} h per sjukdag. Heltidsdag: ${round2(dayHours)} h.`;
+}
+
+function renderSickManualTable() {
+  if (!els.sickManualTableBody) return;
+  els.sickManualTableBody.innerHTML = "";
+  const rows = [...sickManualRows].sort((a, b) => a.name.localeCompare(b.name, "sv"));
+  for (const r of rows) {
+    const tr = document.createElement("tr");
+    tr.className = "border-b border-slate-800";
+
+    const tdCb = document.createElement("td");
+    tdCb.className = "px-3 py-2";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "accent-rose-500";
+    cb.dataset.id = r.id;
+    tdCb.appendChild(cb);
+
+    const tdName = document.createElement("td");
+    tdName.className = "px-3 py-2 whitespace-nowrap";
+    tdName.textContent = r.name;
+
+    const tdDays = document.createElement("td");
+    tdDays.className = "px-3 py-2 text-right tabular-nums";
+    tdDays.textContent = round2(r.days).toFixed(2).replace(/\.00$/, "");
+
+    const tdEmp = document.createElement("td");
+    tdEmp.className = "px-3 py-2 text-right tabular-nums";
+    tdEmp.textContent = `${round2(r.employmentPct)}`;
+
+    const tdSick = document.createElement("td");
+    tdSick.className = "px-3 py-2 text-right tabular-nums";
+    tdSick.textContent = `${round2(r.sickPct)}`;
+
+    const tdHours = document.createElement("td");
+    tdHours.className = "px-3 py-2 text-right tabular-nums";
+    tdHours.textContent = round2(sickManualRowHours(r) || 0).toFixed(2);
+
+    tr.appendChild(tdCb);
+    tr.appendChild(tdName);
+    tr.appendChild(tdDays);
+    tr.appendChild(tdEmp);
+    tr.appendChild(tdSick);
+    tr.appendChild(tdHours);
+    els.sickManualTableBody.appendChild(tr);
+  }
+}
+
+function ensureSickManualChart() {
+  if (!els.sickManualChartCanvas) return null;
+  if (sickManualChart) return sickManualChart;
+  if (typeof Chart === "undefined") return null;
+  const ctx = els.sickManualChartCanvas.getContext("2d");
+  sickManualChart = new Chart(ctx, {
+    type: "bar",
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: "y",
+      events: [],
+      animation: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        title: { display: true, text: "Sjuktimmar per person (manuell)", color: "#e2e8f0", font: { size: 14 } },
+        tidrapportValueLabels: {
+          enabled: true,
+          mode: "each",
+          integerLabels: false,
+          fontSize: 11,
+          pad: 6,
+          color: "#f8fafc",
+          strokeColor: "rgba(15, 23, 42, 0.85)",
+        },
+      },
+      scales: {
+        x: { beginAtZero: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
+        y: { ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.10)" } },
+      },
+    },
+  });
+  return sickManualChart;
+}
+
+function renderSickManualChart() {
+  const c = ensureSickManualChart();
+  if (!c) return;
+  const byName = new Map();
+  for (const r of sickManualRows) {
+    const h = sickManualRowHours(r);
+    if (!(Number(h) >= 0)) continue;
+    byName.set(r.name, (byName.get(r.name) || 0) + h);
+  }
+  const rows = [...byName.entries()]
+    .map(([name, hours]) => ({ name, hours: round2(hours) }))
+    .sort((a, b) => (b.hours - a.hours) || a.name.localeCompare(b.name, "sv"));
+  const labels = rows.map((r) => r.name);
+  const colors = rows.map((_, i) => palette(i));
+  c.data.labels = labels;
+  c.data.datasets = [
+    {
+      label: "Sjuktimmar",
+      data: rows.map((r) => r.hours),
+      backgroundColor: colors.map((hex) => rgbaFromHex(hex, 0.78)),
+      borderColor: colors.map((hex) => rgbaFromHex(hex, 1)),
+      borderWidth: 1,
+    },
+  ];
+  const ttl = rows.length ? `Sjuktimmar per person (manuell) · Personer: ${rows.length}` : "Sjuktimmar per person (manuell)";
+  c.options.plugins.title.text = ttl;
+  c.options.plugins.tidrapportValueLabels.enabled = true;
+  c.options.plugins.tidrapportValueLabels.mode = "each";
+  c.options.plugins.tidrapportValueLabels.integerLabels = false;
+  if (els.sickManualTitlePreview) els.sickManualTitlePreview.textContent = ttl;
+  c.update();
+}
+
+function addSickManualRow(name, days, defaults = sickManualDefaults()) {
+  const cleanName = cleanStr(name);
+  const d = Number(days);
+  if (!cleanName || !Number.isFinite(d) || d < 0) return false;
+  const row = {
+    id: `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    name: cleanName,
+    days: d,
+    employmentPct: defaults.employmentPct,
+    sickPct: defaults.sickPct,
+    weekHours: defaults.weekHours,
+    workdaysPerWeek: defaults.workdaysPerWeek,
+  };
+  sickManualRows.push(row);
+  return true;
+}
+
+function addSickManualRowFromInputs() {
+  const name = cleanStr(els.sickManualName?.value);
+  const days = parseHourNumber(els.sickManualDays?.value);
+  if (!addSickManualRow(name, days)) {
+    setSickManualStatus("Fyll i namn och antal dagar.");
+    return;
+  }
+  saveSickManualToStorage(sickManualRows);
+  renderSickManualTable();
+  renderSickManualChart();
+  setSickManualStatus(`Lade till ${name}.`);
+}
+
+function applySickManualPaste() {
+  const raw = normalizePastedTableString(els.sickManualPaste?.value || "");
+  if (!raw) {
+    setSickManualStatus("Klistringsrutan är tom.");
+    return;
+  }
+  const fallbackName = cleanStr(els.sickManualName?.value);
+  const defaults = sickManualDefaults();
+  let added = 0;
+  let skipped = 0;
+  raw.split("\n").map((l) => l.trim()).filter(Boolean).forEach((line, idx) => {
+    const tabParts = line.split(/\t|;/).map((p) => p.trim()).filter(Boolean);
+    let name = "";
+    let daysRaw = "";
+    if (tabParts.length >= 2) {
+      daysRaw = tabParts[tabParts.length - 1];
+      name = tabParts.slice(0, -1).join(" ");
+    } else {
+      const m = line.match(/(-?\d[\d\s.,]*)\s*$/);
+      if (m) {
+        daysRaw = m[1];
+        name = line.slice(0, m.index).trim();
+      }
+    }
+    const days = parseHourNumber(daysRaw);
+    const finalName = cleanStr(name) || fallbackName || `Rad ${idx + 1}`;
+    if (!addSickManualRow(finalName, days, defaults)) skipped += 1;
+    else added += 1;
+  });
+  saveSickManualToStorage(sickManualRows);
+  renderSickManualTable();
+  renderSickManualChart();
+  setSickManualStatus(`Klart: ${added} rad(er) inlagda${skipped ? `, ${skipped} hoppades över` : ""}.`);
+}
+
+function refreshSickManual() {
+  updateSickManualFormulaHint();
+  renderSickManualTable();
+  renderSickManualChart();
 }
 
 function flashMergeQueueList() {
@@ -2787,6 +3087,10 @@ els.tabOvertime?.addEventListener("click", () => {
   renderOvertimeTable();
   renderOvertimeChart();
 });
+els.tabSickManual?.addEventListener("click", () => {
+  setActiveTab("sickManual");
+  refreshSickManual();
+});
 
 // Overtime: actions
 els.overtimeChartMode?.addEventListener("change", () => {
@@ -2835,6 +3139,51 @@ els.btnOvertimeDownload?.addEventListener("click", () => {
   const a = document.createElement("a");
   a.href = url;
   a.download = `overtid_${new Date().toISOString().slice(0, 10)}.png`;
+  a.click();
+});
+
+// Sick hours (manual): actions
+els.btnSickManualAdd?.addEventListener("click", addSickManualRowFromInputs);
+els.btnSickManualGenerate?.addEventListener("click", () => {
+  refreshSickManual();
+  setSickManualStatus("Uppdaterade diagrammet.");
+});
+els.btnSickManualClear?.addEventListener("click", () => {
+  sickManualRows = [];
+  saveSickManualToStorage(sickManualRows);
+  refreshSickManual();
+  setSickManualStatus("Rensat.");
+});
+els.btnSickManualRemoveSelected?.addEventListener("click", () => {
+  if (!els.sickManualTableBody) return;
+  const ids = [...els.sickManualTableBody.querySelectorAll("input[type='checkbox']")]
+    .filter((cb) => cb.checked)
+    .map((cb) => cb.dataset.id)
+    .filter(Boolean);
+  if (!ids.length) {
+    setSickManualStatus("Inget markerat.");
+    return;
+  }
+  sickManualRows = sickManualRows.filter((r) => !ids.includes(r.id));
+  saveSickManualToStorage(sickManualRows);
+  refreshSickManual();
+  setSickManualStatus(`Tog bort ${ids.length} rad(er).`);
+});
+els.btnSickManualPasteApply?.addEventListener("click", applySickManualPaste);
+els.btnSickManualPasteClear?.addEventListener("click", () => {
+  if (els.sickManualPaste) els.sickManualPaste.value = "";
+  setSickManualStatus("Tömt klistringsrutan.");
+});
+for (const el of [els.sickEmploymentPct, els.sickRatePct, els.sickWeekHours, els.sickWorkdaysPerWeek]) {
+  el?.addEventListener("input", updateSickManualFormulaHint);
+}
+els.btnSickManualDownload?.addEventListener("click", () => {
+  const c = ensureSickManualChart();
+  if (!c) return;
+  const url = c.toBase64Image("image/png", 1);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `sjuktimmar_${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
 });
 
@@ -3055,6 +3404,13 @@ els.btnDownload.addEventListener("click", () => {
   overtimeChartMode = s.chartMode || "timeline";
   if (els.overtimeChartMode) els.overtimeChartMode.value = overtimeChartMode;
   if (els.overtimeYear && !els.overtimeYear.value) els.overtimeYear.value = String(new Date().getFullYear());
+  // Sick hours (manual): load saved rows/defaults
+  sickManualRows = loadSickManualFromStorage();
+  if (els.sickWeekHours && !els.sickWeekHours.value) els.sickWeekHours.value = "36.33";
+  if (els.sickWorkdaysPerWeek && !els.sickWorkdaysPerWeek.value) els.sickWorkdaysPerWeek.value = "5";
+  if (els.sickEmploymentPct && !els.sickEmploymentPct.value) els.sickEmploymentPct.value = "100";
+  if (els.sickRatePct && !els.sickRatePct.value) els.sickRatePct.value = "100";
+  updateSickManualFormulaHint();
   // Default tab = tidrapport
   setActiveTab("tidrapport");
   if (els.analysisModeSelect?.value === "compare") els.analysisModeSelect.value = "normal";
