@@ -792,23 +792,87 @@ function isSickManualSickStatus(raw) {
   return low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj");
 }
 
+function addSickManualAbsenceRow(name, d0, d1, omf, defaults) {
+  const cleanName = cleanStr(name);
+  if (!cleanName || !d0 || !d1 || !(Number(omf) > 0)) return false;
+  const days = workdaysInclusive(d0, d1, defaults.workdaysPerWeek);
+  if (!(days > 0)) return false;
+  sickManualRows.push({
+    id: `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    name: cleanName,
+    days,
+    employmentPct: defaults.employmentPct,
+    sickPct: Math.max(0, Math.min(100, omf * 100)),
+    weekHours: defaults.weekHours,
+    workdaysPerWeek: defaults.workdaysPerWeek,
+  });
+  return true;
+}
+
+function addSickManualLooseAbsenceRowsFromText(raw) {
+  const defaults = sickManualDefaults();
+  const text = String(raw ?? "")
+    .replace(/[\u00A0\u2007\u202F]/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  const chunks = text.split(/\.{4,}/g).map((c) => c.trim()).filter(Boolean);
+  if (!chunks.length) return null;
+
+  let added = 0;
+  let skipped = 0;
+  const dateRe = /\d{4}-\d{2}-\d{2}/g;
+
+  for (const chunk of chunks) {
+    const s = cleanStr(chunk.replace(/\n/g, " "));
+    if (!s || !/\d{4}-\d{2}-\d{2}/.test(s)) continue;
+
+    const dates = [...s.matchAll(dateRe)];
+    if (dates.length < 2) {
+      skipped += 1;
+      continue;
+    }
+
+    let name = cleanStr(s.slice(0, dates[0].index));
+    // Om rubrikraden följde med i första blocket: kasta allt fram till sista rubriken.
+    name = cleanStr(name.replace(/^.*\bMed\b/i, "").replace(/^.*\bOmf\b/i, ""));
+
+    const d0 = parseIsoDate(dates[0][0]);
+    const d1 = parseIsoDate(dates[1][0]);
+    const tail = s.slice((dates[1].index || 0) + dates[1][0].length);
+    if (!isSickManualSickStatus(tail)) {
+      skipped += 1;
+      continue;
+    }
+
+    const sickIdx = tail.toLowerCase().search(/sjuk|sj\//);
+    const afterStatus = sickIdx >= 0 ? tail.slice(sickIdx) : tail;
+    const numMatches = [...afterStatus.matchAll(/(?:^|\s)([01](?:[.,]\d{1,3})?)(?=\s|$)/g)];
+    const omf = numMatches.length ? parseOmfFactor(numMatches[0][1]) : null;
+
+    if (!addSickManualAbsenceRow(name, d0, d1, omf, defaults)) skipped += 1;
+    else added += 1;
+  }
+
+  return { added, skipped };
+}
+
 function addSickManualAbsenceRowsFromText(raw) {
   let parsed;
   try {
     parsed = parseTable(raw);
   } catch {
-    return null;
+    return addSickManualLooseAbsenceRowsFromText(raw);
   }
   const headers = parsed?.headers || [];
   const rows = parsed?.rows || [];
-  if (!headers.length || !rows.length) return null;
+  if (!headers.length || !rows.length) return addSickManualLooseAbsenceRowsFromText(raw);
 
   const colName = pickCol(headers, ["Namn", "Name"]);
   const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
   const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
   const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
   const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
-  if (!colName || !colDatumFom || !colOmf) return null;
+  if (!colName || !colDatumFom || !colOmf) return addSickManualLooseAbsenceRowsFromText(raw);
 
   const defaults = sickManualDefaults();
   let added = 0;
@@ -835,24 +899,12 @@ function addSickManualAbsenceRowsFromText(raw) {
       skipped += 1;
       continue;
     }
-    const days = workdaysInclusive(d0, d1, defaults.workdaysPerWeek);
-    if (!(days > 0)) {
-      skipped += 1;
-      continue;
-    }
-    sickManualRows.push({
-      id: `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-      name,
-      days,
-      employmentPct: defaults.employmentPct,
-      sickPct: Math.max(0, Math.min(100, omf * 100)),
-      weekHours: defaults.weekHours,
-      workdaysPerWeek: defaults.workdaysPerWeek,
-    });
-    added += 1;
+    if (!addSickManualAbsenceRow(name, d0, d1, omf, defaults)) skipped += 1;
+    else added += 1;
   }
 
-  return { added, skipped };
+  if (added > 0) return { added, skipped };
+  return addSickManualLooseAbsenceRowsFromText(raw) || { added, skipped };
 }
 
 function addSickManualRowFromInputs() {
