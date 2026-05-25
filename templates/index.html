@@ -3485,8 +3485,14 @@
           let isClickable = false;
           
           if (isActive) {
-            statusText = 'Aktiv';
-            statusColor = 'text-green-400';
+            if (daysFromNextRace != null && daysFromNextRace > 0) {
+              statusText = `Aktiv · nästa race om ${daysFromNextRace} dag${daysFromNextRace !== 1 ? 'ar' : ''}`;
+            } else if (daysFromNextRace === 0) {
+              statusText = 'Aktiv · race idag';
+            } else {
+              statusText = 'Aktiv';
+            }
+            statusColor = daysFromNextRace != null && daysFromNextRace <= 7 ? 'text-yellow-400' : 'text-green-400';
             buttonClass = 'bg-green-600 hover:bg-green-700';
             buttonText = 'Gå till serie';
             isClickable = true;
