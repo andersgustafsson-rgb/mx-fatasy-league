@@ -641,8 +641,8 @@
             <details class="group mt-4 rounded-xl border border-slate-800 bg-slate-950/30">
               <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden">
                 <span>
-                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra siffror / namn</span>
-                  <span class="block text-xs text-slate-500 mt-0.5">En rad per person: <span class="font-mono">Namn[TAB]dagar</span> eller bara <span class="font-mono">dagar</span></span>
+                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra frånvarorader / siffror</span>
+                  <span class="block text-xs text-slate-500 mt-0.5">Klistra frånvarotabell med Namn + Datum Fom/Tom + Omf, eller <span class="font-mono">Namn[TAB]dagar</span></span>
                 </span>
                 <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
               </summary>
@@ -650,7 +650,7 @@
                 <textarea
                   id="sickManualPaste"
                   class="mt-3 w-full h-40 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
-                  placeholder="Norin, Angelika&#9;22&#10;Olsson, Lena&#9;10&#10;7"
+                  placeholder="Namn&#9;Datum Fom&#9;Datum Tom&#9;Orsak&#9;Omf&#10;Norin, Angelika&#9;2026-04-01&#9;2026-04-30&#9;Sjukdom&#9;0.750&#10;Norin, Angelika&#9;2026-04-01&#9;2026-04-30&#9;Sjukdom&#9;0.250"
                 ></textarea>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <button type="button" id="btnSickManualPasteApply" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
@@ -661,7 +661,7 @@
                   </button>
                 </div>
                 <p class="text-[11px] text-slate-500 mt-2">
-                  Klistrade rader använder sysselsättning/sjukgrad/veckoarvode från rutorna ovan. Om raden bara är en siffra används namnet i namnrutan, annars skapas “Rad 1”, “Rad 2” osv.
+                  Frånvarotabell: arbetsdagar räknas från datum och «Omf» blir sjukgrad. Annan klistring använder sysselsättning/sjukgrad/veckoarvode från rutorna ovan.
                 </p>
               </div>
             </details>

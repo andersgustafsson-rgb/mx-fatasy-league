@@ -786,6 +786,75 @@ function addSickManualRow(name, days, defaults = sickManualDefaults()) {
   return true;
 }
 
+function isSickManualSickStatus(raw) {
+  const low = cleanStr(raw).toLowerCase();
+  if (!low) return true;
+  return low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj");
+}
+
+function addSickManualAbsenceRowsFromText(raw) {
+  let parsed;
+  try {
+    parsed = parseTable(raw);
+  } catch {
+    return null;
+  }
+  const headers = parsed?.headers || [];
+  const rows = parsed?.rows || [];
+  if (!headers.length || !rows.length) return null;
+
+  const colName = pickCol(headers, ["Namn", "Name"]);
+  const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
+  const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum", "Datum"]);
+  const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
+  const colOrsak = pickCol(headers, ORSAK_HEADER_ALIASES);
+  if (!colName || !colDatumFom || !colOmf) return null;
+
+  const defaults = sickManualDefaults();
+  let added = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const name = cleanStr(row[colName]);
+    if (!name) {
+      skipped += 1;
+      continue;
+    }
+    if (colOrsak && !isSickManualSickStatus(row[colOrsak])) {
+      skipped += 1;
+      continue;
+    }
+    const d0 = parseIsoDate(row[colDatumFom]);
+    let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
+    if (d0 && !d1) d1 = d0;
+    if (!d0 || !d1) {
+      skipped += 1;
+      continue;
+    }
+    const omf = parseOmfFactor(row[colOmf]);
+    if (!(Number(omf) > 0)) {
+      skipped += 1;
+      continue;
+    }
+    const days = workdaysInclusive(d0, d1, defaults.workdaysPerWeek);
+    if (!(days > 0)) {
+      skipped += 1;
+      continue;
+    }
+    sickManualRows.push({
+      id: `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      name,
+      days,
+      employmentPct: defaults.employmentPct,
+      sickPct: Math.max(0, Math.min(100, omf * 100)),
+      weekHours: defaults.weekHours,
+      workdaysPerWeek: defaults.workdaysPerWeek,
+    });
+    added += 1;
+  }
+
+  return { added, skipped };
+}
+
 function addSickManualRowFromInputs() {
   const name = cleanStr(els.sickManualName?.value);
   const days = parseHourNumber(els.sickManualDays?.value);
@@ -805,6 +874,18 @@ function applySickManualPaste() {
     setSickManualStatus("Klistringsrutan är tom.");
     return;
   }
+
+  const absenceResult = addSickManualAbsenceRowsFromText(raw);
+  if (absenceResult && (absenceResult.added > 0 || absenceResult.skipped > 0)) {
+    saveSickManualToStorage(sickManualRows);
+    renderSickManualTable();
+    renderSickManualChart();
+    setSickManualStatus(
+      `Frånvarorader: ${absenceResult.added} rad(er) inlagda${absenceResult.skipped ? `, ${absenceResult.skipped} hoppades över` : ""}.`
+    );
+    return;
+  }
+
   const fallbackName = cleanStr(els.sickManualName?.value);
   const defaults = sickManualDefaults();
   let added = 0;
