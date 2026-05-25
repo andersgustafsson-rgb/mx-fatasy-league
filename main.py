@@ -18555,14 +18555,14 @@ def get_smx_qualification():
         position = 1
         for rider_id, data in all_riders:
             rider = data['rider']
-            if rider.class_name == '450cc':
+            if data.get('class_name') == '450cc':
                 qualification_data.append({
                     'position': position,
                     'rider_id': rider.id,
                     'rider_name': rider.name,
                     'rider_number': rider.rider_number,
                     'bike_brand': rider.bike_brand,
-                    'rider_class': rider.class_name,
+                    'rider_class': data.get('class_name'),
                     'total_points': data['total_points'],
                     'sx_points': data['sx_points'],
                     'mx_points': data['mx_points'],
@@ -18593,14 +18593,14 @@ def get_smx_qualification_250cc():
         position = 1
         for rider_id, data in all_riders:
             rider = data['rider']
-            if rider.class_name == '250cc':
+            if data.get('class_name') == '250cc':
                 qualification_data.append({
                     'position': position,
                     'rider_id': rider.id,
                     'rider_name': rider.name,
                     'rider_number': rider.rider_number,
                     'bike_brand': rider.bike_brand,
-                    'coast_250': rider.coast_250,
+                    'coast_250': data.get('coast_250') or rider.coast_250,
                     'total_points': data['total_points'],
                     'sx_points': data['sx_points'],
                     'mx_points': data['mx_points'],
@@ -18690,8 +18690,8 @@ def get_series_leaders():
                 leaders_data[series] = None
         
         # Format SMX qualification overview - separate 450cc and 250cc
-        smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '450cc']
-        smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data['rider'].class_name == '250cc']
+        smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '450cc']
+        smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '250cc']
         
         smx_overview = {
             'total_qualified': len(smx_qualification),
@@ -18706,6 +18706,7 @@ def get_series_leaders():
                 'position': i,
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
+                'class_name': data.get('class_name'),
                 'total_points': data['total_points'],
                 'sx_points': data['sx_points'],
                 'mx_points': data['mx_points']
@@ -18718,7 +18719,8 @@ def get_series_leaders():
                 'position': i,
                 'rider_name': rider.name,
                 'rider_number': rider.rider_number,
-                'coast_250': rider.coast_250,
+                'class_name': data.get('class_name'),
+                'coast_250': data.get('coast_250') or rider.coast_250,
                 'total_points': data['total_points'],
                 'sx_points': data['sx_points'],
                 'mx_points': data['mx_points']
@@ -19705,154 +19707,120 @@ def get_current_time():
     # Default to real time
     return datetime.utcnow()
 
+def _normalize_result_class(result_class: str | None, rider_class: str | None) -> str | None:
+    """Class at result time. Falls back to current rider class for older rows."""
+    raw = (result_class or rider_class or "").strip().lower()
+    if raw in {"450", "450cc", "sx1", "wsx_sx1"}:
+        return "450cc"
+    if raw in {"250", "250cc", "sx2", "wsx_sx2"}:
+        return "250cc"
+    return None
+
+
+def _result_points_for_standing(result: CompetitionResult) -> int:
+    if result.position and result.position <= 20:
+        return get_smx_qualification_points(result.position)
+    return 0
+
+
 def calculate_smx_qualification_points():
-    """Calculate SMX qualification points for all riders based on Supercross and Motocross results"""
-    # Regular season SMX combined = SX + MX points (no playoffs).
-    # We calculate from stored CompetitionResult rows, scoped to the correct Competition.series values.
-    riders = Rider.query.all()
+    """Calculate SMX qualification points from result-time class, not current rider class."""
+    # A rider can move 250 -> 450 later. Historical SX 250 points must remain in 250 standings.
+    standings = {}
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.series.in_(["SX", "MX"]))
+        .all()
+    )
 
-    smx_points = {}
-    
-    for rider in riders:
-        # Get SX/MX results for this rider
-        sx_results = (
-            db.session.query(CompetitionResult)
-            .join(Competition)
-            .filter(
-                CompetitionResult.rider_id == rider.id,
-                Competition.series == "SX",
-            )
-            .all()
-        )
-        mx_results = (
-            db.session.query(CompetitionResult)
-            .join(Competition)
-            .filter(
-                CompetitionResult.rider_id == rider.id,
-                Competition.series == "MX",
-            )
-            .all()
-        )
+    for result, competition, rider in rows:
+        class_name = _normalize_result_class(result.class_name, rider.class_name)
+        if class_name not in {"450cc", "250cc"}:
+            continue
 
-        sx_points = 0
-        for result in sx_results:
-            if result.position and result.position <= 20:
-                sx_points += get_smx_qualification_points(result.position)
+        points = _result_points_for_standing(result)
+        if points <= 0:
+            continue
 
-        mx_points = 0
-        for result in mx_results:
-            if result.position and result.position <= 20:
-                mx_points += get_smx_qualification_points(result.position)
+        key = f"{rider.id}:{class_name}"
+        if key not in standings:
+            standings[key] = {
+                "rider": rider,
+                "class_name": class_name,
+                "coast_250": rider.coast_250,
+                "total_points": 0,
+                "sx_points": 0,
+                "mx_points": 0,
+            }
 
-        total_points = sx_points + mx_points
-        
-        smx_points[rider.id] = {
-            'rider': rider,
-            'total_points': total_points,
-            'sx_points': sx_points,
-            'mx_points': mx_points,
-        }
-        
-    
-    # Sort by class and get top 20 for each class separately
-    riders_450 = [(rider_id, data) for rider_id, data in smx_points.items() if data['rider'].class_name == '450cc']
-    riders_250 = [(rider_id, data) for rider_id, data in smx_points.items() if data['rider'].class_name == '250cc']
-    
-    # Sort each class by total points
-    riders_450_sorted = sorted(riders_450, key=lambda x: x[1]['total_points'], reverse=True)
-    riders_250_sorted = sorted(riders_250, key=lambda x: x[1]['total_points'], reverse=True)
-    
-    # Get top 20 for each class
-    top_20_450 = riders_450_sorted[:20]
-    top_20_250 = riders_250_sorted[:20]
-    
-    # Combine for backward compatibility (but now properly separated)
-    top_20 = top_20_450 + top_20_250
-    
-    
-    return top_20
+        if class_name == "250cc" and competition.series == "SX":
+            comp_coast = (competition.coast_250 or "").strip().lower()
+            if comp_coast in {"east", "west"}:
+                standings[key]["coast_250"] = comp_coast
+
+        if competition.series == "SX":
+            standings[key]["sx_points"] += points
+        elif competition.series == "MX":
+            standings[key]["mx_points"] += points
+        standings[key]["total_points"] += points
+
+    riders_450 = [(key, data) for key, data in standings.items() if data["class_name"] == "450cc"]
+    riders_250 = [(key, data) for key, data in standings.items() if data["class_name"] == "250cc"]
+
+    riders_450_sorted = sorted(riders_450, key=lambda x: x[1]["total_points"], reverse=True)
+    riders_250_sorted = sorted(riders_250, key=lambda x: x[1]["total_points"], reverse=True)
+
+    return riders_450_sorted[:20] + riders_250_sorted[:20]
 
 def get_series_leaders():
     """Get current leaders for each series (450cc, 250cc East, 250cc West)"""
-    
     leaders = {
         '450cc': {'leader': None, 'points': 0, 'top_5': []},
         '250cc_east': {'leader': None, 'points': 0, 'top_5': []},
         '250cc_west': {'leader': None, 'points': 0, 'top_5': []}
     }
-    
-    # Get all riders
-    riders = Rider.query.all()
-    
-    # Calculate points for all riders (Supercross standings)
-    rider_points = {}
-    for rider in riders:
-        total_points = 0
-        
-        # Get results for this rider based on their class and coast
-        if rider.class_name == '450cc':
-            # 450cc: sum all SX rounds
-            results = (
-                db.session.query(CompetitionResult)
-                .join(Competition)
-                .filter(
-                    CompetitionResult.rider_id == rider.id,
-                    Competition.series == "SX",
-                )
-                .all()
-            )
-        else:
-            # 250cc: include their coast rounds plus "both/showdown" events
-            results = (
-                db.session.query(CompetitionResult)
-                .join(Competition)
-                .filter(
-                    CompetitionResult.rider_id == rider.id,
-                    Competition.series == "SX",
-                    Competition.coast_250.in_([rider.coast_250, "both", "showdown"]),
-                )
-                .all()
-            )
-        
-        # Calculate total points
-        for result in results:
-            if result.position and result.position <= 20:
-                points = get_smx_qualification_points(result.position)
-                total_points += points
-        
-        rider_points[rider.id] = {
-            'rider': rider,
-            'points': total_points
-        }
-    
-    # Sort riders by class and coast, get top 5 for each
-    for rider_id, data in rider_points.items():
-        rider = data['rider']
-        points = data['points']
-        
-        if rider.class_name == '450cc':
-            leaders['450cc']['top_5'].append({'rider': rider, 'points': points})
-            if points > leaders['450cc']['points']:
-                leaders['450cc']['leader'] = rider
-                leaders['450cc']['points'] = points
-        elif rider.class_name == '250cc':
-            if rider.coast_250 == 'east':
-                leaders['250cc_east']['top_5'].append({'rider': rider, 'points': points})
-                if points > leaders['250cc_east']['points']:
-                    leaders['250cc_east']['leader'] = rider
-                    leaders['250cc_east']['points'] = points
-            elif rider.coast_250 == 'west':
-                leaders['250cc_west']['top_5'].append({'rider': rider, 'points': points})
-                if points > leaders['250cc_west']['points']:
-                    leaders['250cc_west']['leader'] = rider
-                    leaders['250cc_west']['points'] = points
-    
-    # Sort top 5 for each series
-    for series in leaders:
-        leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
-        leaders[series]['top_5'] = leaders[series]['top_5'][:5]
-    
-    
+
+    standings = {key: {} for key in leaders}
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.series == "SX")
+        .all()
+    )
+
+    for result, competition, rider in rows:
+        class_name = _normalize_result_class(result.class_name, rider.class_name)
+        points = _result_points_for_standing(result)
+        if points <= 0:
+            continue
+
+        series_key = None
+        if class_name == "450cc":
+            series_key = "450cc"
+        elif class_name == "250cc":
+            comp_coast = (competition.coast_250 or "").strip().lower()
+            rider_coast = (rider.coast_250 or "").strip().lower()
+            coast = comp_coast if comp_coast in {"east", "west"} else rider_coast
+            if coast in {"east", "west"}:
+                series_key = f"250cc_{coast}"
+
+        if not series_key:
+            continue
+
+        rider_key = rider.id
+        row = standings[series_key].setdefault(rider_key, {"rider": rider, "points": 0})
+        row["points"] += points
+
+    for series_key, rows_by_rider in standings.items():
+        top_rows = sorted(rows_by_rider.values(), key=lambda x: x["points"], reverse=True)
+        leaders[series_key]["top_5"] = top_rows[:5]
+        if top_rows:
+            leaders[series_key]["leader"] = top_rows[0]["rider"]
+            leaders[series_key]["points"] = top_rows[0]["points"]
+
     return leaders
 
 def get_wsx_leaders():
