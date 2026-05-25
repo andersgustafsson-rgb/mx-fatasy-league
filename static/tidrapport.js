@@ -698,9 +698,14 @@ const FALLBACK_HOURS_PER_WORKDAY = 8;
 function getNominalHoursPerWorkday() {
   const rawW = cleanStr(els.fullTimeWeekHoursInput?.value).replace(",", ".");
   const w = parseFloat(rawW);
-  const d = parseInt(cleanStr(els.workdaysPerWeekInput?.value), 10);
+  const d = getConfiguredWorkdaysPerWeek();
   if (!Number.isFinite(w) || w <= 0 || !Number.isFinite(d) || d < 1 || d > 7) return FALLBACK_HOURS_PER_WORKDAY;
   return w / d;
+}
+
+function getConfiguredWorkdaysPerWeek() {
+  const d = parseInt(cleanStr(els.workdaysPerWeekInput?.value), 10);
+  return Number.isFinite(d) ? d : 5;
 }
 
 function updateNominalDayHoursHint() {
@@ -760,6 +765,28 @@ function daysInclusiveUtc(d0, d1) {
   return Math.floor((t1 - t0) / 86400000) + 1;
 }
 
+function isConfiguredWorkday(d, workdaysPerWeek) {
+  if (!d) return false;
+  if (workdaysPerWeek >= 7) return true;
+  const jsDay = d.getDay(); // 0=sön, 1=mån ... 6=lör
+  if (jsDay === 0) return false;
+  if (workdaysPerWeek >= 6) return jsDay <= 6;
+  // Default/common case: 5 arbetsdagar = måndag-fredag. Lägre värden är en förenklad mån–tors osv.
+  return jsDay <= Math.max(1, Math.min(5, workdaysPerWeek));
+}
+
+function workdaysInclusive(d0, d1, workdaysPerWeek = getConfiguredWorkdaysPerWeek()) {
+  if (!d0 || !d1) return 0;
+  const totalDays = daysInclusiveUtc(d0, d1);
+  if (totalDays <= 0) return 0;
+  let count = 0;
+  for (let i = 0; i < totalDays; i += 1) {
+    const d = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + i);
+    if (isConfiguredWorkday(d, workdaysPerWeek)) count += 1;
+  }
+  return count;
+}
+
 function overlapDaysInMonth(dStart, dEnd, year, month1to12) {
   if (!dStart || !dEnd) return 0;
   const ms = dateAtMidnight(year, month1to12, 1);
@@ -770,6 +797,16 @@ function overlapDaysInMonth(dStart, dEnd, year, month1to12) {
   const da = new Date(a);
   const db = new Date(b);
   return daysInclusiveUtc(da, db);
+}
+
+function overlapWorkdaysInMonth(dStart, dEnd, year, month1to12) {
+  if (!dStart || !dEnd) return 0;
+  const ms = dateAtMidnight(year, month1to12, 1);
+  const me = dateAtMidnight(year, month1to12 + 1, 0);
+  const a = Math.max(Date.UTC(dStart.getFullYear(), dStart.getMonth(), dStart.getDate()), Date.UTC(ms.getFullYear(), ms.getMonth(), ms.getDate()));
+  const b = Math.min(Date.UTC(dEnd.getFullYear(), dEnd.getMonth(), dEnd.getDate()), Date.UTC(me.getFullYear(), me.getMonth(), me.getDate()));
+  if (a > b) return 0;
+  return workdaysInclusive(new Date(a), new Date(b));
 }
 
 function dateInSelectedMonth(d, year, month1to12) {
@@ -839,7 +876,8 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
   if (!filt) {
     if (d0 && d1) {
       const span = Math.max(1, daysInclusiveUtc(d0, d1));
-      return { hours: pd * span, days: span, occ: 1 };
+      const workSpan = Math.max(1, workdaysInclusive(d0, d1));
+      return { hours: pd * workSpan, days: span, occ: 1 };
     }
     return { hours: pd, days: 1, occ: 1 };
   }
@@ -847,7 +885,8 @@ function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtO
   if (!d0 || !d1) return { hours: pd, days: 1, occ: 1 };
   const ov = overlapDaysInMonth(d0, d1, filt.year, filt.month);
   if (ov <= 0) return { hours: 0, days: 0, occ: 0 };
-  return { hours: pd * ov, days: ov, occ: 1 };
+  const workOv = overlapWorkdaysInMonth(d0, d1, filt.year, filt.month);
+  return { hours: pd * workOv, days: ov, occ: 1 };
 }
 
 /**
@@ -1178,8 +1217,8 @@ function aggregateParsed(headers, rows) {
       // IMPORTANT: vid «Samlad period» klipper vi per del/månad (label), inte efter UI:s nuvarande Månad/År.
       const rowFilt = parseMonthYearFromLabel(source) || filt;
       const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, rowFilt);
-      if (b.hours === 0) continue;
-      if (b.hours == null || !(Number(b.hours) > 0)) {
+      if (b.hours === 0 && b.days === 0 && b.occ === 0) continue;
+      if (b.hours == null || (!(Number(b.hours) > 0) && !(Number(b.days) > 0) && !(Number(b.occ) > 0))) {
         skippedNoTime += 1;
         if (debugSamples.length < DEBUG_LIMIT) {
           debugSamples.push({
@@ -1266,8 +1305,8 @@ function aggregateParsed(headers, rows) {
       continue;
     }
     const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
-    if (b.hours === 0) continue;
-    if (b.hours == null || !(Number(b.hours) > 0)) {
+    if (b.hours === 0 && b.days === 0 && b.occ === 0) continue;
+    if (b.hours == null || (!(Number(b.hours) > 0) && !(Number(b.days) > 0) && !(Number(b.occ) > 0))) {
       skippedNoTime += 1;
       if (debugSamples.length < DEBUG_LIMIT) {
         debugSamples.push({
