@@ -19723,10 +19723,63 @@ def _result_points_for_standing(result: CompetitionResult) -> int:
     return 0
 
 
+def _promoted_250_coast_by_name() -> dict[str, str]:
+    """Names that moved 250 -> 450, with their historical 250 SX coast."""
+    promoted: dict[str, str] = {
+        # Fallback for deployments where the original 250 row was edited instead of kept.
+        "haiden deegan": "west",
+    }
+
+    try:
+        from models import SeasonTeamClassPromotion
+
+        rows = SeasonTeamClassPromotion.query.filter_by(is_active=True).all()
+        for row in rows:
+            from_rider = getattr(row, "from_rider", None)
+            to_rider = getattr(row, "to_rider", None)
+            name = (getattr(to_rider, "name", None) or getattr(from_rider, "name", None) or "").strip().lower()
+            coast = (getattr(from_rider, "coast_250", None) or "").strip().lower()
+            if name and coast in {"east", "west"}:
+                promoted[name] = coast
+    except Exception:
+        pass
+
+    return promoted
+
+
+def _standing_class_and_coast(
+    result: CompetitionResult,
+    competition: Competition,
+    rider: Rider,
+    promoted_250_coasts: dict[str, str],
+) -> tuple[str | None, str | None]:
+    class_name = _normalize_result_class(result.class_name, rider.class_name)
+    comp_coast = (competition.coast_250 or "").strip().lower()
+
+    # If a rider was later moved to 450, older SX rows may have been backfilled to 450.
+    # SX 250 history is identified by the promoted rider name + the SX coast calendar.
+    promoted_coast = promoted_250_coasts.get((rider.name or "").strip().lower())
+    if competition.series == "SX" and promoted_coast and comp_coast in {"east", "west", "both", "showdown"}:
+        class_name = "250cc"
+        if comp_coast in {"east", "west"}:
+            return class_name, comp_coast
+        return class_name, promoted_coast
+
+    if class_name == "250cc":
+        rider_coast = (rider.coast_250 or "").strip().lower()
+        if comp_coast in {"east", "west"}:
+            return class_name, comp_coast
+        if rider_coast in {"east", "west"}:
+            return class_name, rider_coast
+
+    return class_name, None
+
+
 def calculate_smx_qualification_points():
     """Calculate SMX qualification points from result-time class, not current rider class."""
     # A rider can move 250 -> 450 later. Historical SX 250 points must remain in 250 standings.
     standings = {}
+    promoted_250_coasts = _promoted_250_coast_by_name()
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
         .join(Competition, Competition.id == CompetitionResult.competition_id)
@@ -19736,7 +19789,9 @@ def calculate_smx_qualification_points():
     )
 
     for result, competition, rider in rows:
-        class_name = _normalize_result_class(result.class_name, rider.class_name)
+        class_name, coast_250 = _standing_class_and_coast(
+            result, competition, rider, promoted_250_coasts
+        )
         if class_name not in {"450cc", "250cc"}:
             continue
 
@@ -19749,16 +19804,14 @@ def calculate_smx_qualification_points():
             standings[key] = {
                 "rider": rider,
                 "class_name": class_name,
-                "coast_250": rider.coast_250,
+                "coast_250": coast_250 or rider.coast_250,
                 "total_points": 0,
                 "sx_points": 0,
                 "mx_points": 0,
             }
 
-        if class_name == "250cc" and competition.series == "SX":
-            comp_coast = (competition.coast_250 or "").strip().lower()
-            if comp_coast in {"east", "west"}:
-                standings[key]["coast_250"] = comp_coast
+        if class_name == "250cc" and coast_250 in {"east", "west"}:
+            standings[key]["coast_250"] = coast_250
 
         if competition.series == "SX":
             standings[key]["sx_points"] += points
@@ -19783,6 +19836,7 @@ def get_series_leaders():
     }
 
     standings = {key: {} for key in leaders}
+    promoted_250_coasts = _promoted_250_coast_by_name()
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
         .join(Competition, Competition.id == CompetitionResult.competition_id)
@@ -19792,7 +19846,9 @@ def get_series_leaders():
     )
 
     for result, competition, rider in rows:
-        class_name = _normalize_result_class(result.class_name, rider.class_name)
+        class_name, coast_250 = _standing_class_and_coast(
+            result, competition, rider, promoted_250_coasts
+        )
         points = _result_points_for_standing(result)
         if points <= 0:
             continue
@@ -19801,11 +19857,8 @@ def get_series_leaders():
         if class_name == "450cc":
             series_key = "450cc"
         elif class_name == "250cc":
-            comp_coast = (competition.coast_250 or "").strip().lower()
-            rider_coast = (rider.coast_250 or "").strip().lower()
-            coast = comp_coast if comp_coast in {"east", "west"} else rider_coast
-            if coast in {"east", "west"}:
-                series_key = f"250cc_{coast}"
+            if coast_250 in {"east", "west"}:
+                series_key = f"250cc_{coast_250}"
 
         if not series_key:
             continue
