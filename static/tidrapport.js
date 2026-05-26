@@ -767,6 +767,7 @@ function ensureSickManualChart() {
           label: "Totalt",
           value: 0,
           suffix: " h",
+          position: "bottom-right",
         },
         tidrapportValueLabels: {
           enabled: true,
@@ -816,6 +817,7 @@ function renderSickManualChart() {
   c.options.plugins.title.text = ttl;
   c.options.plugins.tidrapportCornerTotal.enabled = rows.length > 0;
   c.options.plugins.tidrapportCornerTotal.value = totalHours;
+  c.options.plugins.tidrapportCornerTotal.position = orientation === "vertical" ? "top-right" : "bottom-right";
   c.options.plugins.tidrapportValueLabels.enabled = true;
   c.options.plugins.tidrapportValueLabels.mode = "each";
   c.options.plugins.tidrapportValueLabels.integerLabels = false;
@@ -2314,7 +2316,8 @@ let chart = null;
       const padX = 10;
       const padY = 7;
       const x = area.right - 10;
-      const y = area.bottom - 10;
+      const position = cleanStr(plug.position) || "bottom-right";
+      const y = position === "top-right" ? area.top + 10 : area.bottom - 10;
 
       ctx.save();
       ctx.font = `700 ${fontSize}px system-ui, Segoe UI, sans-serif`;
@@ -2322,7 +2325,7 @@ let chart = null;
       const boxW = metrics.width + padX * 2;
       const boxH = fontSize + padY * 2;
       const boxX = x - boxW;
-      const boxY = y - boxH;
+      const boxY = position === "top-right" ? y : y - boxH;
 
       ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
       ctx.strokeStyle = "rgba(148, 163, 184, 0.35)";
