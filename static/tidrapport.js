@@ -719,6 +719,12 @@ function ensureSickManualChart() {
         legend: { display: false },
         tooltip: { enabled: false },
         title: { display: true, text: "Sjuktimmar per person (manuell)", color: "#e2e8f0", font: { size: 14 } },
+        tidrapportCornerTotal: {
+          enabled: true,
+          label: "Totalt",
+          value: 0,
+          suffix: " h",
+        },
         tidrapportValueLabels: {
           enabled: true,
           mode: "each",
@@ -763,11 +769,16 @@ function renderSickManualChart() {
     },
   ];
   const ttl = rows.length ? `Sjuktimmar per person (manuell) · Personer: ${rows.length}` : "Sjuktimmar per person (manuell)";
+  const totalHours = round2(rows.reduce((sum, r) => sum + r.hours, 0));
   c.options.plugins.title.text = ttl;
+  c.options.plugins.tidrapportCornerTotal.enabled = rows.length > 0;
+  c.options.plugins.tidrapportCornerTotal.value = totalHours;
   c.options.plugins.tidrapportValueLabels.enabled = true;
   c.options.plugins.tidrapportValueLabels.mode = "each";
   c.options.plugins.tidrapportValueLabels.integerLabels = false;
-  if (els.sickManualTitlePreview) els.sickManualTitlePreview.textContent = ttl;
+  if (els.sickManualTitlePreview) {
+    els.sickManualTitlePreview.textContent = rows.length ? `${ttl} · Totalt: ${totalHours.toFixed(2)} h` : ttl;
+  }
   c.update();
 }
 
@@ -2233,6 +2244,56 @@ let chart = null;
         }
       }
 
+      ctx.restore();
+    },
+  });
+})();
+
+(() => {
+  if (typeof Chart === "undefined" || window.__tidrapport_corner_total_plugin) return;
+  window.__tidrapport_corner_total_plugin = true;
+  Chart.register({
+    id: "tidrapportCornerTotal",
+    afterDraw(chart) {
+      const plug = chart.options.plugins?.tidrapportCornerTotal;
+      if (!plug?.enabled || !(Number(plug.value) > 0)) return;
+      const area = chart.chartArea;
+      if (!area) return;
+
+      const label = cleanStr(plug.label) || "Totalt";
+      const suffix = plug.suffix == null ? "" : String(plug.suffix);
+      const value = Number(plug.value);
+      const formatted = value.toFixed(2).replace(/\.00$/, "");
+      const text = `${label}: ${formatted}${suffix}`;
+
+      const { ctx } = chart;
+      const fontSize = Number(plug.fontSize) > 0 ? Number(plug.fontSize) : 13;
+      const padX = 10;
+      const padY = 7;
+      const x = area.right - 10;
+      const y = area.bottom - 10;
+
+      ctx.save();
+      ctx.font = `700 ${fontSize}px system-ui, Segoe UI, sans-serif`;
+      const metrics = ctx.measureText(text);
+      const boxW = metrics.width + padX * 2;
+      const boxH = fontSize + padY * 2;
+      const boxX = x - boxW;
+      const boxY = y - boxH;
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.78)";
+      ctx.strokeStyle = "rgba(148, 163, 184, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") ctx.roundRect(boxX, boxY, boxW, boxH, 8);
+      else ctx.rect(boxX, boxY, boxW, boxH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = cleanStr(plug.color) || "#f8fafc";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x - padX, boxY + boxH / 2);
       ctx.restore();
     },
   });
