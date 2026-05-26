@@ -202,6 +202,7 @@ const els = {
   sickManualTableBody: document.getElementById("sickManualTableBody"),
   btnSickManualRemoveSelected: document.getElementById("btnSickManualRemoveSelected"),
   sickManualChartCanvas: document.getElementById("sickManualChartCanvas"),
+  sickManualOrientation: document.getElementById("sickManualOrientation"),
   btnSickManualDownload: document.getElementById("btnSickManualDownload"),
   sickManualTitlePreview: document.getElementById("sickManualTitlePreview"),
   sickManualPaste: document.getElementById("sickManualPaste"),
@@ -646,6 +647,48 @@ function setSickManualStatus(msg) {
   if (els.sickManualStatusText) els.sickManualStatusText.textContent = msg || "";
 }
 
+function getSickManualOrientation() {
+  return cleanStr(els.sickManualOrientation?.value) === "vertical" ? "vertical" : "horizontal";
+}
+
+function sickManualScalesForOrientation(orientation) {
+  if (orientation === "vertical") {
+    return {
+      x: {
+        type: "category",
+        ticks: {
+          autoSkip: false,
+          maxRotation: 60,
+          minRotation: 35,
+          color: "#cbd5e1",
+          font: { size: 10 },
+        },
+        grid: { color: "rgba(148,163,184,0.10)" },
+      },
+      y: {
+        type: "linear",
+        beginAtZero: true,
+        ticks: { color: "#cbd5e1", font: { size: 12 } },
+        grid: { color: "rgba(148,163,184,0.15)" },
+      },
+    };
+  }
+
+  return {
+    x: {
+      type: "linear",
+      beginAtZero: true,
+      ticks: { color: "#cbd5e1", font: { size: 12 } },
+      grid: { color: "rgba(148,163,184,0.15)" },
+    },
+    y: {
+      type: "category",
+      ticks: { autoSkip: false, color: "#cbd5e1", font: { size: 11 } },
+      grid: { color: "rgba(148,163,184,0.10)" },
+    },
+  };
+}
+
 function updateSickManualFormulaHint() {
   if (!els.sickManualFormulaHint) return;
   const d = sickManualDefaults();
@@ -735,10 +778,7 @@ function ensureSickManualChart() {
           strokeColor: "rgba(15, 23, 42, 0.85)",
         },
       },
-      scales: {
-        x: { beginAtZero: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
-        y: { ticks: { autoSkip: false, color: "#cbd5e1", font: { size: 11 } }, grid: { color: "rgba(148,163,184,0.10)" } },
-      },
+      scales: sickManualScalesForOrientation("horizontal"),
     },
   });
   return sickManualChart;
@@ -758,6 +798,9 @@ function renderSickManualChart() {
     .sort((a, b) => (b.hours - a.hours) || a.name.localeCompare(b.name, "sv"));
   const labels = rows.map((r) => r.name);
   const colors = rows.map((_, i) => palette(i));
+  const orientation = getSickManualOrientation();
+  c.options.indexAxis = orientation === "vertical" ? "x" : "y";
+  c.options.scales = sickManualScalesForOrientation(orientation);
   c.data.labels = labels;
   c.data.datasets = [
     {
@@ -3464,6 +3507,7 @@ els.btnSickManualPasteClear?.addEventListener("click", () => {
   if (els.sickManualPaste) els.sickManualPaste.value = "";
   setSickManualStatus("Tömt klistringsrutan.");
 });
+els.sickManualOrientation?.addEventListener("change", renderSickManualChart);
 for (const el of [els.sickEmploymentPct, els.sickRatePct, els.sickWeekHours, els.sickWorkdaysPerWeek]) {
   el?.addEventListener("input", updateSickManualFormulaHint);
 }
