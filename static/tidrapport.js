@@ -203,6 +203,7 @@ const els = {
   btnSickManualRemoveSelected: document.getElementById("btnSickManualRemoveSelected"),
   sickManualChartCanvas: document.getElementById("sickManualChartCanvas"),
   sickManualOrientation: document.getElementById("sickManualOrientation"),
+  sickManualNameLimit: document.getElementById("sickManualNameLimit"),
   btnSickManualDownload: document.getElementById("btnSickManualDownload"),
   sickManualTitlePreview: document.getElementById("sickManualTitlePreview"),
   sickManualPaste: document.getElementById("sickManualPaste"),
@@ -651,6 +652,13 @@ function getSickManualOrientation() {
   return cleanStr(els.sickManualOrientation?.value) === "vertical" ? "vertical" : "horizontal";
 }
 
+function getSickManualNameLimit() {
+  const raw = cleanStr(els.sickManualNameLimit?.value) || "all";
+  if (raw === "all") return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function sickManualScalesForOrientation(orientation) {
   if (orientation === "vertical") {
     return {
@@ -794,9 +802,11 @@ function renderSickManualChart() {
     if (!(Number(h) >= 0)) continue;
     byName.set(r.name, (byName.get(r.name) || 0) + h);
   }
-  const rows = [...byName.entries()]
+  const allRows = [...byName.entries()]
     .map(([name, hours]) => ({ name, hours: round2(hours) }))
     .sort((a, b) => (b.hours - a.hours) || a.name.localeCompare(b.name, "sv"));
+  const limit = getSickManualNameLimit();
+  const rows = limit ? allRows.slice(0, limit) : allRows;
   const labels = rows.map((r) => r.name);
   const colors = rows.map((_, i) => palette(i));
   const orientation = getSickManualOrientation();
@@ -812,7 +822,8 @@ function renderSickManualChart() {
       borderWidth: 1,
     },
   ];
-  const ttl = rows.length ? `Sjuktimmar per person (manuell) · Personer: ${rows.length}` : "Sjuktimmar per person (manuell)";
+  const countText = allRows.length > rows.length ? `${rows.length}/${allRows.length}` : `${rows.length}`;
+  const ttl = rows.length ? `Sjuktimmar per person (manuell) · Personer: ${countText}` : "Sjuktimmar per person (manuell)";
   const totalHours = round2(rows.reduce((sum, r) => sum + r.hours, 0));
   c.options.plugins.title.text = ttl;
   c.options.plugins.tidrapportCornerTotal.enabled = rows.length > 0;
@@ -3511,6 +3522,7 @@ els.btnSickManualPasteClear?.addEventListener("click", () => {
   setSickManualStatus("Tömt klistringsrutan.");
 });
 els.sickManualOrientation?.addEventListener("change", renderSickManualChart);
+els.sickManualNameLimit?.addEventListener("change", renderSickManualChart);
 for (const el of [els.sickEmploymentPct, els.sickRatePct, els.sickWeekHours, els.sickWorkdaysPerWeek]) {
   el?.addEventListener("input", updateSickManualFormulaHint);
 }
