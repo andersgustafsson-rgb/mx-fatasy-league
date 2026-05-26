@@ -588,7 +588,7 @@
               <div>
                 <h2 class="text-lg font-semibold text-rose-50 tracking-tight">Sjuktimmar — manuell beräkning</h2>
                 <p class="text-xs text-slate-400 mt-1 max-w-md">
-                  Mata in namn och antal arbetsdagar/frånvarodagar. Välj sysselsättningsgrad och sjukgrad, så räknas sjuktimmar fram.
+                  Mata in namn och antal arbetsdagar/frånvarodagar, eller klistra kundens Excel-lista med färdiga sjuktimmar.
                 </p>
               </div>
               <button type="button" id="btnSickManualClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">
@@ -641,8 +641,8 @@
             <details class="group mt-4 rounded-xl border border-slate-800 bg-slate-950/30">
               <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/40 marker:content-none [&::-webkit-details-marker]:hidden">
                 <span>
-                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra frånvarorader / siffror</span>
-                  <span class="block text-xs text-slate-500 mt-0.5">Klistra frånvarotabell med Namn + Datum Fom/Tom + Omf, eller <span class="font-mono">Namn[TAB]dagar</span></span>
+                  <span class="block text-sm font-semibold text-slate-100">Snabbklistra Excel-lista / frånvarorader</span>
+                  <span class="block text-xs text-slate-500 mt-0.5">Klistra kundens lista med Namn + datum + Sjukdom + Omf + syss + dagar + timmar</span>
                 </span>
                 <span class="shrink-0 text-slate-500 text-xs transition-transform duration-200 group-open:rotate-180" aria-hidden="true">▼</span>
               </summary>
@@ -650,7 +650,7 @@
                 <textarea
                   id="sickManualPaste"
                   class="mt-3 w-full h-40 rounded-lg bg-slate-950 border border-slate-800 p-3 text-sm font-mono"
-                  placeholder="Namn&#9;Datum Fom&#9;Datum Tom&#9;Orsak&#9;Omf&#10;Norin, Angelika&#9;2026-04-01&#9;2026-04-30&#9;Sjukdom&#9;0.750&#10;Norin, Angelika&#9;2026-04-01&#9;2026-04-30&#9;Sjukdom&#9;0.250"
+                  placeholder="Althin, Marie&#9;2026-04-20&#9;2026-04-23&#9;&#9;Sjukdom&#9;0.920&#9;62&#9;4&#9;&#9;15.5&#10;Dahl, Marie&#9;2026-04-19&#9;2026-04-21&#9;&#9;Sjukdom&#9;1.000&#9;90&#9;3&#9;&#9;20.5"
                 ></textarea>
                 <div class="mt-3 flex flex-wrap gap-2">
                   <button type="button" id="btnSickManualPasteApply" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-700">
@@ -661,7 +661,7 @@
                   </button>
                 </div>
                 <p class="text-[11px] text-slate-500 mt-2">
-                  Frånvarotabell: arbetsdagar räknas från datum och «Omf» blir sjukgrad. Annan klistring använder sysselsättning/sjukgrad/veckoarvode från rutorna ovan.
+                  Excel-lista med timkolumn använder färdiga sjuktimmar direkt. Saknas timkolumn räknas frånvarorader från datum och «Omf» som sjukgrad.
                 </p>
               </div>
             </details>

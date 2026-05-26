@@ -601,6 +601,7 @@ function calculateSickManualHours(days, employmentPct, sickPct, weekHours, workd
 }
 
 function sickManualRowHours(row) {
+  if (Number.isFinite(row?.hours)) return Number(row.hours);
   return calculateSickManualHours(
     row.days,
     row.employmentPct,
@@ -625,6 +626,7 @@ function loadSickManualFromStorage() {
         sickPct: Number(r?.sickPct),
         weekHours: Number(r?.weekHours),
         workdaysPerWeek: Number(r?.workdaysPerWeek),
+        hours: Number.isFinite(Number(r?.hours)) ? Number(r.hours) : null,
       }))
       .filter((r) => r.name && Number.isFinite(r.days) && Number.isFinite(sickManualRowHours(r)));
   } catch {
@@ -786,10 +788,93 @@ function addSickManualRow(name, days, defaults = sickManualDefaults()) {
   return true;
 }
 
+function addSickManualFixedHoursRow(name, hours, meta = {}, defaults = sickManualDefaults()) {
+  const cleanName = cleanStr(name);
+  const h = Number(hours);
+  if (!cleanName || !Number.isFinite(h) || h < 0) return false;
+  const days = Number(meta.days);
+  const employmentPct = Number(meta.employmentPct);
+  const sickPct = Number(meta.sickPct);
+  sickManualRows.push({
+    id: `sick_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    name: cleanName,
+    days: Number.isFinite(days) && days >= 0 ? days : 0,
+    employmentPct: Number.isFinite(employmentPct) ? employmentPct : defaults.employmentPct,
+    sickPct: Number.isFinite(sickPct) ? sickPct : defaults.sickPct,
+    weekHours: defaults.weekHours,
+    workdaysPerWeek: defaults.workdaysPerWeek,
+    hours: h,
+  });
+  return true;
+}
+
 function isSickManualSickStatus(raw) {
   const low = cleanStr(raw).toLowerCase();
   if (!low) return true;
   return low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj");
+}
+
+function addSickManualExcelHoursRowsFromText(raw) {
+  const lines = String(raw ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[\u00A0\u2007\u202F]/g, " ")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (!lines.length) return null;
+
+  const defaults = sickManualDefaults();
+  let added = 0;
+  let skipped = 0;
+  let detected = 0;
+
+  for (const line of lines) {
+    const cells = line.includes("\t")
+      ? line.split("\t").map((c) => cleanStr(c))
+      : line.split(";").map((c) => cleanStr(c));
+    if (cells.length < 7) continue;
+
+    const name = cells[0];
+    const d0 = parseIsoDate(cells[1]);
+    const d1 = parseIsoDate(cells[2]);
+    const statusIdx = cells.findIndex((c, idx) => {
+      const low = cleanStr(c).toLowerCase();
+      return idx > 2 && (low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj"));
+    });
+    if (!name || !d0 || !d1 || statusIdx < 0) continue;
+    detected += 1;
+
+    const numericAfterStatus = cells
+      .slice(statusIdx + 1)
+      .map((value, relIdx) => ({ value, idx: statusIdx + 1 + relIdx, n: parseHourNumber(value) }))
+      .filter((x) => x.value && Number.isFinite(x.n));
+
+    // Kundens Excel-lista: Omf, sysselsättning, sjukdagar, sjuktimmar. Använd timkolumnen som facit.
+    if (numericAfterStatus.length < 4) {
+      skipped += 1;
+      continue;
+    }
+
+    const omf = parseOmfFactor(numericAfterStatus[0].value);
+    const employmentPct = parsePct(numericAfterStatus[1].value, defaults.employmentPct);
+    const days = numericAfterStatus[2].n;
+    const hours = numericAfterStatus[numericAfterStatus.length - 1].n;
+
+    if (!addSickManualFixedHoursRow(name, hours, {
+      days,
+      employmentPct,
+      sickPct: Number.isFinite(omf) ? Math.max(0, Math.min(100, omf * 100)) : defaults.sickPct,
+    }, defaults)) {
+      skipped += 1;
+    } else {
+      added += 1;
+    }
+  }
+
+  if (!detected || added === 0) return null;
+  return { added, skipped, mode: "excelHours" };
 }
 
 function addSickManualAbsenceRow(name, d0, d1, omf, defaults) {
@@ -924,6 +1009,17 @@ function applySickManualPaste() {
   const raw = normalizePastedTableString(els.sickManualPaste?.value || "");
   if (!raw) {
     setSickManualStatus("Klistringsrutan är tom.");
+    return;
+  }
+
+  const excelHoursResult = addSickManualExcelHoursRowsFromText(raw);
+  if (excelHoursResult && (excelHoursResult.added > 0 || excelHoursResult.skipped > 0)) {
+    saveSickManualToStorage(sickManualRows);
+    renderSickManualTable();
+    renderSickManualChart();
+    setSickManualStatus(
+      `Excel-lista: ${excelHoursResult.added} rad(er) inlagda med färdiga timmar${excelHoursResult.skipped ? `, ${excelHoursResult.skipped} hoppades över` : ""}.`
+    );
     return;
   }
 
