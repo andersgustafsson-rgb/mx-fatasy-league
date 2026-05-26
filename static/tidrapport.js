@@ -737,7 +737,7 @@ function ensureSickManualChart() {
       },
       scales: {
         x: { beginAtZero: true, ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.15)" } },
-        y: { ticks: { color: "#cbd5e1", font: { size: 12 } }, grid: { color: "rgba(148,163,184,0.10)" } },
+        y: { ticks: { autoSkip: false, color: "#cbd5e1", font: { size: 11 } }, grid: { color: "rgba(148,163,184,0.10)" } },
       },
     },
   });
