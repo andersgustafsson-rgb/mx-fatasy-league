@@ -1467,6 +1467,10 @@ function imgSrcFor(riderId) {
   if (!r) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
+
+  if (r.has_db_portrait) {
+    return `/rider_portrait/${r.id}`;
+  }
   
   // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {

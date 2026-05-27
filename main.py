@@ -17,6 +17,7 @@ from flask import (
     url_for,
     flash,
     make_response,
+    Response,
 )
 import re
 import unicodedata
@@ -27,7 +28,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -2123,6 +2124,31 @@ def _rider_portrait_url(r: Rider) -> str | None:
         return None
     s = str(raw).strip()
     return s or None
+
+
+@app.route("/rider_portrait/<int:rider_id>")
+def rider_portrait(rider_id: int):
+    """Serverar DB-porträtt som bytes — undviker base64 i sid-JSON."""
+    import base64
+
+    raw = db.session.query(Rider.rider_image_data).filter_by(id=rider_id).scalar()
+    if not raw:
+        return Response(status=404)
+    s = str(raw).strip()
+    if not s.startswith("data:"):
+        return Response(status=404)
+    try:
+        meta, b64part = s.split(",", 1)
+        mime = "image/jpeg"
+        if ";" in meta:
+            mime = meta[5:].split(";")[0].strip() or mime
+        blob = base64.b64decode(b64part)
+        resp = make_response(blob)
+        resp.headers["Content-Type"] = mime
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
+    except Exception:
+        return Response(status=404)
 
 
 def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
@@ -4323,13 +4349,13 @@ def race_picks_page(competition_id):
     if is_wsx:
         # WSX använder egna klasser och separata förare
         riders_450 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="wsx_sx1")
             .order_by(Rider.rider_number)
             .all()
         )
         riders_250 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="wsx_sx2")
             .order_by(Rider.rider_number)
             .all()
@@ -4337,13 +4363,13 @@ def race_picks_page(competition_id):
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="450cc")
             .order_by(Rider.rider_number)
             .all()
         )
 
-        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        riders_250_query = rider_query_for_list_ui().filter_by(class_name="250cc")
         coast = (comp.coast_250 or "").lower()
         if coast in ("east", "west"):
             # Endast en coast: visa bara den coasten + "both"
@@ -4353,10 +4379,23 @@ def race_picks_page(competition_id):
         # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
+    pick_rider_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
+    ids_with_db_portrait: frozenset[int] = frozenset()
+    if pick_rider_ids:
+        ids_with_db_portrait = frozenset(
+            row[0]
+            for row in db.session.query(Rider.id)
+            .filter(
+                Rider.id.in_(pick_rider_ids),
+                Rider.rider_image_data.isnot(None),
+                Rider.rider_image_data != "",
+            )
+            .all()
+        )
+
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
-        # Föredra rider_image_data (base64) så bilder överlever deploy; annars image_url (fil)
-        img = getattr(r, 'rider_image_data', None) or r.image_url
+        # Render 512MB: aldrig base64 i sid-JSON; DB-bilder via /rider_portrait/<id>
         return {
             "id": r.id,
             "name": r.name,
@@ -4365,8 +4404,9 @@ def race_picks_page(competition_id):
             "bike_brand": r.bike_brand,
             "price": r.price,
             "is_out": (r.id in out_ids),
-            "image_url": img,
+            "image_url": r.image_url,
             "coast_250": r.coast_250,
+            "has_db_portrait": r.id in ids_with_db_portrait,
         }
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
