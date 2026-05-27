@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -4323,13 +4323,13 @@ def race_picks_page(competition_id):
     if is_wsx:
         # WSX använder egna klasser och separata förare
         riders_450 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="wsx_sx1")
             .order_by(Rider.rider_number)
             .all()
         )
         riders_250 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="wsx_sx2")
             .order_by(Rider.rider_number)
             .all()
@@ -4337,13 +4337,13 @@ def race_picks_page(competition_id):
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="450cc")
             .order_by(Rider.rider_number)
             .all()
         )
 
-        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        riders_250_query = rider_query_for_list_ui().filter_by(class_name="250cc")
         coast = (comp.coast_250 or "").lower()
         if coast in ("east", "west"):
             # Endast en coast: visa bara den coasten + "both"

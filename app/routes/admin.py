@@ -29,6 +29,7 @@ from models import (
 	SeasonTeamRider,
 	User,
 	WildcardPick,
+	rider_query_for_list_ui,
 )
 
 bp = Blueprint('admin', __name__, url_prefix='')  # keep same absolute paths
@@ -215,13 +216,14 @@ def rider_management():
 	if not is_admin_user():
 		return redirect(url_for("index"))
 	try:
-		# SMX förare: alla 450cc och 250cc (oavsett coast_250)
-		riders_smx = Rider.query.filter(
+		# Undvik rider_image_data / långa textfält → OOM på 512MB (Render).
+		base = rider_query_for_list_ui()
+
+		riders_smx = base.filter(
 			Rider.class_name.in_(['450cc', '250cc'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
-		
-		# WSX förare: alla wsx_sx1 och wsx_sx2
-		riders_wsx = Rider.query.filter(
+
+		riders_wsx = base.filter(
 			Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
 		
@@ -314,8 +316,7 @@ def bulk_update_rider_numbers():
 			"Kayden Minear": 99,
 		}
 		
-		# Get all SMX riders
-		smx_riders = Rider.query.filter(
+		smx_riders = rider_query_for_list_ui().filter(
 			Rider.class_name.in_(['450cc', '250cc'])
 		).all()
 		
@@ -770,8 +771,8 @@ def list_class_promotions():
 			}
 		)
 
-	riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.name).all()
-	riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.name).all()
+	riders_250 = rider_query_for_list_ui().filter_by(class_name="250cc").order_by(Rider.name).all()
+	riders_450 = rider_query_for_list_ui().filter_by(class_name="450cc").order_by(Rider.name).all()
 	return jsonify(
 		{
 			"promotions": promotions,
@@ -969,7 +970,7 @@ def _parse_and_diff_entry_list(
 	parsed = parse_provisional_entry_text(text, klass)
 	if only_marked_new:
 		parsed = [p for p in parsed if p.get("is_new_in_list")]
-	diff = diff_against_db(parsed, klass, coast_250, Rider.query)
+	diff = diff_against_db(parsed, klass, coast_250, rider_query_for_list_ui())
 	return klass, diff
 
 
@@ -1247,9 +1248,13 @@ def rider_images_racerx_preview():
 				continue
 			by_name[_norm_racerx_name(name)] = {"img_url": img, "profile_url": profile, "name_guess": name}
 
+		ids_with_blob = {
+			row[0]
+			for row in db.session.query(Rider.id).filter(Rider.rider_image_data.isnot(None)).all()
+		}
 		candidates = []
-		for rider in Rider.query.all():
-			if getattr(rider, "rider_image_data", None):
+		for rider in rider_query_for_list_ui().all():
+			if rider.id in ids_with_blob:
 				continue
 			key = _norm_racerx_name(rider.name)
 			src = by_name.get(key)
