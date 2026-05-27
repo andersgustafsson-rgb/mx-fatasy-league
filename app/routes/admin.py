@@ -996,6 +996,7 @@ def _serialize_diff(diff: dict) -> dict:
 		"existing_count": len(diff["existing"]),
 		"other_class_count": len(other_class),
 		"number_updates_count": len(number_updates),
+		"name_variants_count": len(diff.get("name_variants") or []),
 		"number_conflicts_count": len(diff["number_conflicts"]),
 		"new": [row(p) for p in diff["new"]],
 		"other_class": [
@@ -1056,6 +1057,7 @@ def _serialize_review(klass: str, diff: dict) -> list[dict]:
 			"note": it.get("note"),
 			"coast_mismatch": it.get("coast_mismatch", False),
 			"is_new_in_list": it.get("is_new_in_list", False),
+			"can_ignore": it.get("can_ignore", True),
 		}
 		out.append(row)
 	return out
@@ -1097,10 +1099,12 @@ def entry_list_preview():
 def _execute_entry_list_apply() -> tuple[dict, int]:
 	from entry_list_import import (
 		DEFAULT_PRICE,
+		apply_name_variants,
 		apply_number_updates,
 		import_new_riders,
 		review_item_key_create,
 		review_item_key_cross_create,
+		review_item_key_name_variant,
 		review_item_key_update,
 	)
 
@@ -1144,13 +1148,17 @@ def _execute_entry_list_apply() -> tuple[dict, int]:
 			p for p in diff["number_updates"]
 			if review_item_key_update(int(p["existing_id"])) in selected_keys
 		]
+		variants_selected = [
+			p for p in diff.get("name_variants", [])
+			if review_item_key_name_variant(int(p["existing_id"])) in selected_keys
+		]
 		errors: list[str] = []
 		created: list[str] = []
 		updated: list[str] = []
 		conflicts_resolved = 0
 
-		any_writes = bool(new_selected or cross_selected or updates_selected)
-		combined = sum(1 for x in (new_selected, cross_selected, updates_selected) if x) > 1
+		any_writes = bool(new_selected or cross_selected or updates_selected or variants_selected)
+		combined = sum(1 for x in (new_selected, cross_selected, updates_selected, variants_selected) if x) > 1
 		if new_selected:
 			created, err_new = import_new_riders(
 				new_selected,
@@ -1185,6 +1193,15 @@ def _execute_entry_list_apply() -> tuple[dict, int]:
 				auto_commit=not combined,
 			)
 			errors.extend(err_num)
+		if variants_selected and not errors:
+			var_updated, err_var = apply_name_variants(
+				variants_selected,
+				Rider,
+				db.session,
+				auto_commit=not combined,
+			)
+			updated.extend(var_updated)
+			errors.extend(err_var)
 
 		if errors:
 			db.session.rollback()

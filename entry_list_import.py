@@ -36,6 +36,35 @@ def norm_name(name: str) -> str:
     return re.sub(r"\s+", " ", (name or "").strip()).lower()
 
 
+_NAME_SUFFIXES = frozenset({"ii", "iii", "iv", "jr", "sr", "2nd", "3rd"})
+
+
+def _name_tokens(name: str) -> list[str]:
+    return [t for t in norm_name(name).split() if t and t not in _NAME_SUFFIXES]
+
+
+def names_likely_same_person(list_name: str, db_name: str) -> bool:
+    """Max Vohland vs Maximus Vohland, Tre Fierro III vs Tre Fierro."""
+    a = _name_tokens(list_name)
+    b = _name_tokens(db_name)
+    if not a or not b:
+        return False
+    if a[-1] != b[-1]:
+        return False
+    if len(a) == 1 or len(b) == 1:
+        return True
+    fa, fb = a[0], b[0]
+    if fa == fb:
+        return True
+    if len(fa) >= 3 and len(fb) >= 3 and (fa.startswith(fb[:3]) or fb.startswith(fa[:3])):
+        return True
+    return fa in fb or fb in fa
+
+
+def review_item_key_name_variant(existing_id: int) -> str:
+    return f"variant:{existing_id}"
+
+
 def review_item_key_create(name: str) -> str:
     return f"create:{norm_name(name)}"
 
@@ -133,18 +162,43 @@ def build_review_items(diff: dict[str, Any], list_class: str) -> list[dict[str, 
             "is_new_in_list": p.get("is_new_in_list", False),
         })
 
+    for p in diff.get("name_variants", []):
+        ex_name = p.get("existing_name") or "?"
+        items.append({
+            "key": review_item_key_name_variant(int(p["existing_id"])),
+            "action": "name_variant",
+            "action_label": "Samma förare (namn skiljer)",
+            "selectable": True,
+            "name": p["name"],
+            "list": list_snap(p),
+            "db": {
+                "id": p.get("existing_id"),
+                "number": p.get("existing_number"),
+                "class_name": list_class,
+                "name": ex_name,
+            },
+            "note": (
+                f'Nummer #{p["number"]} tillhör "{ex_name}" i DB. '
+                f'Kryssa för att byta visningsnamn till "{p["name"]}" '
+                f"(samma id, poäng behålls)."
+            ),
+            "is_new_in_list": p.get("is_new_in_list", False),
+        })
+
     for p in diff.get("number_conflicts", []):
         items.append({
             "key": f"conflict:{p.get('number')}:{norm_name(p['name'])}",
             "action": "conflict",
-            "action_label": "Konflikt",
+            "action_label": "Konflikt (annan förare?)",
             "selectable": False,
+            "can_ignore": True,
             "name": p["name"],
             "list": list_snap(p),
             "db": {
                 "id": p.get("existing_id"),
                 "name": p.get("existing_name"),
             },
+            "note": "Olika namn på samma nummer — ignorera om listan har fel, eller fixa nummer manuellt.",
             "is_new_in_list": p.get("is_new_in_list", False),
         })
 
@@ -314,6 +368,7 @@ def diff_against_db(
     new_riders: list[dict[str, Any]] = []
     existing_match: list[dict[str, Any]] = []
     other_class: list[dict[str, Any]] = []
+    name_variants: list[dict[str, Any]] = []
     number_conflicts: list[dict[str, Any]] = []
 
     for p in parsed:
@@ -349,11 +404,20 @@ def diff_against_db(
             continue
 
         if ex_by_num and norm_name(ex_by_num.name) != nk:
-            number_conflicts.append({
-                **p,
-                "existing_id": ex_by_num.id,
-                "existing_name": ex_by_num.name,
-            })
+            if names_likely_same_person(p["name"], ex_by_num.name):
+                name_variants.append({
+                    **p,
+                    **_rider_row_extra(ex_by_num),
+                    "existing_name": ex_by_num.name,
+                    "name_changed": True,
+                    "number_changed": ex_by_num.rider_number != p["number"],
+                })
+            else:
+                number_conflicts.append({
+                    **p,
+                    "existing_id": ex_by_num.id,
+                    "existing_name": ex_by_num.name,
+                })
             continue
 
         ex_by_num_any = by_number_all_coast.get(p["number"])
@@ -373,6 +437,7 @@ def diff_against_db(
         "new": new_riders,
         "existing": existing_match,
         "other_class": other_class,
+        "name_variants": name_variants,
         "number_updates": number_updates,
         "number_conflicts": number_conflicts,
         "parsed_total": len(parsed),
@@ -512,3 +577,32 @@ def apply_number_updates(
     if auto_commit:
         db_session.commit()
     return updated, errors, conflicts_resolved
+
+
+def apply_name_variants(
+    variants: list[dict[str, Any]],
+    rider_model,
+    db_session,
+    auto_commit: bool = True,
+) -> tuple[list[str], list[str]]:
+    """Update display name (and number if needed) on existing rider id — keeps all points."""
+    updated: list[str] = []
+    errors: list[str] = []
+    for p in variants:
+        rider = rider_model.query.get(p.get("existing_id"))
+        if not rider:
+            errors.append(f"{p.get('name')}: hittades inte")
+            continue
+        if rider.class_name != p.get("class_name"):
+            errors.append(f"{p.get('name')}: fel klass i DB")
+            continue
+        rider.name = p["name"]
+        if p.get("number_changed"):
+            rider.rider_number = p["number"]
+        updated.append(p["name"])
+    if auto_commit:
+        if errors:
+            db_session.rollback()
+        else:
+            db_session.commit()
+    return updated, errors

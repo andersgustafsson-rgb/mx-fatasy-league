@@ -127,6 +127,10 @@
                         class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded">
                         Avmarkera alla
                     </button>
+                    <button type="button" id="pasteEntrySelectVariantBtn"
+                        class="text-xs bg-sky-700 hover:bg-sky-600 text-white px-3 py-1 rounded">
+                        Välj namnvarianter
+                    </button>
                     <label class="flex items-center gap-1 text-xs cursor-pointer">
                         <input type="checkbox" id="pasteEntryHideUnchanged" class="rounded" checked>
                         Dölj oförändrade
@@ -141,6 +145,7 @@
                                 <th class="px-2 py-1 text-left">Namn</th>
                                 <th class="px-2 py-1 text-left">I databasen</th>
                                 <th class="px-2 py-1 text-left">I listan</th>
+                                <th class="px-2 py-1 w-16"></th>
                             </tr>
                         </thead>
                         <tbody id="pasteEntryReviewBody"></tbody>
@@ -1702,7 +1707,7 @@
 
         // Snabbklistra entry list (endast nya)
         let pasteEntryLastPreview = null;
-
+        let pasteEntryIgnoredKeys = new Set();
         let pasteEntrySeasonActive = false;
 
         function pasteEntryPayload(extra) {
@@ -1727,6 +1732,7 @@
         function formatPasteDbCell(db, item) {
             if (!db) return '<span class="text-gray-500">— finns inte —</span>';
             const parts = [];
+            if (db.name) parts.push('"' + db.name + '"');
             if (db.class_name) parts.push(db.class_name);
             if (db.number != null) parts.push('#' + db.number);
             if (db.bike_brand) parts.push(db.bike_brand);
@@ -1753,6 +1759,7 @@
             if (action === 'create') return 'bg-emerald-700 text-white';
             if (action === 'update_number') return 'bg-amber-700 text-white';
             if (action === 'other_class') return 'bg-violet-700 text-white border border-violet-300';
+            if (action === 'name_variant') return 'bg-sky-700 text-white';
             if (action === 'conflict') return 'bg-red-700 text-white';
             return 'bg-gray-600 text-gray-200';
         }
@@ -1766,6 +1773,7 @@
 
         function renderPasteEntryPreview(data) {
             pasteEntryLastPreview = data;
+            pasteEntryIgnoredKeys = new Set();
             pasteEntrySeasonActive = !!data.season_active;
             const seasonWrap = document.getElementById('pasteEntrySeasonConfirmWrap');
             if (seasonWrap) {
@@ -1780,9 +1788,10 @@
             summary.textContent =
                 `Tolkade ${data.parsed_total} rader — ${data.new_count} kan läggas till, ` +
                 `${data.number_updates_count || 0} nummerändringar` +
+                ((data.name_variants_count || 0) > 0 ? `, ${data.name_variants_count} namnvariant(er)` : '') +
                 ((data.other_class_count || 0) > 0 ? `, ${data.other_class_count} i annan klass` : '') +
                 (data.number_conflicts_count
-                    ? `, ${data.number_conflicts_count} konflikt(er)`
+                    ? `, ${data.number_conflicts_count} riktig konflikt`
                     : '') +
                 `. Kryssa i det du vill spara.` +
                 (data.filtered_marked_new_only ? ' (endast rader märkta New)' : '');
@@ -1791,8 +1800,10 @@
             let shown = 0;
             items.forEach(item => {
                 if (hideUnchanged && item.action === 'unchanged') return;
+                if (pasteEntryIgnoredKeys.has(item.key)) return;
                 shown++;
                 const tr = document.createElement('tr');
+                tr.dataset.reviewKey = item.key;
                 tr.className = 'border-t border-gray-200 dark:border-gray-600';
                 if (item.action === 'unchanged') tr.classList.add('opacity-60');
                 let dbCell = formatPasteDbCell(item.db, item);
@@ -1827,11 +1838,26 @@
                 td4.className = 'px-2 py-1';
                 td4.innerHTML = formatPasteListCell(item.list, item);
                 tr.appendChild(td4);
+                const td5 = document.createElement('td');
+                td5.className = 'px-2 py-1 text-right';
+                if (item.can_ignore !== false) {
+                    const ign = document.createElement('button');
+                    ign.type = 'button';
+                    ign.className = 'text-xs text-gray-500 hover:text-gray-300 underline';
+                    ign.textContent = 'Ignorera';
+                    ign.onclick = () => {
+                        pasteEntryIgnoredKeys.add(item.key);
+                        tr.remove();
+                        updatePasteEntrySaveButton();
+                    };
+                    td5.appendChild(ign);
+                }
+                tr.appendChild(td5);
                 tbody.appendChild(tr);
             });
             if (shown === 0) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = '<td colspan="5" class="px-2 py-3 text-gray-500">Inget att visa (alla oförändrade?)</td>';
+                tr.innerHTML = '<td colspan="6" class="px-2 py-3 text-gray-500">Inget att visa (alla oförändrade?)</td>';
                 tbody.appendChild(tr);
             }
 
@@ -1889,7 +1915,13 @@
             });
             updatePasteEntrySaveButton();
         });
-        // cross:create keys = klassbyte-kandidater (valfritt)
+        document.getElementById('pasteEntrySelectVariantBtn').addEventListener('click', () => {
+            document.querySelectorAll('.paste-entry-select').forEach(cb => {
+                const key = cb.getAttribute('data-key') || '';
+                cb.checked = key.startsWith('variant:');
+            });
+            updatePasteEntrySaveButton();
+        });
         document.getElementById('pasteEntrySelectNoneBtn').addEventListener('click', () => {
             document.querySelectorAll('.paste-entry-select').forEach(cb => { cb.checked = false; });
             updatePasteEntrySaveButton();
