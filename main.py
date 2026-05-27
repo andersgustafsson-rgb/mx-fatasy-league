@@ -9,6 +9,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from flask import (
     Flask,
+    abort,
     render_template,
     request,
     jsonify,
@@ -27,7 +28,36 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement
+from models import (
+    db,
+    User,
+    GlobalSimulation,
+    Series,
+    Competition,
+    Rider,
+    SeasonTeam,
+    SeasonTeamRider,
+    League,
+    LeagueMembership,
+    LeagueRequest,
+    BulletinPost,
+    BulletinReaction,
+    RacePick,
+    PicksSnapshot,
+    CompetitionScore,
+    LeaderboardHistory,
+    CompetitionRiderStatus,
+    CompetitionResult,
+    HoleshotPick,
+    HoleshotResult,
+    WildcardPick,
+    CompetitionImage,
+    CrossDinoHighScore,
+    FinishedSeriesStats,
+    AdminAnnouncement,
+    rider_query_for_list_ui,
+    rider_ids_with_db_portrait_among,
+)
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -1086,12 +1116,14 @@ def index():
         if my_team:
             try:
                 rs = (
-                    db.session.query(Rider)
+                    rider_query_for_list_ui()
                     .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
                     .filter(SeasonTeamRider.season_team_id == my_team.id)
                     .order_by(Rider.class_name.desc(), Rider.price.desc())
                     .all()
                 )
+                _tr_ids = [r.id for r in rs]
+                _tr_portrait = rider_ids_with_db_portrait_among(_tr_ids)
                 team_riders = [
                     {
                         "id": r.id,
@@ -1099,7 +1131,11 @@ def index():
                         "number": r.rider_number,
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
-                        "image_url": getattr(r, 'rider_image_data', None) or r.image_url or None,
+                        "image_url": rider_img_src_for_ui(
+                            r.id,
+                            r.image_url,
+                            r.id in _tr_portrait,
+                        ),
                     }
                     for r in rs
                 ]
@@ -3611,9 +3647,12 @@ def season_team_builder():
     try:
         # IMPORTANT: Only get SMX riders (450cc and 250cc) for season teams
         # WSX riders (wsx_sx1, wsx_sx2) should NOT appear in season team builder
-        all_riders = Rider.query.filter(
-            Rider.class_name.in_(['450cc', '250cc'])
-        ).order_by(Rider.rider_number).all()
+        all_riders = (
+            rider_query_for_list_ui()
+            .filter(Rider.class_name.in_(["450cc", "250cc"]))
+            .order_by(Rider.rider_number)
+            .all()
+        )
         print(f"Found {len(all_riders)} SMX riders for season team builder")
         
         # Deduplicate riders: keep only the latest version (highest ID) of each rider name+class combination
@@ -3650,7 +3689,10 @@ def season_team_builder():
         unique_riders = list(riders_by_key.values())
         unique_riders.sort(key=lambda r: (r.rider_number or 999, r.name))
         print(f"After deduplication: {len(unique_riders)} unique SMX riders")
-        
+
+        _sr_ids = [r.id for r in unique_riders]
+        portrait_among_sr = rider_ids_with_db_portrait_among(_sr_ids)
+
         # Check if user already has a team
         existing_team = SeasonTeam.query.filter_by(user_id=user_id).first()
         has_existing_team = existing_team is not None
@@ -3670,7 +3712,11 @@ def season_team_builder():
                 'class': rider.class_name,
                 'rider_number': rider.rider_number,
                 'bike_brand': rider.bike_brand,
-                'image_url': getattr(rider, 'rider_image_data', None) or rider.image_url,
+                'image_url': rider_img_src_for_ui(
+                    rider.id,
+                    rider.image_url,
+                    rider.id in portrait_among_sr,
+                ),
                 'price': rider.price,
                 'coast_250': rider.coast_250
             })
@@ -4279,6 +4325,56 @@ def series_page(series_id):
         db.session.rollback()
         return redirect(url_for("index"))
 
+def rider_img_src_for_ui(rider_id: int, static_url: str | None, has_db_portrait: bool) -> str | None:
+    """Short URL for <img src> — never embed multi-megabyte base64 on list pages."""
+    if has_db_portrait:
+        return url_for("rider_picture", rider_id=rider_id)
+    if static_url:
+        su = static_url.strip()
+        if su.startswith("http://") or su.startswith("https://"):
+            return su
+        return url_for("static", filename=su)
+    return None
+
+
+@app.route("/rider_picture/<int:rider_id>")
+def rider_picture(rider_id: int):
+    """Serve DB-stored portrait bytes or redirect to static/external image."""
+    row = (
+        db.session.query(Rider.rider_image_data, Rider.image_url)
+        .filter_by(id=rider_id)
+        .first()
+    )
+    if not row:
+        abort(404)
+    raw_blob, static_path = row
+    if raw_blob:
+        raw = raw_blob.strip()
+        if raw.startswith("data:"):
+            try:
+                comma_i = raw.index(",")
+                meta = raw[5:comma_i]
+                b64 = raw[comma_i + 1 :].strip()
+                mime = "image/jpeg"
+                if meta:
+                    mime = meta.split(";")[0].strip() or mime
+                import base64
+
+                data = base64.b64decode(b64)
+                resp = make_response(data)
+                resp.headers["Content-Type"] = mime
+                resp.headers["Cache-Control"] = "public, max-age=86400"
+                return resp
+            except Exception:
+                pass
+    if static_path:
+        sp = static_path.strip()
+        if sp.startswith("http://") or sp.startswith("https://"):
+            return redirect(sp)
+        return redirect(url_for("static", filename=sp))
+    abort(404)
+
+
 def _ensure_rider_image_data_column():
     """Säkerställ att riders.rider_image_data finns (överlever deploy). Kör tyst om kolumnen redan finns."""
     try:
@@ -4322,14 +4418,14 @@ def race_picks_page(competition_id):
 
     if is_wsx:
         # WSX använder egna klasser och separata förare
+        rq = rider_query_for_list_ui()
         riders_450 = (
-            Rider.query
-            .filter_by(class_name="wsx_sx1")
+            rq.filter_by(class_name="wsx_sx1")
             .order_by(Rider.rider_number)
             .all()
         )
         riders_250 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="wsx_sx2")
             .order_by(Rider.rider_number)
             .all()
@@ -4337,13 +4433,13 @@ def race_picks_page(competition_id):
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
-            Rider.query
+            rider_query_for_list_ui()
             .filter_by(class_name="450cc")
             .order_by(Rider.rider_number)
             .all()
         )
 
-        riders_250_query = Rider.query.filter_by(class_name="250cc")
+        riders_250_query = rider_query_for_list_ui().filter_by(class_name="250cc")
         coast = (comp.coast_250 or "").lower()
         if coast in ("east", "west"):
             # Endast en coast: visa bara den coasten + "both"
@@ -4353,10 +4449,14 @@ def race_picks_page(competition_id):
         # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
+    _pp_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
+    portrait_ids_on_page = rider_ids_with_db_portrait_among(_pp_ids)
+
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
-        # Föredra rider_image_data (base64) så bilder överlever deploy; annars image_url (fil)
-        img = getattr(r, 'rider_image_data', None) or r.image_url
+        img = rider_img_src_for_ui(
+            r.id, r.image_url, r.id in portrait_ids_on_page
+        )
         return {
             "id": r.id,
             "name": r.name,
@@ -5286,9 +5386,20 @@ def rider_profile(rider_id: int):
 @app.get('/riders')
 def riders_directory():
     # Simple searchable list grouped by class
-    riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number.asc()).all()
-    riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number.asc()).all()
-    riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number.asc()).all()
+    rq = rider_query_for_list_ui()
+    riders_450 = rq.filter_by(class_name='450cc').order_by(Rider.rider_number.asc()).all()
+    riders_250_east = (
+        rider_query_for_list_ui()
+        .filter_by(class_name='250cc', coast_250='east')
+        .order_by(Rider.rider_number.asc())
+        .all()
+    )
+    riders_250_west = (
+        rider_query_for_list_ui()
+        .filter_by(class_name='250cc', coast_250='west')
+        .order_by(Rider.rider_number.asc())
+        .all()
+    )
     return render_template('riders.html',
                            riders_450=riders_450,
                            riders_250_east=riders_250_east,
@@ -9415,7 +9526,7 @@ def _build_crowd_picks_summary(competition_id: int, comp: Competition, ensure_sn
     Uses snapshots when available so results stay stable after lock.
     """
     is_wsx = getattr(comp, "series", None) == "WSX"
-    riders_dict = {r.id: r for r in Rider.query.all()}
+    riders_dict = {r.id: r for r in rider_query_for_list_ui().all()}
 
     slot_450: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
     slot_250: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
@@ -14824,12 +14935,14 @@ def view_user_profile(user_id):
         if season_team:
             try:
                 rs = (
-                    db.session.query(Rider)
+                    rider_query_for_list_ui()
                     .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
                     .filter(SeasonTeamRider.season_team_id == season_team.id)
                     .order_by(Rider.class_name.desc(), Rider.price.desc())
                     .all()
                 )
+                _prof_ids = [r.id for r in rs]
+                _prof_portrait = rider_ids_with_db_portrait_among(_prof_ids)
                 team_riders = [
                     {
                         "id": r.id,
@@ -14837,7 +14950,11 @@ def view_user_profile(user_id):
                         "number": r.rider_number,
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
-                        "image_url": getattr(r, 'rider_image_data', None) or r.image_url or None,
+                        "image_url": rider_img_src_for_ui(
+                            r.id,
+                            r.image_url,
+                            r.id in _prof_portrait,
+                        ),
                     }
                     for r in rs
                 ]
@@ -18155,7 +18272,7 @@ def api_riders():
     if not is_admin_user():
         return jsonify({"error": "Unauthorized"}), 403
     
-    riders = Rider.query.order_by(Rider.class_name, Rider.rider_number).all()
+    riders = rider_query_for_list_ui().order_by(Rider.class_name, Rider.rider_number).all()
     return jsonify([{
         "id": rider.id,
         "name": rider.name,
