@@ -30,6 +30,9 @@ from dotenv import load_dotenv
 load_dotenv()
 from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
+_INDEX_SCHEMA_CHECKED = False
+_RIDER_IMAGE_COLUMN_CHECKED = False
+
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
     """
@@ -946,87 +949,101 @@ def index():
         is_logged_in = False
     today = get_today()
 
-    # Ensure database is initialized
-    try:
-        # Check if tables exist, if not initialize
-        from sqlalchemy import inspect
-        if not inspect(db.engine).has_table('competitions'):
-            print("Tables missing, reinitializing database...")
-            init_database()
-        
-        # Add classes column if missing
+    # Ensure database is initialized (only once per worker).
+    global _INDEX_SCHEMA_CHECKED
+    if not _INDEX_SCHEMA_CHECKED:
         try:
-            exists = db.session.execute(db.text("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name='riders' AND column_name='classes'
-            """)).fetchone()
-            if not exists:
-                print("Adding classes column to riders table...")
-                db.session.execute(db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)"))
-                db.session.commit()
-                print("Classes column added successfully")
-        except Exception as e:
-            print(f"Error adding classes column: {e}")
-            db.session.rollback()
-            pass
-        
-        # Skip rider bio column migrations for now
-        pass
+            # Check if tables exist, if not initialize
+            from sqlalchemy import inspect
 
-        # Skip league_memberships column migrations for now
-        pass
-        
-        
-        # Skip league image column migrations for now
-        pass
-        
-        # Skip league additional column migrations for now
-        pass
-        
-        # Add admin announcement columns to global_simulation if missing
-        try:
-            exists = db.session.execute(db.text("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name='global_simulation' AND column_name='admin_message'
-            """)).fetchone()
-            if not exists:
-                print("Adding admin announcement columns to global_simulation table...")
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT"))
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"))
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"))
-                db.session.commit()
-                print("Admin announcement columns added successfully")
-        except Exception as e:
-            print(f"Error adding admin announcement columns: {e}")
-            db.session.rollback()
-        pass
-        
-        # Check if league_requests table exists
-        if not inspect(db.engine).has_table('league_requests'):
-            print("Creating league_requests table...")
+            if not inspect(db.engine).has_table("competitions"):
+                print("Tables missing, reinitializing database...")
+                init_database()
+
+            # Add classes column if missing
             try:
-                db.session.rollback()
-                db.session.execute(db.text("""
-                    CREATE TABLE league_requests (
-                        id SERIAL PRIMARY KEY,
-                        league_id INTEGER NOT NULL REFERENCES leagues(id),
-                        user_id INTEGER NOT NULL REFERENCES users(id),
-                        message VARCHAR(500),
-                        status VARCHAR(20) DEFAULT 'pending',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        processed_at TIMESTAMP,
-                        UNIQUE(league_id, user_id)
+                exists = db.session.execute(
+                    db.text(
+                        """
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name='riders' AND column_name='classes'
+                        """
                     )
-                """))
-                db.session.commit()
-                print("league_requests table created successfully")
+                ).fetchone()
+                if not exists:
+                    print("Adding classes column to riders table...")
+                    db.session.execute(
+                        db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)")
+                    )
+                    db.session.commit()
+                    print("Classes column added successfully")
             except Exception as e:
-                print(f"Error creating league_requests table: {e}")
+                print(f"Error adding classes column: {e}")
                 db.session.rollback()
-        
-    except Exception as e:
-        print(f"Database check error: {e}")
-        init_database()
+
+            # Add admin announcement columns to global_simulation if missing
+            try:
+                exists = db.session.execute(
+                    db.text(
+                        """
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name='global_simulation' AND column_name='admin_message'
+                        """
+                    )
+                ).fetchone()
+                if not exists:
+                    print("Adding admin announcement columns to global_simulation table...")
+                    db.session.execute(
+                        db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT")
+                    )
+                    db.session.execute(
+                        db.text(
+                            "ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"
+                        )
+                    )
+                    db.session.execute(
+                        db.text(
+                            "ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"
+                        )
+                    )
+                    db.session.commit()
+                    print("Admin announcement columns added successfully")
+            except Exception as e:
+                print(f"Error adding admin announcement columns: {e}")
+                db.session.rollback()
+
+            # Check if league_requests table exists
+            if not inspect(db.engine).has_table("league_requests"):
+                print("Creating league_requests table...")
+                try:
+                    db.session.rollback()
+                    db.session.execute(
+                        db.text(
+                            """
+                            CREATE TABLE league_requests (
+                                id SERIAL PRIMARY KEY,
+                                league_id INTEGER NOT NULL REFERENCES leagues(id),
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                message VARCHAR(500),
+                                status VARCHAR(20) DEFAULT 'pending',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                processed_at TIMESTAMP,
+                                UNIQUE(league_id, user_id)
+                            )
+                            """
+                        )
+                    )
+                    db.session.commit()
+                    print("league_requests table created successfully")
+                except Exception as e:
+                    print(f"Error creating league_requests table: {e}")
+                    db.session.rollback()
+
+            _INDEX_SCHEMA_CHECKED = True
+        except Exception as e:
+            print(f"Database check error: {e}")
+            init_database()
+            _INDEX_SCHEMA_CHECKED = True
 
     # Get competitions with error handling
     try:
@@ -1087,7 +1104,7 @@ def index():
         if my_team:
             try:
                 rs = (
-                    db.session.query(Rider)
+                    rider_query_for_list_ui()
                     .join(SeasonTeamRider, Rider.id == SeasonTeamRider.rider_id)
                     .filter(SeasonTeamRider.season_team_id == my_team.id)
                     .order_by(Rider.class_name.desc(), Rider.price.desc())
@@ -1100,7 +1117,7 @@ def index():
                         "number": r.rider_number,
                         "brand": (r.bike_brand or "").lower(),
                         "class": r.class_name,
-                        "image_url": getattr(r, 'rider_image_data', None) or r.image_url or None,
+                        "image_url": r.image_url or None,
                     }
                     for r in rs
                 ]
@@ -1370,26 +1387,6 @@ def index():
             user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
             user_total_points = sum(score.total_points or 0 for score in user_scores)
             races_participated = len([s for s in user_scores if s.total_points and s.total_points > 0])
-            
-            # Find best position (lowest position in leaderboard across all competitions)
-            if races_participated > 0:
-                best_positions = []
-                for score in user_scores:
-                    if score.total_points and score.total_points > 0:
-                        # Find user's position in this competition
-                        all_scores_for_comp = CompetitionScore.query.filter_by(
-                            competition_id=score.competition_id
-                        ).order_by(CompetitionScore.total_points.desc()).all()
-                        
-                        position = 1
-                        for i, s in enumerate(all_scores_for_comp):
-                            if s.user_id == uid:
-                                position = i + 1
-                                break
-                        best_positions.append(position)
-                
-                if best_positions:
-                    best_position = min(best_positions)
         except Exception as e:
             print(f"Error calculating user statistics: {e}")
             user_total_points = 0
@@ -4307,6 +4304,9 @@ def series_page(series_id):
 
 def _ensure_rider_image_data_column():
     """Säkerställ att riders.rider_image_data finns (överlever deploy). Kör tyst om kolumnen redan finns."""
+    global _RIDER_IMAGE_COLUMN_CHECKED
+    if _RIDER_IMAGE_COLUMN_CHECKED:
+        return
     try:
         db.session.execute(db.text("ALTER TABLE riders ADD COLUMN IF NOT EXISTS rider_image_data TEXT"))
         db.session.commit()
@@ -4316,6 +4316,7 @@ def _ensure_rider_image_data_column():
             db.session.commit()
         except Exception:
             db.session.rollback()
+    _RIDER_IMAGE_COLUMN_CHECKED = True
 
 
 @app.route("/race_picks/<int:competition_id>")
@@ -4411,6 +4412,9 @@ def race_picks_page(competition_id):
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
+
+    _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
+    out_riders_mini = [_by_json_id[i] for i in sorted(out_ids) if i in _by_json_id]
     
     # Debug: Show which riders are marked as OUT
     out_450 = [r for r in riders_450_json if r['is_out']]
@@ -4476,10 +4480,9 @@ def race_picks_page(competition_id):
     return render_template(
         "race_picks.html",
         competition=comp,
-        riders_450=riders_450,
-        riders_250=riders_250,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
+        out_riders_mini=out_riders_mini,
         actual_results=actual_results,
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
@@ -11779,31 +11782,52 @@ def confirm_import_results():
         print(f"Error in confirm_import_results: {e}")
         return jsonify({"error": str(e)}), 500
 
+_import_competitions_cache: dict[str, tuple[float, dict]] = {}
+
+
 @app.get("/get_competitions_for_import")
 def get_competitions_for_import():
     """Get list of competitions for CSV import"""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    
+
     try:
+        import time
+
+        ttl = float((os.getenv("IMPORT_COMPETITIONS_CACHE_TTL") or "25").strip())
+        now = time.time()
+        cached = _import_competitions_cache.get("payload")
+        if cached and (now - cached[0]) < ttl:
+            return jsonify(cached[1])
+
         competitions = Competition.query.order_by(Competition.event_date.desc()).all()
-        competition_list = []
-        
-        for comp in competitions:
-            competition_list.append({
+        cids = [c.id for c in competitions]
+        has_results_ids: set[int] = set()
+        if cids:
+            has_results_ids = {
+                row[0]
+                for row in db.session.query(CompetitionResult.competition_id)
+                .filter(CompetitionResult.competition_id.in_(cids))
+                .distinct()
+                .all()
+            }
+
+        competition_list = [
+            {
                 "id": comp.id,
                 "name": comp.name,
-                "series": comp.series,  # Include series to check if WSX
+                "series": comp.series,
                 "event_date": comp.event_date.isoformat() if comp.event_date else None,
-                "location": getattr(comp, 'location', 'Unknown'),
-                "has_results": bool(CompetitionResult.query.filter_by(competition_id=comp.id).first())
-            })
-        
-        return jsonify({
-            "success": True,
-            "competitions": competition_list
-        })
-        
+                "location": getattr(comp, "location", "Unknown"),
+                "has_results": comp.id in has_results_ids,
+            }
+            for comp in competitions
+        ]
+
+        payload = {"success": True, "competitions": competition_list}
+        _import_competitions_cache["payload"] = (now, payload)
+        return jsonify(payload)
+
     except Exception as e:
         print(f"Error in get_competitions_for_import: {e}")
         return jsonify({"error": str(e)}), 500
