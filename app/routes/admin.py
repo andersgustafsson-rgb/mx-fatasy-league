@@ -1204,6 +1204,159 @@ def entry_list_fetch_images():
 		return jsonify({"error": str(e)}), 500
 
 
+def _norm_racerx_name(name: str) -> str:
+	import re
+
+	s = (name or "").strip()
+	s = re.sub(r"\s+", " ", s)
+	s = re.sub(r"\s+(Jr\.|Sr\.|III|II|IV)$", "", s, flags=re.IGNORECASE)
+	return s.lower()
+
+
+def _load_racerx_images_csv() -> list[dict]:
+	import csv
+	from pathlib import Path
+
+	path = Path("data/racerx_riders_2026.csv")
+	if not path.exists():
+		return []
+	with path.open(encoding="utf-8") as f:
+		return list(csv.DictReader(f))
+
+
+@bp.route("/rider_management/racerx_images/preview", methods=["POST"])
+@login_required
+def rider_images_racerx_preview():
+	"""Preview which riders can get images from data/racerx_riders_2026.csv."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	try:
+		rows = _load_racerx_images_csv()
+		if not rows:
+			return jsonify({"error": "Hittar inte data/racerx_riders_2026.csv"}), 400
+
+		# Build quick lookup by normalized name
+		by_name: dict[str, dict] = {}
+		for r in rows:
+			name = (r.get("name_guess") or "").strip()
+			img = (r.get("img_url") or "").strip()
+			profile = (r.get("profile_url") or "").strip()
+			if not name or not img:
+				continue
+			if img.lower().endswith("post_thumb.png"):
+				continue
+			by_name[_norm_racerx_name(name)] = {"img_url": img, "profile_url": profile, "name_guess": name}
+
+		candidates = []
+		for rider in Rider.query.all():
+			if getattr(rider, "rider_image_data", None):
+				continue
+			key = _norm_racerx_name(rider.name)
+			src = by_name.get(key)
+			if not src:
+				continue
+			candidates.append({
+				"key": f"img:{rider.id}",
+				"rider_id": rider.id,
+				"name": rider.name,
+				"class_name": rider.class_name,
+				"number": rider.rider_number,
+				"img_url": src["img_url"],
+				"profile_url": src["profile_url"],
+			})
+
+		return jsonify({
+			"success": True,
+			"candidates": candidates,
+			"count": len(candidates),
+			"message": f"Hittade {len(candidates)} förare utan bild som kan matchas mot RacerX.",
+		})
+	except Exception as e:
+		print(f"rider_images_racerx_preview error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rider_management/racerx_images/apply", methods=["POST"])
+@login_required
+def rider_images_racerx_apply():
+	"""Apply selected image updates from RacerX CSV (stores as rider_image_data data URL)."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	selected = data.get("selected") or []
+	force = bool(data.get("force"))
+	try:
+		selected_ids = []
+		for k in selected:
+			if isinstance(k, str) and k.startswith("img:") and k[4:].isdigit():
+				selected_ids.append(int(k[4:]))
+		if not selected_ids:
+			return jsonify({"error": "Välj minst en rad"}), 400
+
+		rows = _load_racerx_images_csv()
+		if not rows:
+			return jsonify({"error": "Hittar inte data/racerx_riders_2026.csv"}), 400
+
+		by_name: dict[str, dict] = {}
+		for r in rows:
+			name = (r.get("name_guess") or "").strip()
+			img = (r.get("img_url") or "").strip()
+			if not name or not img:
+				continue
+			if img.lower().endswith("post_thumb.png"):
+				continue
+			by_name[_norm_racerx_name(name)] = {"img_url": img}
+
+		import base64
+		import requests
+
+		headers = {
+			"User-Agent": (
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+			)
+		}
+
+		updated = 0
+		skipped = 0
+		errors: list[str] = []
+		for rid in selected_ids:
+			r = Rider.query.get(rid)
+			if not r:
+				continue
+			if not force and getattr(r, "rider_image_data", None):
+				skipped += 1
+				continue
+			src = by_name.get(_norm_racerx_name(r.name))
+			if not src:
+				skipped += 1
+				continue
+			try:
+				resp = requests.get(src["img_url"], headers=headers, timeout=30)
+				resp.raise_for_status()
+				mime = (resp.headers.get("Content-Type") or "image/jpeg").split(";", 1)[0].strip()
+				if not mime.startswith("image/"):
+					mime = "image/jpeg"
+				r.rider_image_data = f"data:{mime};base64,{base64.b64encode(resp.content).decode('ascii')}"
+				updated += 1
+			except Exception as e:
+				errors.append(f"{r.name}: {e}")
+		db.session.commit()
+		return jsonify({
+			"success": True,
+			"updated": updated,
+			"skipped": skipped,
+			"errors": errors,
+			"message": f"Uppdaterade {updated} bilder (skippade {skipped})",
+		})
+	except Exception as e:
+		db.session.rollback()
+		print(f"rider_images_racerx_apply error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
 def _execute_entry_list_apply() -> tuple[dict, int]:
 	from entry_list_import import (
 		DEFAULT_PRICE,
