@@ -29,6 +29,7 @@ from models import (
 	SeasonTeamRider,
 	User,
 	WildcardPick,
+	rider_query_for_list_ui,
 )
 
 bp = Blueprint('admin', __name__, url_prefix='')  # keep same absolute paths
@@ -215,13 +216,14 @@ def rider_management():
 	if not is_admin_user():
 		return redirect(url_for("index"))
 	try:
-		# SMX förare: alla 450cc och 250cc (oavsett coast_250)
-		riders_smx = Rider.query.filter(
+		# Undvik rider_image_data / långa textfält → OOM på 512MB (Render).
+		base = rider_query_for_list_ui()
+
+		riders_smx = base.filter(
 			Rider.class_name.in_(['450cc', '250cc'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
-		
-		# WSX förare: alla wsx_sx1 och wsx_sx2
-		riders_wsx = Rider.query.filter(
+
+		riders_wsx = base.filter(
 			Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
 		
@@ -314,8 +316,7 @@ def bulk_update_rider_numbers():
 			"Kayden Minear": 99,
 		}
 		
-		# Get all SMX riders
-		smx_riders = Rider.query.filter(
+		smx_riders = rider_query_for_list_ui().filter(
 			Rider.class_name.in_(['450cc', '250cc'])
 		).all()
 		
@@ -764,13 +765,14 @@ def list_class_promotions():
 				"to_class": tr.class_name if tr else "450cc",
 				"is_active": row.is_active,
 				"note": row.note,
+				"teams_with_from": teams,
 				"teams_with_250": teams,
 				"created_at": row.created_at.isoformat() if row.created_at else None,
 			}
 		)
 
-	riders_250 = Rider.query.filter_by(class_name="250cc").order_by(Rider.name).all()
-	riders_450 = Rider.query.filter_by(class_name="450cc").order_by(Rider.name).all()
+	riders_250 = rider_query_for_list_ui().filter_by(class_name="250cc").order_by(Rider.name).all()
+	riders_450 = rider_query_for_list_ui().filter_by(class_name="450cc").order_by(Rider.name).all()
 	return jsonify(
 		{
 			"promotions": promotions,
@@ -784,8 +786,8 @@ def list_class_promotions():
 @login_required
 def setup_class_promotion():
 	"""
-	Aktivera klassbyte: koppla 250-förare → 450-förare och uppdatera 450 startnummer.
-	JSON: from_rider_id, new_450_number, to_rider_id (valfritt), note (valfritt)
+	Aktivera MX-klassbyte: koppla gammal klass → ny klass och uppdatera startnummer i målklassen.
+	JSON: from_rider_id, new_number (eller new_450_number), to_rider_id (valfritt), note (valfritt)
 	"""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
@@ -796,18 +798,23 @@ def setup_class_promotion():
 	data = request.get_json(silent=True) or {}
 	try:
 		from_rider_id = int(data.get("from_rider_id"))
-		new_number = int(data.get("new_450_number"))
+		raw_num = data.get("new_number", data.get("new_450_number"))
+		new_number = int(raw_num)
 	except (TypeError, ValueError):
-		return jsonify({"error": "from_rider_id och new_450_number krävs"}), 400
+		return jsonify({"error": "from_rider_id och new_number krävs"}), 400
 
 	to_rider_id = data.get("to_rider_id")
 	note = (data.get("note") or "").strip() or None
 
 	from_rider = Rider.query.get(from_rider_id)
 	if not from_rider:
-		return jsonify({"error": "250-föraren hittades inte"}), 404
-	if from_rider.class_name != "250cc":
-		return jsonify({"error": "from_rider_id måste vara en 250cc-förare"}), 400
+		return jsonify({"error": "Föraren (gammal klass) hittades inte"}), 404
+	if from_rider.class_name not in ("250cc", "450cc"):
+		return jsonify({"error": "from_rider_id måste vara 250cc eller 450cc"}), 400
+
+	target_class = "450cc" if from_rider.class_name == "250cc" else "250cc"
+	from_short = "250" if from_rider.class_name == "250cc" else "450"
+	to_short = "450" if target_class == "450cc" else "250"
 
 	if to_rider_id:
 		try:
@@ -819,7 +826,7 @@ def setup_class_promotion():
 		to_rider = (
 			Rider.query.filter(
 				Rider.name.ilike(from_rider.name.strip()),
-				Rider.class_name == "450cc",
+				Rider.class_name == target_class,
 			)
 			.order_by(Rider.id.desc())
 			.first()
@@ -828,14 +835,19 @@ def setup_class_promotion():
 	if not to_rider:
 		return jsonify(
 			{
-				"error": "Ingen 450-förare hittades med samma namn. Skapa 450-raden först under förarlistan."
+				"error": (
+					f"Ingen {to_short}-förare hittades med samma namn. "
+					f"Skapa {to_short}-raden först under förarlistan."
+				)
 			}
 		), 400
-	if to_rider.class_name != "450cc":
-		return jsonify({"error": "to_rider_id måste vara 450cc"}), 400
+	if to_rider.class_name != target_class:
+		return jsonify({"error": f"to_rider_id måste vara {target_class}"}), 400
+	if to_rider.class_name == from_rider.class_name:
+		return jsonify({"error": "Från- och till-förare måste vara olika klasser"}), 400
 
 	conflict = (
-		Rider.query.filter_by(class_name="450cc", rider_number=new_number)
+		Rider.query.filter_by(class_name=target_class, rider_number=new_number)
 		.filter(Rider.id != to_rider.id)
 		.first()
 	)
@@ -843,13 +855,16 @@ def setup_class_promotion():
 		return jsonify(
 			{
 				"error": "nummer_upptaget",
-				"message": f"#{new_number} i 450 är redan {conflict.name}. Byt nummer på den föraren först.",
+				"message": (
+					f"#{new_number} i {to_short} är redan {conflict.name}. "
+					"Byt nummer på den föraren först."
+				),
 				"existing_rider_id": conflict.id,
 				"existing_rider_name": conflict.name,
 			}
 		), 409
 
-	old_450_number = to_rider.rider_number
+	old_to_number = to_rider.rider_number
 	to_rider.rider_number = new_number
 
 	row = SeasonTeamClassPromotion.query.filter_by(from_rider_id=from_rider_id).first()
@@ -872,11 +887,13 @@ def setup_class_promotion():
 		{
 			"success": True,
 			"message": (
-				f"Klassbyte aktivt: {from_rider.name} (#{from_rider.rider_number} 250) → "
-				f"{to_rider.name} (#{old_450_number} → #{new_number} 450). "
-				f"{teams} säsongsteam har fortfarande 250-versionen (gratis byte)."
+				f"Klassbyte aktivt: {from_rider.name} "
+				f"(#{from_rider.rider_number} {from_short}) → "
+				f"{to_rider.name} (#{old_to_number} → #{new_number} {to_short}). "
+				f"{teams} säsongsteam har fortfarande {from_short}-versionen (gratis byte)."
 			),
 			"promotion_id": row.id,
+			"teams_with_from": teams,
 			"teams_with_250": teams,
 		}
 	)
@@ -904,3 +921,591 @@ def manage_class_promotion(promo_id: int):
 		row.note = (data.get("note") or "").strip() or None
 	db.session.commit()
 	return jsonify({"success": True, "is_active": row.is_active})
+
+
+def _entry_list_payload() -> tuple[str, str, str | None, bool, int, bool, bool, bool, bool]:
+	data = request.get_json(silent=True) or {}
+	text = (data.get("text") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	coast_raw = data.get("coast_250")
+	coast_250 = (coast_raw or "").strip() or None
+	if coast_250 not in ("west", "east"):
+		coast_250 = None
+	only_marked_new = bool(data.get("only_marked_new"))
+	default_price = int(data.get("default_price") or 100_000)
+	add_new = bool(data.get("add_new", False))
+	update_numbers = bool(data.get("update_numbers", False))
+	confirm_season_active = bool(data.get("confirm_season_active", False))
+	allow_cross_class_create = bool(data.get("allow_cross_class_create", False))
+	return (
+		text,
+		class_name,
+		coast_250,
+		only_marked_new,
+		default_price,
+		add_new,
+		update_numbers,
+		confirm_season_active,
+		allow_cross_class_create,
+	)
+
+
+def _entry_list_season_active() -> bool:
+	try:
+		from main import is_season_active
+		return bool(is_season_active())
+	except Exception:
+		return False
+
+
+def _parse_and_diff_entry_list(
+	text: str,
+	class_name: str,
+	coast_250: str | None,
+	only_marked_new: bool,
+):
+	from entry_list_import import diff_against_db, normalize_class_name, parse_provisional_entry_text
+
+	klass = normalize_class_name(class_name)
+	parsed = parse_provisional_entry_text(text, klass)
+	if only_marked_new:
+		parsed = [p for p in parsed if p.get("is_new_in_list")]
+	diff = diff_against_db(parsed, klass, coast_250, rider_query_for_list_ui())
+	return klass, diff
+
+
+def _serialize_diff(diff: dict) -> dict:
+	def row(p: dict, extra: dict | None = None) -> dict:
+		out = {
+			"number": p["number"],
+			"name": p["name"],
+			"bike_brand": p.get("bike_brand"),
+			"hometown": p.get("hometown"),
+			"is_new_in_list": p.get("is_new_in_list", False),
+		}
+		if extra:
+			out.update(extra)
+		return out
+
+	number_updates = diff.get("number_updates") or []
+
+	other_class = diff.get("other_class") or []
+
+	return {
+		"parsed_total": diff["parsed_total"],
+		"new_count": len(diff["new"]),
+		"existing_count": len(diff["existing"]),
+		"other_class_count": len(other_class),
+		"number_updates_count": len(number_updates),
+		"name_variants_count": len(diff.get("name_variants") or []),
+		"number_conflicts_count": len(diff["number_conflicts"]),
+		"new": [row(p) for p in diff["new"]],
+		"other_class": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"existing_class": p.get("existing_class"),
+					"note": p.get("note"),
+				},
+			)
+			for p in other_class
+		],
+		"number_updates": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"number_changed": True,
+				},
+			)
+			for p in number_updates
+		],
+		"existing": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"number_changed": p.get("number_changed"),
+				},
+			)
+			for p in diff["existing"]
+		],
+		"number_conflicts": [
+			row(p, {"existing_id": p.get("existing_id"), "existing_name": p.get("existing_name")})
+			for p in diff["number_conflicts"]
+		],
+	}
+
+
+def _serialize_review(klass: str, diff: dict) -> list[dict]:
+	from entry_list_import import build_review_items
+
+	items = build_review_items(diff, klass)
+	out = []
+	for it in items:
+		row = {
+			"key": it["key"],
+			"action": it["action"],
+			"action_label": it["action_label"],
+			"selectable": it["selectable"],
+			"name": it["name"],
+			"list": it.get("list"),
+			"db": it.get("db"),
+			"note": it.get("note"),
+			"coast_mismatch": it.get("coast_mismatch", False),
+			"is_new_in_list": it.get("is_new_in_list", False),
+			"can_ignore": it.get("can_ignore", True),
+		}
+		out.append(row)
+	return out
+
+
+@bp.route("/rider_management/entry_list/preview", methods=["POST"])
+@login_required
+def entry_list_preview():
+	"""Preview pasted provisional entry list; show only riders not already in DB."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+
+	text, class_name, coast_250, only_marked_new, _, _, _, _, _ = _entry_list_payload()
+	if not text:
+		return jsonify({"error": "Klistra in entry list först"}), 400
+
+	try:
+		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
+		body = _serialize_diff(diff)
+		body["review_items"] = _serialize_review(klass, diff)
+		body["selectable_count"] = sum(1 for i in body["review_items"] if i["selectable"])
+		body["success"] = True
+		body["class_name"] = klass
+		body["coast_250"] = coast_250
+		body["filtered_marked_new_only"] = only_marked_new
+		body["season_active"] = _entry_list_season_active()
+		body["safety_note"] = (
+			"Poäng, picks och säsongsteam följer förarens id. "
+			"Importen ändrar aldrig klass och tar inte bort förare. "
+			"Samma namn i annan klass (t.ex. 250→450) skapas inte automatiskt — använd MX-klassbyte."
+		)
+		return jsonify(body)
+	except Exception as e:
+		print(f"entry_list_preview error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rider_management/entry_list/fetch_url", methods=["POST"])
+@login_required
+def entry_list_fetch_url():
+	"""Fetch RacerX entry list by URL and return TSV-like text for preview/import."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	url = (data.get("url") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	if not url:
+		return jsonify({"error": "URL saknas"}), 400
+	if "racerxonline.com" not in url.lower():
+		return jsonify({"error": "Endast racerxonline.com stöds"}), 400
+	try:
+		from racerx_entry_list import fetch_entry_list
+		from entry_list_import import normalize_class_name
+
+		klass = normalize_class_name(class_name)
+		title, rows = fetch_entry_list(url)
+		# Make a pasteable text that our parser understands (tabs)
+		lines = []
+		for r in rows:
+			new_cell = "New" if r.is_new else ""
+			lines.append(f"{r.number}\t{r.name}\t{new_cell}\t{r.hometown}\t{r.bike}")
+		return jsonify({
+			"success": True,
+			"title": title,
+			"class_name": klass,
+			"count": len(rows),
+			"text": "\n".join(lines),
+		})
+	except Exception as e:
+		print(f"entry_list_fetch_url error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rider_management/entry_list/fetch_images", methods=["POST"])
+@login_required
+def entry_list_fetch_images():
+	"""Fetch and store rider images (data URLs) for selected riders in the current list."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	selected_keys = set(data.get("selected") or [])
+	force = bool(data.get("force"))
+	text = (data.get("text") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	coast_raw = data.get("coast_250")
+	coast_250 = (coast_raw or "").strip() or None
+	if coast_250 not in ("west", "east"):
+		coast_250 = None
+	only_marked_new = bool(data.get("only_marked_new"))
+	if not text:
+		return jsonify({"error": "Klistra in entry list först"}), 400
+	if not selected_keys:
+		return jsonify({"error": "Välj minst en rad"}), 400
+	try:
+		from racerx_entry_list import fetch_rider_image_data_url
+		from entry_list_import import normalize_class_name
+
+		klass = normalize_class_name(class_name)
+		_, diff = _parse_and_diff_entry_list(text, klass, coast_250, only_marked_new)
+		# Map selectable items to rider ids
+		rider_ids: set[int] = set()
+		for p in diff.get("number_updates", []):
+			if f"update:{int(p['existing_id'])}" in selected_keys:
+				rider_ids.add(int(p["existing_id"]))
+		for p in diff.get("name_variants", []):
+			if f"variant:{int(p['existing_id'])}" in selected_keys:
+				rider_ids.add(int(p["existing_id"]))
+		updated = 0
+		skipped = 0
+		errors: list[str] = []
+		for rid in sorted(rider_ids):
+			r = Rider.query.get(rid)
+			if not r:
+				continue
+			if not force and getattr(r, "rider_image_data", None):
+				skipped += 1
+				continue
+			# Try to build a rider URL from name (best effort) if we don't have it.
+			slug = (r.name or "").strip().lower().replace(" ", "-")
+			rider_url = f"https://racerxonline.com/rider/{slug}/races"
+			try:
+				img_data = fetch_rider_image_data_url(rider_url)
+				if not img_data:
+					skipped += 1
+					continue
+				r.rider_image_data = img_data
+				updated += 1
+			except Exception as e:
+				errors.append(f"{r.name}: {e}")
+		db.session.commit()
+		return jsonify({
+			"success": True,
+			"updated": updated,
+			"skipped": skipped,
+			"errors": errors,
+			"message": f"Hämtade {updated} bilder (skippade {skipped})",
+		})
+	except Exception as e:
+		db.session.rollback()
+		print(f"entry_list_fetch_images error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+def _norm_racerx_name(name: str) -> str:
+	import re
+
+	s = (name or "").strip()
+	s = re.sub(r"\s+", " ", s)
+	s = re.sub(r"\s+(Jr\.|Sr\.|III|II|IV)$", "", s, flags=re.IGNORECASE)
+	return s.lower()
+
+
+def _load_racerx_images_csv() -> list[dict]:
+	import csv
+	from pathlib import Path
+
+	path = Path("data/racerx_riders_2026.csv")
+	if not path.exists():
+		return []
+	with path.open(encoding="utf-8") as f:
+		return list(csv.DictReader(f))
+
+
+@bp.route("/rider_management/racerx_images/preview", methods=["POST"])
+@login_required
+def rider_images_racerx_preview():
+	"""Preview which riders can get images from data/racerx_riders_2026.csv."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	try:
+		rows = _load_racerx_images_csv()
+		if not rows:
+			return jsonify({"error": "Hittar inte data/racerx_riders_2026.csv"}), 400
+
+		# Build quick lookup by normalized name
+		by_name: dict[str, dict] = {}
+		for r in rows:
+			name = (r.get("name_guess") or "").strip()
+			img = (r.get("img_url") or "").strip()
+			profile = (r.get("profile_url") or "").strip()
+			if not name or not img:
+				continue
+			if img.lower().endswith("post_thumb.png"):
+				continue
+			by_name[_norm_racerx_name(name)] = {"img_url": img, "profile_url": profile, "name_guess": name}
+
+		ids_with_blob = {
+			row[0]
+			for row in db.session.query(Rider.id).filter(Rider.rider_image_data.isnot(None)).all()
+		}
+		candidates = []
+		for rider in rider_query_for_list_ui().all():
+			if rider.id in ids_with_blob:
+				continue
+			key = _norm_racerx_name(rider.name)
+			src = by_name.get(key)
+			if not src:
+				continue
+			candidates.append({
+				"key": f"img:{rider.id}",
+				"rider_id": rider.id,
+				"name": rider.name,
+				"class_name": rider.class_name,
+				"number": rider.rider_number,
+				"img_url": src["img_url"],
+				"profile_url": src["profile_url"],
+			})
+
+		return jsonify({
+			"success": True,
+			"candidates": candidates,
+			"count": len(candidates),
+			"message": f"Hittade {len(candidates)} förare utan bild som kan matchas mot RacerX.",
+		})
+	except Exception as e:
+		print(f"rider_images_racerx_preview error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rider_management/racerx_images/apply", methods=["POST"])
+@login_required
+def rider_images_racerx_apply():
+	"""Apply selected image updates from RacerX CSV (stores as rider_image_data data URL)."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	selected = data.get("selected") or []
+	force = bool(data.get("force"))
+	try:
+		selected_ids = []
+		for k in selected:
+			if isinstance(k, str) and k.startswith("img:") and k[4:].isdigit():
+				selected_ids.append(int(k[4:]))
+		if not selected_ids:
+			return jsonify({"error": "Välj minst en rad"}), 400
+
+		rows = _load_racerx_images_csv()
+		if not rows:
+			return jsonify({"error": "Hittar inte data/racerx_riders_2026.csv"}), 400
+
+		by_name: dict[str, dict] = {}
+		for r in rows:
+			name = (r.get("name_guess") or "").strip()
+			img = (r.get("img_url") or "").strip()
+			if not name or not img:
+				continue
+			if img.lower().endswith("post_thumb.png"):
+				continue
+			by_name[_norm_racerx_name(name)] = {"img_url": img}
+
+		import base64
+		import requests
+
+		headers = {
+			"User-Agent": (
+				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+				"AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+			)
+		}
+
+		updated = 0
+		skipped = 0
+		errors: list[str] = []
+		for rid in selected_ids:
+			r = Rider.query.get(rid)
+			if not r:
+				continue
+			if not force and getattr(r, "rider_image_data", None):
+				skipped += 1
+				continue
+			src = by_name.get(_norm_racerx_name(r.name))
+			if not src:
+				skipped += 1
+				continue
+			try:
+				resp = requests.get(src["img_url"], headers=headers, timeout=30)
+				resp.raise_for_status()
+				mime = (resp.headers.get("Content-Type") or "image/jpeg").split(";", 1)[0].strip()
+				if not mime.startswith("image/"):
+					mime = "image/jpeg"
+				r.rider_image_data = f"data:{mime};base64,{base64.b64encode(resp.content).decode('ascii')}"
+				updated += 1
+			except Exception as e:
+				errors.append(f"{r.name}: {e}")
+		db.session.commit()
+		return jsonify({
+			"success": True,
+			"updated": updated,
+			"skipped": skipped,
+			"errors": errors,
+			"message": f"Uppdaterade {updated} bilder (skippade {skipped})",
+		})
+	except Exception as e:
+		db.session.rollback()
+		print(f"rider_images_racerx_apply error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+def _execute_entry_list_apply() -> tuple[dict, int]:
+	from entry_list_import import (
+		DEFAULT_PRICE,
+		apply_name_variants,
+		apply_number_updates,
+		import_new_riders,
+		review_item_key_create,
+		review_item_key_cross_create,
+		review_item_key_name_variant,
+		review_item_key_update,
+	)
+
+	data = request.get_json(silent=True) or {}
+	selected_keys = set(data.get("selected") or [])
+	(
+		text,
+		class_name,
+		coast_250,
+		only_marked_new,
+		default_price,
+		_,
+		_,
+		confirm_season_active,
+		allow_cross_class_create,
+	) = _entry_list_payload()
+	if not text:
+		return {"error": "Klistra in entry list först"}, 400
+	if not selected_keys:
+		return {"error": "Välj minst en rad att spara"}, 400
+	if _entry_list_season_active() and not confirm_season_active:
+		return {
+			"error": (
+				"Säsong pågår — kryssa i bekräftelsen under listan innan du sparar "
+				"(endast valda rader, samma id behåller poäng)"
+			),
+			"season_active": True,
+		}, 400
+
+	try:
+		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
+		new_selected = [
+			p for p in diff["new"]
+			if review_item_key_create(p["name"]) in selected_keys
+		]
+		cross_selected = [
+			p for p in diff.get("other_class", [])
+			if review_item_key_cross_create(p["name"]) in selected_keys
+		]
+		updates_selected = [
+			p for p in diff["number_updates"]
+			if review_item_key_update(int(p["existing_id"])) in selected_keys
+		]
+		variants_selected = [
+			p for p in diff.get("name_variants", [])
+			if review_item_key_name_variant(int(p["existing_id"])) in selected_keys
+		]
+		errors: list[str] = []
+		created: list[str] = []
+		updated: list[str] = []
+		conflicts_resolved = 0
+
+		any_writes = bool(new_selected or cross_selected or updates_selected or variants_selected)
+		combined = sum(1 for x in (new_selected, cross_selected, updates_selected, variants_selected) if x) > 1
+		if new_selected:
+			created, err_new = import_new_riders(
+				new_selected,
+				Rider,
+				db.session,
+				Rider.query,
+				coast_250=coast_250,
+				default_price=default_price or DEFAULT_PRICE,
+				auto_commit=not combined,
+				allow_cross_class_create=False,
+			)
+			errors.extend(err_new)
+		if cross_selected and not errors:
+			cross_created, err_cross = import_new_riders(
+				cross_selected,
+				Rider,
+				db.session,
+				Rider.query,
+				coast_250=coast_250,
+				default_price=default_price or DEFAULT_PRICE,
+				auto_commit=not combined,
+				allow_cross_class_create=True,
+			)
+			created.extend(cross_created)
+			errors.extend(err_cross)
+		if updates_selected and not errors:
+			updated, err_num, conflicts_resolved = apply_number_updates(
+				updates_selected,
+				Rider,
+				db.session,
+				Rider.query,
+				auto_commit=not combined,
+			)
+			errors.extend(err_num)
+		if variants_selected and not errors:
+			var_updated, err_var = apply_name_variants(
+				variants_selected,
+				Rider,
+				db.session,
+				auto_commit=not combined,
+			)
+			updated.extend(var_updated)
+			errors.extend(err_var)
+
+		if errors:
+			db.session.rollback()
+			return {"error": "; ".join(errors), "errors": errors}, 400
+		if any_writes:
+			db.session.commit()
+
+		parts = []
+		if created:
+			parts.append(f"{len(created)} nya")
+		if updated:
+			parts.append(f"{len(updated)} nummer uppdaterade")
+		message = ", ".join(parts) if parts else "Inget att ändra"
+		if conflicts_resolved:
+			message += f" ({conflicts_resolved} nummerkonflikt(er) lösta med temp-nummer)"
+
+		return {
+			"success": True,
+			"created_count": len(created),
+			"created": created,
+			"updated_count": len(updated),
+			"updated": updated,
+			"conflicts_resolved": conflicts_resolved,
+			"errors": errors,
+			"message": message,
+		}, 200
+	except Exception as e:
+		db.session.rollback()
+		print(f"entry_list_apply error: {e}")
+		traceback.print_exc()
+		return {"error": str(e)}, 500
+
+
+@bp.route("/rider_management/entry_list/apply", methods=["POST"])
+@login_required
+def entry_list_apply():
+	"""Apply only admin-selected rows from entry list review."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	body, status = _execute_entry_list_apply()
+	return jsonify(body), status

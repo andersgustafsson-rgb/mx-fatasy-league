@@ -60,6 +60,172 @@
             </div>
         </div>
 
+        <!-- Snabbklistra Provisional Entry List -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-cyan-500">
+            <h3 class="text-lg font-semibold text-cyan-400 mb-2">📋 Snabbklistra Entry List</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Klistra in <strong>Provisional Entry List</strong> från supercross.com.
+                Lägg till <strong>nya</strong> förare och/eller <strong>uppdatera startnummer</strong> för befintliga — utan att ersätta hela listan.
+            </p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+                <div class="lg:col-span-2">
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">RacerX URL (valfritt)</label>
+                    <input id="pasteEntryUrl" type="url"
+                        placeholder="https://racerxonline.com/mx/2026/fox-raceway/250/entry-list"
+                        class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div class="flex items-end gap-2">
+                    <button type="button" id="pasteEntryFetchUrlBtn"
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        Hämta från URL
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-400/50 rounded p-2 mb-3">
+                <strong>Poäng per klass:</strong> 250-Deegan och 450-Deegan är <em>två olika id</em> i databasen.
+                Poäng på 250-id följer alltid 250-raden; en ny 450-rad börjar på <strong>0 poäng</strong>.
+                Importer flyttar aldrig resultat mellan klasser. Efter ny 450-rad: koppla <strong>MX-klassbyte</strong> (250 → 450) så spelare kan byta gratis.
+            </p>
+            <label class="flex items-center gap-2 text-sm mb-3 cursor-pointer hidden" id="pasteEntrySeasonConfirmWrap">
+                <input type="checkbox" id="pasteEntrySeasonConfirm" class="rounded">
+                <span>Jag förstår: under pågående säsong påverkas bara valda nya/nummer (samma id behåller poäng)</span>
+            </label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Klass</label>
+                    <select id="pasteEntryClass" class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                        <option value="250cc" selected>250cc</option>
+                        <option value="450cc">450cc</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">250-kust (valfritt)</label>
+                    <select id="pasteEntryCoast" class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Alla / 450</option>
+                        <option value="west">West</option>
+                        <option value="east">East</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="pasteEntryOnlyNewMarker" class="rounded">
+                        Visa bara rader märkta <strong>New</strong> i listan
+                    </label>
+                </div>
+            </div>
+            <textarea
+                id="pasteEntryText"
+                rows="8"
+                placeholder="Klistra in hela listan här (Number, Rider, Hometown, Bike)..."
+                class="w-full px-3 py-2 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+            ></textarea>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <button type="button" id="pasteEntryPreviewBtn"
+                    class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    Förhandsgranska
+                </button>
+            </div>
+            <div id="pasteEntryStatus" class="mt-3 text-sm hidden"></div>
+            <div id="pasteEntryPreviewBox" class="mt-4 hidden">
+                <p id="pasteEntrySummary" class="text-sm text-gray-600 dark:text-gray-400 mb-2"></p>
+                <div class="flex flex-wrap gap-2 mb-2">
+                    <button type="button" id="pasteEntrySelectNewBtn"
+                        class="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded">
+                        Välj alla nya
+                    </button>
+                    <button type="button" id="pasteEntrySelectNumBtn"
+                        class="text-xs bg-amber-700 hover:bg-amber-600 text-white px-3 py-1 rounded">
+                        Välj alla nummerändringar
+                    </button>
+                    <button type="button" id="pasteEntrySelectNoneBtn"
+                        class="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded">
+                        Avmarkera alla
+                    </button>
+                    <button type="button" id="pasteEntrySelectVariantBtn"
+                        class="text-xs bg-sky-700 hover:bg-sky-600 text-white px-3 py-1 rounded">
+                        Välj namnvarianter
+                    </button>
+                    <label class="flex items-center gap-1 text-xs cursor-pointer">
+                        <input type="checkbox" id="pasteEntryHideUnchanged" class="rounded" checked>
+                        Dölj oförändrade
+                    </label>
+                </div>
+                <div class="max-h-[28rem] overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg mb-3">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-2 py-1 w-8"></th>
+                                <th class="px-2 py-1 text-left">Åtgärd</th>
+                                <th class="px-2 py-1 text-left">Namn</th>
+                                <th class="px-2 py-1 text-left">I databasen</th>
+                                <th class="px-2 py-1 text-left">I listan</th>
+                                <th class="px-2 py-1 w-16"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="pasteEntryReviewBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" id="pasteEntrySaveSelectedBtn"
+                    class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    disabled>
+                    Spara valda till databasen (0)
+                </button>
+                <button type="button" id="pasteEntryFetchImagesBtn"
+                    class="bg-sky-700 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ml-2"
+                    disabled>
+                    Hämta bilder för valda
+                </button>
+            </div>
+        </div>
+
+        <!-- RacerX bilder: fyll på saknade -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-sky-500">
+            <h3 class="text-lg font-semibold text-sky-400 mb-2">🖼️ RacerX-bilder (fyll på saknade)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Matchar mot <code>data/racerx_riders_2026.csv</code>. Inget uppdateras utan att du kryssar i och sparar.
+            </p>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button type="button" id="racerxImagesPreviewBtn"
+                    class="bg-sky-700 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    Förhandsgranska saknade bilder
+                </button>
+                <button type="button" id="racerxImagesSelectAllBtn"
+                    class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm" disabled>
+                    Välj alla
+                </button>
+                <button type="button" id="racerxImagesSelectNoneBtn"
+                    class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm" disabled>
+                    Avmarkera alla
+                </button>
+                <label class="flex items-center gap-2 text-sm cursor-pointer ml-auto">
+                    <input type="checkbox" id="racerxImagesForce" class="rounded">
+                    Skriv över befintlig bild
+                </label>
+            </div>
+            <div id="racerxImagesStatus" class="text-sm hidden mb-3"></div>
+            <div class="max-h-72 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                        <tr>
+                            <th class="px-2 py-1 w-8"></th>
+                            <th class="px-2 py-1 text-left">Namn</th>
+                            <th class="px-2 py-1 text-left">Klass</th>
+                            <th class="px-2 py-1 text-left">#</th>
+                            <th class="px-2 py-1 text-left">Källa</th>
+                        </tr>
+                    </thead>
+                    <tbody id="racerxImagesBody">
+                        <tr><td colspan="5" class="px-2 py-3 text-gray-500">Klicka “Förhandsgranska”.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <button type="button" id="racerxImagesApplyBtn"
+                class="mt-3 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                disabled>
+                Uppdatera valda bilder (0)
+            </button>
+        </div>
+
         <!-- Bulk Update Rider Numbers -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-yellow-400">
             <h3 class="text-lg font-semibold text-yellow-400 mb-3">🔄 Bulk Uppdatera Förarenummer (SMX)</h3>
@@ -78,18 +244,23 @@
 
         <!-- MX klassbyte: gratis säsongsteam-byte + nytt 450-nummer -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
-            <h3 class="text-lg font-semibold text-emerald-400 mb-2">⬆️ MX-klassbyte (säsongsteam)</h3>
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">↕️ MX-klassbyte (säsongsteam)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                När en förare går 250 → 450: koppla rätt rader, sätt <strong>nytt startnummer i 450</strong>, och aktivera gratis byte för spelare som fortfarande har 250-versionen på säsongsteamet.
+                Koppla rätt förarrader när någon byter klass (250 ↔ 450), sätt <strong>nytt startnummer i målklassen</strong>, och aktivera gratis byte för spelare som fortfarande har den gamla versionen på säsongsteamet.
             </p>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                 <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                     <h4 class="text-sm font-semibold text-gray-200 mb-2">Nytt klassbyte</h4>
-                    <label class="block text-xs text-gray-400 mb-1">250-förare (gammal klass)</label>
+                    <label class="block text-xs text-gray-400 mb-1">Riktning</label>
+                    <select id="cp-direction" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm" onchange="onClassPromoDirectionChange()">
+                        <option value="250_to_450">250 → 450 (uppgradering)</option>
+                        <option value="450_to_250">450 → 250 (nedgradering)</option>
+                    </select>
+                    <label id="cp-from-label" class="block text-xs text-gray-400 mb-1">250-förare (gammal klass på lag)</label>
                     <select id="cp-from-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm" onchange="onClassPromoFromChange()"></select>
-                    <label class="block text-xs text-gray-400 mb-1">450-förare (samma person)</label>
+                    <label id="cp-to-label" class="block text-xs text-gray-400 mb-1">450-förare (samma person, ny klass)</label>
                     <select id="cp-to-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm"></select>
-                    <label class="block text-xs text-gray-400 mb-1">Nytt startnummer i 450</label>
+                    <label id="cp-number-label" class="block text-xs text-gray-400 mb-1">Nytt startnummer i 450</label>
                     <input id="cp-new-number" type="number" min="1" max="999" placeholder="t.ex. 28" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
                     <label class="block text-xs text-gray-400 mb-1">Anteckning (valfritt)</label>
                     <input id="cp-note" type="text" placeholder="MX 2026" class="w-full mb-3 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
@@ -961,6 +1132,44 @@
         }
 
         let cpData = { riders_250: [], riders_450: [], promotions: [] };
+        let cpDirection = '250_to_450';
+
+        function cpFromClass() {
+            return cpDirection === '450_to_250' ? '450cc' : '250cc';
+        }
+        function cpToClass() {
+            return cpDirection === '450_to_250' ? '250cc' : '450cc';
+        }
+        function cpFromShort() { return cpFromClass() === '250cc' ? '250' : '450'; }
+        function cpToShort() { return cpToClass() === '250cc' ? '250' : '450'; }
+        function cpRidersFrom() {
+            return cpFromClass() === '250cc' ? cpData.riders_250 : cpData.riders_450;
+        }
+        function cpRidersTo() {
+            return cpToClass() === '250cc' ? cpData.riders_250 : cpData.riders_450;
+        }
+
+        function updateCpDirectionLabels() {
+            const fs = cpFromShort();
+            const ts = cpToShort();
+            const fl = document.getElementById('cp-from-label');
+            const tl = document.getElementById('cp-to-label');
+            const nl = document.getElementById('cp-number-label');
+            if (fl) fl.textContent = `${fs}-förare (gammal klass på lag)`;
+            if (tl) tl.textContent = `${ts}-förare (samma person, ny klass)`;
+            if (nl) nl.textContent = `Nytt startnummer i ${ts}`;
+        }
+
+        function onClassPromoDirectionChange() {
+            const sel = document.getElementById('cp-direction');
+            cpDirection = sel?.value === '450_to_250' ? '450_to_250' : '250_to_450';
+            updateCpDirectionLabels();
+            const toSel = document.getElementById('cp-to-rider');
+            const numInput = document.getElementById('cp-new-number');
+            if (toSel) toSel.value = '';
+            if (numInput) numInput.value = '';
+            fillCpSelects();
+        }
 
         function cpShowStatus(html, ok) {
             const el = document.getElementById('cp-status');
@@ -980,12 +1189,14 @@
             const fromSel = document.getElementById('cp-from-rider');
             const toSel = document.getElementById('cp-to-rider');
             if (!fromSel || !toSel) return;
-            fromSel.innerHTML = '<option value="">— välj 250-förare —</option>' +
-                cpData.riders_250.map(r =>
+            const fs = cpFromShort();
+            const ts = cpToShort();
+            fromSel.innerHTML = `<option value="">— välj ${fs}-förare —</option>` +
+                cpRidersFrom().map(r =>
                     `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
                 ).join('');
-            toSel.innerHTML = '<option value="">— välj 450-förare —</option>' +
-                cpData.riders_450.map(r =>
+            toSel.innerHTML = `<option value="">— välj ${ts}-förare —</option>` +
+                cpRidersTo().map(r =>
                     `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
                 ).join('');
         }
@@ -996,15 +1207,19 @@
             const numInput = document.getElementById('cp-new-number');
             if (!fromSel || !toSel) return;
             const fromId = parseInt(fromSel.value, 10);
-            const fromR = cpData.riders_250.find(r => r.id === fromId);
+            const fromR = cpRidersFrom().find(r => r.id === fromId);
             if (!fromR) return;
-            const matches = cpData.riders_450.filter(r => normCpName(r.name) === normCpName(fromR.name));
+            const matches = cpRidersTo().filter(r => normCpName(r.name) === normCpName(fromR.name));
+            const ts = cpToShort();
             if (matches.length === 1) {
                 toSel.value = String(matches[0].id);
                 if (numInput && !numInput.value) numInput.value = matches[0].rider_number || '';
             } else if (matches.length > 1) {
-                toSel.innerHTML = '<option value="">— flera 450 med samma namn —</option>' +
+                toSel.innerHTML = `<option value="">— flera ${ts} med samma namn —</option>` +
                     matches.map(r => `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`).join('');
+            } else {
+                fillCpSelects();
+                fromSel.value = String(fromId);
             }
         }
 
@@ -1015,16 +1230,21 @@
                 list.innerHTML = '<p class="text-gray-500">Inga aktiva klassbyten ännu.</p>';
                 return;
             }
-            list.innerHTML = cpData.promotions.map(p => `
+            list.innerHTML = cpData.promotions.map(p => {
+                const fromCls = (p.from_class || '250cc').replace('cc', '');
+                const toCls = (p.to_class || '450cc').replace('cc', '');
+                const teams = p.teams_with_from ?? p.teams_with_250 ?? 0;
+                return `
                 <div class="mb-3 p-2 rounded border border-gray-600 bg-gray-900/40 ${p.is_active ? '' : 'opacity-50'}">
-                    <div class="font-semibold text-emerald-200">${p.from_name} #${p.from_number} (250) → ${p.to_name} #${p.to_number} (450)</div>
-                    <div class="text-xs text-gray-400 mt-1">${p.teams_with_250} säsongsteam med 250-versionen · ${p.is_active ? 'Aktiv' : 'Pausad'}</div>
+                    <div class="font-semibold text-emerald-200">${p.from_name} #${p.from_number} (${fromCls}) → ${p.to_name} #${p.to_number} (${toCls})</div>
+                    <div class="text-xs text-gray-400 mt-1">${teams} säsongsteam med ${fromCls}-versionen · ${p.is_active ? 'Aktiv' : 'Pausad'}</div>
                     <div class="flex gap-2 mt-2">
                         <button type="button" onclick="toggleClassPromotion(${p.id}, ${!p.is_active})" class="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600">${p.is_active ? 'Pausa' : 'Aktivera'}</button>
                         <button type="button" onclick="deleteClassPromotion(${p.id})" class="text-xs px-2 py-1 rounded bg-red-800 hover:bg-red-700">Ta bort</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         async function loadClassPromotions() {
@@ -1033,6 +1253,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Kunde inte ladda');
                 cpData = data;
+                updateCpDirectionLabels();
                 fillCpSelects();
                 renderCpList();
             } catch (e) {
@@ -1047,10 +1268,10 @@
             const newNum = document.getElementById('cp-new-number')?.value;
             const note = document.getElementById('cp-note')?.value || '';
             if (!fromId || !newNum) {
-                cpShowStatus('Välj 250-förare och ange nytt 450-nummer.', false);
+                cpShowStatus(`Välj ${cpFromShort()}-förare och ange nytt ${cpToShort()}-nummer.`, false);
                 return;
             }
-            if (!confirm('Aktivera klassbyte och uppdatera 450-numret? Spelare med 250-versionen får gratis byte.')) return;
+            if (!confirm(`Aktivera klassbyte (${cpFromShort()} → ${cpToShort()}) och uppdatera numret? Spelare med ${cpFromShort()}-versionen får gratis byte.`)) return;
             try {
                 const res = await fetch('/rider_management/class_promotions/setup', {
                     method: 'POST',
@@ -1058,7 +1279,7 @@
                     body: JSON.stringify({
                         from_rider_id: parseInt(fromId, 10),
                         to_rider_id: toId ? parseInt(toId, 10) : null,
-                        new_450_number: parseInt(newNum, 10),
+                        new_number: parseInt(newNum, 10),
                         note: note
                     })
                 });
@@ -1550,6 +1771,430 @@
                 });
             }
         }
+
+        // Snabbklistra entry list (endast nya)
+        let pasteEntryLastPreview = null;
+        let pasteEntryIgnoredKeys = new Set();
+        let pasteEntrySeasonActive = false;
+
+        function pasteEntryPayload(extra) {
+            return Object.assign({
+                text: document.getElementById('pasteEntryText').value,
+                class_name: document.getElementById('pasteEntryClass').value,
+                coast_250: document.getElementById('pasteEntryCoast').value || null,
+                only_marked_new: document.getElementById('pasteEntryOnlyNewMarker').checked,
+                confirm_season_active: document.getElementById('pasteEntrySeasonConfirm').checked,
+            }, extra || {});
+        }
+
+        function showPasteEntryStatus(html, isError) {
+            const el = document.getElementById('pasteEntryStatus');
+            el.classList.remove('hidden');
+            el.className = 'mt-3 text-sm ' + (isError
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-gray-700 dark:text-gray-300');
+            el.innerHTML = html;
+        }
+
+        function formatPasteDbCell(db, item) {
+            if (!db) return '<span class="text-gray-500">— finns inte —</span>';
+            const parts = [];
+            if (db.name) parts.push('"' + db.name + '"');
+            if (db.class_name) parts.push(db.class_name);
+            if (db.number != null) parts.push('#' + db.number);
+            if (db.bike_brand) parts.push(db.bike_brand);
+            if (db.coast) parts.push(db.coast);
+            if (db.id) parts.push('id ' + db.id);
+            if (db.name && item.action === 'conflict') {
+                return '<span class="text-red-400">#' + (db.number || '?') + ' ' + escapeHtml(db.name) + '</span>';
+            }
+            return escapeHtml(parts.join(' · ') || '—');
+        }
+
+        function formatPasteListCell(list, item) {
+            if (!list) return '—';
+            const parts = [];
+            if (list.class_name) parts.push(list.class_name);
+            if (list.number != null) parts.push('#' + list.number);
+            if (list.bike_brand) parts.push(list.bike_brand);
+            let html = escapeHtml(parts.join(' · '));
+            if (item.is_new_in_list) html += ' <span class="text-cyan-400">New</span>';
+            return html;
+        }
+
+        function actionBadgeClass(action) {
+            if (action === 'create') return 'bg-emerald-700 text-white';
+            if (action === 'update_number') return 'bg-amber-700 text-white';
+            if (action === 'other_class') return 'bg-violet-700 text-white border border-violet-300';
+            if (action === 'name_variant') return 'bg-sky-700 text-white';
+            if (action === 'conflict') return 'bg-red-700 text-white';
+            return 'bg-gray-600 text-gray-200';
+        }
+
+        function updatePasteEntrySaveButton() {
+            const n = document.querySelectorAll('.paste-entry-select:checked').length;
+            const btn = document.getElementById('pasteEntrySaveSelectedBtn');
+            btn.disabled = n === 0;
+            btn.textContent = 'Spara valda till databasen (' + n + ')';
+            const imgBtn = document.getElementById('pasteEntryFetchImagesBtn');
+            if (imgBtn) imgBtn.disabled = n === 0;
+        }
+
+        function renderPasteEntryPreview(data) {
+            pasteEntryLastPreview = data;
+            pasteEntryIgnoredKeys = new Set();
+            pasteEntrySeasonActive = !!data.season_active;
+            const seasonWrap = document.getElementById('pasteEntrySeasonConfirmWrap');
+            if (seasonWrap) {
+                seasonWrap.classList.toggle('hidden', !pasteEntrySeasonActive);
+            }
+            const box = document.getElementById('pasteEntryPreviewBox');
+            const summary = document.getElementById('pasteEntrySummary');
+            const tbody = document.getElementById('pasteEntryReviewBody');
+            const hideUnchanged = document.getElementById('pasteEntryHideUnchanged').checked;
+            const items = data.review_items || [];
+
+            summary.textContent =
+                `Tolkade ${data.parsed_total} rader — ${data.new_count} kan läggas till, ` +
+                `${data.number_updates_count || 0} nummerändringar` +
+                ((data.name_variants_count || 0) > 0 ? `, ${data.name_variants_count} namnvariant(er)` : '') +
+                ((data.other_class_count || 0) > 0 ? `, ${data.other_class_count} i annan klass` : '') +
+                (data.number_conflicts_count
+                    ? `, ${data.number_conflicts_count} riktig konflikt`
+                    : '') +
+                `. Kryssa i det du vill spara.` +
+                (data.filtered_marked_new_only ? ' (endast rader märkta New)' : '');
+
+            tbody.innerHTML = '';
+            let shown = 0;
+            items.forEach(item => {
+                if (hideUnchanged && item.action === 'unchanged') return;
+                if (pasteEntryIgnoredKeys.has(item.key)) return;
+                shown++;
+                const tr = document.createElement('tr');
+                tr.dataset.reviewKey = item.key;
+                tr.className = 'border-t border-gray-200 dark:border-gray-600';
+                if (item.action === 'unchanged') tr.classList.add('opacity-60');
+                let dbCell = formatPasteDbCell(item.db, item);
+                if (item.note) dbCell += '<br><span class="text-violet-300 text-xs">' + escapeHtml(item.note) + '</span>';
+                if (item.coast_mismatch) {
+                    dbCell += '<br><span class="text-amber-400 text-xs">annan kust i DB</span>';
+                }
+                const td0 = document.createElement('td');
+                td0.className = 'px-2 py-1 text-center';
+                if (item.selectable) {
+                    const inp = document.createElement('input');
+                    inp.type = 'checkbox';
+                    inp.className = 'paste-entry-select rounded';
+                    inp.dataset.key = item.key;
+                    inp.addEventListener('change', updatePasteEntrySaveButton);
+                    td0.appendChild(inp);
+                }
+                tr.appendChild(td0);
+                const td1 = document.createElement('td');
+                td1.className = 'px-2 py-1';
+                td1.innerHTML = `<span class="text-xs px-1.5 py-0.5 rounded ${actionBadgeClass(item.action)}">${escapeHtml(item.action_label)}</span>`;
+                tr.appendChild(td1);
+                const td2 = document.createElement('td');
+                td2.className = 'px-2 py-1 font-medium';
+                td2.textContent = item.name;
+                tr.appendChild(td2);
+                const td3 = document.createElement('td');
+                td3.className = 'px-2 py-1 text-gray-400';
+                td3.innerHTML = dbCell;
+                tr.appendChild(td3);
+                const td4 = document.createElement('td');
+                td4.className = 'px-2 py-1';
+                td4.innerHTML = formatPasteListCell(item.list, item);
+                tr.appendChild(td4);
+                const td5 = document.createElement('td');
+                td5.className = 'px-2 py-1 text-right';
+                if (item.can_ignore !== false) {
+                    const ign = document.createElement('button');
+                    ign.type = 'button';
+                    ign.className = 'text-xs text-gray-500 hover:text-gray-300 underline';
+                    ign.textContent = 'Ignorera';
+                    ign.onclick = () => {
+                        pasteEntryIgnoredKeys.add(item.key);
+                        tr.remove();
+                        updatePasteEntrySaveButton();
+                    };
+                    td5.appendChild(ign);
+                }
+                tr.appendChild(td5);
+                tbody.appendChild(tr);
+            });
+            if (shown === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="6" class="px-2 py-3 text-gray-500">Inget att visa (alla oförändrade?)</td>';
+                tbody.appendChild(tr);
+            }
+
+            box.classList.remove('hidden');
+            updatePasteEntrySaveButton();
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        document.getElementById('pasteEntryPreviewBtn').addEventListener('click', async () => {
+            const payload = pasteEntryPayload();
+            if (!payload.text.trim()) {
+                showPasteEntryStatus('Klistra in listan först.', true);
+                return;
+            }
+            showPasteEntryStatus('Analyserar…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Förhandsgranskning misslyckades', true);
+                    return;
+                }
+                renderPasteEntryPreview(data);
+                showPasteEntryStatus('Klar — granska tabellen nedan.', false);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        document.getElementById('pasteEntryFetchUrlBtn').addEventListener('click', async () => {
+            const url = document.getElementById('pasteEntryUrl').value.trim();
+            if (!url) {
+                showPasteEntryStatus('Klistra in en RacerX-URL först.', true);
+                return;
+            }
+            showPasteEntryStatus('Hämtar från URL…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/fetch_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        class_name: document.getElementById('pasteEntryClass').value,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Kunde inte hämta URL', true);
+                    return;
+                }
+                document.getElementById('pasteEntryText').value = data.text || '';
+                showPasteEntryStatus(`Hämtade ${data.count} rader från URL. Klicka Förhandsgranska.`, false);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        function getPasteEntrySelectedKeys() {
+            return Array.from(document.querySelectorAll('.paste-entry-select:checked'))
+                .map(cb => cb.getAttribute('data-key'));
+        }
+
+        document.getElementById('pasteEntrySelectNewBtn').addEventListener('click', () => {
+            document.querySelectorAll('.paste-entry-select').forEach(cb => {
+                const key = cb.getAttribute('data-key') || '';
+                cb.checked = key.startsWith('create:');
+            });
+            updatePasteEntrySaveButton();
+        });
+        document.getElementById('pasteEntrySelectNumBtn').addEventListener('click', () => {
+            document.querySelectorAll('.paste-entry-select').forEach(cb => {
+                const key = cb.getAttribute('data-key') || '';
+                cb.checked = key.startsWith('update:');
+            });
+            updatePasteEntrySaveButton();
+        });
+        document.getElementById('pasteEntrySelectVariantBtn').addEventListener('click', () => {
+            document.querySelectorAll('.paste-entry-select').forEach(cb => {
+                const key = cb.getAttribute('data-key') || '';
+                cb.checked = key.startsWith('variant:');
+            });
+            updatePasteEntrySaveButton();
+        });
+        document.getElementById('pasteEntrySelectNoneBtn').addEventListener('click', () => {
+            document.querySelectorAll('.paste-entry-select').forEach(cb => { cb.checked = false; });
+            updatePasteEntrySaveButton();
+        });
+        document.getElementById('pasteEntryHideUnchanged').addEventListener('change', () => {
+            if (pasteEntryLastPreview) renderPasteEntryPreview(pasteEntryLastPreview);
+        });
+
+        document.getElementById('pasteEntrySaveSelectedBtn').addEventListener('click', async () => {
+            if (!pasteEntryLastPreview) return;
+            const selected = getPasteEntrySelectedKeys();
+            if (!selected.length) {
+                showPasteEntryStatus('Kryssa i minst en rad.', true);
+                return;
+            }
+            if (pasteEntrySeasonActive && !document.getElementById('pasteEntrySeasonConfirm').checked) {
+                showPasteEntryStatus('Säsong pågår — kryssa i bekräftelsen ovan.', true);
+                return;
+            }
+            if (!confirm('Spara ' + selected.length + ' valda ändringar till databasen?')) return;
+
+            const btn = document.getElementById('pasteEntrySaveSelectedBtn');
+            btn.disabled = true;
+            showPasteEntryStatus('Sparar…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pasteEntryPayload({ selected })),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Sparning misslyckades', true);
+                    btn.disabled = false;
+                    updatePasteEntrySaveButton();
+                    return;
+                }
+                showPasteEntryStatus(
+                    `✅ ${data.message}` +
+                    (data.errors && data.errors.length ? '<br>Fel: ' + data.errors.join(', ') : ''),
+                    false
+                );
+                setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+                btn.disabled = false;
+                updatePasteEntrySaveButton();
+            }
+        });
+
+        document.getElementById('pasteEntryFetchImagesBtn').addEventListener('click', async () => {
+            if (!pasteEntryLastPreview) return;
+            const selected = getPasteEntrySelectedKeys();
+            if (!selected.length) {
+                showPasteEntryStatus('Kryssa i minst en rad.', true);
+                return;
+            }
+            if (!confirm('Hämta bilder för valda? (kan ta en stund)')) return;
+            showPasteEntryStatus('Hämtar bilder…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/fetch_images', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pasteEntryPayload({ selected })),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Misslyckades att hämta bilder', true);
+                    return;
+                }
+                showPasteEntryStatus(
+                    `✅ ${data.message}` + (data.errors && data.errors.length ? '<br>Fel: ' + data.errors.join(', ') : ''),
+                    false
+                );
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        // RacerX images: fill missing rider images from CSV
+        function showRacerxImagesStatus(html, isError) {
+            const el = document.getElementById('racerxImagesStatus');
+            el.classList.remove('hidden');
+            el.className = 'text-sm mb-3 ' + (isError
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-gray-700 dark:text-gray-300');
+            el.innerHTML = html;
+        }
+
+        function updateRacerxApplyBtn() {
+            const n = document.querySelectorAll('.racerx-img-select:checked').length;
+            const btn = document.getElementById('racerxImagesApplyBtn');
+            btn.disabled = n === 0;
+            btn.textContent = `Uppdatera valda bilder (${n})`;
+        }
+
+        function getRacerxSelectedKeys() {
+            return Array.from(document.querySelectorAll('.racerx-img-select:checked'))
+                .map(cb => cb.getAttribute('data-key'));
+        }
+
+        document.getElementById('racerxImagesPreviewBtn').addEventListener('click', async () => {
+            showRacerxImagesStatus('Letar matchningar…', false);
+            try {
+                const res = await fetch('/rider_management/racerx_images/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showRacerxImagesStatus(data.error || 'Förhandsgranskning misslyckades', true);
+                    return;
+                }
+                const tbody = document.getElementById('racerxImagesBody');
+                tbody.innerHTML = '';
+                (data.candidates || []).forEach(it => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-t border-gray-200 dark:border-gray-600';
+                    tr.innerHTML =
+                        `<td class="px-2 py-1 text-center"><input type="checkbox" class="racerx-img-select rounded" data-key="${escapeHtml(it.key)}"></td>` +
+                        `<td class="px-2 py-1">${escapeHtml(it.name)}</td>` +
+                        `<td class="px-2 py-1 text-gray-400">${escapeHtml(it.class_name)}</td>` +
+                        `<td class="px-2 py-1 text-gray-400">${it.number ?? '—'}</td>` +
+                        `<td class="px-2 py-1"><a class="underline text-sky-400" target="_blank" rel="noopener noreferrer" href="${escapeHtml(it.profile_url || it.img_url)}">RacerX</a></td>`;
+                    tbody.appendChild(tr);
+                });
+                if (!data.candidates || data.candidates.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="5" class="px-2 py-3 text-gray-500">Inga saknade bilder hittades.</td>';
+                    tbody.appendChild(tr);
+                }
+                document.querySelectorAll('.racerx-img-select').forEach(cb => cb.addEventListener('change', updateRacerxApplyBtn));
+                document.getElementById('racerxImagesSelectAllBtn').disabled = false;
+                document.getElementById('racerxImagesSelectNoneBtn').disabled = false;
+                showRacerxImagesStatus(data.message || `Klar.`, false);
+                updateRacerxApplyBtn();
+            } catch (e) {
+                showRacerxImagesStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        document.getElementById('racerxImagesSelectAllBtn').addEventListener('click', () => {
+            document.querySelectorAll('.racerx-img-select').forEach(cb => cb.checked = true);
+            updateRacerxApplyBtn();
+        });
+        document.getElementById('racerxImagesSelectNoneBtn').addEventListener('click', () => {
+            document.querySelectorAll('.racerx-img-select').forEach(cb => cb.checked = false);
+            updateRacerxApplyBtn();
+        });
+
+        document.getElementById('racerxImagesApplyBtn').addEventListener('click', async () => {
+            const selected = getRacerxSelectedKeys();
+            if (!selected.length) return;
+            const force = document.getElementById('racerxImagesForce').checked;
+            if (!confirm(`Uppdatera ${selected.length} bilder?${force ? ' (skriver över)' : ''}`)) return;
+            showRacerxImagesStatus('Hämtar och sparar bilder…', false);
+            try {
+                const res = await fetch('/rider_management/racerx_images/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selected, force }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showRacerxImagesStatus(data.error || 'Uppdatering misslyckades', true);
+                    return;
+                }
+                showRacerxImagesStatus(
+                    `✅ ${data.message}` + (data.errors && data.errors.length ? '<br>Fel: ' + data.errors.join(', ') : ''),
+                    false
+                );
+            } catch (e) {
+                showRacerxImagesStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
 
         // Entry List Import functionality
         let entryListPreview = null;
