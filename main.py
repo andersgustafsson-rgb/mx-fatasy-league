@@ -4355,8 +4355,9 @@ def race_picks_page(competition_id):
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
-        # Föredra rider_image_data (base64) så bilder överlever deploy; annars image_url (fil)
-        img = getattr(r, 'rider_image_data', None) or r.image_url
+        # KRITISKT (Render 512MB): skicka aldrig base64-bilder i payloaden (kan bli 10–30MB+ per sida).
+        # Vi skickar bara ev. fil-URL (eller None) här. Bilder kan fyllas på via static/fil senare.
+        img = r.image_url
         return {
             "id": r.id,
             "name": r.name,
