@@ -922,7 +922,7 @@ def manage_class_promotion(promo_id: int):
 	return jsonify({"success": True, "is_active": row.is_active})
 
 
-def _entry_list_payload() -> tuple[str, str, str | None, bool, int, bool, bool]:
+def _entry_list_payload() -> tuple[str, str, str | None, bool, int, bool, bool, bool, bool]:
 	data = request.get_json(silent=True) or {}
 	text = (data.get("text") or "").strip()
 	class_name = (data.get("class_name") or "250cc").strip()
@@ -934,7 +934,27 @@ def _entry_list_payload() -> tuple[str, str, str | None, bool, int, bool, bool]:
 	default_price = int(data.get("default_price") or 100_000)
 	add_new = bool(data.get("add_new", False))
 	update_numbers = bool(data.get("update_numbers", False))
-	return text, class_name, coast_250, only_marked_new, default_price, add_new, update_numbers
+	confirm_season_active = bool(data.get("confirm_season_active", False))
+	allow_cross_class_create = bool(data.get("allow_cross_class_create", False))
+	return (
+		text,
+		class_name,
+		coast_250,
+		only_marked_new,
+		default_price,
+		add_new,
+		update_numbers,
+		confirm_season_active,
+		allow_cross_class_create,
+	)
+
+
+def _entry_list_season_active() -> bool:
+	try:
+		from main import is_season_active
+		return bool(is_season_active())
+	except Exception:
+		return False
 
 
 def _parse_and_diff_entry_list(
@@ -968,13 +988,28 @@ def _serialize_diff(diff: dict) -> dict:
 
 	number_updates = diff.get("number_updates") or []
 
+	other_class = diff.get("other_class") or []
+
 	return {
 		"parsed_total": diff["parsed_total"],
 		"new_count": len(diff["new"]),
 		"existing_count": len(diff["existing"]),
+		"other_class_count": len(other_class),
 		"number_updates_count": len(number_updates),
 		"number_conflicts_count": len(diff["number_conflicts"]),
 		"new": [row(p) for p in diff["new"]],
+		"other_class": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"existing_class": p.get("existing_class"),
+					"note": p.get("note"),
+				},
+			)
+			for p in other_class
+		],
 		"number_updates": [
 			row(
 				p,
@@ -1004,6 +1039,28 @@ def _serialize_diff(diff: dict) -> dict:
 	}
 
 
+def _serialize_review(klass: str, diff: dict) -> list[dict]:
+	from entry_list_import import build_review_items
+
+	items = build_review_items(diff, klass)
+	out = []
+	for it in items:
+		row = {
+			"key": it["key"],
+			"action": it["action"],
+			"action_label": it["action_label"],
+			"selectable": it["selectable"],
+			"name": it["name"],
+			"list": it.get("list"),
+			"db": it.get("db"),
+			"note": it.get("note"),
+			"coast_mismatch": it.get("coast_mismatch", False),
+			"is_new_in_list": it.get("is_new_in_list", False),
+		}
+		out.append(row)
+	return out
+
+
 @bp.route("/rider_management/entry_list/preview", methods=["POST"])
 @login_required
 def entry_list_preview():
@@ -1011,17 +1068,25 @@ def entry_list_preview():
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
 
-	text, class_name, coast_250, only_marked_new, _, _, _ = _entry_list_payload()
+	text, class_name, coast_250, only_marked_new, _, _, _, _, _ = _entry_list_payload()
 	if not text:
 		return jsonify({"error": "Klistra in entry list först"}), 400
 
 	try:
 		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
 		body = _serialize_diff(diff)
+		body["review_items"] = _serialize_review(klass, diff)
+		body["selectable_count"] = sum(1 for i in body["review_items"] if i["selectable"])
 		body["success"] = True
 		body["class_name"] = klass
 		body["coast_250"] = coast_250
 		body["filtered_marked_new_only"] = only_marked_new
+		body["season_active"] = _entry_list_season_active()
+		body["safety_note"] = (
+			"Poäng, picks och säsongsteam följer förarens id. "
+			"Importen ändrar aldrig klass och tar inte bort förare. "
+			"Samma namn i annan klass (t.ex. 250→450) skapas inte automatiskt — använd MX-klassbyte."
+		)
 		return jsonify(body)
 	except Exception as e:
 		print(f"entry_list_preview error: {e}")
@@ -1029,43 +1094,91 @@ def entry_list_preview():
 		return jsonify({"error": str(e)}), 500
 
 
-def _execute_entry_list_apply(
-	add_new: bool,
-	update_numbers: bool,
-) -> tuple[dict, int]:
+def _execute_entry_list_apply() -> tuple[dict, int]:
 	from entry_list_import import (
 		DEFAULT_PRICE,
 		apply_number_updates,
 		import_new_riders,
+		review_item_key_create,
+		review_item_key_cross_create,
+		review_item_key_update,
 	)
 
-	text, class_name, coast_250, only_marked_new, default_price, _, _ = _entry_list_payload()
+	data = request.get_json(silent=True) or {}
+	selected_keys = set(data.get("selected") or [])
+	(
+		text,
+		class_name,
+		coast_250,
+		only_marked_new,
+		default_price,
+		_,
+		_,
+		confirm_season_active,
+		allow_cross_class_create,
+	) = _entry_list_payload()
 	if not text:
 		return {"error": "Klistra in entry list först"}, 400
-	if not add_new and not update_numbers:
-		return {"error": "Välj minst en åtgärd (nya förare eller nummeruppdatering)"}, 400
+	if not selected_keys:
+		return {"error": "Välj minst en rad att spara"}, 400
+	if _entry_list_season_active() and not confirm_season_active:
+		return {
+			"error": (
+				"Säsong pågår — kryssa i bekräftelsen under listan innan du sparar "
+				"(endast valda rader, samma id behåller poäng)"
+			),
+			"season_active": True,
+		}, 400
 
 	try:
 		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
+		new_selected = [
+			p for p in diff["new"]
+			if review_item_key_create(p["name"]) in selected_keys
+		]
+		cross_selected = [
+			p for p in diff.get("other_class", [])
+			if review_item_key_cross_create(p["name"]) in selected_keys
+		]
+		updates_selected = [
+			p for p in diff["number_updates"]
+			if review_item_key_update(int(p["existing_id"])) in selected_keys
+		]
 		errors: list[str] = []
 		created: list[str] = []
 		updated: list[str] = []
 		conflicts_resolved = 0
 
-		combined = add_new and update_numbers
-		if add_new:
+		any_writes = bool(new_selected or cross_selected or updates_selected)
+		combined = sum(1 for x in (new_selected, cross_selected, updates_selected) if x) > 1
+		if new_selected:
 			created, err_new = import_new_riders(
-				diff["new"],
+				new_selected,
 				Rider,
 				db.session,
+				Rider.query,
 				coast_250=coast_250,
 				default_price=default_price or DEFAULT_PRICE,
 				auto_commit=not combined,
+				allow_cross_class_create=False,
 			)
 			errors.extend(err_new)
-		if update_numbers and not errors:
+		if cross_selected and not errors:
+			cross_created, err_cross = import_new_riders(
+				cross_selected,
+				Rider,
+				db.session,
+				Rider.query,
+				coast_250=coast_250,
+				default_price=default_price or DEFAULT_PRICE,
+				auto_commit=not combined,
+				allow_cross_class_create=True,
+			)
+			created.extend(cross_created)
+			errors.extend(err_cross)
+		if updates_selected and not errors:
 			updated, err_num, conflicts_resolved = apply_number_updates(
-				diff["number_updates"],
+				updates_selected,
 				Rider,
 				db.session,
 				Rider.query,
@@ -1073,10 +1186,10 @@ def _execute_entry_list_apply(
 			)
 			errors.extend(err_num)
 
-		if combined:
-			if errors:
-				db.session.rollback()
-				return {"error": "; ".join(errors), "errors": errors}, 400
+		if errors:
+			db.session.rollback()
+			return {"error": "; ".join(errors), "errors": errors}, 400
+		if any_writes:
 			db.session.commit()
 
 		parts = []
@@ -1105,22 +1218,11 @@ def _execute_entry_list_apply(
 		return {"error": str(e)}, 500
 
 
-@bp.route("/rider_management/entry_list/import_new", methods=["POST"])
-@login_required
-def entry_list_import_new():
-	"""Add only riders from pasted list that are not already in DB (same class/coast)."""
-	if not is_admin_user():
-		return jsonify({"error": "Unauthorized"}), 401
-	body, status = _execute_entry_list_apply(add_new=True, update_numbers=False)
-	return jsonify(body), status
-
-
 @bp.route("/rider_management/entry_list/apply", methods=["POST"])
 @login_required
 def entry_list_apply():
-	"""Add new riders and/or update numbers from pasted entry list."""
+	"""Apply only admin-selected rows from entry list review."""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
-	_, _, _, _, _, add_new, update_numbers = _entry_list_payload()
-	body, status = _execute_entry_list_apply(add_new=add_new, update_numbers=update_numbers)
+	body, status = _execute_entry_list_apply()
 	return jsonify(body), status
