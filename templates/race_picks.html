@@ -1468,9 +1468,17 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
   
-  // 1. image_url är redan en färdig URL (/rider_picture/<id> eller /static/...)
+  // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {
-    return r.image_url;
+    if (r.image_url.startsWith('data:')) return r.image_url;
+    let imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
+    // Filnamn med mellanslag ger 404 – normalisera till understreck
+    if (imagePath.includes(' ')) {
+      const parts = imagePath.split('/');
+      parts[parts.length - 1] = parts[parts.length - 1].replace(/\s+/g, '_');
+      imagePath = parts.join('/');
+    }
+    return `/static/${imagePath}`;
   }
   
   // 2. Check if this is a WSX rider - try WSX folder first (before standard format)

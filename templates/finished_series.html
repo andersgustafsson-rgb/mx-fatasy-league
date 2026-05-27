@@ -117,8 +117,10 @@
 <div class="relative inline-block {{ box }} shrink-0">
   <div class="absolute inset-0 rounded-full bg-gradient-to-br from-violet-600/90 via-fuchsia-600/90 to-cyan-600/90 shadow-md ring-2 ring-white/15 z-0" aria-hidden="true"></div>
   {% set pic = row.profile_picture_url %}
-  {% if pic %}
-    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/40 z-10" onerror="this.remove()">
+  {% if pic and pic.startswith('data:') %}
+    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/40 z-10">
+  {% elif pic and not pic.startswith('uploaded_') %}
+    <img src="{{ url_for('static', filename=pic) }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/40 z-10" onerror="this.remove()">
   {% endif %}
 </div>
 {% endmacro %}

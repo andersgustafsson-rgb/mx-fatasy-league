@@ -84,13 +84,19 @@
           <!-- Profilbild -->
           <div class="flex items-center gap-4 mb-6">
             {% if target_user.profile_picture_url %}
-              <img src="{{ url_for('user_picture', user_id=target_user.id) }}" 
-                   alt="Profilbild" 
-                   class="w-20 h-20 rounded-full object-cover border-4 border-blue-400"
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-              <div class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-blue-400" style="display:none;">
-                <span class="text-blue-400 text-2xl font-bold">{{ target_user.username[0].upper() }}</span>
-              </div>
+              {% if target_user.profile_picture_url.startswith('data:') %}
+                <img src="{{ target_user.profile_picture_url }}" 
+                     alt="Profilbild" 
+                     class="w-20 h-20 rounded-full object-cover border-4 border-blue-400">
+              {% else %}
+                <img src="{{ url_for('static', filename=target_user.profile_picture_url) }}" 
+                     alt="Profilbild" 
+                     class="w-20 h-20 rounded-full object-cover border-4 border-blue-400"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-blue-400" style="display:none;">
+                  <span class="text-blue-400 text-2xl font-bold">{{ target_user.username[0].upper() }}</span>
+                </div>
+              {% endif %}
             {% else %}
               <div class="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center border-4 border-blue-400">
                 <span class="text-blue-400 text-2xl font-bold">{{ target_user.username[0].upper() }}</span>
@@ -168,7 +174,7 @@
                 <div class="flex items-center gap-3 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-lg px-4 py-3 shadow-md hover:shadow-lg transition-shadow">
                   <div class="flex items-center gap-2 flex-shrink-0">
                     {% if r.image_url %}
-                      <img src="{{ r.image_url }}"
+                      <img src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}"
                            alt="{{ r.name }} headshot"
                            class="w-10 h-10 rounded-full object-cover border-2 {% if r.class == '450cc' %}border-orange-500{% else %}border-yellow-500{% endif %}"
                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

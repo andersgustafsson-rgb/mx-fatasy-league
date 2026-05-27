@@ -1147,7 +1147,7 @@ def index():
         try:
             user = User.query.get(uid)
             if user and hasattr(user, 'profile_picture_url') and user.profile_picture_url:
-                user_profile_picture = user_img_src_for_ui(uid, user.profile_picture_url)
+                user_profile_picture = user.profile_picture_url
         except Exception as e:
             print(f"Error getting user profile picture: {e}")
             user_profile_picture = None
@@ -1642,7 +1642,7 @@ def fantasy_supercross_leaderboard_for_year(year: int) -> list:
         u = uid_map.get(u_id)
         dn = getattr(u, "display_name", None) or (u.username if u else "?")
         letter = (dn.strip()[:1] or "?").upper()
-        pic_raw = getattr(u, "profile_picture_url", None) if u else None
+        pic = getattr(u, "profile_picture_url", None) if u else None
         out.append(
             {
                 "rank": rank,
@@ -1651,7 +1651,7 @@ def fantasy_supercross_leaderboard_for_year(year: int) -> list:
                 "display_name": dn,
                 "points": pts,
                 "avatar_letter": letter,
-                "profile_picture_url": user_img_src_for_ui(u_id, pic_raw),
+                "profile_picture_url": pic,
             }
         )
     return out
@@ -3946,12 +3946,11 @@ def finished_series_page():
             for user_id, stats in user_scores.items():
                 user = User.query.get(user_id)
                 if user:
-                    _pic_raw = getattr(user, "profile_picture_url", None)
                     leaderboard.append({
                         'user_id': user_id,
                         'username': user.username,
                         'display_name': getattr(user, 'display_name', None) or user.username,
-                        'profile_picture_url': user_img_src_for_ui(user_id, _pic_raw),
+                        'profile_picture_url': getattr(user, 'profile_picture_url', None),
                         **stats
                     })
             
@@ -4076,12 +4075,11 @@ def finished_series_detail_page(series_id):
         for user_id, stats in user_scores.items():
             user = User.query.get(user_id)
             if user:
-                _pic_raw = getattr(user, "profile_picture_url", None)
                 leaderboard.append({
                     'user_id': user_id,
                     'username': user.username,
                     'display_name': getattr(user, 'display_name', None) or user.username,
-                    'profile_picture_url': user_img_src_for_ui(user_id, _pic_raw),
+                    'profile_picture_url': getattr(user, 'profile_picture_url', None),
                     **stats
                 })
         
@@ -4339,13 +4337,6 @@ def rider_img_src_for_ui(rider_id: int, static_url: str | None, has_db_portrait:
     return None
 
 
-def user_img_src_for_ui(user_id: int, raw: str | None) -> str | None:
-    """Short URL for <img src> for user avatars (avoid embedding base64 in HTML/JSON)."""
-    if not raw:
-        return None
-    return url_for("user_picture", user_id=user_id)
-
-
 @app.route("/rider_picture/<int:rider_id>")
 def rider_picture(rider_id: int):
     """Serve DB-stored portrait bytes or redirect to static/external image."""
@@ -4381,39 +4372,6 @@ def rider_picture(rider_id: int):
         if sp.startswith("http://") or sp.startswith("https://"):
             return redirect(sp)
         return redirect(url_for("static", filename=sp))
-    abort(404)
-
-
-@app.get("/user_picture/<int:user_id>")
-def user_picture(user_id: int):
-    """Serve DB-stored user avatar bytes or redirect to static/external image."""
-    row = db.session.query(User.profile_picture_url).filter_by(id=user_id).first()
-    if not row:
-        abort(404)
-    raw_blob = row[0]
-    if raw_blob:
-        raw = str(raw_blob).strip()
-        if raw.startswith("data:"):
-            try:
-                comma_i = raw.index(",")
-                meta = raw[5:comma_i]
-                b64 = raw[comma_i + 1 :].strip()
-                mime = "image/jpeg"
-                if meta:
-                    mime = meta.split(";")[0].strip() or mime
-                import base64
-
-                data = base64.b64decode(b64)
-                resp = make_response(data)
-                resp.headers["Content-Type"] = mime
-                resp.headers["Cache-Control"] = "public, max-age=86400"
-                return resp
-            except Exception:
-                pass
-        if raw.startswith("http://") or raw.startswith("https://"):
-            return redirect(raw)
-        # Treat as static path
-        return redirect(url_for("static", filename=raw))
     abort(404)
 
 
