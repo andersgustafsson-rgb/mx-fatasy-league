@@ -60,6 +60,97 @@
             </div>
         </div>
 
+        <!-- Snabbklistra Provisional Entry List -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-cyan-500">
+            <h3 class="text-lg font-semibold text-cyan-400 mb-2">📋 Snabbklistra Entry List</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Klistra in <strong>Provisional Entry List</strong> från supercross.com.
+                Lägg till <strong>nya</strong> förare och/eller <strong>uppdatera startnummer</strong> för befintliga — utan att ersätta hela listan.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Klass</label>
+                    <select id="pasteEntryClass" class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                        <option value="250cc" selected>250cc</option>
+                        <option value="450cc">450cc</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">250-kust (valfritt)</label>
+                    <select id="pasteEntryCoast" class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600">
+                        <option value="">Alla / 450</option>
+                        <option value="west">West</option>
+                        <option value="east">East</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" id="pasteEntryOnlyNewMarker" class="rounded">
+                        Visa bara rader märkta <strong>New</strong> i listan
+                    </label>
+                </div>
+            </div>
+            <textarea
+                id="pasteEntryText"
+                rows="8"
+                placeholder="Klistra in hela listan här (Number, Rider, Hometown, Bike)..."
+                class="w-full px-3 py-2 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+            ></textarea>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <button type="button" id="pasteEntryPreviewBtn"
+                    class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    Förhandsgranska
+                </button>
+                <button type="button" id="pasteEntryImportBtn"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    disabled>
+                    Lägg till nya
+                </button>
+                <button type="button" id="pasteEntryUpdateNumbersBtn"
+                    class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    disabled>
+                    Uppdatera nummer
+                </button>
+                <button type="button" id="pasteEntryApplyAllBtn"
+                    class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                    disabled>
+                    Gör båda
+                </button>
+            </div>
+            <div id="pasteEntryStatus" class="mt-3 text-sm hidden"></div>
+            <div id="pasteEntryPreviewBox" class="mt-4 hidden">
+                <p id="pasteEntrySummary" class="text-sm text-gray-600 dark:text-gray-400 mb-2"></p>
+                <h4 class="text-sm font-semibold text-emerald-500 mb-1">Nya förare</h4>
+                <div class="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg mb-4">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-2 py-1 text-left">#</th>
+                                <th class="px-2 py-1 text-left">Namn</th>
+                                <th class="px-2 py-1 text-left">Märke</th>
+                                <th class="px-2 py-1 text-left">New</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pasteEntryNewBody"></tbody>
+                    </table>
+                </div>
+                <h4 class="text-sm font-semibold text-amber-500 mb-1">Nummerändringar</h4>
+                <div class="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                            <tr>
+                                <th class="px-2 py-1 text-left">Namn</th>
+                                <th class="px-2 py-1 text-left">Gammalt</th>
+                                <th class="px-2 py-1 text-left">→</th>
+                                <th class="px-2 py-1 text-left">Nytt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pasteEntryNumberBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Bulk Update Rider Numbers -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-yellow-400">
             <h3 class="text-lg font-semibold text-yellow-400 mb-3">🔄 Bulk Uppdatera Förarenummer (SMX)</h3>
@@ -1605,6 +1696,169 @@
                 });
             }
         }
+
+        // Snabbklistra entry list (endast nya)
+        let pasteEntryLastPreview = null;
+
+        function pasteEntryPayload(extra) {
+            return Object.assign({
+                text: document.getElementById('pasteEntryText').value,
+                class_name: document.getElementById('pasteEntryClass').value,
+                coast_250: document.getElementById('pasteEntryCoast').value || null,
+                only_marked_new: document.getElementById('pasteEntryOnlyNewMarker').checked,
+            }, extra || {});
+        }
+
+        function showPasteEntryStatus(html, isError) {
+            const el = document.getElementById('pasteEntryStatus');
+            el.classList.remove('hidden');
+            el.className = 'mt-3 text-sm ' + (isError
+                ? 'text-red-600 dark:text-red-400'
+                : 'text-gray-700 dark:text-gray-300');
+            el.innerHTML = html;
+        }
+
+        function renderPasteEntryPreview(data) {
+            pasteEntryLastPreview = data;
+            const box = document.getElementById('pasteEntryPreviewBox');
+            const summary = document.getElementById('pasteEntrySummary');
+            const tbodyNew = document.getElementById('pasteEntryNewBody');
+            const tbodyNum = document.getElementById('pasteEntryNumberBody');
+            const importBtn = document.getElementById('pasteEntryImportBtn');
+            const updateBtn = document.getElementById('pasteEntryUpdateNumbersBtn');
+            const applyAllBtn = document.getElementById('pasteEntryApplyAllBtn');
+
+            summary.textContent =
+                `Tolkade ${data.parsed_total} rader — ${data.new_count} nya, ` +
+                `${data.number_updates_count || 0} nummerändringar, ` +
+                `${data.existing_count} oförändrade` +
+                (data.number_conflicts_count
+                    ? `, ${data.number_conflicts_count} oklara konflikt(er) (annat namn har redan numret)`
+                    : '') +
+                (data.filtered_marked_new_only ? ' (endast rader märkta New)' : '');
+
+            tbodyNew.innerHTML = '';
+            (data.new || []).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-t border-gray-200 dark:border-gray-600';
+                tr.innerHTML =
+                    `<td class="px-2 py-1">${r.number}</td>` +
+                    `<td class="px-2 py-1">${escapeHtml(r.name)}</td>` +
+                    `<td class="px-2 py-1">${escapeHtml(r.bike_brand || '')}</td>` +
+                    `<td class="px-2 py-1">${r.is_new_in_list ? '✓' : ''}</td>`;
+                tbodyNew.appendChild(tr);
+            });
+            if (!data.new || data.new.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="4" class="px-2 py-2 text-gray-500">Inga nya förare.</td>';
+                tbodyNew.appendChild(tr);
+            }
+
+            tbodyNum.innerHTML = '';
+            (data.number_updates || []).forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-t border-gray-200 dark:border-gray-600';
+                tr.innerHTML =
+                    `<td class="px-2 py-1">${escapeHtml(r.name)}</td>` +
+                    `<td class="px-2 py-1 text-gray-500">${r.existing_number ?? '—'}</td>` +
+                    `<td class="px-2 py-1">→</td>` +
+                    `<td class="px-2 py-1 font-semibold text-amber-400">${r.number}</td>`;
+                tbodyNum.appendChild(tr);
+            });
+            if (!data.number_updates || data.number_updates.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="4" class="px-2 py-2 text-gray-500">Inga nummerändringar.</td>';
+                tbodyNum.appendChild(tr);
+            }
+
+            box.classList.remove('hidden');
+            const hasNew = data.new_count > 0;
+            const hasNum = (data.number_updates_count || 0) > 0;
+            importBtn.disabled = !hasNew;
+            updateBtn.disabled = !hasNum;
+            applyAllBtn.disabled = !(hasNew || hasNum);
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        document.getElementById('pasteEntryPreviewBtn').addEventListener('click', async () => {
+            const payload = pasteEntryPayload();
+            if (!payload.text.trim()) {
+                showPasteEntryStatus('Klistra in listan först.', true);
+                return;
+            }
+            showPasteEntryStatus('Analyserar…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/preview', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Förhandsgranskning misslyckades', true);
+                    return;
+                }
+                renderPasteEntryPreview(data);
+                showPasteEntryStatus('Klar — granska tabellen nedan.', false);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        async function runPasteEntryApply(opts) {
+            if (!pasteEntryLastPreview) return;
+            const parts = [];
+            if (opts.add_new && pasteEntryLastPreview.new_count > 0) {
+                parts.push(`${pasteEntryLastPreview.new_count} nya förare`);
+            }
+            if (opts.update_numbers && (pasteEntryLastPreview.number_updates_count || 0) > 0) {
+                parts.push(`${pasteEntryLastPreview.number_updates_count} nummeruppdateringar`);
+            }
+            if (!parts.length) return;
+            if (!confirm('Tillämpa: ' + parts.join(' + ') + '?')) return;
+
+            ['pasteEntryImportBtn', 'pasteEntryUpdateNumbersBtn', 'pasteEntryApplyAllBtn'].forEach(id => {
+                document.getElementById(id).disabled = true;
+            });
+            showPasteEntryStatus('Sparar…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pasteEntryPayload(opts)),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Sparning misslyckades', true);
+                    renderPasteEntryPreview(pasteEntryLastPreview);
+                    return;
+                }
+                showPasteEntryStatus(
+                    `✅ ${data.message}` +
+                    (data.errors && data.errors.length ? '<br>Fel: ' + data.errors.join(', ') : ''),
+                    false
+                );
+                setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+                renderPasteEntryPreview(pasteEntryLastPreview);
+            }
+        }
+
+        document.getElementById('pasteEntryImportBtn').addEventListener('click', () => {
+            runPasteEntryApply({ add_new: true, update_numbers: false });
+        });
+        document.getElementById('pasteEntryUpdateNumbersBtn').addEventListener('click', () => {
+            runPasteEntryApply({ add_new: false, update_numbers: true });
+        });
+        document.getElementById('pasteEntryApplyAllBtn').addEventListener('click', () => {
+            runPasteEntryApply({ add_new: true, update_numbers: true });
+        });
 
         // Entry List Import functionality
         let entryListPreview = null;

@@ -920,3 +920,207 @@ def manage_class_promotion(promo_id: int):
 		row.note = (data.get("note") or "").strip() or None
 	db.session.commit()
 	return jsonify({"success": True, "is_active": row.is_active})
+
+
+def _entry_list_payload() -> tuple[str, str, str | None, bool, int, bool, bool]:
+	data = request.get_json(silent=True) or {}
+	text = (data.get("text") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	coast_raw = data.get("coast_250")
+	coast_250 = (coast_raw or "").strip() or None
+	if coast_250 not in ("west", "east"):
+		coast_250 = None
+	only_marked_new = bool(data.get("only_marked_new"))
+	default_price = int(data.get("default_price") or 100_000)
+	add_new = bool(data.get("add_new", False))
+	update_numbers = bool(data.get("update_numbers", False))
+	return text, class_name, coast_250, only_marked_new, default_price, add_new, update_numbers
+
+
+def _parse_and_diff_entry_list(
+	text: str,
+	class_name: str,
+	coast_250: str | None,
+	only_marked_new: bool,
+):
+	from entry_list_import import diff_against_db, normalize_class_name, parse_provisional_entry_text
+
+	klass = normalize_class_name(class_name)
+	parsed = parse_provisional_entry_text(text, klass)
+	if only_marked_new:
+		parsed = [p for p in parsed if p.get("is_new_in_list")]
+	diff = diff_against_db(parsed, klass, coast_250, Rider.query)
+	return klass, diff
+
+
+def _serialize_diff(diff: dict) -> dict:
+	def row(p: dict, extra: dict | None = None) -> dict:
+		out = {
+			"number": p["number"],
+			"name": p["name"],
+			"bike_brand": p.get("bike_brand"),
+			"hometown": p.get("hometown"),
+			"is_new_in_list": p.get("is_new_in_list", False),
+		}
+		if extra:
+			out.update(extra)
+		return out
+
+	number_updates = diff.get("number_updates") or []
+
+	return {
+		"parsed_total": diff["parsed_total"],
+		"new_count": len(diff["new"]),
+		"existing_count": len(diff["existing"]),
+		"number_updates_count": len(number_updates),
+		"number_conflicts_count": len(diff["number_conflicts"]),
+		"new": [row(p) for p in diff["new"]],
+		"number_updates": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"number_changed": True,
+				},
+			)
+			for p in number_updates
+		],
+		"existing": [
+			row(
+				p,
+				{
+					"existing_id": p.get("existing_id"),
+					"existing_number": p.get("existing_number"),
+					"number_changed": p.get("number_changed"),
+				},
+			)
+			for p in diff["existing"]
+		],
+		"number_conflicts": [
+			row(p, {"existing_id": p.get("existing_id"), "existing_name": p.get("existing_name")})
+			for p in diff["number_conflicts"]
+		],
+	}
+
+
+@bp.route("/rider_management/entry_list/preview", methods=["POST"])
+@login_required
+def entry_list_preview():
+	"""Preview pasted provisional entry list; show only riders not already in DB."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+
+	text, class_name, coast_250, only_marked_new, _, _, _ = _entry_list_payload()
+	if not text:
+		return jsonify({"error": "Klistra in entry list först"}), 400
+
+	try:
+		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
+		body = _serialize_diff(diff)
+		body["success"] = True
+		body["class_name"] = klass
+		body["coast_250"] = coast_250
+		body["filtered_marked_new_only"] = only_marked_new
+		return jsonify(body)
+	except Exception as e:
+		print(f"entry_list_preview error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+def _execute_entry_list_apply(
+	add_new: bool,
+	update_numbers: bool,
+) -> tuple[dict, int]:
+	from entry_list_import import (
+		DEFAULT_PRICE,
+		apply_number_updates,
+		import_new_riders,
+	)
+
+	text, class_name, coast_250, only_marked_new, default_price, _, _ = _entry_list_payload()
+	if not text:
+		return {"error": "Klistra in entry list först"}, 400
+	if not add_new and not update_numbers:
+		return {"error": "Välj minst en åtgärd (nya förare eller nummeruppdatering)"}, 400
+
+	try:
+		klass, diff = _parse_and_diff_entry_list(text, class_name, coast_250, only_marked_new)
+		errors: list[str] = []
+		created: list[str] = []
+		updated: list[str] = []
+		conflicts_resolved = 0
+
+		combined = add_new and update_numbers
+		if add_new:
+			created, err_new = import_new_riders(
+				diff["new"],
+				Rider,
+				db.session,
+				coast_250=coast_250,
+				default_price=default_price or DEFAULT_PRICE,
+				auto_commit=not combined,
+			)
+			errors.extend(err_new)
+		if update_numbers and not errors:
+			updated, err_num, conflicts_resolved = apply_number_updates(
+				diff["number_updates"],
+				Rider,
+				db.session,
+				Rider.query,
+				auto_commit=not combined,
+			)
+			errors.extend(err_num)
+
+		if combined:
+			if errors:
+				db.session.rollback()
+				return {"error": "; ".join(errors), "errors": errors}, 400
+			db.session.commit()
+
+		parts = []
+		if created:
+			parts.append(f"{len(created)} nya")
+		if updated:
+			parts.append(f"{len(updated)} nummer uppdaterade")
+		message = ", ".join(parts) if parts else "Inget att ändra"
+		if conflicts_resolved:
+			message += f" ({conflicts_resolved} nummerkonflikt(er) lösta med temp-nummer)"
+
+		return {
+			"success": True,
+			"created_count": len(created),
+			"created": created,
+			"updated_count": len(updated),
+			"updated": updated,
+			"conflicts_resolved": conflicts_resolved,
+			"errors": errors,
+			"message": message,
+		}, 200
+	except Exception as e:
+		db.session.rollback()
+		print(f"entry_list_apply error: {e}")
+		traceback.print_exc()
+		return {"error": str(e)}, 500
+
+
+@bp.route("/rider_management/entry_list/import_new", methods=["POST"])
+@login_required
+def entry_list_import_new():
+	"""Add only riders from pasted list that are not already in DB (same class/coast)."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	body, status = _execute_entry_list_apply(add_new=True, update_numbers=False)
+	return jsonify(body), status
+
+
+@bp.route("/rider_management/entry_list/apply", methods=["POST"])
+@login_required
+def entry_list_apply():
+	"""Add new riders and/or update numbers from pasted entry list."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	_, _, _, _, _, add_new, update_numbers = _entry_list_payload()
+	body, status = _execute_entry_list_apply(add_new=add_new, update_numbers=update_numbers)
+	return jsonify(body), status
