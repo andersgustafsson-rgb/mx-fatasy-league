@@ -2276,19 +2276,21 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Check if we just submitted results and need to reload them
             const lastCompId = sessionStorage.getItem('lastSubmittedCompetitionId');
-            
-            loadSimulationCompetitions();
-            loadBulkCompetitions();
-            loadManualCompetitions();
-            loadQuickHoleshotCompetitions();
-            loadRecalculateCompetitions();
-            loadRestoreCompetitions();
-            loadSetScoreCompetitions();
-            loadAllUsers();
-            loadFullPicksCompetitions();
-            loadPicksStatsCompetitions();
-            loadAnnouncement(); // Load existing announcement when page loads
-            loadUsersWithEmail(); // Load users with email for email sending
+
+            // Undvik 10+ parallella fetch mot samma worker (512MB / gthread) → OOM/502.
+            const stagger = (fn, ms) => setTimeout(fn, ms);
+            stagger(() => loadSimulationCompetitions(), 0);
+            stagger(() => loadBulkCompetitions(), 100);
+            stagger(() => loadManualCompetitions(), 200);
+            stagger(() => loadQuickHoleshotCompetitions(), 300);
+            stagger(() => loadRecalculateCompetitions(), 400);
+            stagger(() => loadRestoreCompetitions(), 500);
+            stagger(() => loadSetScoreCompetitions(), 600);
+            stagger(() => loadAllUsers(), 700);
+            stagger(() => loadFullPicksCompetitions(), 800);
+            stagger(() => loadPicksStatsCompetitions(), 900);
+            stagger(() => loadAnnouncement(), 1000);
+            stagger(() => loadUsersWithEmail(), 1100);
             
             // Load existing results if a competition is already selected (only if not just submitted)
             if (!lastCompId) {

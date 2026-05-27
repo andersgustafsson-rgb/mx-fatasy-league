@@ -11786,31 +11786,52 @@ def confirm_import_results():
         print(f"Error in confirm_import_results: {e}")
         return jsonify({"error": str(e)}), 500
 
+_import_competitions_cache: dict[str, tuple[float, dict]] = {}
+
+
 @app.get("/get_competitions_for_import")
 def get_competitions_for_import():
     """Get list of competitions for CSV import"""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    
+
     try:
+        import time
+
+        ttl = float((os.getenv("IMPORT_COMPETITIONS_CACHE_TTL") or "25").strip())
+        now = time.time()
+        cached = _import_competitions_cache.get("payload")
+        if cached and (now - cached[0]) < ttl:
+            return jsonify(cached[1])
+
         competitions = Competition.query.order_by(Competition.event_date.desc()).all()
-        competition_list = []
-        
-        for comp in competitions:
-            competition_list.append({
+        cids = [c.id for c in competitions]
+        has_results_ids: set[int] = set()
+        if cids:
+            has_results_ids = {
+                row[0]
+                for row in db.session.query(CompetitionResult.competition_id)
+                .filter(CompetitionResult.competition_id.in_(cids))
+                .distinct()
+                .all()
+            }
+
+        competition_list = [
+            {
                 "id": comp.id,
                 "name": comp.name,
-                "series": comp.series,  # Include series to check if WSX
+                "series": comp.series,
                 "event_date": comp.event_date.isoformat() if comp.event_date else None,
-                "location": getattr(comp, 'location', 'Unknown'),
-                "has_results": bool(CompetitionResult.query.filter_by(competition_id=comp.id).first())
-            })
-        
-        return jsonify({
-            "success": True,
-            "competitions": competition_list
-        })
-        
+                "location": getattr(comp, "location", "Unknown"),
+                "has_results": comp.id in has_results_ids,
+            }
+            for comp in competitions
+        ]
+
+        payload = {"success": True, "competitions": competition_list}
+        _import_competitions_cache["payload"] = (now, payload)
+        return jsonify(payload)
+
     except Exception as e:
         print(f"Error in get_competitions_for_import: {e}")
         return jsonify({"error": str(e)}), 500
