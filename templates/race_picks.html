@@ -405,15 +405,15 @@
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
                 <span class="text-purple-200">Aktiva förare:</span>
-                <span class="text-white font-semibold">{{ riders_450|length + riders_250|length }}</span>
+                <span class="text-white font-semibold">{{ riders_450_json|length + riders_250_json|length }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-purple-200">{{ _class_450_hdr }}:</span>
-                <span class="text-white font-semibold">{{ riders_450|length }}</span>
+                <span class="text-white font-semibold">{{ riders_450_json|length }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-purple-200">{{ _class_250_hdr }}:</span>
-                <span class="text-white font-semibold">{{ riders_250|length }}</span>
+                <span class="text-white font-semibold">{{ riders_250_json|length }}</span>
               </div>
             </div>
           </div>
@@ -448,14 +448,12 @@
     <div class="mb-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
       <h3 class="text-sm font-semibold text-red-400 mb-2">⚠️ OUT-förare (kan inte väljas)</h3>
       <div class="flex flex-wrap gap-2">
-        {% for rider in riders_450 + riders_250 %}
-          {% if rider.id in out_ids %}
+        {% for rider in out_riders_mini %}
             <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-800/40 text-red-200 text-xs rounded border border-red-600/50">
               <span class="w-2 h-2 bg-red-500 rounded-full"></span>
               #{{ rider.rider_number }} {{ rider.name }}
-              <span class="text-red-300">({{ rider.class_name }})</span>
+              <span class="text-red-300">({{ rider.class }})</span>
             </span>
-          {% endif %}
         {% endfor %}
       </div>
     </div>
@@ -491,19 +489,7 @@
               <div class="search-box">
                 <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_450_data }}', {{ i }}, this.value)">
               </div>
-              <div class="rider-list">
-            {% for rider in riders_450 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('{{ class_450_data }}', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
-                    <span class="rider-info">
-                      <span class="rider-number">#{{ rider.rider_number }}</span>
-                      <span class="rider-name">{{ rider.name }}</span>
-                      <span class="rider-brand">{{ rider.bike_brand }}</span>
-                    </span>
-                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
-                  </div>
-            {% endfor %}
-              </div>
+              <div class="rider-list"></div>
             </div>
           </div>
         </div>
@@ -531,19 +517,7 @@
               <div class="search-box">
                 <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_250_data }}', {{ i }}, this.value)">
               </div>
-              <div class="rider-list">
-            {% for rider in riders_250 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectRider('{{ class_250_data }}', {{ i }}, {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
-                    <span class="rider-info">
-                      <span class="rider-number">#{{ rider.rider_number }}</span>
-                      <span class="rider-name">{{ rider.name }}</span>
-                      <span class="rider-brand">{{ rider.bike_brand }}</span>
-                    </span>
-                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
-                  </div>
-            {% endfor %}
-              </div>
+              <div class="rider-list"></div>
             </div>
           </div>
         </div>
@@ -557,15 +531,9 @@
 {% for i in range(1, 7) %}
   <select name="pick_450_{{ i }}" style="display: none;">
     <option value="">-- välj förare --</option>
-    {% for rider in riders_450 %}
-      <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
-    {% endfor %}
   </select>
   <select name="pick_250_{{ i }}" style="display: none;">
     <option value="">-- välj förare --</option>
-    {% for rider in riders_250 %}
-      <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
-    {% endfor %}
   </select>
 {% endfor %}
 <!-- SLUT: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
@@ -587,19 +555,7 @@
               <div class="search-box">
                 <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('holeshot-450', 0, this.value)">
               </div>
-              <div class="rider-list">
-  {% for rider in riders_450 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('450', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
-                    <span class="rider-info">
-                      <span class="rider-number">#{{ rider.rider_number }}</span>
-                      <span class="rider-name">{{ rider.name }}</span>
-                      <span class="rider-brand">{{ rider.bike_brand }}</span>
-                    </span>
-                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
-                  </div>
-  {% endfor %}
-              </div>
+              <div class="rider-list"></div>
             </div>
           </div>
         </div>
@@ -614,19 +570,7 @@
               <div class="search-box">
                 <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('holeshot-250', 0, this.value)">
               </div>
-              <div class="rider-list">
-  {% for rider in riders_250 %}
-                  <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" data-coast="{{ rider.coast_250 or '' }}" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectHoleshotRider('250', {{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                    <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
-                    <span class="rider-info">
-                      <span class="rider-number">#{{ rider.rider_number }}</span>
-                      <span class="rider-name">{{ rider.name }}</span>
-                      <span class="rider-brand">{{ rider.bike_brand }}</span>
-                    </span>
-                    {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
-                  </div>
-  {% endfor %}
-              </div>
+              <div class="rider-list"></div>
             </div>
           </div>
         </div>
@@ -635,16 +579,10 @@
       <!-- Hidden select elements for form submission -->
       <select id="holeshot-450" name="holeshot_450" style="display: none;">
         <option value="">-- välj förare --</option>
-        {% for rider in riders_450 %}
-          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
-        {% endfor %}
       </select>
       <select id="holeshot-250" name="holeshot_250" style="display: none;">
         <option value="">-- välj förare --</option>
-        {% for rider in riders_250 %}
-          <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
-        {% endfor %}
-          </select>
+      </select>
         </div>
 
     {% if competition.series != 'WSX' %}
@@ -663,28 +601,13 @@
             <div class="search-box">
               <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('wildcard-pick', 0, this.value)">
             </div>
-            <div class="rider-list">
-              {% for rider in riders_450 %}
-                <div class="rider-option" data-rider-id="{{ rider.id }}" data-rider-name="#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})" {% if rider.id in out_ids %}data-out="true"{% endif %} onclick="selectWildcardRider({{ rider.id }}, '#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})')">
-                  <img alt="" class="rider-avatar" data-rider-id="{{ rider.id }}">
-                  <span class="rider-info">
-                    <span class="rider-number">#{{ rider.rider_number }}</span>
-                    <span class="rider-name">{{ rider.name }}</span>
-                    <span class="rider-brand">{{ rider.bike_brand }}</span>
-                  </span>
-                  {% if rider.id in out_ids %}<span class="out-badge">OUT</span>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
+            <div class="rider-list"></div>
       </div>
     </div>
 
         <!-- Hidden select element for form submission -->
         <select id="wildcard-pick" name="wildcard_pick" style="display: none;">
   <option value="">-- välj 450cc förare --</option>
-  {% for rider in riders_450 %}
-            <option value="{{ rider.id }}">#{{ rider.rider_number }} {{ rider.name }} ({{ rider.bike_brand }})</option>
-  {% endfor %}
         </select>
       </div>
     </div>
@@ -740,9 +663,140 @@
   const OUT_IDS = {{ out_ids | tojson }};
   // Coast-filtrering för 250cc
   const competitionCoast = {{ competition.coast_250|tojson }};
-  
 
-  // Load saved picks from localStorage on page load
+  /** Dolda select name="pick_450_N" / pick_250_N även för WSX (HTML använder alltid 450/250). */
+  function hiddenPickSelectName(riderClass, position) {
+    const pos = Number(position);
+    if (Number.isNaN(pos) || pos < 1 || pos > 6) return null;
+    if (riderClass === '450cc' || riderClass === 'wsx_sx1') return `pick_450_${pos}`;
+    if (riderClass === '250cc' || riderClass === 'wsx_sx2') return `pick_250_${pos}`;
+    return null;
+  }
+
+  function isOutRiderId(rid) {
+    return OUT_IDS.some((x) => Number(x) === Number(rid));
+  }
+
+  function riderOptionLabel(r) {
+    const brand = r.bike_brand || '';
+    return `#${r.rider_number} ${r.name} (${brand})`;
+  }
+
+  function pickColumn450List() {
+    return allRiders
+      .filter((r) => r.class === '450cc' || r.class === 'wsx_sx1')
+      .sort((a, b) => (Number(a.rider_number) || 999) - (Number(b.rider_number) || 999));
+  }
+
+  function pickColumn250List() {
+    return allRiders
+      .filter((r) => r.class === '250cc' || r.class === 'wsx_sx2')
+      .sort((a, b) => (Number(a.rider_number) || 999) - (Number(b.rider_number) || 999));
+  }
+
+  function ridersForDropdownDataClass(dc) {
+    if (dc === '450cc' || dc === 'wsx_sx1' || dc === 'holeshot-450' || dc === 'wildcard-pick') {
+      return pickColumn450List();
+    }
+    if (dc === '250cc' || dc === 'wsx_sx2' || dc === 'holeshot-250') {
+      return pickColumn250List();
+    }
+    return [];
+  }
+
+  function createRiderOptionEl(rider, dataClass, position) {
+    const label = riderOptionLabel(rider);
+    const div = document.createElement('div');
+    div.className = 'rider-option';
+    div.dataset.riderId = String(rider.id);
+    div.dataset.riderName = label;
+    if (
+      dataClass === '250cc' ||
+      dataClass === 'wsx_sx2' ||
+      dataClass === 'holeshot-250'
+    ) {
+      if (rider.coast_250) div.dataset.coast = rider.coast_250;
+    }
+    if (isOutRiderId(rider.id)) {
+      div.dataset.out = 'true';
+    }
+    const outHtml = div.dataset.out === 'true' ? '<span class="out-badge">OUT</span>' : '';
+    div.innerHTML =
+      '<img alt="" class="rider-avatar" data-rider-id="' +
+      rider.id +
+      '">' +
+      '<span class="rider-info">' +
+      '<span class="rider-number">#' +
+      rider.rider_number +
+      '</span>' +
+      '<span class="rider-name"></span>' +
+      '<span class="rider-brand"></span>' +
+      '</span>' +
+      outHtml;
+    div.querySelector('.rider-name').textContent = rider.name || '';
+    div.querySelector('.rider-brand').textContent = rider.bike_brand || '';
+
+    div.addEventListener('click', () => {
+      if (dataClass === 'wildcard-pick') {
+        selectWildcardRider(rider.id, label);
+      } else if (dataClass === 'holeshot-450') {
+        selectHoleshotRider('450', rider.id, label);
+      } else if (dataClass === 'holeshot-250') {
+        selectHoleshotRider('250', rider.id, label);
+      } else {
+        selectRider(dataClass, position, rider.id, label);
+      }
+    });
+    return div;
+  }
+
+  function populateAllRiderDropdowns() {
+    document.querySelectorAll('.rider-selector').forEach((selector) => {
+      const dataClass = selector.dataset.class;
+      if (!dataClass) return;
+      const list = selector.querySelector('.rider-list');
+      if (!list || list.dataset.populated === '1') return;
+      const riders = ridersForDropdownDataClass(dataClass);
+      const posRaw = selector.dataset.position;
+      const pos = posRaw !== undefined && posRaw !== '' ? Number(posRaw) : 0;
+      riders.forEach((rider) => {
+        list.appendChild(createRiderOptionEl(rider, dataClass, pos));
+      });
+      list.dataset.populated = '1';
+    });
+  }
+
+  function fillSelectFromRiders(sel, riders, emptyText) {
+    if (!sel) return;
+    sel.innerHTML = '';
+    const o0 = document.createElement('option');
+    o0.value = '';
+    o0.textContent = emptyText || '-- välj förare --';
+    sel.appendChild(o0);
+    riders.forEach((r) => {
+      const o = document.createElement('option');
+      o.value = String(r.id);
+      o.textContent = riderOptionLabel(r);
+      sel.appendChild(o);
+    });
+  }
+
+  function populateHiddenSelectsFromJson() {
+    const l450 = pickColumn450List();
+    const l250 = pickColumn250List();
+    for (let i = 1; i <= 6; i++) {
+      fillSelectFromRiders(document.querySelector(`select[name="pick_450_${i}"]`), l450, '-- välj förare --');
+      fillSelectFromRiders(document.querySelector(`select[name="pick_250_${i}"]`), l250, '-- välj förare --');
+    }
+    fillSelectFromRiders(document.getElementById('holeshot-450'), l450, '-- välj förare --');
+    fillSelectFromRiders(document.getElementById('holeshot-250'), l250, '-- välj förare --');
+    fillSelectFromRiders(document.getElementById('wildcard-pick'), l450, '-- välj 450cc förare --');
+  }
+
+  populateAllRiderDropdowns();
+  populateHiddenSelectsFromJson();
+
+  // Load saved picks from localStorage on page load (efter att DOM byggts)
   loadSavedPicksFromStorage();
 
   // Save picks to localStorage
@@ -861,9 +915,12 @@
               }
               
               // Update hidden select
-              const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+              const hp = hiddenPickSelectName(riderClass, position);
+              if (hp) {
+              const hiddenSelect = document.querySelector(`select[name="${hp}"]`);
               if (hiddenSelect) {
                 hiddenSelect.value = pick.riderId;
+              }
               }
               
               // Update preview image
@@ -930,27 +987,22 @@
   // Remove wrong coast selections
   function removeWrongCoastSelections() {
     if (competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
-      
-      // Check all 250cc selectors
-      const selectors250 = document.querySelectorAll('.rider-selector[data-class="250cc"]');
-      selectors250.forEach(selector => {
+      const coastPickClasses = isWSXSeries ? ['wsx_sx2'] : ['250cc'];
+      coastPickClasses.forEach((cls) => {
+        document.querySelectorAll(`.rider-selector[data-class="${cls}"]`).forEach((selector) => {
         const selectedRiderSpan = selector.querySelector('.selected-rider');
         const currentText = selectedRiderSpan.textContent;
         
-        // Skip if no selection made yet
         if (currentText === '-- välj förare --' || currentText === '-- välj 250cc förare --') {
           return;
         }
         
-        // Find the rider option that matches the selected text
         const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
         if (riderOption) {
           const riderCoast = riderOption.dataset.coast;
           if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
-            // Clear the selection
             selectedRiderSpan.textContent = '-- välj förare --';
             
-            // Clear the preview image
             const position = selector.dataset.position;
             const imgId = `prev-250-${position}`;
             const img = document.getElementById(imgId);
@@ -959,14 +1011,14 @@
               img.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
             }
             
-            // Clear localStorage for this pick
             const savedPicks = JSON.parse(localStorage.getItem(`race_picks_${competitionId}`) || '{}');
-            if (savedPicks.racePicks && savedPicks.racePicks['250cc']) {
-              delete savedPicks.racePicks['250cc'][position];
+            if (savedPicks.racePicks && savedPicks.racePicks[cls]) {
+              delete savedPicks.racePicks[cls][position];
               localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(savedPicks));
             }
           }
         }
+        });
       });
     }
   }
@@ -1100,9 +1152,10 @@
       }
     }
 
-    // Check coast validation for 250cc riders
-    if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
-      const riderOption = document.querySelector(`.rider-option[data-rider-id="${riderId}"]`);
+    // Check coast validation för 250 / WSX SX2
+    if ((riderClass === '250cc' || riderClass === 'wsx_sx2') && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
+      const selectorEarly = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
+      const riderOption = selectorEarly ? selectorEarly.querySelector(`.rider-option[data-rider-id="${riderId}"]`) : null;
       if (riderOption) {
         const riderCoast = riderOption.dataset.coast;
         if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
@@ -1137,9 +1190,12 @@
     }
     
     // Update the hidden select element for form submission
-    const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+    const hp = hiddenPickSelectName(riderClass, position);
+    if (hp) {
+    const hiddenSelect = document.querySelector(`select[name="${hp}"]`);
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
+    }
     }
     
     // Call existing onPickChange function to update preview image
@@ -1201,9 +1257,9 @@
       const isAlreadySelected = chosenRiderIds.includes(riderId);
       const isOut = option.dataset.out === 'true';
       
-      // Check coast for 250cc race picks (not holeshot)
+      // Check coast for 250cc / WSX SX2 race picks (not holeshot)
       let isWrongCoast = false;
-      if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
+      if ((riderClass === '250cc' || riderClass === 'wsx_sx2') && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
         const riderCoast = option.dataset.coast;
         if (riderCoast) {
           isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
@@ -1302,9 +1358,12 @@
     }
     
     // Clear hidden select
-    const hiddenSelect = document.querySelector(`select[name="pick_${riderClass.replace('cc', '')}_${position}"]`);
+    const hp = hiddenPickSelectName(riderClass, position);
+    if (hp) {
+    const hiddenSelect = document.querySelector(`select[name="${hp}"]`);
     if (hiddenSelect) {
       hiddenSelect.value = '';
+    }
     }
     
     // Clear preview image
@@ -1348,9 +1407,9 @@
                                  option.dataset.riderName !== currentSelected;
         const isOut = option.dataset.out === 'true';
         
-        // Check coast for 250cc riders
+        // Check coast för 250 / WSX SX2
         let isWrongCoast = false;
-        if (riderClass === '250cc' && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
+        if ((riderClass === '250cc' || riderClass === 'wsx_sx2') && competitionCoast && competitionCoast !== 'both' && competitionCoast !== 'showdown') {
           const riderCoast = option.dataset.coast;
           if (riderCoast) {
             isWrongCoast = riderCoast !== competitionCoast && riderCoast !== 'both';
@@ -1467,6 +1526,10 @@ function imgSrcFor(riderId) {
   if (!r) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
+
+  if (r.has_db_portrait) {
+    return `/rider_portrait/${r.id}`;
+  }
   
   // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {
@@ -1533,6 +1596,19 @@ function handleImageError(img) {
   const src = img.getAttribute('src') || '';
   const riderId = img.getAttribute('data-rider-id');
   const rider = riderId ? allRiders.find((x) => Number(x.id) === Number(riderId)) : null;
+
+  if (rider && rider.has_db_portrait && src.includes('/rider_portrait/')) {
+    rider.has_db_portrait = false;
+    const fallbackSrc = imgSrcFor(rider.id);
+    rider.has_db_portrait = true;
+    if (fallbackSrc && !fallbackSrc.includes('/rider_portrait/')) {
+      img.onerror = function () {
+        handleImageError(img);
+      };
+      img.src = fallbackSrc;
+      return;
+    }
+  }
   
   // Always have a fallback to brand logo
   const fallbackToBrandLogo = function() {
@@ -2419,15 +2495,21 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         if (sel450) {
           const span = sel450.querySelector('.selected-rider');
           if (span) span.textContent = '-- välj förare --';
-          const hidden = document.querySelector(`select[name="pick_${class450.replace('cc', '')}_${i}"]`);
+          const hn = hiddenPickSelectName(class450, i);
+          if (hn) {
+          const hidden = document.querySelector(`select[name="${hn}"]`);
           if (hidden) hidden.value = '';
+          }
           onPickChange(class450, i, null);
         }
         if (sel250) {
           const span = sel250.querySelector('.selected-rider');
           if (span) span.textContent = '-- välj förare --';
-          const hidden = document.querySelector(`select[name="pick_${class250.replace('cc', '')}_${i}"]`);
+          const hn2 = hiddenPickSelectName(class250, i);
+          if (hn2) {
+          const hidden = document.querySelector(`select[name="${hn2}"]`);
           if (hidden) hidden.value = '';
+          }
           onPickChange(class250, i, null);
         }
       }

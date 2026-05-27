@@ -26,6 +26,6 @@ errorlog = "-"
 loglevel = os.getenv("GUNICORN_LOG_LEVEL", "info")
 
 # Proactively recycle the worker to avoid gradual bloat.
-max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "200"))
+max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "8000"))
 max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "50"))
 

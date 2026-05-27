@@ -17,6 +17,7 @@ from flask import (
     url_for,
     flash,
     make_response,
+    Response,
 )
 import re
 import unicodedata
@@ -4292,6 +4293,34 @@ def _ensure_rider_image_data_column():
             db.session.rollback()
 
 
+@app.route("/rider_portrait/<int:rider_id>")
+def rider_portrait(rider_id: int):
+    """
+    Serverar en förares DB-bild (data-URL i rider_image_data) som riktiga bytes.
+    Undviker stora base64-strängar inbäddade i sidan.
+    """
+    import base64
+
+    raw = db.session.query(Rider.rider_image_data).filter_by(id=rider_id).scalar()
+    if not raw:
+        return Response(status=404)
+    s = str(raw).strip()
+    if not s.startswith("data:"):
+        return Response(status=404)
+    try:
+        meta, b64part = s.split(",", 1)
+        mime = "image/jpeg"
+        if ";" in meta:
+            mime = meta[5:].split(";")[0].strip() or mime
+        blob = base64.b64decode(b64part)
+        resp = make_response(blob)
+        resp.headers["Content-Type"] = mime
+        resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
+    except Exception:
+        return Response(status=404)
+
+
 @app.route("/race_picks/<int:competition_id>")
 @login_required
 def race_picks_page(competition_id):
@@ -4353,6 +4382,20 @@ def race_picks_page(competition_id):
         # Vid "showdown" / "both" / annat: visa alla 250cc (ingen coast-filter)
         riders_250 = riders_250_query.order_by(Rider.rider_number).all()
 
+    pick_rider_ids = [r.id for r in riders_450] + [r.id for r in riders_250]
+    ids_with_db_portrait: frozenset[int] = frozenset()
+    if pick_rider_ids:
+        ids_with_db_portrait = frozenset(
+            row[0]
+            for row in db.session.query(Rider.id)
+            .filter(
+                Rider.id.in_(pick_rider_ids),
+                Rider.rider_image_data.isnot(None),
+                Rider.rider_image_data != "",
+            )
+            .all()
+        )
+
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
         # KRITISKT (Render 512MB): skicka aldrig base64-bilder i payloaden (kan bli 10–30MB+ per sida).
@@ -4368,10 +4411,14 @@ def race_picks_page(competition_id):
             "is_out": (r.id in out_ids),
             "image_url": img,
             "coast_250": r.coast_250,
+            "has_db_portrait": r.id in ids_with_db_portrait,
         }
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
+
+    _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
+    out_riders_mini = [_by_json_id[i] for i in sorted(out_ids) if i in _by_json_id]
     
     # Debug: Show which riders are marked as OUT
     out_450 = [r for r in riders_450_json if r['is_out']]
@@ -4437,10 +4484,9 @@ def race_picks_page(competition_id):
     return render_template(
         "race_picks.html",
         competition=comp,
-        riders_450=riders_450,
-        riders_250=riders_250,
         riders_450_json=riders_450_json,
         riders_250_json=riders_250_json,
+        out_riders_mini=out_riders_mini,
         actual_results=actual_results,
         holeshot_results=holeshot_results,
         out_ids=list(out_ids),
