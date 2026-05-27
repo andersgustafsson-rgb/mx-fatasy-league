@@ -2014,6 +2014,18 @@ def _past_comps_for_250_coast(past_all: list[Competition], coast: str) -> list[C
     return out
 
 
+def _prior_competition_for_picks(target: Competition) -> Competition | None:
+    """Senaste tävling i samma serie före target (behöver inte ha resultat)."""
+    q = Competition.query
+    if getattr(target, "series", None):
+        q = q.filter(Competition.series == target.series)
+    if target.event_date:
+        q = q.filter(Competition.event_date < target.event_date)
+    else:
+        q = q.filter(Competition.id != target.id)
+    return q.order_by(Competition.event_date.desc().nullslast(), Competition.id.desc()).first()
+
+
 def _crowd_scores_for_competition(target: Competition, rider_ids: set[int]) -> dict[int, float]:
     scores = defaultdict(float)
     comp_id = int(target.id)
@@ -2058,6 +2070,19 @@ def _crowd_scores_for_competition(target: Competition, rider_ids: set[int]) -> d
             # Higher weight for better predicted finishes (Borda-style, cap at top 10)
             scores[p.rider_id] += max(0.0, 11.0 - float(min(pred, 10)))
     return dict(scores)
+
+
+def _crowd_scores_with_fallback(target: Competition, rider_ids: set[int]) -> dict[int, float]:
+    """Picks för aktuellt race; om inga picks än, föregående veckas tävling."""
+    scores = _crowd_scores_for_competition(target, rider_ids)
+    if scores and max(scores.values()) > 1e-9:
+        return scores
+    prior = _prior_competition_for_picks(target)
+    if prior and int(prior.id) != int(target.id):
+        prior_scores = _crowd_scores_for_competition(prior, rider_ids)
+        if prior_scores and max(prior_scores.values()) > 1e-9:
+            return prior_scores
+    return scores
 
 
 def _min_max_normalize(d: dict[int, float]) -> dict[int, float]:
@@ -2203,6 +2228,60 @@ def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
     return None
 
 
+def _rank_bucket_picks_only(
+    riders: list[Rider],
+    crowd_raw_all: dict[int, float],
+    *,
+    top_n: int = 3,
+) -> list[dict]:
+    """Ranking enbart från aggregerade spelarpicks (ingen form från resultat)."""
+    rids = {r.id for r in riders}
+    crowd_raw = {
+        rid: float(crowd_raw_all.get(rid, 0.0))
+        for rid in rids
+        if float(crowd_raw_all.get(rid, 0.0)) > 1e-9
+    }
+    if not crowd_raw:
+        return []
+
+    crowd_n = _min_max_normalize(crowd_raw)
+    sorted_ids = sorted(crowd_n.keys(), key=lambda i: crowd_n[i], reverse=True)
+    top_ids = sorted_ids[:top_n]
+    raw_top = [crowd_n[i] for i in top_ids]
+    pcts = _softmax_percentages(raw_top)
+    id_to_rider = {r.id: r for r in riders}
+    rows = []
+    for i, rid in enumerate(top_ids):
+        r = id_to_rider.get(rid)
+        if not r:
+            continue
+        c_n = crowd_n.get(rid, 0.5)
+        rows.append(
+            {
+                "rank": i + 1,
+                "rider_id": rid,
+                "name": r.name,
+                "number": r.rider_number,
+                "coast_250": r.coast_250,
+                "strength_pct": pcts[i] if i < len(pcts) else 0.0,
+                "score": round(float(c_n), 4),
+                "score_parts": {
+                    "form_weight": 0.0,
+                    "crowd_weight": 1.0,
+                    "form_norm": None,
+                    "crowd_norm": round(float(c_n), 4),
+                    "form_raw": None,
+                    "form_median_pos": None,
+                    "form_result_count": None,
+                    "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4),
+                    "source": "picks",
+                },
+                "image_url": _rider_portrait_url(r),
+            }
+        )
+    return rows
+
+
 def _rank_bucket(
     riders: list[Rider],
     target: Competition,
@@ -2211,18 +2290,23 @@ def _rank_bucket(
     form_weight: float = 0.55,
     crowd_weight: float = 0.45,
     top_n: int = 3,
-) -> list[dict]:
+) -> tuple[list[dict], bool]:
+    """
+    Return (rows, picks_only).
+    picks_only=True när ranking saknar tillräckligt med tidigare resultat.
+    """
     if not riders:
-        return []
+        return [], False
     rids = {r.id for r in riders}
+    crowd_raw_all = _crowd_scores_with_fallback(target, rids)
+
     # Kräv minst 2 resultat i aktuell scope om det finns minst två tävlingar; annars 1.
     min_res = 2 if len(past_comps) >= 2 else 1
     form_raw, form_meta = _result_median_scores_for_riders(rids, past_comps, min_results=min_res)
     eligible = set(form_raw.keys())
     if not eligible:
-        return []
+        return _rank_bucket_picks_only(riders, crowd_raw_all, top_n=top_n), True
 
-    crowd_raw_all = _crowd_scores_for_competition(target, rids)
     crowd_raw = {rid: float(crowd_raw_all.get(rid, 0.0)) for rid in eligible}
     form_raw_e = {rid: form_raw[rid] for rid in eligible}
     form_n = _min_max_normalize(form_raw_e)
@@ -2269,11 +2353,12 @@ def _rank_bucket(
                     "form_median_pos": fm.get("median"),
                     "form_result_count": fm.get("count"),
                     "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4) if crowd_raw else None,
+                    "source": "results_and_picks",
                 },
                 "image_url": _rider_portrait_url(r),
             }
         )
-    return rows
+    return rows, False
 
 
 @app.get("/api/power_ranking")
@@ -2299,10 +2384,23 @@ def api_power_ranking():
         else:
             single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
 
-        top_450 = _rank_bucket(riders_450, target, past, out_ids)
+        top_450, picks_only_450 = _rank_bucket(riders_450, target, past, out_ids)
 
         past_east = _past_comps_for_250_coast(past, "east")
         past_west = _past_comps_for_250_coast(past, "west")
+
+        picks_only_any = picks_only_450
+        if len(past) == 0:
+            method = (
+                "Baserat på spelarnas picks (inget resultat från tidigare race i säsongen)"
+            )
+            form_scope_label = "picks denna vecka"
+        else:
+            method = (
+                "Resultat: medianplacering + antal West/East-race (säsong hittills) "
+                "· + spelarnas picks (snapshot efter låsning)"
+            )
+            form_scope_label = "hela säsongen hittills"
 
         payload: dict = {
             "ok": True,
@@ -2313,9 +2411,10 @@ def api_power_ranking():
                 "coast_250": target.coast_250,
                 "event_date": target.event_date.isoformat() if target.event_date else None,
             },
-            "method": "Resultat: medianplacering + antal West/East-race (säsong hittills) · + spelarnas picks (snapshot efter låsning)",
+            "method": method,
             "past_races_used": len(past),
-            "form_scope_label": "hela säsongen hittills",
+            "form_scope_label": form_scope_label,
+            "ranking_source": "picks" if picks_only_any and len(past) == 0 else "results",
             "riders_450": top_450,
             "riders_250": None,
             "riders_250_east": None,
@@ -2324,12 +2423,24 @@ def api_power_ranking():
 
         if split_250:
             east_r, west_r = split_250
-            payload["riders_250_east"] = _rank_bucket(east_r, target, past_east, out_ids)
-            payload["riders_250_west"] = _rank_bucket(west_r, target, past_west, out_ids)
+            top_east, po_e = _rank_bucket(east_r, target, past_east, out_ids)
+            top_west, po_w = _rank_bucket(west_r, target, past_west, out_ids)
+            payload["riders_250_east"] = top_east
+            payload["riders_250_west"] = top_west
+            picks_only_any = picks_only_any or po_e or po_w
         else:
             coast = str(getattr(target, "coast_250", None) or "").strip().lower()
             past_250 = _past_comps_for_250_coast(past, coast) if coast in ("east", "west") else past
-            payload["riders_250"] = _rank_bucket(single_250, target, past_250, out_ids)
+            top_250, po_250 = _rank_bucket(single_250, target, past_250, out_ids)
+            payload["riders_250"] = top_250
+            picks_only_any = picks_only_any or po_250
+
+        if picks_only_any and len(past) > 0:
+            payload["method"] = (
+                "Delvis baserat på spelarnas picks där det saknas tillräckligt "
+                "med tidigare resultat i klassen"
+            )
+            payload["ranking_source"] = "mixed"
 
         return jsonify(payload)
     except Exception as e:
