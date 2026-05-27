@@ -148,7 +148,7 @@ class SeasonTeamRider(db.Model):
 
 
 class SeasonTeamClassPromotion(db.Model):
-    """Gratis säsongsteam-byte när förare går 250 → 450 (MX)."""
+    """Gratis säsongsteam-byte vid MX-klassbyte (250 ↔ 450)."""
     __tablename__ = "season_team_class_promotions"
 
     id = db.Column(db.Integer, primary_key=True)

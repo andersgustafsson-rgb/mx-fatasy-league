@@ -764,6 +764,7 @@ def list_class_promotions():
 				"to_class": tr.class_name if tr else "450cc",
 				"is_active": row.is_active,
 				"note": row.note,
+				"teams_with_from": teams,
 				"teams_with_250": teams,
 				"created_at": row.created_at.isoformat() if row.created_at else None,
 			}
@@ -784,8 +785,8 @@ def list_class_promotions():
 @login_required
 def setup_class_promotion():
 	"""
-	Aktivera klassbyte: koppla 250-förare → 450-förare och uppdatera 450 startnummer.
-	JSON: from_rider_id, new_450_number, to_rider_id (valfritt), note (valfritt)
+	Aktivera MX-klassbyte: koppla gammal klass → ny klass och uppdatera startnummer i målklassen.
+	JSON: from_rider_id, new_number (eller new_450_number), to_rider_id (valfritt), note (valfritt)
 	"""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
@@ -796,18 +797,23 @@ def setup_class_promotion():
 	data = request.get_json(silent=True) or {}
 	try:
 		from_rider_id = int(data.get("from_rider_id"))
-		new_number = int(data.get("new_450_number"))
+		raw_num = data.get("new_number", data.get("new_450_number"))
+		new_number = int(raw_num)
 	except (TypeError, ValueError):
-		return jsonify({"error": "from_rider_id och new_450_number krävs"}), 400
+		return jsonify({"error": "from_rider_id och new_number krävs"}), 400
 
 	to_rider_id = data.get("to_rider_id")
 	note = (data.get("note") or "").strip() or None
 
 	from_rider = Rider.query.get(from_rider_id)
 	if not from_rider:
-		return jsonify({"error": "250-föraren hittades inte"}), 404
-	if from_rider.class_name != "250cc":
-		return jsonify({"error": "from_rider_id måste vara en 250cc-förare"}), 400
+		return jsonify({"error": "Föraren (gammal klass) hittades inte"}), 404
+	if from_rider.class_name not in ("250cc", "450cc"):
+		return jsonify({"error": "from_rider_id måste vara 250cc eller 450cc"}), 400
+
+	target_class = "450cc" if from_rider.class_name == "250cc" else "250cc"
+	from_short = "250" if from_rider.class_name == "250cc" else "450"
+	to_short = "450" if target_class == "450cc" else "250"
 
 	if to_rider_id:
 		try:
@@ -819,7 +825,7 @@ def setup_class_promotion():
 		to_rider = (
 			Rider.query.filter(
 				Rider.name.ilike(from_rider.name.strip()),
-				Rider.class_name == "450cc",
+				Rider.class_name == target_class,
 			)
 			.order_by(Rider.id.desc())
 			.first()
@@ -828,14 +834,19 @@ def setup_class_promotion():
 	if not to_rider:
 		return jsonify(
 			{
-				"error": "Ingen 450-förare hittades med samma namn. Skapa 450-raden först under förarlistan."
+				"error": (
+					f"Ingen {to_short}-förare hittades med samma namn. "
+					f"Skapa {to_short}-raden först under förarlistan."
+				)
 			}
 		), 400
-	if to_rider.class_name != "450cc":
-		return jsonify({"error": "to_rider_id måste vara 450cc"}), 400
+	if to_rider.class_name != target_class:
+		return jsonify({"error": f"to_rider_id måste vara {target_class}"}), 400
+	if to_rider.class_name == from_rider.class_name:
+		return jsonify({"error": "Från- och till-förare måste vara olika klasser"}), 400
 
 	conflict = (
-		Rider.query.filter_by(class_name="450cc", rider_number=new_number)
+		Rider.query.filter_by(class_name=target_class, rider_number=new_number)
 		.filter(Rider.id != to_rider.id)
 		.first()
 	)
@@ -843,13 +854,16 @@ def setup_class_promotion():
 		return jsonify(
 			{
 				"error": "nummer_upptaget",
-				"message": f"#{new_number} i 450 är redan {conflict.name}. Byt nummer på den föraren först.",
+				"message": (
+					f"#{new_number} i {to_short} är redan {conflict.name}. "
+					"Byt nummer på den föraren först."
+				),
 				"existing_rider_id": conflict.id,
 				"existing_rider_name": conflict.name,
 			}
 		), 409
 
-	old_450_number = to_rider.rider_number
+	old_to_number = to_rider.rider_number
 	to_rider.rider_number = new_number
 
 	row = SeasonTeamClassPromotion.query.filter_by(from_rider_id=from_rider_id).first()
@@ -872,11 +886,13 @@ def setup_class_promotion():
 		{
 			"success": True,
 			"message": (
-				f"Klassbyte aktivt: {from_rider.name} (#{from_rider.rider_number} 250) → "
-				f"{to_rider.name} (#{old_450_number} → #{new_number} 450). "
-				f"{teams} säsongsteam har fortfarande 250-versionen (gratis byte)."
+				f"Klassbyte aktivt: {from_rider.name} "
+				f"(#{from_rider.rider_number} {from_short}) → "
+				f"{to_rider.name} (#{old_to_number} → #{new_number} {to_short}). "
+				f"{teams} säsongsteam har fortfarande {from_short}-versionen (gratis byte)."
 			),
 			"promotion_id": row.id,
+			"teams_with_from": teams,
 			"teams_with_250": teams,
 		}
 	)

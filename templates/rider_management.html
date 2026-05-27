@@ -78,18 +78,23 @@
 
         <!-- MX klassbyte: gratis säsongsteam-byte + nytt 450-nummer -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
-            <h3 class="text-lg font-semibold text-emerald-400 mb-2">⬆️ MX-klassbyte (säsongsteam)</h3>
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">↕️ MX-klassbyte (säsongsteam)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                När en förare går 250 → 450: koppla rätt rader, sätt <strong>nytt startnummer i 450</strong>, och aktivera gratis byte för spelare som fortfarande har 250-versionen på säsongsteamet.
+                Koppla rätt förarrader när någon byter klass (250 ↔ 450), sätt <strong>nytt startnummer i målklassen</strong>, och aktivera gratis byte för spelare som fortfarande har den gamla versionen på säsongsteamet.
             </p>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                 <div class="border border-gray-300 dark:border-gray-600 rounded-lg p-3">
                     <h4 class="text-sm font-semibold text-gray-200 mb-2">Nytt klassbyte</h4>
-                    <label class="block text-xs text-gray-400 mb-1">250-förare (gammal klass)</label>
+                    <label class="block text-xs text-gray-400 mb-1">Riktning</label>
+                    <select id="cp-direction" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm" onchange="onClassPromoDirectionChange()">
+                        <option value="250_to_450">250 → 450 (uppgradering)</option>
+                        <option value="450_to_250">450 → 250 (nedgradering)</option>
+                    </select>
+                    <label id="cp-from-label" class="block text-xs text-gray-400 mb-1">250-förare (gammal klass på lag)</label>
                     <select id="cp-from-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm" onchange="onClassPromoFromChange()"></select>
-                    <label class="block text-xs text-gray-400 mb-1">450-förare (samma person)</label>
+                    <label id="cp-to-label" class="block text-xs text-gray-400 mb-1">450-förare (samma person, ny klass)</label>
                     <select id="cp-to-rider" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm"></select>
-                    <label class="block text-xs text-gray-400 mb-1">Nytt startnummer i 450</label>
+                    <label id="cp-number-label" class="block text-xs text-gray-400 mb-1">Nytt startnummer i 450</label>
                     <input id="cp-new-number" type="number" min="1" max="999" placeholder="t.ex. 28" class="w-full mb-2 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
                     <label class="block text-xs text-gray-400 mb-1">Anteckning (valfritt)</label>
                     <input id="cp-note" type="text" placeholder="MX 2026" class="w-full mb-3 px-2 py-2 rounded bg-gray-700 border border-gray-600 text-sm">
@@ -961,6 +966,44 @@
         }
 
         let cpData = { riders_250: [], riders_450: [], promotions: [] };
+        let cpDirection = '250_to_450';
+
+        function cpFromClass() {
+            return cpDirection === '450_to_250' ? '450cc' : '250cc';
+        }
+        function cpToClass() {
+            return cpDirection === '450_to_250' ? '250cc' : '450cc';
+        }
+        function cpFromShort() { return cpFromClass() === '250cc' ? '250' : '450'; }
+        function cpToShort() { return cpToClass() === '250cc' ? '250' : '450'; }
+        function cpRidersFrom() {
+            return cpFromClass() === '250cc' ? cpData.riders_250 : cpData.riders_450;
+        }
+        function cpRidersTo() {
+            return cpToClass() === '250cc' ? cpData.riders_250 : cpData.riders_450;
+        }
+
+        function updateCpDirectionLabels() {
+            const fs = cpFromShort();
+            const ts = cpToShort();
+            const fl = document.getElementById('cp-from-label');
+            const tl = document.getElementById('cp-to-label');
+            const nl = document.getElementById('cp-number-label');
+            if (fl) fl.textContent = `${fs}-förare (gammal klass på lag)`;
+            if (tl) tl.textContent = `${ts}-förare (samma person, ny klass)`;
+            if (nl) nl.textContent = `Nytt startnummer i ${ts}`;
+        }
+
+        function onClassPromoDirectionChange() {
+            const sel = document.getElementById('cp-direction');
+            cpDirection = sel?.value === '450_to_250' ? '450_to_250' : '250_to_450';
+            updateCpDirectionLabels();
+            const toSel = document.getElementById('cp-to-rider');
+            const numInput = document.getElementById('cp-new-number');
+            if (toSel) toSel.value = '';
+            if (numInput) numInput.value = '';
+            fillCpSelects();
+        }
 
         function cpShowStatus(html, ok) {
             const el = document.getElementById('cp-status');
@@ -980,12 +1023,14 @@
             const fromSel = document.getElementById('cp-from-rider');
             const toSel = document.getElementById('cp-to-rider');
             if (!fromSel || !toSel) return;
-            fromSel.innerHTML = '<option value="">— välj 250-förare —</option>' +
-                cpData.riders_250.map(r =>
+            const fs = cpFromShort();
+            const ts = cpToShort();
+            fromSel.innerHTML = `<option value="">— välj ${fs}-förare —</option>` +
+                cpRidersFrom().map(r =>
                     `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
                 ).join('');
-            toSel.innerHTML = '<option value="">— välj 450-förare —</option>' +
-                cpData.riders_450.map(r =>
+            toSel.innerHTML = `<option value="">— välj ${ts}-förare —</option>` +
+                cpRidersTo().map(r =>
                     `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`
                 ).join('');
         }
@@ -996,15 +1041,19 @@
             const numInput = document.getElementById('cp-new-number');
             if (!fromSel || !toSel) return;
             const fromId = parseInt(fromSel.value, 10);
-            const fromR = cpData.riders_250.find(r => r.id === fromId);
+            const fromR = cpRidersFrom().find(r => r.id === fromId);
             if (!fromR) return;
-            const matches = cpData.riders_450.filter(r => normCpName(r.name) === normCpName(fromR.name));
+            const matches = cpRidersTo().filter(r => normCpName(r.name) === normCpName(fromR.name));
+            const ts = cpToShort();
             if (matches.length === 1) {
                 toSel.value = String(matches[0].id);
                 if (numInput && !numInput.value) numInput.value = matches[0].rider_number || '';
             } else if (matches.length > 1) {
-                toSel.innerHTML = '<option value="">— flera 450 med samma namn —</option>' +
+                toSel.innerHTML = `<option value="">— flera ${ts} med samma namn —</option>` +
                     matches.map(r => `<option value="${r.id}">#${r.rider_number || '?'} ${r.name}</option>`).join('');
+            } else {
+                fillCpSelects();
+                fromSel.value = String(fromId);
             }
         }
 
@@ -1015,16 +1064,21 @@
                 list.innerHTML = '<p class="text-gray-500">Inga aktiva klassbyten ännu.</p>';
                 return;
             }
-            list.innerHTML = cpData.promotions.map(p => `
+            list.innerHTML = cpData.promotions.map(p => {
+                const fromCls = (p.from_class || '250cc').replace('cc', '');
+                const toCls = (p.to_class || '450cc').replace('cc', '');
+                const teams = p.teams_with_from ?? p.teams_with_250 ?? 0;
+                return `
                 <div class="mb-3 p-2 rounded border border-gray-600 bg-gray-900/40 ${p.is_active ? '' : 'opacity-50'}">
-                    <div class="font-semibold text-emerald-200">${p.from_name} #${p.from_number} (250) → ${p.to_name} #${p.to_number} (450)</div>
-                    <div class="text-xs text-gray-400 mt-1">${p.teams_with_250} säsongsteam med 250-versionen · ${p.is_active ? 'Aktiv' : 'Pausad'}</div>
+                    <div class="font-semibold text-emerald-200">${p.from_name} #${p.from_number} (${fromCls}) → ${p.to_name} #${p.to_number} (${toCls})</div>
+                    <div class="text-xs text-gray-400 mt-1">${teams} säsongsteam med ${fromCls}-versionen · ${p.is_active ? 'Aktiv' : 'Pausad'}</div>
                     <div class="flex gap-2 mt-2">
                         <button type="button" onclick="toggleClassPromotion(${p.id}, ${!p.is_active})" class="text-xs px-2 py-1 rounded bg-slate-700 hover:bg-slate-600">${p.is_active ? 'Pausa' : 'Aktivera'}</button>
                         <button type="button" onclick="deleteClassPromotion(${p.id})" class="text-xs px-2 py-1 rounded bg-red-800 hover:bg-red-700">Ta bort</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         async function loadClassPromotions() {
@@ -1033,6 +1087,7 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Kunde inte ladda');
                 cpData = data;
+                updateCpDirectionLabels();
                 fillCpSelects();
                 renderCpList();
             } catch (e) {
@@ -1047,10 +1102,10 @@
             const newNum = document.getElementById('cp-new-number')?.value;
             const note = document.getElementById('cp-note')?.value || '';
             if (!fromId || !newNum) {
-                cpShowStatus('Välj 250-förare och ange nytt 450-nummer.', false);
+                cpShowStatus(`Välj ${cpFromShort()}-förare och ange nytt ${cpToShort()}-nummer.`, false);
                 return;
             }
-            if (!confirm('Aktivera klassbyte och uppdatera 450-numret? Spelare med 250-versionen får gratis byte.')) return;
+            if (!confirm(`Aktivera klassbyte (${cpFromShort()} → ${cpToShort()}) och uppdatera numret? Spelare med ${cpFromShort()}-versionen får gratis byte.`)) return;
             try {
                 const res = await fetch('/rider_management/class_promotions/setup', {
                     method: 'POST',
@@ -1058,7 +1113,7 @@
                     body: JSON.stringify({
                         from_rider_id: parseInt(fromId, 10),
                         to_rider_id: toId ? parseInt(toId, 10) : null,
-                        new_450_number: parseInt(newNum, 10),
+                        new_number: parseInt(newNum, 10),
                         note: note
                     })
                 });
