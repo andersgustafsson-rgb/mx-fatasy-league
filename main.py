@@ -30,6 +30,8 @@ from dotenv import load_dotenv
 load_dotenv()
 from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
+_INDEX_SCHEMA_CHECKED = False
+
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
     """
@@ -946,87 +948,101 @@ def index():
         is_logged_in = False
     today = get_today()
 
-    # Ensure database is initialized
-    try:
-        # Check if tables exist, if not initialize
-        from sqlalchemy import inspect
-        if not inspect(db.engine).has_table('competitions'):
-            print("Tables missing, reinitializing database...")
-            init_database()
-        
-        # Add classes column if missing
+    # Ensure database is initialized (only once per worker).
+    global _INDEX_SCHEMA_CHECKED
+    if not _INDEX_SCHEMA_CHECKED:
         try:
-            exists = db.session.execute(db.text("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name='riders' AND column_name='classes'
-            """)).fetchone()
-            if not exists:
-                print("Adding classes column to riders table...")
-                db.session.execute(db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)"))
-                db.session.commit()
-                print("Classes column added successfully")
-        except Exception as e:
-            print(f"Error adding classes column: {e}")
-            db.session.rollback()
-            pass
-        
-        # Skip rider bio column migrations for now
-        pass
+            # Check if tables exist, if not initialize
+            from sqlalchemy import inspect
 
-        # Skip league_memberships column migrations for now
-        pass
-        
-        
-        # Skip league image column migrations for now
-        pass
-        
-        # Skip league additional column migrations for now
-        pass
-        
-        # Add admin announcement columns to global_simulation if missing
-        try:
-            exists = db.session.execute(db.text("""
-                SELECT column_name FROM information_schema.columns 
-                WHERE table_name='global_simulation' AND column_name='admin_message'
-            """)).fetchone()
-            if not exists:
-                print("Adding admin announcement columns to global_simulation table...")
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT"))
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"))
-                db.session.execute(db.text("ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"))
-                db.session.commit()
-                print("Admin announcement columns added successfully")
-        except Exception as e:
-            print(f"Error adding admin announcement columns: {e}")
-            db.session.rollback()
-        pass
-        
-        # Check if league_requests table exists
-        if not inspect(db.engine).has_table('league_requests'):
-            print("Creating league_requests table...")
+            if not inspect(db.engine).has_table("competitions"):
+                print("Tables missing, reinitializing database...")
+                init_database()
+
+            # Add classes column if missing
             try:
-                db.session.rollback()
-                db.session.execute(db.text("""
-                    CREATE TABLE league_requests (
-                        id SERIAL PRIMARY KEY,
-                        league_id INTEGER NOT NULL REFERENCES leagues(id),
-                        user_id INTEGER NOT NULL REFERENCES users(id),
-                        message VARCHAR(500),
-                        status VARCHAR(20) DEFAULT 'pending',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        processed_at TIMESTAMP,
-                        UNIQUE(league_id, user_id)
+                exists = db.session.execute(
+                    db.text(
+                        """
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name='riders' AND column_name='classes'
+                        """
                     )
-                """))
-                db.session.commit()
-                print("league_requests table created successfully")
+                ).fetchone()
+                if not exists:
+                    print("Adding classes column to riders table...")
+                    db.session.execute(
+                        db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)")
+                    )
+                    db.session.commit()
+                    print("Classes column added successfully")
             except Exception as e:
-                print(f"Error creating league_requests table: {e}")
+                print(f"Error adding classes column: {e}")
                 db.session.rollback()
-        
-    except Exception as e:
-        print(f"Database check error: {e}")
-        init_database()
+
+            # Add admin announcement columns to global_simulation if missing
+            try:
+                exists = db.session.execute(
+                    db.text(
+                        """
+                        SELECT column_name FROM information_schema.columns 
+                        WHERE table_name='global_simulation' AND column_name='admin_message'
+                        """
+                    )
+                ).fetchone()
+                if not exists:
+                    print("Adding admin announcement columns to global_simulation table...")
+                    db.session.execute(
+                        db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT")
+                    )
+                    db.session.execute(
+                        db.text(
+                            "ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"
+                        )
+                    )
+                    db.session.execute(
+                        db.text(
+                            "ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"
+                        )
+                    )
+                    db.session.commit()
+                    print("Admin announcement columns added successfully")
+            except Exception as e:
+                print(f"Error adding admin announcement columns: {e}")
+                db.session.rollback()
+
+            # Check if league_requests table exists
+            if not inspect(db.engine).has_table("league_requests"):
+                print("Creating league_requests table...")
+                try:
+                    db.session.rollback()
+                    db.session.execute(
+                        db.text(
+                            """
+                            CREATE TABLE league_requests (
+                                id SERIAL PRIMARY KEY,
+                                league_id INTEGER NOT NULL REFERENCES leagues(id),
+                                user_id INTEGER NOT NULL REFERENCES users(id),
+                                message VARCHAR(500),
+                                status VARCHAR(20) DEFAULT 'pending',
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                processed_at TIMESTAMP,
+                                UNIQUE(league_id, user_id)
+                            )
+                            """
+                        )
+                    )
+                    db.session.commit()
+                    print("league_requests table created successfully")
+                except Exception as e:
+                    print(f"Error creating league_requests table: {e}")
+                    db.session.rollback()
+
+            _INDEX_SCHEMA_CHECKED = True
+        except Exception as e:
+            print(f"Database check error: {e}")
+            init_database()
+            _INDEX_SCHEMA_CHECKED = True
 
     # Get competitions with error handling
     try:
@@ -1370,26 +1386,6 @@ def index():
             user_scores = CompetitionScore.query.filter_by(user_id=uid).all()
             user_total_points = sum(score.total_points or 0 for score in user_scores)
             races_participated = len([s for s in user_scores if s.total_points and s.total_points > 0])
-            
-            # Find best position (lowest position in leaderboard across all competitions)
-            if races_participated > 0:
-                best_positions = []
-                for score in user_scores:
-                    if score.total_points and score.total_points > 0:
-                        # Find user's position in this competition
-                        all_scores_for_comp = CompetitionScore.query.filter_by(
-                            competition_id=score.competition_id
-                        ).order_by(CompetitionScore.total_points.desc()).all()
-                        
-                        position = 1
-                        for i, s in enumerate(all_scores_for_comp):
-                            if s.user_id == uid:
-                                position = i + 1
-                                break
-                        best_positions.append(position)
-                
-                if best_positions:
-                    best_position = min(best_positions)
         except Exception as e:
             print(f"Error calculating user statistics: {e}")
             user_total_points = 0

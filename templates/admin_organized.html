@@ -962,6 +962,25 @@
     </div>
 
     <script>
+        /** En inflight-fetch åt gången för samma tävlingslista (fler loaders / flikar = färre spikes). */
+        let _competitionsImportInflight = null;
+        function fetchCompetitionsForImportShared() {
+            if (!_competitionsImportInflight) {
+                _competitionsImportInflight = fetch('/get_competitions_for_import')
+                    .then(async (response) => {
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data.error || response.statusText || 'Request failed');
+                        }
+                        return data;
+                    })
+                    .finally(() => {
+                        _competitionsImportInflight = null;
+                    });
+            }
+            return _competitionsImportInflight;
+        }
+
         // Tab switching
         function showSection(sectionId, tabEl) {
             document.querySelectorAll('.section-panel').forEach(panel => {
@@ -1296,8 +1315,7 @@
         // Load competitions for simulation
         async function loadSimulationCompetitions() {
             try {
-                const response = await fetch('/get_competitions_for_import');
-                const data = await response.json();
+                const data = await fetchCompetitionsForImportShared();
                 
                 if (data.success) {
                     const select = document.getElementById('simulation-competition');
@@ -1321,8 +1339,7 @@
         // Load competitions for picks statistics
         async function loadPicksStatsCompetitions() {
             try {
-                const response = await fetch('/get_competitions_for_import');
-                const data = await response.json();
+                const data = await fetchCompetitionsForImportShared();
                 
                 if (data.success) {
                     const select = document.getElementById('picks-stats-competition');
@@ -1468,8 +1485,7 @@
         // Bulk Import helpers
         async function loadBulkCompetitions() {
             try {
-                const response = await fetch('/get_competitions_for_import');
-                const data = await response.json();
+                const data = await fetchCompetitionsForImportShared();
                 const select = document.getElementById('bulk-competition');
                 if (!select) return;
                 if (data.success) {
@@ -2341,8 +2357,7 @@
         // Recalculate Scores helpers
         async function loadRecalculateCompetitions() {
             try {
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 const select = document.getElementById('recalculate-competition');
                 if (!select) return;
                 
@@ -2405,8 +2420,7 @@
         async function loadSetScoreCompetitions() {
             try {
                 console.log('Loading competitions for set score...');
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 console.log('Competitions response:', data);
                 const select = document.getElementById('set-score-competition');
                 if (!select) {
@@ -2558,8 +2572,7 @@
 
         async function loadFullPicksCompetitions() {
             try {
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 const select = document.getElementById('full-picks-competition');
                 if (!select) return;
                 select.innerHTML = '<option value="">Välj tävling...</option>';
@@ -2577,8 +2590,7 @@
         async function loadRestoreCompetitions() {
             try {
                 console.log('Loading competitions for restore...');
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 console.log('Competitions response:', data);
                 const select = document.getElementById('restore-competition');
                 if (!select) {
@@ -2884,8 +2896,7 @@
         // Quick Holeshot Update helpers
         async function loadQuickHoleshotCompetitions() {
             try {
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 const select = document.getElementById('quick-holeshot-competition');
                 if (!select) return;
                 
@@ -2990,8 +3001,7 @@
 
         async function loadManualCompetitions() {
             try {
-                const res = await fetch('/get_competitions_for_import');
-                const data = await res.json();
+                const data = await fetchCompetitionsForImportShared();
                 const select = document.getElementById('manual-competition');
                 const outSelect = document.getElementById('out-competition');
                 if (!select) return;
