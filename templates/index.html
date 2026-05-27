@@ -529,23 +529,13 @@
             </h1>
             <div class="flex items-center gap-3 mt-2">
               {% if user_profile_picture %}
-                {% if user_profile_picture.startswith('data:') %}
-                  <img src="{{ user_profile_picture }}" 
-                       alt="Profilbild" 
-                       class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400">
-                {% elif user_profile_picture.startswith('uploaded_') %}
-                  <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center border-2 border-yellow-400">
-                    <span class="text-yellow-400 text-xs">📷</span>
-                  </div>
-                {% else %}
-                  <img src="{{ url_for('static', filename=user_profile_picture) }}" 
-                       alt="Profilbild" 
-                       class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400"
-                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400" style="display:none;">
-                    <span class="text-yellow-400 text-xs">📷</span>
-                  </div>
-                {% endif %}
+                <img src="{{ user_profile_picture }}" 
+                     alt="Profilbild" 
+                     class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400" style="display:none;">
+                  <span class="text-yellow-400 text-xs">📷</span>
+                </div>
               {% else %}
                 <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400">
                   <span class="text-yellow-400 text-sm font-bold">{{ username[0].upper() }}</span>
@@ -1738,7 +1728,7 @@
                             <div class="flex items-center gap-2">
                               {% if r.image_url %}
                                 <img
-                                  src="{{ r.image_url if r.image_url.startswith('data:') else url_for('static', filename=r.image_url) }}"
+                                  src="{{ r.image_url }}"
                                   alt="{{ r.name }}"
                                   class="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700"
                                   loading="lazy"
@@ -3583,8 +3573,7 @@
     function powerRankingPortraitSrc(r) {
       if (!r || !r.image_url) return '';
       const u = r.image_url;
-      if (u.startsWith('data:')) return u;
-      return '/static/' + (u.startsWith('riders/') ? u : 'riders/' + u);
+      return u;
     }
 
     function renderPowerRankingRows(rows, label) {

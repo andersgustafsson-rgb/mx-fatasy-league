@@ -157,13 +157,7 @@
 <body class="text-gray-100">
 {% macro rider_img_src(r) -%}
   {%- if r and r.image_url -%}
-    {%- set u = r.image_url | trim | string -%}
-    {%- if u.startswith('data:') -%}{{ u }}
-    {%- elif u.startswith('http://') or u.startswith('https://') -%}{{ u }}
-    {%- else -%}
-      {%- set path = u if (u.startswith('riders/') or u.startswith('uploads/') or u.startswith('trackmaps/')) else ('riders/' ~ u) -%}
-      {{- url_for('static', filename=path) -}}
-    {%- endif -%}
+    {{- r.image_url | trim | string -}}
   {%- endif -%}
 {%- endmacro %}
 
@@ -187,10 +181,8 @@
 <div class="relative inline-block {{ box }} shrink-0">
   <div class="absolute inset-0 rounded-full bg-gradient-to-br from-violet-600/90 via-fuchsia-600/90 to-cyan-600/90 shadow-lg ring-2 ring-white/20 z-0" aria-hidden="true"></div>
   {% set pic = row.profile_picture_url %}
-  {% if pic and pic.startswith('data:') %}
-    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10">
-  {% elif pic and not pic.startswith('uploaded_') %}
-    <img src="{{ url_for('static', filename=pic) }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10" onerror="this.remove()">
+  {% if pic %}
+    <img src="{{ pic }}" alt="" class="absolute inset-0 w-full h-full rounded-full object-cover ring-2 ring-cyan-400/45 shadow-lg z-10" onerror="this.remove()">
   {% endif %}
 </div>
 {% endmacro %}

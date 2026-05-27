@@ -137,27 +137,10 @@
   </style>
 </head>
 <body class="page-bg text-slate-100">
-  {# Samma logik som race picks: data-URL, eller /static/ + riders/… #}
+  {# image_url är redan en färdig URL (/rider_picture/<id> eller /static/...) #}
   {% macro rider_image_src(r) -%}
     {%- if r and r.image_url -%}
-      {%- set u = r.image_url | trim -%}
-      {%- if u.startswith('data:') -%}
-        {{- u -}}
-      {%- elif u.startswith('http://') or u.startswith('https://') -%}
-        {{- u -}}
-      {%- else -%}
-        {%- set path = u if (u.startswith('riders/') or u.startswith('uploads/') or u.startswith('trackmaps/')) else ('riders/' ~ u) -%}
-        {%- set rp = path.rpartition('/') -%}
-        {%- set dir_part = rp[0] -%}
-        {%- set slash = rp[1] -%}
-        {%- set fname = rp[2] -%}
-        {%- if slash -%}
-          {%- set path_fixed = dir_part ~ slash ~ (fname | replace(' ', '_')) -%}
-        {%- else -%}
-          {%- set path_fixed = path | replace(' ', '_') -%}
-        {%- endif -%}
-        /static/{{ path_fixed }}
-      {%- endif -%}
+      {{- r.image_url | trim -}}
     {%- endif -%}
   {%- endmacro %}
 
