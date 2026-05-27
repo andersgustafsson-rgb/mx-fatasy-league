@@ -21,9 +21,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="md:col-span-1">
             <div class="rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
-              {% if rider.rider_image_data %}
-              <img src="{{ url_for('rider_picture', rider_id=rider.id) }}" alt="{{ rider.name }}" class="w-full h-64 object-cover">
-              {% elif rider.image_url %}
+              {% if rider.image_url %}
               <img src="{{ rider.image_url }}" alt="{{ rider.name }}" class="w-full h-64 object-cover">
               {% else %}
               <div class="w-full h-64 flex items-center justify-center text-gray-400">Ingen bild</div>

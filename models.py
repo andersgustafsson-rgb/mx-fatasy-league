@@ -128,39 +128,6 @@ class Rider(db.Model):
     bio = db.Column(db.Text)
     achievements = db.Column(db.Text)
 
-
-def rider_query_for_list_ui():
-    """
-    Riders for tables/list pages without loading huge Text columns into RAM.
-    (rider_image_data is multi-MB per row when embedded as base64 data URLs.)
-    """
-    from sqlalchemy.orm import defer
-
-    return Rider.query.options(
-        defer(Rider.rider_image_data),
-        defer(Rider.bio),
-        defer(Rider.achievements),
-    )
-
-
-def rider_ids_with_db_portrait() -> set[int]:
-    """Primary keys whose row has a non-null rider_image_data (cheap; does not fetch blob)."""
-    rows = db.session.query(Rider.id).filter(Rider.rider_image_data.isnot(None)).all()
-    return {r[0] for r in rows}
-
-
-def rider_ids_with_db_portrait_among(ids: list[int]) -> set[int]:
-    """Subset of ids that have a DB-stored portrait — avoids full-table scan when list is small."""
-    if not ids:
-        return set()
-    rows = (
-        db.session.query(Rider.id)
-        .filter(Rider.id.in_(ids), Rider.rider_image_data.isnot(None))
-        .all()
-    )
-    return {r[0] for r in rows}
-
-
 class SeasonTeam(db.Model):
     __tablename__ = "season_teams"
     id = db.Column(db.Integer, primary_key=True)

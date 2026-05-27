@@ -12,7 +12,6 @@ from models import (
 	CompetitionScore,
 	HoleshotPick,
 	HoleshotResult,
-	rider_query_for_list_ui,
 )
 from datetime import datetime
 
@@ -362,7 +361,7 @@ def reset_cross_dino_highscores():
 def _suggest_rider_number(class_name: str) -> int:
 	used = [
 		r.rider_number
-		for r in rider_query_for_list_ui().filter_by(class_name=class_name).all()
+		for r in Rider.query.filter_by(class_name=class_name).all()
 		if r.rider_number is not None
 	]
 	return (max(used) + 1) if used else 99
