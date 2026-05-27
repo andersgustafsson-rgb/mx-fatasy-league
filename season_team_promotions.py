@@ -1,4 +1,4 @@
-"""Gratis MX-klassbyte (250 ↔ 450) för säsongsteam — konfigureras i admin."""
+"""Gratis MX-klassbyte (250 → 450) för säsongsteam — konfigureras i admin."""
 
 from __future__ import annotations
 
@@ -106,8 +106,7 @@ def _offer_dict(from_rider, to_rider, from_id: int) -> Dict[str, Any]:
         "to_number": to_rider.rider_number,
         "to_price": to_rider.price,
         "label": (
-            f"{to_rider.name}: {getattr(from_rider, 'class_name', '250cc') or '250cc'} → "
-            f"{to_rider.class_name} (#{getattr(from_rider, 'rider_number', '?')} "
+            f"{to_rider.name}: 250 → 450 (#{getattr(from_rider, 'rider_number', '?')} "
             f"→ #{to_rider.rider_number}) (gratis)"
         ),
     }
@@ -146,11 +145,9 @@ def get_user_promotion_offers(user_id: int) -> List[Dict[str, Any]]:
             continue
         from_rider = Rider.query.get(row.from_rider_id)
         if not from_rider:
-            to_cls = getattr(to_rider, "class_name", None) or "450cc"
-            from_cls = "250cc" if to_cls == "450cc" else "450cc"
             ghost = {
-                "from_name": (row.note or "Gamla platsen").split("→")[0].strip() or "Din gamla plats",
-                "from_class": from_cls,
+                "from_name": (row.note or "250-förare").split("→")[0].strip() or "Din 250-plats",
+                "from_class": "250cc",
                 "from_number": None,
                 "from_price": 0,
             }

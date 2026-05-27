@@ -37,4 +37,4 @@ USER appuser
 
 # Render sätter PORT (ofta 10000) — ingen fast healthcheck-port i Dockerfile
 # Run the application (--preload: DB-init i main.py körs bara en gång, inte per worker)
-CMD ["gunicorn", "-c", "gunicorn.conf.py", "main:app"]
+CMD ["sh", "-c", "gunicorn --preload --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 main:app"]

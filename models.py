@@ -128,20 +128,6 @@ class Rider(db.Model):
     bio = db.Column(db.Text)
     achievements = db.Column(db.Text)
 
-
-def rider_query_for_list_ui():
-    """
-    Lista/kortläge: ladda inte enorma blob-kolumner (rider_image_data, bio) i RAM.
-    """
-    from sqlalchemy.orm import defer
-
-    return Rider.query.options(
-        defer(Rider.rider_image_data),
-        defer(Rider.bio),
-        defer(Rider.achievements),
-    )
-
-
 class SeasonTeam(db.Model):
     __tablename__ = "season_teams"
     id = db.Column(db.Integer, primary_key=True)
@@ -162,7 +148,7 @@ class SeasonTeamRider(db.Model):
 
 
 class SeasonTeamClassPromotion(db.Model):
-    """Gratis säsongsteam-byte vid MX-klassbyte (250 ↔ 450)."""
+    """Gratis säsongsteam-byte när förare går 250 → 450 (MX)."""
     __tablename__ = "season_team_class_promotions"
 
     id = db.Column(db.Integer, primary_key=True)
