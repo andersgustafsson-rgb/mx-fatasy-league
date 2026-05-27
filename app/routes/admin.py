@@ -225,14 +225,9 @@ def rider_management():
 			Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])
 		).order_by(Rider.class_name, Rider.rider_number).all()
 		
-		import os
-
-		return render_template(
-			'rider_management.html',
-			riders_smx=riders_smx,
-			riders_wsx=riders_wsx,
-			is_render_host=bool(os.getenv('RENDER')),
-		)
+		return render_template('rider_management.html',
+							riders_smx=riders_smx,
+							riders_wsx=riders_wsx)
 	except Exception as e:
 		return f"<h1>Database Error</h1><p>{e}</p>"
 
@@ -1368,17 +1363,6 @@ def rider_images_racerx_refresh_csv():
 	"""Run the RacerX rider scraper to refresh data/racerx_riders_2026.csv."""
 	if not is_admin_user():
 		return jsonify({"error": "Unauthorized"}), 401
-	import os
-
-	if os.getenv("RENDER"):
-		return jsonify({
-			"error": (
-				"RacerX-scrape kan inte köras på Render (512 MB RAM — tar ner hela sajten). "
-				"Kör lokalt: python tools/scrape_racerx_riders.py och deploya sedan CSV, "
-				"eller använd bara 'Förhandsgranska saknade bilder' med befintlig CSV."
-			),
-			"blocked_on_render": True,
-		}), 503
 	try:
 		# Run scraper in-process so we don't depend on shell.
 		from tools import scrape_racerx_riders
