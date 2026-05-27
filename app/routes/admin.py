@@ -1096,6 +1096,114 @@ def entry_list_preview():
 		return jsonify({"error": str(e)}), 500
 
 
+@bp.route("/rider_management/entry_list/fetch_url", methods=["POST"])
+@login_required
+def entry_list_fetch_url():
+	"""Fetch RacerX entry list by URL and return TSV-like text for preview/import."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	url = (data.get("url") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	if not url:
+		return jsonify({"error": "URL saknas"}), 400
+	if "racerxonline.com" not in url.lower():
+		return jsonify({"error": "Endast racerxonline.com stöds"}), 400
+	try:
+		from racerx_entry_list import fetch_entry_list
+		from entry_list_import import normalize_class_name
+
+		klass = normalize_class_name(class_name)
+		title, rows = fetch_entry_list(url)
+		# Make a pasteable text that our parser understands (tabs)
+		lines = []
+		for r in rows:
+			new_cell = "New" if r.is_new else ""
+			lines.append(f"{r.number}\t{r.name}\t{new_cell}\t{r.hometown}\t{r.bike}")
+		return jsonify({
+			"success": True,
+			"title": title,
+			"class_name": klass,
+			"count": len(rows),
+			"text": "\n".join(lines),
+		})
+	except Exception as e:
+		print(f"entry_list_fetch_url error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
+@bp.route("/rider_management/entry_list/fetch_images", methods=["POST"])
+@login_required
+def entry_list_fetch_images():
+	"""Fetch and store rider images (data URLs) for selected riders in the current list."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	data = request.get_json(silent=True) or {}
+	selected_keys = set(data.get("selected") or [])
+	force = bool(data.get("force"))
+	text = (data.get("text") or "").strip()
+	class_name = (data.get("class_name") or "250cc").strip()
+	coast_raw = data.get("coast_250")
+	coast_250 = (coast_raw or "").strip() or None
+	if coast_250 not in ("west", "east"):
+		coast_250 = None
+	only_marked_new = bool(data.get("only_marked_new"))
+	if not text:
+		return jsonify({"error": "Klistra in entry list först"}), 400
+	if not selected_keys:
+		return jsonify({"error": "Välj minst en rad"}), 400
+	try:
+		from racerx_entry_list import fetch_rider_image_data_url
+		from entry_list_import import normalize_class_name
+
+		klass = normalize_class_name(class_name)
+		_, diff = _parse_and_diff_entry_list(text, klass, coast_250, only_marked_new)
+		# Map selectable items to rider ids
+		rider_ids: set[int] = set()
+		for p in diff.get("number_updates", []):
+			if f"update:{int(p['existing_id'])}" in selected_keys:
+				rider_ids.add(int(p["existing_id"]))
+		for p in diff.get("name_variants", []):
+			if f"variant:{int(p['existing_id'])}" in selected_keys:
+				rider_ids.add(int(p["existing_id"]))
+		updated = 0
+		skipped = 0
+		errors: list[str] = []
+		for rid in sorted(rider_ids):
+			r = Rider.query.get(rid)
+			if not r:
+				continue
+			if not force and getattr(r, "rider_image_data", None):
+				skipped += 1
+				continue
+			# Try to build a rider URL from name (best effort) if we don't have it.
+			slug = (r.name or "").strip().lower().replace(" ", "-")
+			rider_url = f"https://racerxonline.com/rider/{slug}/races"
+			try:
+				img_data = fetch_rider_image_data_url(rider_url)
+				if not img_data:
+					skipped += 1
+					continue
+				r.rider_image_data = img_data
+				updated += 1
+			except Exception as e:
+				errors.append(f"{r.name}: {e}")
+		db.session.commit()
+		return jsonify({
+			"success": True,
+			"updated": updated,
+			"skipped": skipped,
+			"errors": errors,
+			"message": f"Hämtade {updated} bilder (skippade {skipped})",
+		})
+	except Exception as e:
+		db.session.rollback()
+		print(f"entry_list_fetch_images error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
 def _execute_entry_list_apply() -> tuple[dict, int]:
 	from entry_list_import import (
 		DEFAULT_PRICE,

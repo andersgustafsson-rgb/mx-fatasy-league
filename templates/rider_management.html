@@ -67,6 +67,20 @@
                 Klistra in <strong>Provisional Entry List</strong> från supercross.com.
                 Lägg till <strong>nya</strong> förare och/eller <strong>uppdatera startnummer</strong> för befintliga — utan att ersätta hela listan.
             </p>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+                <div class="lg:col-span-2">
+                    <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">RacerX URL (valfritt)</label>
+                    <input id="pasteEntryUrl" type="url"
+                        placeholder="https://racerxonline.com/mx/2026/fox-raceway/250/entry-list"
+                        class="w-full px-3 py-2 rounded border dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div class="flex items-end gap-2">
+                    <button type="button" id="pasteEntryFetchUrlBtn"
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        Hämta från URL
+                    </button>
+                </div>
+            </div>
             <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-400/50 rounded p-2 mb-3">
                 <strong>Poäng per klass:</strong> 250-Deegan och 450-Deegan är <em>två olika id</em> i databasen.
                 Poäng på 250-id följer alltid 250-raden; en ny 450-rad börjar på <strong>0 poäng</strong>.
@@ -155,6 +169,11 @@
                     class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
                     disabled>
                     Spara valda till databasen (0)
+                </button>
+                <button type="button" id="pasteEntryFetchImagesBtn"
+                    class="bg-sky-700 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 ml-2"
+                    disabled>
+                    Hämta bilder för valda
                 </button>
             </div>
         </div>
@@ -1769,6 +1788,8 @@
             const btn = document.getElementById('pasteEntrySaveSelectedBtn');
             btn.disabled = n === 0;
             btn.textContent = 'Spara valda till databasen (' + n + ')';
+            const imgBtn = document.getElementById('pasteEntryFetchImagesBtn');
+            if (imgBtn) imgBtn.disabled = n === 0;
         }
 
         function renderPasteEntryPreview(data) {
@@ -1896,6 +1917,34 @@
             }
         });
 
+        document.getElementById('pasteEntryFetchUrlBtn').addEventListener('click', async () => {
+            const url = document.getElementById('pasteEntryUrl').value.trim();
+            if (!url) {
+                showPasteEntryStatus('Klistra in en RacerX-URL först.', true);
+                return;
+            }
+            showPasteEntryStatus('Hämtar från URL…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/fetch_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url,
+                        class_name: document.getElementById('pasteEntryClass').value,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Kunde inte hämta URL', true);
+                    return;
+                }
+                document.getElementById('pasteEntryText').value = data.text || '';
+                showPasteEntryStatus(`Hämtade ${data.count} rader från URL. Klicka Förhandsgranska.`, false);
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
         function getPasteEntrySelectedKeys() {
             return Array.from(document.querySelectorAll('.paste-entry-select:checked'))
                 .map(cb => cb.getAttribute('data-key'));
@@ -1969,6 +2018,35 @@
                 showPasteEntryStatus('Nätverksfel: ' + e.message, true);
                 btn.disabled = false;
                 updatePasteEntrySaveButton();
+            }
+        });
+
+        document.getElementById('pasteEntryFetchImagesBtn').addEventListener('click', async () => {
+            if (!pasteEntryLastPreview) return;
+            const selected = getPasteEntrySelectedKeys();
+            if (!selected.length) {
+                showPasteEntryStatus('Kryssa i minst en rad.', true);
+                return;
+            }
+            if (!confirm('Hämta bilder för valda? (kan ta en stund)')) return;
+            showPasteEntryStatus('Hämtar bilder…', false);
+            try {
+                const res = await fetch('/rider_management/entry_list/fetch_images', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pasteEntryPayload({ selected })),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showPasteEntryStatus(data.error || 'Misslyckades att hämta bilder', true);
+                    return;
+                }
+                showPasteEntryStatus(
+                    `✅ ${data.message}` + (data.errors && data.errors.length ? '<br>Fel: ' + data.errors.join(', ') : ''),
+                    false
+                );
+            } catch (e) {
+                showPasteEntryStatus('Nätverksfel: ' + e.message, true);
             }
         });
 
