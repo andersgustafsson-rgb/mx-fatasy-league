@@ -189,6 +189,10 @@
                     class="bg-sky-700 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors">
                     Förhandsgranska saknade bilder
                 </button>
+                <button type="button" id="racerxImagesRefreshCsvBtn"
+                    class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg transition-colors">
+                    Uppdatera från RacerX (scrape)
+                </button>
                 <button type="button" id="racerxImagesSelectAllBtn"
                     class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm" disabled>
                     Välj alla
@@ -2156,6 +2160,26 @@
                 document.getElementById('racerxImagesSelectNoneBtn').disabled = false;
                 showRacerxImagesStatus(data.message || `Klar.`, false);
                 updateRacerxApplyBtn();
+            } catch (e) {
+                showRacerxImagesStatus('Nätverksfel: ' + e.message, true);
+            }
+        });
+
+        document.getElementById('racerxImagesRefreshCsvBtn').addEventListener('click', async () => {
+            if (!confirm('Hämta senaste rider-bilder från RacerX? (kan ta 1–2 minuter)')) return;
+            showRacerxImagesStatus('Scrapar RacerX…', false);
+            try {
+                const res = await fetch('/rider_management/racerx_images/refresh_csv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showRacerxImagesStatus(data.error || 'Scrape misslyckades', true);
+                    return;
+                }
+                showRacerxImagesStatus(`✅ ${data.message} Kör sedan “Förhandsgranska saknade bilder”.`, false);
             } catch (e) {
                 showRacerxImagesStatus('Nätverksfel: ' + e.message, true);
             }

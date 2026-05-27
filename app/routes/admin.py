@@ -1357,6 +1357,29 @@ def rider_images_racerx_apply():
 		return jsonify({"error": str(e)}), 500
 
 
+@bp.route("/rider_management/racerx_images/refresh_csv", methods=["POST"])
+@login_required
+def rider_images_racerx_refresh_csv():
+	"""Run the RacerX rider scraper to refresh data/racerx_riders_2026.csv."""
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	try:
+		# Run scraper in-process so we don't depend on shell.
+		from tools import scrape_racerx_riders
+
+		start = datetime.utcnow()
+		scrape_racerx_riders.main()
+		elapsed_ms = int((datetime.utcnow() - start).total_seconds() * 1000)
+		return jsonify({
+			"success": True,
+			"message": f"Uppdaterade racerx_riders_2026.csv (tog {elapsed_ms} ms).",
+		})
+	except Exception as e:
+		print(f"rider_images_racerx_refresh_csv error: {e}")
+		traceback.print_exc()
+		return jsonify({"error": str(e)}), 500
+
+
 def _execute_entry_list_apply() -> tuple[dict, int]:
 	from entry_list_import import (
 		DEFAULT_PRICE,
