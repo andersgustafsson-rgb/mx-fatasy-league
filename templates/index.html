@@ -2580,6 +2580,10 @@
     // Race Countdown System
     let realCountdownInterval;
     let testCountdownInterval;
+    let realCountdownTickInterval;
+    let realCountdownServerSyncInterval;
+    let _realCountdownSeconds = { race: null, deadline: null };
+    let _realCountdownLastSyncMs = 0;
     
     async function fetchRealCountdownData() {
       try {
@@ -2598,8 +2602,13 @@
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
         updateNextMxDaysLabel(data);
         
-        // Update countdowns
-        updateRealCountdowns(data);
+        // Store seconds and render countdowns locally (avoid polling server every second)
+        if (data.countdown && data.countdown.race_start && data.countdown.pick_deadline) {
+          _realCountdownSeconds.race = Number(data.countdown.race_start.total_seconds || 0);
+          _realCountdownSeconds.deadline = Number(data.countdown.pick_deadline.total_seconds || 0);
+          _realCountdownLastSyncMs = Date.now();
+        }
+        renderRealCountdownsFromSeconds();
         
         // Update picks status from real countdown (test countdown removed)
         updateRealPicksStatus(data);
@@ -2632,20 +2641,21 @@
       // test countdown removed
     }
     
-    function updateRealCountdowns(data) {
-      const raceCountdown = data.countdown.race_start;
-      const deadlineCountdown = data.countdown.pick_deadline;
+    function renderRealCountdownsFromSeconds() {
+      const raceTotal = Number(_realCountdownSeconds.race || 0);
+      const deadlineTotal = Number(_realCountdownSeconds.deadline || 0);
       
       // Format time display
-      function formatTime(countdown) {
-        if (countdown.total_seconds <= 0) {
+      function formatTimeFromTotal(totalSeconds) {
+        const ts = Math.max(0, Math.floor(Number(totalSeconds || 0)));
+        if (ts <= 0) {
           return '00:00:00';
         }
         
-        const days = countdown.days;
-        const hours = countdown.hours;
-        const minutes = countdown.minutes;
-        const seconds = countdown.seconds;
+        const days = Math.floor(ts / 86400);
+        const hours = Math.floor((ts % 86400) / 3600);
+        const minutes = Math.floor((ts % 3600) / 60);
+        const seconds = ts % 60;
         
         if (days > 0) {
           return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -2654,8 +2664,8 @@
         }
       }
       
-      document.getElementById('real-race-countdown').textContent = formatTime(raceCountdown);
-      document.getElementById('real-deadline-countdown').textContent = formatTime(deadlineCountdown);
+      document.getElementById('real-race-countdown').textContent = formatTimeFromTotal(raceTotal);
+      document.getElementById('real-deadline-countdown').textContent = formatTimeFromTotal(deadlineTotal);
     }
     
     // updateTestCountdowns removed
@@ -2770,17 +2780,24 @@
     // updateTestPicksStatus removed
     
     function startCountdown() {
-      // Fetch initial data
+      // 1) Fetch initial server state once
       fetchRealCountdownData();
-      
-      // Check if mobile device
-      const isMobile = window.innerWidth <= 768;
-      const updateInterval = isMobile ? 2000 : 1000; // Slower updates on mobile
-      
-      // Update real countdown
-      realCountdownInterval = setInterval(() => {
+
+      // 2) Tick locally every second (no server calls)
+      if (realCountdownTickInterval) clearInterval(realCountdownTickInterval);
+      realCountdownTickInterval = setInterval(() => {
+        if (_realCountdownSeconds.race != null) _realCountdownSeconds.race = Math.max(0, _realCountdownSeconds.race - 1);
+        if (_realCountdownSeconds.deadline != null) _realCountdownSeconds.deadline = Math.max(0, _realCountdownSeconds.deadline - 1);
+        renderRealCountdownsFromSeconds();
+      }, 1000);
+
+      // 3) Server sync occasionally to correct drift and pick lock status
+      if (realCountdownServerSyncInterval) clearInterval(realCountdownServerSyncInterval);
+      realCountdownServerSyncInterval = setInterval(() => {
+        // Avoid syncing too often if tab is backgrounded
+        if (document.hidden) return;
         fetchRealCountdownData();
-      }, updateInterval);
+      }, 60000); // 60s instead of 1s
       
       // test countdown updates removed
     }
@@ -2789,6 +2806,14 @@
       if (realCountdownInterval) {
         clearInterval(realCountdownInterval);
         realCountdownInterval = null;
+      }
+      if (realCountdownTickInterval) {
+        clearInterval(realCountdownTickInterval);
+        realCountdownTickInterval = null;
+      }
+      if (realCountdownServerSyncInterval) {
+        clearInterval(realCountdownServerSyncInterval);
+        realCountdownServerSyncInterval = null;
       }
       if (testCountdownInterval) {
         clearInterval(testCountdownInterval);
