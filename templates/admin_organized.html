@@ -141,18 +141,18 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
-                            <select id="out-competition" class="w-full max-w-md px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="outCompetitionChanged()">
+                            <select id="out-competition" data-searchable="1" class="w-full max-w-md px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="outCompetitionChanged()">
                                 <option value="">Välj tävling...</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2" id="out-class1-label">450cc/SX1</label>
-                                <select id="wsx-out-sx1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                                <select id="wsx-out-sx1" data-searchable="1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-300 mb-2" id="out-class2-label">250cc/SX2</label>
-                                <select id="wsx-out-sx2" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                                <select id="wsx-out-sx2" data-searchable="1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
                             </div>
                             <div class="flex gap-2">
                                 <button type="button" onclick="setRiderOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
@@ -191,19 +191,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
-                                    <select id="quick-holeshot-competition" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" required onchange="loadQuickHoleshotRiders()">
+                                    <select id="quick-holeshot-competition" data-searchable="1" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" required onchange="loadQuickHoleshotRiders()">
                                         <option value="">Välj tävling...</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 450cc/SX1</label>
-                                    <select id="quick-holeshot-450" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <select id="quick-holeshot-450" data-searchable="1" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Ingen</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 250cc/SX2</label>
-                                    <select id="quick-holeshot-250" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <select id="quick-holeshot-250" data-searchable="1" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Ingen</option>
                                     </select>
                                 </div>
@@ -230,19 +230,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
-                                    <select id="manual-competition" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <select id="manual-competition" data-searchable="1" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Loading competitions...</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX1 (WSX 450)</label>
-                                    <select id="manual-hs-450" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <select id="manual-hs-450" data-searchable="1" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Välj förare</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX2 (WSX 250)</label>
-                                    <select id="manual-hs-250" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <select id="manual-hs-250" data-searchable="1" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Välj förare</option>
                                     </select>
                                 </div>
@@ -962,6 +962,74 @@
     </div>
 
     <script>
+        function makeSelectSearchable(selectEl) {
+            if (!selectEl || selectEl.dataset.searchableInit === '1') return;
+            selectEl.dataset.searchableInit = '1';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'mb-2';
+
+            const input = document.createElement('input');
+            input.type = 'search';
+            input.autocomplete = 'off';
+            input.placeholder = 'Sök...';
+            input.className = 'w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400';
+
+            selectEl.parentNode.insertBefore(wrapper, selectEl);
+            wrapper.appendChild(input);
+
+            let cached = [];
+            function cacheOptions() {
+                cached = Array.from(selectEl.options).map(o => ({
+                    value: o.value,
+                    text: (o.textContent || '').trim(),
+                    disabled: o.disabled,
+                    selected: o.selected,
+                }));
+            }
+            function applyFilter(q) {
+                const query = (q || '').trim().toLowerCase();
+                const keepSelectedValue = selectEl.value;
+                const filtered = query
+                    ? cached.filter(o => o.text.toLowerCase().includes(query) || o.value.toLowerCase().includes(query))
+                    : cached;
+
+                selectEl.innerHTML = '';
+                for (const o of filtered) {
+                    const opt = document.createElement('option');
+                    opt.value = o.value;
+                    opt.textContent = o.text;
+                    opt.disabled = o.disabled;
+                    selectEl.appendChild(opt);
+                }
+                // Preserve selection if still present
+                if (keepSelectedValue && Array.from(selectEl.options).some(o => o.value === keepSelectedValue)) {
+                    selectEl.value = keepSelectedValue;
+                }
+            }
+
+            cacheOptions();
+            input.addEventListener('input', () => applyFilter(input.value));
+            selectEl.addEventListener('change', () => {
+                // keep cache "selected" state loosely aligned (doesn't need to be perfect)
+                for (const o of cached) o.selected = (o.value === selectEl.value);
+            });
+
+            // Options are often populated async; update cache when they change.
+            try {
+                const obs = new MutationObserver(() => {
+                    cacheOptions();
+                    applyFilter(input.value);
+                });
+                obs.observe(selectEl, { childList: true, subtree: true });
+            } catch (_) {}
+        }
+
+        function initSearchableSelects(root) {
+            const r = root || document;
+            r.querySelectorAll('select[data-searchable="1"]').forEach(makeSelectSearchable);
+        }
+
         /** En inflight-fetch åt gången för samma tävlingslista (fler loaders / flikar = färre spikes). */
         let _competitionsImportInflight = null;
         function fetchCompetitionsForImportShared() {
@@ -999,6 +1067,10 @@
                 || document.querySelector(`.tab-btn[onclick*="showSection('${sectionId}')"]`);
             if (tab) tab.classList.add('active');
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSearchableSelects();
+        });
 
         function getOutCompetitionId() {
             return document.getElementById('out-competition')?.value
