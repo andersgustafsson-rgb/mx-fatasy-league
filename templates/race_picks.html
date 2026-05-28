@@ -45,10 +45,13 @@
     transform-origin: center center;
   }
   .preview-img.portrait-jo {
-    object-fit: cover;
-    object-position: center 50%;
-    transform: scale(0.74);
+    /* Jo Shimoda-bilden är ofta extremt tajt beskuren i källan.
+       `contain` gör den mindre inzoomad visuellt utan att behöva ny bildkälla. */
+    object-fit: contain;
+    object-position: center;
+    transform: scale(1.08);
     transform-origin: center center;
+    background: #1f2937;
   }
   .preview-img.portrait-brand {
     object-fit: contain;
@@ -188,10 +191,11 @@
     transform-origin: center center;
   }
   .rider-avatar.portrait-jo {
-    object-fit: cover;
-    object-position: center 50%;
-    transform: scale(0.74);
+    object-fit: contain;
+    object-position: center;
+    transform: scale(1.08);
     transform-origin: center center;
+    background: #1f2937;
   }
   .rider-avatar.portrait-brand {
     object-fit: contain;
