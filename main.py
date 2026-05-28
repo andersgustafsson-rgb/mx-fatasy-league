@@ -348,6 +348,8 @@ def service_worker():
     resp = make_response(send_from_directory(app.static_folder, "sw.js"))
     resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
     resp.headers["Service-Worker-Allowed"] = "/"
+    # Ensure clients quickly pick up new SW versions (avoid stale cached HTML/JS behaviors).
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
     return resp
 
 

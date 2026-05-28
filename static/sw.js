@@ -1,5 +1,5 @@
 /* Minimal PWA service worker: cache static shell + offline fallback. */
-const CACHE = "mx-fantasy-v12";
+const CACHE = "mx-fantasy-v13";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -8,7 +8,6 @@ self.addEventListener("install", (event) => {
       .open(CACHE)
       .then((c) =>
         c.addAll([
-          "/",
           "/static/manifest.webmanifest",
           OFFLINE_URL,
           "/static/images/mx_fantasy_favicon.png",
