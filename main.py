@@ -18494,6 +18494,10 @@ def race_countdown():
     """Countdown for main page - supports both real and test modes"""
     try:
         mode = request.args.get('mode', 'real')
+        # Guard: this endpoint can be hit frequently; avoid DB writes in hot path.
+        global _RACE_COUNTDOWN_SELF_HEAL_DONE  # type: ignore
+        if "_RACE_COUNTDOWN_SELF_HEAL_DONE" not in globals():
+            _RACE_COUNTDOWN_SELF_HEAL_DONE = False  # type: ignore
         
         if mode == 'test':
             # Test mode - use simulated time from GlobalSimulation
@@ -18613,78 +18617,8 @@ def race_countdown():
             # Expire the object so properties (like start_time) are re-read from database
             db.session.expire(next_race_obj)
 
-            # Auto-set active_race_id to next race in real mode for rolling operation
-            try:
-                gs = GlobalSimulation.query.filter_by(id=1).first()
-                if gs:
-                    if gs.active or gs.active_race_id != next_race_obj.id:
-                        gs.active = False
-                        gs.active_race_id = next_race_obj.id
-                        gs.scenario = None
-                        db.session.commit()
-                else:
-                    gs = GlobalSimulation(id=1, active=False, active_race_id=next_race_obj.id)
-                    db.session.add(gs)
-                    db.session.commit()
-            except Exception as _e:
-                db.session.rollback()
-                print(f"DEBUG: autoset active_race_id failed: {_e}")
-
-            # Self-heal timezone/start_time for known races if missing
-            try:
-                needs_commit = False
-                if 'buenos aires' in (next_race_obj.name or '').lower():
-                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
-                        next_race_obj.timezone = 'America/Argentina/Buenos_Aires'
-                        needs_commit = True
-                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
-                        from datetime import time as _t
-                        next_race_obj.start_time = _t(hour=13, minute=0)
-                        needs_commit = True
-                elif 'canadian' in (next_race_obj.name or '').lower():
-                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
-                        from datetime import time as _t
-                        next_race_obj.start_time = _t(hour=17, minute=0)
-                        needs_commit = True
-                elif 'australian' in (next_race_obj.name or '').lower():
-                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
-                        next_race_obj.timezone = 'Australia/Brisbane'
-                        needs_commit = True
-                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
-                        from datetime import time as _t
-                        next_race_obj.start_time = _t(hour=18, minute=0)
-                        needs_commit = True
-                elif 'swedish' in (next_race_obj.name or '').lower():
-                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
-                        next_race_obj.timezone = 'Europe/Stockholm'
-                        needs_commit = True
-                    if hasattr(next_race_obj, 'start_time') and not next_race_obj.start_time:
-                        from datetime import time as _t
-                        next_race_obj.start_time = _t(hour=17, minute=0)
-                        needs_commit = True
-                elif 'anaheim 1' in (next_race_obj.name or '').lower():
-                    # Fix event_date if wrong (should be 2026-01-10)
-                    from datetime import date as _d
-                    if next_race_obj.event_date != _d(2026, 1, 10):
-                        next_race_obj.event_date = _d(2026, 1, 10)
-                        needs_commit = True
-                    if hasattr(next_race_obj, 'timezone') and not next_race_obj.timezone:
-                        next_race_obj.timezone = 'America/Los_Angeles'
-                        needs_commit = True
-                    # Always set start_time to 11:30 for Anaheim 1 (even if it's already set)
-                    if hasattr(next_race_obj, 'start_time'):
-                        from datetime import time as _t
-                        correct_time = _t(hour=11, minute=30)
-                        current_time = next_race_obj.start_time
-                        if current_time is None or current_time != correct_time:
-                            # Race start 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1, picks deadline 9:30 AM PT (2h before)
-                            next_race_obj.start_time = correct_time
-                            needs_commit = True
-                if needs_commit:
-                    db.session.commit()
-            except Exception as _e2:
-                db.session.rollback()
-                print(f"DEBUG: failed to auto-fix timezone/start_time: {_e2}")
+            # Self-heal and autoset were causing DB writes on a hot endpoint.
+            # Keep behavior read-only; any fixes should be done via admin tools/migrations.
             
             # Calculate countdown to race start using start_time from database
             # Ensure event_date is a datetime object
@@ -18851,7 +18785,7 @@ def race_countdown():
         # Check if race has results (is completed)
         has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
         
-        return jsonify({
+        payload = {
             "next_race": next_race,
             "countdown": {
                 "race_start": format_countdown(race_diff),
@@ -18859,7 +18793,21 @@ def race_countdown():
             },
             "picks_locked": picks_locked,
             "has_results": has_results
-        })
+        }
+
+        # Cache for a short time to cut bandwidth if clients still poll.
+        # ETag rotates each minute to keep countdown reasonably fresh.
+        from flask import make_response
+        from datetime import datetime as _dt
+        minute_tag = _dt.utcnow().strftime("%Y%m%d%H%M")
+        etag = f"\"racecd:{mode}:{minute_tag}\""
+        if request.headers.get("If-None-Match") == etag:
+            resp = make_response("", 304)
+        else:
+            resp = make_response(jsonify(payload))
+        resp.headers["ETag"] = etag
+        resp.headers["Cache-Control"] = "public, max-age=60"
+        return resp
         
     except Exception as e:
         print(f"Error in race_countdown: {e}")
