@@ -817,17 +817,17 @@
       for (let i = 1; i <= 6; i++) {
         const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${i}"]`);
         if (selector) {
-          const selectedRiderSpan = selector.querySelector('.selected-rider');
-          const currentText = selectedRiderSpan.textContent;
-          
-          if (currentText !== '-- välj förare --' && currentText !== '-- välj 450cc förare --') {
-            const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
-            if (riderOption) {
-              picks.racePicks[riderClass][i] = {
-                riderId: riderOption.dataset.riderId,
-                riderName: riderOption.dataset.riderName
-              };
-            }
+          const riderId = getRiderIdFromSelector(selector);
+          const currentText = (selector.querySelector('.selected-rider')?.textContent || '').trim();
+          if (
+            riderId &&
+            currentText !== '-- välj förare --' &&
+            currentText !== '-- välj 450cc förare --'
+          ) {
+            picks.racePicks[riderClass][i] = {
+              riderId: String(riderId),
+              riderName: currentText,
+            };
           }
         }
       }
@@ -922,6 +922,7 @@
                 hiddenSelect.value = pick.riderId;
               }
               }
+              selector.dataset.selectedRiderId = String(pick.riderId);
               
               // Update preview image
               onPickChange(riderClass, position, pick.riderId);
@@ -1194,9 +1195,10 @@
     if (hp) {
     const hiddenSelect = document.querySelector(`select[name="${hp}"]`);
     if (hiddenSelect) {
-      hiddenSelect.value = riderId;
+      hiddenSelect.value = String(riderId);
     }
     }
+    selector.dataset.selectedRiderId = String(riderId);
     
     // Call existing onPickChange function to update preview image
     onPickChange(riderClass, position, riderId);
@@ -1365,6 +1367,7 @@
       hiddenSelect.value = '';
     }
     }
+    delete selector.dataset.selectedRiderId;
     
     // Clear preview image
     onPickChange(riderClass, position, null);
@@ -1964,6 +1967,7 @@ function onPickChange(cls, pos, riderId = null) {
           if (hiddenSelect) {
             hiddenSelect.value = p.rider_id;
           }
+          selector.dataset.selectedRiderId = String(p.rider_id);
           
           // Update preview image
           const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || p.class.startsWith("450"))
@@ -2296,32 +2300,47 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
   // Helper function to get rider ID from selected rider
   function getRiderIdFromSelector(selector) {
-    const selectedRiderSpan = selector.querySelector('.selected-rider');
-    const riderText = selectedRiderSpan.textContent;
-    
-    if (riderText && riderText !== '-- välj förare --') {
-      // Find the rider option that matches the selected text
-      const riderOptions = selector.querySelectorAll('.rider-option');
-      
-      for (const option of riderOptions) {
-        const optionText = option.textContent.trim().replace(/\s+/g, ' ');
-        const normalizedRiderText = riderText.replace(/\s+/g, ' ');
-        
-        // Try exact match first
-        if (optionText === normalizedRiderText) {
-          const riderId = parseInt(option.dataset.riderId);
-          return riderId;
-        }
-        
-        // Try match without parentheses (e.g., "Husqvarna" vs "(Husqvarna)")
-        const optionTextNoParens = optionText.replace(/[()]/g, '');
-        const normalizedRiderTextNoParens = normalizedRiderText.replace(/[()]/g, '');
-        if (optionTextNoParens === normalizedRiderTextNoParens) {
-          const riderId = parseInt(option.dataset.riderId);
-          return riderId;
+    if (!selector) return null;
+
+    const stored = selector.dataset.selectedRiderId;
+    if (stored) {
+      const id = parseInt(stored, 10);
+      if (!Number.isNaN(id) && id > 0) return id;
+    }
+
+    const riderClass = selector.dataset.class;
+    const position = selector.dataset.position;
+    if (riderClass && position) {
+      const hp = hiddenPickSelectName(riderClass, Number(position));
+      if (hp) {
+        const hiddenSelect = document.querySelector(`select[name="${hp}"]`);
+        if (hiddenSelect && hiddenSelect.value) {
+          const id = parseInt(hiddenSelect.value, 10);
+          if (!Number.isNaN(id) && id > 0) return id;
         }
       }
     }
+
+    const selectedRiderSpan = selector.querySelector('.selected-rider');
+    const riderText = (selectedRiderSpan?.textContent || '').trim().replace(/\s+/g, ' ');
+    if (
+      !riderText ||
+      riderText === '-- välj förare --' ||
+      riderText === '-- välj 450cc förare --'
+    ) {
+      return null;
+    }
+
+    for (const opt of selector.querySelectorAll('.rider-option')) {
+      if ((opt.dataset.riderName || '').trim() === riderText) {
+        const id = parseInt(opt.dataset.riderId, 10);
+        if (!Number.isNaN(id) && id > 0) return id;
+      }
+    }
+
+    const r = allRiders.find((x) => riderOptionLabel(x) === riderText);
+    if (r) return Number(r.id);
+
     return null;
   }
 
