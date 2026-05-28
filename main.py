@@ -152,6 +152,7 @@ def ensure_picks_snapshots_for_competition(competition_id: int, source: str = "a
 # Flask app & config
 # -------------------------------------------------
 app = Flask(__name__)
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 60 * 60 * 24 * 7  # 7 days for /static by default
 
 # Configuration from environment variables
 # SECRET_KEY: Critical for security - must be set in production!
@@ -192,6 +193,34 @@ else:
     print("Using local SQLite database file")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+
+@app.after_request
+def add_cache_headers(response):
+    """
+    Reduce Render bandwidth: cache static assets hard in browsers/CDNs.
+    Keep HTML and API responses uncached by default.
+    """
+    try:
+        path = (request.path or "")
+        # Don't override explicit cache policies set by routes.
+        if "Cache-Control" in response.headers:
+            return response
+
+        # Static assets: let browsers reuse files aggressively.
+        if path.startswith("/static/"):
+            # Longer cache for images; shorter for everything else to avoid stale JS/CSS issues.
+            lower = path.lower()
+            is_image = lower.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"))
+            max_age = 60 * 60 * 24 * (30 if is_image else 7)
+            cc = f"public, max-age={max_age}"
+            if is_image:
+                cc += ", immutable"
+            response.headers["Cache-Control"] = cc
+            return response
+    except Exception:
+        return response
+    return response
 
 
 # Offentlig Facebook-sida / profil (Miljövariabeln FACEBOOK_PAGE_URL åsidosätter).
@@ -2152,6 +2181,7 @@ def _rider_portrait_url(r: Rider) -> str | None:
 def rider_portrait(rider_id: int):
     """Serverar DB-porträtt som bytes — undviker base64 i sid-JSON."""
     import base64
+    import hashlib
 
     raw = db.session.query(Rider.rider_image_data).filter_by(id=rider_id).scalar()
     if not raw:
@@ -2160,6 +2190,15 @@ def rider_portrait(rider_id: int):
     if not s.startswith("data:"):
         return Response(status=404)
     try:
+        # ETag based on the stored data-url (cheap, avoids hashing decoded bytes).
+        etag = '"' + hashlib.sha1(s.encode("utf-8")).hexdigest() + '"'
+        inm = request.headers.get("If-None-Match")
+        if inm and inm == etag:
+            resp = Response(status=304)
+            resp.headers["ETag"] = etag
+            resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+            return resp
+
         meta, b64part = s.split(",", 1)
         mime = "image/jpeg"
         if ";" in meta:
@@ -2167,7 +2206,8 @@ def rider_portrait(rider_id: int):
         blob = base64.b64decode(b64part)
         resp = make_response(blob)
         resp.headers["Content-Type"] = mime
-        resp.headers["Cache-Control"] = "public, max-age=86400"
+        resp.headers["ETag"] = etag
+        resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
         return resp
     except Exception:
         return Response(status=404)
