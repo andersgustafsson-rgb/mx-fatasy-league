@@ -984,6 +984,8 @@
             wrapper.appendChild(input);
 
             let cached = [];
+            let isApplyingFilter = false;
+            let observer = null;
             function cacheOptions() {
                 cached = Array.from(selectEl.options).map(o => ({
                     value: o.value,
@@ -999,6 +1001,9 @@
                     ? cached.filter(o => o.text.toLowerCase().includes(query) || o.value.toLowerCase().includes(query))
                     : cached;
 
+                // Prevent MutationObserver feedback loop while we rewrite options.
+                isApplyingFilter = true;
+                try { if (observer) observer.disconnect(); } catch (_) {}
                 selectEl.innerHTML = '';
                 for (const o of filtered) {
                     const opt = document.createElement('option');
@@ -1011,6 +1016,8 @@
                 if (keepSelectedValue && Array.from(selectEl.options).some(o => o.value === keepSelectedValue)) {
                     selectEl.value = keepSelectedValue;
                 }
+                try { if (observer) observer.observe(selectEl, { childList: true, subtree: true }); } catch (_) {}
+                isApplyingFilter = false;
             }
 
             cacheOptions();
@@ -1028,11 +1035,12 @@
 
             // Options are often populated async; update cache when they change.
             try {
-                const obs = new MutationObserver(() => {
+                observer = new MutationObserver(() => {
+                    if (isApplyingFilter) return;
                     cacheOptions();
                     applyFilter(input.value);
                 });
-                obs.observe(selectEl, { childList: true, subtree: true });
+                observer.observe(selectEl, { childList: true, subtree: true });
             } catch (_) {}
         }
 
