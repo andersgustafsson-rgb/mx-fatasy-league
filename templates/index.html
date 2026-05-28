@@ -791,6 +791,11 @@
             <!-- Real Time Countdown Widget -->
             <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 flex-1 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
               <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
+              <div class="absolute top-2 right-2 z-20">
+                <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold bg-black/60 border border-cyan-400/40 text-cyan-200 px-2.5 py-1 rounded-full backdrop-blur">
+                  Aktiva nu: <span id="active-now-count">–</span>
+                </div>
+              </div>
               <div class="relative z-10">
               <div class="text-center">
                 <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-3" id="real-countdown-race-name">Laddar...</h3>
@@ -3719,6 +3724,7 @@
       
       // Start countdown system
       startCountdown();
+      startActiveNow();
       
       // Initialize tabs
       initTabs();
@@ -3747,6 +3753,54 @@
         <div class="flex justify-between text-white/95 text-xs gap-2"><span class="truncate">${label}</span><span class="text-emerald-300 font-mono shrink-0">${pct}%</span></div>
         <div class="h-2 bg-white/10 rounded-full overflow-hidden mt-0.5"><div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-400" style="width:${w}%"></div></div>
       </div>`;
+    }
+
+    // "Active now" presence (very low bandwidth)
+    function startActiveNow() {
+      try {
+        const badge = document.getElementById('active-now-badge');
+        const countEl = document.getElementById('active-now-count');
+        if (!badge || !countEl) return;
+
+        // Stable per-browser id (no PII). Resets if localStorage is cleared.
+        let cid = null;
+        try { cid = localStorage.getItem('mx_active_cid'); } catch (_) {}
+        if (!cid) {
+          cid = 'c_' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+          try { localStorage.setItem('mx_active_cid', cid); } catch (_) {}
+        }
+
+        let inFlight = false;
+        async function heartbeat() {
+          if (document.hidden) return;
+          if (inFlight) return;
+          inFlight = true;
+          try {
+            const res = await fetch('/api/active_now', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ client_id: cid }),
+              cache: 'no-store',
+              keepalive: true,
+            });
+            const data = await res.json().catch(() => null);
+            if (data && data.ok && typeof data.active_now === 'number') {
+              countEl.textContent = String(data.active_now);
+              badge.classList.remove('hidden');
+            }
+          } catch (_) {
+            // ignore
+          } finally {
+            inFlight = false;
+          }
+        }
+
+        // Kick once, then every minute; also on focus/visibility changes
+        heartbeat();
+        setInterval(heartbeat, 60000);
+        document.addEventListener('visibilitychange', heartbeat);
+        window.addEventListener('focus', heartbeat);
+      } catch (_) {}
     }
 
     function _renderCrowdSummaryHtml(crowd, classLabel450, classLabel250, isWSX) {

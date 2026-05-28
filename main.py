@@ -5,6 +5,7 @@ import random
 import secrets
 import string
 import math
+import time
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from flask import (
@@ -349,6 +350,53 @@ def service_worker():
     resp.headers["Content-Type"] = "application/javascript; charset=utf-8"
     resp.headers["Service-Worker-Allowed"] = "/"
     # Ensure clients quickly pick up new SW versions (avoid stale cached HTML/JS behaviors).
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
+
+
+# -------------------------------------------------
+# Lightweight "active now" counter (in-memory)
+# -------------------------------------------------
+_ACTIVE_NOW: dict[str, float] = {}
+_ACTIVE_NOW_TTL_SECONDS = 120
+
+
+def _active_now_prune(now_ts: float) -> None:
+    cutoff = now_ts - _ACTIVE_NOW_TTL_SECONDS
+    dead = [k for k, ts in _ACTIVE_NOW.items() if ts < cutoff]
+    for k in dead:
+        _ACTIVE_NOW.pop(k, None)
+
+
+@app.post("/api/active_now")
+def api_active_now_heartbeat():
+    """
+    Low-bandwidth presence ping.
+    Tracks last-seen in memory with a short TTL and returns current active count.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        client_id = str(data.get("client_id") or "").strip()
+        if not client_id:
+            return jsonify({"ok": False, "error": "missing_client_id"}), 400
+
+        now_ts = time.time()
+        _ACTIVE_NOW[client_id] = now_ts
+        _active_now_prune(now_ts)
+
+        resp = jsonify({"ok": True, "active_now": len(_ACTIVE_NOW)})
+        resp.headers["Cache-Control"] = "no-store, max-age=0"
+        return resp
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.get("/api/active_now")
+def api_active_now_get():
+    """Read-only active count (no heartbeat update)."""
+    now_ts = time.time()
+    _active_now_prune(now_ts)
+    resp = jsonify({"ok": True, "active_now": len(_ACTIVE_NOW)})
     resp.headers["Cache-Control"] = "no-store, max-age=0"
     return resp
 
