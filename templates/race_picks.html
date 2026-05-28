@@ -30,14 +30,27 @@
   .pick-row { grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
   .preview-img {
     width: 64px; height: 64px; border-radius: 9999px;
-    object-fit: cover; 
-    object-position: center 25%;
+    object-fit: cover;
+    object-position: center 12%;
     background: #4b5563; opacity: .85;
     transition: opacity .15s ease, transform .15s ease;
     border: 2px solid #6b7280;
     flex-shrink: 0;
   }
   .preview-img.has-src { opacity: 1; }
+  /* RacerX/DB-porträtt är ofta tight crop – zooma ut något */
+  .preview-img.portrait-db {
+    object-position: center 38%;
+    transform: scale(0.84);
+    transform-origin: center center;
+  }
+  .preview-img.portrait-brand {
+    object-fit: contain;
+    object-position: center;
+    transform: none;
+    padding: 6px;
+    background: #1f2937;
+  }
   .pick-select-sm {
     padding-top: .4rem; padding-bottom: .4rem;  /* ~py-1.5 */
     font-size: .875rem; /* text-sm */
@@ -158,10 +171,22 @@
     border-radius: 50%;
     margin-right: 10px;
     object-fit: cover;
-    object-position: center 25%;
+    object-position: center 12%;
     background: #374151;
     border: 2px solid #4b5563;
     flex-shrink: 0;
+  }
+  .rider-avatar.portrait-db {
+    object-position: center 38%;
+    transform: scale(0.84);
+    transform-origin: center center;
+  }
+  .rider-avatar.portrait-brand {
+    object-fit: contain;
+    object-position: center;
+    transform: none;
+    padding: 5px;
+    background: #1f2937;
   }
 
   .rider-info {
@@ -1107,6 +1132,7 @@
         const imageSrc = imgSrcFor(riderId);
         if (imageSrc) {
           img.src = imageSrc;
+          applyRiderPortraitFraming(img);
           img.onerror = function() {
             // Use handleImageError for proper fallback handling
             handleImageError(this);
@@ -1524,6 +1550,18 @@ function wsxSlug(name) {
   return (name || "").toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
 
+/** Enhetlig bildbeskärning: DB-porträtt vs fil vs märkeslogo. */
+function applyRiderPortraitFraming(img) {
+  if (!img) return;
+  const src = img.getAttribute('src') || '';
+  img.classList.remove('portrait-db', 'portrait-brand');
+  if (src.includes('/brand_logos/')) {
+    img.classList.add('portrait-brand');
+  } else if (src.includes('/rider_portrait/') || src.startsWith('data:image')) {
+    img.classList.add('portrait-db');
+  }
+}
+
 function imgSrcFor(riderId) {
   const r = allRiders.find((x) => Number(x.id) === Number(riderId));
   if (!r) {
@@ -1609,6 +1647,7 @@ function handleImageError(img) {
         handleImageError(img);
       };
       img.src = fallbackSrc;
+      applyRiderPortraitFraming(img);
       return;
     }
   }
@@ -1624,12 +1663,15 @@ function handleImageError(img) {
       };
       const logoName = brandMap[brandName] || brandName;
       img.src = `/static/brand_logos/${logoName}.png`;
+      applyRiderPortraitFraming(img);
       img.onerror = function() {
         // Final fallback
         img.src = '/static/brand_logos/honda.png';
+        applyRiderPortraitFraming(img);
       };
     } else {
       img.src = '/static/brand_logos/honda.png';
+      applyRiderPortraitFraming(img);
     }
   };
   
@@ -1809,6 +1851,7 @@ function onPickChange(cls, pos, riderId = null) {
         img.setAttribute('data-rider-id', String(val));
       }
       img.src = src;
+      applyRiderPortraitFraming(img);
       img.classList.add("has-src"); // gör preview tydligare
       img.style.background = "transparent";
       img.onerror = function() { 
@@ -1980,7 +2023,9 @@ function onPickChange(cls, pos, riderId = null) {
             const src = imgSrcFor(p.rider_id);
             if (src) {
               img.src = src;
-              img.style.background = "transparent";
+              applyRiderPortraitFraming(img);
+              img.classList.add('has-src');
+              img.style.background = 'transparent';
               img.onerror = function() {
                 handleImageError(this);
               };
