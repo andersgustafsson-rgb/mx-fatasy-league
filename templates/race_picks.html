@@ -44,6 +44,10 @@
     transform: scale(0.76);
     transform-origin: center center;
   }
+  .preview-img.portrait-jo {
+    object-position: center 52%;
+    transform: scale(0.70);
+  }
   .preview-img.portrait-brand {
     object-fit: contain;
     object-position: center;
@@ -180,6 +184,10 @@
     object-position: center 45%;
     transform: scale(0.76);
     transform-origin: center center;
+  }
+  .rider-avatar.portrait-jo {
+    object-position: center 52%;
+    transform: scale(0.70);
   }
   .rider-avatar.portrait-brand {
     object-fit: contain;
@@ -1554,11 +1562,18 @@ function wsxSlug(name) {
 function applyRiderPortraitFraming(img) {
   if (!img) return;
   const src = img.getAttribute('src') || '';
-  img.classList.remove('portrait-db', 'portrait-brand');
+  img.classList.remove('portrait-db', 'portrait-brand', 'portrait-jo');
   if (src.includes('/brand_logos/')) {
     img.classList.add('portrait-brand');
   } else if (src.includes('/rider_portrait/') || src.startsWith('data:image')) {
     img.classList.add('portrait-db');
+  }
+
+  // Per-förare override för tight crop (t.ex. Jo Shimoda från RacerX).
+  const riderId = img.getAttribute('data-rider-id');
+  const rider = riderId ? allRiders.find((x) => String(x.id) === String(riderId)) : null;
+  if (rider && String(rider.name || '').toLowerCase() === 'jo shimoda') {
+    img.classList.add('portrait-jo');
   }
 }
 
