@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MX Fantasy League - Motocross Fantasy Sports</title>
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@1,600;1,700;1,800&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
@@ -1884,10 +1886,7 @@
     </div>
   </div>
 
-  <!-- Ljudkälla: lägg en fil på static/sfx/moto.mp3 för MC-ljud -->
-  <audio id="nav-audio" preload="auto" playsinline>
-    <source src="{{ url_for('static', filename='sfx/moto.mp3') }}" type="audio/mpeg">
-  </audio>
+  <!-- Audio removed (unused + caused extra network errors) -->
 
   <script>
     // Set race picks URL for JavaScript
@@ -1898,15 +1897,6 @@
     
     // Litet klickljud vid navigering till t.ex. "Dina picks"
     (function(){
-      // Suppress audio loading errors (416 range request errors, etc.)
-      const navAudio = document.getElementById('nav-audio');
-      if (navAudio) {
-        navAudio.addEventListener('error', function(e) {
-          // Silently ignore audio loading errors - fallback Web Audio will be used
-          return false;
-        });
-      }
-      
       let ctx = null;
       function getCtx(){
         if (!ctx) {
@@ -1917,19 +1907,7 @@
         return ctx;
       }
       function playNavSound(durationMs = 350) {
-        const el = document.getElementById('nav-audio');
-        // 1) Försök spela upp mp3 om den finns
-        if (el) {
-          try {
-            el.volume = 1.0;
-            el.currentTime = 0;
-            const p = el.play();
-            if (p && typeof p.then === 'function') {
-              p.catch(() => { /* ignorerar fel */ });
-            }
-          } catch(_) { /* ignore */ }
-        }
-        // 2) Spela ALLTID en kort Web Audio‑ton parallellt som säker fallback
+        // Web Audio-only (no mp3 fetch)
         try {
           const ac = getCtx();
           if (ac) {

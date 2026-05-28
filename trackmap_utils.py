@@ -201,11 +201,27 @@ def get_trackmaps_for_competition(competition) -> list:
         .order_by(CompetitionImage.sort_order)
         .all()
     )
-    valid_db = [
-        i
-        for i in images
-        if (getattr(i, "image_url", None) or "").strip()
-    ]
+    def _url_exists_locally(url: str) -> bool:
+        # DB stores paths used as url_for('static', filename=...)
+        # Keep external URLs, but avoid 404s for missing local static files.
+        url = (url or "").strip()
+        if not url:
+            return False
+        if url.startswith("http://") or url.startswith("https://"):
+            return True
+        try:
+            p = Path("static") / url
+            return p.is_file()
+        except Exception:
+            return False
+
+    valid_db = []
+    for i in images:
+        url = (getattr(i, "image_url", None) or "").strip()
+        if not url:
+            continue
+        if _url_exists_locally(url):
+            valid_db.append(i)
     if valid_db:
         return valid_db
 
