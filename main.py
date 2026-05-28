@@ -8974,113 +8974,123 @@ def race_results_page():
                 "show_smx_section": False,
             }
 
-        competitions = (
-            Competition.query
-            .order_by(Competition.event_date.asc())
-            .all()
-        )
-        
-        # Get results for each competition
-        competition_results = {}
+        competitions = Competition.query.order_by(Competition.event_date.asc()).all()
+        competition_results: dict[int, dict] = {
+            int(c.id): {"results": [], "holeshots": []} for c in competitions
+        }
+
         promoted_250_coasts = _promoted_250_coast_by_name()
-        for comp in competitions:
-            results = (
+        comp_ids = [int(c.id) for c in competitions]
+
+        if comp_ids:
+            # Hämta alla resultat i en query (undvik N+1) och ladda inte rider_image_data-blobs.
+            rows = (
                 db.session.query(
+                    CompetitionResult.competition_id,
                     CompetitionResult.rider_id,
                     CompetitionResult.position,
                     CompetitionResult.rider_points,
-                    Rider.name.label('rider_name'),
-                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label("class_name"),
+                    Rider.name.label("rider_name"),
+                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name).label(
+                        "class_name"
+                    ),
                     Rider.class_name.label("rider_current_class"),
                     Rider.coast_250.label("coast_250"),
                     Rider.rider_number,
                     Rider.image_url,
-                    Rider.rider_image_data,
+                    (Rider.rider_image_data.isnot(None) & (Rider.rider_image_data != "")).label(
+                        "has_db_portrait"
+                    ),
                     Rider.bike_brand,
                 )
                 .join(Rider, Rider.id == CompetitionResult.rider_id)
-                .filter(CompetitionResult.competition_id == comp.id)
-                .order_by(db.func.coalesce(CompetitionResult.class_name, Rider.class_name).asc(), CompetitionResult.position.asc())
-                .all()
-            )
-            
-            holeshots_rows = (
-                db.session.query(
-                    HoleshotResult.rider_id,
-                    Rider.name.label('rider_name'),
-                    HoleshotResult.class_name,
-                    Rider.rider_number,
-                    Rider.image_url,
-                    Rider.rider_image_data,
-                    Rider.bike_brand,
+                .filter(CompetitionResult.competition_id.in_(comp_ids))
+                .order_by(
+                    CompetitionResult.competition_id.asc(),
+                    db.func.coalesce(CompetitionResult.class_name, Rider.class_name).asc(),
+                    CompetitionResult.position.asc(),
                 )
-                .join(Rider, Rider.id == HoleshotResult.rider_id)
-                .filter(HoleshotResult.competition_id == comp.id)
                 .all()
             )
-            
-            # Add race points to each result (different point systems for different series)
-            results_with_points = []
-            for result in results:
+
+            comp_by_id = {int(c.id): c for c in competitions}
+            for result in rows:
+                comp_id = int(result.competition_id)
+                comp = comp_by_id.get(comp_id)
+                if not comp:
+                    continue
+
                 # Use appropriate point system based on series
                 if comp.series == "WSX":
-                    # For WSX, use rider_points if provided (manual entry), otherwise calculate from position
-                    if hasattr(result, 'rider_points') and result.rider_points is not None:
+                    if hasattr(result, "rider_points") and result.rider_points is not None:
                         points = result.rider_points
                     else:
                         points = get_smx_qualification_points(result.position)
-                elif comp.series == "SX":
-                    points = get_smx_qualification_points(result.position)  # Supercross uses SMX points
-                elif comp.series == "MX":
-                    points = get_smx_qualification_points(result.position)  # Motocross uses SMX points
                 elif comp.series == "SMX":
-                    points = get_smx_qualification_points(result.position) * comp.point_multiplier  # SMX Finals with multiplier
+                    points = get_smx_qualification_points(result.position) * comp.point_multiplier
                 else:
-                    points = get_smx_qualification_points(result.position)  # Default to SMX points
-                
-                merged_img = getattr(result, "rider_image_data", None) or result.image_url
+                    points = get_smx_qualification_points(result.position)
+
+                img_url = (
+                    f"/rider_portrait/{int(result.rider_id)}"
+                    if bool(getattr(result, "has_db_portrait", False))
+                    else (result.image_url or None)
+                )
+
                 if comp.series == "WSX":
                     display_class = result.class_name
                 else:
                     display_class = _standing_class_and_coast(
                         result, comp, result, promoted_250_coasts
                     )[0] or result.class_name
-                result_dict = {
-                    'rider_id': result.rider_id,
-                    'position': result.position,
-                    'rider_name': result.rider_name,
-                    'class_name': display_class,
-                    'rider_number': result.rider_number,
-                    'image_url': merged_img,
-                    'bike_brand': result.bike_brand,
-                    'points': points,
-                }
-                results_with_points.append(result_dict)
 
-            results_with_points.sort(
-                key=lambda row: (
-                    str(row.get("class_name") or ""),
-                    row.get("position") if row.get("position") is not None else 9999,
-                )
-            )
-            
-            holeshots = []
-            for h in holeshots_rows:
-                merged_h_img = getattr(h, "rider_image_data", None) or h.image_url
-                holeshots.append(
+                competition_results[comp_id]["results"].append(
                     {
-                        'rider_name': h.rider_name,
-                        'class_name': h.class_name,
-                        'rider_number': h.rider_number,
-                        'image_url': merged_h_img,
-                        'bike_brand': h.bike_brand,
+                        "rider_id": result.rider_id,
+                        "position": result.position,
+                        "rider_name": result.rider_name,
+                        "class_name": display_class,
+                        "rider_number": result.rider_number,
+                        "image_url": img_url,
+                        "bike_brand": result.bike_brand,
+                        "points": points,
                     }
                 )
 
-            competition_results[comp.id] = {
-                'results': results_with_points,
-                'holeshots': holeshots,
-            }
+            hs_rows = (
+                db.session.query(
+                    HoleshotResult.competition_id,
+                    HoleshotResult.rider_id,
+                    HoleshotResult.class_name,
+                    Rider.name.label("rider_name"),
+                    Rider.rider_number,
+                    Rider.image_url,
+                    (Rider.rider_image_data.isnot(None) & (Rider.rider_image_data != "")).label(
+                        "has_db_portrait"
+                    ),
+                    Rider.bike_brand,
+                )
+                .join(Rider, Rider.id == HoleshotResult.rider_id)
+                .filter(HoleshotResult.competition_id.in_(comp_ids))
+                .order_by(HoleshotResult.competition_id.asc())
+                .all()
+            )
+            for h in hs_rows:
+                comp_id = int(h.competition_id)
+                img_url = (
+                    f"/rider_portrait/{int(h.rider_id)}"
+                    if bool(getattr(h, "has_db_portrait", False))
+                    else (h.image_url or None)
+                )
+                competition_results[comp_id]["holeshots"].append(
+                    {
+                        "rider_name": h.rider_name,
+                        "class_name": h.class_name,
+                        "rider_number": h.rider_number,
+                        "image_url": img_url,
+                        "bike_brand": h.bike_brand,
+                    }
+                )
     
         # Determine status for each competition and find the latest one
         today = get_today()
