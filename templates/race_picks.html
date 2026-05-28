@@ -30,25 +30,19 @@
   .pick-row { grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
   .preview-img {
     width: 64px; height: 64px; border-radius: 9999px;
-    object-fit: cover;
-    object-position: center 12%;
+    /* RacerX-style cutouts (transparent PNG) ser bäst ut med contain i cirkel. */
+    object-fit: contain;
+    object-position: center;
     background: #4b5563; opacity: .85;
     transition: opacity .15s ease, transform .15s ease;
     border: 2px solid #6b7280;
     flex-shrink: 0;
   }
   .preview-img.has-src { opacity: 1; }
-  /* RacerX/DB-porträtt är ofta tight crop – zooma ut något */
-  .preview-img.portrait-db {
-    object-position: center 45%;
-    transform: scale(0.76);
-    transform-origin: center center;
-  }
-  .preview-img.portrait-jo {
+  /* Foton (t.ex. JPEG eller DB-porträtt) – använd cover så de inte blir små. */
+  .preview-img.portrait-photo {
     object-fit: cover;
-    object-position: center 50%;
-    transform: scale(0.74);
-    transform-origin: center center;
+    object-position: center 12%;
   }
   .preview-img.portrait-brand {
     object-fit: contain;
@@ -176,22 +170,15 @@
     height: 56px;
     border-radius: 50%;
     margin-right: 10px;
-    object-fit: cover;
-    object-position: center 12%;
+    object-fit: contain;
+    object-position: center;
     background: #374151;
     border: 2px solid #4b5563;
     flex-shrink: 0;
   }
-  .rider-avatar.portrait-db {
-    object-position: center 45%;
-    transform: scale(0.76);
-    transform-origin: center center;
-  }
-  .rider-avatar.portrait-jo {
+  .rider-avatar.portrait-photo {
     object-fit: cover;
-    object-position: center 50%;
-    transform: scale(0.74);
-    transform-origin: center center;
+    object-position: center 12%;
   }
   .rider-avatar.portrait-brand {
     object-fit: contain;
@@ -1566,37 +1553,16 @@ function wsxSlug(name) {
 function applyRiderPortraitFraming(img) {
   if (!img) return;
   const src = img.getAttribute('src') || '';
-  img.classList.remove('portrait-db', 'portrait-brand', 'portrait-jo');
+  img.classList.remove('portrait-brand', 'portrait-photo');
   if (src.includes('/brand_logos/')) {
     img.classList.add('portrait-brand');
-  } else if (src.includes('/rider_portrait/') || src.startsWith('data:image')) {
-    img.classList.add('portrait-db');
-  }
-
-  // Per-förare override för tight crop (t.ex. Jo Shimoda från RacerX).
-  // Robust: försök först via rider-id, annars via närliggande text i DOM.
-  const riderId = img.getAttribute('data-rider-id');
-  const rider = riderId ? allRiders.find((x) => String(x.id) === String(riderId)) : null;
-  const nameFromId = rider ? String(rider.name || '').trim().toLowerCase() : '';
-
-  let nameFromDom = '';
-  try {
-    const opt = img.closest('.rider-option');
-    if (opt) {
-      nameFromDom = String(opt.querySelector('.rider-name')?.textContent || '').trim().toLowerCase();
-    }
-    if (!nameFromDom) {
-      const pickRow = img.closest('.pick-row');
-      if (pickRow) {
-        nameFromDom = String(pickRow.querySelector('.selected-rider')?.textContent || '').trim().toLowerCase();
-      }
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  if (nameFromId === 'jo shimoda' || nameFromDom.includes('jo shimoda')) {
-    img.classList.add('portrait-jo');
+  } else if (
+    src.includes('/rider_portrait/') ||
+    src.startsWith('data:image/jpeg') ||
+    src.endsWith('.jpg') ||
+    src.endsWith('.jpeg')
+  ) {
+    img.classList.add('portrait-photo');
   }
 }
 
