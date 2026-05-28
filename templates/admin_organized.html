@@ -968,12 +968,17 @@
 
             const wrapper = document.createElement('div');
             wrapper.className = 'mb-2';
+            // Some sections use overlays/stacking contexts; ensure the input can be focused/clicked.
+            wrapper.style.position = 'relative';
+            wrapper.style.zIndex = '30';
+            wrapper.style.pointerEvents = 'auto';
 
             const input = document.createElement('input');
             input.type = 'search';
             input.autocomplete = 'off';
             input.placeholder = 'Sök...';
             input.className = 'w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400';
+            input.style.pointerEvents = 'auto';
 
             selectEl.parentNode.insertBefore(wrapper, selectEl);
             wrapper.appendChild(input);
@@ -1010,6 +1015,12 @@
 
             cacheOptions();
             input.addEventListener('input', () => applyFilter(input.value));
+            // Avoid parent click handlers swallowing focus/caret.
+            ['pointerdown', 'mousedown', 'click', 'touchstart'].forEach(evt => {
+                input.addEventListener(evt, (e) => {
+                    e.stopPropagation();
+                }, { passive: true });
+            });
             selectEl.addEventListener('change', () => {
                 // keep cache "selected" state loosely aligned (doesn't need to be perfect)
                 for (const o of cached) o.selected = (o.value === selectEl.value);
