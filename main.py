@@ -147,6 +147,72 @@ def ensure_picks_snapshots_for_competition(competition_id: int, source: str = "a
             created = 0
     return created
 
+
+_PICKS_SNAPSHOT_AUTO_DONE: set[int] = set()
+_PICKS_SNAPSHOT_AUTO_LAST_RUN: dict[int, float] = {}
+_PICKS_SNAPSHOT_AUTO_INTERVAL_SEC = 90
+
+
+def _user_ids_with_any_live_picks(competition_id: int) -> set[int]:
+    user_ids: set[int] = set()
+    for model in (RacePick, HoleshotPick, WildcardPick):
+        user_ids.update(
+            int(uid)
+            for (uid,) in db.session.query(model.user_id)
+            .filter(model.competition_id == competition_id)
+            .distinct()
+            .all()
+            if uid is not None
+        )
+    return user_ids
+
+
+def _missing_pick_snapshot_user_count(competition_id: int) -> int:
+    user_ids = _user_ids_with_any_live_picks(competition_id)
+    if not user_ids:
+        return 0
+    existing = {
+        int(uid)
+        for (uid,) in db.session.query(PicksSnapshot.user_id)
+        .filter(PicksSnapshot.competition_id == competition_id)
+        .filter(PicksSnapshot.user_id.in_(list(user_ids)))
+        .all()
+    }
+    return len(user_ids - existing)
+
+
+def _auto_ensure_picks_snapshots_if_locked(comp: Competition | None) -> None:
+    """
+    Best-effort: when picks are locked, persist snapshots without admin action.
+    Throttled per competition; retries until every user with live picks has a row.
+    """
+    if comp is None:
+        return
+    comp_id = int(comp.id)
+    if comp_id in _PICKS_SNAPSHOT_AUTO_DONE:
+        return
+    try:
+        if not is_picks_locked(comp):
+            return
+    except Exception:
+        return
+
+    now = time.time()
+    if now - _PICKS_SNAPSHOT_AUTO_LAST_RUN.get(comp_id, 0.0) < _PICKS_SNAPSHOT_AUTO_INTERVAL_SEC:
+        return
+    _PICKS_SNAPSHOT_AUTO_LAST_RUN[comp_id] = now
+
+    try:
+        created = ensure_picks_snapshots_for_competition(comp_id, source="auto_lock")
+        if created:
+            print(f"INFO: auto picks snapshots created={created} competition_id={comp_id}")
+        if _missing_pick_snapshot_user_count(comp_id) == 0:
+            _PICKS_SNAPSHOT_AUTO_DONE.add(comp_id)
+    except Exception as e:
+        db.session.rollback()
+        print(f"WARNING: auto picks snapshots failed competition_id={comp_id}: {e}")
+
+
 # -------------------------------------------------
 # Flask app & config
 # -------------------------------------------------
@@ -18842,6 +18908,13 @@ def race_countdown():
             "picks_locked": picks_locked,
             "has_results": has_results
         }
+
+        # Auto-freeze picks when deadline passes (homepage syncs ~every 60s).
+        if picks_locked:
+            snap_comp = upcoming_race or next_race_obj
+            snap_id = int(getattr(snap_comp, "id", 0) or 0)
+            if snap_comp is not None and snap_id > 0 and snap_id != 999:
+                _auto_ensure_picks_snapshots_if_locked(snap_comp)
 
         # Cache for a short time to cut bandwidth if clients still poll.
         # ETag rotates each minute to keep countdown reasonably fresh.
