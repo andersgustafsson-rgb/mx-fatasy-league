@@ -481,8 +481,8 @@ def get_today():
 
 def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None:
     """
-    Homepage hero between Supercross finale (last SX has results) and the next MX race day.
-    Disappears automatically when the next MX event date arrives (today >= next_mx.event_date).
+    Homepage hero between SX finale (last SX has results) and the first MX race day.
+    Hidden once the first Motocross round starts (today >= first MX event_date), e.g. after Fox Raceway.
     """
     try:
         sx_comps = [
@@ -504,24 +504,20 @@ def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None
         if not CompetitionResult.query.filter_by(competition_id=last_sx.id).first():
             return None
 
-        next_mx = None
-        for c in sorted(mx_comps, key=lambda x: x.event_date):
-            if c.event_date and c.event_date > today:
-                next_mx = c
-                break
-        if not next_mx:
+        first_mx = min(mx_comps, key=lambda c: c.event_date)
+        if today >= first_mx.event_date:
             return None
 
-        days = (next_mx.event_date - today).days
+        days = (first_mx.event_date - today).days
         return {
             "headline": "Supercrossen är i mål!",
             "tagline": "Inomhussäsongen är färdigspelad — utomhus väntar runt hörnet.",
             "last_race_name": last_sx.name,
             "last_race_date": last_sx.event_date,
             "season_year": last_sx.event_date.year,
-            "next_mx_id": next_mx.id,
-            "next_mx_name": next_mx.name,
-            "next_mx_date": next_mx.event_date,
+            "next_mx_id": first_mx.id,
+            "next_mx_name": first_mx.name,
+            "next_mx_date": first_mx.event_date,
             "days_until_mx": int(days),
         }
     except Exception as e:
