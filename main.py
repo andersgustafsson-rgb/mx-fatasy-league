@@ -4539,16 +4539,6 @@ def series_page(series_id):
         if next_race:
             # Use simple date comparison instead of complex is_picks_locked function
             picks_open = next_race.event_date and next_race.event_date > current_time.date()
-
-            # Gate: Motocross picks open only after Supercross ends
-            try:
-                is_mx_series = (getattr(series, "name", None) == "Motocross") or (getattr(next_race, "series", None) == "MX")
-                if is_mx_series:
-                    sx = Series.query.filter_by(name="Supercross", year=2026).first()
-                    if sx and sx.end_date and get_today() <= sx.end_date:
-                        picks_open = False
-            except Exception:
-                pass
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -8346,6 +8336,9 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
             continue
         if line in bike_brands:
             continue
+        # RacerX table header when copying MX overall (Pos / Rider / Hometown / Motos / Bike)
+        if re.match(r"^(?:pos(?:ition)?|#|rider|hometown|motos|bike)\b", line, re.IGNORECASE):
+            continue
         
         print(f"🔍 DEBUG: Line {i+1}: '{line}'")
         
@@ -8435,6 +8428,29 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                     entry["bike_brand"] = bike_brand
                 results.append(entry)
                 print(f"🔍 DEBUG: Motocross/SMX/RacerX match - Position: {position}, Name: '{rider_name}'")
+                continue
+
+        # RacerX MX overall with single spaces: "1 Seth Hammaker... 2 - 1 Kawasaki"
+        # Fantasy uses overall position (col 1), not moto splits — motos are for verification only.
+        mx_moto = re.match(
+            r"^(\d{1,2})\s+(.+?)\s+"
+            r"((?:\d{1,2}\s*-\s*(?:\d{1,2}|DNS))|(?:DNS\s*-\s*\d{1,2}))\s+",
+            line,
+            re.IGNORECASE,
+        )
+        if mx_moto:
+            position = int(mx_moto.group(1))
+            rider_name = _dedupe_concatenated_name(mx_moto.group(2).strip())
+            rider_name = re.sub(r"\s+[A-Z][a-z]+,.*$", "", rider_name).strip()
+            rider_name = re.sub(
+                r"\s+(Honda|Yamaha|Kawasaki|KTM|Husqvarna|GasGas|Suzuki|Triumph).*$",
+                "",
+                rider_name,
+                flags=re.IGNORECASE,
+            ).strip()
+            if rider_name:
+                results.append({"position": position, "rider_name": rider_name})
+                print(f"🔍 DEBUG: MX moto-row match - Position: {position}, Name: '{rider_name}'")
     
     print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
@@ -20414,16 +20430,6 @@ def is_picks_locked(competition):
         competition_name = competition.name if hasattr(competition, 'name') else f"ID {competition.id}"
         competition_id = competition.id
 
-    # Gate: Motocross picks should not open until Supercross ends (season transition).
-    # Prevents MX picks being available while SX season is still running.
-    try:
-        if getattr(competition_obj, "series", None) == "MX":
-            sx = Series.query.filter_by(name="Supercross", year=2026).first()
-            if sx and sx.end_date and get_today() <= sx.end_date:
-                return True
-    except Exception:
-        pass
-    
     # Check if we're in simulation mode (use only global database state for consistency)
     simulation_active = False
     
