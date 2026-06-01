@@ -479,6 +479,30 @@ def get_today():
     return today
 
 
+def _next_competition_for_picks(
+    *,
+    series: str | None = None,
+    require_open: bool = True,
+) -> Competition | None:
+    """
+    Nästa tävling utan resultat i DB. Med require_open=True: bara där picks inte är låsta.
+    Ignorerar stale global_simulation.active_race_id.
+    """
+    today = get_today()
+    q = Competition.query.filter(Competition.event_date.isnot(None))
+    if series:
+        q = q.filter(Competition.series == series)
+    for comp in q.order_by(Competition.event_date.asc()).all():
+        if comp.event_date and comp.event_date < today:
+            continue
+        if CompetitionResult.query.filter_by(competition_id=comp.id).first():
+            continue
+        if require_open and is_picks_locked(comp):
+            continue
+        return comp
+    return None
+
+
 def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None:
     """
     Homepage hero between SX finale (last SX has results) and the first MX race day.
@@ -1023,21 +1047,21 @@ def series_status():
                 elif s.start_date:
                     is_currently_active = current_date >= s.start_date
             
-            # Get next race in this series
-            # If there is an explicitly active competition set via simulation/admin,
-            # prefer showing that as the "next" race for the corresponding series.
+            # Nästa race i serien (öppna picks om möjligt, annars nästa utan resultat)
+            series_code = None
+            if s.name == "Supercross":
+                series_code = "SX"
+            elif s.name == "Motocross":
+                series_code = "MX"
+            elif s.name == "SMX Finals":
+                series_code = "SMX"
+            elif s.name == "WSX":
+                series_code = "WSX"
             next_race = None
-            try:
-                active_simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
-                # Our model uses active_race_id as the active competition id
-                if active_simulation and getattr(active_simulation, 'active_race_id', None):
-                    active_comp = Competition.query.get(active_simulation.active_race_id)
-                    if active_comp and active_comp.series_id == s.id:
-                        next_race = active_comp
-            except Exception as active_error:
-                pass
-
-            # Fallback to the chronologically next upcoming race if no active one applies
+            if series_code:
+                next_race = _next_competition_for_picks(series=series_code, require_open=True)
+                if not next_race:
+                    next_race = _next_competition_for_picks(series=series_code, require_open=False)
             if not next_race:
                 next_race = Competition.query.filter_by(series_id=s.id).filter(
                     Competition.event_date >= current_date
@@ -1193,32 +1217,10 @@ def index():
         print(f"Error getting competitions: {e}")
         competitions = []
     
-    # Check if there's an active race set in admin panel
-    upcoming_race = None
-    try:
-        global_sim = GlobalSimulation.query.first()
-        # Föredra explicit active_race_id om tävlingen fortfarande är nästa utan resultat
-        # (race_countdown sätter active_race_id även när active=False — undvik split mot serie-kort / timer)
-        if global_sim and getattr(global_sim, "active_race_id", None):
-            ac = Competition.query.get(global_sim.active_race_id)
-            if ac and ac.event_date and ac.event_date >= today:
-                if not CompetitionResult.query.filter_by(competition_id=ac.id).first():
-                    upcoming_race = ac
-        if not upcoming_race and global_sim and global_sim.active and global_sim.active_race_id:
-            upcoming_race = Competition.query.get(global_sim.active_race_id)
-    except Exception as e:
-        pass
-    
-    # Fallback to next race by date if no active race is set
-    # Skip competitions that already have results (completed races)
+    # Nästa race för picks/countdown: öppna picks först, annars nästa utan resultat
+    upcoming_race = _next_competition_for_picks(require_open=True)
     if not upcoming_race:
-        for c in competitions:
-            if c.event_date and c.event_date >= today:
-                # Check if this competition has results (is completed)
-                has_results = CompetitionResult.query.filter_by(competition_id=c.id).first() is not None
-                if not has_results:
-                    upcoming_race = c
-                    break
+        upcoming_race = _next_competition_for_picks(require_open=False)
     
     # Get user-specific data only if logged in
     my_team = None
@@ -4578,31 +4580,30 @@ def series_page(series_id):
             else:
                 user_picks_status[comp.id] = {'has_picks': False}
         
-        # Find next race (either active race or next upcoming race)
+        series_code = None
+        if series.name == "Supercross":
+            series_code = "SX"
+        elif series.name == "Motocross":
+            series_code = "MX"
+        elif series.name == "SMX Finals":
+            series_code = "SMX"
+        elif series.name == "WSX":
+            series_code = "WSX"
+
         next_race = None
-        if active_race_id:
-            # If there's an active race, check if it belongs to this series
-            potential_race = Competition.query.get(active_race_id)
-            if potential_race and potential_race.series_id == series_id:
-                next_race = potential_race
-                # Found active race in this series
-            else:
-                # Active race is not in this series
-                pass
-        
+        if series_code:
+            next_race = _next_competition_for_picks(series=series_code, require_open=True)
+            if not next_race:
+                next_race = _next_competition_for_picks(series=series_code, require_open=False)
         if not next_race:
-            # Otherwise find the next upcoming race in this series
             current_date = get_today()
             next_race = Competition.query.filter_by(series_id=series_id).filter(
                 Competition.event_date >= current_date
             ).order_by(Competition.event_date).first()
-            # Found next upcoming race
-        
-        # Determine if picks are open - OPTIMIZED
-        picks_open = False
-        if next_race:
-            # Use simple date comparison instead of complex is_picks_locked function
-            picks_open = next_race.event_date and next_race.event_date > current_time.date()
+
+        picks_open = bool(next_race and not is_picks_locked(next_race))
+        if next_race and comp_ids:
+            picks_locked_status[next_race.id] = not picks_open
         
         # Simple template render with all required variables
         print(f"DEBUG: About to render series_page.html for series {series_id}")
@@ -19699,20 +19700,25 @@ def set_active_race_only():
 
 @app.route("/race_picks_active")
 def race_picks_active():
-    """Redirect to race picks for the currently active race"""
+    """Redirect to race picks for the next competition with open picks."""
     if "user_id" not in session:
         return redirect(url_for("login"))
     
     try:
-        # Get active race from global simulation
-        result = db.session.execute(db.text("SELECT active_race_id FROM global_simulation WHERE id = 1")).fetchone()
-        
-        if result and result[0]:
-            active_race_id = result[0]
-            return redirect(url_for("race_picks_page", competition_id=active_race_id))
-        else:
-            flash("Inget aktivt race satt för simulering", "error")
-            return redirect(url_for("index"))
+        comp = _next_competition_for_picks(require_open=True)
+        if comp:
+            return redirect(url_for("race_picks_page", competition_id=comp.id))
+
+        comp = _next_competition_for_picks(require_open=False)
+        if comp:
+            flash(
+                f"Picks är låsta för {comp.name}. Nästa race med öppna picks kommer snart.",
+                "info",
+            )
+            return redirect(url_for("race_picks_page", competition_id=comp.id))
+
+        flash("Inget kommande race med öppna picks hittades.", "error")
+        return redirect(url_for("index"))
             
     except Exception as e:
         print(f"Error getting active race: {e}")
