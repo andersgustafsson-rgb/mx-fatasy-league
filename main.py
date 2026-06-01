@@ -2289,6 +2289,74 @@ def _rider_portrait_url(r: Rider) -> str | None:
     return s or None
 
 
+def _display_image_url_for_rider_row(
+    rider_id: int,
+    *,
+    has_db_portrait: bool,
+    image_url: str | None,
+    rider_name: str | None,
+    rider_number: int | None,
+    class_name: str | None,
+    coast_250: str | None = None,
+    bike_brand: str | None = None,
+    series_participation: str | None = None,
+) -> str | None:
+    """
+    Slutlig bild-URL för resultat/pall — samma ordning som race_picks imgSrcFor().
+    """
+    if has_db_portrait:
+        return f"/rider_portrait/{int(rider_id)}"
+
+    if image_url:
+        u = str(image_url).strip()
+        if not u:
+            pass
+        elif u.startswith(("data:", "http://", "https://")):
+            return u
+        elif u.startswith("/"):
+            return u
+        else:
+            path = u if u.startswith(("riders/", "uploads/", "trackmaps/")) else f"riders/{u}"
+            parts = path.split("/")
+            parts[-1] = parts[-1].replace(" ", "_")
+            return f"/static/{'/'.join(parts)}"
+
+    class _RiderShim:
+        pass
+
+    shim = _RiderShim()
+    shim.name = rider_name
+    shim.rider_number = rider_number
+    shim.class_name = class_name
+    shim.coast_250 = coast_250
+    shim.series_participation = series_participation
+    shim.rider_image_data = None
+    shim.image_url = None
+    static_path = _resolve_rider_headshot_for_display(shim)
+    if static_path:
+        parts = static_path.split("/")
+        parts[-1] = parts[-1].replace(" ", "_")
+        return f"/static/{'/'.join(parts)}"
+
+    if bike_brand:
+        brand = str(bike_brand).lower().strip()
+        brand_map = {
+            "honda": "honda",
+            "ktm": "ktm",
+            "yamaha": "yamaha",
+            "kawasaki": "kawasaki",
+            "suzuki": "suzuki",
+            "husqvarna": "husqvarna",
+            "gasgas": "gasgas",
+            "beta": "beta",
+            "triumph": "triumph",
+        }
+        logo = brand_map.get(brand, brand)
+        return f"/static/brand_logos/{logo}.png"
+
+    return None
+
+
 @app.route("/rider_portrait/<int:rider_id>")
 def rider_portrait(rider_id: int):
     """Serverar DB-porträtt som bytes — undviker base64 i sid-JSON."""
@@ -9152,6 +9220,7 @@ def race_results_page():
                         "has_db_portrait"
                     ),
                     Rider.bike_brand,
+                    Rider.series_participation,
                 )
                 .join(Rider, Rider.id == CompetitionResult.rider_id)
                 .filter(CompetitionResult.competition_id.in_(comp_ids))
@@ -9181,10 +9250,16 @@ def race_results_page():
                 else:
                     points = get_smx_qualification_points(result.position)
 
-                img_url = (
-                    f"/rider_portrait/{int(result.rider_id)}"
-                    if bool(getattr(result, "has_db_portrait", False))
-                    else (result.image_url or None)
+                img_url = _display_image_url_for_rider_row(
+                    int(result.rider_id),
+                    has_db_portrait=bool(getattr(result, "has_db_portrait", False)),
+                    image_url=result.image_url,
+                    rider_name=result.rider_name,
+                    rider_number=result.rider_number,
+                    class_name=getattr(result, "rider_current_class", None) or result.class_name,
+                    coast_250=getattr(result, "coast_250", None),
+                    bike_brand=result.bike_brand,
+                    series_participation=getattr(result, "series_participation", None),
                 )
 
                 if comp.series == "WSX":
@@ -9227,10 +9302,14 @@ def race_results_page():
             )
             for h in hs_rows:
                 comp_id = int(h.competition_id)
-                img_url = (
-                    f"/rider_portrait/{int(h.rider_id)}"
-                    if bool(getattr(h, "has_db_portrait", False))
-                    else (h.image_url or None)
+                img_url = _display_image_url_for_rider_row(
+                    int(h.rider_id),
+                    has_db_portrait=bool(getattr(h, "has_db_portrait", False)),
+                    image_url=h.image_url,
+                    rider_name=h.rider_name,
+                    rider_number=h.rider_number,
+                    class_name=h.class_name,
+                    bike_brand=h.bike_brand,
                 )
                 competition_results[comp_id]["holeshots"].append(
                     {

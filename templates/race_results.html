@@ -145,6 +145,8 @@
         {{- u -}}
       {%- elif u.startswith('http://') or u.startswith('https://') -%}
         {{- u -}}
+      {%- elif u.startswith('/') -%}
+        {{- u -}}
       {%- else -%}
         {%- set path = u if (u.startswith('riders/') or u.startswith('uploads/') or u.startswith('trackmaps/')) else ('riders/' ~ u) -%}
         {%- set rp = path.rpartition('/') -%}
