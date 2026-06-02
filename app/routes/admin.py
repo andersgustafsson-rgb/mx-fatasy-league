@@ -149,34 +149,53 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 
 	def _fetch_racerx_og_image(rider_name: str) -> str | None:
 		"""Best-effort: fetch https://racerxonline.com/rider/<slug> and return og:image url."""
-		name = (rider_name or "").strip().lower()
-		if not name:
+		raw = (rider_name or "").strip()
+		if not raw:
 			return None
-		# slug: keep letters/numbers/spaces -> hyphen
-		slug = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in name)
-		slug = "-".join(slug.split())
-		if not slug:
-			return None
-		url = f"https://racerxonline.com/rider/{slug}"
-		try:
-			resp = requests.get(
-				url,
-				headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
-				timeout=12,
-			)
-			if resp.status_code != 200:
-				return None
-			soup = BeautifulSoup(resp.text, "html.parser")
-			og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
-			if og and og.get("content"):
-				img = str(og.get("content") or "").strip()
-				if img and not img.lower().endswith("post_thumb.png"):
-					return img
-		except Exception:
-			return None
+
+		def slugify(s: str) -> str:
+			s = (s or "").strip().lower()
+			s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+			s = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in s)
+			return "-".join(s.split())
+
+		# Try a few variants; RacerX slugs often omit suffixes like Jr/III.
+		base = " ".join(raw.split())
+		toks = base.split(" ")
+		suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+		variants = [base]
+		if toks and toks[-1].lower().strip(".") in suffixes:
+			variants.append(" ".join(toks[:-1]))
+		# drop middle initials (e.g., "A.")
+		variants.append(" ".join([t for t in toks if len(t) > 1 and not t.endswith(".")]))
+
+		seen_slugs: set[str] = set()
+		for v in variants:
+			slug = slugify(v)
+			if not slug or slug in seen_slugs:
+				continue
+			seen_slugs.add(slug)
+			url = f"https://racerxonline.com/rider/{slug}"
+			try:
+				resp = requests.get(
+					url,
+					headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
+					timeout=12,
+				)
+				if resp.status_code != 200:
+					continue
+				soup = BeautifulSoup(resp.text, "html.parser")
+				og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+				if og and og.get("content"):
+					img = str(og.get("content") or "").strip()
+					if img and not img.lower().endswith("post_thumb.png"):
+						return img
+			except Exception:
+				continue
 		return None
 
 	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
+	unmatched_sample: list[dict] = []
 	for rider in missing:
 		if updated >= limit:
 			break
@@ -223,6 +242,15 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 				continue
 			fetched_fail += 1
 			no_match += 1
+			if len(unmatched_sample) < 15:
+				unmatched_sample.append(
+					{
+						"id": int(rider.id),
+						"name": rider.name,
+						"class": rider.class_name,
+						"number": rider.rider_number,
+					}
+				)
 			continue
 
 		img = (best.get("img_url") or "").strip()
@@ -250,6 +278,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			"fetched_ok": int(fetched_ok),
 			"fetched_fail": int(fetched_fail),
 		},
+		"unmatched_sample": unmatched_sample,
 	}
 
 
