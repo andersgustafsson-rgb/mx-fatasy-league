@@ -1579,6 +1579,7 @@ function imgSrcFor(riderId) {
   // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
   if (r.image_url) {
     if (r.image_url.startsWith('data:')) return r.image_url;
+    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) return r.image_url;
     let imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
     // Filnamn med mellanslag ger 404 – normalisera till understreck
     if (imagePath.includes(' ')) {
