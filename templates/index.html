@@ -2028,7 +2028,7 @@
                   const total = Number(me.total_points || 0);
                   chips.innerHTML = `
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
-                    <span id="welcome-latest-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold">Senast: —</span>
+                    <a id="welcome-latest-chip" href="/my_scores" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold hover:bg-gray-500/15 hover:border-gray-400/40 transition-colors">Senast: —</a>
                     <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 Nivå: —</span>
                   `;
 
@@ -2040,8 +2040,10 @@
                     if (latestChip && r2.ok && d2 && d2.ok && d2.latest) {
                       const pts = Number(d2.latest.points || 0);
                       const name = (d2.latest.name || '').toString();
+                      const cid = Number(d2.latest.competition_id || 0);
                       latestChip.textContent = `Senast: +${pts}p (${name})`;
-                      latestChip.className = `inline-flex items-center px-2 py-0.5 rounded-full border ${pts > 0 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-gray-500/30 bg-gray-500/10 text-gray-200'} font-bold`;
+                      latestChip.className = `inline-flex items-center px-2 py-0.5 rounded-full border ${pts > 0 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-gray-500/30 bg-gray-500/10 text-gray-200'} font-bold hover:opacity-90 transition-opacity`;
+                      if (cid) latestChip.href = `/my_scores?focus=${encodeURIComponent(cid)}`;
                     } else if (latestChip) {
                       latestChip.textContent = `Senast: —`;
                     }

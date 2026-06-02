@@ -126,6 +126,7 @@
               {% for row in scores %}
               {% set status_key = "completed" if row.has_results else "pending" %}
               <tr
+                id="comp-{{ row['competition_id'] }}"
                 data-name="{{ row.name | lower }}"
                 data-series="{{ row.series }}"
                 data-status="{{ status_key }}"
@@ -376,6 +377,30 @@
       if (clear) clear.addEventListener("click", clearFilters);
 
       applyFilters();
+
+      // Optional deep link: /my_scores?focus=<competition_id>
+      try {
+        const params = new URLSearchParams(window.location.search || "");
+        const focus = params.get("focus");
+        if (focus) {
+          // Ensure the row isn't filtered out
+          if (q) q.value = "";
+          if (series) series.value = "all";
+          if (status) status.value = "all";
+          applyFilters();
+
+          const tr = document.getElementById(`comp-${focus}`);
+          if (tr) {
+            tr.scrollIntoView({ block: "center", behavior: "smooth" });
+            tr.classList.add("ring-2", "ring-amber-400/70");
+            window.setTimeout(() => tr.classList.remove("ring-2", "ring-amber-400/70"), 2500);
+            if ((tr.getAttribute("data-status") || "") === "completed") {
+              const cid = Number(focus);
+              if (cid) showDetails(cid);
+            }
+          }
+        }
+      } catch (_) {}
     });
   </script>
 </body>
