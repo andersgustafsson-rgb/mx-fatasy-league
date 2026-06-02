@@ -41,5 +41,9 @@ docker-compose.yml
 render.yaml
 vercel.json
 
+# Allowlist required CSVs for server-side admin tools
+!data/racerx_riders_2026.csv
+!data/racerx_name_map.csv
+
 # Duplicerad trackmap-mapp (samma bilder finns under pro_motocross)
 static/trackmaps pro motocross/
