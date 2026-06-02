@@ -1564,27 +1564,39 @@ function wsxSlug(name) {
   return (name || "").toLowerCase().trim().replace(/\./g, "").replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
 
+/** Square face crop on RacerX CDN — fixes wide og:image (1200x630) in round avatars. */
+function normalizePortraitUrl(url) {
+  if (!url || !url.includes('iscdn.net')) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('w', '600');
+    u.searchParams.set('h', '600');
+    u.searchParams.set('fit', 'crop');
+    u.searchParams.set('crop', 'faces');
+    if (!u.searchParams.has('auto')) u.searchParams.set('auto', 'format');
+    if (!u.searchParams.has('q')) u.searchParams.set('q', '90');
+    return u.toString();
+  } catch (_) {
+    return url;
+  }
+}
+
 /** Enhetlig bildbeskärning: DB-porträtt vs fil vs märkeslogo. */
 function applyRiderPortraitFraming(img) {
   if (!img) return;
   const src = img.getAttribute('src') || '';
   img.classList.remove('portrait-brand', 'portrait-photo', 'portrait-cutout');
+  img.style.transform = '';
   if (src.includes('/brand_logos/')) {
     img.classList.add('portrait-brand');
   } else if (
-    src.includes('removebg') ||
-    src.includes('.png') ||
-    src.toLowerCase().includes('.png?')
-  ) {
-    // Transparenta/cutout PNG:er (vanligt på RacerX) blir fula med cover (kapas i sidled).
-    img.classList.add('portrait-cutout');
-  } else if (
     src.includes('/rider_portrait/') ||
-    src.startsWith('data:image/jpeg') ||
+    src.startsWith('data:image/') ||
     src.startsWith('http://') ||
     src.startsWith('https://') ||
     src.endsWith('.jpg') ||
-    src.endsWith('.jpeg')
+    src.endsWith('.jpeg') ||
+    src.includes('.png')
   ) {
     img.classList.add('portrait-photo');
   }
@@ -1598,7 +1610,9 @@ function imgSrcFor(riderId) {
 
   // CDN/extern URL först — undvik trasig legacy DB-porträtt som blockerar RacerX-bild
   if (r.image_url) {
-    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) return r.image_url;
+    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) {
+      return normalizePortraitUrl(r.image_url);
+    }
   }
 
   if (r.has_db_portrait) {

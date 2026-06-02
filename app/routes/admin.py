@@ -23,6 +23,8 @@ from flask import (
 	url_for,
 )
 
+from app.portrait_urls import normalize_racerx_portrait_url, score_racerx_portrait_url
+
 from models import (
 	db,
 	Competition,
@@ -109,15 +111,52 @@ _RACERX_HTTP_HEADERS = {
 }
 
 
+def _absolutize_racerx_img_src(src: str) -> str | None:
+	s = (src or "").strip()
+	if not s or "post_thumb.png" in s.lower():
+		return None
+	if s.startswith("//"):
+		return "https:" + s
+	if s.startswith("http://") or s.startswith("https://"):
+		return s
+	if s.startswith("/"):
+		return "https://racerxonline.com" + s
+	return None
+
+
+def _collect_racerx_img_candidates(soup: BeautifulSoup) -> list[str]:
+	out: list[str] = []
+	og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+	if og and og.get("content"):
+		u = _absolutize_racerx_img_src(str(og.get("content") or ""))
+		if u:
+			out.append(u)
+	for sel in (
+		".rider-hero img",
+		".rider-profile img",
+		".rider img",
+		".profile img",
+		"article img",
+		".entry-content img",
+	):
+		for im in soup.select(sel):
+			u = _absolutize_racerx_img_src((im.get("src") or "").strip())
+			if u:
+				out.append(u)
+	return out
+
+
 def _fetch_racerx_og_image(rider_name: str) -> str | None:
-	"""Best-effort: fetch RacerX rider page and return a headshot image URL."""
+	"""Best-effort: fetch RacerX rider page and return a square headshot CDN URL."""
+	best_url: str | None = None
+	best_score = -9999
 	for slug in _racerx_slug_variants(rider_name)[:6]:
 		for base_path in ("rider", "riders"):
 			for suffix in ("", "/news"):
-				url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
+				page_url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
 				try:
 					resp = requests.get(
-						url,
+						page_url,
 						headers=_RACERX_HTTP_HEADERS,
 						timeout=12,
 						allow_redirects=True,
@@ -125,33 +164,20 @@ def _fetch_racerx_og_image(rider_name: str) -> str | None:
 					if resp.status_code != 200:
 						continue
 					soup = BeautifulSoup(resp.text, "html.parser")
-					og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
-					if og and og.get("content"):
-						img = str(og.get("content") or "").strip()
-						if img and "post_thumb.png" not in img.lower():
-							return img
-					for sel in (
-						".rider-hero img",
-						".rider img",
-						".profile img",
-						".entry-content img",
-						"img",
-					):
-						im = soup.select_one(sel)
-						if not im:
+					seen: set[str] = set()
+					for cand in _collect_racerx_img_candidates(soup):
+						if cand in seen:
 							continue
-						src = (im.get("src") or "").strip()
-						if not src or "post_thumb.png" in src:
-							continue
-						if src.startswith("//"):
-							return "https:" + src
-						if src.startswith("http://") or src.startswith("https://"):
-							return src
-						if src.startswith("/"):
-							return "https://racerxonline.com" + src
+						seen.add(cand)
+						sc = score_racerx_portrait_url(cand)
+						if sc > best_score:
+							best_score = sc
+							best_url = cand
+					if best_score >= 50:
+						return normalize_racerx_portrait_url(best_url)
 				except Exception:
 					continue
-	return None
+	return normalize_racerx_portrait_url(best_url)
 
 
 def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
@@ -241,7 +267,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			fetched += 1
 			img = _fetch_racerx_og_image(rider.name or "")
 			if img:
-				rider.image_url = img
+				rider.image_url = normalize_racerx_portrait_url(img) or img
 				updated += 1
 				fetched_ok += 1
 				continue
@@ -263,7 +289,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			no_match += 1
 			continue
 
-		rider.image_url = img
+		rider.image_url = normalize_racerx_portrait_url(img) or img
 		updated += 1
 
 	db.session.commit()
@@ -582,6 +608,31 @@ def admin_page():
 		return f"<h1>Database Error</h1><p>{e}</p>"
 
 
+@bp.post("/admin/tools/racerx_portraits/normalize")
+@login_required
+def admin_racerx_portraits_normalize():
+	"""Rewrite stored isCDN URLs to square face crop (fixes wide og:image banners)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		updated = 0
+		rows = Rider.query.filter(
+			Rider.image_url.isnot(None),
+			Rider.image_url != "",
+			Rider.image_url.ilike("%iscdn.net%"),
+		).all()
+		for rider in rows:
+			new_url = normalize_racerx_portrait_url(rider.image_url)
+			if new_url and new_url != rider.image_url:
+				rider.image_url = new_url
+				updated += 1
+		db.session.commit()
+		return jsonify({"ok": True, "updated": int(updated), "checked": len(rows)})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @bp.post("/admin/tools/racerx_portraits/apply")
 @login_required
 def admin_racerx_portraits_apply():
@@ -603,7 +654,7 @@ def admin_racerx_portraits_apply():
 		img = _fetch_racerx_og_image(rider.name or name)
 		if not img:
 			return jsonify({"ok": False, "error": "no_image_found", "name": rider.name}), 404
-		rider.image_url = img
+		rider.image_url = normalize_racerx_portrait_url(img) or img
 		db.session.commit()
 		return jsonify(
 			{

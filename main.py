@@ -2314,6 +2314,10 @@ def _display_image_url_for_rider_row(
         if not u:
             pass
         elif u.startswith(("data:", "http://", "https://")):
+            if u.startswith("http"):
+                from app.portrait_urls import normalize_racerx_portrait_url
+
+                return normalize_racerx_portrait_url(u) or u
             return u
         elif u.startswith("/"):
             return u
@@ -4723,9 +4727,12 @@ def race_picks_page(competition_id):
             .all()
         )
 
+    from app.portrait_urls import normalize_racerx_portrait_url
+
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
         # Render 512MB: aldrig base64 i sid-JSON; DB-bilder via /rider_portrait/<id>
+        img_url = normalize_racerx_portrait_url(r.image_url) if r.image_url else None
         return {
             "id": r.id,
             "name": r.name,
@@ -4734,7 +4741,7 @@ def race_picks_page(competition_id):
             "bike_brand": r.bike_brand,
             "price": r.price,
             "is_out": (r.id in out_ids),
-            "image_url": r.image_url,
+            "image_url": img_url,
             "coast_250": r.coast_250,
             "has_db_portrait": r.id in ids_with_db_portrait,
         }
