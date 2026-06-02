@@ -102,6 +102,58 @@ def _norm_name_for_match(s: str) -> str:
 	return " ".join(s.split())
 
 
+_RACERX_HTTP_HEADERS = {
+	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
+	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+	"Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _fetch_racerx_og_image(rider_name: str) -> str | None:
+	"""Best-effort: fetch RacerX rider page and return a headshot image URL."""
+	for slug in _racerx_slug_variants(rider_name)[:6]:
+		for base_path in ("rider", "riders"):
+			for suffix in ("", "/news"):
+				url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
+				try:
+					resp = requests.get(
+						url,
+						headers=_RACERX_HTTP_HEADERS,
+						timeout=12,
+						allow_redirects=True,
+					)
+					if resp.status_code != 200:
+						continue
+					soup = BeautifulSoup(resp.text, "html.parser")
+					og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+					if og and og.get("content"):
+						img = str(og.get("content") or "").strip()
+						if img and "post_thumb.png" not in img.lower():
+							return img
+					for sel in (
+						".rider-hero img",
+						".rider img",
+						".profile img",
+						".entry-content img",
+						"img",
+					):
+						im = soup.select_one(sel)
+						if not im:
+							continue
+						src = (im.get("src") or "").strip()
+						if not src or "post_thumb.png" in src:
+							continue
+						if src.startswith("//"):
+							return "https:" + src
+						if src.startswith("http://") or src.startswith("https://"):
+							return src
+						if src.startswith("/"):
+							return "https://racerxonline.com" + src
+				except Exception:
+					continue
+	return None
+
+
 def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	"""
 	Server-side import: set Rider.image_url to RacerX CDN url (no downloads, no base64).
@@ -146,83 +198,6 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	fetched = 0
 	fetched_ok = 0
 	fetched_fail = 0
-
-	def _fetch_racerx_og_image(rider_name: str) -> str | None:
-		"""Best-effort: fetch RacerX rider page and return a headshot image URL."""
-		raw = (rider_name or "").strip()
-		if not raw:
-			return None
-
-		def slugify(s: str) -> str:
-			s = (s or "").strip().lower()
-			s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
-			s = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in s)
-			return "-".join(s.split())
-
-		# Try a few variants; RacerX slugs often omit suffixes like Jr/III.
-		base = " ".join(raw.split())
-		toks = base.split(" ")
-		suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
-		variants = [base]
-		if toks and toks[-1].lower().strip(".") in suffixes:
-			variants.append(" ".join(toks[:-1]))
-		# drop middle initials (e.g., "A.")
-		variants.append(" ".join([t for t in toks if len(t) > 1 and not t.endswith(".")]))
-
-		seen_slugs: set[str] = set()
-		for v in variants:
-			slug = slugify(v)
-			if not slug or slug in seen_slugs:
-				continue
-			seen_slugs.add(slug)
-			# RacerX uses both /rider/<slug> and /riders/<slug> and sometimes only exposes content under /news.
-			for base_path in ("rider", "riders"):
-				for suffix in ("", "/news"):
-					url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
-					try:
-						resp = requests.get(
-							url,
-							headers={
-								"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
-								"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-								"Accept-Language": "en-US,en;q=0.9",
-							},
-							timeout=12,
-							allow_redirects=True,
-						)
-						if resp.status_code != 200:
-							continue
-						soup = BeautifulSoup(resp.text, "html.parser")
-						og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
-						if og and og.get("content"):
-							img = str(og.get("content") or "").strip()
-							if img and not img.lower().endswith("post_thumb.png"):
-								return img
-						# Fallback: pick first likely headshot <img>
-						for sel in (
-							".rider-hero img",
-							".rider img",
-							".profile img",
-							".entry-content img",
-							"img",
-						):
-							im = soup.select_one(sel)
-							if not im:
-								continue
-							src = (im.get("src") or "").strip()
-							if not src:
-								continue
-							if "post_thumb.png" in src:
-								continue
-							if src.startswith("//"):
-								return "https:" + src
-							if src.startswith("http://") or src.startswith("https://"):
-								return src
-							if src.startswith("/"):
-								return "https://racerxonline.com" + src
-					except Exception:
-						continue
-		return None
 
 	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
 	unmatched_sample: list[dict] = []
@@ -315,6 +290,26 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 def _racerx_portraits_debug() -> dict:
 	CSV_IN = pathlib.Path("data/racerx_riders_2026.csv")
 	info: dict = {"csv_exists": CSV_IN.exists(), "csv_path": CSV_IN.as_posix()}
+
+	# Optional: inspect a specific rider by name (for debugging UI vs DB)
+	inspect_name = (request.args.get("name") or "").strip() if request else ""
+	if inspect_name:
+		r = (
+			Rider.query.filter(db.func.lower(Rider.name) == inspect_name.lower())
+			.order_by(Rider.id.asc())
+			.first()
+		)
+		if r:
+			info["inspect_rider"] = {
+				"id": int(r.id),
+				"name": r.name,
+				"class": r.class_name,
+				"number": r.rider_number,
+				"image_url": getattr(r, "image_url", None),
+				"has_db_portrait": bool(getattr(r, "rider_image_data", None)),
+			}
+		else:
+			info["inspect_rider"] = {"name": inspect_name, "found": False}
 
 	missing_q = Rider.query.filter(
 		((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
@@ -585,6 +580,42 @@ def admin_page():
 		return render_template("admin_organized.html")
 	except Exception as e:
 		return f"<h1>Database Error</h1><p>{e}</p>"
+
+
+@bp.post("/admin/tools/racerx_portraits/apply")
+@login_required
+def admin_racerx_portraits_apply():
+	"""Fetch RacerX og:image for one rider by name and save to image_url."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		data = request.get_json(silent=True) or {}
+		name = (request.args.get("name") or data.get("name") or "").strip()
+		if not name:
+			return jsonify({"ok": False, "error": "missing_name"}), 400
+		rider = (
+			Rider.query.filter(db.func.lower(Rider.name) == name.lower())
+			.order_by(Rider.id.asc())
+			.first()
+		)
+		if not rider:
+			return jsonify({"ok": False, "error": "rider_not_found", "name": name}), 404
+		img = _fetch_racerx_og_image(rider.name or name)
+		if not img:
+			return jsonify({"ok": False, "error": "no_image_found", "name": rider.name}), 404
+		rider.image_url = img
+		db.session.commit()
+		return jsonify(
+			{
+				"ok": True,
+				"id": int(rider.id),
+				"name": rider.name,
+				"image_url": rider.image_url,
+			}
+		)
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 @bp.post("/admin/tools/racerx_portraits/step")

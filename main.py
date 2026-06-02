@@ -2366,10 +2366,16 @@ def rider_portrait(rider_id: int):
     import hashlib
 
     raw = db.session.query(Rider.rider_image_data).filter_by(id=rider_id).scalar()
-    if not raw:
-        return Response(status=404)
-    s = str(raw).strip()
-    if not s.startswith("data:"):
+    s = str(raw or "").strip()
+    if not s.startswith("data:image"):
+        ext = (
+            db.session.query(Rider.image_url)
+            .filter_by(id=rider_id)
+            .scalar()
+        )
+        ext_s = str(ext or "").strip()
+        if ext_s.startswith("http://") or ext_s.startswith("https://"):
+            return redirect(ext_s, code=302)
         return Response(status=404)
     try:
         # ETag based on the stored data-url (cheap, avoids hashing decoded bytes).
@@ -4712,6 +4718,7 @@ def race_picks_page(competition_id):
                 Rider.id.in_(pick_rider_ids),
                 Rider.rider_image_data.isnot(None),
                 Rider.rider_image_data != "",
+                Rider.rider_image_data.like("data:image%"),
             )
             .all()
         )

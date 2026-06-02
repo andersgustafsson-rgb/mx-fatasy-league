@@ -42,7 +42,14 @@
   /* Foton (t.ex. JPEG eller DB-porträtt) – använd cover så de inte blir små. */
   .preview-img.portrait-photo {
     object-fit: cover;
-    object-position: center 12%;
+    object-position: center 18%;
+  }
+  /* Cutouts/transparenta PNG (RacerX removebg) – contain så de inte kapas. */
+  .preview-img.portrait-cutout {
+    object-fit: contain;
+    object-position: center;
+    padding: 6px;
+    background: radial-gradient(circle at 50% 35%, rgba(55, 65, 81, 0.95), rgba(17, 24, 39, 0.95));
   }
   .preview-img.portrait-brand {
     object-fit: contain;
@@ -178,7 +185,13 @@
   }
   .rider-avatar.portrait-photo {
     object-fit: cover;
-    object-position: center 12%;
+    object-position: center 18%;
+  }
+  .rider-avatar.portrait-cutout {
+    object-fit: contain;
+    object-position: center;
+    padding: 5px;
+    background: radial-gradient(circle at 50% 35%, rgba(55, 65, 81, 0.95), rgba(17, 24, 39, 0.95));
   }
   .rider-avatar.portrait-brand {
     object-fit: contain;
@@ -1553,12 +1566,21 @@ function wsxSlug(name) {
 function applyRiderPortraitFraming(img) {
   if (!img) return;
   const src = img.getAttribute('src') || '';
-  img.classList.remove('portrait-brand', 'portrait-photo');
+  img.classList.remove('portrait-brand', 'portrait-photo', 'portrait-cutout');
   if (src.includes('/brand_logos/')) {
     img.classList.add('portrait-brand');
   } else if (
+    src.includes('removebg') ||
+    src.includes('.png') ||
+    src.toLowerCase().includes('.png?')
+  ) {
+    // Transparenta/cutout PNG:er (vanligt på RacerX) blir fula med cover (kapas i sidled).
+    img.classList.add('portrait-cutout');
+  } else if (
     src.includes('/rider_portrait/') ||
     src.startsWith('data:image/jpeg') ||
+    src.startsWith('http://') ||
+    src.startsWith('https://') ||
     src.endsWith('.jpg') ||
     src.endsWith('.jpeg')
   ) {
@@ -1572,14 +1594,18 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
 
+  // CDN/extern URL först — undvik trasig legacy DB-porträtt som blockerar RacerX-bild
+  if (r.image_url) {
+    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) return r.image_url;
+  }
+
   if (r.has_db_portrait) {
     return `/rider_portrait/${r.id}`;
   }
   
-  // 1. Try rider image first if image_url exists (kan vara data-URL från DB eller filsökväg)
+  // 1. Try rider image (data-URL eller filsökväg)
   if (r.image_url) {
     if (r.image_url.startsWith('data:')) return r.image_url;
-    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) return r.image_url;
     let imagePath = r.image_url.startsWith('riders/') ? r.image_url : `riders/${r.image_url}`;
     // Filnamn med mellanslag ger 404 – normalisera till understreck
     if (imagePath.includes(' ')) {
