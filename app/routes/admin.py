@@ -175,9 +175,10 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			if not slug or slug in seen_slugs:
 				continue
 			seen_slugs.add(slug)
-			# RacerX uses both /rider/<slug> and /riders/<slug> depending on section.
+			# RacerX uses both /rider/<slug> and /riders/<slug> and sometimes only exposes content under /news.
 			for base_path in ("rider", "riders"):
-				url = f"https://racerxonline.com/{base_path}/{slug}"
+				for suffix in ("", "/news"):
+					url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
 				try:
 					resp = requests.get(
 						url,
@@ -187,6 +188,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 							"Accept-Language": "en-US,en;q=0.9",
 						},
 						timeout=12,
+						allow_redirects=True,
 					)
 					if resp.status_code != 200:
 						continue
