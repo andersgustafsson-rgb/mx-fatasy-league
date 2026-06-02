@@ -175,23 +175,25 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			if not slug or slug in seen_slugs:
 				continue
 			seen_slugs.add(slug)
-			url = f"https://racerxonline.com/rider/{slug}"
-			try:
-				resp = requests.get(
-					url,
-					headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
-					timeout=12,
-				)
-				if resp.status_code != 200:
+			# RacerX uses both /rider/<slug> and /riders/<slug> depending on section.
+			for base_path in ("rider", "riders"):
+				url = f"https://racerxonline.com/{base_path}/{slug}"
+				try:
+					resp = requests.get(
+						url,
+						headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
+						timeout=12,
+					)
+					if resp.status_code != 200:
+						continue
+					soup = BeautifulSoup(resp.text, "html.parser")
+					og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+					if og and og.get("content"):
+						img = str(og.get("content") or "").strip()
+						if img and not img.lower().endswith("post_thumb.png"):
+							return img
+				except Exception:
 					continue
-				soup = BeautifulSoup(resp.text, "html.parser")
-				og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
-				if og and og.get("content"):
-					img = str(og.get("content") or "").strip()
-					if img and not img.lower().endswith("post_thumb.png"):
-						return img
-			except Exception:
-				continue
 		return None
 
 	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
