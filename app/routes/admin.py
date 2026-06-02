@@ -179,49 +179,49 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			for base_path in ("rider", "riders"):
 				for suffix in ("", "/news"):
 					url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
-				try:
-					resp = requests.get(
-						url,
-						headers={
-							"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
-							"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-							"Accept-Language": "en-US,en;q=0.9",
-						},
-						timeout=12,
-						allow_redirects=True,
-					)
-					if resp.status_code != 200:
+					try:
+						resp = requests.get(
+							url,
+							headers={
+								"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
+								"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+								"Accept-Language": "en-US,en;q=0.9",
+							},
+							timeout=12,
+							allow_redirects=True,
+						)
+						if resp.status_code != 200:
+							continue
+						soup = BeautifulSoup(resp.text, "html.parser")
+						og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+						if og and og.get("content"):
+							img = str(og.get("content") or "").strip()
+							if img and not img.lower().endswith("post_thumb.png"):
+								return img
+						# Fallback: pick first likely headshot <img>
+						for sel in (
+							".rider-hero img",
+							".rider img",
+							".profile img",
+							".entry-content img",
+							"img",
+						):
+							im = soup.select_one(sel)
+							if not im:
+								continue
+							src = (im.get("src") or "").strip()
+							if not src:
+								continue
+							if "post_thumb.png" in src:
+								continue
+							if src.startswith("//"):
+								return "https:" + src
+							if src.startswith("http://") or src.startswith("https://"):
+								return src
+							if src.startswith("/"):
+								return "https://racerxonline.com" + src
+					except Exception:
 						continue
-					soup = BeautifulSoup(resp.text, "html.parser")
-					og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
-					if og and og.get("content"):
-						img = str(og.get("content") or "").strip()
-						if img and not img.lower().endswith("post_thumb.png"):
-							return img
-					# Fallback: pick first likely headshot <img>
-					for sel in (
-						".rider-hero img",
-						".rider img",
-						".profile img",
-						".entry-content img",
-						"img",
-					):
-						im = soup.select_one(sel)
-						if not im:
-							continue
-						src = (im.get("src") or "").strip()
-						if not src:
-							continue
-						if "post_thumb.png" in src:
-							continue
-						if src.startswith("//"):
-							return "https:" + src
-						if src.startswith("http://") or src.startswith("https://"):
-							return src
-						if src.startswith("/"):
-							return "https://racerxonline.com" + src
-				except Exception:
-					continue
 		return None
 
 	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
