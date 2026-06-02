@@ -2317,7 +2317,11 @@ def _display_image_url_for_rider_row(
             if u.startswith("http"):
                 from app.portrait_urls import normalize_racerx_portrait_url
 
-                return normalize_racerx_portrait_url(u) or u
+                low = u.lower()
+                if "post_thumb.png" in low or "/i/logos/" in low:
+                    pass
+                else:
+                    return normalize_racerx_portrait_url(u) or u
             return u
         elif u.startswith("/"):
             return u

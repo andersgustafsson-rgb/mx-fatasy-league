@@ -1567,6 +1567,9 @@ function wsxSlug(name) {
 /** Square face crop on RacerX CDN — fixes wide og:image (1200x630) in round avatars. */
 function normalizePortraitUrl(url) {
   if (!url || !url.includes('iscdn.net')) return url;
+  // RacerX placeholder/logo should never be used as portrait.
+  const low = String(url).toLowerCase();
+  if (low.includes('post_thumb.png') || low.includes('/i/logos/')) return null;
   try {
     const u = new URL(url);
     u.searchParams.set('w', '600');
@@ -1611,7 +1614,8 @@ function imgSrcFor(riderId) {
   // CDN/extern URL först — undvik trasig legacy DB-porträtt som blockerar RacerX-bild
   if (r.image_url) {
     if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) {
-      return normalizePortraitUrl(r.image_url);
+      const u = normalizePortraitUrl(r.image_url);
+      if (u) return u;
     }
   }
 
