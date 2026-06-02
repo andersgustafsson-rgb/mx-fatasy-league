@@ -115,18 +115,13 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	missing_q = Rider.query.filter(
 		((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
 		Rider.class_name.in_(["250cc", "450cc"]),
-	)
+	).order_by(Rider.class_name.asc(), Rider.rider_number.asc().nullslast(), Rider.name.asc())
 	missing = missing_q.all()
 	if not missing:
 		return {"ok": True, "done": True, "updated": 0, "remaining": 0, "total_missing": 0}
 
-	by_norm: dict[str, list[Rider]] = {}
-	for r in missing:
-		by_norm.setdefault(_norm_name_for_match(r.name or ""), []).append(r)
-
-	# Read CSV once and build lookup maps
-	csv_exact: dict[str, dict] = {}
-	csv_by_last: dict[str, list[dict]] = {}
+	# Read CSV once and build normalized rows list
+	csv_rows: list[dict] = []
 	with CSV_IN.open(encoding="utf-8") as f:
 		rdr = csv.DictReader(f)
 		for row in rdr:
@@ -137,72 +132,66 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			norm = _norm_name_for_match(name_guess)
 			if not norm:
 				continue
-			csv_exact.setdefault(norm, row)
-			last = norm.split(" ")[-1] if norm.split(" ") else ""
-			if last:
-				csv_by_last.setdefault(last, []).append(row)
+			row["_norm"] = norm
+			csv_rows.append(row)
 
 	updated = 0
 	remaining_before = int(len(missing))
-	seen = 0
+	processed_missing = 0
 	placeholders = 0
 	no_match = 0
 
-	# Iterate missing riders and assign best match
-	for norm, cands in list(by_norm.items()):
+	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
+	for rider in missing:
 		if updated >= limit:
 			break
-		if not cands:
-			continue
-
-		row = csv_exact.get(norm)
-		if row is None:
-			# Fallback: match by last name + first name prefix
-			parts = norm.split(" ")
-			if len(parts) >= 2:
-				first = parts[0]
-				last = parts[-1]
-				for cand_row in (csv_by_last.get(last) or []):
-					cn = _norm_name_for_match((cand_row.get("name_guess") or "").strip())
-					if not cn:
-						continue
-					cparts = cn.split(" ")
-					if len(cparts) >= 2 and cparts[0].startswith(first):
-						row = cand_row
-						break
-
-		if row is None:
+		processed_missing += 1
+		rn = _norm_name_for_match(rider.name or "")
+		if not rn:
 			no_match += 1
 			continue
 
-		img = (row.get("img_url") or "").strip()
-		if not img:
+		# 1) exact normalized match
+		best = next((row for row in csv_rows if row.get("_norm") == rn), None)
+
+		# 2) substring match (either direction)
+		if best is None:
+			for row in csv_rows:
+				cn = row.get("_norm") or ""
+				if not cn:
+					continue
+				if rn in cn or cn in rn:
+					best = row
+					break
+
+		# 3) last name match + first initial
+		if best is None:
+			parts = rn.split(" ")
+			if len(parts) >= 2:
+				first = parts[0]
+				last = parts[-1]
+				for row in csv_rows:
+					cn = row.get("_norm") or ""
+					cparts = cn.split(" ")
+					if len(cparts) >= 2 and cparts[-1] == last and cparts[0].startswith(first[:1]):
+						best = row
+						break
+
+		if best is None:
+			no_match += 1
 			continue
 
-		# If multiple candidates share name, prefer one with matching number if possible, else first.
-		num_raw = (row.get("number_guess") or "").strip()
-		num = int(num_raw) if num_raw.isdigit() else None
-		chosen = None
-		if num is not None:
-			for c in cands:
-				if c.rider_number == num:
-					chosen = c
-					break
-		if chosen is None:
-			chosen = cands[0]
+		img = (best.get("img_url") or "").strip()
+		if not img:
+			no_match += 1
+			continue
 
-		chosen.image_url = img
+		rider.image_url = img
 		updated += 1
-		seen += 1
 
 	db.session.commit()
 
-	remaining = (
-		Rider.query.filter(
-			((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
-			Rider.class_name.in_(["250cc", "450cc"]),
-		).count()
-	)
+	remaining = missing_q.count()
 	return {
 		"ok": True,
 		"done": remaining == 0,
@@ -210,11 +199,44 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 		"remaining_before": remaining_before,
 		"remaining": int(remaining),
 		"stats": {
-			"processed_rows": int(seen),
+			"processed_missing": int(processed_missing),
 			"placeholders_skipped": int(placeholders),
 			"no_match_rows": int(no_match),
 		},
 	}
+
+
+def _racerx_portraits_debug() -> dict:
+	CSV_IN = pathlib.Path("data/racerx_riders_2026.csv")
+	info: dict = {"csv_exists": CSV_IN.exists(), "csv_path": CSV_IN.as_posix()}
+
+	missing_q = Rider.query.filter(
+		((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
+		Rider.class_name.in_(["250cc", "450cc"]),
+	)
+	info["missing_count_250_450"] = int(missing_q.count())
+	info["sample_missing"] = [
+		{
+			"id": int(r.id),
+			"name": r.name,
+			"class": r.class_name,
+			"number": r.rider_number,
+			"norm": _norm_name_for_match(r.name or ""),
+		}
+		for r in missing_q.order_by(Rider.class_name, Rider.rider_number).limit(15).all()
+	]
+
+	if not CSV_IN.exists():
+		return {"ok": False, **info}
+
+	try:
+		rows = list(csv.DictReader(CSV_IN.open(encoding="utf-8")))
+		info["csv_total_rows"] = int(len(rows))
+		info["csv_sample"] = rows[:10]
+	except Exception as e:
+		return {"ok": False, **info, "error": f"csv_read_failed:{e}"}
+
+	return {"ok": True, **info}
 
 
 @bp.route("/admin/social-recap")
@@ -359,6 +381,18 @@ def admin_racerx_portraits_step():
 		if not res.get("ok"):
 			return jsonify(res), 400
 		return jsonify(res)
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@bp.get("/admin/tools/racerx_portraits/debug")
+@login_required
+def admin_racerx_portraits_debug():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		return jsonify(_racerx_portraits_debug())
 	except Exception as e:
 		db.session.rollback()
 		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
