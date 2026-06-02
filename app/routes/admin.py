@@ -8,6 +8,9 @@ import csv
 import pathlib
 import unicodedata
 
+import requests
+from bs4 import BeautifulSoup
+
 from flask import (
 	Blueprint,
 	current_app,
@@ -140,6 +143,38 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	processed_missing = 0
 	placeholders = 0
 	no_match = 0
+	fetched = 0
+	fetched_ok = 0
+	fetched_fail = 0
+
+	def _fetch_racerx_og_image(rider_name: str) -> str | None:
+		"""Best-effort: fetch https://racerxonline.com/rider/<slug> and return og:image url."""
+		name = (rider_name or "").strip().lower()
+		if not name:
+			return None
+		# slug: keep letters/numbers/spaces -> hyphen
+		slug = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in name)
+		slug = "-".join(slug.split())
+		if not slug:
+			return None
+		url = f"https://racerxonline.com/rider/{slug}"
+		try:
+			resp = requests.get(
+				url,
+				headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
+				timeout=12,
+			)
+			if resp.status_code != 200:
+				return None
+			soup = BeautifulSoup(resp.text, "html.parser")
+			og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+			if og and og.get("content"):
+				img = str(og.get("content") or "").strip()
+				if img and not img.lower().endswith("post_thumb.png"):
+					return img
+		except Exception:
+			return None
+		return None
 
 	# Iterate missing riders and find best match from CSV (small N, OK to be a bit fuzzy)
 	for rider in missing:
@@ -178,6 +213,15 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 						break
 
 		if best is None:
+			# Last fallback: fetch profile page by slug and use og:image
+			fetched += 1
+			img = _fetch_racerx_og_image(rider.name or "")
+			if img:
+				rider.image_url = img
+				updated += 1
+				fetched_ok += 1
+				continue
+			fetched_fail += 1
 			no_match += 1
 			continue
 
@@ -202,6 +246,9 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 			"processed_missing": int(processed_missing),
 			"placeholders_skipped": int(placeholders),
 			"no_match_rows": int(no_match),
+			"fetched_profile_pages": int(fetched),
+			"fetched_ok": int(fetched_ok),
+			"fetched_fail": int(fetched_fail),
 		},
 	}
 
