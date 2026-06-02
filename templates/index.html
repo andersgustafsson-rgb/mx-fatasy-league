@@ -3659,8 +3659,10 @@
         }
         wrap.classList.remove('hidden');
         const c = data.competition || {};
-        const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : (data.past_races_used != null ? `${data.past_races_used} senaste race i form` : '');
-        sub.textContent = [c.name, c.series, scopeLabel]
+        const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
+        const crowdN = data.crowd_users != null ? `${data.crowd_users} spelares picks` : '';
+        const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
+        sub.textContent = [c.name, c.series, scopeLabel, crowdN ? `picks ${lockedLbl} (${crowdN})` : '']
           .filter(Boolean).join(' · ');
         let html = '';
         html += renderPowerRankingRows(data.riders_450, '450cc — topp 3');

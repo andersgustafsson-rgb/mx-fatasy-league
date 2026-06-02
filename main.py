@@ -2524,6 +2524,8 @@ def _rank_bucket(
     form_weight: float = 0.55,
     crowd_weight: float = 0.45,
     top_n: int = 3,
+    *,
+    use_prior_pick_fallback: bool = True,
 ) -> tuple[list[dict], bool]:
     """
     Return (rows, picks_only).
@@ -2532,7 +2534,10 @@ def _rank_bucket(
     if not riders:
         return [], False
     rids = {r.id for r in riders}
-    crowd_raw_all = _crowd_scores_with_fallback(target, rids)
+    if use_prior_pick_fallback:
+        crowd_raw_all = _crowd_scores_with_fallback(target, rids)
+    else:
+        crowd_raw_all = _crowd_scores_for_competition(target, rids)
 
     # Kräv minst 2 resultat i aktuell scope om det finns minst två tävlingar; annars 1.
     min_res = 2 if len(past_comps) >= 2 else 1
@@ -2607,9 +2612,27 @@ def api_power_ranking():
         if not target:
             return jsonify({"ok": False, "error": "no_competition"}), 404
 
-        # Form: season-to-date (alla avklarade race före target i samma serie)
-        past = _past_races_for_form(target, limit=None)
+        # Form: senaste avklarade race i samma serie (inte hela säsongen — undvik att MX #2 ser ut som #1)
+        past = _past_races_for_form(target, limit=5)
         out_ids = _out_rider_ids(target.id)
+
+        try:
+            picks_locked = is_picks_locked(target)
+        except Exception:
+            picks_locked = False
+
+        crowd_users = (
+            db.session.query(db.func.count(db.distinct(RacePick.user_id)))
+            .filter(RacePick.competition_id == target.id)
+            .scalar()
+            or 0
+        )
+
+        # Tunn form (t.ex. bara Fox) → lita mer på picks till aktuellt race
+        if len(past) <= 1:
+            fw, cw = 0.35, 0.65
+        else:
+            fw, cw = 0.55, 0.45
 
         riders_450 = _riders_450_scope(out_ids)
         # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
@@ -2618,23 +2641,32 @@ def api_power_ranking():
         else:
             single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
 
-        top_450, picks_only_450 = _rank_bucket(riders_450, target, past, out_ids)
+        top_450, picks_only_450 = _rank_bucket(
+            riders_450, target, past, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+        )
 
         past_east = _past_comps_for_250_coast(past, "east")
         past_west = _past_comps_for_250_coast(past, "west")
 
         picks_only_any = picks_only_450
+        form_names = [c.name for c in past if c and c.name]
         if len(past) == 0:
             method = (
-                "Baserat på spelarnas picks (inget resultat från tidigare race i säsongen)"
+                "Baserat på spelarnas picks till denna tävling (inget tidigare resultat i serien)"
             )
-            form_scope_label = "picks denna vecka"
+            form_scope_label = "ingen form ännu"
+        elif len(past) == 1:
+            method = (
+                f"Form från {past[0].name} · picks till {target.name} "
+                f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
+            )
+            form_scope_label = f"form: {past[0].name}"
         else:
             method = (
-                "Resultat: medianplacering + antal West/East-race (säsong hittills) "
-                "· + spelarnas picks (snapshot efter låsning)"
+                f"Form från {len(past)} senaste race · picks till {target.name} "
+                f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
             )
-            form_scope_label = "hela säsongen hittills"
+            form_scope_label = f"{len(past)} senaste race"
 
         payload: dict = {
             "ok": True,
@@ -2647,7 +2679,10 @@ def api_power_ranking():
             },
             "method": method,
             "past_races_used": len(past),
+            "form_races": form_names,
             "form_scope_label": form_scope_label,
+            "crowd_users": int(crowd_users),
+            "crowd_picks_locked": bool(picks_locked),
             "ranking_source": "picks" if picks_only_any and len(past) == 0 else "results",
             "riders_450": top_450,
             "riders_250": None,
@@ -2657,15 +2692,21 @@ def api_power_ranking():
 
         if split_250:
             east_r, west_r = split_250
-            top_east, po_e = _rank_bucket(east_r, target, past_east, out_ids)
-            top_west, po_w = _rank_bucket(west_r, target, past_west, out_ids)
+            top_east, po_e = _rank_bucket(
+                east_r, target, past_east, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+            )
+            top_west, po_w = _rank_bucket(
+                west_r, target, past_west, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+            )
             payload["riders_250_east"] = top_east
             payload["riders_250_west"] = top_west
             picks_only_any = picks_only_any or po_e or po_w
         else:
             coast = str(getattr(target, "coast_250", None) or "").strip().lower()
             past_250 = _past_comps_for_250_coast(past, coast) if coast in ("east", "west") else past
-            top_250, po_250 = _rank_bucket(single_250, target, past_250, out_ids)
+            top_250, po_250 = _rank_bucket(
+                single_250, target, past_250, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+            )
             payload["riders_250"] = top_250
             picks_only_any = picks_only_any or po_250
 
