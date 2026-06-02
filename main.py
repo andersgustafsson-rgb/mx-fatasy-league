@@ -3837,11 +3837,13 @@ def profile_page():
         if best_positions:
             best_position = min(best_positions)
     
+    needs_email = not (getattr(user, "email", None) or "").strip()
     print(f"DEBUG: Rendering profile template with user: {user.username}")
     print(f"DEBUG: Total points breakdown - Race: {total_race_points}, Holeshot: {total_holeshot_points}, Wildcard: {total_wildcard_points}")
     return render_template(
         "profile.html",
         user=user,
+        needs_email=needs_email,
         season_team=season_team,
         competitions_played=competitions_played,
         best_position=best_position,
@@ -3883,7 +3885,13 @@ def update_profile():
     
     try:
         # Uppdatera grundläggande information (only if columns exist)
-        email = request.form.get("email", "").strip() or None
+        email_raw = (request.form.get("email", "") or "").strip()
+        # Soft requirement: block saving profile until email is provided (but do not block gameplay)
+        if not email_raw:
+            flash("Lägg till din e-postadress för att spara profilen (behövs för lösenordsreset och viktiga notiser).", "error")
+            return redirect(url_for("profile_page"))
+
+        email = email_raw or None
         display_name = request.form.get("display_name", "").strip() or None
         bio = request.form.get("bio", "").strip() or None
         favorite_rider = request.form.get("favorite_rider", "").strip() or None

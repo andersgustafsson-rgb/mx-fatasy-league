@@ -36,6 +36,13 @@
       {% endif %}
     {% endwith %}
 
+    {% if needs_email %}
+      <div class="p-4 rounded-lg mb-6 bg-amber-500/20 border border-amber-400 text-amber-100">
+        <div class="font-semibold">Lägg till e‑postadress</div>
+        <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Du kan spela som vanligt, men profilen går inte att spara utan e‑post.</div>
+      </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
       <!-- Profilbild och grundinfo -->
@@ -120,7 +127,8 @@
               </label>
               <input type="email" name="email" id="email" 
                      value="{{ user.email or '' }}"
-                     placeholder="din@email.com (valfritt)"
+                     placeholder="din@email.com"
+                     required
                      class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Används för att skicka påminnelser om picks och viktiga uppdateringar
@@ -173,6 +181,7 @@
             <!-- Submit button -->
             <div class="flex justify-end">
               <button type="submit"
+                      id="save-profile-btn"
                       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors">
                 Spara Profil
               </button>
@@ -181,6 +190,23 @@
         </div>
       </div>
     </div>
+
+    <script>
+      (function () {
+        const email = document.getElementById('email');
+        const btn = document.getElementById('save-profile-btn');
+        if (!email || !btn) return;
+
+        const sync = () => {
+          const ok = !!(email.value || '').trim();
+          btn.disabled = !ok;
+          btn.classList.toggle('opacity-50', !ok);
+          btn.classList.toggle('cursor-not-allowed', !ok);
+        };
+        email.addEventListener('input', sync);
+        sync();
+      })();
+    </script>
 
     <!-- Statistik och prestationer -->
     <div class="mt-8">
