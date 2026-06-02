@@ -2050,25 +2050,19 @@ def api_leagues_stats():
 
 
 def _resolve_power_ranking_competition(competition_id: int | None) -> Competition | None:
-    """Same idea as index: active race from admin, else next race without results."""
+    """Resolve target competition for power ranking (match index logic, ignore stale admin active race)."""
     if competition_id:
         c = Competition.query.get(competition_id)
         if c:
             return c
-    try:
-        global_sim = GlobalSimulation.query.first()
-        if global_sim and global_sim.active and global_sim.active_race_id:
-            c = Competition.query.get(global_sim.active_race_id)
-            if c:
-                return c
-    except Exception:
-        pass
-    today = get_today()
-    for c in Competition.query.order_by(Competition.event_date).all():
-        if c.event_date and c.event_date >= today:
-            has_results = CompetitionResult.query.filter_by(competition_id=c.id).first() is not None
-            if not has_results:
-                return c
+
+    # Prefer upcoming race with open picks; fallback to next race without results.
+    nxt = _next_competition_for_picks(require_open=True)
+    if nxt:
+        return nxt
+    nxt = _next_competition_for_picks(require_open=False)
+    if nxt:
+        return nxt
     return None
 
 
