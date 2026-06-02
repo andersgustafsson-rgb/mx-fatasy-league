@@ -344,6 +344,118 @@ def _racerx_portraits_debug() -> dict:
 
 	return {"ok": True, **info}
 
+def _racerx_slug_variants(name: str) -> list[str]:
+	raw = (name or "").strip()
+	if not raw:
+		return []
+	base = " ".join(raw.split())
+	toks = base.split(" ")
+	suffixes = {"jr", "sr", "ii", "iii", "iv", "v"}
+	variants = [base]
+	if toks and toks[-1].lower().strip(".") in suffixes:
+		variants.append(" ".join(toks[:-1]))
+	variants.append(" ".join([t for t in toks if len(t) > 1 and not t.endswith(".")]))
+
+	def slugify(s: str) -> str:
+		s = (s or "").strip().lower()
+		s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+		s = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in s)
+		return "-".join(s.split())
+
+	out: list[str] = []
+	seen: set[str] = set()
+	for v in variants:
+		slug = slugify(v)
+		if not slug or slug in seen:
+			continue
+		seen.add(slug)
+		out.append(slug)
+	return out
+
+
+@bp.get("/admin/tools/racerx_portraits/trace")
+@login_required
+def admin_racerx_portraits_trace():
+	"""
+	Debug: show which RacerX URLs are tried for a rider name and what we find.
+	Example:
+	  /admin/tools/racerx_portraits/trace?name=Mikkel%20Haarup
+	"""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		name = (request.args.get("name") or "").strip()
+		if not name:
+			return jsonify({"ok": False, "error": "missing_name"}), 400
+
+		slugs = _racerx_slug_variants(name)
+		attempts: list[dict] = []
+
+		headers = {
+			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
+			"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			"Accept-Language": "en-US,en;q=0.9",
+		}
+
+		found_img = None
+		found_url = None
+		for slug in slugs[:6]:
+			for base_path in ("rider", "riders"):
+				for suffix in ("", "/news"):
+					url = f"https://racerxonline.com/{base_path}/{slug}{suffix}"
+					row = {"url": url, "status": None, "og_image": None, "img_src": None}
+					try:
+						resp = requests.get(url, headers=headers, timeout=12, allow_redirects=True)
+						row["status"] = int(resp.status_code)
+						if resp.status_code == 200:
+							soup = BeautifulSoup(resp.text, "html.parser")
+							og = soup.select_one('meta[property="og:image"], meta[name="og:image"]')
+							if og and og.get("content"):
+								og_img = str(og.get("content") or "").strip()
+								row["og_image"] = og_img
+								if og_img and "post_thumb.png" not in og_img:
+									found_img = og_img
+									found_url = url
+							if not found_img:
+								for sel in (".rider-hero img", ".rider img", ".profile img", ".entry-content img", "img"):
+									im = soup.select_one(sel)
+									if not im:
+										continue
+									src = (im.get("src") or "").strip()
+									if not src or "post_thumb.png" in src:
+										continue
+									if src.startswith("//"):
+										src = "https:" + src
+									elif src.startswith("/"):
+										src = "https://racerxonline.com" + src
+									row["img_src"] = src
+									found_img = found_img or src
+									found_url = found_url or url
+									break
+					except Exception as e:
+						row["error"] = str(e)
+					attempts.append(row)
+					if found_img:
+						break
+				if found_img:
+					break
+			if found_img:
+				break
+
+		return jsonify(
+			{
+				"ok": True,
+				"name": name,
+				"slugs": slugs,
+				"found_image": found_img,
+				"found_on_url": found_url,
+				"attempts": attempts[:60],
+			}
+		)
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
 
 @bp.route("/admin/social-recap")
 @login_required
