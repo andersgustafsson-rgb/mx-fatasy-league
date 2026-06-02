@@ -111,8 +111,11 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	limit = int(limit or 40)
 	limit = max(1, min(limit, 200))
 
-	# Build candidate set: riders missing image_url
-	missing_q = Rider.query.filter((Rider.image_url == None) | (Rider.image_url == ""))  # noqa: E711
+	# Build candidate set: only 250/450 riders missing image_url
+	missing_q = Rider.query.filter(
+		((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
+		Rider.class_name.in_(["250cc", "450cc"]),
+	)
 	missing = missing_q.all()
 	if not missing:
 		return {"ok": True, "done": True, "updated": 0, "remaining": 0, "total_missing": 0}
@@ -121,62 +124,85 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	for r in missing:
 		by_norm.setdefault(_norm_name_for_match(r.name or ""), []).append(r)
 
+	# Read CSV once and build lookup maps
+	csv_exact: dict[str, dict] = {}
+	csv_by_last: dict[str, list[dict]] = {}
+	with CSV_IN.open(encoding="utf-8") as f:
+		rdr = csv.DictReader(f)
+		for row in rdr:
+			img = (row.get("img_url") or "").strip()
+			if not img or img.lower().endswith("post_thumb.png"):
+				continue
+			name_guess = (row.get("name_guess") or "").strip()
+			norm = _norm_name_for_match(name_guess)
+			if not norm:
+				continue
+			csv_exact.setdefault(norm, row)
+			last = norm.split(" ")[-1] if norm.split(" ") else ""
+			if last:
+				csv_by_last.setdefault(last, []).append(row)
+
 	updated = 0
 	remaining_before = int(len(missing))
 	seen = 0
 	placeholders = 0
 	no_match = 0
 
-	with CSV_IN.open(encoding="utf-8") as f:
-		rdr = csv.DictReader(f)
-		for row in rdr:
-			if updated >= limit:
-				break
-			img = (row.get("img_url") or "").strip()
-			if not img:
-				continue
-			# Skip obvious placeholder images
-			if img.lower().endswith("post_thumb.png"):
-				placeholders += 1
-				continue
+	# Iterate missing riders and assign best match
+	for norm, cands in list(by_norm.items()):
+		if updated >= limit:
+			break
+		if not cands:
+			continue
 
-			name_guess = (row.get("name_guess") or "").strip()
-			norm = _norm_name_for_match(name_guess)
-			if not norm:
-				continue
-
-			cands = by_norm.get(norm) or []
-			if not cands:
-				no_match += 1
-				continue
-
-			# If multiple candidates share name, prefer one with matching number if possible, else first.
-			num_raw = (row.get("number_guess") or "").strip()
-			num = int(num_raw) if num_raw.isdigit() else None
-			chosen = None
-			if num is not None:
-				for c in cands:
-					if c.rider_number == num:
-						chosen = c
+		row = csv_exact.get(norm)
+		if row is None:
+			# Fallback: match by last name + first name prefix
+			parts = norm.split(" ")
+			if len(parts) >= 2:
+				first = parts[0]
+				last = parts[-1]
+				for cand_row in (csv_by_last.get(last) or []):
+					cn = _norm_name_for_match((cand_row.get("name_guess") or "").strip())
+					if not cn:
+						continue
+					cparts = cn.split(" ")
+					if len(cparts) >= 2 and cparts[0].startswith(first):
+						row = cand_row
 						break
-			if chosen is None:
-				chosen = cands[0]
 
-			# Write URL
-			chosen.image_url = img
-			updated += 1
-			seen += 1
-			# Remove from missing pool so we don't double-update in same run
-			try:
-				cands.remove(chosen)
-			except Exception:
-				pass
-			if not cands:
-				by_norm.pop(norm, None)
+		if row is None:
+			no_match += 1
+			continue
+
+		img = (row.get("img_url") or "").strip()
+		if not img:
+			continue
+
+		# If multiple candidates share name, prefer one with matching number if possible, else first.
+		num_raw = (row.get("number_guess") or "").strip()
+		num = int(num_raw) if num_raw.isdigit() else None
+		chosen = None
+		if num is not None:
+			for c in cands:
+				if c.rider_number == num:
+					chosen = c
+					break
+		if chosen is None:
+			chosen = cands[0]
+
+		chosen.image_url = img
+		updated += 1
+		seen += 1
 
 	db.session.commit()
 
-	remaining = Rider.query.filter((Rider.image_url == None) | (Rider.image_url == "")).count()  # noqa: E711
+	remaining = (
+		Rider.query.filter(
+			((Rider.image_url == None) | (Rider.image_url == "")),  # noqa: E711
+			Rider.class_name.in_(["250cc", "450cc"]),
+		).count()
+	)
 	return {
 		"ok": True,
 		"done": remaining == 0,
