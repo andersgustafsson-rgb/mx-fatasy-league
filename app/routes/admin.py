@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 from functools import wraps
 import csv
 import pathlib
+import unicodedata
 
 from flask import (
 	Blueprint,
@@ -75,11 +76,27 @@ def login_required(f):
 
 
 def _norm_name_for_match(s: str) -> str:
-	s = (s or "").strip().lower()
-	s = s.replace(".", " ")
+	s = (s or "").strip()
+	if not s:
+		return ""
+	# Dedup concatenated names: "Cole DaviesCole Davies" / "Cole Davies Cole Davies"
+	if len(s) % 2 == 0:
+		mid = len(s) // 2
+		if s[:mid] == s[mid:]:
+			s = s[:mid]
+	words = " ".join(s.split())
+	parts = words.split(" ")
+	if len(parts) >= 4 and len(parts) % 2 == 0:
+		half = len(parts) // 2
+		if parts[:half] == parts[half:]:
+			words = " ".join(parts[:half])
+	s = words
+
+	# Strip accents/diacritics and normalize
+	s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+	s = s.lower().replace(".", " ")
 	s = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in s)
-	s = " ".join(s.split())
-	return s
+	return " ".join(s.split())
 
 
 def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
@@ -105,6 +122,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 		by_norm.setdefault(_norm_name_for_match(r.name or ""), []).append(r)
 
 	updated = 0
+	remaining_before = int(len(missing))
 	seen = 0
 	placeholders = 0
 	no_match = 0
@@ -163,6 +181,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 		"ok": True,
 		"done": remaining == 0,
 		"updated": updated,
+		"remaining_before": remaining_before,
 		"remaining": int(remaining),
 		"stats": {
 			"processed_rows": int(seen),

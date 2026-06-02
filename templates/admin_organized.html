@@ -1636,6 +1636,7 @@
 
             let totalUpdated = 0;
             let loops = 0;
+            let zeroStreak = 0;
             try {
                 while (loops < 50) { // safety cap
                     loops += 1;
@@ -1652,11 +1653,22 @@
 
                     totalUpdated += Number(data.updated || 0);
                     const remaining = Number(data.remaining || 0);
+                    const updatedNow = Number(data.updated || 0);
+                    if (updatedNow <= 0) {
+                        zeroStreak += 1;
+                    } else {
+                        zeroStreak = 0;
+                    }
                     if (data.done || remaining <= 0) {
                         status.textContent = `✅ Klart! Uppdaterade ${totalUpdated} förare.`;
                         return;
                     }
-                    status.textContent = `Uppdaterade +${data.updated} (totalt ${totalUpdated}). Kvar: ${remaining}...`;
+                    if (zeroStreak >= 3) {
+                        const nm = (data.stats && data.stats.no_match_rows != null) ? ` (no-match rows: ${data.stats.no_match_rows})` : '';
+                        status.textContent = `⏸️ Inga fler matchar automatiskt. Uppdaterade totalt ${totalUpdated}. Kvar: ${remaining}.${nm} Du kan köra igen efter att vi lagt overrides.`;
+                        return;
+                    }
+                    status.textContent = `Uppdaterade +${updatedNow} (totalt ${totalUpdated}). Kvar: ${remaining}...`;
                     await new Promise(r => setTimeout(r, 400));
                 }
                 status.textContent = `⏸️ Stoppade efter många batchar. Totalt uppdaterade: ${totalUpdated}. Kör igen för att fortsätta.`;
