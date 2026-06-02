@@ -16,12 +16,21 @@ try:
 except Exception:
     HAS_FUZZY = False
 
-# Ensure project root on sys.path so "from app import ..." works
+# Ensure project root on sys.path so "from main import ..." works
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import app, db, Rider  # noqa: E402
+# Render Postgres requires SSL; make sure local runs don't fail due to missing sslmode.
+db_url = (os.getenv("DATABASE_URL") or "").strip()
+if db_url and "postgres" in db_url and "sslmode=" not in db_url:
+    os.environ["DATABASE_URL"] = db_url + ("&" if "?" in db_url else "?") + "sslmode=require"
+
+# IMPORTANT: repo has both app.py and app/ package; use app factory to avoid side effects.
+from app import create_app  # noqa: E402
+from models import db, Rider  # noqa: E402
+
+app = create_app()
 
 CSV_IN = pathlib.Path("data/racerx_riders_2026.csv")
 OVR_PATH = pathlib.Path("data/racerx_name_map.csv")
