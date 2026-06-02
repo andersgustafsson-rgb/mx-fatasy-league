@@ -5,6 +5,9 @@ import sys
 import pathlib
 import requests
 from werkzeug.utils import secure_filename
+from io import BytesIO
+
+from PIL import Image
 
 # Optional fuzzy support (safe if not installed)
 try:
@@ -22,8 +25,9 @@ from app import app, db, Rider  # noqa: E402
 
 CSV_IN = pathlib.Path("data/racerx_riders_2026.csv")
 OVR_PATH = pathlib.Path("data/racerx_name_map.csv")
-DEST_DIR = pathlib.Path("static/riders")
+DEST_DIR = pathlib.Path("static/riders/headshots")
 DEST_DIR.mkdir(parents=True, exist_ok=True)
+IMPORT_MODE = (os.getenv("IMPORT_MODE") or "url").strip().lower()  # "url" or "download"
 
 HEADERS = {
     "User-Agent": (
@@ -42,13 +46,12 @@ def norm_name(s: str) -> str:
 
 
 def pick_filename(name: str, number: int | None, url: str) -> str:
-    """Build a stable local filename: '<number>_<name>.ext' or '<name>.ext'."""
+    """Build a stable local filename: '<rider_number>_<name>.webp' (normalized)."""
     base = norm_name(name).lower().replace(" ", "_")
     if number:
         base = f"{number}_{base}"
-    path = url.split("?", 1)[0]
-    ext = os.path.splitext(path)[1] or ".jpg"
-    return secure_filename(base + ext)
+    # Always write webp (small + cache-friendly)
+    return secure_filename(base + ".webp")
 
 
 def load_overrides() -> dict:
@@ -72,10 +75,23 @@ def load_overrides() -> dict:
     return ovr
 
 
-def download_image(url: str, dest_path: pathlib.Path):
+def download_image(url: str) -> bytes:
     resp = requests.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    dest_path.write_bytes(resp.content)
+    return resp.content
+
+
+def downscale_to_webp(img_bytes: bytes, *, max_size: int = 256, quality: int = 78) -> bytes:
+    """
+    Convert arbitrary remote images to a small square-ish WebP.
+    Keeps aspect ratio; max side = max_size.
+    """
+    im = Image.open(BytesIO(img_bytes))
+    im = im.convert("RGB")
+    im.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+    out = BytesIO()
+    im.save(out, format="WEBP", quality=int(quality), method=6)
+    return out.getvalue()
 
 
 def main():
@@ -164,16 +180,26 @@ def main():
                 # Keep the DB match but don't update image_url from a placeholder
                 continue
 
-            # Download image and update rider
+            # Don't overwrite an existing image_url unless explicitly requested
+            if getattr(candidate, "image_url", None):
+                continue
+
+            # Update rider image
             try:
-                fname = pick_filename(candidate.name, candidate.rider_number, img)
-                dest = DEST_DIR / fname
-                download_image(img, dest)
-                # store path relative to static/
-                candidate.image_url = f"riders/{fname}"
+                if IMPORT_MODE == "download":
+                    fname = pick_filename(candidate.name, candidate.rider_number, img)
+                    dest = DEST_DIR / fname
+                    raw = download_image(img)
+                    webp = downscale_to_webp(raw, max_size=256, quality=78)
+                    dest.write_bytes(webp)
+                    # store path relative to static/
+                    candidate.image_url = f"riders/headshots/{fname}"
+                else:
+                    # safest default: store remote URL; templates accept http(s)
+                    candidate.image_url = img
                 updated += 1
             except Exception as e:
-                print("[MISS-DL]", candidate.name, img, e)
+                print("[MISS-IMG]", candidate.name, img, e)
 
         # DEBUG REPORT (before commit)
         print(f"[DEBUG] scraped rows: {scraped_total}")
