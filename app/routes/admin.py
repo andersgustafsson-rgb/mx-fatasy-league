@@ -4,6 +4,8 @@ import os
 import traceback
 from datetime import date, datetime, timedelta
 from functools import wraps
+import csv
+import pathlib
 
 from flask import (
 	Blueprint,
@@ -70,6 +72,104 @@ def login_required(f):
 				pass
 		return f(*args, **kwargs)
 	return decorated_function
+
+
+def _norm_name_for_match(s: str) -> str:
+	s = (s or "").strip().lower()
+	s = s.replace(".", " ")
+	s = "".join(ch if (ch.isalnum() or ch.isspace()) else " " for ch in s)
+	s = " ".join(s.split())
+	return s
+
+
+def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
+	"""
+	Server-side import: set Rider.image_url to RacerX CDN url (no downloads, no base64).
+	Processes up to `limit` riders with missing image_url per call.
+	"""
+	CSV_IN = pathlib.Path("data/racerx_riders_2026.csv")
+	if not CSV_IN.exists():
+		return {"ok": False, "error": f"missing_csv:{CSV_IN.as_posix()}"}
+
+	limit = int(limit or 40)
+	limit = max(1, min(limit, 200))
+
+	# Build candidate set: riders missing image_url
+	missing_q = Rider.query.filter((Rider.image_url == None) | (Rider.image_url == ""))  # noqa: E711
+	missing = missing_q.all()
+	if not missing:
+		return {"ok": True, "done": True, "updated": 0, "remaining": 0, "total_missing": 0}
+
+	by_norm: dict[str, list[Rider]] = {}
+	for r in missing:
+		by_norm.setdefault(_norm_name_for_match(r.name or ""), []).append(r)
+
+	updated = 0
+	seen = 0
+	placeholders = 0
+	no_match = 0
+
+	with CSV_IN.open(encoding="utf-8") as f:
+		rdr = csv.DictReader(f)
+		for row in rdr:
+			if updated >= limit:
+				break
+			img = (row.get("img_url") or "").strip()
+			if not img:
+				continue
+			# Skip obvious placeholder images
+			if img.lower().endswith("post_thumb.png"):
+				placeholders += 1
+				continue
+
+			name_guess = (row.get("name_guess") or "").strip()
+			norm = _norm_name_for_match(name_guess)
+			if not norm:
+				continue
+
+			cands = by_norm.get(norm) or []
+			if not cands:
+				no_match += 1
+				continue
+
+			# If multiple candidates share name, prefer one with matching number if possible, else first.
+			num_raw = (row.get("number_guess") or "").strip()
+			num = int(num_raw) if num_raw.isdigit() else None
+			chosen = None
+			if num is not None:
+				for c in cands:
+					if c.rider_number == num:
+						chosen = c
+						break
+			if chosen is None:
+				chosen = cands[0]
+
+			# Write URL
+			chosen.image_url = img
+			updated += 1
+			seen += 1
+			# Remove from missing pool so we don't double-update in same run
+			try:
+				cands.remove(chosen)
+			except Exception:
+				pass
+			if not cands:
+				by_norm.pop(norm, None)
+
+	db.session.commit()
+
+	remaining = Rider.query.filter((Rider.image_url == None) | (Rider.image_url == "")).count()  # noqa: E711
+	return {
+		"ok": True,
+		"done": remaining == 0,
+		"updated": updated,
+		"remaining": int(remaining),
+		"stats": {
+			"processed_rows": int(seen),
+			"placeholders_skipped": int(placeholders),
+			"no_match_rows": int(no_match),
+		},
+	}
 
 
 @bp.route("/admin/social-recap")
@@ -200,6 +300,23 @@ def admin_page():
 		return render_template("admin_organized.html")
 	except Exception as e:
 		return f"<h1>Database Error</h1><p>{e}</p>"
+
+
+@bp.post("/admin/tools/racerx_portraits/step")
+@login_required
+def admin_racerx_portraits_step():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		data = request.get_json(silent=True) or {}
+		limit = int(data.get("limit") or 40)
+		res = _import_racerx_portraits_step(limit=limit)
+		if not res.get("ok"):
+			return jsonify(res), 400
+		return jsonify(res)
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
 @bp.route('/competition_management')

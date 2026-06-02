@@ -634,6 +634,17 @@
                         <a href="/rider_management" class="btn-primary px-4 py-2 rounded-lg inline-block">
                             👥 Hantera förare
                         </a>
+                        <div class="mt-4 pt-4 border-t border-gray-700">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button id="racerx-portraits-btn" onclick="adminImportRacerxPortraits()" class="btn-warning px-4 py-2 rounded-lg">
+                                    🖼️ Importera RacerX-porträtt (server)
+                                </button>
+                                <span id="racerx-portraits-status" class="text-sm text-gray-300"></span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-2">
+                                Sätter <code class="text-gray-200">Rider.image_url</code> till RacerX CDN-länk för förare som saknar bild (ingen base64, ingen nedladdning).
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -1611,6 +1622,48 @@
             } catch (e) {
                 const select = document.getElementById('bulk-competition');
                 if (select) select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+            }
+        }
+
+        // Admin tool: import RacerX portraits server-side in batches
+        async function adminImportRacerxPortraits() {
+            const btn = document.getElementById('racerx-portraits-btn');
+            const status = document.getElementById('racerx-portraits-status');
+            if (!btn || !status) return;
+
+            btn.disabled = true;
+            status.textContent = 'Startar import...';
+
+            let totalUpdated = 0;
+            let loops = 0;
+            try {
+                while (loops < 50) { // safety cap
+                    loops += 1;
+                    status.textContent = `Importerar... (batch ${loops})`;
+                    const resp = await fetch('/admin/tools/racerx_portraits/step', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({limit: 60})
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok || data.error || data.ok === false) {
+                        throw new Error(data.error || 'Okänt fel vid import');
+                    }
+
+                    totalUpdated += Number(data.updated || 0);
+                    const remaining = Number(data.remaining || 0);
+                    if (data.done || remaining <= 0) {
+                        status.textContent = `✅ Klart! Uppdaterade ${totalUpdated} förare.`;
+                        return;
+                    }
+                    status.textContent = `Uppdaterade +${data.updated} (totalt ${totalUpdated}). Kvar: ${remaining}...`;
+                    await new Promise(r => setTimeout(r, 400));
+                }
+                status.textContent = `⏸️ Stoppade efter många batchar. Totalt uppdaterade: ${totalUpdated}. Kör igen för att fortsätta.`;
+            } catch (e) {
+                status.textContent = `❌ Fel: ${e.message || e}`;
+            } finally {
+                btn.disabled = false;
             }
         }
 
