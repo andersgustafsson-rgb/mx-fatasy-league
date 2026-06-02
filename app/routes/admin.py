@@ -148,7 +148,7 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 	fetched_fail = 0
 
 	def _fetch_racerx_og_image(rider_name: str) -> str | None:
-		"""Best-effort: fetch https://racerxonline.com/rider/<slug> and return og:image url."""
+		"""Best-effort: fetch RacerX rider page and return a headshot image URL."""
 		raw = (rider_name or "").strip()
 		if not raw:
 			return None
@@ -181,7 +181,11 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 				try:
 					resp = requests.get(
 						url,
-						headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36"},
+						headers={
+							"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124 Safari/537.36",
+							"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+							"Accept-Language": "en-US,en;q=0.9",
+						},
 						timeout=12,
 					)
 					if resp.status_code != 200:
@@ -192,6 +196,28 @@ def _import_racerx_portraits_step(*, limit: int = 40) -> dict:
 						img = str(og.get("content") or "").strip()
 						if img and not img.lower().endswith("post_thumb.png"):
 							return img
+					# Fallback: pick first likely headshot <img>
+					for sel in (
+						".rider-hero img",
+						".rider img",
+						".profile img",
+						".entry-content img",
+						"img",
+					):
+						im = soup.select_one(sel)
+						if not im:
+							continue
+						src = (im.get("src") or "").strip()
+						if not src:
+							continue
+						if "post_thumb.png" in src:
+							continue
+						if src.startswith("//"):
+							return "https:" + src
+						if src.startswith("http://") or src.startswith("https://"):
+							return src
+						if src.startswith("/"):
+							return "https://racerxonline.com" + src
 				except Exception:
 					continue
 		return None
