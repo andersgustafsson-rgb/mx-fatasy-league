@@ -1235,6 +1235,7 @@ def index():
     picks_locked = True
     league_requests_count = 0
     
+    needs_email = False
     if is_logged_in:
         # Get season team with error handling
         try:
@@ -1273,9 +1274,11 @@ def index():
             user = User.query.get(uid)
             if user and hasattr(user, 'profile_picture_url') and user.profile_picture_url:
                 user_profile_picture = user.profile_picture_url
+            needs_email = not (getattr(user, "email", None) or "").strip()
         except Exception as e:
             print(f"Error getting user profile picture: {e}")
             user_profile_picture = None
+            needs_email = False
 
         # Get user's picks for upcoming race
         picks_status = "no_picks"
@@ -1567,6 +1570,7 @@ def index():
         picks_locked=picks_locked,
         is_admin=is_admin_user() if is_logged_in else False,
         is_logged_in=is_logged_in,
+        needs_email=needs_email if is_logged_in else False,
         admin_message=admin_message,
         admin_message_priority=admin_message_priority,
         admin_announcement_id=admin_announcement_id,

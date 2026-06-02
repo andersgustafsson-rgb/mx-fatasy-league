@@ -513,6 +513,20 @@
 
       <!-- Header - Responsiv layout -->
       <div class="mb-6 md:mb-8">
+        {% if is_logged_in and needs_email %}
+          <div class="mb-4 rounded-xl border border-amber-400/70 bg-amber-500/15 px-4 py-3 text-amber-100">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div class="font-extrabold">Lägg till e‑postadress</div>
+                <div class="text-sm opacity-90">Behövs för lösenordsreset och viktiga notiser. Det tar 10 sekunder.</div>
+              </div>
+              <a href="{{ url_for('profile_page') }}"
+                 class="inline-flex items-center justify-center rounded-lg bg-amber-400 text-gray-900 font-extrabold px-4 py-2 hover:bg-amber-300 transition-colors">
+                Fyll i nu →
+              </a>
+            </div>
+          </div>
+        {% endif %}
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
           <header class="text-center sm:text-left">
             <h1 class="mx-brand" aria-label="MX Fantasy League">
