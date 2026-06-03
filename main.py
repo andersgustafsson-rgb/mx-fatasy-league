@@ -10783,17 +10783,17 @@ def _build_race_results_detail(
                     "actual_name": actual_at_pos_name or rider_name,
                     "position": pos_label,
                     "points": 15,
-                    "hint": f"Rätt wildcard på P{wc.position} → +15p",
+                    "hint": f"Rätt på plats {wc.position} (wildcard 10–20) → +15p",
                 }
             )
         else:
             if actual_at_pos_name and pos_label:
                 hint = (
-                    f"Gissade {rider_name} på P{pos_label} — där kom {actual_at_pos_name}"
+                    f"Gissade {rider_name} på plats {pos_label} (10–20) — där kom {actual_at_pos_name}"
                 )
             elif pos_label:
                 hint = (
-                    f"Gissade {rider_name} på P{pos_label} — ingen förare registrerad på platsen"
+                    f"Gissade {rider_name} på plats {pos_label} (10–20) — ingen förare registrerad"
                 )
             else:
                 hint = "Fel wildcard → 0p"

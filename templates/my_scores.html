@@ -318,18 +318,19 @@
       if (row.kind === "wildcard") {
         const picked = (row.picked_name || row.rider_name || "—").trim();
         const actual = (row.actual_name || "").trim();
-        const pos = row.position != null ? `P${row.position}` : "—";
+        const posNum = row.position != null ? row.position : null;
+        const pos = posNum != null ? `plats ${posNum}` : "—";
         let bodyHtml;
         if (ok) {
-          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> — stämde</span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> — stämde</span>`;
         } else if (actual) {
-          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> → kom <strong class="text-amber-200">${actual}</strong></span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> → där kom <strong class="text-amber-200">${actual}</strong></span>`;
         } else {
-          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> <span class="text-rose-300/90">(ingen på platsen i resultat)</span></span>`;
+          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(ingen på platsen i resultat)</span></span>`;
         }
         return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-bold uppercase text-slate-500">Wildcard 450</span>
+            <span class="text-xs font-bold uppercase text-slate-500">Wildcard · plats 10–20</span>
             <span class="text-base shrink-0">${icon}</span>
           </div>
           <div class="text-sm leading-snug">${bodyHtml}</div>
