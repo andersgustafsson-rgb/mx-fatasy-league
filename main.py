@@ -255,9 +255,13 @@ elif os.getenv('RENDER'):
     print("   4. Copy the DATABASE_URL from database settings")
     print("   5. Add DATABASE_URL environment variable to your web service")
 else:
-    # For local development, use a local file
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fantasy_mx.db'
-    print("Using local SQLite database file")
+    # For local development: honor DATABASE_URL when it points at SQLite (e.g. fantasy_mx_local.db)
+    db_url = (os.getenv("DATABASE_URL") or "").strip()
+    if db_url.startswith("sqlite:"):
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///fantasy_mx.db"
+    print(f"Using local SQLite database file ({app.config['SQLALCHEMY_DATABASE_URI']})")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -320,7 +324,8 @@ def inject_facebook_social():
 
 # Security settings
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour session timeout
-app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS in production
+# Render uses HTTPS; local http://127.0.0.1 needs insecure cookies or login never sticks
+app.config['SESSION_COOKIE_SECURE'] = bool(os.getenv('RENDER'))
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent XSS attacks
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 
@@ -10569,6 +10574,264 @@ def holeshot_pick_class_for_result(pick_class: str) -> str:
     return pick_class or ""
 
 
+def _build_race_results_detail(
+    user_id: int,
+    competition_id: int,
+    *,
+    dedupe_picks: bool = False,
+) -> dict:
+    """Structured race score breakdown for detail modal."""
+    comp = Competition.query.get(competition_id)
+    actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+    actual_by_rider = {r.rider_id: r for r in actual}
+
+    all_picks = RacePick.query.filter_by(user_id=user_id, competition_id=competition_id).all()
+    if dedupe_picks:
+        seen_picks: dict[tuple, RacePick] = {}
+        for pick in all_picks:
+            key = (pick.user_id, pick.competition_id, pick.rider_id)
+            if key not in seen_picks or pick.pick_id > seen_picks[key].pick_id:
+                seen_picks[key] = pick
+        picks = list(seen_picks.values())
+    else:
+        picks = all_picks
+
+    picks_450: list[dict] = []
+    picks_250: list[dict] = []
+    other_lines: list[dict] = []
+    race_points = 0
+
+    for p in picks:
+        rider = Rider.query.get(p.rider_id)
+        rider_name = rider.name if rider else f"Förare #{p.rider_id}"
+        cls = (rider.class_name if rider else "") or ""
+        act = actual_by_rider.get(p.rider_id)
+        if not act:
+            other_lines.append(
+                {
+                    "kind": "note",
+                    "status": "error",
+                    "text": f"{rider_name} — inget resultat hittades",
+                    "points": 0,
+                }
+            )
+            continue
+
+        points = calculate_race_pick_points(p.predicted_position, act.position)
+        race_points += points
+        diff = abs(int(p.predicted_position) - int(act.position)) if p.predicted_position and act.position else 0
+
+        if points == 25:
+            status = "perfect"
+            hint = "Exakt rätt plats → +25p"
+        elif points > 0:
+            status = "close"
+            hint = f"{diff} {'plats' if diff == 1 else 'platser'} fel → +{points}p"
+        else:
+            status = "miss"
+            hint = "Utanför poängzonen → 0p"
+
+        row = {
+            "kind": "pick",
+            "status": status,
+            "rider_name": rider_name,
+            "predicted": int(p.predicted_position),
+            "actual": int(act.position),
+            "points": int(points),
+            "diff": int(diff),
+            "hint": hint,
+        }
+        if cls == "450cc":
+            picks_450.append(row)
+        elif cls == "250cc":
+            picks_250.append(row)
+        else:
+            other_lines.append(row)
+
+    picks_450.sort(key=lambda x: x.get("predicted", 99))
+    picks_250.sort(key=lambda x: x.get("predicted", 99))
+
+    all_holopicks = HoleshotPick.query.filter_by(user_id=user_id, competition_id=competition_id).all()
+    if dedupe_picks:
+        seen_holeshots: dict[tuple, HoleshotPick] = {}
+        for hp in all_holopicks:
+            key = (hp.user_id, hp.competition_id, hp.class_name)
+            if key not in seen_holeshots or hp.id > seen_holeshots[key].id:
+                seen_holeshots[key] = hp
+        holopicks = list(seen_holeshots.values())
+    else:
+        holopicks = all_holopicks
+
+    holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
+    holo_by_class = holeshot_results_by_bucket(holos)
+    holeshot_rows: list[dict] = []
+    holeshot_450_correct = False
+    holeshot_250_correct = False
+    holeshot_450_name = ""
+    holeshot_250_name = ""
+    holeshot_points = 0
+
+    for hp in holopicks:
+        bucket = holeshot_pick_class_for_result(hp.class_name)
+        act = holo_by_class.get(bucket)
+        rider = Rider.query.get(hp.rider_id)
+        rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
+        label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
+
+        actual_rider_name = None
+        if act and act.rider_id:
+            actual_rider = Rider.query.get(act.rider_id)
+            actual_rider_name = (
+                actual_rider.name if actual_rider else f"Förare #{act.rider_id}"
+            )
+
+        if act and act.rider_id == hp.rider_id:
+            if bucket == "450cc":
+                holeshot_450_correct = True
+                holeshot_450_name = rider_name
+            elif bucket == "250cc":
+                holeshot_250_correct = True
+                holeshot_250_name = rider_name
+            holeshot_rows.append(
+                {
+                    "kind": "holeshot",
+                    "status": "correct",
+                    "label": label,
+                    "rider_name": rider_name,
+                    "picked_name": rider_name,
+                    "actual_name": actual_rider_name or rider_name,
+                    "points": 10,
+                    "hint": "Rätt holeshot → +10p",
+                }
+            )
+        else:
+            if actual_rider_name:
+                hint = f"Gissade {rider_name} — holeshot: {actual_rider_name}"
+            else:
+                hint = f"Gissade {rider_name} — inget holeshot-resultat registrerat"
+            holeshot_rows.append(
+                {
+                    "kind": "holeshot",
+                    "status": "wrong",
+                    "label": label,
+                    "rider_name": rider_name,
+                    "picked_name": rider_name,
+                    "actual_name": actual_rider_name,
+                    "points": 0,
+                    "hint": hint,
+                }
+            )
+
+    if holeshot_450_correct and holeshot_250_correct:
+        holeshot_points = 25
+        holeshot_rows = [
+            {
+                "kind": "holeshot",
+                "status": "correct",
+                "label": "450cc",
+                "rider_name": holeshot_450_name or "—",
+                "points": 10,
+                "hint": "Rätt holeshot 450",
+            },
+            {
+                "kind": "holeshot",
+                "status": "correct",
+                "label": "250cc",
+                "rider_name": holeshot_250_name or "—",
+                "points": 10,
+                "hint": "Rätt holeshot 250",
+            },
+            {
+                "kind": "bonus",
+                "status": "bonus",
+                "text": "Båda holeshots rätt — +5 bonus",
+                "points": 5,
+                "hint": "25p totalt för holeshot",
+            },
+        ]
+    else:
+        holeshot_points = sum(int(r.get("points") or 0) for r in holeshot_rows if r.get("kind") == "holeshot")
+
+    wildcard_rows: list[dict] = []
+    wildcard_points = 0
+    wc = WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+    if wc:
+        actual_450cc = []
+        for r in actual:
+            rider = Rider.query.get(r.rider_id)
+            if rider and rider.class_name == "450cc":
+                actual_450cc.append(r)
+        target = next((r for r in actual_450cc if r.position == wc.position), None)
+        rider = Rider.query.get(wc.rider_id)
+        rider_name = rider.name if rider else f"Förare #{wc.rider_id}"
+        if target and target.rider_id == wc.rider_id:
+            wildcard_points = 15
+            wildcard_rows.append(
+                {
+                    "kind": "wildcard",
+                    "status": "correct",
+                    "rider_name": rider_name,
+                    "position": int(wc.position),
+                    "points": 15,
+                    "hint": f"Rätt wildcard på P{wc.position} → +15p",
+                }
+            )
+        else:
+            wildcard_rows.append(
+                {
+                    "kind": "wildcard",
+                    "status": "wrong",
+                    "rider_name": rider_name,
+                    "position": int(wc.position) if wc.position else None,
+                    "points": 0,
+                    "hint": "Fel wildcard → 0p",
+                }
+            )
+
+    total = race_points + holeshot_points + wildcard_points
+
+    # Legacy pipe-delimited lines for any old clients
+    breakdown: list[str] = []
+    for bucket in (picks_450, picks_250):
+        for row in bucket:
+            if row["status"] == "perfect":
+                breakdown.append(
+                    f"✅|PERFEKT|{row['rider_name']}|{row['predicted']}|{row['actual']}|+{row['points']}"
+                )
+            elif row["status"] == "close":
+                breakdown.append(
+                    f"▲|{row['diff']}PLATSER|{row['rider_name']}|{row['predicted']}|{row['actual']}|+{row['points']}"
+                )
+            else:
+                breakdown.append(
+                    f"❌|MISS|{row['rider_name']}|{row['predicted']}|{row['actual']}|0"
+                )
+
+    return {
+        "ok": True,
+        "competition": {
+            "id": int(competition_id),
+            "name": comp.name if comp else None,
+            "series": comp.series if comp else None,
+            "event_date": comp.event_date.isoformat() if comp and comp.event_date else None,
+        },
+        "total": int(total),
+        "summary": {
+            "race_points": int(race_points),
+            "holeshot_points": int(holeshot_points),
+            "wildcard_points": int(wildcard_points),
+        },
+        "sections": {
+            "picks_450": picks_450,
+            "picks_250": picks_250,
+            "holeshot": holeshot_rows,
+            "wildcard": wildcard_rows,
+            "other": other_lines,
+        },
+        "breakdown": breakdown,
+    }
+
+
 @app.get("/get_my_race_results/<int:competition_id>")
 def get_my_race_results(competition_id):
     if "user_id" not in session:
@@ -10578,97 +10841,12 @@ def get_my_race_results(competition_id):
     db.session.rollback()
     
     uid = session["user_id"]
+    try:
+        return jsonify(_build_race_results_detail(uid, competition_id, dedupe_picks=False))
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
-    actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
-    actual_by_rider = {r.rider_id: r for r in actual}
-    picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-
-    breakdown = []
-    total = 0
-
-    for p in picks:
-        act = actual_by_rider.get(p.rider_id)
-        if not act:
-            # Try to get rider name for better error message
-            rider = Rider.query.get(p.rider_id)
-            rider_name = rider.name if rider else f"rider {p.rider_id}"
-            breakdown.append(f"❌ Pick {rider_name} hittades inte i resultat")
-            continue
-        
-        # Get rider name for display
-        rider = Rider.query.get(p.rider_id)
-        rider_name = rider.name if rider else f"rider {p.rider_id}"
-        
-        # Use new scoring system based on position difference
-        points = calculate_race_pick_points(p.predicted_position, act.position)
-        if points == 25:
-            breakdown.append(f"✅|PERFEKT|{rider_name}|{p.predicted_position}|{act.position}|+{points}")
-        elif points > 0:
-            diff = abs(p.predicted_position - act.position)
-            breakdown.append(f"▲|{diff}PLATSER|{rider_name}|{p.predicted_position}|{act.position}|+{points}")
-        else:
-            breakdown.append(f"❌|MISS|{rider_name}|{p.predicted_position}|{act.position}|0")
-        total += points
-
-    holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-    holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
-    holo_by_class = holeshot_results_by_bucket(holos)
-    
-    # Calculate holeshot points
-    holeshot_450_correct = False
-    holeshot_250_correct = False
-    holeshot_points = 0
-    
-    for hp in holopicks:
-        bucket = holeshot_pick_class_for_result(hp.class_name)
-        act = holo_by_class.get(bucket)
-        rider = Rider.query.get(hp.rider_id)
-        rider_name = rider.name if rider else f"rider {hp.rider_id}"
-        
-        if act and act.rider_id == hp.rider_id:
-            if bucket == "450cc":
-                holeshot_450_correct = True
-                holeshot_points += 10
-                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-            elif bucket == "250cc":
-                holeshot_250_correct = True
-                holeshot_points += 10
-                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-        else:
-            breakdown.append(f"❌ Holeshot {hp.class_name}: {rider_name} fel")
-    
-    # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
-    if holeshot_450_correct and holeshot_250_correct:
-        holeshot_points = 25
-        # Update breakdown to show bonus
-        breakdown = [b for b in breakdown if not (b.startswith("✅ Holeshot") or b.startswith("❌ Holeshot"))]
-        breakdown.append("✅ Holeshot 450cc: rätt (+10)")
-        breakdown.append("✅ Holeshot 250cc: rätt (+10)")
-        breakdown.append("🎯 Bonus: Båda holeshots rätt! (+5 bonus = 25 totalt)")
-    
-    total += holeshot_points
-
-    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
-    if wc:
-        # Wildcard is always 450cc, so filter results to only 450cc
-        actual_450cc = []
-        for r in actual:
-            rider = Rider.query.get(r.rider_id)
-            if rider and rider.class_name == "450cc":
-                actual_450cc.append(r)
-        
-        target = next((r for r in actual_450cc if r.position == wc.position), None)
-        # Get rider name for wildcard display
-        rider = Rider.query.get(wc.rider_id)
-        rider_name = rider.name if rider else f"rider {wc.rider_id}"
-        
-        if target and target.rider_id == wc.rider_id:
-            breakdown.append(f"✅ Wildcard: {rider_name} på pos {wc.position} (+15)")
-            total += 15
-        else:
-            breakdown.append(f"❌ Wildcard: {rider_name} fel")
-
-    return jsonify({"breakdown": breakdown, "total": total})
 
 @app.get("/get_user_race_results/<string:username>/<int:competition_id>")
 def get_user_race_results(username: str, competition_id: int):
@@ -10678,126 +10856,13 @@ def get_user_race_results(username: str, competition_id: int):
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
     
-    uid = user.id
+    try:
+        return jsonify(_build_race_results_detail(user.id, competition_id, dedupe_picks=True))
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
-    actual = CompetitionResult.query.filter_by(competition_id=competition_id).all()
-    actual_by_rider = {r.rider_id: r for r in actual}
-    all_picks = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-    
-    # Remove duplicate picks (same user, competition, rider) - keep only the most recent one
-    seen_picks = {}
-    for pick in all_picks:
-        key = (pick.user_id, pick.competition_id, pick.rider_id)
-        if key not in seen_picks:
-            seen_picks[key] = pick
-        elif pick.pick_id > seen_picks[key].pick_id:
-            # Keep the more recent one (higher pick_id)
-            seen_picks[key] = pick
-    
-    picks = list(seen_picks.values())
 
-    breakdown = []
-    total = 0
-
-    for p in picks:
-        act = actual_by_rider.get(p.rider_id)
-        if not act:
-            # Try to get rider name for better error message
-            rider = Rider.query.get(p.rider_id)
-            rider_name = rider.name if rider else f"rider {p.rider_id}"
-            breakdown.append(f"❌ Pick {rider_name} hittades inte i resultat")
-            continue
-        
-        # Get rider name for display
-        rider = Rider.query.get(p.rider_id)
-        rider_name = rider.name if rider else f"rider {p.rider_id}"
-        
-        # Use new scoring system based on position difference
-        points = calculate_race_pick_points(p.predicted_position, act.position)
-        if points == 25:
-            breakdown.append(f"✅|PERFEKT|{rider_name}|{p.predicted_position}|{act.position}|+{points}")
-        elif points > 0:
-            diff = abs(p.predicted_position - act.position)
-            breakdown.append(f"▲|{diff}PLATSER|{rider_name}|{p.predicted_position}|{act.position}|+{points}")
-        else:
-            breakdown.append(f"❌|MISS|{rider_name}|{p.predicted_position}|{act.position}|0")
-        total += points
-
-    all_holopicks = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-    
-    # Remove duplicate holeshot picks (same user, competition, class) - keep only the most recent one
-    seen_holeshots = {}
-    for hp in all_holopicks:
-        key = (hp.user_id, hp.competition_id, hp.class_name)
-        if key not in seen_holeshots:
-            seen_holeshots[key] = hp
-        elif hp.id > seen_holeshots[key].id:
-            # Keep the more recent one (higher pick_id)
-            seen_holeshots[key] = hp
-    
-    holopicks = list(seen_holeshots.values())
-    holos = HoleshotResult.query.filter_by(competition_id=competition_id).all()
-    holo_by_class = holeshot_results_by_bucket(holos)
-    
-    # Calculate holeshot points
-    holeshot_450_correct = False
-    holeshot_250_correct = False
-    holeshot_points = 0
-    
-    for hp in holopicks:
-        bucket = holeshot_pick_class_for_result(hp.class_name)
-        act = holo_by_class.get(bucket)
-        rider = Rider.query.get(hp.rider_id)
-        rider_name = rider.name if rider else f"rider {hp.rider_id}"
-        
-        if act and act.rider_id == hp.rider_id:
-            if bucket == "450cc":
-                holeshot_450_correct = True
-                holeshot_points += 10
-                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-            elif bucket == "250cc":
-                holeshot_250_correct = True
-                holeshot_points += 10
-                breakdown.append(f"✅ Holeshot {hp.class_name}: {rider_name} rätt (+10)")
-        else:
-            breakdown.append(f"❌ Holeshot {hp.class_name}: {rider_name} fel")
-    
-    # Bonus: Om båda holeshots är rätt, ge 25 poäng totalt istället för 20
-    if holeshot_450_correct and holeshot_250_correct:
-        holeshot_points = 25
-        # Update breakdown to show bonus
-        breakdown = [b for b in breakdown if not (b.startswith("✅ Holeshot") or b.startswith("❌ Holeshot"))]
-        breakdown.append("✅ Holeshot 450cc: rätt (+10)")
-        breakdown.append("✅ Holeshot 250cc: rätt (+10)")
-        breakdown.append("🎯 Bonus: Båda holeshots rätt! (+5 bonus = 25 totalt)")
-    
-    total += holeshot_points
-
-    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
-    if wc:
-        # Wildcard is always 450cc, so filter results to only 450cc
-        actual_450cc = []
-        for r in actual:
-            rider = Rider.query.get(r.rider_id)
-            if rider and rider.class_name == "450cc":
-                actual_450cc.append(r)
-        
-        target = next((r for r in actual_450cc if r.position == wc.position), None)
-        # Get rider name for wildcard display
-        rider = Rider.query.get(wc.rider_id)
-        rider_name = rider.name if rider else f"rider {wc.rider_id}"
-        
-        if target and target.rider_id == wc.rider_id:
-            breakdown.append(f"✅ Wildcard: {rider_name} på pos {wc.position} (+15)")
-            total += 15
-        else:
-            breakdown.append(f"❌ Wildcard: {rider_name} fel")
-
-    return jsonify({"breakdown": breakdown, "total": total})
-
-# -------------------------------------------------
-# Poängberäkning
-# -------------------------------------------------
 def calculate_race_pick_points(predicted_position, actual_position):
     """
     Calculate points for a race pick based on how close the prediction was.
@@ -10811,23 +10876,22 @@ def calculate_race_pick_points(predicted_position, actual_position):
     """
     if actual_position is None:
         return 0
-    
+
     if predicted_position == actual_position:
         return 25
-    
-    # Calculate the difference (absolute value)
+
     diff = abs(predicted_position - actual_position)
-    
+
     if diff == 1:
         return 18
-    elif diff == 2:
+    if diff == 2:
         return 13
-    elif diff == 3:
+    if diff == 3:
         return 9
-    elif diff == 4:
+    if diff == 4:
         return 6
-    else:  # 5 or more positions off
-        return 3
+    return 3
+
 
 def calculate_scores(comp_id: int):
     
@@ -16365,6 +16429,18 @@ def repair_known_result_anomalies() -> int:
 
 
 # Initialize database function
+def _sqlite_add_column_if_missing(table: str, column: str, ddl: str) -> None:
+    """Lightweight schema patch for older local SQLite files."""
+    if "sqlite" not in str(db.engine.url):
+        return
+    rows = db.session.execute(db.text(f"PRAGMA table_info({table})")).fetchall()
+    if column in {row[1] for row in rows}:
+        return
+    db.session.execute(db.text(f"ALTER TABLE {table} ADD COLUMN {ddl}"))
+    db.session.commit()
+    print(f'Added missing column {table}.{column}')
+
+
 def init_database():
     """Initialize database with tables and test data"""
     try:
@@ -16375,6 +16451,17 @@ def init_database():
             try:
                 db.create_all()
                 print("Database tables created successfully")
+                try:
+                    _sqlite_add_column_if_missing("riders", "rider_image_data", "rider_image_data TEXT")
+                    _sqlite_add_column_if_missing(
+                        "users", "password_reset_token", "password_reset_token VARCHAR(64)"
+                    )
+                    _sqlite_add_column_if_missing(
+                        "users", "password_reset_expires", "password_reset_expires TIMESTAMP"
+                    )
+                except Exception as col_err:
+                    print(f"Warning: SQLite column patch skipped: {col_err}")
+                    db.session.rollback()
                 # Auto-seed WSX 2025 so it always exists for the UI
                 try:
                     ensure_wsx_series_and_competitions()
