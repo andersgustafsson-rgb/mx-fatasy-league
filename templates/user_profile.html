@@ -560,10 +560,27 @@
       const pts = Number(row.points || 0);
       const ptsTxt = pts > 0 ? `+${pts}p` : "0p";
       if (row.kind === "wildcard") {
-        const pos = row.position != null ? ` (gissade P${row.position})` : "";
-        return `<div class="flex items-center justify-between gap-2 py-2 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40">
-          <span>${icon} <strong>Wildcard:</strong> ${row.rider_name}${pos}</span>
-          <span class="font-bold tabular-nums ${ok ? "text-emerald-300" : "text-slate-500"}">${ptsTxt}</span>
+        const picked = (row.picked_name || row.rider_name || "—").trim();
+        const actual = (row.actual_name || "").trim();
+        const pos = row.position != null ? `P${row.position}` : "—";
+        let bodyHtml;
+        if (ok) {
+          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> — stämde</span>`;
+        } else if (actual) {
+          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> → kom <strong class="text-amber-200">${actual}</strong></span>`;
+        } else {
+          bodyHtml = `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> på <strong class="text-cyan-200">${pos}</strong> <span class="text-rose-300/90">(ingen på platsen i resultat)</span></span>`;
+        }
+        return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold uppercase text-slate-500">Wildcard 450</span>
+            <span class="text-base shrink-0">${icon}</span>
+          </div>
+          <div class="text-sm leading-snug">${bodyHtml}</div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] text-slate-500">${row.hint || ""}</span>
+            <span class="font-bold tabular-nums text-sm ${ok ? "text-emerald-300" : "text-slate-500"}">${ptsTxt}</span>
+          </div>
         </div>`;
       }
       const picked = (row.picked_name || row.rider_name || "—").trim();

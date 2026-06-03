@@ -10764,6 +10764,14 @@ def _build_race_results_detail(
         target = next((r for r in actual_450cc if r.position == wc.position), None)
         rider = Rider.query.get(wc.rider_id)
         rider_name = rider.name if rider else f"Förare #{wc.rider_id}"
+        pos_label = int(wc.position) if wc.position else None
+        actual_at_pos_name = None
+        if target and target.rider_id:
+            actual_rider = Rider.query.get(target.rider_id)
+            actual_at_pos_name = (
+                actual_rider.name if actual_rider else f"Förare #{target.rider_id}"
+            )
+
         if target and target.rider_id == wc.rider_id:
             wildcard_points = 15
             wildcard_rows.append(
@@ -10771,20 +10779,34 @@ def _build_race_results_detail(
                     "kind": "wildcard",
                     "status": "correct",
                     "rider_name": rider_name,
-                    "position": int(wc.position),
+                    "picked_name": rider_name,
+                    "actual_name": actual_at_pos_name or rider_name,
+                    "position": pos_label,
                     "points": 15,
                     "hint": f"Rätt wildcard på P{wc.position} → +15p",
                 }
             )
         else:
+            if actual_at_pos_name and pos_label:
+                hint = (
+                    f"Gissade {rider_name} på P{pos_label} — där kom {actual_at_pos_name}"
+                )
+            elif pos_label:
+                hint = (
+                    f"Gissade {rider_name} på P{pos_label} — ingen förare registrerad på platsen"
+                )
+            else:
+                hint = "Fel wildcard → 0p"
             wildcard_rows.append(
                 {
                     "kind": "wildcard",
                     "status": "wrong",
                     "rider_name": rider_name,
-                    "position": int(wc.position) if wc.position else None,
+                    "picked_name": rider_name,
+                    "actual_name": actual_at_pos_name,
+                    "position": pos_label,
                     "points": 0,
-                    "hint": "Fel wildcard → 0p",
+                    "hint": hint,
                 }
             )
 
