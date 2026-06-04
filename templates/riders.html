@@ -18,9 +18,11 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <p class="text-xs text-gray-500 mb-4">Listan hämtas direkt från databasen vid varje laddning. 250 utan coast visas i fjärde kolumnen.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
       <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden">
-        <div class="bg-cyan-600 px-4 py-2 text-white font-bold">250E</div>
+        <div class="bg-cyan-600 px-4 py-2 text-white font-bold">250E <span class="text-cyan-100/80 font-normal">({{ riders_250_east|length }})</span></div>
         <ul id="list-250e" class="divide-y divide-gray-800">
           {% for r in riders_250_east %}
           <li class="p-3 hover:bg-gray-800">
@@ -47,14 +49,28 @@
         </ul>
       </div>
 
-      <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden md:col-span-1">
-        <div class="bg-yellow-600 px-4 py-2 text-white font-bold">450</div>
+      <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden">
+        <div class="bg-yellow-600 px-4 py-2 text-white font-bold">450 <span class="text-yellow-100/80 font-normal">({{ riders_450|length }})</span></div>
         <ul id="list-450" class="divide-y divide-gray-800">
           {% for r in riders_450 %}
           <li class="p-3 hover:bg-gray-800">
             <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
               <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
               <span class="text-gray-500">{{ r.bike_brand }}</span>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="bg-gray-900 rounded-lg border-2 border-amber-500 overflow-hidden {% if not riders_250_unassigned %}hidden{% endif %}">
+        <div class="bg-amber-600 px-4 py-2 text-white font-bold">250 · saknar coast <span class="font-normal">({{ riders_250_unassigned|length }})</span></div>
+        <ul id="list-250u" class="divide-y divide-gray-800 max-h-[70vh] overflow-y-auto">
+          {% for r in riders_250_unassigned %}
+          <li class="p-3 hover:bg-gray-800">
+            <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
+              <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
+              <span class="text-amber-400/90 text-xs">sätt E/W i admin</span>
             </a>
           </li>
           {% endfor %}
@@ -68,8 +84,9 @@
     const lists = [
       document.getElementById('list-250e'),
       document.getElementById('list-250w'),
-      document.getElementById('list-450')
-    ];
+      document.getElementById('list-450'),
+      document.getElementById('list-250u'),
+    ].filter(Boolean);
     input.addEventListener('input', () => {
       const q = input.value.toLowerCase();
       lists.forEach(list => {

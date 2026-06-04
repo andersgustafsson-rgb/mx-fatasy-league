@@ -5699,18 +5699,65 @@ def rider_profile(rider_id: int):
     rider = Rider.query.get_or_404(rider_id)
     return render_template('rider_detail.html', rider=rider, username=session.get('username'))
 
+def _rider_directory_sort_key(rider: Rider) -> tuple:
+    num = rider.rider_number if rider.rider_number is not None else 99999
+    return (num, (rider.name or "").lower())
+
+
+def _group_riders_for_directory() -> tuple[list[Rider], list[Rider], list[Rider], list[Rider]]:
+    """
+    Build /riders columns from DB (live query, no cache).
+    250cc with coast 'both' appears in both 250E and 250W (same as race picks).
+    Riders missing coast show in riders_250_unassigned so new adds are not hidden.
+    """
+    riders_450: list[Rider] = []
+    riders_250_east: list[Rider] = []
+    riders_250_west: list[Rider] = []
+    riders_250_unassigned: list[Rider] = []
+    seen_east: set[int] = set()
+    seen_west: set[int] = set()
+
+    for rider in Rider.query.all():
+        cls = (rider.class_name or "").strip().lower()
+        if cls in ("450cc", "450", "wsx_sx1"):
+            riders_450.append(rider)
+            continue
+        if cls not in ("250cc", "250", "wsx_sx2"):
+            continue
+        coast = (rider.coast_250 or "").strip().lower()
+        if coast in ("east", "both"):
+            riders_250_east.append(rider)
+            seen_east.add(rider.id)
+        if coast in ("west", "both"):
+            riders_250_west.append(rider)
+            seen_west.add(rider.id)
+        if rider.id not in seen_east and rider.id not in seen_west:
+            riders_250_unassigned.append(rider)
+
+    key = _rider_directory_sort_key
+    riders_450.sort(key=key)
+    riders_250_east.sort(key=key)
+    riders_250_west.sort(key=key)
+    riders_250_unassigned.sort(key=key)
+    return riders_450, riders_250_east, riders_250_west, riders_250_unassigned
+
+
 # Public rider list
 @app.get('/riders')
 def riders_directory():
-    # Simple searchable list grouped by class
-    riders_450 = Rider.query.filter_by(class_name='450cc').order_by(Rider.rider_number.asc()).all()
-    riders_250_east = Rider.query.filter_by(class_name='250cc', coast_250='east').order_by(Rider.rider_number.asc()).all()
-    riders_250_west = Rider.query.filter_by(class_name='250cc', coast_250='west').order_by(Rider.rider_number.asc()).all()
-    return render_template('riders.html',
-                           riders_450=riders_450,
-                           riders_250_east=riders_250_east,
-                           riders_250_west=riders_250_west,
-                           username=session.get('username'))
+    riders_450, riders_250_east, riders_250_west, riders_250_unassigned = _group_riders_for_directory()
+    resp = make_response(
+        render_template(
+            "riders.html",
+            riders_450=riders_450,
+            riders_250_east=riders_250_east,
+            riders_250_west=riders_250_west,
+            riders_250_unassigned=riders_250_unassigned,
+            username=session.get("username"),
+        )
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 # API endpoints for competition management
 ## Moved to api blueprint in app/routes/api.py

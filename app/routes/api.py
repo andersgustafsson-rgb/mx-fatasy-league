@@ -540,16 +540,23 @@ def add_rider():
 		}), 409
 
 	# New rider - create it
-	price = data.get('price') or (450000 if data['class_name'] == '450cc' else 50000)
 	classes = data.get('classes', data.get('class_name', '250cc'))
+	class_name = data.get('class_name', classes.split(',')[0].strip() if classes else '250cc')
+	coast_250 = (data.get('coast_250') or '').strip() or None
+	if class_name == '250cc' and not coast_250:
+		return jsonify({
+			'error': 'coast_required',
+			'message': 'Välj coast (East eller West) för 250cc — annars syns inte föraren på /riders',
+		}), 400
+	price = data.get('price') or (450000 if class_name == '450cc' else 50000)
 
 	rider = Rider(
 		name=data['name'],
-		class_name=data.get('class_name', classes.split(',')[0].strip() if classes else '250cc'),
+		class_name=class_name,
 		classes=classes,
 		rider_number=data['rider_number'],
 		bike_brand=data['bike_brand'],
-		coast_250=data.get('coast_250'),
+		coast_250=coast_250,
 		price=price,
 		image_url=image_url,
 		rider_image_data=rider_image_data,
