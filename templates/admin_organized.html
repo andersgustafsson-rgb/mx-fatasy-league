@@ -340,7 +340,7 @@
                         </div>
 
                         <label class="block text-sm font-medium text-gray-300 mb-2">Paste results text here</label>
-                        <textarea id="bulk-text" rows="8" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white font-mono" placeholder="MX: klistra in Overall-tabellen (första kolumnen = slutplacering). Motos-kolumnen (t.ex. 2 - 1) behövs inte räknas om.&#10;1&#9;Seth Hammaker&#9;...&#9;2 - 1&#9;Kawasaki"></textarea>
+                        <textarea id="bulk-text" rows="8" class="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white font-mono" placeholder="MX: klistra in Overall-tabellen från Racer X. Motos-kolumnen (t.ex. 1 - 1) ger seriepoäng per moto: 25+25=50p. Första kolumnen = overall (för fantasy-tips).&#10;1&#9;Hunter Lawrence&#9;...&#9;1 - 1&#9;Honda"></textarea>
 
                         <div id="bulk-preview" class="mt-4 hidden">
                             <h4 class="text-lg font-semibold text-white mb-2">Preview</h4>
@@ -348,7 +348,9 @@
                                 <table class="min-w-full text-left text-sm">
                                     <thead class="text-gray-300">
                                         <tr>
-                                            <th class="px-2 py-1">Pos</th>
+                                            <th class="px-2 py-1">Overall</th>
+                                            <th class="px-2 py-1">Motos</th>
+                                            <th class="px-2 py-1">Seriepoäng</th>
                                             <th class="px-2 py-1">Rider</th>
                                             <th class="px-2 py-1">In database</th>
                                             <th class="px-2 py-1">Åtgärd</th>
@@ -1828,6 +1830,18 @@
                 const tdPos = document.createElement('td');
                 tdPos.className = 'px-2 py-1';
                 tdPos.textContent = r.position;
+                const tdMotos = document.createElement('td');
+                tdMotos.className = 'px-2 py-1 font-mono text-xs text-cyan-300';
+                if (r.moto_1 != null || r.moto_2 != null) {
+                    const left = r.moto_1 != null ? r.moto_1 : 'DNS';
+                    const right = r.moto_2 != null ? r.moto_2 : 'DNS';
+                    tdMotos.textContent = `${left} - ${right}`;
+                } else {
+                    tdMotos.textContent = '—';
+                }
+                const tdPts = document.createElement('td');
+                tdPts.className = 'px-2 py-1 font-bold text-yellow-300 tabular-nums';
+                tdPts.textContent = r.round_points != null ? `${r.round_points}p` : '—';
                 const tdRider = document.createElement('td');
                 tdRider.className = 'px-2 py-1';
                 tdRider.textContent = r.found_in_db && r.db_rider_name
@@ -1848,17 +1862,27 @@
                 } else {
                     tdAct.textContent = '—';
                 }
-                tr.append(tdPos, tdRider, tdDb, tdAct);
+                tr.append(tdPos, tdMotos, tdPts, tdRider, tdDb, tdAct);
                 tbody.appendChild(tr);
             });
             preview.classList.remove('hidden');
+            const infoMessages = [];
+            if (data.rows.some(r => r.round_points != null)) {
+                infoMessages.push('MX-seriepoäng = poäng från moto 1 + moto 2 (t.ex. 1-1 → 25+25 = 50p). Overall-kolumnen används för fantasy-tips.');
+            }
             if (data.missing_riders && data.missing_riders.length) {
+                infoMessages.push(
+                    `Saknade förare (${data.missing_riders.length}): klicka <strong>➕ Lägg till i DB</strong> på raden i tabellen. ` +
+                    data.missing_riders.map(m => `${m.position}. ${m.rider_name}`).join(', ')
+                );
+            }
+            if (infoMessages.length) {
                 missing.classList.remove('hidden');
-                missing.innerHTML = `Saknade förare (${data.missing_riders.length}): klicka <strong>➕ Lägg till i DB</strong> på raden i tabellen. ` +
-                    data.missing_riders.map(m => `${m.position}. ${m.rider_name}`).join(', ');
+                missing.className = 'mt-3 bg-cyan-900/30 border border-cyan-700 text-cyan-100 rounded p-3';
+                missing.innerHTML = infoMessages.join('<br>');
             } else {
                 missing.classList.add('hidden');
-                missing.textContent = '';
+                missing.innerHTML = '';
             }
         }
 

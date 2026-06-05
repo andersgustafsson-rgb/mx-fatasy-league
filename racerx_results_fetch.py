@@ -160,7 +160,9 @@ def build_racerx_results_url(
         elif s == "SMX":
             series_key = "smx"
     cn = (class_name or "").lower()
-    if cn == "wsx_sx1":
+    if series_key == "mx":
+        path = "450" if "450" in cn else "250"
+    elif cn == "wsx_sx1":
         path = "sx1"
     elif cn == "wsx_sx2":
         path = "sx2"

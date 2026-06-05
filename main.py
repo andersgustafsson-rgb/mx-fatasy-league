@@ -5618,6 +5618,8 @@ def run_migration():
         
         # Add rider_points column to competition_results table for WSX manual entry
         db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS rider_points INTEGER"))
+        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER"))
+        db.session.execute(db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER"))
         
         # Create leaderboard_history table
         db.session.execute(db.text("""
@@ -8506,6 +8508,31 @@ def _title_case_name(s: str) -> str:
         return s
     return ' '.join(word.capitalize() for word in s.split())
 
+
+_MX_MOTOS_RE = re.compile(
+    r"(\d{1,2}|DNS)\s*-\s*(\d{1,2}|DNS)",
+    re.IGNORECASE,
+)
+
+
+def _parse_mx_motos_str(text: str) -> tuple[int | None, int | None]:
+    """Parse RacerX moto splits like '1 - 1', '5 - 4', 'DNS - 12'."""
+    match = _MX_MOTOS_RE.search(text or "")
+    if not match:
+        return None, None
+
+    def _token(raw: str) -> int | None:
+        token = (raw or "").strip().upper()
+        if token == "DNS":
+            return None
+        try:
+            return int(token)
+        except ValueError:
+            return None
+
+    return _token(match.group(1)), _token(match.group(2))
+
+
 def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
     bike_brands = {"Honda", "Yamaha", "Kawasaki", "Husqvarna", "GasGas", "KTM", "Suzuki", "Triumph"}
     lines = pasted_text.splitlines()
@@ -8608,6 +8635,10 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                 entry = {"position": position, "rider_name": rider_name}
                 if bike_brand:
                     entry["bike_brand"] = bike_brand
+                moto_1, moto_2 = _parse_mx_motos_str(line)
+                if moto_1 is not None or moto_2 is not None:
+                    entry["moto_1"] = moto_1
+                    entry["moto_2"] = moto_2
                 results.append(entry)
                 print(f"🔍 DEBUG: Motocross/SMX/RacerX match - Position: {position}, Name: '{rider_name}'")
                 continue
@@ -8631,9 +8662,14 @@ def _parse_bulk_results(pasted_text: str, format_type: str = 'motocross'):
                 flags=re.IGNORECASE,
             ).strip()
             if rider_name:
-                results.append({"position": position, "rider_name": rider_name})
+                moto_1, moto_2 = _parse_mx_motos_str(mx_moto.group(0))
+                entry = {"position": position, "rider_name": rider_name}
+                if moto_1 is not None or moto_2 is not None:
+                    entry["moto_1"] = moto_1
+                    entry["moto_2"] = moto_2
+                results.append(entry)
                 print(f"🔍 DEBUG: MX moto-row match - Position: {position}, Name: '{rider_name}'")
-    
+
     print(f"🔍 DEBUG: Total parsed results: {len(results)}")
     return results
 
@@ -8800,6 +8836,13 @@ def bulk_preview_results():
                 "rider_id": rider.id if rider else None,
                 "db_rider_name": rider.name if rider else None,
                 "bike_brand": row.get("bike_brand"),
+                "moto_1": row.get("moto_1"),
+                "moto_2": row.get("moto_2"),
+                "round_points": (
+                    _mx_moto_championship_points(row.get("moto_1"), row.get("moto_2"))
+                    if row.get("moto_1") is not None or row.get("moto_2") is not None
+                    else None
+                ),
             })
             if not rider:
                 missing.append({
@@ -8883,13 +8926,23 @@ def bulk_import_results():
                 competition_id=competition_id,
                 rider_id=rider.id
             ).first()
+            moto_1 = row.get("moto_1")
+            moto_2 = row.get("moto_2")
             if existing:
-                existing.position = row['position']
+                existing.position = row["position"]
+                existing.class_name = class_name
+                if moto_1 is not None:
+                    existing.moto_1_position = moto_1
+                if moto_2 is not None:
+                    existing.moto_2_position = moto_2
             else:
                 db.session.add(CompetitionResult(
                     competition_id=competition_id,
                     rider_id=rider.id,
-                    position=row['position']
+                    position=row["position"],
+                    class_name=class_name,
+                    moto_1_position=moto_1,
+                    moto_2_position=moto_2,
                 ))
             imported += 1
 
@@ -9165,7 +9218,7 @@ def compute_series_championship_totals():
             mult = comp.point_multiplier or 1.0
             pts = float(get_smx_qualification_points(cr.position)) * float(mult)
         else:
-            pts = float(get_smx_qualification_points(cr.position))
+            pts = float(_result_points_for_standing(cr, comp))
 
         if s == "WSX":
             rider_class = getattr(cr, "class_name", None) or rider.class_name
@@ -9365,6 +9418,8 @@ def race_results_page():
                         points = get_smx_qualification_points(result.position)
                 elif comp.series == "SMX":
                     points = get_smx_qualification_points(result.position) * comp.point_multiplier
+                elif comp.series == "MX":
+                    points = _result_points_for_standing(result, comp)
                 else:
                     points = get_smx_qualification_points(result.position)
 
@@ -13414,8 +13469,12 @@ def admin_recalculate_all_rider_points():
                     points = get_smx_qualification_points(result.position) * (comp.point_multiplier or 1)
                     result.rider_points = points
                     total_results_updated += 1
+                elif comp.series == "MX":
+                    points = _result_points_for_standing(result, comp)
+                    result.rider_points = points
+                    total_results_updated += 1
                 else:
-                    # SX, MX, or default - use standard SMX points
+                    # SX — one main event per round
                     points = get_smx_qualification_points(result.position)
                     result.rider_points = points
                     total_results_updated += 1
@@ -19402,32 +19461,39 @@ def get_series_leaders():
     """Get current leaders for each series and SMX overview"""
     try:
         leaders = get_series_leaders()
+        mx_leaders = get_mx_series_leaders()
         smx_qualification = calculate_smx_qualification_points()
-        
+
+        def format_leaders_block(block):
+            formatted = {}
+            for series, data in block.items():
+                if data["leader"]:
+                    rider = data["leader"]
+                    formatted[series] = {
+                        "leader": {
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "bike_brand": rider.bike_brand,
+                            "points": data["points"],
+                        },
+                        "top_5": [
+                            {
+                                "rider_name": item["rider"].name,
+                                "rider_number": item["rider"].rider_number,
+                                "bike_brand": item["rider"].bike_brand,
+                                "points": item["points"],
+                            }
+                            for item in data["top_5"]
+                        ],
+                    }
+                else:
+                    formatted[series] = None
+            return formatted
+
         # Format leaders data
-        leaders_data = {}
-        for series, data in leaders.items():
-            if data['leader']:
-                rider = data['leader']
-                leaders_data[series] = {
-                    'leader': {
-                        'rider_name': rider.name,
-                        'rider_number': rider.rider_number,
-                        'bike_brand': rider.bike_brand,
-                        'points': data['points']
-                    },
-                    'top_5': [
-                        {
-                            'rider_name': item['rider'].name,
-                            'rider_number': item['rider'].rider_number,
-                            'bike_brand': item['rider'].bike_brand,
-                            'points': item['points']
-                        } for item in data['top_5']
-                    ]
-                }
-            else:
-                leaders_data[series] = None
-        
+        leaders_data = format_leaders_block(leaders)
+        mx_leaders_data = format_leaders_block(mx_leaders)
+
         # Format SMX qualification overview - separate 450cc, 250 East and 250 West
         smx_450cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '450cc']
         smx_250cc = [(rider_id, data) for rider_id, data in smx_qualification if data.get('class_name') == '250cc']
@@ -19482,6 +19548,7 @@ def get_series_leaders():
         return jsonify({
             'success': True,
             'leaders': leaders_data,
+            'mx_leaders': mx_leaders_data,
             'smx_overview': smx_overview
         })
         
@@ -20475,7 +20542,25 @@ def _normalize_result_class(result_class: str | None, rider_class: str | None) -
     return None
 
 
-def _result_points_for_standing(result: CompetitionResult) -> int:
+def _mx_moto_championship_points(m1: int | None, m2: int | None) -> int:
+    """AMA Pro Motocross: each moto awards AMA points; round total = moto1 + moto2 (1-1 → 50)."""
+    total = 0
+    for pos in (m1, m2):
+        if pos is not None and pos >= 1:
+            total += get_smx_qualification_points(pos)
+    return total
+
+
+def _result_points_for_standing(
+    result: CompetitionResult,
+    competition: Competition | None = None,
+) -> int:
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "MX":
+        m1 = getattr(result, "moto_1_position", None)
+        m2 = getattr(result, "moto_2_position", None)
+        if m1 is not None or m2 is not None:
+            return _mx_moto_championship_points(m1, m2)
     if result.position and result.position <= 20:
         return get_smx_qualification_points(result.position)
     return 0
@@ -20555,7 +20640,7 @@ def calculate_smx_qualification_points():
         if class_name not in {"450cc", "250cc"}:
             continue
 
-        points = _result_points_for_standing(result)
+        points = _result_points_for_standing(result, competition)
         if points <= 0:
             continue
 
@@ -20635,6 +20720,55 @@ def get_series_leaders():
             leaders[series_key]["points"] = top_rows[0]["points"]
 
     return leaders
+
+
+def get_mx_series_leaders():
+    """Get current MX leaders for 450cc and 250cc (single combined 250 championship)."""
+    leaders = {
+        "450cc": {"leader": None, "points": 0, "top_5": []},
+        "250cc": {"leader": None, "points": 0, "top_5": []},
+    }
+
+    standings = {key: {} for key in leaders}
+    promoted_250_coasts = _promoted_250_coast_by_name()
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.series == "MX")
+        .all()
+    )
+
+    for result, competition, rider in rows:
+        class_name, _coast_250 = _standing_class_and_coast(
+            result, competition, rider, promoted_250_coasts
+        )
+        points = _result_points_for_standing(result, competition)
+        if points <= 0:
+            continue
+
+        series_key = None
+        if class_name == "450cc":
+            series_key = "450cc"
+        elif class_name == "250cc":
+            series_key = "250cc"
+
+        if not series_key:
+            continue
+
+        rider_key = rider.id
+        row = standings[series_key].setdefault(rider_key, {"rider": rider, "points": 0})
+        row["points"] += points
+
+    for series_key, rows_by_rider in standings.items():
+        top_rows = sorted(rows_by_rider.values(), key=lambda x: x["points"], reverse=True)
+        leaders[series_key]["top_5"] = top_rows[:5]
+        if top_rows:
+            leaders[series_key]["leader"] = top_rows[0]["rider"]
+            leaders[series_key]["points"] = top_rows[0]["points"]
+
+    return leaders
+
 
 def get_wsx_leaders():
     """Get current leaders for WSX series (SX1 and SX2) - sum points from all WSX competitions"""

@@ -296,6 +296,8 @@ class CompetitionResult(db.Model):
     rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"))
     position = db.Column(db.Integer, nullable=False)
     rider_points = db.Column(db.Integer, nullable=True)  # Total points for WSX riders (manual entry)
+    moto_1_position = db.Column(db.Integer, nullable=True)
+    moto_2_position = db.Column(db.Integer, nullable=True)
     # Snapshot of rider class at time of result entry. Needed so class switches don't rewrite history.
     class_name = db.Column("class", db.String(10), nullable=True)
     competition = db.relationship('Competition', backref='results', lazy=True)
