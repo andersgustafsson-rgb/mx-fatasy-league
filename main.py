@@ -8980,6 +8980,56 @@ def bulk_import_results():
         return jsonify({"error": str(e)}), 500
 
 
+@app.post("/clear_competition_class_results")
+def clear_competition_class_results():
+    """Remove imported results for one class only (e.g. wrong RacerX import). Keeps picks."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    _ensure_competition_result_moto_columns()
+    try:
+        data = request.get_json(force=True) or {}
+        competition_id = data.get("competition_id")
+        class_name = (data.get("class_name") or "").strip()
+        if not competition_id or not class_name:
+            return jsonify({"error": "competition_id och class_name krävs"}), 400
+
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 404
+
+        rows = (
+            db.session.query(CompetitionResult, Rider)
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(CompetitionResult.competition_id == competition_id)
+            .all()
+        )
+
+        deleted = 0
+        for result, rider in rows:
+            result_class = _normalize_result_class(getattr(result, "class_name", None), rider.class_name)
+            if result_class == class_name:
+                db.session.delete(result)
+                deleted += 1
+
+        db.session.commit()
+
+        try:
+            calculate_scores(int(competition_id))
+        except Exception:
+            pass
+
+        return jsonify({
+            "success": True,
+            "deleted": deleted,
+            "competition_name": competition.name,
+            "class_name": class_name,
+            "message": f"Rensade {deleted} {class_name}-resultat från {competition.name}. Tips lämnades orörda.",
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.post("/admin/simulate/<int:competition_id>")
 def admin_simulate(competition_id):
     if not is_admin_user():

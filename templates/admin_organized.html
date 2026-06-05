@@ -325,8 +325,10 @@
                                 <button onclick="bulkPreviewResults()" class="btn-primary px-4 py-2 rounded-lg">👁️ Preview</button>
                                 <button onclick="bulkFetchRacerXAndPreview()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">🌐 Hämta &amp; Preview</button>
                                 <button onclick="bulkImportResults()" class="btn-warning px-4 py-2 rounded-lg">📥 Import</button>
+                                <button onclick="bulkClearClassResults()" class="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg">🗑️ Rensa klass</button>
                             </div>
                         </div>
+                        <p class="text-xs text-gray-500 mb-3">Fel tävling/klass? Välj tävling + klass ovan och klicka <strong class="text-gray-400">Rensa klass</strong> (tar bara bort resultat, inte tips).</p>
 
                         <div class="mb-4 p-3 bg-gray-900/60 border border-gray-700 rounded-lg">
                             <label class="block text-sm font-medium text-gray-300 mb-2">Racer X-URL (test — sparar inget förrän du klickar Import)</label>
@@ -1960,6 +1962,31 @@
             const data = await res.json();
             if (data.success) {
                 alert(`✅ Importerat: ${data.imported}. Skippade (saknas i DB): ${data.skipped.length}.`);
+            } else {
+                alert('❌ Fel: ' + (data.error || 'Okänt fel'));
+            }
+        }
+
+        async function bulkClearClassResults() {
+            const competitionId = document.getElementById('bulk-competition').value;
+            const className = document.getElementById('bulk-class').value;
+            const compSelect = document.getElementById('bulk-competition');
+            const compLabel = compSelect.options[compSelect.selectedIndex]?.text || competitionId;
+            if (!competitionId || !className) {
+                alert('Välj tävling och klass först.');
+                return;
+            }
+            if (!confirm(`Rensa alla ${className}-resultat för ${compLabel}?\n\nTips påverkas inte.`)) return;
+            const res = await fetch('/clear_competition_class_results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ competition_id: competitionId, class_name: className })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+                document.getElementById('bulk-text').value = '';
+                document.getElementById('bulk-preview')?.classList.add('hidden');
             } else {
                 alert('❌ Fel: ' + (data.error || 'Okänt fel'));
             }
