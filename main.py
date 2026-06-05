@@ -509,6 +509,28 @@ def _next_competition_for_picks(
     return None
 
 
+def _is_mx_season_started(today: date | None = None) -> bool:
+    """True once the outdoor MX calendar has begun (first MX race day or any MX results)."""
+    today = today or date.today()
+    mx_comps = [
+        c
+        for c in Competition.query.filter(Competition.series == "MX").all()
+        if c.event_date
+    ]
+    if not mx_comps:
+        return False
+    first_mx = min(mx_comps, key=lambda c: c.event_date)
+    if today >= first_mx.event_date:
+        return True
+    return (
+        db.session.query(CompetitionResult.result_id)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .filter(Competition.series == "MX")
+        .first()
+        is not None
+    )
+
+
 def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None:
     """
     Homepage hero between SX finale (last SX has results) and the first MX race day.
@@ -1215,6 +1237,8 @@ def index():
             print(f"Database check error: {e}")
             init_database()
             _INDEX_SCHEMA_CHECKED = True
+
+    _ensure_competition_result_moto_columns()
 
     # Get competitions with error handling
     try:
@@ -4714,16 +4738,25 @@ def _ensure_competition_result_moto_columns():
     if _MOTO_COLUMNS_CHECKED:
         return
     try:
-        db.session.execute(
-            db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
-        )
-        db.session.execute(
-            db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
-        )
-        db.session.commit()
-    except Exception:
+        if "sqlite" in str(db.engine.url):
+            _sqlite_add_column_if_missing(
+                "competition_results", "moto_1_position", "moto_1_position INTEGER"
+            )
+            _sqlite_add_column_if_missing(
+                "competition_results", "moto_2_position", "moto_2_position INTEGER"
+            )
+        else:
+            db.session.execute(
+                db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
+            )
+            db.session.execute(
+                db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
+            )
+            db.session.commit()
+        _MOTO_COLUMNS_CHECKED = True
+    except Exception as e:
         db.session.rollback()
-    _MOTO_COLUMNS_CHECKED = True
+        print(f"Warning: moto column ensure failed: {e}")
 
 
 @app.route("/race_picks/<int:competition_id>")
@@ -16750,13 +16783,21 @@ def init_database():
 
             # MX moto splits (RacerX import: 1-1 → 25+25 seriepoäng)
             try:
-                db.session.execute(
-                    db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
-                )
-                db.session.execute(
-                    db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
-                )
-                db.session.commit()
+                if "sqlite" in str(db.engine.url):
+                    _sqlite_add_column_if_missing(
+                        "competition_results", "moto_1_position", "moto_1_position INTEGER"
+                    )
+                    _sqlite_add_column_if_missing(
+                        "competition_results", "moto_2_position", "moto_2_position INTEGER"
+                    )
+                else:
+                    db.session.execute(
+                        db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
+                    )
+                    db.session.execute(
+                        db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
+                    )
+                    db.session.commit()
                 print("Ensured moto_1_position / moto_2_position on competition_results")
             except Exception as e:
                 print(f"Warning: Could not add MX moto columns: {e}")
@@ -16801,6 +16842,11 @@ print("Starting database initialization...")
 init_success = init_database()
 if init_success:
     print("✅ Database initialization completed successfully - pipeline minutes test")
+    try:
+        with app.app_context():
+            _ensure_competition_result_moto_columns()
+    except Exception as e:
+        print(f"Warning: moto columns on startup: {e}")
     
     # Auto-create track map images only if none exist
     print("🖼️ Checking track map images...")
@@ -19635,7 +19681,10 @@ def get_series_leaders():
             'success': True,
             'leaders': leaders_data,
             'mx_leaders': mx_leaders_data,
-            'smx_overview': smx_overview
+            'smx_overview': smx_overview,
+            'sections': {
+                'sx': {'collapsed': _is_mx_season_started()},
+            },
         })
         
     except Exception as e:

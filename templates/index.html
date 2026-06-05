@@ -219,6 +219,12 @@
       min-height: 180px;
       background-repeat: no-repeat;
     }
+    .series-leaders-details > summary {
+      list-style: none;
+    }
+    .series-leaders-details > summary::-webkit-details-marker {
+      display: none;
+    }
     .bg-smx {
       background-image: url('/static/images/smx playoffs.webp');
       background-size: cover;
@@ -3135,17 +3141,28 @@
               }).join('');
             }
 
-            html += `
-              <div class="mb-5">
-                <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3">📊 Supercross-serieledare</h4>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            `;
+            function leadersCollapsibleSection(title, collapsed, bodyHtml) {
+              const openAttr = collapsed ? '' : ' open';
+              const hint = collapsed ? '▸ visa' : '▾ dölj';
+              return `
+                <details class="series-leaders-details mb-5 rounded-lg border border-gray-700/40 bg-gray-950/20"${openAttr}>
+                  <summary class="cursor-pointer select-none px-2 py-2 flex items-center justify-between gap-2 text-sm font-black text-cyan-300 uppercase tracking-wide hover:text-cyan-200">
+                    <span>${title}</span>
+                    <span class="text-gray-500 text-[10px] font-normal normal-case shrink-0">${hint}</span>
+                  </summary>
+                  <div class="px-1 pb-2 pt-1">${bodyHtml}</div>
+                </details>
+              `;
+            }
+
+            const sxCollapsed = !!(data.sections && data.sections.sx && data.sections.sx.collapsed);
+            let sxBody = '<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">';
             seriesCards.forEach(card => {
               const colors = accentClasses[card.accent];
               const seriesData = data.leaders[card.key];
               const leader = seriesData && seriesData.leader ? seriesData.leader : null;
               const top5 = seriesData && seriesData.top_5 ? seriesData.top_5 : [];
-              html += `
+              sxBody += `
                 <div class="rounded-xl border ${colors.border} ${colors.bg} p-3 shadow-lg">
                   <div class="flex items-center justify-between mb-2">
                     <h5 class="${colors.title} font-black text-sm">${card.label}</h5>
@@ -3156,10 +3173,11 @@
                 </div>
               `;
             });
-            html += `
-                </div>
-              </div>
-            `;
+            sxBody += '</div>';
+            const sxTitle = sxCollapsed
+              ? '📊 Supercross-serieledare <span class="text-[10px] font-normal normal-case text-gray-500">(säsong klar)</span>'
+              : '📊 Supercross-serieledare';
+            const sxSectionHtml = leadersCollapsibleSection(sxTitle, sxCollapsed, sxBody);
 
             const mxSeriesCards = [
               { key: '450cc', label: '450cc', accent: 'yellow' },
@@ -3195,7 +3213,7 @@
             const smx450 = data.smx_overview['450cc_top_5'] || [];
             const smx250 = data.smx_overview['250cc_top_5'] || [];
             html += `
-              <div>
+              <div class="mb-5">
                 <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3">🏆 SMX-kval (SX + MX)</h4>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div class="rounded-xl border border-yellow-400/60 bg-yellow-500/10 p-3">
@@ -3223,6 +3241,8 @@
                 </div>
               </div>
             `;
+
+            html += sxSectionHtml;
             
             container.innerHTML = html;
           }
