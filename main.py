@@ -33,6 +33,7 @@ from models import db, User, GlobalSimulation, Series, Competition, Rider, Seaso
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
+_MOTO_COLUMNS_CHECKED = False
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -4707,6 +4708,24 @@ def _ensure_rider_image_data_column():
     _RIDER_IMAGE_COLUMN_CHECKED = True
 
 
+def _ensure_competition_result_moto_columns():
+    """Säkerställ moto_1/moto_2 på competition_results (MX import)."""
+    global _MOTO_COLUMNS_CHECKED
+    if _MOTO_COLUMNS_CHECKED:
+        return
+    try:
+        db.session.execute(
+            db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
+        )
+        db.session.execute(
+            db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    _MOTO_COLUMNS_CHECKED = True
+
+
 @app.route("/race_picks/<int:competition_id>")
 @login_required
 def race_picks_page(competition_id):
@@ -8773,6 +8792,7 @@ def parse_racerx_url():
 def bulk_preview_results():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
+    _ensure_competition_result_moto_columns()
     try:
         data = request.get_json(force=True)
         competition_id = data.get('competition_id')
@@ -8859,6 +8879,7 @@ def bulk_preview_results():
 def bulk_import_results():
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
+    _ensure_competition_result_moto_columns()
     try:
         data = request.get_json(force=True)
         competition_id = data.get('competition_id')
@@ -16677,6 +16698,20 @@ def init_database():
                 print(f'Warning: Could not migrate competition_results."class": {e}')
                 db.session.rollback()
 
+            # MX moto splits (RacerX import: 1-1 → 25+25 seriepoäng)
+            try:
+                db.session.execute(
+                    db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_1_position INTEGER")
+                )
+                db.session.execute(
+                    db.text("ALTER TABLE competition_results ADD COLUMN IF NOT EXISTS moto_2_position INTEGER")
+                )
+                db.session.commit()
+                print("Ensured moto_1_position / moto_2_position on competition_results")
+            except Exception as e:
+                print(f"Warning: Could not add MX moto columns: {e}")
+                db.session.rollback()
+
             try:
                 repaired = repair_known_result_anomalies()
                 if repaired:
@@ -19460,6 +19495,7 @@ def debug_250cc():
 def get_series_leaders():
     """Get current leaders for each series and SMX overview"""
     try:
+        _ensure_competition_result_moto_columns()
         leaders = get_series_leaders()
         mx_leaders = get_mx_series_leaders()
         smx_qualification = calculate_smx_qualification_points()
