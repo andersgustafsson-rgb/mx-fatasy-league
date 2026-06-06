@@ -509,6 +509,35 @@ def _next_competition_for_picks(
     return None
 
 
+def _current_picks_competition() -> Competition | None:
+    """Aktuell tävling för picks (öppen först, annars låst nästa utan resultat)."""
+    comp = _next_competition_for_picks(require_open=True)
+    if not comp:
+        comp = _next_competition_for_picks(require_open=False)
+    return comp
+
+
+def _can_view_other_users_picks(comp: Competition) -> bool:
+    """Tillåt visning när race är klart/låst, eller för aktuell pick-tävling (t.ex. Hangtown)."""
+    has_results = (
+        CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+    )
+    if has_results or is_picks_locked(comp):
+        return True
+    current = _current_picks_competition()
+    return current is not None and current.id == comp.id
+
+
+def _competition_for_viewing_other_picks(
+    *,
+    upcoming: Competition | None = None,
+) -> Competition | None:
+    """Tävling som 'Se andras picks' ska visa — aktuell pick-race."""
+    if upcoming:
+        return upcoming
+    return _current_picks_competition()
+
+
 def _is_mx_season_started(today: date | None = None) -> bool:
     """True once the outdoor MX calendar has begun (first MX race day or any MX results)."""
     today = today or date.today()
@@ -1251,6 +1280,8 @@ def index():
     upcoming_race = _next_competition_for_picks(require_open=True)
     if not upcoming_race:
         upcoming_race = _next_competition_for_picks(require_open=False)
+
+    view_picks_race = _competition_for_viewing_other_picks(upcoming=upcoming_race)
     
     # Get user-specific data only if logged in
     my_team = None
@@ -1584,6 +1615,7 @@ def index():
         username=session.get("username", "Gäst"),
         user_profile_picture=user_profile_picture if is_logged_in else None,
         upcoming_race=upcoming_race,
+        view_picks_race=view_picks_race,
         upcoming_race_bg_url=upcoming_race_bg_url,
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team if is_logged_in else None,
@@ -10260,7 +10292,7 @@ def crowd_picks_summary(competition_id):
     picks_locked = is_picks_locked(comp)
     has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
 
-    if not picks_locked and not has_results:
+    if not _can_view_other_users_picks(comp):
         return jsonify({"error": "Picks måste vara låsta eller race färdigt."}), 403
 
     try:
@@ -10288,13 +10320,13 @@ def get_other_users_picks(competition_id):
         # Get competition to determine series
         comp = Competition.query.get_or_404(competition_id)
         
-        # IMPORTANT: Only allow viewing other users' picks when picks are locked or race has results
+        # Allow viewing for current race, locked picks, or finished races
         picks_locked = is_picks_locked(comp)
         has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
         
         print(f"DEBUG: get_other_users_picks - Competition: {comp.name}, picks_locked: {picks_locked}, has_results: {has_results}")
         
-        if not picks_locked and not has_results:
+        if not _can_view_other_users_picks(comp):
             error_msg = f"Picks måste vara låsta eller race måste vara färdigt för att se andra användares picks (picks_locked={picks_locked}, has_results={has_results})"
             print(f"DEBUG: get_other_users_picks - Access denied: {error_msg}")
             return jsonify({"error": error_msg}), 403
@@ -19401,6 +19433,8 @@ def race_countdown():
         
         # Check if race has results (is completed)
         has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
+
+        view_picks_race = _competition_for_viewing_other_picks(upcoming=next_race_obj)
         
         payload = {
             "next_race": next_race,
@@ -19409,7 +19443,10 @@ def race_countdown():
                 "pick_deadline": format_countdown(deadline_diff)
             },
             "picks_locked": picks_locked,
-            "has_results": has_results
+            "has_results": has_results,
+            "can_view_other_picks": view_picks_race is not None,
+            "view_picks_competition_id": view_picks_race.id if view_picks_race else None,
+            "view_picks_race_name": view_picks_race.name if view_picks_race else None,
         }
 
         # Auto-freeze picks when deadline passes (homepage syncs ~every 60s).
