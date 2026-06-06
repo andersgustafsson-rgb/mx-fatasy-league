@@ -510,11 +510,13 @@ def _next_competition_for_picks(
 
 
 def _current_picks_competition() -> Competition | None:
-    """Aktuell tävling för picks (öppen först, annars låst nästa utan resultat)."""
-    comp = _next_competition_for_picks(require_open=True)
-    if not comp:
-        comp = _next_competition_for_picks(require_open=False)
-    return comp
+    """Nästa tävling utan resultat — inkl. låsta picks (t.ex. Hangtown efter deadline)."""
+    return _next_competition_for_picks(require_open=False)
+
+
+def _next_open_picks_competition() -> Competition | None:
+    """Nästa tävling där picks fortfarande går att ändra."""
+    return _next_competition_for_picks(require_open=True)
 
 
 def _can_view_other_users_picks(comp: Competition) -> bool:
@@ -1276,12 +1278,9 @@ def index():
         print(f"Error getting competitions: {e}")
         competitions = []
     
-    # Nästa race för picks/countdown: öppna picks först, annars nästa utan resultat
-    upcoming_race = _next_competition_for_picks(require_open=True)
-    if not upcoming_race:
-        upcoming_race = _next_competition_for_picks(require_open=False)
-
-    view_picks_race = _competition_for_viewing_other_picks(upcoming=upcoming_race)
+    # Aktuellt race = nästa utan resultat (inkl. låst Hangtown). Öppna picks kan vara ett senare race.
+    upcoming_race = _current_picks_competition()
+    view_picks_race = upcoming_race
     
     # Get user-specific data only if logged in
     my_team = None
@@ -19434,7 +19433,7 @@ def race_countdown():
         # Check if race has results (is completed)
         has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
 
-        view_picks_race = _competition_for_viewing_other_picks(upcoming=next_race_obj)
+        view_picks_race = next_race_obj
         
         payload = {
             "next_race": next_race,
@@ -20165,11 +20164,11 @@ def race_picks_active():
         return redirect(url_for("login"))
     
     try:
-        comp = _next_competition_for_picks(require_open=True)
+        comp = _next_open_picks_competition()
         if comp:
             return redirect(url_for("race_picks_page", competition_id=comp.id))
 
-        comp = _next_competition_for_picks(require_open=False)
+        comp = _current_picks_competition()
         if comp:
             flash(
                 f"Picks är låsta för {comp.name}. Nästa race med öppna picks kommer snart.",
