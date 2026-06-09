@@ -489,18 +489,74 @@ def _actual_positions(competition_id: int) -> dict[int, int]:
     return {k[1]: v[1] for k, v in lookup.items()}
 
 
+def _latest_results_by_rider(competition_id: int) -> dict[int, CompetitionResult]:
+    rows = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+    out: dict[int, CompetitionResult] = {}
+    for res in rows:
+        rid = int(res.rider_id)
+        if rid not in out or res.result_id > out[rid].result_id:
+            out[rid] = res
+    return out
+
+
+def _result_class_at_competition(
+    comp: Competition,
+    res: CompetitionResult,
+    rider: Rider | None,
+    *,
+    promoted_250_coasts: dict[str, str] | None = None,
+) -> str | None:
+    """Klass vid tävlingen — snapshot + promoted-250-logik, inte nuvarande rider.class."""
+    from main import _promoted_250_coast_by_name, _standing_class_and_coast
+
+    if rider is None and res.rider_id:
+        rider = Rider.query.get(res.rider_id)
+    if rider is None:
+        return None
+    coasts = promoted_250_coasts if promoted_250_coasts is not None else _promoted_250_coast_by_name()
+    class_name, _coast = _standing_class_and_coast(res, comp, rider, coasts)
+    return class_name
+
+
+def _result_class_matches_config(
+    comp: Competition, effective_class: str | None, class_names: tuple[str, ...]
+) -> bool:
+    if not effective_class:
+        return False
+    norm = {
+        "wsx_sx1": "450cc",
+        "wsx_sx2": "250cc",
+        "450cc": "450cc",
+        "250cc": "250cc",
+    }
+    eff = norm.get(effective_class, effective_class)
+    for cn in class_names:
+        if norm.get(cn, cn) == eff:
+            return True
+    return False
+
+
 def _rider_podium(
-    competition_id: int, class_names: tuple[str, ...], limit: int = 3
+    comp: Competition,
+    competition_id: int,
+    class_names: tuple[str, ...],
+    limit: int = 3,
 ) -> list[dict[str, Any]]:
-    actual = _actual_positions(competition_id)
+    from main import _promoted_250_coast_by_name
+
+    promoted = _promoted_250_coast_by_name()
     riders = {r.id: r for r in Rider.query.all()}
     found: list[tuple[int, Rider]] = []
-    for rid, pos in actual.items():
+    for res in _latest_results_by_rider(competition_id).values():
+        pos = res.position
         if pos is None or pos < 1 or pos > limit:
             continue
-        r = riders.get(rid)
-        if r and r.class_name in class_names:
-            found.append((int(pos), r))
+        rider = riders.get(int(res.rider_id))
+        if not rider:
+            continue
+        eff = _result_class_at_competition(comp, res, rider, promoted_250_coasts=promoted)
+        if _result_class_matches_config(comp, eff, class_names):
+            found.append((int(pos), rider))
     found.sort(key=lambda x: x[0])
     out = []
     for pos, r in found[:limit]:
@@ -561,7 +617,6 @@ def _winner_pick_stats(
     picker_n: int,
 ) -> tuple[int, int]:
     """Andel som hade vinnaren som P1 respektive topp 3 (450/250)."""
-    riders = {r.id: r for r in Rider.query.all()}
     p1_count = top3_count = 0
     for _uid, payload in _iter_pick_payloads(competition_id):
         for p in payload.get("race_picks") or []:
@@ -570,14 +625,12 @@ def _winner_pick_stats(
                 pos = int(p.get("predicted_position"))
             except (TypeError, ValueError):
                 continue
-            rider = riders.get(rid)
-            if not rider or rider.class_name not in class_names:
+            if rid != winner_id:
                 continue
-            if rid == winner_id:
-                if pos == 1:
-                    p1_count += 1
-                if 1 <= pos <= 3:
-                    top3_count += 1
+            if pos == 1:
+                p1_count += 1
+            if 1 <= pos <= 3:
+                top3_count += 1
     if picker_n <= 0:
         return 0, 0
     p1_pct = round(100.0 * p1_count / picker_n, 0)
@@ -625,20 +678,26 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
         {"id": "picker_count", "group": "meta", "text": f"{picker_n} spelare lämnade tips"}
     ]
 
-    actual = _actual_positions(competition_id)
     riders = {r.id: r for r in Rider.query.all()}
     cfg = _class_config(comp)
     cls450 = (cfg["primary"][0],)
     cls250 = (cfg["secondary"][0],)
+    from main import _promoted_250_coast_by_name
+
+    promoted = _promoted_250_coast_by_name()
 
     def winner_for_class(class_names: tuple[str, ...]) -> tuple[int | None, str]:
-        for rid, pos in actual.items():
-            if pos != 1:
+        for res in _latest_results_by_rider(competition_id).values():
+            if int(res.position or 0) != 1:
                 continue
-            r = riders.get(rid)
-            if r and (r.class_name in class_names):
-                num = getattr(r, "rider_number", None)
-                return rid, f"#{num} {r.name}" if num else r.name
+            r = riders.get(int(res.rider_id))
+            if not r:
+                continue
+            eff = _result_class_at_competition(comp, res, r, promoted_250_coasts=promoted)
+            if not _result_class_matches_config(comp, eff, class_names):
+                continue
+            num = getattr(r, "rider_number", None)
+            return int(r.id), f"#{num} {r.name}" if num else r.name
         return None, ""
 
     win450_id, win450_label = winner_for_class(cls450)
@@ -783,11 +842,14 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
 
     if getattr(comp, "series", None) != "WSX":
         # Inte "fältets vanligaste wildcard" (alla väljer olika platser) — visa träff mot resultat.
-        rows = CompetitionResult.query.filter_by(competition_id=competition_id).all()
+        promoted = _promoted_250_coast_by_name()
         by_pos_450: dict[int, int] = {}
-        for res in rows:
-            rider = Rider.query.get(res.rider_id)
-            if rider and rider.class_name == cfg["primary"][0]:
+        for res in _latest_results_by_rider(competition_id).values():
+            rider = riders.get(int(res.rider_id))
+            if not rider:
+                continue
+            eff = _result_class_at_competition(comp, res, rider, promoted_250_coasts=promoted)
+            if _result_class_matches_config(comp, eff, (cfg["primary"][0],)):
                 by_pos_450[int(res.position)] = int(res.rider_id)
         if by_pos_450:
             wcs = (
@@ -864,10 +926,10 @@ def build_social_recap_data(
 
     if include_rider_podium and has_results:
         data["rider_podium_primary"] = _rider_podium(
-            competition_id, (cfg["primary"][0],), limit=3
+            comp, competition_id, (cfg["primary"][0],), limit=3
         )
         data["rider_podium_secondary"] = _rider_podium(
-            competition_id, (cfg["secondary"][0],), limit=3
+            comp, competition_id, (cfg["secondary"][0],), limit=3
         )
     else:
         data["rider_podium_primary"] = []
@@ -2326,7 +2388,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "29"
+RECAP_RENDERER_REV = "30"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
