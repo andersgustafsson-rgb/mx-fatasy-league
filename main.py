@@ -520,14 +520,11 @@ def _next_open_picks_competition() -> Competition | None:
 
 
 def _can_view_other_users_picks(comp: Competition) -> bool:
-    """Tillåt visning när race är klart/låst, eller för aktuell pick-tävling (t.ex. Hangtown)."""
+    """Tillåt visning när picks är låsta eller race är färdigt."""
     has_results = (
         CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
     )
-    if has_results or is_picks_locked(comp):
-        return True
-    current = _current_picks_competition()
-    return current is not None and current.id == comp.id
+    return has_results or is_picks_locked(comp)
 
 
 def _competition_for_viewing_other_picks(
@@ -1609,12 +1606,17 @@ def index():
     except Exception:
         pass
 
+    can_view_other_picks = (
+        _can_view_other_users_picks(view_picks_race) if view_picks_race else False
+    )
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
         user_profile_picture=user_profile_picture if is_logged_in else None,
         upcoming_race=upcoming_race,
         view_picks_race=view_picks_race,
+        can_view_other_picks=can_view_other_picks,
         upcoming_race_bg_url=upcoming_race_bg_url,
         upcoming_races=[c for c in competitions if c.event_date and c.event_date >= today],
         my_team=my_team if is_logged_in else None,
@@ -10283,7 +10285,7 @@ def _build_crowd_picks_summary(competition_id: int, comp: Competition, ensure_sn
 
 @app.route("/crowd_picks_summary/<int:competition_id>")
 def crowd_picks_summary(competition_id):
-    """Lightweight crowd / 'field' popularity for teaser widgets (requires login + locked or results)."""
+    """Crowd-popularitet för teaser — kräver inloggning + låsta picks eller färdigt race."""
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
 
@@ -10319,7 +10321,6 @@ def get_other_users_picks(competition_id):
         # Get competition to determine series
         comp = Competition.query.get_or_404(competition_id)
         
-        # Allow viewing for current race, locked picks, or finished races
         picks_locked = is_picks_locked(comp)
         has_results = CompetitionResult.query.filter_by(competition_id=competition_id).first() is not None
         
@@ -19434,7 +19435,10 @@ def race_countdown():
         has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
 
         view_picks_race = next_race_obj
-        
+        can_view_other_picks = (
+            _can_view_other_users_picks(view_picks_race) if view_picks_race else False
+        )
+
         payload = {
             "next_race": next_race,
             "countdown": {
@@ -19443,7 +19447,7 @@ def race_countdown():
             },
             "picks_locked": picks_locked,
             "has_results": has_results,
-            "can_view_other_picks": view_picks_race is not None,
+            "can_view_other_picks": can_view_other_picks,
             "view_picks_competition_id": view_picks_race.id if view_picks_race else None,
             "view_picks_race_name": view_picks_race.name if view_picks_race else None,
         }
