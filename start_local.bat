@@ -26,7 +26,7 @@ if not exist .pip-cache mkdir .pip-cache
 set PIP_CACHE_DIR=%CD%\.pip-cache
 
 echo Kontrollerar Python-paket...
-"%PY%" -c "import flask; import dotenv; import flask_sqlalchemy" 2>nul
+"%PY%" -c "import flask; import dotenv; import flask_sqlalchemy; from PIL import Image" 2>nul
 if errorlevel 1 (
     echo Installerar/uppdaterar paket fran requirements.txt...
     "%PY%" -m pip install --upgrade pip --no-cache-dir -q

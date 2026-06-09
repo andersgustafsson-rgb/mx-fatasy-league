@@ -1280,23 +1280,54 @@ def _load_brand_logo(size: int = 96):
     return None
 
 
-def _load_rider_thumb(rider_id: int, size: int = 72):
+def _paste_recap_brand_logo_in_circle(
+    base,
+    circle: dict[str, int],
+    ref_w: int,
+    ref_h: int,
+    out_w: int,
+    out_h: int,
+) -> None:
+    """Placera MX Fantasy-loggan i header-cirkeln på recap-mallen."""
+    from PIL import Image, ImageDraw
+
+    cx, cy, r = _scale_recap_circle(circle, ref_w, ref_h, out_w, out_h)
+    d = max(24, r * 2)
+    fill = int(d * 1.02)  # fyll nästan hela header-cirkeln
+    logo = _load_brand_logo(fill * 2)
+    if logo is None:
+        return
+    logo = logo.resize((fill, fill), Image.Resampling.LANCZOS)
+    inner = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+    ox = (d - logo.width) // 2
+    oy = (d - logo.height) // 2
+    inner.paste(logo, (ox, oy), logo)
+    mask = Image.new("L", (d, d), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
+    inner.putalpha(mask)
+    base.paste(inner, (cx - d // 2, cy - d // 2), inner)
+
+
+def _load_image_bytes(raw: str, size: int = 0):
+    """Ladda bild från data-URL, http(s) eller relativ sökväg — utan resize."""
     from PIL import Image
 
-    rider = Rider.query.get(rider_id)
-    if not rider:
-        return None
-    raw = getattr(rider, "rider_image_data", None) or getattr(rider, "image_url", None)
-    if not raw:
-        return None
     s = str(raw).strip()
+    if not s:
+        return None
     try:
         if s.startswith("data:"):
             b64 = s.split(",", 1)[-1]
             data = base64.b64decode(b64)
             img = Image.open(io.BytesIO(data)).convert("RGBA")
         elif s.startswith("http"):
-            return None
+            import urllib.request
+
+            req = urllib.request.Request(
+                s, headers={"User-Agent": "MXFantasyRecap/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                img = Image.open(io.BytesIO(resp.read())).convert("RGBA")
         else:
             if not s.startswith(("riders/", "uploads/", "trackmaps/")):
                 s = "riders/" + s.lstrip("/")
@@ -1306,42 +1337,41 @@ def _load_rider_thumb(rider_id: int, size: int = 72):
             if not p.exists():
                 return None
             img = Image.open(p).convert("RGBA")
-        img.thumbnail((size, size), Image.Resampling.LANCZOS)
         return img
     except Exception:
         return None
 
 
-def _load_user_profile_image(user_id: int, size: int = 72):
-    from PIL import Image
+def _normalize_portrait_url(url: str) -> str:
+    try:
+        from app.portrait_urls import normalize_racerx_portrait_url
 
+        return normalize_racerx_portrait_url(url) or url
+    except Exception:
+        return url
+
+
+def _load_rider_thumb(rider_id: int, size: int = 72):
+    rider = Rider.query.get(rider_id)
+    if not rider:
+        return None
+    raw = getattr(rider, "rider_image_data", None) or getattr(rider, "image_url", None)
+    if not raw:
+        return None
+    s = str(raw).strip()
+    if s.startswith("http"):
+        s = _normalize_portrait_url(s)
+    return _load_image_bytes(s, size)
+
+
+def _load_user_profile_image(user_id: int, size: int = 72):
     user = User.query.get(user_id)
     if not user:
         return None
     raw = getattr(user, "profile_picture_url", None)
     if not raw:
         return None
-    s = str(raw).strip()
-    try:
-        if s.startswith("data:"):
-            b64 = s.split(",", 1)[-1]
-            data = base64.b64decode(b64)
-            img = Image.open(io.BytesIO(data)).convert("RGBA")
-        elif s.startswith("http"):
-            return None
-        else:
-            if not s.startswith(("uploads/", "riders/", "trackmaps/")):
-                s = "uploads/" + s.lstrip("/")
-            p = _ROOT / "static" / s.lstrip("/")
-            if not p.exists():
-                p = _ROOT / s.lstrip("/")
-            if not p.exists():
-                return None
-            img = Image.open(p).convert("RGBA")
-        img.thumbnail((size, size), Image.Resampling.LANCZOS)
-        return img
-    except Exception:
-        return None
+    return _load_image_bytes(str(raw), size)
 
 
 def _make_initials_avatar(display_name: str, user_id: int, size: int):
@@ -1800,15 +1830,20 @@ def _draw_weekly_highlights_section(
             tf = _fit_font_px(title, text_w, bold=True, min_px=32, max_px=40)
             disp = (card.get("display_name") or "?").strip()
             disp, nf = _fit_podium_name(disp, text_w, min_px=30, max_px=40)
-            detail = _plain_draw_text((card.get("detail") or "")[:64])
-            df = _fit_font_px(detail, text_w, bold=False, min_px=26, max_px=32)
+            d1, d2 = _weekly_detail_recap_lines(card.get("detail") or "")
+            df = _fit_font_px(d1, text_w, bold=True, min_px=26, max_px=32)
+            d2f = _fit_font_px(d2, text_w, bold=False, min_px=24, max_px=28) if d2 else None
             draw.text((tx, y + 18), title, font=tf, fill=CYAN)
             draw.text((tx, y + 56), disp, font=nf, fill=WHITE)
-            draw.text((tx, y + 108), detail, font=df, fill=MUTED)
+            draw.text((tx, y + 108), d1, font=df, fill=_weekly_detail_line1_fill(d1))
+            if d2 and d2f:
+                draw.text((tx, y + 148), d2, font=d2f, fill=MUTED)
         else:
             tf = _load_font(24, bold=True)
             nf = _load_font(24, bold=True)
-            df = _load_font(22)
+            d1, d2 = _weekly_detail_recap_lines(card.get("detail") or "")
+            df = _load_font(22, bold=True)
+            d2f = _load_font(20)
             draw.text((tx, y + _sz(16)), title[:28], font=tf, fill=CYAN)
             draw.text(
                 (tx, y + _sz(44)),
@@ -1816,7 +1851,9 @@ def _draw_weekly_highlights_section(
                 font=nf,
                 fill=WHITE,
             )
-            draw.text((tx, y + _sz(68)), (card.get("detail") or "")[:48], font=df, fill=MUTED)
+            draw.text((tx, y + _sz(68)), d1[:48], font=df, fill=_weekly_detail_line1_fill(d1))
+            if d2:
+                draw.text((tx, y + _sz(92)), d2[:48], font=d2f, fill=MUTED)
     return y0 + panel_h
 
 
@@ -2145,6 +2182,1088 @@ def _draw_fb_season_strip(
         )
 
 
+RECAP_TEMPLATE_GRAPHIC = _ROOT / "static" / "recap_templates" / "recap_fb_graphic.png"
+RECAP_TEMPLATE_STATS = _ROOT / "static" / "recap_templates" / "recap_fb_stats.png"
+RECAP_SLOTS_JSON = _ROOT / "static" / "recap_templates" / "slots.json"
+def _recap_templates_ready() -> bool:
+    return (
+        RECAP_TEMPLATE_GRAPHIC.is_file()
+        and RECAP_TEMPLATE_STATS.is_file()
+        and RECAP_SLOTS_JSON.is_file()
+    )
+
+
+def _load_recap_slots() -> dict[str, Any]:
+    with open(RECAP_SLOTS_JSON, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _recap_is_grey_pixel(r: int, g: int, b: int) -> bool:
+    return 88 < r < 178 and abs(r - g) < 24 and abs(g - b) < 24
+
+
+def _recap_grey_circle_in_region(
+    px, x0: int, x1: int, y0: int, y1: int,
+) -> dict[str, int] | None:
+    """Hitta grå avatar-cirkel i en avgränsad panelkolumn."""
+    import math
+
+    pts = [
+        (x, y)
+        for y in range(y0, y1)
+        for x in range(x0, x1)
+        if _recap_is_grey_pixel(*px[x, y])
+    ]
+    if len(pts) < 400:
+        return None
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    # Medelpunkt av grå pixlar — bbox-centrum dras ned av pallblock som klipper cirkeln.
+    cx = sum(xs) / len(xs)
+    cy = sum(ys) / len(ys)
+    dists = sorted(math.hypot(x - cx, y - cy) for x, y in pts)
+    r = dists[int(len(dists) * 0.92)]
+    return {"cx": int(round(cx)), "cy": int(round(cy)), "r": int(round(r))}
+
+
+def _recap_name_box_at_column(px, col_cx: int, *, y0: int, y1: int, margin: int = 125) -> dict[str, int] | None:
+    """Hitta mörk namnplatta centrerad under en pallkolumn."""
+    best: dict[str, int] | None = None
+    for y in range(y0, y1):
+        spans: list[tuple[int, int]] = []
+        start: int | None = None
+        for x in range(col_cx - margin, col_cx + margin):
+            if px[x, y][0] < 70:
+                if start is None:
+                    start = x
+            elif start is not None:
+                if x - start >= 50:
+                    spans.append((start, x - 1))
+                start = None
+        if start is not None and col_cx + margin - start >= 50:
+            spans.append((start, col_cx + margin - 1))
+        for a, b in spans:
+            cx = (a + b) // 2
+            if abs(cx - col_cx) > 55:
+                continue
+            width = b - a
+            if width < 60:
+                continue
+            cand = {"x0": a, "x1": b, "y0": y - 3, "y1": y + 22}
+            if best is None or width > (best["x1"] - best["x0"]):
+                best = cand
+    return best
+
+
+# ~8 px ≈ 1 mm i 2190-mallen (används i finjusteringar nedan).
+_RECAP_MM = 8
+
+# Veckans prestationer — per kort (IB, AN, GR, holeshot).
+# 1 mm på mallen ≈ _RECAP_MM (8) px; 1,5 mm ≈ 12 px.
+_RECAP_STATS_WEEKLY_RING_UP = int(1.5 * _RECAP_MM)
+_RECAP_STATS_WEEKLY_AVATAR_NUDGE: dict[int, tuple[int, int, int]] = {
+    0: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # IB — upp ~1,5 mm
+    1: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # AN
+    2: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # GR
+    3: (0, 1 * _RECAP_MM, 12),                  # holeshot — ner ~1 mm
+}
+_RECAP_STATS_WEEKLY_TEXT_DX = 4 * _RECAP_MM       # namn/detalj ~4 mm höger
+_RECAP_STATS_WEEKLY_DETAIL_DY = 5 * _RECAP_MM     # förklaringstext ner ~5 mm
+_RECAP_STATS_WEEKLY_DETAIL_NUDGE: dict[int, tuple[int, int]] = {
+    0: (-1 * _RECAP_MM, 0),       # IB — förklaring ~1 mm vänster
+}
+# Säsongstoppen — poängruta + avatar.
+_RECAP_STATS_SEASON_POINTS_SHIFT = -20 * _RECAP_MM  # 2 cm vänster
+_RECAP_STATS_SEASON_AVATAR_DY = -1 * _RECAP_MM       # initialer upp ~1 mm
+
+# Finjustering per pall / fantasy-plats: (dx, dy, dr) i px på 2190-mallen.
+_RECAP_AVATAR_NUDGE: dict[tuple[str, int], tuple[int, int, int]] = {
+    ("rider_450", 1): (0, -2, 0),    # Hunter — upp ~1 mm
+    ("rider_450", 2): (0, 22, 0),    # JP — ner ~1 mm
+    ("rider_450", 3): (4, 19, 1),    # Jett — perfekt
+    ("rider_250", 1): (0, 0, 0),     # SH — upp ~1 mm
+    ("rider_250", 2): (0, 20, 0),    # C. Dudney — ner ~1 mm
+    ("rider_250", 3): (0, 28, 0),    # C. Davies — ner ~2 mm
+    ("fantasy", 1): (0, 42, -18),    # KA — ner ~1 mm
+    ("fantasy", 2): (_RECAP_MM, 40, -18),   # GR — ner + höger ~1 mm
+    ("fantasy", 3): (_RECAP_MM, 44, -18),   # IB — ner + höger ~1 mm
+}
+
+# Plats 4/5 — separata rader i höger ruta (2190-mall).
+_RECAP_FANTASY_EXTRAS = [
+    {
+        "rank": 4,
+        "avatar": {"cx": 1215, "cy": 1195, "r": 26},
+        "name_pts": {"x0": 1255, "y0": 1178, "x1": 2095, "y1": 1198},
+    },
+    {
+        "rank": 5,
+        "avatar": {"cx": 1215, "cy": 1345, "r": 26},
+        "name_pts": {"x0": 1255, "y0": 1327, "x1": 2095, "y1": 1359},
+    },
+]
+
+# Klassrubrik — vit text ca y 250–278; sudda endast textbandet.
+_RECAP_CLASS_TITLE_BOXES = {
+    "primary": {"x0": 458, "y0": 248, "x1": 732, "y1": 280},
+    "secondary": {"x0": 1528, "y0": 248, "x1": 1802, "y1": 280},
+}
+_RECAP_CLASS_HEADER_RESTORE = {
+    "primary": {"x0": 458, "x1": 732, "ref_x": 380},
+    "secondary": {"x0": 1528, "x1": 1802, "ref_x": 1450},
+}
+# Gemini-artefakter i fantasy-panelen (hörn).
+_RECAP_ARTIFACT_INPAINT = [
+    {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
+    {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
+]
+RECAP_RENDERER_REV = "27"
+
+# Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
+_RECAP_RIDER_NAME_Y_SHIFT = 40
+
+
+def _recap_detect_dark_row(px, x0: int, x1: int, y0: int, y1: int) -> tuple[int, int] | None:
+    """Vertikal mittpunkt för en mörk listrad (fantasy plats 4/5)."""
+    best_y = -1
+    best_count = 0
+    for y in range(y0, y1):
+        count = sum(1 for x in range(x0, x1) if px[x, y][0] < 50)
+        if count > best_count:
+            best_count = count
+            best_y = y
+    if best_y < 0 or best_count < 400:
+        return None
+    top = y0
+    bottom = y1 - 1
+    for y in range(best_y, y0 - 1, -1):
+        if sum(1 for x in range(x0, x1) if px[x, y][0] < 50) < best_count // 3:
+            top = y + 1
+            break
+    for y in range(best_y, y1):
+        if sum(1 for x in range(x0, x1) if px[x, y][0] < 50) < best_count // 3:
+            bottom = y - 1
+            break
+    return top, bottom
+
+
+def _detect_recap_graphic_slots_from_image(img) -> dict[str, Any]:
+    """Mät avatar- och textrutor direkt från recap-mallen (2190-bild)."""
+    from PIL import Image
+
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    px = img.load()
+    w, h = img.size
+
+    def ring(col_cx: int, x0: int, x1: int, y0: int, y1: int) -> dict[str, int] | None:
+        return _recap_grey_circle_in_region(px, x0, x1, y0, y1)
+
+    rider_cols = [
+        ("rider_450", 2, 266, 150, 380, 350, 530),
+        ("rider_450", 1, 560, 450, 690, 320, 520),
+        ("rider_450", 3, 851, 730, 970, 370, 530),
+        ("rider_250", 2, 1336, 1220, 1450, 350, 530),
+        ("rider_250", 1, 1629, 1520, 1760, 320, 520),
+        ("rider_250", 3, 1924, 1800, 2040, 370, 530),
+    ]
+    fantasy_cols = [
+        (2, 252, 150, 360, 1050, 1220),
+        (1, 563, 450, 670, 1050, 1220),
+        (3, 846, 730, 960, 1050, 1220),
+    ]
+
+    graphic: dict[str, Any] = {"ref_w": w, "ref_h": h, "rider_450": {"avatars": [], "names": []}, "rider_250": {"avatars": [], "names": []}, "fantasy": {"avatars": [], "names": [], "extras": []}}
+
+    for panel, pos, col_cx, x0, x1, y0, y1 in rider_cols:
+        av = ring(col_cx, x0, x1, y0, y1)
+        if av:
+            graphic[panel]["avatars"].append({"pos": pos, **av})
+        nm = _recap_name_box_at_column(px, col_cx, y0=818, y1=852)
+        if nm:
+            graphic[panel]["names"].append({"pos": pos, **nm})
+
+    for panel in ("rider_450", "rider_250"):
+        avatars = graphic[panel]["avatars"]
+        if avatars:
+            uniform_r = max(int(a["r"]) for a in avatars)
+            for a in avatars:
+                a["r"] = uniform_r
+
+    for pos, col_cx, x0, x1, y0, y1 in fantasy_cols:
+        av = ring(col_cx, x0, x1, y0, y1)
+        if av:
+            graphic["fantasy"]["avatars"].append({"pos": pos, **av})
+        nm = _recap_name_box_at_column(px, col_cx, y0=1290, y1=1338, margin=145)
+        if nm:
+            nm = dict(nm)
+            nm["y0"] = nm.get("y0", 1300) + 10
+            nm["y1"] = nm.get("y1", 1325) + 10
+            graphic["fantasy"]["names"].append({"pos": pos, **nm})
+
+    fantasy_avatars = graphic["fantasy"]["avatars"]
+    if fantasy_avatars:
+        uniform_r = max(int(a["r"]) for a in fantasy_avatars)
+        for a in fantasy_avatars:
+            a["r"] = uniform_r
+
+    graphic["fantasy"]["extras"] = [dict(row) for row in _RECAP_FANTASY_EXTRAS]
+
+    title_rows = [
+        y
+        for y in range(48, 128)
+        if sum(1 for x in range(1405, 2148) if px[x, y][0] < 80) > 400
+    ]
+    if title_rows:
+        graphic["race_title"] = {
+            "x0": 1410,
+            "y0": min(title_rows) + 2,
+            "x1": 2145,
+            "y1": max(title_rows) - 2,
+        }
+    brand = _recap_grey_circle_in_region(px, 30, 260, 20, 175)
+    if brand and 35 <= brand["r"] <= 75:
+        graphic["brand_logo"] = brand
+    return graphic
+
+
+def _recap_dark_subbox_in_region(
+    px, x0: int, x1: int, y0: int, y1: int, *, pad: int = 8,
+) -> dict[str, int] | None:
+    min_x, max_x, min_y, max_y = x1, x0, y1, y0
+    found = False
+    for y in range(y0, y1):
+        for x in range(x0, x1):
+            if px[x, y][0] < 55:
+                found = True
+                min_x = min(min_x, x)
+                max_x = max(max_x, x)
+                min_y = min(min_y, y)
+                max_y = max(max_y, y)
+    if not found or max_x - min_x < 60:
+        return None
+    return {
+        "x0": min_x + pad,
+        "y0": min_y + pad,
+        "x1": max_x - pad,
+        "y1": max_y - pad,
+    }
+
+
+def _split_recap_weekly_text_boxes(px, box: dict[str, int]) -> tuple[dict[str, int], dict[str, int]]:
+    """Dela veckokort i namn (över) och detalj (under) inom mörk textruta."""
+    x0, x1, y0, y1 = box["x0"], box["x1"], box["y0"], box["y1"]
+    panel_bottom = y0
+    for y in range(y1, y0 - 1, -1):
+        dark = sum(1 for x in range(x0, x1) if px[x, y][0] < 55)
+        if dark > (x1 - x0) * 0.55:
+            panel_bottom = y
+            break
+    y1 = max(y0 + 48, panel_bottom - 12)
+    split_y = y0 + int((y1 - y0) * 0.28)
+    pad_x = 8
+    name = {"x0": x0 + pad_x, "y0": y0 + 4, "x1": x1 - pad_x, "y1": split_y - 2}
+    detail = {"x0": x0 + pad_x, "y0": split_y + 2, "x1": x1 - pad_x, "y1": y1 - 4}
+    return name, detail
+
+
+def _tune_recap_stats_weekly_slot(slot: dict[str, Any], index: int = 0) -> dict[str, Any]:
+    """Finjustera avatar + textrutor per veckokort."""
+    dx, dy, dr = _RECAP_STATS_WEEKLY_AVATAR_NUDGE.get(index, (0, 0, 12))
+    av = dict(slot["avatar"])
+    av["cx"] = int(av["cx"]) + dx
+    av["cy"] = int(av["cy"]) + dy
+    av["r"] = min(72, int(av["r"]) + dr)
+    name = dict(slot["name"])
+    detail = dict(slot["detail"])
+    text_dx = _RECAP_STATS_WEEKLY_TEXT_DX
+    name["x0"] = int(name["x0"]) + text_dx
+    name["x1"] = int(name["x1"]) + text_dx
+    detail["x0"] = int(detail["x0"]) + text_dx
+    detail["x1"] = int(detail["x1"]) + text_dx
+    detail_dy = _RECAP_STATS_WEEKLY_DETAIL_DY
+    detail_dx, detail_dy_extra = _RECAP_STATS_WEEKLY_DETAIL_NUDGE.get(index, (0, 0))
+    detail["x0"] = int(detail["x0"]) + detail_dx
+    detail["x1"] = int(detail["x1"]) + detail_dx
+    detail["y0"] = int(detail["y0"]) + detail_dy + detail_dy_extra
+    detail["y1"] = int(detail["y1"]) + detail_dy + detail_dy_extra
+    return {**slot, "avatar": av, "name": name, "detail": detail}
+
+
+def _tune_recap_stats_season_slot(slot: dict[str, Any]) -> dict[str, Any]:
+    """Flytta poängruta + avatar innanför säsongsraden."""
+    shift = _RECAP_STATS_SEASON_POINTS_SHIFT
+    pts = dict(slot["points"])
+    pts["x0"] = int(pts["x0"]) + shift
+    pts["x1"] = int(pts["x1"]) + shift
+    name_x1 = int(slot["name"]["x1"])
+    pts["x0"] = max(name_x1 + 10, int(pts["x0"]))
+    av = dict(slot["avatar"])
+    av["cy"] = int(av["cy"]) + _RECAP_STATS_SEASON_AVATAR_DY
+    return {**slot, "avatar": av, "points": pts}
+
+
+def _detect_recap_stats_slots_from_image(img) -> dict[str, Any]:
+    """Mät avatar- och textrutor direkt från recap-statistikmallen."""
+    from PIL import Image
+
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+    px = img.load()
+    w, h = img.size
+    stats: dict[str, Any] = {"ref_w": w, "ref_h": h, "weekly": [], "season": [], "facts": []}
+
+    weekly_regions = [
+        (80, 350, 350, 550, 260, 600, 378, 518),
+        (550, 1050, 350, 550, 720, 1100, 378, 518),
+        (80, 350, 600, 800, 260, 600, 668, 808),
+        (550, 1050, 600, 800, 720, 1100, 668, 808),
+    ]
+    for av_x0, av_x1, av_y0, av_y1, tx_x0, tx_x1, ty0, ty1 in weekly_regions:
+        av = _recap_grey_circle_in_region(px, av_x0, av_x1, av_y0, av_y1)
+        text_box = _recap_dark_subbox_in_region(px, tx_x0, tx_x1, ty0, ty1)
+        if not av or not text_box:
+            continue
+        av = dict(av)
+        av["r"] = min(int(av["r"]), 66)
+        name, detail = _split_recap_weekly_text_boxes(px, text_box)
+        stats["weekly"].append({"avatar": av, "name": name, "detail": detail})
+
+    season_bands = [(330, 450), (450, 570), (570, 690), (690, 810), (810, 930)]
+    for rank, (y0, y1) in enumerate(season_bands, start=1):
+        av = _recap_grey_circle_in_region(px, 1080, 1285, y0, y1)
+        name = _recap_dark_subbox_in_region(px, 1395, 1850, y0, y1)
+        points = _recap_dark_subbox_in_region(px, 1855, 2140, y0, y1)
+        if not av or not name or not points:
+            continue
+        av = dict(av)
+        av["r"] = min(int(av["r"]), 42)
+        stats["season"].append({"rank": rank, "avatar": av, "name": name, "points": points})
+
+    fact_boxes: list[dict[str, int]] = []
+    in_box = False
+    start_y = 0
+    for y in range(1140, 1420):
+        dark = sum(1 for x in range(1270, 2080) if px[x, y][0] < 55)
+        if dark > 500:
+            if not in_box:
+                start_y = y
+                in_box = True
+        elif in_box:
+            if y - start_y >= 40:
+                fact_boxes.append({"x0": 1280, "y0": start_y + 8, "x1": 2070, "y1": y - 8})
+            in_box = False
+    stats["facts"] = fact_boxes[:3]
+
+    title_rows = [
+        y
+        for y in range(48, 128)
+        if sum(1 for x in range(1405, 2148) if px[x, y][0] < 80) > 400
+    ]
+    if title_rows:
+        stats["race_title"] = {
+            "x0": 1410,
+            "y0": min(title_rows) + 2,
+            "x1": 2145,
+            "y1": max(title_rows) - 2,
+        }
+    brand = _recap_grey_circle_in_region(px, 30, 260, 20, 175)
+    if brand and 35 <= brand["r"] <= 75:
+        stats["brand_logo"] = brand
+    return stats
+
+
+def _merge_detected_stats_slots(static: dict[str, Any], detected: dict[str, Any]) -> dict[str, Any]:
+    merged = {**static, **detected}
+    for key in ("weekly", "season", "facts"):
+        if detected.get(key):
+            merged[key] = detected[key]
+    if "race_title" in detected:
+        merged["race_title"] = detected["race_title"]
+    if detected.get("brand_logo"):
+        merged["brand_logo"] = detected["brand_logo"]
+    return merged
+
+
+def _recap_avatar_visual_nudge(panel: str, pos: int, slot: dict[str, int]) -> dict[str, int]:
+    """Applicera manuell finjustering ovanpå mätta mallkoordinater."""
+    cx, cy, r = int(slot["cx"]), int(slot["cy"]), int(slot["r"])
+    dx, dy, dr = _RECAP_AVATAR_NUDGE.get((panel, pos), (0, 0, 0))
+    return {"cx": cx + dx, "cy": cy + dy, "r": max(52, r + dr)}
+
+
+def _shift_recap_box_y(
+    box: tuple[int, int, int, int], dy: int,
+) -> tuple[int, int, int, int]:
+    x0, y0, x1, y1 = box
+    return x0, y0 + dy, x1, y1 + dy
+
+
+def _recap_class_header_label(data: dict[str, Any], key: str) -> str:
+    labels = data.get("class_labels") or {}
+    series = str(data.get("series") or "").upper()
+    primary = str(labels.get("primary") or "450")
+    secondary = str(labels.get("secondary") or "250")
+    if series == "WSX":
+        return str(labels.get("primary") or "SX1") if key == "primary" else str(labels.get("secondary") or "SX2")
+    if series == "SX":
+        base_lbl = primary if key == "primary" else secondary
+        return f"{base_lbl} SX"
+    return primary if key == "primary" else secondary
+
+
+def _inpaint_recap_region(base, x0: int, y0: int, x1: int, y1: int, passes: int = 2) -> None:
+    """Sudda små artefakter/vattenmärken med medelvärde av grannpixlar."""
+    px = base.load()
+    w, h = base.size
+    for _ in range(passes):
+        updates: list[tuple[int, int, tuple]] = []
+        for y in range(max(0, y0), min(h - 1, y1) + 1):
+            for x in range(max(0, x0), min(w - 1, x1) + 1):
+                acc = [0, 0, 0, 0]
+                n = 0
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        if dx == 0 and dy == 0:
+                            continue
+                        nx, ny = x + dx, y + dy
+                        if x0 <= nx <= x1 and y0 <= ny <= y1:
+                            continue
+                        if 0 <= nx < w and 0 <= ny < h:
+                            p = px[nx, ny]
+                            for i in range(3):
+                                acc[i] += p[i]
+                            acc[3] += p[3] if len(p) > 3 else 255
+                            n += 1
+                if n:
+                    updates.append(
+                        (x, y, tuple(int(acc[i] / n) for i in range(3)) + (int(acc[3] / n),))
+                    )
+        for x, y, color in updates:
+            px[x, y] = color
+
+
+def _clean_recap_template_artifacts(base) -> None:
+    for spec in _RECAP_ARTIFACT_INPAINT:
+        _inpaint_recap_region(base, spec["x0"], spec["y0"], spec["x1"], spec["y1"])
+
+
+def recap_renderer_engine() -> str:
+    return "template" if _recap_templates_ready() else "fallback"
+
+
+def _recap_panel_fill_color(base, x0: int, y0: int, x1: int, y1: int) -> tuple:
+    """Bakgrundsfärg precis under rubriktexten."""
+    w, h = base.size
+    sx = (x0 + x1) // 2
+    sy = min(h - 1, y1 + 6)
+    p = base.getpixel((sx, sy))
+    if isinstance(p, tuple) and len(p) >= 3:
+        return p[:3]
+    return (21, 35, 61)
+
+
+def _wipe_recap_header_text_band(base, x0: int, y0: int, x1: int, y1: int) -> None:
+    """Sudda rubriktext rad för rad så panelgradienten bevaras ovanför texten."""
+    px = base.load()
+    w, h = base.size
+    ref_l = max(0, x0 - 24)
+    ref_r = min(w - 1, x1 + 24)
+    for y in range(max(0, y0), min(h, y1 + 1)):
+        left = px[ref_l, y][:3]
+        right = px[ref_r, y][:3]
+        for x in range(max(0, x0), min(w, x1 + 1)):
+            t = (x - x0) / max(1, x1 - x0)
+            px[x, y] = (
+                int(left[0] * (1 - t) + right[0] * t),
+                int(left[1] * (1 - t) + right[1] * t),
+                int(left[2] * (1 - t) + right[2] * t),
+                px[x, y][3] if len(px[x, y]) > 3 else 255,
+            )
+
+
+def _draw_recap_class_headers(
+    draw,
+    base,
+    data: dict[str, Any],
+    ref_w: int,
+    ref_h: int,
+    out_w: int,
+    out_h: int,
+) -> None:
+    """Sudda inbakad malltext och rita rätt klassnamn (MX/SX/WSX)."""
+    for key in ("primary", "secondary"):
+        box = _scale_recap_box(_RECAP_CLASS_TITLE_BOXES[key], ref_w, ref_h, out_w, out_h)
+        x0, y0, x1, y1 = box
+        _wipe_recap_header_text_band(base, x0, y0, x1, y1)
+        text = _recap_class_header_label(data, key)
+        _draw_text_in_box(draw, box, text, bold=True, max_px=46, min_px=24, fill=WHITE)
+
+
+def _merge_detected_graphic_slots(static: dict[str, Any], detected: dict[str, Any]) -> dict[str, Any]:
+    """Statisk slots.json + mätta koordinater från aktuell PNG-mall."""
+    merged = {**static, **detected}
+    for key in ("rider_450", "rider_250", "fantasy"):
+        if key in detected:
+            merged[key] = detected[key]
+    if "race_title" in detected:
+        merged["race_title"] = detected["race_title"]
+    if detected.get("brand_logo"):
+        merged["brand_logo"] = detected["brand_logo"]
+    return merged
+
+
+def _scale_recap_coord(
+    value: float, ref: int, out: int,
+) -> int:
+    return int(round(value * out / ref))
+
+
+def _scale_recap_box(
+    box: dict[str, int], ref_w: int, ref_h: int, out_w: int, out_h: int,
+) -> tuple[int, int, int, int]:
+    return (
+        _scale_recap_coord(box["x0"], ref_w, out_w),
+        _scale_recap_coord(box["y0"], ref_h, out_h),
+        _scale_recap_coord(box["x1"], ref_w, out_w),
+        _scale_recap_coord(box["y1"], ref_h, out_h),
+    )
+
+
+def _scale_recap_circle(
+    slot: dict[str, int], ref_w: int, ref_h: int, out_w: int, out_h: int,
+) -> tuple[int, int, int]:
+    return (
+        _scale_recap_coord(slot["cx"], ref_w, out_w),
+        _scale_recap_coord(slot["cy"], ref_h, out_h),
+        max(8, _scale_recap_coord(slot["r"], ref_w, out_w)),
+    )
+
+
+def _cover_crop_square(img, size: int, *, face_bias: float = 0.1):
+    """Fyll en kvadrat (cover) — porträtt zoomas in istället för letterbox."""
+    from PIL import Image
+
+    w, h = img.size
+    if w < 1 or h < 1:
+        return img
+    scale = max(size / w, size / h)
+    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+    img = img.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = max(0, (nw - size) // 2)
+    top = max(0, (nh - size) // 2 - int(size * face_bias))
+    left = min(left, max(0, nw - size))
+    top = min(top, max(0, nh - size))
+    return img.crop((left, top, left + size, top + size))
+
+
+def _paste_plain_circle_avatar(
+    base,
+    cx: int,
+    cy: int,
+    radius: int,
+    *,
+    rider_id: int | None = None,
+    user_id: int | None = None,
+    display_name: str = "?",
+    initials: str = "?",
+    face_bias: float = 0.1,
+) -> None:
+    """Cirkulär avatar utan ring — mallen har redan ram."""
+    from PIL import Image, ImageDraw
+
+    d = radius * 2
+    inner = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+    thumb = None
+    if rider_id:
+        thumb = _load_rider_thumb(int(rider_id), d * 2)
+    elif user_id:
+        thumb = _load_user_profile_image(int(user_id), d * 2)
+    if thumb is None:
+        thumb = _make_initials_avatar(display_name or initials, int(user_id or rider_id or 0), d)
+    else:
+        thumb = _cover_crop_square(thumb.convert("RGBA"), d, face_bias=face_bias)
+
+    mask = Image.new("L", (d, d), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
+    ox = (d - thumb.width) // 2
+    oy = (d - thumb.height) // 2
+    inner.paste(thumb, (ox, oy), thumb if thumb.mode == "RGBA" else None)
+    inner.putalpha(mask)
+    base.paste(inner, (cx - radius, cy - radius), inner)
+
+
+def _draw_text_in_box(
+    draw,
+    box: tuple[int, int, int, int],
+    text: str,
+    *,
+    bold: bool = True,
+    fill=WHITE,
+    align: str = "center",
+    max_px: int = 34,
+    min_px: int = 18,
+    pad_x: int = 8,
+    pad_y: int = 0,
+    valign: str = "center",
+) -> None:
+    x0, y0, x1, y1 = box
+    w = max(10, x1 - x0)
+    h = max(10, y1 - y0)
+    text = (text or "").strip() or "—"
+    font = _fit_font_px(text, w - pad_x * 2, bold=bold, min_px=min_px, max_px=max_px)
+    if valign == "top":
+        if align == "right":
+            x, anchor = x1 - pad_x, "rt"
+        elif align == "center":
+            x, anchor = x0 + w // 2, "mt"
+        else:
+            x, anchor = x0 + pad_x, "lt"
+        draw.text((x, y0 + pad_y), text, font=font, fill=fill, anchor=anchor)
+        return
+    try:
+        ascent, descent = font.getmetrics()
+        cy = y0 + (h + ascent - descent) // 2 + pad_y
+    except Exception:
+        cy = y0 + h // 2 + pad_y
+    if align == "left":
+        x = x0 + pad_x
+        anchor = "lm"
+    elif align == "right":
+        x = x1 - pad_x
+        anchor = "rm"
+    else:
+        x = x0 + w // 2
+        anchor = "mm"
+    draw.text((x, cy), text, font=font, fill=fill, anchor=anchor)
+
+
+def _wrap_text_lines(text: str, font, max_width: int, *, max_lines: int = 2) -> list[str]:
+    words = (text or "").strip().split()
+    if not words:
+        return ["—"]
+    lines: list[str] = []
+    current = words[0]
+    for word in words[1:]:
+        trial = f"{current} {word}"
+        if _text_width(font, trial) <= max_width:
+            current = trial
+        else:
+            lines.append(current)
+            current = word
+            if len(lines) >= max_lines:
+                break
+    if len(lines) < max_lines:
+        lines.append(current)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+    if len(lines) == max_lines and len(words) > len(" ".join(lines).split()):
+        last = lines[-1]
+        while last and _text_width(font, last + "…") > max_width:
+            last = last[:-1].rstrip()
+        lines[-1] = (last + "…") if last else "…"
+    return lines
+
+
+def _draw_text_wrapped_in_box(
+    draw,
+    box: tuple[int, int, int, int],
+    text: str,
+    *,
+    bold: bool = False,
+    fill=WHITE,
+    align: str = "left",
+    max_px: int = 26,
+    min_px: int = 14,
+    max_lines: int = 2,
+    pad_x: int = 12,
+    pad_y: int | None = None,
+) -> None:
+    x0, y0, x1, y1 = box
+    w = max(10, x1 - x0)
+    h = max(10, y1 - y0)
+    text = (text or "").strip() or "—"
+    max_w = w - pad_x * 2
+    font = None
+    lines: list[str] = []
+    for px in range(max_px, min_px - 1, -1):
+        trial = _load_font_px(px, bold=bold)
+        trial_lines = _wrap_text_lines(text, trial, max_w, max_lines=max_lines)
+        if all(_text_width(trial, line) <= max_w for line in trial_lines):
+            font = trial
+            lines = trial_lines
+            break
+    if font is None:
+        font = _load_font_px(min_px, bold=bold)
+        lines = _wrap_text_lines(text, font, max_w, max_lines=max_lines)
+    line_h = _font_height(font)
+    gap = 4
+    total_h = len(lines) * line_h + max(0, len(lines) - 1) * gap
+    y = y0 + (pad_y if pad_y is not None else max(0, (h - total_h) // 2))
+    for line in lines:
+        if align == "right":
+            x, anchor = x1 - pad_x, "ra"
+        elif align == "center":
+            x, anchor = x0 + w // 2, "ma"
+        else:
+            x, anchor = x0 + pad_x, "la"
+        draw.text((x, y), line, font=font, fill=fill, anchor=anchor)
+        y += line_h + gap
+
+
+def _short_weekly_detail(detail: str, max_len: int = 44) -> str:
+    s = (detail or "").strip()
+    s = s.replace(" i veckan", " i vk.").replace(" denna vecka", " denna vk.")
+    s = s.replace(" platser", " pl.")
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 1].rstrip() + "…"
+
+
+def _weekly_detail_recap_lines(detail: str) -> tuple[str, str]:
+    """Dela veckodetalj på två rader (klättring / poäng eller fullträffar / vecka)."""
+    s = (detail or "").strip()
+    if not s:
+        return "—", ""
+    if " · " in s:
+        line1, line2 = s.split(" · ", 1)
+        line1 = line1.replace("platser", "pl.").strip()
+        line2 = (
+            line2.replace(" i veckan", " denna vecka")
+            .replace(" i vk.", " denna vecka")
+            .strip()
+        )
+        return line1, line2
+    if " denna vecka" in s:
+        head, tail = s.split(" denna vecka", 1)
+        return head.strip(), "denna vecka"
+    if " holeshot-poäng" in s:
+        head, tail = s.split(" holeshot-poäng", 1)
+        return head.strip(), f"holeshot-poäng{tail.replace(' i veckan', ' denna vecka')}".strip()
+    return _short_weekly_detail(s, max_len=36), ""
+
+
+def _weekly_detail_line1_fill(line1: str):
+    """Grön pil upp, röd pil ner — annars dämpad text."""
+    s = (line1 or "").strip()
+    if s.startswith("↑"):
+        return GREEN
+    if s.startswith("↓"):
+        return RED
+    return MUTED
+
+
+def _draw_weekly_detail_in_box(
+    draw,
+    box: tuple[int, int, int, int],
+    line1: str,
+    line2: str,
+    *,
+    line1_max_px: int = 20,
+    line2_max_px: int = 18,
+    valign: str = "top",
+    pad_y: int = 0,
+) -> None:
+    """Veckodetalj: rad 1 med färgad pil, rad 2 dämpad."""
+    x0, y0, x1, y1 = box
+    w = max(10, x1 - x0)
+    h = max(10, y1 - y0)
+    gap = 4
+    line1 = (line1 or "—").strip()
+    line2 = (line2 or "").strip()
+    f1 = _fit_font_px(line1, w - 12, bold=True, min_px=13, max_px=line1_max_px)
+    f2 = _fit_font_px(line2, w - 12, bold=False, min_px=11, max_px=line2_max_px) if line2 else None
+    h1 = _font_height(f1)
+    h2 = _font_height(f2) if f2 else 0
+    total = h1 + (gap + h2 if line2 else 0)
+    y = y0 + pad_y if valign == "top" else y0 + (h - total) // 2
+    x = x0 + 8
+    draw.text((x, y), line1, font=f1, fill=_weekly_detail_line1_fill(line1), anchor="lt")
+    if line2 and f2:
+        draw.text((x, y + h1 + gap), line2, font=f2, fill=MUTED, anchor="lt")
+
+
+def _draw_text_lines_in_box(
+    draw,
+    box: tuple[int, int, int, int],
+    line1: str,
+    line2: str,
+    *,
+    line1_fill=WHITE,
+    line2_fill=MUTED,
+    line1_bold: bool = True,
+    line1_max_px: int = 28,
+    line2_max_px: int = 22,
+    valign: str = "center",
+    pad_y: int = 0,
+) -> None:
+    x0, y0, x1, y1 = box
+    w = max(10, x1 - x0)
+    h = max(10, y1 - y0)
+    gap = 4
+    line1 = (line1 or "—").strip()
+    line2 = (line2 or "").strip()
+    f1 = _fit_font_px(line1, w - 12, bold=line1_bold, min_px=13, max_px=line1_max_px)
+    f2 = _fit_font_px(line2, w - 12, bold=False, min_px=11, max_px=line2_max_px) if line2 else None
+    h1 = _font_height(f1)
+    h2 = _font_height(f2) if f2 else 0
+    total = h1 + (gap + h2 if line2 else 0)
+    y = y0 + pad_y if valign == "top" else y0 + (h - total) // 2
+    x = x0 + 8
+    draw.text((x, y), line1, font=f1, fill=line1_fill, anchor="lt")
+    if line2 and f2:
+        draw.text((x, y + h1 + gap), line2, font=f2, fill=line2_fill, anchor="lt")
+
+
+def _recap_race_title_text(data: dict[str, Any]) -> str:
+    name = (data.get("competition_name") or "Race").strip()
+    raw_date = data.get("event_date")
+    if raw_date:
+        try:
+            from datetime import datetime
+
+            if isinstance(raw_date, str):
+                dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+            else:
+                dt = raw_date
+            date_s = dt.strftime("%d %b %Y")
+            return f"{name} · {date_s}"
+        except Exception:
+            pass
+    return name
+
+
+def _podium_entry_by_pos(podium: list[dict], pos: int) -> dict | None:
+    for p in podium or []:
+        if int(p.get("position", 0)) == pos:
+            return p
+    return None
+
+
+def _leaderboard_by_rank(rows: list[dict], rank: int) -> dict | None:
+    for r in rows or []:
+        if _leaderboard_rank(r) == rank:
+            return r
+    return None
+
+
+def _resize_recap_template(img, out_w: int) -> Any:
+    from PIL import Image
+
+    tw, th = img.size
+    out_h = max(1, int(round(th * out_w / tw)))
+    return img.resize((out_w, out_h), Image.Resampling.LANCZOS)
+
+
+def _render_recap_graphic_from_template(data: dict[str, Any]) -> bytes:
+    from PIL import Image, ImageDraw
+
+    static_slots = _load_recap_slots()["graphic"]
+    base = Image.open(RECAP_TEMPLATE_GRAPHIC).convert("RGBA")
+    out_w, out_h = base.size
+    _clean_recap_template_artifacts(base)
+    try:
+        detected = _detect_recap_graphic_slots_from_image(base)
+        slots = _merge_detected_graphic_slots(static_slots, detected)
+    except Exception as exc:
+        print(f"recap slot detect fallback: {exc}")
+        slots = static_slots
+    ref_w, ref_h = int(slots.get("ref_w", out_w)), int(slots.get("ref_h", out_h))
+    draw = ImageDraw.Draw(base)
+    mods = data.get("modules") or {}
+
+    brand_logo = slots.get("brand_logo")
+    if brand_logo:
+        _paste_recap_brand_logo_in_circle(base, brand_logo, ref_w, ref_h, out_w, out_h)
+
+    title_box = _scale_recap_box(slots["race_title"], ref_w, ref_h, out_w, out_h)
+    _draw_text_in_box(draw, title_box, _recap_race_title_text(data), max_px=32, min_px=20, pad_y=1)
+    _draw_recap_class_headers(draw, base, data, ref_w, ref_h, out_w, out_h)
+
+    if mods.get("rider_podium") and data.get("has_results"):
+        for key, podium_key in (("rider_450", "rider_podium_primary"), ("rider_250", "rider_podium_secondary")):
+            panel = slots[key]
+            podium = data.get(podium_key) or []
+            for av in panel["avatars"]:
+                pos = int(av["pos"])
+                entry = _podium_entry_by_pos(podium, pos)
+                tuned = _recap_avatar_visual_nudge(key, pos, av)
+                cx, cy, r = _scale_recap_circle(tuned, ref_w, ref_h, out_w, out_h)
+                if entry:
+                    _paste_plain_circle_avatar(
+                        base, cx, cy, r,
+                        rider_id=entry.get("rider_id"),
+                        display_name=entry.get("name") or "?",
+                        initials=(entry.get("short_name") or "?")[:2],
+                        face_bias=0.05,
+                    )
+            name_slots = {int(n["pos"]): n for n in panel.get("names") or []}
+            for av in panel["avatars"]:
+                pos = int(av["pos"])
+                entry = _podium_entry_by_pos(podium, pos)
+                if not entry:
+                    continue
+                label = entry.get("short_name") or entry.get("name") or "—"
+                if entry.get("number"):
+                    label = f"#{entry['number']} {label}"
+                nm = name_slots.get(pos)
+                if nm:
+                    box = _scale_recap_box(nm, ref_w, ref_h, out_w, out_h)
+                    dy = _scale_recap_coord(_RECAP_RIDER_NAME_Y_SHIFT, ref_h, out_h)
+                    box = _shift_recap_box_y(box, dy)
+                else:
+                    cx, cy, r = _scale_recap_circle(av, ref_w, ref_h, out_w, out_h)
+                    below = int(panel.get("name_below_avatar", 228))
+                    half_w = int(panel.get("name_half_w", 96))
+                    h = int(panel.get("name_box_h", 72))
+                    y0 = cy + r + _scale_recap_coord(below, ref_h, out_h)
+                    hw = _scale_recap_coord(half_w, ref_w, out_w)
+                    hh = _scale_recap_coord(h, ref_h, out_h)
+                    box = (cx - hw, y0, cx + hw, y0 + hh)
+                _draw_text_in_box(
+                    draw, box, label,
+                    max_px=22, min_px=12, pad_x=4, fill=WHITE,
+                )
+
+    if mods.get("race") and data.get("race_leaderboard"):
+        lb = data["race_leaderboard"]
+        fantasy = slots["fantasy"]
+        f_name_slots = {int(n["pos"]): n for n in fantasy.get("names") or []}
+        for av in fantasy["avatars"]:
+            pos = int(av["pos"])
+            row = _leaderboard_by_rank(lb, pos)
+            tuned = _recap_avatar_visual_nudge("fantasy", pos, av)
+            cx, cy, r = _scale_recap_circle(tuned, ref_w, ref_h, out_w, out_h)
+            if row:
+                _paste_plain_circle_avatar(
+                    base, cx, cy, r,
+                    user_id=row.get("user_id"),
+                    display_name=row.get("display_name") or "?",
+                )
+                nm = f_name_slots.get(pos)
+                if nm:
+                    box = _scale_recap_box(nm, ref_w, ref_h, out_w, out_h)
+                    _draw_text_in_box(
+                        draw, box,
+                        _short_user_name(row.get("display_name") or "?"),
+                        max_px=24, min_px=13, fill=WHITE,
+                    )
+        for extra in fantasy["extras"]:
+            rank = int(extra["rank"])
+            row = _leaderboard_by_rank(lb, rank)
+            if not row:
+                continue
+            cx, cy, r = _scale_recap_circle(extra["avatar"], ref_w, ref_h, out_w, out_h)
+            _paste_plain_circle_avatar(
+                base, cx, cy, r,
+                user_id=row.get("user_id"),
+                display_name=row.get("display_name") or "?",
+            )
+            box = _scale_recap_box(extra["name_pts"], ref_w, ref_h, out_w, out_h)
+            pts = int(row.get("points", 0))
+            line = f"{rank}. {_short_user_name(row.get('display_name') or '?')}"
+            _draw_text_in_box(
+                draw, box, f"{line}  ·  {pts} p",
+                align="left", max_px=28, min_px=16, fill=WHITE, pad_y=1,
+            )
+
+    buf = io.BytesIO()
+    base.convert("RGB").save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
+def _render_recap_stats_from_template(data: dict[str, Any]) -> bytes:
+    from PIL import Image, ImageDraw
+
+    static_slots = _load_recap_slots()["stats"]
+    base_src = Image.open(RECAP_TEMPLATE_STATS).convert("RGBA")
+    try:
+        detected = _detect_recap_stats_slots_from_image(base_src)
+        slots = _merge_detected_stats_slots(static_slots, detected)
+    except Exception as exc:
+        print(f"recap stats slot detect fallback: {exc}")
+        slots = static_slots
+    ref_w, ref_h = int(slots.get("ref_w", base_src.size[0])), int(slots.get("ref_h", base_src.size[1]))
+    base = _resize_recap_template(base_src, W_FB)
+    out_w, out_h = base.size
+    draw = ImageDraw.Draw(base)
+    mods = data.get("modules") or {}
+
+    brand_logo = slots.get("brand_logo")
+    if brand_logo:
+        _paste_recap_brand_logo_in_circle(base, brand_logo, ref_w, ref_h, out_w, out_h)
+
+    title_box = _scale_recap_box(slots["race_title"], ref_w, ref_h, out_w, out_h)
+    _draw_text_in_box(draw, title_box, _recap_race_title_text(data), max_px=32, min_px=20)
+
+    if mods.get("weekly"):
+        cards = (data.get("weekly_highlights") or [])[:4]
+        for i, slot in enumerate(slots["weekly"]):
+            if i >= len(cards):
+                break
+            card = cards[i]
+            slot = _tune_recap_stats_weekly_slot(slot, i)
+            cx, cy, r = _scale_recap_circle(slot["avatar"], ref_w, ref_h, out_w, out_h)
+            _paste_plain_circle_avatar(
+                base, cx, cy, r,
+                user_id=card.get("user_id"),
+                display_name=card.get("display_name") or "?",
+            )
+            name_box = _scale_recap_box(slot["name"], ref_w, ref_h, out_w, out_h)
+            detail_box = _scale_recap_box(slot["detail"], ref_w, ref_h, out_w, out_h)
+            _draw_text_in_box(
+                draw, name_box, card.get("display_name") or "?",
+                align="left", max_px=24, min_px=14, pad_x=4, pad_y=2, valign="top",
+            )
+            d1, d2 = _weekly_detail_recap_lines(card.get("detail") or "")
+            _draw_weekly_detail_in_box(
+                draw, detail_box, d1, d2,
+                line1_max_px=20, line2_max_px=18,
+                valign="top", pad_y=6,
+            )
+
+    if mods.get("season_snippet"):
+        rows = (data.get("season_top_snippet") or [])[:5]
+        for i, slot in enumerate(slots["season"]):
+            if i >= len(rows):
+                break
+            row = rows[i]
+            slot = _tune_recap_stats_season_slot(slot)
+            cx, cy, r = _scale_recap_circle(slot["avatar"], ref_w, ref_h, out_w, out_h)
+            _paste_plain_circle_avatar(
+                base, cx, cy, r,
+                user_id=row.get("user_id"),
+                display_name=row.get("display_name") or "?",
+            )
+            name_box = _scale_recap_box(slot["name"], ref_w, ref_h, out_w, out_h)
+            _draw_text_in_box(
+                draw, name_box,
+                (row.get("display_name") or "?").strip(),
+                align="left", max_px=26, min_px=13, pad_x=8,
+            )
+            pts_box = _scale_recap_box(slot["points"], ref_w, ref_h, out_w, out_h)
+            pts_txt = f"{int(row.get('points', 0)):,}".replace(",", " ")
+            _draw_text_in_box(
+                draw, pts_box, pts_txt,
+                align="right", max_px=24, min_px=14, fill=CYAN, pad_x=16,
+            )
+
+    if mods.get("facts"):
+        facts = [f for f in (data.get("fun_facts") or []) if f.get("text")][:3]
+        for i, slot in enumerate(slots["facts"]):
+            if i >= len(facts):
+                break
+            box = _scale_recap_box(slot, ref_w, ref_h, out_w, out_h)
+            _draw_text_wrapped_in_box(
+                draw, box, facts[i]["text"],
+                align="left", max_px=24, min_px=17, max_lines=3, pad_x=14,
+            )
+
+    buf = io.BytesIO()
+    base.convert("RGB").save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 RECAP_FOOTER_HOST = "mx-fatasy-league.eu.onrender.com"
 
 
@@ -2191,6 +3310,9 @@ def _footer(img, draw, final_h: int, *, bar_h: int = 6) -> None:
 
 def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
     """Bild 1 — grafik: header, förarpall, fantasy-podium."""
+    if _recap_templates_ready():
+        return _render_recap_graphic_from_template(data)
+
     from PIL import Image, ImageDraw
 
     data = {**data, "layout": "facebook_graphic"}
@@ -2214,12 +3336,12 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
         if rp:
             y1 = _draw_rider_podium_row(
                 draw, img, margin, y, half,
-                f"{labels.get('primary', '450')} SX", rp, panel_h=ph, large=True,
+                _recap_class_header_label(data, "primary"), rp, panel_h=ph, large=True,
             )
         if rs:
             y2 = _draw_rider_podium_row(
                 draw, img, margin + half + gap, y, half,
-                f"{labels.get('secondary', '250')} SX", rs, panel_h=ph, large=True,
+                _recap_class_header_label(data, "secondary"), rs, panel_h=ph, large=True,
             )
         y = max(y1, y2) + gap
 
@@ -2243,6 +3365,9 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
 
 def _render_recap_stats_png(data: dict[str, Any]) -> bytes:
     """Bild 2 — statistik: veckan, säsong, fältfakta."""
+    if _recap_templates_ready():
+        return _render_recap_stats_from_template(data)
+
     from PIL import Image, ImageDraw
 
     data = {**data, "layout": "facebook"}

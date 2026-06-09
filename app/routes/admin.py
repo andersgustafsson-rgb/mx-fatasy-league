@@ -584,9 +584,29 @@ def social_recap_png():
 		png_bytes = render_social_recap_png(data, layout=layout, part=part)
 		resp = Response(png_bytes, mimetype="image/png")
 		resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
+		try:
+			from social_recap_service import (
+				RECAP_RENDERER_REV,
+				RECAP_TEMPLATE_GRAPHIC,
+				recap_renderer_engine,
+			)
+
+			resp.headers["X-Recap-Engine"] = recap_renderer_engine()
+			resp.headers["X-Recap-Rev"] = RECAP_RENDERER_REV
+			resp.headers["X-Recap-Series"] = str(data.get("series") or "")
+			if RECAP_TEMPLATE_GRAPHIC.is_file():
+				resp.headers["X-Recap-Template-Mtime"] = str(
+					int(RECAP_TEMPLATE_GRAPHIC.stat().st_mtime)
+				)
+		except Exception:
+			pass
 		return resp
 	except ValueError as e:
-		return jsonify({"error": str(e)}), 404
+		msg = str(e)
+		if msg == "competition_not_found":
+			return jsonify({"error": msg}), 404
+		current_app.logger.exception("social_recap_png render failed: %s", e)
+		return jsonify({"error": msg, "error_type": type(e).__name__}), 500
 	except Exception as e:
 		current_app.logger.exception("social_recap_png failed: %s", e)
 		payload = {"error": str(e) or type(e).__name__, "error_type": type(e).__name__}

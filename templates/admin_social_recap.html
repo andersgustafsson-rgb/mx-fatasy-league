@@ -161,6 +161,7 @@
         const btnCopy = document.getElementById('btn-copy');
         let graphicBlobUrl = null;
         let statsBlobUrl = null;
+        let lastRecapEngine = '';
 
         async function setPreviewPng(imgEl, url, which) {
             if (which === 'g' && graphicBlobUrl) {
@@ -186,6 +187,15 @@
                 } catch (_) { /* plain text */ }
                 imgEl.removeAttribute('src');
                 throw new Error(errLabel + ' API ' + res.status + ': ' + detail);
+            }
+            const engine = res.headers.get('X-Recap-Engine') || '?';
+            const rev = res.headers.get('X-Recap-Rev') || '?';
+            const series = res.headers.get('X-Recap-Series') || '?';
+            if (which === 'g') {
+                lastRecapEngine = 'Motor: ' + engine + ', rev ' + rev + ', series=' + series;
+                if (engine === 'fallback') {
+                    lastRecapEngine += ' — saknar mall-PNG (lägg recap_fb_graphic.png i static/recap_templates/)';
+                }
             }
             if (!ct.includes('image/png')) {
                 const t = await res.text();
@@ -284,7 +294,7 @@
                     }
                     btnDownloadGraphic.href = gUrl;
                     btnDownloadStats.href = sUrl;
-                    statusMsg.textContent = 'Klar. 2 bilder (stor text): pallar ~1620×1120 + statistik.';
+                    statusMsg.textContent = 'Klar. 2 bilder (stor text): pallar ~1620×1120 + statistik. ' + lastRecapEngine;
                 } else {
                     dualPreview.classList.add('hidden');
                     singlePreview.classList.remove('hidden');
