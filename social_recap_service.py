@@ -2265,7 +2265,7 @@ _RECAP_STATS_WEEKLY_AVATAR_NUDGE: dict[int, tuple[int, int, int]] = {
     0: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # IB — upp ~1,5 mm
     1: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # AN
     2: (0, -_RECAP_STATS_WEEKLY_RING_UP, 12),   # GR
-    3: (0, 1 * _RECAP_MM, 12),                  # holeshot — ner ~1 mm
+    3: (0, -1 * _RECAP_MM, 12),                 # holeshot — upp ~1 mm
 }
 _RECAP_STATS_WEEKLY_TEXT_DX = 4 * _RECAP_MM       # namn/detalj ~4 mm höger
 _RECAP_STATS_WEEKLY_DETAIL_DY = 5 * _RECAP_MM     # förklaringstext ner ~5 mm
@@ -2317,7 +2317,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "27"
+RECAP_RENDERER_REV = "28"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
