@@ -108,6 +108,15 @@ def _short_user_name(name: str, max_len: int = 14) -> str:
     return (s[: max_len - 1] + "…") if len(s) > max_len else s
 
 
+def _short_recap_display_name(name: str) -> str:
+    """Förnamn + efternamnsinitial — ryms i smala recap-rutor."""
+    s = (name or "?").strip()
+    parts = s.split()
+    if len(parts) >= 2 and parts[-1]:
+        return f"{parts[0]} {parts[-1][0].upper()}."
+    return s
+
+
 def _leaderboard_rank(row: dict[str, Any], default: int = 99) -> int:
     """Säker int(rank) — None/värden från API ska inte ge TypeError."""
     v = row.get("rank", default)
@@ -1828,7 +1837,7 @@ def _draw_weekly_highlights_section(
         title = _plain_draw_text(card.get("title") or "")
         if large:
             tf = _fit_font_px(title, text_w, bold=True, min_px=32, max_px=40)
-            disp = (card.get("display_name") or "?").strip()
+            disp = _short_recap_display_name(card.get("display_name") or "?")
             disp, nf = _fit_podium_name(disp, text_w, min_px=30, max_px=40)
             d1, d2 = _weekly_detail_recap_lines(card.get("detail") or "")
             df = _fit_font_px(d1, text_w, bold=True, min_px=26, max_px=32)
@@ -1847,7 +1856,7 @@ def _draw_weekly_highlights_section(
             draw.text((tx, y + _sz(16)), title[:28], font=tf, fill=CYAN)
             draw.text(
                 (tx, y + _sz(44)),
-                _short_user_name(card.get("display_name") or "?"),
+                _short_recap_display_name(card.get("display_name") or "?"),
                 font=nf,
                 fill=WHITE,
             )
@@ -2317,7 +2326,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "28"
+RECAP_RENDERER_REV = "29"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
@@ -2793,6 +2802,25 @@ def _paste_plain_circle_avatar(
     base.paste(inner, (cx - radius, cy - radius), inner)
 
 
+def _draw_recap_name_in_box(
+    draw,
+    box: tuple[int, int, int, int],
+    name: str,
+    *,
+    max_px: int = 24,
+    min_px: int = 14,
+    pad_x: int = 4,
+    pad_y: int = 2,
+) -> None:
+    """Kort namn (Förnamn E.) som ryms i recap-ruta."""
+    x0, y0, x1, y1 = box
+    w = max(10, x1 - x0)
+    text, font = _fit_podium_name(
+        _short_recap_display_name(name), w - pad_x * 2, min_px=min_px, max_px=max_px,
+    )
+    draw.text((x0 + pad_x, y0 + pad_y), text, font=font, fill=WHITE, anchor="lt")
+
+
 def _draw_text_in_box(
     draw,
     box: tuple[int, int, int, int],
@@ -3211,9 +3239,9 @@ def _render_recap_stats_from_template(data: dict[str, Any]) -> bytes:
             )
             name_box = _scale_recap_box(slot["name"], ref_w, ref_h, out_w, out_h)
             detail_box = _scale_recap_box(slot["detail"], ref_w, ref_h, out_w, out_h)
-            _draw_text_in_box(
+            _draw_recap_name_in_box(
                 draw, name_box, card.get("display_name") or "?",
-                align="left", max_px=24, min_px=14, pad_x=4, pad_y=2, valign="top",
+                max_px=24, min_px=14, pad_x=4, pad_y=2,
             )
             d1, d2 = _weekly_detail_recap_lines(card.get("detail") or "")
             _draw_weekly_detail_in_box(
@@ -3236,10 +3264,9 @@ def _render_recap_stats_from_template(data: dict[str, Any]) -> bytes:
                 display_name=row.get("display_name") or "?",
             )
             name_box = _scale_recap_box(slot["name"], ref_w, ref_h, out_w, out_h)
-            _draw_text_in_box(
-                draw, name_box,
-                (row.get("display_name") or "?").strip(),
-                align="left", max_px=26, min_px=13, pad_x=8,
+            _draw_recap_name_in_box(
+                draw, name_box, row.get("display_name") or "?",
+                max_px=26, min_px=13, pad_x=8, pad_y=0,
             )
             pts_box = _scale_recap_box(slot["points"], ref_w, ref_h, out_w, out_h)
             pts_txt = f"{int(row.get('points', 0)):,}".replace(",", " ")
