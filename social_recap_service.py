@@ -679,6 +679,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
     ]
 
     riders = {r.id: r for r in Rider.query.all()}
+    actual = _actual_positions(competition_id)
     cfg = _class_config(comp)
     cls450 = (cfg["primary"][0],)
     cls250 = (cfg["secondary"][0],)
@@ -2388,7 +2389,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "30"
+RECAP_RENDERER_REV = "31"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
