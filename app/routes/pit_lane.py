@@ -14,14 +14,6 @@ def _require_login():
     return int(session["user_id"])
 
 
-@bp.before_app_request
-def _ensure_tables():
-    try:
-        pls.ensure_pit_lane_tables()
-    except Exception:
-        pass
-
-
 @bp.route("/pit-lane")
 def pit_lane_page():
     uid = _require_login()

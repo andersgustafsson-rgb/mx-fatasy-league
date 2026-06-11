@@ -40,6 +40,9 @@ def _thread_pair(user_id_a: int, user_id_b: int) -> tuple[int, int]:
 
 
 def ensure_pit_lane_tables() -> None:
+    global _schema_ready
+    if _schema_ready:
+        return
     from sqlalchemy import inspect
 
     insp = inspect(db.engine)

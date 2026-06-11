@@ -1382,6 +1382,15 @@ def index():
                     user_id=uid,
                     competition_id=competition_id_for_picks
                 ).first()
+
+                pick_rider_ids = {p.rider_id for p in race_picks}
+                pick_rider_ids.update(h.rider_id for h in holeshot_picks)
+                if wildcard_pick and wildcard_pick.rider_id:
+                    pick_rider_ids.add(wildcard_pick.rider_id)
+                riders_by_id = {
+                    r.id: r
+                    for r in Rider.query.filter(Rider.id.in_(pick_rider_ids)).all()
+                } if pick_rider_ids else {}
                 
                 # Check if picks are complete (all required picks must be filled)
                 is_wsx = upcoming_race.series == "WSX"
@@ -1395,7 +1404,7 @@ def index():
                 # Sort picks by predicted_position to ensure correct order
                 sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
                 for pick in sorted_race_picks:
-                        rider = Rider.query.get(pick.rider_id)
+                        rider = riders_by_id.get(pick.rider_id)
                         if rider:
                             pick_data = {
                                 "position": pick.predicted_position,
@@ -1430,7 +1439,7 @@ def index():
                 holeshot_450 = False
                 holeshot_250 = False
                 for holeshot in holeshot_picks:
-                    rider = Rider.query.get(holeshot.rider_id)
+                    rider = riders_by_id.get(holeshot.rider_id)
                     if rider:
                         if rider.class_name in ("450cc", "wsx_sx1"):
                             holeshot_450 = True
@@ -1458,7 +1467,7 @@ def index():
                     current_holeshot_450 = None
                     current_holeshot_250 = None
                     for holeshot in holeshot_picks:
-                        rider = Rider.query.get(holeshot.rider_id)
+                        rider = riders_by_id.get(holeshot.rider_id)
                         if rider:
                             # Map WSX classes to display classes
                             if rider.class_name in ("450cc", "wsx_sx1"):
@@ -1477,7 +1486,7 @@ def index():
                     # Process wildcard pick (only for non-WSX series)
                     current_wildcard = None
                     if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
-                        rider = Rider.query.get(wildcard_pick.rider_id)
+                        rider = riders_by_id.get(wildcard_pick.rider_id)
                         if rider:
                             current_wildcard = {
                                 "rider_name": rider.name,
@@ -16737,11 +16746,7 @@ def repair_known_result_anomalies() -> int:
     def norm(value: str | None) -> str:
         return (value or "").replace(".", "").strip().lower()
 
-    haiden_riders = [
-        rider
-        for rider in Rider.query.all()
-        if (rider.name or "").strip().lower() == "haiden deegan"
-    ]
+    haiden_riders = Rider.query.filter(Rider.name.ilike("haiden deegan")).all()
     if not haiden_riders:
         return repaired
 
