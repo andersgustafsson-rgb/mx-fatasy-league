@@ -1,5 +1,5 @@
 /* Minimal PWA service worker: cache static shell + offline fallback. */
-const CACHE = "mx-fantasy-v14";
+const CACHE = "mx-fantasy-v15";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -35,6 +35,8 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(req)
       .then((res) => {
+        // Never cache failed HTML navigations (avoids "stuck" offline shell).
+        if (req.mode === "navigate" && !res.ok) return res;
         const copy = res.clone();
         // Best-effort cache of same-origin static assets.
         try {

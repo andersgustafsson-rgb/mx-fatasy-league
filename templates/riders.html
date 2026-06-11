@@ -88,7 +88,7 @@
         <div class="column-body">
           <ul id="{{ list_id }}" class="divide-y divide-gray-800/80 overflow-y-auto px-1 pb-2">
             {% for r in riders %}
-            {% set img = template_rider_image_src(r) %}
+            {% set img = portrait_for(r) %}
             <li class="rider-row" data-name="{{ r.name|lower }}" data-number="{{ r.rider_number or '' }}" data-series="{{ list_id }}">
               <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center gap-3 p-2.5 mx-1 my-0.5 rounded-lg hover:bg-white/5 transition-colors group">
                 <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-white/10 bg-gray-800 group-hover:ring-cyan-400/40 transition-all">

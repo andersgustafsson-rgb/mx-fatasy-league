@@ -2352,12 +2352,20 @@ def _rider_portrait_url(r: Rider) -> str | None:
     return s or None
 
 
-def _riders_for_image_lookup(rider: Rider) -> list[Rider]:
+def _riders_for_image_lookup(
+    rider: Rider,
+    *,
+    riders_by_name: dict[str, list[Rider]] | None = None,
+) -> list[Rider]:
     """Samma namn — dela porträtt mellan 450/250 och WSX-dubletter."""
     try:
-        from racerx_rider_bio import find_riders_by_name
+        from racerx_rider_bio import _normalize_rider_lookup_name, find_riders_by_name
 
-        twins = find_riders_by_name(rider.name or "")
+        if riders_by_name is not None:
+            key = _normalize_rider_lookup_name(rider.name or "")
+            twins = riders_by_name.get(key, [rider])
+        else:
+            twins = find_riders_by_name(rider.name or "")
         ordered = [rider] + [t for t in twins if t.id != rider.id]
         seen: set[int] = set()
         out: list[Rider] = []
@@ -2371,11 +2379,16 @@ def _riders_for_image_lookup(rider: Rider) -> list[Rider]:
         return [rider]
 
 
-def template_rider_image_src(rider: Rider, *, bio_card: bool = False) -> str | None:
+def template_rider_image_src(
+    rider: Rider,
+    *,
+    bio_card: bool = False,
+    riders_by_name: dict[str, list[Rider]] | None = None,
+) -> str | None:
     """Bild-URL för Jinja (förarlista, bio) — inkl. dublett-fallback."""
     if not rider:
         return None
-    for r in _riders_for_image_lookup(rider):
+    for r in _riders_for_image_lookup(rider, riders_by_name=riders_by_name):
         raw_data = getattr(r, "rider_image_data", None)
         if raw_data and str(raw_data).strip().startswith("data:image"):
             return f"/rider_portrait/{r.id}"
@@ -5899,12 +5912,14 @@ def _rider_directory_series_label(rider: Rider) -> str:
     return cls.upper() or "?"
 
 
-def _group_riders_for_directory() -> dict[str, list[Rider]]:
+def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, list[Rider]]:
     """
     Build /riders columns from DB (live query, no cache).
     WSX has its own columns (not mixed with AMA 450/250).
     250cc with coast 'both' appears in both 250E and 250W (same as race picks).
   """
+    if riders is None:
+        riders = Rider.query.all()
     riders_450: list[Rider] = []
     riders_250_east: list[Rider] = []
     riders_250_west: list[Rider] = []
@@ -5914,7 +5929,7 @@ def _group_riders_for_directory() -> dict[str, list[Rider]]:
     seen_east: set[int] = set()
     seen_west: set[int] = set()
 
-    for rider in Rider.query.all():
+    for rider in riders:
         cls = (rider.class_name or "").strip().lower()
         if cls == "wsx_sx1":
             riders_wsx_sx1.append(rider)
@@ -5960,12 +5975,20 @@ def _group_riders_for_directory() -> dict[str, list[Rider]]:
 # Public rider list
 @app.get('/riders')
 def riders_directory():
-    groups = _group_riders_for_directory()
+    from racerx_rider_bio import build_riders_by_name_map
+
+    all_riders = Rider.query.order_by(Rider.id).all()
+    riders_by_name = build_riders_by_name_map(all_riders)
+    groups = _group_riders_for_directory(all_riders)
+
+    def portrait_for(rider: Rider) -> str | None:
+        return template_rider_image_src(rider, riders_by_name=riders_by_name)
+
     resp = make_response(
         render_template(
             "riders.html",
             series_label=_rider_directory_series_label,
-            template_rider_image_src=template_rider_image_src,
+            portrait_for=portrait_for,
             username=session.get("username"),
             **groups,
         )

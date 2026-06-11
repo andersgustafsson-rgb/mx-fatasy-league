@@ -196,6 +196,16 @@ def _rider_class_priority(class_name: str) -> int:
     return _CLASS_PRIORITY.get((class_name or "").strip().lower(), 99)
 
 
+def build_riders_by_name_map(riders: list[Any]) -> dict[str, list[Any]]:
+    """Indexera förare per normaliserat namn (en query, återanvänds i mallar)."""
+    out: dict[str, list[Any]] = {}
+    for rider in riders:
+        key = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
+        if key:
+            out.setdefault(key, []).append(rider)
+    return out
+
+
 def find_riders_by_name(name: str, riders: list[Any] | None = None) -> list[Any]:
     """Alla Rider-rader med samma namn (t.ex. 450cc + wsx_sx1)."""
     key = _normalize_rider_lookup_name(name)

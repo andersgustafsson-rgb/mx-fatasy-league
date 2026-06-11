@@ -4323,6 +4323,10 @@
       };
       if (document.readyState === 'complete') done();
       else window.addEventListener('load', done, { once: true });
+      // Failsafe: never block the app if load hangs
+      setTimeout(() => {
+        try { document.documentElement.classList.add('ios-splash-done'); } catch (_) {}
+      }, 2500);
     })();
   </script>
 
