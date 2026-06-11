@@ -16842,6 +16842,30 @@ def _sqlite_add_column_if_missing(table: str, column: str, ddl: str) -> None:
     print(f'Added missing column {table}.{column}')
 
 
+def _ensure_rider_bio_sv_columns() -> None:
+    """bio_sv / achievements_sv — svensk översättningscache på riders."""
+    try:
+        if "postgresql" in str(db.engine.url):
+            for col in ("bio_sv", "achievements_sv"):
+                result = db.session.execute(
+                    db.text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name = 'riders' AND column_name = :col"
+                    ),
+                    {"col": col},
+                )
+                if not result.fetchone():
+                    db.session.execute(db.text(f"ALTER TABLE riders ADD COLUMN {col} TEXT"))
+                    print(f"Added missing column riders.{col}")
+            db.session.commit()
+        else:
+            _sqlite_add_column_if_missing("riders", "bio_sv", "bio_sv TEXT")
+            _sqlite_add_column_if_missing("riders", "achievements_sv", "achievements_sv TEXT")
+    except Exception as col_err:
+        db.session.rollback()
+        print(f"Warning: riders bio_sv column patch skipped: {col_err}")
+
+
 def init_database():
     """Initialize database with tables and test data"""
     try:
@@ -16860,11 +16884,13 @@ def init_database():
                     _sqlite_add_column_if_missing(
                         "users", "password_reset_expires", "password_reset_expires TIMESTAMP"
                     )
-                    _sqlite_add_column_if_missing("riders", "bio_sv", "bio_sv TEXT")
-                    _sqlite_add_column_if_missing("riders", "achievements_sv", "achievements_sv TEXT")
                 except Exception as col_err:
                     print(f"Warning: SQLite column patch skipped: {col_err}")
                     db.session.rollback()
+                try:
+                    _ensure_rider_bio_sv_columns()
+                except Exception as bio_col_err:
+                    print(f"Warning: bio_sv migration skipped: {bio_col_err}")
                 # Auto-seed WSX 2025 so it always exists for the UI
                 try:
                     ensure_wsx_series_and_competitions()
