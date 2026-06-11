@@ -818,7 +818,13 @@
               </div>
               <div class="relative z-10">
               <div class="text-center">
-                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-3" id="real-countdown-race-name">Laddar...</h3>
+                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-2" id="real-countdown-race-name">Laddar...</h3>
+                <div id="race-day-weather" class="hidden mb-3 flex justify-center">
+                  <div class="inline-flex items-center gap-2 bg-black/50 border border-cyan-400/30 rounded-full px-3 py-1.5 backdrop-blur-sm max-w-full">
+                    <span id="race-weather-icon" class="text-xl sm:text-2xl leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
+                    <span id="race-weather-text" class="text-cyan-100 text-xs sm:text-sm text-left truncate">Race day väder</span>
+                  </div>
+                </div>
                 <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
                   <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-red-700">
                     <div class="text-red-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">🏁 Race Start</div>
@@ -2622,12 +2628,14 @@
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
           document.getElementById('real-race-countdown').textContent = '--:--:--';
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          updateRaceDayWeather(null);
           return;
         }
         
         // Update race name
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
         updateNextMxDaysLabel(data);
+        updateRaceDayWeather(data.weather);
         
         // Store seconds and render countdowns locally (avoid polling server every second)
         if (data.countdown && data.countdown.race_start && data.countdown.pick_deadline) {
@@ -2645,7 +2653,35 @@
         document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
         document.getElementById('real-race-countdown').textContent = '--:--:--';
         document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+        updateRaceDayWeather(null);
       }
+    }
+
+    const RACE_WEATHER_ICONS = {
+      sun: '☀️',
+      partly: '🌤️',
+      cloud: '☁️',
+      rain: '🌧️',
+      storm: '⛈️',
+      snow: '❄️',
+      fog: '🌫️',
+    };
+
+    function updateRaceDayWeather(weather) {
+      const container = document.getElementById('race-day-weather');
+      const iconEl = document.getElementById('race-weather-icon');
+      const textEl = document.getElementById('race-weather-text');
+      if (!container || !iconEl || !textEl) return;
+      if (!weather || !weather.available) {
+        container.classList.add('hidden');
+        container.classList.remove('flex');
+        return;
+      }
+      iconEl.textContent = RACE_WEATHER_ICONS[weather.icon] || '🌤️';
+      textEl.textContent = weather.summary_sv || weather.label_sv || 'Race day';
+      textEl.title = weather.summary_sv || '';
+      container.classList.remove('hidden');
+      container.classList.add('flex');
     }
 
     function updateNextMxDaysLabel(data) {

@@ -19521,6 +19521,7 @@ def race_countdown():
             deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
             
             next_race = {
+                "id": next_race_obj.id,
                 "name": next_race_obj.name,
                 "event_date": next_race_obj.event_date.isoformat()
             }
@@ -19632,6 +19633,14 @@ def race_countdown():
             _can_view_other_users_picks(view_picks_race) if view_picks_race else False
         )
 
+        weather = {"available": False}
+        if mode == "real" and next_race_obj is not None:
+            try:
+                from track_weather import get_weather_for_competition
+                weather = get_weather_for_competition(next_race_obj)
+            except Exception as _we:
+                print(f"race_countdown weather: {_we}")
+
         payload = {
             "next_race": next_race,
             "countdown": {
@@ -19643,6 +19652,7 @@ def race_countdown():
             "can_view_other_picks": can_view_other_picks,
             "view_picks_competition_id": view_picks_race.id if view_picks_race else None,
             "view_picks_race_name": view_picks_race.name if view_picks_race else None,
+            "weather": weather,
         }
 
         # Auto-freeze picks when deadline passes (homepage syncs ~every 60s).
