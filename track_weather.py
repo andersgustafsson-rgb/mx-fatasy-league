@@ -175,7 +175,7 @@ def build_weather_payload(
             parts.append(f"{temp_max}°C")
     parts.append(label)
     if precip is not None and precip > 0:
-        parts.append(f"{precip}% regn")
+        parts.append(f"{precip}% risk för nederbörd")
     return {
         "available": True,
         "city": city,
