@@ -206,6 +206,30 @@ def _last_name(name: str) -> str:
     return parts[-1].lower() if parts else ""
 
 
+def _compatible_twin_classes(class_name: str) -> set[str]:
+    """WSX SX1 ↔ 450, WSX SX2 ↔ 250 — inte korsvis."""
+    c = (class_name or "").strip().lower()
+    if c == "wsx_sx1":
+        return {"wsx_sx1", "450cc", "450"}
+    if c == "wsx_sx2":
+        return {"wsx_sx2", "250cc", "250"}
+    if c in ("450cc", "450"):
+        return {"wsx_sx1", "450cc", "450"}
+    if c in ("250cc", "250"):
+        return {"wsx_sx2", "250cc", "250"}
+    return {c} if c else set()
+
+
+def _classes_can_twin(class_a: str, class_b: str) -> bool:
+    a = (class_a or "").strip().lower()
+    b = (class_b or "").strip().lower()
+    if not a or not b:
+        return True
+    if a == b:
+        return True
+    return bool(_compatible_twin_classes(a) & _compatible_twin_classes(b))
+
+
 def twin_group_key(name: str, rider_number: int | None = None) -> str:
     """Gruppnyckel för dubletter: efternamn#nummer (tål stavfel i förnamn)."""
     norm = _normalize_rider_lookup_name(name)
@@ -224,7 +248,12 @@ def riders_are_twins(a: Any, b: Any) -> bool:
         return True
     ka = twin_group_key(getattr(a, "name", None) or "", getattr(a, "rider_number", None))
     kb = twin_group_key(getattr(b, "name", None) or "", getattr(b, "rider_number", None))
-    return bool(ka and kb and ka == kb and "#" in ka)
+    if not (ka and kb and ka == kb and "#" in ka):
+        return False
+    return _classes_can_twin(
+        getattr(a, "class_name", None) or "",
+        getattr(b, "class_name", None) or "",
+    )
 
 
 def _rider_class_priority(class_name: str) -> int:
@@ -299,12 +328,13 @@ def find_rider_twins(
         ref = None
 
     class _Ref:
-        __slots__ = ("name", "rider_number", "id")
+        __slots__ = ("name", "rider_number", "id", "class_name")
 
-        def __init__(self, n: str, num: int | None) -> None:
+        def __init__(self, n: str, num: int | None, cls: str | None = None) -> None:
             self.name = n
             self.rider_number = num
             self.id = 0
+            self.class_name = cls
 
     shim = ref if ref is not None else _Ref(name, rider_number)
 
@@ -331,7 +361,12 @@ def find_rider_twins(
         else:
             q = q.filter(Rider.name.ilike(f"%{raw}%"))
         candidates = q.limit(40).all()
-    return [r for r in candidates if riders_are_twins(shim, r)]
+    twins = [r for r in candidates if riders_are_twins(shim, r)]
+    ref_cls = getattr(shim, "class_name", None)
+    if ref_cls:
+        allowed = _compatible_twin_classes(str(ref_cls))
+        twins = [t for t in twins if (getattr(t, "class_name", None) or "").lower() in allowed]
+    return twins
 
 
 def find_riders_by_name(
@@ -344,11 +379,29 @@ def find_riders_by_name(
     return find_rider_twins(name, riders=riders, rider_number=rider_number)
 
 
+def pick_ama_source_for_wsx(wsx: Any, twins: list[Any]) -> Any | None:
+    """Bästa AMA-rad för en WSX-förare (SX1→450, SX2→250)."""
+    cls = (getattr(wsx, "class_name", None) or "").strip().lower()
+    if cls == "wsx_sx1":
+        ama = {"450cc", "450"}
+    elif cls == "wsx_sx2":
+        ama = {"250cc", "250"}
+    else:
+        return pick_primary_rider_for_name(getattr(wsx, "name", None) or "", riders=twins)
+    candidates = [
+        t for t in twins
+        if (getattr(t, "class_name", None) or "").lower() in ama
+    ]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda r: (_rider_class_priority(r.class_name), r.id))
+
+
 def align_wsx_name_to_primary(wsx: Any, twins: list[Any]) -> bool:
     """Rätta WSX-stavfel (Christan → Christian) från 450/250-rad."""
     if (getattr(wsx, "class_name", None) or "") not in ("wsx_sx1", "wsx_sx2"):
         return False
-    primary = pick_primary_rider_for_name(getattr(wsx, "name", None) or "", riders=twins)
+    primary = pick_ama_source_for_wsx(wsx, twins)
     if not primary or primary.id == wsx.id:
         return False
     correct = (getattr(primary, "name", None) or "").strip()
@@ -361,7 +414,7 @@ def align_wsx_name_to_primary(wsx: Any, twins: list[Any]) -> bool:
 
 def pick_primary_rider_for_name(name: str, riders: list[Any] | None = None) -> Any | None:
     """AMA 450/250 före WSX när samma namn finns flera gånger."""
-    matches = find_riders_by_name(name, riders=riders)
+    matches = riders if riders is not None else find_riders_by_name(name)
     if not matches:
         return None
     return min(matches, key=lambda r: (_rider_class_priority(r.class_name), r.id))
@@ -561,15 +614,27 @@ def find_rider_with_bio_by_name(
     riders: list[Any] | None = None,
     *,
     rider_number: int | None = None,
+    for_rider: Any | None = None,
 ) -> Any | None:
     """Hitta befintlig rad med bio för samma namn (prioriterar 450/250)."""
+    if for_rider is not None:
+        pool = riders if riders is not None else find_rider_twins(for_rider)
+    else:
+        pool = find_rider_twins(name, riders=riders, rider_number=rider_number)
     matches = [
-        r for r in find_rider_twins(name, riders=riders, rider_number=rider_number)
+        r for r in pool
         if (getattr(r, "bio", None) or "").strip()
         or (getattr(r, "achievements", None) or "").strip()
     ]
     if not matches:
         return None
+    if for_rider is not None and (getattr(for_rider, "class_name", None) or "") in (
+        "wsx_sx1",
+        "wsx_sx2",
+    ):
+        ama = pick_ama_source_for_wsx(for_rider, pool)
+        if ama and ama in matches:
+            return ama
     return min(matches, key=lambda r: (_rider_class_priority(r.class_name), r.id))
 
 
@@ -586,6 +651,7 @@ def ensure_rider_content_from_twins(rider: Any, riders: list[Any] | None = None)
             getattr(rider, "name", None) or "",
             riders=twins,
             rider_number=getattr(rider, "rider_number", None),
+            for_rider=rider,
         )
         if twin_bio and twin_bio.id != rider.id and copy_bio_between_riders(twin_bio, rider):
             changed = True
@@ -607,6 +673,7 @@ def resolve_rider_bio_source(rider: Any, riders: list[Any] | None = None) -> Any
         getattr(rider, "name", None) or "",
         riders=twins,
         rider_number=getattr(rider, "rider_number", None),
+        for_rider=rider,
     )
     return twin or rider
 
@@ -658,6 +725,7 @@ def bulk_fill_wsx_from_ama_twins() -> dict[str, int]:
                 wsx.name or "",
                 riders=twins,
                 rider_number=getattr(wsx, "rider_number", None),
+                for_rider=wsx,
             )
             if source_bio and source_bio.id != wsx.id and copy_bio_between_riders(source_bio, wsx):
                 bio_n += 1

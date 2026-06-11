@@ -232,7 +232,7 @@
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Hämtar biografi och meriter från racerxonline.com för förare som saknar bio.
                 Körs i batch om 20 (~1–2 min per körning: RacerX-sida per förare + kort paus).
-                Sprids till dublett-rader (450 + WSX). Svenska översätts när någon öppnar biosidan.
+                Sprids till dublett-rader (450↔WSX SX1, 250↔WSX SX2). Svenska översätts när någon öppnar biosidan.
             </p>
             <div class="flex flex-wrap gap-2 mb-3">
                 <button type="button" id="racerxBioBulkBtn"
@@ -241,7 +241,7 @@
                 </button>
                 <button type="button" id="racerxBioSyncTwinsBtn"
                     class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold">
-                    Synka dubletter (450↔WSX)
+                    Synka dubletter (450↔SX1, 250↔SX2)
                 </button>
                 <span id="racerxBioRemaining" class="text-sm text-gray-500 self-center"></span>
             </div>
@@ -2228,7 +2228,7 @@
         document.getElementById('racerxBioSyncTwinsBtn')?.addEventListener('click', async () => {
             const btn = document.getElementById('racerxBioSyncTwinsBtn');
             if (!btn) return;
-            if (!confirm('Kopiera bio och porträtt mellan dublett-rader (samma namn, t.ex. 450cc och wsx_sx1)?')) return;
+            if (!confirm('Kopiera bio och porträtt mellan dublett-rader?\n450↔WSX SX1 och 250↔WSX SX2 (samma namn/#).')) return;
             btn.disabled = true;
             showRacerxBioStatus('Synkar dubletter…', false);
             try {
