@@ -718,6 +718,173 @@ def admin_racerx_portraits_debug():
 		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
+@bp.get("/admin/tools/racerx_bio/status")
+@login_required
+def admin_racerx_bio_status():
+	"""Antal förare utan bio (för batch-knapp i förarhantering)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	remaining = Rider.query.filter(db.or_(Rider.bio.is_(None), Rider.bio == "")).count()
+	return jsonify({"ok": True, "remaining_without_bio": remaining})
+
+
+@bp.get("/admin/tools/racerx_bio/preview")
+@login_required
+def admin_racerx_bio_preview():
+	"""Test: hämta bio från RacerX för en förare (sparar inte)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from racerx_rider_bio import fetch_racerx_rider_profile
+
+		name = (request.args.get("name") or request.args.get("rider") or "").strip()
+		if not name:
+			return jsonify({"ok": False, "error": "missing_name"}), 400
+		return jsonify(fetch_racerx_rider_profile(name))
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@bp.post("/admin/tools/racerx_bio/apply")
+@login_required
+def admin_racerx_bio_apply():
+	"""Spara RacerX-bio på en Rider i databasen (en förare)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from racerx_rider_bio import (
+			apply_profile_to_rider,
+			fetch_racerx_rider_profile,
+			pick_primary_rider_for_name,
+		)
+
+		data = request.get_json(silent=True) or {}
+		rider_id = data.get("rider_id")
+		name = (data.get("name") or "").strip()
+		rider = None
+		if rider_id:
+			rider = Rider.query.get(int(rider_id))
+		elif name:
+			rider = pick_primary_rider_for_name(name)
+		if not rider:
+			return jsonify({"ok": False, "error": "rider_not_found"}), 404
+
+		profile = fetch_racerx_rider_profile(name or rider.name or "")
+		if not profile.get("ok"):
+			return jsonify(profile), 400
+		synced = apply_profile_to_rider(rider, profile)
+		db.session.commit()
+		return jsonify({
+			"ok": True,
+			"rider_id": rider.id,
+			"name": rider.name,
+			"class_name": rider.class_name,
+			"synced_rider_ids": synced,
+			"bio_preview": (rider.bio or "")[:500],
+			"source_url": profile.get("source_url"),
+		})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
+@bp.post("/admin/tools/racerx_bio/bulk")
+@login_required
+def admin_racerx_bio_bulk():
+	"""Bulk-import RacerX-bio (saknar bio först, rate-limited)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		import time
+
+		from racerx_rider_bio import (
+			_normalize_rider_lookup_name,
+			apply_profile_to_rider,
+			copy_bio_between_riders,
+			fetch_racerx_rider_profile,
+			find_rider_with_bio_by_name,
+			pick_primary_rider_for_name,
+			sync_rider_twins,
+		)
+
+		data = request.get_json(silent=True) or {}
+		limit = min(int(data.get("limit") or 25), 100)
+		delay = float(data.get("delay") or 1.2)
+		refresh_all = bool(data.get("all"))
+		class_name = (data.get("class_name") or "").strip()
+
+		all_riders = Rider.query.order_by(Rider.class_name, Rider.rider_number, Rider.name).all()
+		name_keys: list[str] = []
+		for rider in all_riders:
+			if class_name and rider.class_name != class_name:
+				continue
+			if refresh_all or not (rider.bio or "").strip():
+				key = _normalize_rider_lookup_name(rider.name or "")
+				if key and key not in name_keys:
+					name_keys.append(key)
+		name_keys = name_keys[:limit]
+
+		results = []
+		ok_count = 0
+		for key in name_keys:
+			rider = pick_primary_rider_for_name(key, riders=all_riders)
+			if not rider:
+				continue
+			if class_name and rider.class_name != class_name:
+				continue
+			name = (rider.name or "").strip()
+			entry = {"rider_id": rider.id, "name": name, "class_name": rider.class_name}
+			try:
+				existing = find_rider_with_bio_by_name(key, riders=all_riders)
+				if existing and not refresh_all and not (rider.bio or "").strip():
+					copy_bio_between_riders(existing, rider)
+					twins = sync_rider_twins(rider, riders=all_riders)
+					db.session.commit()
+					entry["ok"] = True
+					entry["mode"] = "copy"
+					entry["synced_rider_ids"] = twins["bio"] + twins["portrait"]
+					ok_count += 1
+				else:
+					profile = fetch_racerx_rider_profile(name)
+					if not profile.get("ok"):
+						entry["ok"] = False
+						entry["error"] = profile.get("error", "not_found")
+						results.append(entry)
+						time.sleep(delay)
+						continue
+					synced = apply_profile_to_rider(rider, profile)
+					db.session.commit()
+					entry["ok"] = True
+					entry["mode"] = "fetch"
+					entry["source_url"] = profile.get("source_url")
+					entry["synced_rider_ids"] = synced
+					ok_count += 1
+					time.sleep(delay)
+			except Exception as exc:
+				db.session.rollback()
+				entry["ok"] = False
+				entry["error"] = str(exc)
+			results.append(entry)
+
+		remaining = Rider.query
+		if class_name:
+			remaining = remaining.filter(Rider.class_name == class_name)
+		if not refresh_all:
+			remaining = remaining.filter(db.or_(Rider.bio.is_(None), Rider.bio == ""))
+		remaining_count = remaining.count()
+
+		return jsonify({
+			"ok": True,
+			"processed": len(results),
+			"imported": ok_count,
+			"remaining_without_bio": remaining_count,
+			"results": results,
+		})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
 @bp.route('/competition_management')
 @login_required
 def competition_management():

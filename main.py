@@ -2352,6 +2352,53 @@ def _rider_portrait_url(r: Rider) -> str | None:
     return s or None
 
 
+def _riders_for_image_lookup(rider: Rider) -> list[Rider]:
+    """Samma namn — dela porträtt mellan 450/250 och WSX-dubletter."""
+    try:
+        from racerx_rider_bio import find_riders_by_name
+
+        twins = find_riders_by_name(rider.name or "")
+        ordered = [rider] + [t for t in twins if t.id != rider.id]
+        seen: set[int] = set()
+        out: list[Rider] = []
+        for r in ordered:
+            if r.id in seen:
+                continue
+            seen.add(r.id)
+            out.append(r)
+        return out
+    except Exception:
+        return [rider]
+
+
+def template_rider_image_src(rider: Rider, *, bio_card: bool = False) -> str | None:
+    """Bild-URL för Jinja (förarlista, bio) — inkl. dublett-fallback."""
+    if not rider:
+        return None
+    for r in _riders_for_image_lookup(rider):
+        raw_data = getattr(r, "rider_image_data", None)
+        if raw_data and str(raw_data).strip().startswith("data:image"):
+            return f"/rider_portrait/{r.id}"
+        url = _display_image_url_for_rider_row(
+            r.id,
+            has_db_portrait=bool(raw_data and str(raw_data).strip()),
+            image_url=getattr(r, "image_url", None),
+            rider_name=r.name,
+            rider_number=r.rider_number,
+            class_name=r.class_name,
+            coast_250=getattr(r, "coast_250", None),
+            bike_brand=getattr(r, "bike_brand", None),
+            series_participation=getattr(r, "series_participation", None),
+        )
+        if url:
+            if bio_card and url.startswith("http"):
+                from app.portrait_urls import normalize_racerx_portrait_url_bio
+
+                return normalize_racerx_portrait_url_bio(url) or url
+            return url
+    return None
+
+
 def _display_image_url_for_rider_row(
     rider_id: int,
     *,
@@ -5784,32 +5831,101 @@ def run_migration():
 @app.get('/rider/<int:rider_id>')
 def rider_profile(rider_id: int):
     rider = Rider.query.get_or_404(rider_id)
-    return render_template('rider_detail.html', rider=rider, username=session.get('username'))
+    return render_template(
+        'rider_detail.html',
+        rider=rider,
+        rider_image_src=template_rider_image_src(rider, bio_card=True),
+        username=session.get('username'),
+    )
+
+
+@app.get('/api/rider/<int:rider_id>/bio')
+def rider_bio_i18n(rider_id: int):
+    """Bio/meriter på engelska eller svenska (översätter och cachar vid behov)."""
+    rider = Rider.query.get_or_404(rider_id)
+    lang = (request.args.get("lang") or "sv").strip().lower()
+    if lang not in ("en", "sv"):
+        lang = "sv"
+    if lang == "en":
+        return jsonify({
+            "ok": True,
+            "lang": "en",
+            "bio": rider.bio or "",
+            "achievements": rider.achievements or "",
+        })
+    try:
+        from rider_bio_translate import ensure_swedish_bio
+
+        bio_sv, ach_sv = ensure_swedish_bio(rider)
+        db.session.commit()
+        return jsonify({
+            "ok": True,
+            "lang": "sv",
+            "bio": bio_sv,
+            "achievements": ach_sv,
+        })
+    except Exception as exc:
+        db.session.rollback()
+        print(f"rider bio translate error: {exc}")
+        return jsonify({
+            "ok": False,
+            "error": "translate_failed",
+            "bio": rider.bio or "",
+            "achievements": rider.achievements or "",
+        }), 502
 
 def _rider_directory_sort_key(rider: Rider) -> tuple:
     num = rider.rider_number if rider.rider_number is not None else 99999
     return (num, (rider.name or "").lower())
 
 
-def _group_riders_for_directory() -> tuple[list[Rider], list[Rider], list[Rider], list[Rider]]:
+def _rider_directory_series_label(rider: Rider) -> str:
+    cls = (rider.class_name or "").strip().lower()
+    if cls == "wsx_sx1":
+        return "WSX SX1"
+    if cls == "wsx_sx2":
+        return "WSX SX2"
+    if cls in ("450cc", "450"):
+        return "450"
+    if cls in ("250cc", "250"):
+        coast = (rider.coast_250 or "").strip().lower()
+        if coast == "east":
+            return "250E"
+        if coast == "west":
+            return "250W"
+        if coast == "both":
+            return "250"
+        return "250?"
+    return cls.upper() or "?"
+
+
+def _group_riders_for_directory() -> dict[str, list[Rider]]:
     """
     Build /riders columns from DB (live query, no cache).
+    WSX has its own columns (not mixed with AMA 450/250).
     250cc with coast 'both' appears in both 250E and 250W (same as race picks).
-    Riders missing coast show in riders_250_unassigned so new adds are not hidden.
-    """
+  """
     riders_450: list[Rider] = []
     riders_250_east: list[Rider] = []
     riders_250_west: list[Rider] = []
     riders_250_unassigned: list[Rider] = []
+    riders_wsx_sx1: list[Rider] = []
+    riders_wsx_sx2: list[Rider] = []
     seen_east: set[int] = set()
     seen_west: set[int] = set()
 
     for rider in Rider.query.all():
         cls = (rider.class_name or "").strip().lower()
-        if cls in ("450cc", "450", "wsx_sx1"):
+        if cls == "wsx_sx1":
+            riders_wsx_sx1.append(rider)
+            continue
+        if cls == "wsx_sx2":
+            riders_wsx_sx2.append(rider)
+            continue
+        if cls in ("450cc", "450"):
             riders_450.append(rider)
             continue
-        if cls not in ("250cc", "250", "wsx_sx2"):
+        if cls not in ("250cc", "250"):
             continue
         coast = (rider.coast_250 or "").strip().lower()
         if coast in ("east", "both"):
@@ -5822,25 +5938,36 @@ def _group_riders_for_directory() -> tuple[list[Rider], list[Rider], list[Rider]
             riders_250_unassigned.append(rider)
 
     key = _rider_directory_sort_key
-    riders_450.sort(key=key)
-    riders_250_east.sort(key=key)
-    riders_250_west.sort(key=key)
-    riders_250_unassigned.sort(key=key)
-    return riders_450, riders_250_east, riders_250_west, riders_250_unassigned
+    for bucket in (
+        riders_450,
+        riders_250_east,
+        riders_250_west,
+        riders_250_unassigned,
+        riders_wsx_sx1,
+        riders_wsx_sx2,
+    ):
+        bucket.sort(key=key)
+    return {
+        "riders_450": riders_450,
+        "riders_250_east": riders_250_east,
+        "riders_250_west": riders_250_west,
+        "riders_250_unassigned": riders_250_unassigned,
+        "riders_wsx_sx1": riders_wsx_sx1,
+        "riders_wsx_sx2": riders_wsx_sx2,
+    }
 
 
 # Public rider list
 @app.get('/riders')
 def riders_directory():
-    riders_450, riders_250_east, riders_250_west, riders_250_unassigned = _group_riders_for_directory()
+    groups = _group_riders_for_directory()
     resp = make_response(
         render_template(
             "riders.html",
-            riders_450=riders_450,
-            riders_250_east=riders_250_east,
-            riders_250_west=riders_250_west,
-            riders_250_unassigned=riders_250_unassigned,
+            series_label=_rider_directory_series_label,
+            template_rider_image_src=template_rider_image_src,
             username=session.get("username"),
+            **groups,
         )
     )
     resp.headers["Cache-Control"] = "no-store"
@@ -6708,6 +6835,16 @@ def fix_database_tables():
             result = db.session.execute(db.text("SELECT column_name FROM information_schema.columns WHERE table_name='riders' AND column_name='rider_image_data'"))
             if not result.fetchone():
                 db.session.execute(db.text("ALTER TABLE riders ADD COLUMN rider_image_data TEXT"))
+            for col, ddl in (("bio_sv", "TEXT"), ("achievements_sv", "TEXT")):
+                result = db.session.execute(
+                    db.text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_name='riders' AND column_name=:col"
+                    ),
+                    {"col": col},
+                )
+                if not result.fetchone():
+                    db.session.execute(db.text(f"ALTER TABLE riders ADD COLUMN {col} {ddl}"))
             
             db.session.commit()
         except Exception as riders_error:
@@ -16723,6 +16860,8 @@ def init_database():
                     _sqlite_add_column_if_missing(
                         "users", "password_reset_expires", "password_reset_expires TIMESTAMP"
                     )
+                    _sqlite_add_column_if_missing("riders", "bio_sv", "bio_sv TEXT")
+                    _sqlite_add_column_if_missing("riders", "achievements_sv", "achievements_sv TEXT")
                 except Exception as col_err:
                     print(f"Warning: SQLite column patch skipped: {col_err}")
                     db.session.rollback()

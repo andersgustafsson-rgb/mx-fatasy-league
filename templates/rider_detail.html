@@ -20,11 +20,13 @@
       <div class="p-4 bg-gray-900">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="md:col-span-1">
-            <div class="rounded-lg overflow-hidden border border-gray-700 bg-gray-800">
-              {% if rider.image_url %}
-              <img src="{{ rider.image_url }}" alt="{{ rider.name }}" class="w-full h-64 object-cover">
+            <div class="mx-auto w-full max-w-[17rem] aspect-square rounded-xl overflow-hidden border border-gray-700 bg-gradient-to-b from-gray-800 to-gray-950 shadow-inner">
+              {% if rider_image_src %}
+              <img src="{{ rider_image_src }}" alt="{{ rider.name }}" class="w-full h-full object-cover object-center">
               {% else %}
-              <div class="w-full h-64 flex items-center justify-center text-gray-400">Ingen bild</div>
+              <div class="w-full h-full min-h-[16rem] flex items-center justify-center text-gray-400 bg-gradient-to-b from-gray-800 to-gray-900">
+                <span class="text-4xl font-bold text-cyan-500/40">#{{ rider.rider_number or '?' }}</span>
+              </div>
               {% endif %}
             </div>
             <div class="mt-4 space-y-2 text-sm">
@@ -52,19 +54,116 @@
           </div>
 
           <div class="md:col-span-2 space-y-6">
+            {% set has_bio_content = rider.bio or rider.achievements %}
+            {% if has_bio_content %}
+            <div class="flex justify-end">
+              <div id="bio-lang-toggle" class="inline-flex rounded-lg border border-gray-600 overflow-hidden text-sm" role="group" aria-label="Språk för bio">
+                <button type="button" data-lang="sv" class="bio-lang-btn px-3 py-1.5 bg-cyan-600 text-white font-medium">🇸🇪 Svenska</button>
+                <button type="button" data-lang="en" class="bio-lang-btn px-3 py-1.5 bg-gray-800 text-gray-300 hover:bg-gray-700">🇺🇸 English</button>
+              </div>
+            </div>
+            {% endif %}
+
             <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h2 class="text-lg font-bold text-cyan-400 mb-2">Biografi</h2>
-              <p class="text-gray-200 whitespace-pre-line">{{ rider.bio or 'Ingen biografi tillagd ännu.' }}</p>
+              <p id="rider-bio-text" class="text-gray-200 whitespace-pre-line">{{ rider.bio or 'Ingen biografi tillagd ännu.' }}</p>
             </div>
             <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h2 class="text-lg font-bold text-cyan-400 mb-2">Meriter</h2>
-              <div class="text-gray-200 whitespace-pre-line">{{ rider.achievements or 'Inga meriter tillagda ännu.' }}</div>
+              <div id="rider-achievements-text" class="text-gray-200 whitespace-pre-line">{{ rider.achievements or 'Inga meriter tillagda ännu.' }}</div>
             </div>
+            <p id="bio-translate-status" class="text-xs text-gray-500 hidden"></p>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  {% if has_bio_content %}
+  <script>
+  (function () {
+    const riderId = {{ rider.id }};
+    const bioEl = document.getElementById('rider-bio-text');
+    const achEl = document.getElementById('rider-achievements-text');
+    const statusEl = document.getElementById('bio-translate-status');
+    const buttons = document.querySelectorAll('.bio-lang-btn');
+    const storageKey = 'mxfantasy_rider_bio_lang';
+
+    const content = {
+      en: {
+        bio: {{ (rider.bio or '')|tojson }},
+        achievements: {{ (rider.achievements or '')|tojson }},
+      },
+      sv: {
+        bio: {{ (rider.bio_sv or '')|tojson }},
+        achievements: {{ (rider.achievements_sv or '')|tojson }},
+      },
+    };
+
+    const emptyBioSv = 'Ingen biografi tillagd ännu.';
+    const emptyAchSv = 'Inga meriter tillagda ännu.';
+
+    function setActive(lang) {
+      buttons.forEach((btn) => {
+        const on = btn.dataset.lang === lang;
+        btn.classList.toggle('bg-cyan-600', on);
+        btn.classList.toggle('text-white', on);
+        btn.classList.toggle('font-medium', on);
+        btn.classList.toggle('bg-gray-800', !on);
+        btn.classList.toggle('text-gray-300', !on);
+      });
+    }
+
+    function render(lang) {
+      const pack = content[lang] || content.en;
+      bioEl.textContent = pack.bio || (lang === 'sv' ? emptyBioSv : (content.en.bio || emptyBioSv));
+      achEl.textContent = pack.achievements || (lang === 'sv' ? emptyAchSv : (content.en.achievements || emptyAchSv));
+      setActive(lang);
+      try { localStorage.setItem(storageKey, lang); } catch (_) {}
+    }
+
+    async function loadSwedish() {
+      if (content.sv.bio || content.sv.achievements) {
+        render('sv');
+        return;
+      }
+      statusEl.textContent = 'Översätter till svenska…';
+      statusEl.classList.remove('hidden');
+      buttons.forEach((b) => { b.disabled = true; });
+      try {
+        const res = await fetch(`/api/rider/${riderId}/bio?lang=sv`);
+        const data = await res.json();
+        if (data.ok) {
+          content.sv.bio = data.bio || '';
+          content.sv.achievements = data.achievements || '';
+          render('sv');
+          statusEl.textContent = 'Översatt automatiskt (maskinöversättning).';
+        } else {
+          render('en');
+          statusEl.textContent = 'Kunde inte översätta – visar engelska.';
+        }
+      } catch (_) {
+        render('en');
+        statusEl.textContent = 'Kunde inte översätta – visar engelska.';
+      } finally {
+        buttons.forEach((b) => { b.disabled = false; });
+      }
+    }
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang;
+        if (lang === 'sv') loadSwedish();
+        else render('en');
+      });
+    });
+
+    const saved = (() => { try { return localStorage.getItem(storageKey); } catch (_) { return null; } })();
+    if (saved === 'en') render('en');
+    else if (content.sv.bio || content.sv.achievements) render('sv');
+    else loadSwedish();
+  })();
+  </script>
+  {% endif %}
 </body>
 </html>
-

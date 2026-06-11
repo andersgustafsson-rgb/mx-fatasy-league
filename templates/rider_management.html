@@ -226,6 +226,24 @@
             </button>
         </div>
 
+        <!-- RacerX bio: batch import -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-emerald-500">
+            <h3 class="text-lg font-semibold text-emerald-400 mb-2">📖 RacerX-bio (batch)</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Hämtar biografi och meriter från racerxonline.com för förare som saknar bio.
+                Körs i batch om 20 — sprids automatiskt till dublett-rader (450 + WSX) och svensk översättning sker när någon öppnar biosidan.
+            </p>
+            <div class="flex flex-wrap gap-2 mb-3">
+                <button type="button" id="racerxBioBulkBtn"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-semibold">
+                    Hämta bio (20 st)
+                </button>
+                <span id="racerxBioRemaining" class="text-sm text-gray-500 self-center"></span>
+            </div>
+            <div id="racerxBioStatus" class="text-sm hidden mb-2"></div>
+            <ul id="racerxBioResults" class="text-xs text-gray-600 dark:text-gray-400 space-y-1 max-h-48 overflow-y-auto"></ul>
+        </div>
+
         <!-- Bulk Update Rider Numbers -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border-2 border-yellow-400">
             <h3 class="text-lg font-semibold text-yellow-400 mb-3">🔄 Bulk Uppdatera Förarenummer (SMX)</h3>
@@ -2168,6 +2186,67 @@
         document.getElementById('racerxImagesSelectNoneBtn').addEventListener('click', () => {
             document.querySelectorAll('.racerx-img-select').forEach(cb => cb.checked = false);
             updateRacerxApplyBtn();
+        });
+
+        function showRacerxBioStatus(msg, isError) {
+            const el = document.getElementById('racerxBioStatus');
+            if (!el) return;
+            el.classList.remove('hidden', 'text-red-500', 'text-emerald-600');
+            el.classList.add(isError ? 'text-red-500' : 'text-emerald-600');
+            el.textContent = msg;
+        }
+
+        async function refreshRacerxBioRemaining() {
+            const el = document.getElementById('racerxBioRemaining');
+            if (!el) return;
+            try {
+                const res = await fetch('/admin/tools/racerx_bio/status');
+                const data = await res.json();
+                if (data.ok && data.remaining_without_bio != null) {
+                    el.textContent = `${data.remaining_without_bio} förare saknar bio`;
+                }
+            } catch (_) {
+                el.textContent = '';
+            }
+        }
+        refreshRacerxBioRemaining();
+
+        document.getElementById('racerxBioBulkBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('racerxBioBulkBtn');
+            const list = document.getElementById('racerxBioResults');
+            if (!btn || !list) return;
+            if (!confirm('Hämta RacerX-bio för upp till 20 förare som saknar text? (tar ~30 sek)')) return;
+            btn.disabled = true;
+            showRacerxBioStatus('Hämtar bio från RacerX… kan ta en halvminut.', false);
+            list.innerHTML = '';
+            try {
+                const res = await fetch('/admin/tools/racerx_bio/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 20, delay: 1.2 }),
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showRacerxBioStatus(data.error || 'Batch misslyckades', true);
+                    return;
+                }
+                const lines = (data.results || []).map((r) => {
+                    const mark = r.ok ? '✓' : '✗';
+                    const extra = r.ok ? (r.class_name || '') : (r.error || '');
+                    return `${mark} ${r.name || ''} ${extra}`.trim();
+                });
+                list.innerHTML = lines.map((t) => `<li>${escapeHtml(t)}</li>`).join('');
+                showRacerxBioStatus(
+                    `Klart: ${data.imported || 0} importerade av ${data.processed || 0}. ` +
+                    `${data.remaining_without_bio != null ? data.remaining_without_bio + ' kvar utan bio.' : ''}`,
+                    false
+                );
+                refreshRacerxBioRemaining();
+            } catch (e) {
+                showRacerxBioStatus('Nätverksfel: ' + e.message, true);
+            } finally {
+                btn.disabled = false;
+            }
         });
 
         document.getElementById('racerxImagesApplyBtn').addEventListener('click', async () => {

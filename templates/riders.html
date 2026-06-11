@@ -3,71 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rider Bio - Förarlista</title>
+  <title>Förarguide - MX Fantasy</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .checkered {
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,.07) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.07) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.07) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.07) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+    }
+    .column-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+    .rider-column.is-open .column-body {
+      max-height: 65vh;
+    }
+    .rider-column.is-open .col-chevron {
+      transform: rotate(180deg);
+    }
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
-  <div class="container mx-auto p-4 sm:p-6">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-      <div class="flex items-center gap-3">
-        <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
-        <button onclick="history.back()" class="px-3 py-2 bg-gray-800 border border-cyan-400 text-white rounded hover:bg-gray-700">← Tillbaka</button>
-      </div>
-      <div class="w-full sm:max-w-md">
-        <input id="searchInput" type="text" placeholder="Sök förare eller nummer..." class="w-full px-4 py-2 rounded bg-gray-800 border border-cyan-400 text-white" />
+<body class="bg-gray-950 text-gray-200 min-h-screen">
+  <div class="container mx-auto p-4 sm:p-6 max-w-7xl">
+    <!-- Hero -->
+    <div class="relative rounded-2xl overflow-hidden mb-6 border border-cyan-500/25 shadow-lg shadow-cyan-900/20">
+      <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-gray-900 to-cyan-950"></div>
+      <div class="absolute inset-0 checkered opacity-40"></div>
+      <img src="/static/images/bike_silhouette.svg" alt="" class="absolute -right-4 bottom-0 w-40 sm:w-56 opacity-[0.12] pointer-events-none" aria-hidden="true" />
+      <div class="relative p-5 sm:p-7">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
+            <button onclick="history.back()" class="px-3 py-1.5 text-sm bg-black/40 border border-cyan-500/40 text-white rounded-lg hover:bg-black/60">← Tillbaka</button>
+          </div>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Förarguide</h1>
+        <p class="text-cyan-100/70 text-sm mt-1">Bio, meriter och bilder — sök på nummer eller namn</p>
+        <div class="flex flex-wrap gap-2 mt-4" id="seriesPills">
+          <button type="button" data-series="all" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500 text-gray-900">Alla</button>
+          <button type="button" data-series="250e" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-cyan-900/80 text-cyan-200 border border-cyan-600/40">250E · {{ riders_250_east|length }}</button>
+          <button type="button" data-series="250w" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-orange-900/80 text-orange-200 border border-orange-600/40">250W · {{ riders_250_west|length }}</button>
+          <button type="button" data-series="450" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-yellow-900/80 text-yellow-200 border border-yellow-600/40">450 · {{ riders_450|length }}</button>
+          <button type="button" data-series="wsx1" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-purple-900/80 text-purple-200 border border-purple-600/40">WSX SX1 · {{ riders_wsx_sx1|length }}</button>
+          <button type="button" data-series="wsx2" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-pink-900/80 text-pink-200 border border-pink-600/40">WSX SX2 · {{ riders_wsx_sx2|length }}</button>
+        </div>
       </div>
     </div>
 
-    <p class="text-xs text-gray-500 mb-4">Listan hämtas direkt från databasen vid varje laddning. 250 utan coast visas i fjärde kolumnen.</p>
+    <div class="flex flex-col sm:flex-row gap-3 mb-5">
+      <input id="searchInput" type="search" inputmode="search" autocomplete="off"
+        placeholder="🔍  Sök #38 eller Deegan…"
+        class="flex-1 px-4 py-3 rounded-xl bg-gray-900/80 border border-cyan-500/30 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none" />
+      <select id="seriesFilter"
+        class="px-4 py-3 rounded-xl bg-gray-900/80 border border-gray-600 text-white sm:min-w-[11rem]">
+        <option value="all">Alla serier</option>
+        <option value="250e">250 East</option>
+        <option value="250w">250 West</option>
+        <option value="450">450</option>
+        <option value="wsx1">WSX SX1</option>
+        <option value="wsx2">WSX SX2</option>
+      </select>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden">
-        <div class="bg-cyan-600 px-4 py-2 text-white font-bold">250E <span class="text-cyan-100/80 font-normal">({{ riders_250_east|length }})</span></div>
-        <ul id="list-250e" class="divide-y divide-gray-800">
-          {% for r in riders_250_east %}
-          <li class="p-3 hover:bg-gray-800">
-            <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
-              <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
-              <span class="text-gray-500">{{ r.bike_brand }}</span>
-            </a>
-          </li>
-          {% endfor %}
-        </ul>
+    <div id="searchResults" class="hidden mb-5 bg-gray-900/90 rounded-xl border border-cyan-500/40 overflow-hidden backdrop-blur">
+      <div class="bg-gradient-to-r from-cyan-700 to-blue-800 px-4 py-3 text-white font-bold flex justify-between items-center">
+        <span>Sökresultat</span>
+        <span id="searchCount" class="text-sm font-normal text-cyan-100"></span>
       </div>
+      <ul id="searchList" class="divide-y divide-gray-800 max-h-[70vh] overflow-y-auto"></ul>
+    </div>
 
-      <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden">
-        <div class="bg-orange-600 px-4 py-2 text-white font-bold">250W</div>
-        <ul id="list-250w" class="divide-y divide-gray-800">
-          {% for r in riders_250_west %}
-          <li class="p-3 hover:bg-gray-800">
-            <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
-              <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
-              <span class="text-gray-500">{{ r.bike_brand }}</span>
-            </a>
-          </li>
-          {% endfor %}
-        </ul>
+    <div id="columnView" class="space-y-3">
+      {% macro rider_column(title, riders, series_key, list_id, header_class, border_class) %}
+      <div class="rider-column rounded-xl border {{ border_class }} bg-gray-900/70 overflow-hidden backdrop-blur" data-series="{{ series_key }}">
+        <button type="button" class="column-toggle w-full flex items-center justify-between gap-3 px-4 py-3 {{ header_class }} text-white font-bold text-left">
+          <span>{{ title }} <span class="font-normal opacity-80 text-sm">({{ riders|length }})</span></span>
+          <svg class="col-chevron w-5 h-5 shrink-0 transition-transform opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="column-body">
+          <ul id="{{ list_id }}" class="divide-y divide-gray-800/80 overflow-y-auto px-1 pb-2">
+            {% for r in riders %}
+            {% set img = template_rider_image_src(r) %}
+            <li class="rider-row" data-name="{{ r.name|lower }}" data-number="{{ r.rider_number or '' }}" data-series="{{ list_id }}">
+              <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center gap-3 p-2.5 mx-1 my-0.5 rounded-lg hover:bg-white/5 transition-colors group">
+                <div class="w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-white/10 bg-gray-800 group-hover:ring-cyan-400/40 transition-all">
+                  {% if img %}
+                  <img src="{{ img }}" alt="" class="w-full h-full object-cover object-top" loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <span class="hidden w-full h-full items-center justify-center text-[10px] font-bold text-cyan-400/80">#{{ r.rider_number or '?' }}</span>
+                  {% else %}
+                  <span class="flex w-full h-full items-center justify-center text-[10px] font-bold text-cyan-400/80">#{{ r.rider_number or '?' }}</span>
+                  {% endif %}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-gray-100 truncate font-medium">#{{ r.rider_number or '–' }} {{ r.name }}</div>
+                  <div class="text-[11px] text-gray-500 truncate">{{ r.bike_brand or '—' }}</div>
+                </div>
+                <span class="text-gray-600 group-hover:text-cyan-400 text-lg">›</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
       </div>
+      {% endmacro %}
 
-      <div class="bg-gray-900 rounded-lg border-2 border-cyan-400 overflow-hidden">
-        <div class="bg-yellow-600 px-4 py-2 text-white font-bold">450 <span class="text-yellow-100/80 font-normal">({{ riders_450|length }})</span></div>
-        <ul id="list-450" class="divide-y divide-gray-800">
-          {% for r in riders_450 %}
-          <li class="p-3 hover:bg-gray-800">
-            <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
-              <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
-              <span class="text-gray-500">{{ r.bike_brand }}</span>
-            </a>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
+      {{ rider_column('250 East', riders_250_east, '250e', 'list-250e', 'bg-gradient-to-r from-cyan-600 to-cyan-800', 'border-cyan-500/40') }}
+      {{ rider_column('250 West', riders_250_west, '250w', 'list-250w', 'bg-gradient-to-r from-orange-600 to-orange-800', 'border-orange-500/40') }}
+      {{ rider_column('450', riders_450, '450', 'list-450', 'bg-gradient-to-r from-yellow-600 to-amber-700', 'border-yellow-500/40') }}
+      {{ rider_column('WSX SX1', riders_wsx_sx1, 'wsx1', 'list-wsx1', 'bg-gradient-to-r from-purple-600 to-purple-800', 'border-purple-500/40') }}
+      {{ rider_column('WSX SX2', riders_wsx_sx2, 'wsx2', 'list-wsx2', 'bg-gradient-to-r from-pink-600 to-rose-700', 'border-pink-500/40') }}
+    </div>
 
-      <div class="bg-gray-900 rounded-lg border-2 border-amber-500 overflow-hidden {% if not riders_250_unassigned %}hidden{% endif %}">
-        <div class="bg-amber-600 px-4 py-2 text-white font-bold">250 · saknar coast <span class="font-normal">({{ riders_250_unassigned|length }})</span></div>
-        <ul id="list-250u" class="divide-y divide-gray-800 max-h-[70vh] overflow-y-auto">
+    {% if riders_250_unassigned %}
+    <div id="unassignedBlock" class="mt-4 rider-column rounded-xl border border-amber-500/50 bg-gray-900/70 overflow-hidden" data-series="250u">
+      <button type="button" class="column-toggle w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-amber-600 to-orange-700 text-white font-bold">
+        <span>250 · saknar coast ({{ riders_250_unassigned|length }})</span>
+        <svg class="col-chevron w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div class="column-body">
+        <ul id="list-250u" class="divide-y divide-gray-800 max-h-48 overflow-y-auto">
           {% for r in riders_250_unassigned %}
-          <li class="p-3 hover:bg-gray-800">
+          <li class="rider-row p-3 hover:bg-gray-800" data-name="{{ r.name|lower }}" data-number="{{ r.rider_number or '' }}" data-series="250u">
             <a href="{{ url_for('rider_profile', rider_id=r.id) }}" class="flex items-center justify-between text-sm">
               <span class="text-gray-300">#{{ r.rider_number }} {{ r.name }}</span>
               <span class="text-amber-400/90 text-xs">sätt E/W i admin</span>
@@ -77,26 +139,134 @@
         </ul>
       </div>
     </div>
+    {% endif %}
   </div>
 
   <script>
+  (function () {
+    const SERIES_LABELS = {
+      'list-250e': '250E', 'list-250w': '250W', 'list-450': '450',
+      'list-wsx1': 'WSX SX1', 'list-wsx2': 'WSX SX2', 'list-250u': '250?',
+    };
+    const SERIES_FILTER_MAP = {
+      all: null, '250e': 'list-250e', '250w': 'list-250w', '450': 'list-450',
+      wsx1: 'list-wsx1', wsx2: 'list-wsx2',
+    };
+    const COL_SERIES = { '250e': 'list-250e', '250w': 'list-250w', '450': 'list-450', wsx1: 'list-wsx1', wsx2: 'list-wsx2' };
+
     const input = document.getElementById('searchInput');
-    const lists = [
-      document.getElementById('list-250e'),
-      document.getElementById('list-250w'),
-      document.getElementById('list-450'),
-      document.getElementById('list-250u'),
-    ].filter(Boolean);
-    input.addEventListener('input', () => {
-      const q = input.value.toLowerCase();
-      lists.forEach(list => {
-        Array.from(list.children).forEach(li => {
-          const text = li.textContent.toLowerCase();
-          li.style.display = text.includes(q) ? '' : 'none';
-        });
+    const seriesFilter = document.getElementById('seriesFilter');
+    const columnView = document.getElementById('columnView');
+    const searchResults = document.getElementById('searchResults');
+    const searchList = document.getElementById('searchList');
+    const searchCount = document.getElementById('searchCount');
+    const unassignedBlock = document.getElementById('unassignedBlock');
+    const seriesPills = document.getElementById('seriesPills');
+
+    const allRows = Array.from(document.querySelectorAll('.rider-row'));
+    const rowData = allRows.map((li) => {
+      const a = li.querySelector('a');
+      const nameEl = li.querySelector('.font-medium, .text-gray-300');
+      return {
+        name: li.dataset.name || '',
+        number: String(li.dataset.number || ''),
+        series: li.dataset.series || '',
+        href: a ? a.getAttribute('href') : '#',
+        label: nameEl ? nameEl.textContent.trim() : '',
+        brand: li.querySelector('.text-\\[11px\\]')?.textContent?.trim() || '',
+        img: li.querySelector('img')?.getAttribute('src') || '',
+      };
+    });
+
+    document.querySelectorAll('.column-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const col = btn.closest('.rider-column');
+        if (col) col.classList.toggle('is-open');
       });
     });
+
+    function setSeriesFilter(val) {
+      seriesFilter.value = val;
+      document.querySelectorAll('.series-pill').forEach((p) => {
+        const on = p.dataset.series === val;
+        p.classList.toggle('bg-cyan-500', on && val === 'all');
+        p.classList.toggle('text-gray-900', on && val === 'all');
+        p.classList.toggle('ring-2', on);
+        p.classList.toggle('ring-white/30', on);
+      });
+      applyFilters();
+    }
+
+    seriesPills?.querySelectorAll('.series-pill').forEach((pill) => {
+      pill.addEventListener('click', () => setSeriesFilter(pill.dataset.series));
+    });
+
+    function normalizeQuery(raw) {
+      let q = (raw || '').trim().toLowerCase();
+      if (q.startsWith('#')) q = q.slice(1);
+      return q;
+    }
+
+    function matchesQuery(item, q) {
+      if (!q) return true;
+      if (/^\d+$/.test(q)) return item.number === q || item.number.startsWith(q);
+      return item.name.includes(q) || item.number.includes(q) || item.label.toLowerCase().includes(q);
+    }
+
+    function renderSearchResults(matches) {
+      searchList.innerHTML = '';
+      matches.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'p-2';
+        const badge = SERIES_LABELS[item.series] || item.series;
+        const avatar = item.img
+          ? `<img src="${item.img}" alt="" class="w-10 h-10 rounded-full object-cover ring-2 ring-cyan-500/20">`
+          : `<span class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-xs text-cyan-400">#${item.number || '?'}</span>`;
+        li.innerHTML = `
+          <a href="${item.href}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5">
+            ${avatar}
+            <span class="flex-1 text-sm text-gray-100">${item.label}</span>
+            <span class="text-[10px] uppercase px-2 py-0.5 rounded bg-gray-800 text-cyan-300">${badge}</span>
+          </a>`;
+        searchList.appendChild(li);
+      });
+      searchCount.textContent = matches.length ? `${matches.length} träffar` : 'Inga träffar';
+    }
+
+    function applyFilters() {
+      const q = normalizeQuery(input.value);
+      const seriesKey = seriesFilter.value;
+      const listId = SERIES_FILTER_MAP[seriesKey];
+
+      if (q) {
+        const matches = rowData.filter((item) => {
+          if (listId && item.series !== listId) return false;
+          return matchesQuery(item, q);
+        });
+        columnView.classList.add('hidden');
+        if (unassignedBlock) unassignedBlock.classList.add('hidden');
+        searchResults.classList.remove('hidden');
+        renderSearchResults(matches);
+        return;
+      }
+
+      searchResults.classList.add('hidden');
+      columnView.classList.remove('hidden');
+
+      document.querySelectorAll('#columnView .rider-column').forEach((col) => {
+        const want = COL_SERIES[col.dataset.series];
+        const show = !listId || want === listId;
+        col.classList.toggle('hidden', !show);
+        if (show && listId) col.classList.add('is-open');
+      });
+      if (unassignedBlock) unassignedBlock.classList.toggle('hidden', !!listId);
+    }
+
+    input.addEventListener('input', applyFilters);
+    seriesFilter.addEventListener('change', () => setSeriesFilter(seriesFilter.value));
+
+    setSeriesFilter('all');
+  })();
   </script>
 </body>
 </html>
-
