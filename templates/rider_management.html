@@ -2239,8 +2239,11 @@
                     return;
                 }
                 const blobs = data.wsx_blobs_cleared ? `, ${data.wsx_blobs_cleared} WSX-blobbar rensade` : '';
+                const wsx = (data.wsx_bio_filled || data.wsx_portrait_url_filled)
+                    ? ` WSX: ${data.wsx_bio_filled || 0} bio, ${data.wsx_portrait_url_filled || 0} bild-URL.`
+                    : '';
                 showRacerxBioStatus(
-                    `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt${blobs}.`,
+                    `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt${blobs}.${wsx}`,
                     false
                 );
             } catch (e) {

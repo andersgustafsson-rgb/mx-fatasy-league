@@ -50,7 +50,7 @@ def _translate_chunk_en_sv(text: str) -> str:
         _GTX_URL,
         params={"client": "gtx", "sl": "en", "tl": "sv", "dt": "t", "q": text},
         headers=_HEADERS,
-        timeout=45,
+        timeout=12,
     )
     resp.raise_for_status()
     data = resp.json()

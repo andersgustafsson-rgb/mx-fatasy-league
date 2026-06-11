@@ -128,6 +128,9 @@
         render('sv');
         return;
       }
+      if (content.en.bio || content.en.achievements) {
+        render('en');
+      }
       statusEl.textContent = 'Översätter till svenska…';
       statusEl.classList.remove('hidden');
       buttons.forEach((b) => { b.disabled = true; });
@@ -160,9 +163,15 @@
     });
 
     const saved = (() => { try { return localStorage.getItem(storageKey); } catch (_) { return null; } })();
-    if (saved === 'en') render('en');
-    else if (content.sv.bio || content.sv.achievements) render('sv');
-    else loadSwedish();
+    if (saved === 'sv' && (content.sv.bio || content.sv.achievements)) {
+      render('sv');
+    } else if (saved === 'sv') {
+      loadSwedish();
+    } else if (content.sv.bio || content.sv.achievements) {
+      render('sv');
+    } else {
+      render('en');
+    }
   })();
   </script>
   {% endif %}

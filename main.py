@@ -5901,18 +5901,30 @@ def rider_profile(rider_id: int):
         .filter_by(id=rider_id)
         .first_or_404()
     )
+    from racerx_rider_bio import _normalize_rider_lookup_name, build_riders_by_name_map, find_riders_by_name
+
+    twins = find_riders_by_name(rider.name or "")
+    twins_by_name = build_riders_by_name_map(twins) if twins else None
     try:
-        if ensure_rider_content_from_twins(rider):
+        if ensure_rider_content_from_twins(rider, riders=twins):
             db.session.commit()
+            db.session.refresh(rider)
     except Exception as exc:
         db.session.rollback()
         print(f"ensure_rider_content_from_twins: {exc}")
-    bio_source = resolve_rider_bio_source(rider)
+    bio_source = resolve_rider_bio_source(rider, riders=twins)
+    img_map = twins_by_name
+    if img_map is None and rider.name:
+        key = _normalize_rider_lookup_name(rider.name)
+        if key:
+            img_map = {key: twins}
     return render_template(
         'rider_detail.html',
         rider=rider,
         bio_source=bio_source,
-        rider_image_src=template_rider_image_src(rider, bio_card=True),
+        rider_image_src=template_rider_image_src(
+            rider, bio_card=True, riders_by_name=img_map
+        ),
         username=session.get('username'),
     )
 
