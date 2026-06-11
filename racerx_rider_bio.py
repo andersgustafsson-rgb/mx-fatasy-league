@@ -242,18 +242,17 @@ def twin_group_key(name: str, rider_number: int | None = None) -> str:
 
 def riders_are_twins(a: Any, b: Any) -> bool:
     """Samma förare i 450/250 och WSX även vid stavfel (t.ex. Christan vs Christian)."""
-    if _normalize_rider_lookup_name(getattr(a, "name", None) or "") == _normalize_rider_lookup_name(
-        getattr(b, "name", None) or ""
-    ):
-        return True
+    ca = getattr(a, "class_name", None) or ""
+    cb = getattr(b, "class_name", None) or ""
+    na = _normalize_rider_lookup_name(getattr(a, "name", None) or "")
+    nb = _normalize_rider_lookup_name(getattr(b, "name", None) or "")
+    if na and na == nb:
+        return _classes_can_twin(ca, cb)
     ka = twin_group_key(getattr(a, "name", None) or "", getattr(a, "rider_number", None))
     kb = twin_group_key(getattr(b, "name", None) or "", getattr(b, "rider_number", None))
     if not (ka and kb and ka == kb and "#" in ka):
         return False
-    return _classes_can_twin(
-        getattr(a, "class_name", None) or "",
-        getattr(b, "class_name", None) or "",
-    )
+    return _classes_can_twin(ca, cb)
 
 
 def _rider_class_priority(class_name: str) -> int:
@@ -298,18 +297,45 @@ def rider_ids_with_db_portrait(rider_ids: list[int]) -> set[int]:
 
 
 def build_riders_by_name_map(riders: list[Any]) -> dict[str, list[Any]]:
-    """Indexera förare per twin-grupp (efternamn#nummer eller exakt namn)."""
+    """Indexera förare per namn och efternamn#nummer (WSX kan ha annat # än AMA)."""
     out: dict[str, list[Any]] = {}
     for rider in riders:
-        key = twin_group_key(
+        norm = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
+        num_key = twin_group_key(
             getattr(rider, "name", None) or "",
             getattr(rider, "rider_number", None),
         )
-        if not key:
-            key = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
-        if key:
-            out.setdefault(key, []).append(rider)
+        for key in (norm, num_key):
+            if key:
+                out.setdefault(key, []).append(rider)
     return out
+
+
+def twins_from_name_map(
+    rider: Any,
+    riders_by_name: dict[str, list[Any]] | None,
+) -> list[Any]:
+    """Slå upp syskon i förbyggd karta — filtrerar på klass och riders_are_twins."""
+    if not riders_by_name:
+        return []
+    keys = [
+        twin_group_key(getattr(rider, "name", None) or "", getattr(rider, "rider_number", None)),
+        _normalize_rider_lookup_name(getattr(rider, "name", None) or ""),
+    ]
+    merged: list[Any] = []
+    seen: set[int] = set()
+    for key in keys:
+        if not key:
+            continue
+        for other in riders_by_name.get(key, []):
+            oid = int(getattr(other, "id", 0) or 0)
+            if not oid or oid in seen:
+                continue
+            if not riders_are_twins(rider, other):
+                continue
+            seen.add(oid)
+            merged.append(other)
+    return merged
 
 
 def find_rider_twins(
@@ -336,31 +362,45 @@ def find_rider_twins(
             self.id = 0
             self.class_name = cls
 
-    shim = ref if ref is not None else _Ref(name, rider_number)
+    ref_cls = getattr(ref, "class_name", None) if ref is not None else None
+    shim = ref if ref is not None else _Ref(name, rider_number, ref_cls)
 
     if riders is not None:
-        return [r for r in riders if riders_are_twins(shim, r)]
+        twins = [r for r in riders if riders_are_twins(shim, r)]
+        if ref_cls:
+            allowed = _compatible_twin_classes(str(ref_cls))
+            twins = [t for t in twins if (getattr(t, "class_name", None) or "").lower() in allowed]
+        return twins
 
     from models import Rider
 
+    raw = _canonical_rider_name(name)
+    if not raw:
+        return []
     last = _last_name(name)
+    candidates: list[Any] = []
+    seen_ids: set[int] = set()
+
+    def _add(rows: list[Any]) -> None:
+        for row in rows:
+            rid = int(getattr(row, "id", 0) or 0)
+            if rid and rid not in seen_ids:
+                seen_ids.add(rid)
+                candidates.append(row)
+
+    parts = raw.split()
+    q = _rider_query_light()
+    if len(parts) >= 2:
+        q = q.filter(Rider.name.ilike(f"%{parts[0]}%{parts[-1]}%"))
+    else:
+        q = q.filter(Rider.name.ilike(f"%{raw}%"))
+    _add(q.limit(50).all())
     if rider_number is not None and last:
-        candidates = (
+        _add(
             _rider_query_light()
             .filter(Rider.rider_number == int(rider_number), Rider.name.ilike(f"%{last}%"))
             .all()
         )
-    else:
-        raw = _canonical_rider_name(name)
-        if not raw:
-            return []
-        parts = raw.split()
-        q = _rider_query_light()
-        if len(parts) >= 2:
-            q = q.filter(Rider.name.ilike(f"%{parts[0]}%{parts[-1]}%"))
-        else:
-            q = q.filter(Rider.name.ilike(f"%{raw}%"))
-        candidates = q.limit(40).all()
     twins = [r for r in candidates if riders_are_twins(shim, r)]
     ref_cls = getattr(shim, "class_name", None)
     if ref_cls:
@@ -655,10 +695,11 @@ def ensure_rider_content_from_twins(rider: Any, riders: list[Any] | None = None)
         )
         if twin_bio and twin_bio.id != rider.id and copy_bio_between_riders(twin_bio, rider):
             changed = True
-    best = find_best_portrait_rider_for_name(getattr(rider, "name", None) or "", riders=twins)
-    if best and best.id != rider.id:
-        if copy_portrait_between_riders(best, rider, overwrite=False, allow_blob=False):
-            changed = True
+    if not _rider_has_portrait(rider):
+        best = find_best_portrait_rider_for_name(getattr(rider, "name", None) or "", riders=twins)
+        if best and best.id != rider.id:
+            if copy_portrait_between_riders(best, rider, overwrite=False, allow_blob=True):
+                changed = True
     return changed
 
 
@@ -729,10 +770,10 @@ def bulk_fill_wsx_from_ama_twins() -> dict[str, int]:
             )
             if source_bio and source_bio.id != wsx.id and copy_bio_between_riders(source_bio, wsx):
                 bio_n += 1
-        if not (getattr(wsx, "image_url", None) or "").strip():
+        if not _rider_has_portrait(wsx):
             best = find_best_portrait_rider_for_name(wsx.name or "", riders=twins)
             if best and best.id != wsx.id and copy_portrait_between_riders(
-                best, wsx, overwrite=False, allow_blob=False
+                best, wsx, overwrite=False, allow_blob=True
             ):
                 img_n += 1
     return {
@@ -740,6 +781,52 @@ def bulk_fill_wsx_from_ama_twins() -> dict[str, int]:
         "wsx_portrait_url_filled": img_n,
         "wsx_names_fixed": name_n,
     }
+
+
+def _sync_cluster_keys(rider: Any) -> list[str]:
+    """Unika nycklar per förare — namn (olika #) och efternamn#nummer (stavfel)."""
+    keys: list[str] = []
+    norm = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
+    if norm:
+        keys.append(f"name:{norm}")
+    num_key = twin_group_key(
+        getattr(rider, "name", None) or "",
+        getattr(rider, "rider_number", None),
+    )
+    if num_key:
+        keys.append(num_key)
+    return keys
+
+
+def _sync_twin_cluster(rider: Any, riders: list[Any]) -> tuple[int, int]:
+    """Bio + porträtt inom en dublett-grupp."""
+    twins = find_rider_twins(rider, riders=riders)
+    if len(twins) < 2:
+        return 0, 0
+    bio_fixed = 0
+    for wsx in twins:
+        if (getattr(wsx, "class_name", None) or "") in ("wsx_sx1", "wsx_sx2"):
+            align_wsx_name_to_primary(wsx, twins)
+    source_bio = find_rider_with_bio_by_name(
+        getattr(rider, "name", None) or "",
+        riders=twins,
+        rider_number=getattr(rider, "rider_number", None),
+        for_rider=rider,
+    )
+    if source_bio:
+        for other in twins:
+            if other.id == source_bio.id:
+                continue
+            if copy_bio_between_riders(source_bio, other):
+                bio_fixed += 1
+    portrait_fixed = len(
+        sync_portraits_for_name(
+            getattr(rider, "name", None) or "",
+            riders=twins,
+            rider_number=getattr(rider, "rider_number", None),
+        )
+    )
+    return bio_fixed, portrait_fixed
 
 
 def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]:
@@ -755,35 +842,16 @@ def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]
     bio_fixed = 0
     portrait_fixed = 0
     for rider in riders:
-        key = twin_group_key(
-            getattr(rider, "name", None) or "",
-            getattr(rider, "rider_number", None),
-        )
-        if not key or key in seen_keys:
+        cluster_keys = _sync_cluster_keys(rider)
+        if not cluster_keys:
             continue
-        seen_keys.add(key)
-        twins = find_rider_twins(rider, riders=riders)
-        for wsx in twins:
-            if (getattr(wsx, "class_name", None) or "") in ("wsx_sx1", "wsx_sx2"):
-                align_wsx_name_to_primary(wsx, twins)
-        source_bio = find_rider_with_bio_by_name(
-            getattr(rider, "name", None) or "",
-            riders=twins,
-            rider_number=getattr(rider, "rider_number", None),
-        )
-        if source_bio:
-            for other in twins:
-                if other.id == source_bio.id:
-                    continue
-                if copy_bio_between_riders(source_bio, other):
-                    bio_fixed += 1
-        portrait_fixed += len(
-            sync_portraits_for_name(
-                getattr(rider, "name", None) or "",
-                riders=twins,
-                rider_number=getattr(rider, "rider_number", None),
-            )
-        )
+        if all(k in seen_keys for k in cluster_keys):
+            continue
+        for k in cluster_keys:
+            seen_keys.add(k)
+        b, p = _sync_twin_cluster(rider, riders)
+        bio_fixed += b
+        portrait_fixed += p
     blobs_cleared = compact_wsx_portrait_blobs()
     return {
         "names_processed": len(seen_keys),

@@ -2368,11 +2368,10 @@ def _riders_for_image_lookup(
 ) -> list[Rider]:
     """Samma namn — dela porträtt mellan 450/250 och WSX-dubletter."""
     try:
-        from racerx_rider_bio import find_rider_twins, twin_group_key
+        from racerx_rider_bio import find_rider_twins, twins_from_name_map
 
         if riders_by_name is not None:
-            key = twin_group_key(rider.name or "", rider.rider_number)
-            twins = riders_by_name.get(key, [rider])
+            twins = twins_from_name_map(rider, riders_by_name) or [rider]
         else:
             twins = find_rider_twins(rider)
         ordered = [rider] + [t for t in twins if t.id != rider.id]
@@ -2401,14 +2400,12 @@ def template_rider_image_src(
         from racerx_rider_bio import (
             find_best_portrait_rider_for_name,
             rider_ids_with_db_portrait,
-            twin_group_key,
+            twins_from_name_map,
         )
 
         twin_list: list[Rider] | None = None
         if riders_by_name is not None:
-            twin_list = riders_by_name.get(
-                twin_group_key(rider.name or "", rider.rider_number)
-            )
+            twin_list = twins_from_name_map(rider, riders_by_name) or None
         best = find_best_portrait_rider_for_name(rider.name or "", riders=twin_list)
     except Exception:
         best = None
