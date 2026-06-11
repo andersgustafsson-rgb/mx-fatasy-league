@@ -2238,8 +2238,9 @@
                     showRacerxBioStatus(data.error || 'Synk misslyckades', true);
                     return;
                 }
+                const blobs = data.wsx_blobs_cleared ? `, ${data.wsx_blobs_cleared} WSX-blobbar rensade` : '';
                 showRacerxBioStatus(
-                    `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt uppdaterade.`,
+                    `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt${blobs}.`,
                     false
                 );
             } catch (e) {

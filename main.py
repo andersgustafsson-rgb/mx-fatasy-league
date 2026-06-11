@@ -2409,13 +2409,18 @@ def template_rider_image_src(
     for r in _riders_for_image_lookup(rider, riders_by_name=riders_by_name):
         if r.id not in {x.id for x in lookup_riders}:
             lookup_riders.append(r)
+    try:
+        from racerx_rider_bio import rider_ids_with_db_portrait
+
+        db_portrait_ids = rider_ids_with_db_portrait([int(r.id) for r in lookup_riders])
+    except Exception:
+        db_portrait_ids = set()
     for r in lookup_riders:
-        raw_data = getattr(r, "rider_image_data", None)
-        if raw_data and str(raw_data).strip().startswith("data:image"):
+        if int(r.id) in db_portrait_ids:
             return f"/rider_portrait/{r.id}"
         url = _display_image_url_for_rider_row(
             r.id,
-            has_db_portrait=bool(raw_data and str(raw_data).strip()),
+            has_db_portrait=False,
             image_url=getattr(r, "image_url", None),
             rider_name=r.name,
             rider_number=r.rider_number,
@@ -2515,22 +2520,23 @@ def rider_portrait(rider_id: int):
     import base64
     import hashlib
 
-    rider = Rider.query.get_or_404(rider_id)
+    rider = Rider.query.filter_by(id=rider_id).first_or_404()
+    portrait_id = rider_id
     try:
-        from racerx_rider_bio import find_best_portrait_rider_for_name
+        from racerx_rider_bio import find_best_portrait_rider_for_name, rider_ids_with_db_portrait
 
         best = find_best_portrait_rider_for_name(rider.name or "")
-        if best is not None and best.id != rider.id:
-            rider = best
+        if best is not None:
+            portrait_id = int(best.id)
     except Exception:
         pass
 
-    raw = db.session.query(Rider.rider_image_data).filter_by(id=rider.id).scalar()
+    raw = db.session.query(Rider.rider_image_data).filter_by(id=portrait_id).scalar()
     s = str(raw or "").strip()
     if not s.startswith("data:image"):
         ext = (
             db.session.query(Rider.image_url)
-            .filter_by(id=rider.id)
+            .filter_by(id=portrait_id)
             .scalar()
         )
         ext_s = str(ext or "").strip()
@@ -5874,9 +5880,16 @@ def run_migration():
 # Public rider profile
 @app.get('/rider/<int:rider_id>')
 def rider_profile(rider_id: int):
+    from sqlalchemy.orm import defer
     from racerx_rider_bio import resolve_rider_bio_source
 
-    rider = Rider.query.get_or_404(rider_id)
+    rider = (
+        Rider.query.options(
+            defer(Rider.rider_image_data),
+        )
+        .filter_by(id=rider_id)
+        .first_or_404()
+    )
     bio_source = resolve_rider_bio_source(rider)
     return render_template(
         'rider_detail.html',
@@ -5892,7 +5905,9 @@ def rider_bio_i18n(rider_id: int):
     """Bio/meriter på engelska eller svenska (översätter och cachar vid behov)."""
     from racerx_rider_bio import resolve_rider_bio_source
 
-    rider = Rider.query.get_or_404(rider_id)
+    from sqlalchemy.orm import defer
+
+    rider = Rider.query.options(defer(Rider.rider_image_data)).get_or_404(rider_id)
     bio_source = resolve_rider_bio_source(rider)
     lang = (request.args.get("lang") or "sv").strip().lower()
     if lang not in ("en", "sv"):

@@ -205,6 +205,43 @@ def _rider_class_priority(class_name: str) -> int:
     return _CLASS_PRIORITY.get((class_name or "").strip().lower(), 99)
 
 
+def _rider_query_light():
+    """För dublett-uppslag utan att ladda porträtt-blobbar och långa textfält."""
+    from sqlalchemy.orm import defer
+    from models import Rider
+
+    return Rider.query.options(
+        defer(Rider.rider_image_data),
+        defer(Rider.bio),
+        defer(Rider.achievements),
+        defer(Rider.bio_sv),
+        defer(Rider.achievements_sv),
+    )
+
+
+def _canonical_rider_name(name: str) -> str:
+    return " ".join((name or "").strip().split())
+
+
+def rider_ids_with_db_portrait(rider_ids: list[int]) -> set[int]:
+    """Kolla vilka id som har DB-porträtt utan att läsa base64-innehållet."""
+    if not rider_ids:
+        return set()
+    from sqlalchemy import func
+    from models import Rider, db
+
+    rows = (
+        db.session.query(Rider.id)
+        .filter(
+            Rider.id.in_(rider_ids),
+            Rider.rider_image_data.isnot(None),
+            func.length(Rider.rider_image_data) > 24,
+        )
+        .all()
+    )
+    return {int(r.id) for r in rows}
+
+
 def build_riders_by_name_map(riders: list[Any]) -> dict[str, list[Any]]:
     """Indexera förare per normaliserat namn (en query, återanvänds i mallar)."""
     out: dict[str, list[Any]] = {}
@@ -220,11 +257,14 @@ def find_riders_by_name(name: str, riders: list[Any] | None = None) -> list[Any]
     key = _normalize_rider_lookup_name(name)
     if not key:
         return []
-    if riders is None:
-        from models import Rider
+    if riders is not None:
+        return [r for r in riders if _normalize_rider_lookup_name(r.name) == key]
+    canonical = _canonical_rider_name(name)
+    if not canonical:
+        return []
+    from models import Rider
 
-        riders = Rider.query.all()
-    return [r for r in riders if _normalize_rider_lookup_name(r.name) == key]
+    return _rider_query_light().filter(Rider.name == canonical).all()
 
 
 def pick_primary_rider_for_name(name: str, riders: list[Any] | None = None) -> Any | None:
@@ -235,10 +275,12 @@ def pick_primary_rider_for_name(name: str, riders: list[Any] | None = None) -> A
     return min(matches, key=lambda r: (_rider_class_priority(r.class_name), r.id))
 
 
-def _portrait_quality(rider: Any) -> int:
+def _portrait_quality(rider: Any, *, has_db_portrait: bool | None = None) -> int:
     """Högre = bättre källa (data-URL / CDN före trasig lokal sökväg)."""
-    data = getattr(rider, "rider_image_data", None)
-    if data and str(data).strip().startswith("data:image"):
+    if has_db_portrait is None:
+        data = getattr(rider, "rider_image_data", None)
+        has_db_portrait = bool(data and str(data).strip().startswith("data:image"))
+    if has_db_portrait:
         return 100
     url = getattr(rider, "image_url", None)
     if not url:
@@ -259,25 +301,43 @@ def _rider_has_portrait(rider: Any) -> bool:
 
 def find_best_portrait_rider_for_name(name: str, riders: list[Any] | None = None) -> Any | None:
     matches = find_riders_by_name(name, riders=riders)
-    scored = [(r, _portrait_quality(r)) for r in matches if _portrait_quality(r) > 0]
+    if not matches:
+        return None
+    with_db = rider_ids_with_db_portrait([int(r.id) for r in matches])
+    scored = [
+        (r, _portrait_quality(r, has_db_portrait=(int(r.id) in with_db)))
+        for r in matches
+        if _portrait_quality(r, has_db_portrait=(int(r.id) in with_db)) > 0
+    ]
     if not scored:
         return None
     return max(scored, key=lambda item: (item[1], -_rider_class_priority(item[0].class_name)))[0]
 
 
 def copy_portrait_between_riders(source: Any, target: Any, *, overwrite: bool = False) -> bool:
-    """Kopiera porträtt mellan dublett-rader."""
-    if not _rider_has_portrait(source):
+    """Kopiera porträtt mellan dublett-rader (URL; undvik att duplicera stora base64-blobbar)."""
+    src_ids = rider_ids_with_db_portrait([int(source.id)]) if getattr(source, "id", None) else set()
+    tgt_ids = rider_ids_with_db_portrait([int(target.id)]) if getattr(target, "id", None) else set()
+    src_q = _portrait_quality(source, has_db_portrait=(int(source.id) in src_ids))
+    tgt_q = _portrait_quality(target, has_db_portrait=(int(target.id) in tgt_ids))
+    if src_q <= 0 and not (getattr(source, "image_url", None) or "").strip():
         return False
-    src_q = _portrait_quality(source)
-    tgt_q = _portrait_quality(target)
-    if not overwrite and tgt_q >= src_q:
+    if not overwrite and tgt_q >= src_q and (getattr(target, "image_url", None) or "").strip():
         return False
-    if getattr(source, "rider_image_data", None):
-        target.rider_image_data = source.rider_image_data
-    if getattr(source, "image_url", None):
+    changed = False
+    src_url = (getattr(source, "image_url", None) or "").strip()
+    if src_url and (overwrite or not (getattr(target, "image_url", None) or "").strip()):
         target.image_url = source.image_url
-    return True
+        changed = True
+    # Blob kopieras bara om målraden saknar både URL och sparad bild.
+    if int(source.id) in src_ids and int(target.id) not in tgt_ids and not src_url:
+        from models import Rider, db
+
+        blob = db.session.query(Rider.rider_image_data).filter_by(id=int(source.id)).scalar()
+        if blob and str(blob).strip().startswith("data:image"):
+            target.rider_image_data = blob
+            changed = True
+    return changed
 
 
 def sync_portraits_for_name(name: str, riders: list[Any] | None = None) -> list[int]:
@@ -410,12 +470,38 @@ def resolve_rider_bio_source(rider: Any, riders: list[Any] | None = None) -> Any
     return twin or rider
 
 
+def compact_wsx_portrait_blobs() -> int:
+    """Rensa duplicerade base64-blobbar på WSX när image_url räcker (tvilling-fallback)."""
+    from models import Rider, db
+
+    cleared = 0
+    wsx_rows = (
+        _rider_query_light()
+        .filter(Rider.class_name.in_(("wsx_sx1", "wsx_sx2")))
+        .all()
+    )
+    blob_ids = rider_ids_with_db_portrait([int(r.id) for r in wsx_rows])
+    for row in wsx_rows:
+        if int(row.id) not in blob_ids:
+            continue
+        if not (getattr(row, "image_url", None) or "").strip():
+            continue
+        db.session.execute(
+            db.text("UPDATE riders SET rider_image_data = NULL WHERE id = :id"),
+            {"id": int(row.id)},
+        )
+        cleared += 1
+    return cleared
+
+
 def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]:
     """Kopiera bio och porträtt mellan alla dublett-rader (samma namn)."""
     if riders is None:
         from models import Rider
 
-        riders = Rider.query.all()
+        riders = _rider_query_light().order_by(
+            Rider.class_name, Rider.rider_number, Rider.name
+        ).all()
     keys = sorted(
         {_normalize_rider_lookup_name(getattr(r, "name", None) or "") for r in riders} - {""}
     )
@@ -435,10 +521,12 @@ def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]
         )
         if name:
             portrait_fixed += len(sync_portraits_for_name(name, riders=riders))
+    blobs_cleared = compact_wsx_portrait_blobs()
     return {
         "names_processed": len(keys),
         "bio_rows_updated": bio_fixed,
         "portrait_rows_updated": portrait_fixed,
+        "wsx_blobs_cleared": blobs_cleared,
     }
 
 
