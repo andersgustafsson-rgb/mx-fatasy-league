@@ -2203,7 +2203,16 @@
             try {
                 const res = await fetch('/admin/tools/racerx_bio/status');
                 const data = await res.json();
-                if (data.ok && data.remaining_without_bio != null) {
+                if (data.ok && data.remaining_to_fetch != null) {
+                    let msg = `${data.remaining_to_fetch} kvar att hämta`;
+                    if (data.racerx_skipped_names > 0) {
+                        msg += ` (${data.racerx_skipped_names} utan RacerX-profil)`;
+                    }
+                    if (data.remaining_without_bio != null && data.remaining_without_bio !== data.remaining_to_fetch) {
+                        msg += ` · ${data.remaining_without_bio} saknar bio totalt`;
+                    }
+                    el.textContent = msg;
+                } else if (data.ok && data.remaining_without_bio != null) {
                     el.textContent = `${data.remaining_without_bio} förare saknar bio`;
                 }
             } catch (_) {
@@ -2241,9 +2250,12 @@
                     return `<li class="text-red-400">${escapeHtml(label + err)}</li>`;
                 }).join('');
                 const elapsed = data.elapsed_seconds != null ? ` Tog ${data.elapsed_seconds}s.` : '';
+                const skipped = data.skipped ? ` ${data.skipped} hoppade över (ingen RacerX).` : '';
+                const left = data.remaining_to_fetch != null
+                    ? data.remaining_to_fetch + ' kvar att hämta.'
+                    : (data.remaining_without_bio != null ? data.remaining_without_bio + ' kvar utan bio.' : '');
                 showRacerxBioStatus(
-                    `Klart: ${data.imported || 0} importerade av ${data.processed || 0}.${elapsed} ` +
-                    `${data.remaining_without_bio != null ? data.remaining_without_bio + ' kvar utan bio.' : ''}`,
+                    `Klart: ${data.imported || 0} importerade av ${data.processed || 0}.${elapsed}${skipped} ${left}`,
                     false
                 );
                 refreshRacerxBioRemaining();

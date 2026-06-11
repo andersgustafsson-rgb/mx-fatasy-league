@@ -724,8 +724,25 @@ def admin_racerx_bio_status():
 	"""Antal förare utan bio (för batch-knapp i förarhantering)."""
 	if not is_admin_user():
 		return jsonify({"error": "unauthorized"}), 401
-	remaining = Rider.query.filter(db.or_(Rider.bio.is_(None), Rider.bio == "")).count()
-	return jsonify({"ok": True, "remaining_without_bio": remaining})
+	from sqlalchemy import func
+	from racerx_rider_bio import iter_names_needing_racerx_bio
+
+	remaining_without_bio = Rider.query.filter(
+		db.or_(Rider.bio.is_(None), Rider.bio == "")
+	).count()
+	skipped_names = (
+		db.session.query(func.count(func.distinct(Rider.name)))
+		.filter(Rider.racerx_bio_skip.isnot(None), Rider.racerx_bio_skip != "")
+		.scalar()
+	) or 0
+	all_riders = Rider.query.order_by(Rider.class_name, Rider.rider_number, Rider.name).all()
+	remaining_to_fetch = len(iter_names_needing_racerx_bio(all_riders, refresh_all=False))
+	return jsonify({
+		"ok": True,
+		"remaining_without_bio": remaining_without_bio,
+		"remaining_to_fetch": remaining_to_fetch,
+		"racerx_skipped_names": int(skipped_names),
+	})
 
 
 @bp.get("/admin/tools/racerx_bio/preview")
@@ -799,11 +816,12 @@ def admin_racerx_bio_bulk():
 
 		t0 = time.monotonic()
 		from racerx_rider_bio import (
-			_normalize_rider_lookup_name,
 			apply_profile_to_rider,
 			copy_bio_between_riders,
 			fetch_racerx_rider_profile,
 			find_rider_with_bio_by_name,
+			iter_names_needing_racerx_bio,
+			mark_racerx_bio_skip,
 			pick_primary_rider_for_name,
 			sync_rider_twins,
 		)
@@ -815,15 +833,12 @@ def admin_racerx_bio_bulk():
 		class_name = (data.get("class_name") or "").strip()
 
 		all_riders = Rider.query.order_by(Rider.class_name, Rider.rider_number, Rider.name).all()
-		name_keys: list[str] = []
-		for rider in all_riders:
-			if class_name and rider.class_name != class_name:
-				continue
-			if refresh_all or not (rider.bio or "").strip():
-				key = _normalize_rider_lookup_name(rider.name or "")
-				if key and key not in name_keys:
-					name_keys.append(key)
-		name_keys = name_keys[:limit]
+		name_keys = iter_names_needing_racerx_bio(
+			all_riders,
+			refresh_all=refresh_all,
+			class_name=class_name,
+			limit=limit,
+		)
 
 		results = []
 		ok_count = 0
@@ -853,8 +868,12 @@ def admin_racerx_bio_bulk():
 				else:
 					profile = fetch_racerx_rider_profile(name)
 					if not profile.get("ok"):
+						err = profile.get("error", "not_found")
 						entry["ok"] = False
-						entry["error"] = profile.get("error", "not_found")
+						entry["error"] = err
+						entry["skipped"] = True
+						mark_racerx_bio_skip(rider, err, riders=all_riders)
+						db.session.commit()
 						results.append(entry)
 						time.sleep(delay)
 						continue
@@ -872,18 +891,30 @@ def admin_racerx_bio_bulk():
 				entry["error"] = str(exc)
 			results.append(entry)
 
-		remaining = Rider.query
+		remaining_without_bio = Rider.query
 		if class_name:
-			remaining = remaining.filter(Rider.class_name == class_name)
+			remaining_without_bio = remaining_without_bio.filter(Rider.class_name == class_name)
 		if not refresh_all:
-			remaining = remaining.filter(db.or_(Rider.bio.is_(None), Rider.bio == ""))
-		remaining_count = remaining.count()
+			remaining_without_bio = remaining_without_bio.filter(
+				db.or_(Rider.bio.is_(None), Rider.bio == "")
+			)
+		remaining_count = remaining_without_bio.count()
+		remaining_to_fetch = len(
+			iter_names_needing_racerx_bio(
+				all_riders,
+				refresh_all=refresh_all,
+				class_name=class_name,
+			)
+		)
+		skipped_this_run = sum(1 for r in results if r.get("skipped"))
 
 		return jsonify({
 			"ok": True,
 			"processed": len(results),
 			"imported": ok_count,
+			"skipped": skipped_this_run,
 			"remaining_without_bio": remaining_count,
+			"remaining_to_fetch": remaining_to_fetch,
 			"elapsed_seconds": round(time.monotonic() - t0, 1),
 			"results": results,
 		})

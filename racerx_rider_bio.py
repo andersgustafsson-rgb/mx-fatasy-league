@@ -315,6 +315,8 @@ def copy_bio_between_riders(source: Any, target: Any) -> bool:
         target.bio_sv = source.bio_sv
     if getattr(source, "achievements_sv", None):
         target.achievements_sv = source.achievements_sv
+    if bio or ach:
+        clear_racerx_bio_skip(target)
     return True
 
 
@@ -331,6 +333,59 @@ def sync_bio_to_name_twins(rider: Any, riders: list[Any] | None = None) -> list[
         if copy_bio_between_riders(rider, other):
             synced.append(other.id)
     return synced
+
+
+def find_racerx_skip_for_name(name: str, riders: list[Any] | None = None) -> str:
+    """Tom sträng om namnet inte markerats som ej hittbar på RacerX."""
+    for rider in find_riders_by_name(name, riders=riders):
+        skip = (getattr(rider, "racerx_bio_skip", None) or "").strip()
+        if skip:
+            return skip
+    return ""
+
+
+def mark_racerx_bio_skip(rider: Any, reason: str, riders: list[Any] | None = None) -> list[int]:
+    """Markera alla dublett-rader — batchen ska inte försöka samma namn igen."""
+    reason = _clean_ws((reason or "unknown"))[:200]
+    marked: list[int] = []
+    for other in find_riders_by_name(getattr(rider, "name", None) or "", riders=riders):
+        if hasattr(other, "racerx_bio_skip"):
+            other.racerx_bio_skip = reason
+            marked.append(other.id)
+    return marked
+
+
+def clear_racerx_bio_skip(rider: Any, riders: list[Any] | None = None) -> None:
+    for other in find_riders_by_name(getattr(rider, "name", None) or "", riders=riders):
+        if hasattr(other, "racerx_bio_skip"):
+            other.racerx_bio_skip = None
+
+
+def iter_names_needing_racerx_bio(
+    all_riders: list[Any],
+    *,
+    refresh_all: bool = False,
+    class_name: str = "",
+    limit: int | None = None,
+) -> list[str]:
+    """Unika namn som saknar bio och inte redan markerats som RacerX-miss."""
+    name_keys: list[str] = []
+    seen: set[str] = set()
+    for rider in all_riders:
+        if class_name and rider.class_name != class_name:
+            continue
+        if not refresh_all and (getattr(rider, "bio", None) or "").strip():
+            continue
+        key = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
+        if not key or key in seen:
+            continue
+        if find_racerx_skip_for_name(key, riders=all_riders):
+            continue
+        seen.add(key)
+        name_keys.append(key)
+        if limit is not None and len(name_keys) >= limit:
+            break
+    return name_keys
 
 
 def find_rider_with_bio_by_name(name: str, riders: list[Any] | None = None) -> Any | None:
@@ -359,6 +414,7 @@ def apply_profile_to_rider(
     if bio:
         rider.bio = bio[:8000]
         changed = True
+        clear_racerx_bio_skip(rider)
     acc = (profile.get("accomplishments") or "").strip()
     if acc:
         rider.achievements = acc[:8000]

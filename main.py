@@ -16870,6 +16870,31 @@ def _sqlite_add_column_if_missing(table: str, column: str, ddl: str) -> None:
     print(f'Added missing column {table}.{column}')
 
 
+def _ensure_racerx_bio_skip_column() -> None:
+    """racerx_bio_skip — batch hoppar över namn som saknas på RacerX."""
+    try:
+        if "postgresql" in str(db.engine.url):
+            result = db.session.execute(
+                db.text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'riders' AND column_name = 'racerx_bio_skip'"
+                )
+            )
+            if not result.fetchone():
+                db.session.execute(
+                    db.text("ALTER TABLE riders ADD COLUMN racerx_bio_skip VARCHAR(200)")
+                )
+                print("Added missing column riders.racerx_bio_skip")
+            db.session.commit()
+        else:
+            _sqlite_add_column_if_missing(
+                "riders", "racerx_bio_skip", "racerx_bio_skip VARCHAR(200)"
+            )
+    except Exception as col_err:
+        db.session.rollback()
+        print(f"Warning: racerx_bio_skip column patch skipped: {col_err}")
+
+
 def _ensure_rider_bio_sv_columns() -> None:
     """bio_sv / achievements_sv — svensk översättningscache på riders."""
     try:
@@ -16919,6 +16944,10 @@ def init_database():
                     _ensure_rider_bio_sv_columns()
                 except Exception as bio_col_err:
                     print(f"Warning: bio_sv migration skipped: {bio_col_err}")
+                try:
+                    _ensure_racerx_bio_skip_column()
+                except Exception as skip_col_err:
+                    print(f"Warning: racerx_bio_skip migration skipped: {skip_col_err}")
                 # Auto-seed WSX 2025 so it always exists for the UI
                 try:
                     ensure_wsx_series_and_competitions()

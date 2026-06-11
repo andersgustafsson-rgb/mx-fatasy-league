@@ -17,32 +17,16 @@ load_dotenv(ROOT / ".env")
 
 from models import Rider, db  # noqa: E402
 from racerx_rider_bio import (  # noqa: E402
-    _normalize_rider_lookup_name,
     apply_profile_to_rider,
     copy_bio_between_riders,
     fetch_racerx_rider_profile,
     find_rider_with_bio_by_name,
+    iter_names_needing_racerx_bio,
+    mark_racerx_bio_skip,
     pick_primary_rider_for_name,
     sync_rider_twins,
 )
 from tools.apply_racerx_bio import _make_app  # noqa: E402
-
-
-def _names_needing_bio(
-    all_riders: list[Rider],
-    *,
-    refresh_all: bool,
-    class_name: str,
-) -> list[str]:
-    names: set[str] = set()
-    for rider in all_riders:
-        if class_name and rider.class_name != class_name:
-            continue
-        if refresh_all or not (rider.bio or "").strip():
-            key = _normalize_rider_lookup_name(rider.name or "")
-            if key:
-                names.add(key)
-    return sorted(names)
 
 
 def main() -> None:
@@ -59,13 +43,13 @@ def main() -> None:
     with app.app_context():
         print("DB:", app.config["SQLALCHEMY_DATABASE_URI"])
         all_riders = Rider.query.order_by(Rider.class_name, Rider.rider_number, Rider.name).all()
-        name_keys = _names_needing_bio(
+        limit = args.limit if args.limit > 0 else None
+        name_keys = iter_names_needing_racerx_bio(
             all_riders,
             refresh_all=args.all,
             class_name=(args.class_name or "").strip(),
+            limit=limit,
         )
-        if args.limit > 0:
-            name_keys = name_keys[: args.limit]
 
         plan: list[tuple[str, Rider, str]] = []
         for key in name_keys:
@@ -105,7 +89,10 @@ def main() -> None:
                 else:
                     profile = fetch_racerx_rider_profile(name)
                     if not profile.get("ok"):
-                        print("MISS", profile.get("error", "?"))
+                        err = profile.get("error", "?")
+                        mark_racerx_bio_skip(rider, err, riders=all_riders)
+                        db.session.commit()
+                        print("SKIP", err)
                         fail += 1
                         time.sleep(args.delay)
                         continue

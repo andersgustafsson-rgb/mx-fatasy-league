@@ -129,6 +129,7 @@ class Rider(db.Model):
     achievements = db.Column(db.Text)
     bio_sv = db.Column(db.Text, nullable=True)
     achievements_sv = db.Column(db.Text, nullable=True)
+    racerx_bio_skip = db.Column(db.String(200), nullable=True)
 
 
 def rider_query_for_list_ui():
