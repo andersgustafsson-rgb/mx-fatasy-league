@@ -231,7 +231,8 @@
             <h3 class="text-lg font-semibold text-emerald-400 mb-2">📖 RacerX-bio (batch)</h3>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
                 Hämtar biografi och meriter från racerxonline.com för förare som saknar bio.
-                Körs i batch om 20 — sprids automatiskt till dublett-rader (450 + WSX) och svensk översättning sker när någon öppnar biosidan.
+                Körs i batch om 20 (~1–2 min per körning: RacerX-sida per förare + kort paus).
+                Sprids till dublett-rader (450 + WSX). Svenska översätts när någon öppnar biosidan.
             </p>
             <div class="flex flex-wrap gap-2 mb-3">
                 <button type="button" id="racerxBioBulkBtn"
@@ -2215,29 +2216,33 @@
             const btn = document.getElementById('racerxBioBulkBtn');
             const list = document.getElementById('racerxBioResults');
             if (!btn || !list) return;
-            if (!confirm('Hämta RacerX-bio för upp till 20 förare som saknar text? (tar ~30 sek)')) return;
+            if (!confirm('Hämta RacerX-bio för upp till 20 förare?\n\nTar oftast 1–2 minuter (ibland längre). Låt fliken vara öppen.')) return;
             btn.disabled = true;
-            showRacerxBioStatus('Hämtar bio från RacerX… kan ta en halvminut.', false);
+            showRacerxBioStatus('Hämtar bio från RacerX… 1–2 min, vänta i den här fliken.', false);
             list.innerHTML = '';
             try {
                 const res = await fetch('/admin/tools/racerx_bio/bulk', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ limit: 20, delay: 1.2 }),
+                    body: JSON.stringify({ limit: 20, delay: 0.6 }),
                 });
                 const data = await res.json();
                 if (!res.ok || data.error) {
                     showRacerxBioStatus(data.error || 'Batch misslyckades', true);
                     return;
                 }
-                const lines = (data.results || []).map((r) => {
+                list.innerHTML = (data.results || []).map((r) => {
                     const mark = r.ok ? '✓' : '✗';
-                    const extra = r.ok ? (r.class_name || '') : (r.error || '');
-                    return `${mark} ${r.name || ''} ${extra}`.trim();
-                });
-                list.innerHTML = lines.map((t) => `<li>${escapeHtml(t)}</li>`).join('');
+                    const label = `${mark} #${r.rider_number || '?'} ${r.name || ''} (${r.class_name || ''})`;
+                    if (r.ok && r.rider_id) {
+                        return `<li><a href="/rider/${r.rider_id}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">${escapeHtml(label)}</a></li>`;
+                    }
+                    const err = r.error ? ` — ${r.error}` : '';
+                    return `<li class="text-red-400">${escapeHtml(label + err)}</li>`;
+                }).join('');
+                const elapsed = data.elapsed_seconds != null ? ` Tog ${data.elapsed_seconds}s.` : '';
                 showRacerxBioStatus(
-                    `Klart: ${data.imported || 0} importerade av ${data.processed || 0}. ` +
+                    `Klart: ${data.imported || 0} importerade av ${data.processed || 0}.${elapsed} ` +
                     `${data.remaining_without_bio != null ? data.remaining_without_bio + ' kvar utan bio.' : ''}`,
                     false
                 );

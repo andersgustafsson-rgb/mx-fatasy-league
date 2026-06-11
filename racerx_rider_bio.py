@@ -17,6 +17,15 @@ HEADERS = {
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
+_HTTP: requests.Session | None = None
+
+
+def _http_session() -> requests.Session:
+    global _HTTP
+    if _HTTP is None:
+        _HTTP = requests.Session()
+        _HTTP.headers.update(HEADERS)
+    return _HTTP
 
 
 def _clean_ws(s: str) -> str:
@@ -144,7 +153,7 @@ def _parse_profile_page(html: str, page_url: str) -> dict[str, Any]:
     }
 
 
-def fetch_racerx_rider_profile(name_or_url: str, *, timeout: int = 20) -> dict[str, Any]:
+def fetch_racerx_rider_profile(name_or_url: str, *, timeout: int = 12) -> dict[str, Any]:
     """
     Hämta bio/meriter för en förare.
     name_or_url: 'Haiden Deegan' eller full RacerX-URL.
@@ -161,7 +170,7 @@ def fetch_racerx_rider_profile(name_or_url: str, *, timeout: int = 20) -> dict[s
     last_err = ""
     for page_url in urls:
         try:
-            resp = requests.get(page_url, headers=HEADERS, timeout=timeout, allow_redirects=True)
+            resp = _http_session().get(page_url, timeout=timeout, allow_redirects=True)
             if resp.status_code == 404:
                 last_err = f"404 {page_url}"
                 continue

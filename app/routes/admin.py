@@ -797,6 +797,7 @@ def admin_racerx_bio_bulk():
 	try:
 		import time
 
+		t0 = time.monotonic()
 		from racerx_rider_bio import (
 			_normalize_rider_lookup_name,
 			apply_profile_to_rider,
@@ -809,7 +810,7 @@ def admin_racerx_bio_bulk():
 
 		data = request.get_json(silent=True) or {}
 		limit = min(int(data.get("limit") or 25), 100)
-		delay = float(data.get("delay") or 1.2)
+		delay = max(0.35, float(data.get("delay") or 0.6))
 		refresh_all = bool(data.get("all"))
 		class_name = (data.get("class_name") or "").strip()
 
@@ -833,7 +834,12 @@ def admin_racerx_bio_bulk():
 			if class_name and rider.class_name != class_name:
 				continue
 			name = (rider.name or "").strip()
-			entry = {"rider_id": rider.id, "name": name, "class_name": rider.class_name}
+			entry = {
+				"rider_id": rider.id,
+				"name": name,
+				"class_name": rider.class_name,
+				"rider_number": rider.rider_number,
+			}
 			try:
 				existing = find_rider_with_bio_by_name(key, riders=all_riders)
 				if existing and not refresh_all and not (rider.bio or "").strip():
@@ -878,6 +884,7 @@ def admin_racerx_bio_bulk():
 			"processed": len(results),
 			"imported": ok_count,
 			"remaining_without_bio": remaining_count,
+			"elapsed_seconds": round(time.monotonic() - t0, 1),
 			"results": results,
 		})
 	except Exception as e:

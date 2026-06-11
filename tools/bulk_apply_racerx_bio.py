@@ -49,7 +49,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Importera RacerX-bio för flera förare")
     parser.add_argument("--all", action="store_true", help="Uppdatera även förare som redan har bio")
     parser.add_argument("--limit", type=int, default=0, help="Max antal unika namn (0 = alla)")
-    parser.add_argument("--delay", type=float, default=1.2, help="Sekunder mellan RacerX-anrop")
+    parser.add_argument("--delay", type=float, default=0.6, help="Sekunder mellan RacerX-anrop")
     parser.add_argument("--translate-sv", action="store_true", help="Översätt till svenska direkt efter import")
     parser.add_argument("--dry-run", action="store_true", help="Lista vilka som skulle köras")
     parser.add_argument("--class", dest="class_name", metavar="CLASS", help="Filtrera klass, t.ex. 450cc")
