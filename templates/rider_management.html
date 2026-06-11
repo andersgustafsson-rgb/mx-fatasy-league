@@ -2239,8 +2239,8 @@
                     return;
                 }
                 const blobs = data.wsx_blobs_cleared ? `, ${data.wsx_blobs_cleared} WSX-blobbar rensade` : '';
-                const wsx = (data.wsx_bio_filled || data.wsx_portrait_url_filled)
-                    ? ` WSX: ${data.wsx_bio_filled || 0} bio, ${data.wsx_portrait_url_filled || 0} bild-URL.`
+                const wsx = (data.wsx_bio_filled || data.wsx_portrait_url_filled || data.wsx_names_fixed)
+                    ? ` WSX: ${data.wsx_bio_filled || 0} bio, ${data.wsx_portrait_url_filled || 0} bild-URL, ${data.wsx_names_fixed || 0} namn rättade.`
                     : '';
                 showRacerxBioStatus(
                     `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt${blobs}.${wsx}`,

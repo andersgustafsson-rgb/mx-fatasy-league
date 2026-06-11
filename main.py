@@ -2368,13 +2368,13 @@ def _riders_for_image_lookup(
 ) -> list[Rider]:
     """Samma namn — dela porträtt mellan 450/250 och WSX-dubletter."""
     try:
-        from racerx_rider_bio import _normalize_rider_lookup_name, find_riders_by_name
+        from racerx_rider_bio import find_rider_twins, twin_group_key
 
         if riders_by_name is not None:
-            key = _normalize_rider_lookup_name(rider.name or "")
+            key = twin_group_key(rider.name or "", rider.rider_number)
             twins = riders_by_name.get(key, [rider])
         else:
-            twins = find_riders_by_name(rider.name or "")
+            twins = find_rider_twins(rider)
         ordered = [rider] + [t for t in twins if t.id != rider.id]
         seen: set[int] = set()
         out: list[Rider] = []
@@ -2399,14 +2399,16 @@ def template_rider_image_src(
         return None
     try:
         from racerx_rider_bio import (
-            _normalize_rider_lookup_name,
             find_best_portrait_rider_for_name,
             rider_ids_with_db_portrait,
+            twin_group_key,
         )
 
         twin_list: list[Rider] | None = None
         if riders_by_name is not None:
-            twin_list = riders_by_name.get(_normalize_rider_lookup_name(rider.name or ""))
+            twin_list = riders_by_name.get(
+                twin_group_key(rider.name or "", rider.rider_number)
+            )
         best = find_best_portrait_rider_for_name(rider.name or "", riders=twin_list)
     except Exception:
         best = None
@@ -2534,9 +2536,10 @@ def rider_portrait(rider_id: int):
     rider = Rider.query.filter_by(id=rider_id).first_or_404()
     portrait_id = rider_id
     try:
-        from racerx_rider_bio import find_best_portrait_rider_for_name, rider_ids_with_db_portrait
+        from racerx_rider_bio import find_best_portrait_rider_for_name, find_rider_twins
 
-        best = find_best_portrait_rider_for_name(rider.name or "")
+        twins = find_rider_twins(rider)
+        best = find_best_portrait_rider_for_name(rider.name or "", riders=twins)
         if best is not None:
             portrait_id = int(best.id)
     except Exception:
@@ -5901,9 +5904,9 @@ def rider_profile(rider_id: int):
         .filter_by(id=rider_id)
         .first_or_404()
     )
-    from racerx_rider_bio import _normalize_rider_lookup_name, build_riders_by_name_map, find_riders_by_name
+    from racerx_rider_bio import build_riders_by_name_map, find_rider_twins, twin_group_key
 
-    twins = find_riders_by_name(rider.name or "")
+    twins = find_rider_twins(rider)
     twins_by_name = build_riders_by_name_map(twins) if twins else None
     try:
         if ensure_rider_content_from_twins(rider, riders=twins):
@@ -5914,8 +5917,8 @@ def rider_profile(rider_id: int):
         print(f"ensure_rider_content_from_twins: {exc}")
     bio_source = resolve_rider_bio_source(rider, riders=twins)
     img_map = twins_by_name
-    if img_map is None and rider.name:
-        key = _normalize_rider_lookup_name(rider.name)
+    if img_map is None and twins:
+        key = twin_group_key(rider.name or "", rider.rider_number)
         if key:
             img_map = {key: twins}
     return render_template(

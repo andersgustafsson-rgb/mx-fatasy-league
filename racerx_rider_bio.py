@@ -201,6 +201,32 @@ def _normalize_rider_lookup_name(name: str) -> str:
     return " ".join((name or "").strip().split()).lower()
 
 
+def _last_name(name: str) -> str:
+    parts = _canonical_rider_name(name).split()
+    return parts[-1].lower() if parts else ""
+
+
+def twin_group_key(name: str, rider_number: int | None = None) -> str:
+    """Gruppnyckel för dubletter: efternamn#nummer (tål stavfel i förnamn)."""
+    norm = _normalize_rider_lookup_name(name)
+    if rider_number is not None:
+        last = _last_name(name)
+        if last:
+            return f"{last}#{int(rider_number)}"
+    return norm or ""
+
+
+def riders_are_twins(a: Any, b: Any) -> bool:
+    """Samma förare i 450/250 och WSX även vid stavfel (t.ex. Christan vs Christian)."""
+    if _normalize_rider_lookup_name(getattr(a, "name", None) or "") == _normalize_rider_lookup_name(
+        getattr(b, "name", None) or ""
+    ):
+        return True
+    ka = twin_group_key(getattr(a, "name", None) or "", getattr(a, "rider_number", None))
+    kb = twin_group_key(getattr(b, "name", None) or "", getattr(b, "rider_number", None))
+    return bool(ka and kb and ka == kb and "#" in ka)
+
+
 def _rider_class_priority(class_name: str) -> int:
     return _CLASS_PRIORITY.get((class_name or "").strip().lower(), 99)
 
@@ -243,37 +269,94 @@ def rider_ids_with_db_portrait(rider_ids: list[int]) -> set[int]:
 
 
 def build_riders_by_name_map(riders: list[Any]) -> dict[str, list[Any]]:
-    """Indexera förare per normaliserat namn (en query, återanvänds i mallar)."""
+    """Indexera förare per twin-grupp (efternamn#nummer eller exakt namn)."""
     out: dict[str, list[Any]] = {}
     for rider in riders:
-        key = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
+        key = twin_group_key(
+            getattr(rider, "name", None) or "",
+            getattr(rider, "rider_number", None),
+        )
+        if not key:
+            key = _normalize_rider_lookup_name(getattr(rider, "name", None) or "")
         if key:
             out.setdefault(key, []).append(rider)
     return out
 
 
-def find_riders_by_name(name: str, riders: list[Any] | None = None) -> list[Any]:
-    """Alla Rider-rader med samma namn (t.ex. 450cc + wsx_sx1)."""
-    key = _normalize_rider_lookup_name(name)
-    if not key:
-        return []
+def find_rider_twins(
+    rider_or_name: Any | str,
+    *,
+    riders: list[Any] | None = None,
+    rider_number: int | None = None,
+) -> list[Any]:
+    """Alla rader för samma förare (450 + WSX), även vid stavfel i förnamn."""
+    if hasattr(rider_or_name, "name"):
+        ref = rider_or_name
+        name = getattr(ref, "name", None) or ""
+        rider_number = getattr(ref, "rider_number", rider_number)
+    else:
+        name = str(rider_or_name or "")
+        ref = None
+
+    class _Ref:
+        __slots__ = ("name", "rider_number", "id")
+
+        def __init__(self, n: str, num: int | None) -> None:
+            self.name = n
+            self.rider_number = num
+            self.id = 0
+
+    shim = ref if ref is not None else _Ref(name, rider_number)
+
     if riders is not None:
-        return [r for r in riders if _normalize_rider_lookup_name(r.name) == key]
-    raw = _canonical_rider_name(name)
-    if not raw:
-        return []
+        return [r for r in riders if riders_are_twins(shim, r)]
+
     from models import Rider
 
-    parts = raw.split()
-    q = _rider_query_light()
-    if len(parts) >= 2:
-        q = q.filter(Rider.name.ilike(f"%{parts[0]}%{parts[-1]}%"))
+    last = _last_name(name)
+    if rider_number is not None and last:
+        candidates = (
+            _rider_query_light()
+            .filter(Rider.rider_number == int(rider_number), Rider.name.ilike(f"%{last}%"))
+            .all()
+        )
     else:
-        q = q.filter(Rider.name.ilike(f"%{raw}%"))
-    return [
-        r for r in q.limit(40).all()
-        if _normalize_rider_lookup_name(getattr(r, "name", None) or "") == key
-    ]
+        raw = _canonical_rider_name(name)
+        if not raw:
+            return []
+        parts = raw.split()
+        q = _rider_query_light()
+        if len(parts) >= 2:
+            q = q.filter(Rider.name.ilike(f"%{parts[0]}%{parts[-1]}%"))
+        else:
+            q = q.filter(Rider.name.ilike(f"%{raw}%"))
+        candidates = q.limit(40).all()
+    return [r for r in candidates if riders_are_twins(shim, r)]
+
+
+def find_riders_by_name(
+    name: str,
+    riders: list[Any] | None = None,
+    *,
+    rider_number: int | None = None,
+) -> list[Any]:
+    """Bakåtkompatibel wrapper — föredra find_rider_twins(rider)."""
+    return find_rider_twins(name, riders=riders, rider_number=rider_number)
+
+
+def align_wsx_name_to_primary(wsx: Any, twins: list[Any]) -> bool:
+    """Rätta WSX-stavfel (Christan → Christian) från 450/250-rad."""
+    if (getattr(wsx, "class_name", None) or "") not in ("wsx_sx1", "wsx_sx2"):
+        return False
+    primary = pick_primary_rider_for_name(getattr(wsx, "name", None) or "", riders=twins)
+    if not primary or primary.id == wsx.id:
+        return False
+    correct = (getattr(primary, "name", None) or "").strip()
+    current = (getattr(wsx, "name", None) or "").strip()
+    if correct and current and correct != current:
+        wsx.name = correct
+        return True
+    return False
 
 
 def pick_primary_rider_for_name(name: str, riders: list[Any] | None = None) -> Any | None:
@@ -353,13 +436,19 @@ def copy_portrait_between_riders(
     return False
 
 
-def sync_portraits_for_name(name: str, riders: list[Any] | None = None) -> list[int]:
+def sync_portraits_for_name(
+    name: str,
+    riders: list[Any] | None = None,
+    *,
+    rider_number: int | None = None,
+) -> list[int]:
     """Sprid bästa porträttet till alla rader med samma namn."""
-    best = find_best_portrait_rider_for_name(name, riders=riders)
+    twins = find_rider_twins(name, riders=riders, rider_number=rider_number)
+    best = find_best_portrait_rider_for_name(name, riders=twins or riders)
     if not best:
         return []
     synced: list[int] = []
-    for other in find_riders_by_name(name, riders=riders):
+    for other in twins:
         if other.id == best.id:
             continue
         if copy_portrait_between_riders(best, other, overwrite=True, allow_blob=True):
@@ -400,7 +489,8 @@ def sync_bio_to_name_twins(rider: Any, riders: list[Any] | None = None) -> list[
     if not bio and not ach:
         return []
     synced: list[int] = []
-    for other in find_riders_by_name(rider.name or "", riders=riders):
+    twins = find_rider_twins(rider, riders=riders)
+    for other in twins:
         if other.id == rider.id:
             continue
         if copy_bio_between_riders(rider, other):
@@ -408,9 +498,14 @@ def sync_bio_to_name_twins(rider: Any, riders: list[Any] | None = None) -> list[
     return synced
 
 
-def find_racerx_skip_for_name(name: str, riders: list[Any] | None = None) -> str:
+def find_racerx_skip_for_name(
+    name: str,
+    riders: list[Any] | None = None,
+    *,
+    rider_number: int | None = None,
+) -> str:
     """Tom sträng om namnet inte markerats som ej hittbar på RacerX."""
-    for rider in find_riders_by_name(name, riders=riders):
+    for rider in find_rider_twins(name, riders=riders, rider_number=rider_number):
         skip = (getattr(rider, "racerx_bio_skip", None) or "").strip()
         if skip:
             return skip
@@ -421,7 +516,7 @@ def mark_racerx_bio_skip(rider: Any, reason: str, riders: list[Any] | None = Non
     """Markera alla dublett-rader — batchen ska inte försöka samma namn igen."""
     reason = _clean_ws((reason or "unknown"))[:200]
     marked: list[int] = []
-    for other in find_riders_by_name(getattr(rider, "name", None) or "", riders=riders):
+    for other in find_rider_twins(rider, riders=riders):
         if hasattr(other, "racerx_bio_skip"):
             other.racerx_bio_skip = reason
             marked.append(other.id)
@@ -429,7 +524,7 @@ def mark_racerx_bio_skip(rider: Any, reason: str, riders: list[Any] | None = Non
 
 
 def clear_racerx_bio_skip(rider: Any, riders: list[Any] | None = None) -> None:
-    for other in find_riders_by_name(getattr(rider, "name", None) or "", riders=riders):
+    for other in find_rider_twins(rider, riders=riders):
         if hasattr(other, "racerx_bio_skip"):
             other.racerx_bio_skip = None
 
@@ -461,10 +556,15 @@ def iter_names_needing_racerx_bio(
     return name_keys
 
 
-def find_rider_with_bio_by_name(name: str, riders: list[Any] | None = None) -> Any | None:
+def find_rider_with_bio_by_name(
+    name: str,
+    riders: list[Any] | None = None,
+    *,
+    rider_number: int | None = None,
+) -> Any | None:
     """Hitta befintlig rad med bio för samma namn (prioriterar 450/250)."""
     matches = [
-        r for r in find_riders_by_name(name, riders=riders)
+        r for r in find_rider_twins(name, riders=riders, rider_number=rider_number)
         if (getattr(r, "bio", None) or "").strip()
         or (getattr(r, "achievements", None) or "").strip()
     ]
@@ -475,14 +575,21 @@ def find_rider_with_bio_by_name(name: str, riders: list[Any] | None = None) -> A
 
 def ensure_rider_content_from_twins(rider: Any, riders: list[Any] | None = None) -> bool:
     """Kopiera bio och porträtt-URL från syskon-rad (t.ex. 450 → wsx_sx1). Returnerar True om något ändrades."""
+    twins = riders if riders is not None else find_rider_twins(rider)
     changed = False
+    if align_wsx_name_to_primary(rider, twins):
+        changed = True
     if not (getattr(rider, "bio", None) or "").strip() and not (
         getattr(rider, "achievements", None) or ""
     ).strip():
-        twin_bio = find_rider_with_bio_by_name(getattr(rider, "name", None) or "", riders=riders)
+        twin_bio = find_rider_with_bio_by_name(
+            getattr(rider, "name", None) or "",
+            riders=twins,
+            rider_number=getattr(rider, "rider_number", None),
+        )
         if twin_bio and twin_bio.id != rider.id and copy_bio_between_riders(twin_bio, rider):
             changed = True
-    best = find_best_portrait_rider_for_name(getattr(rider, "name", None) or "", riders=riders)
+    best = find_best_portrait_rider_for_name(getattr(rider, "name", None) or "", riders=twins)
     if best and best.id != rider.id:
         if copy_portrait_between_riders(best, rider, overwrite=False, allow_blob=False):
             changed = True
@@ -495,7 +602,12 @@ def resolve_rider_bio_source(rider: Any, riders: list[Any] | None = None) -> Any
         getattr(rider, "achievements", None) or ""
     ).strip():
         return rider
-    twin = find_rider_with_bio_by_name(getattr(rider, "name", None) or "", riders=riders)
+    twins = riders if riders is not None else find_rider_twins(rider)
+    twin = find_rider_with_bio_by_name(
+        getattr(rider, "name", None) or "",
+        riders=twins,
+        rider_number=getattr(rider, "rider_number", None),
+    )
     return twin or rider
 
 
@@ -529,17 +641,24 @@ def bulk_fill_wsx_from_ama_twins() -> dict[str, int]:
 
     bio_n = 0
     img_n = 0
+    name_n = 0
     wsx_rows = (
         _rider_query_light()
         .filter(Rider.class_name.in_(("wsx_sx1", "wsx_sx2")))
         .all()
     )
     for wsx in wsx_rows:
-        twins = find_riders_by_name(getattr(wsx, "name", None) or "")
+        twins = find_rider_twins(wsx)
         if not twins:
             continue
+        if align_wsx_name_to_primary(wsx, twins):
+            name_n += 1
         if not (getattr(wsx, "bio", None) or "").strip():
-            source_bio = find_rider_with_bio_by_name(wsx.name or "", riders=twins)
+            source_bio = find_rider_with_bio_by_name(
+                wsx.name or "",
+                riders=twins,
+                rider_number=getattr(wsx, "rider_number", None),
+            )
             if source_bio and source_bio.id != wsx.id and copy_bio_between_riders(source_bio, wsx):
                 bio_n += 1
         if not (getattr(wsx, "image_url", None) or "").strip():
@@ -548,7 +667,11 @@ def bulk_fill_wsx_from_ama_twins() -> dict[str, int]:
                 best, wsx, overwrite=False, allow_blob=False
             ):
                 img_n += 1
-    return {"wsx_bio_filled": bio_n, "wsx_portrait_url_filled": img_n}
+    return {
+        "wsx_bio_filled": bio_n,
+        "wsx_portrait_url_filled": img_n,
+        "wsx_names_fixed": name_n,
+    }
 
 
 def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]:
@@ -560,28 +683,42 @@ def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]
         riders = _rider_query_light().order_by(
             Rider.class_name, Rider.rider_number, Rider.name
         ).all()
-    keys = sorted(
-        {_normalize_rider_lookup_name(getattr(r, "name", None) or "") for r in riders} - {""}
-    )
+    seen_keys: set[str] = set()
     bio_fixed = 0
     portrait_fixed = 0
-    for key in keys:
-        source_bio = find_rider_with_bio_by_name(key, riders=riders)
+    for rider in riders:
+        key = twin_group_key(
+            getattr(rider, "name", None) or "",
+            getattr(rider, "rider_number", None),
+        )
+        if not key or key in seen_keys:
+            continue
+        seen_keys.add(key)
+        twins = find_rider_twins(rider, riders=riders)
+        for wsx in twins:
+            if (getattr(wsx, "class_name", None) or "") in ("wsx_sx1", "wsx_sx2"):
+                align_wsx_name_to_primary(wsx, twins)
+        source_bio = find_rider_with_bio_by_name(
+            getattr(rider, "name", None) or "",
+            riders=twins,
+            rider_number=getattr(rider, "rider_number", None),
+        )
         if source_bio:
-            for other in find_riders_by_name(key, riders=riders):
+            for other in twins:
                 if other.id == source_bio.id:
                     continue
                 if copy_bio_between_riders(source_bio, other):
                     bio_fixed += 1
-        name = next(
-            (getattr(r, "name", None) or "" for r in riders if _normalize_rider_lookup_name(r.name or "") == key),
-            "",
+        portrait_fixed += len(
+            sync_portraits_for_name(
+                getattr(rider, "name", None) or "",
+                riders=twins,
+                rider_number=getattr(rider, "rider_number", None),
+            )
         )
-        if name:
-            portrait_fixed += len(sync_portraits_for_name(name, riders=riders))
     blobs_cleared = compact_wsx_portrait_blobs()
     return {
-        "names_processed": len(keys),
+        "names_processed": len(seen_keys),
         "bio_rows_updated": bio_fixed,
         "portrait_rows_updated": portrait_fixed,
         "wsx_blobs_cleared": blobs_cleared,
