@@ -239,6 +239,10 @@
                     class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-semibold">
                     Hämta bio (20 st)
                 </button>
+                <button type="button" id="racerxBioSyncTwinsBtn"
+                    class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg transition-colors font-semibold">
+                    Synka dubletter (450↔WSX)
+                </button>
                 <span id="racerxBioRemaining" class="text-sm text-gray-500 self-center"></span>
             </div>
             <div id="racerxBioStatus" class="text-sm hidden mb-2"></div>
@@ -2220,6 +2224,30 @@
             }
         }
         refreshRacerxBioRemaining();
+
+        document.getElementById('racerxBioSyncTwinsBtn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('racerxBioSyncTwinsBtn');
+            if (!btn) return;
+            if (!confirm('Kopiera bio och porträtt mellan dublett-rader (samma namn, t.ex. 450cc och wsx_sx1)?')) return;
+            btn.disabled = true;
+            showRacerxBioStatus('Synkar dubletter…', false);
+            try {
+                const res = await fetch('/admin/tools/racerx_bio/sync_twins', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    showRacerxBioStatus(data.error || 'Synk misslyckades', true);
+                    return;
+                }
+                showRacerxBioStatus(
+                    `Synk klar: ${data.bio_rows_updated || 0} bio, ${data.portrait_rows_updated || 0} porträtt uppdaterade.`,
+                    false
+                );
+            } catch (e) {
+                showRacerxBioStatus('Nätverksfel: ' + e.message, true);
+            } finally {
+                btn.disabled = false;
+            }
+        });
 
         document.getElementById('racerxBioBulkBtn')?.addEventListener('click', async () => {
             const btn = document.getElementById('racerxBioBulkBtn');

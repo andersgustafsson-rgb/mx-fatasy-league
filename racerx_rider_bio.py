@@ -393,10 +393,53 @@ def find_rider_with_bio_by_name(name: str, riders: list[Any] | None = None) -> A
     matches = [
         r for r in find_riders_by_name(name, riders=riders)
         if (getattr(r, "bio", None) or "").strip()
+        or (getattr(r, "achievements", None) or "").strip()
     ]
     if not matches:
         return None
     return min(matches, key=lambda r: (_rider_class_priority(r.class_name), r.id))
+
+
+def resolve_rider_bio_source(rider: Any, riders: list[Any] | None = None) -> Any:
+    """Rad att läsa bio från — egen eller bästa tvilling (450 före WSX)."""
+    if (getattr(rider, "bio", None) or "").strip() or (
+        getattr(rider, "achievements", None) or ""
+    ).strip():
+        return rider
+    twin = find_rider_with_bio_by_name(getattr(rider, "name", None) or "", riders=riders)
+    return twin or rider
+
+
+def sync_all_rider_name_twins(riders: list[Any] | None = None) -> dict[str, int]:
+    """Kopiera bio och porträtt mellan alla dublett-rader (samma namn)."""
+    if riders is None:
+        from models import Rider
+
+        riders = Rider.query.all()
+    keys = sorted(
+        {_normalize_rider_lookup_name(getattr(r, "name", None) or "") for r in riders} - {""}
+    )
+    bio_fixed = 0
+    portrait_fixed = 0
+    for key in keys:
+        source_bio = find_rider_with_bio_by_name(key, riders=riders)
+        if source_bio:
+            for other in find_riders_by_name(key, riders=riders):
+                if other.id == source_bio.id:
+                    continue
+                if copy_bio_between_riders(source_bio, other):
+                    bio_fixed += 1
+        name = next(
+            (getattr(r, "name", None) or "" for r in riders if _normalize_rider_lookup_name(r.name or "") == key),
+            "",
+        )
+        if name:
+            portrait_fixed += len(sync_portraits_for_name(name, riders=riders))
+    return {
+        "names_processed": len(keys),
+        "bio_rows_updated": bio_fixed,
+        "portrait_rows_updated": portrait_fixed,
+    }
 
 
 def apply_profile_to_rider(

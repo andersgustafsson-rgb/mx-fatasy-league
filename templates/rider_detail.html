@@ -54,7 +54,8 @@
           </div>
 
           <div class="md:col-span-2 space-y-6">
-            {% set has_bio_content = rider.bio or rider.achievements %}
+            {% set bio_source = bio_source if bio_source is defined else rider %}
+            {% set has_bio_content = bio_source.bio or bio_source.achievements %}
             {% if has_bio_content %}
             <div class="flex justify-end">
               <div id="bio-lang-toggle" class="inline-flex rounded-lg border border-gray-600 overflow-hidden text-sm" role="group" aria-label="Språk för bio">
@@ -66,11 +67,11 @@
 
             <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h2 class="text-lg font-bold text-cyan-400 mb-2">Biografi</h2>
-              <p id="rider-bio-text" class="text-gray-200 whitespace-pre-line">{{ rider.bio or 'Ingen biografi tillagd ännu.' }}</p>
+              <p id="rider-bio-text" class="text-gray-200 whitespace-pre-line">{{ bio_source.bio or 'Ingen biografi tillagd ännu.' }}</p>
             </div>
             <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
               <h2 class="text-lg font-bold text-cyan-400 mb-2">Meriter</h2>
-              <div id="rider-achievements-text" class="text-gray-200 whitespace-pre-line">{{ rider.achievements or 'Inga meriter tillagda ännu.' }}</div>
+              <div id="rider-achievements-text" class="text-gray-200 whitespace-pre-line">{{ bio_source.achievements or 'Inga meriter tillagda ännu.' }}</div>
             </div>
             <p id="bio-translate-status" class="text-xs text-gray-500 hidden"></p>
           </div>
@@ -91,12 +92,12 @@
 
     const content = {
       en: {
-        bio: {{ (rider.bio or '')|tojson }},
-        achievements: {{ (rider.achievements or '')|tojson }},
+        bio: {{ (bio_source.bio or '')|tojson }},
+        achievements: {{ (bio_source.achievements or '')|tojson }},
       },
       sv: {
-        bio: {{ (rider.bio_sv or '')|tojson }},
-        achievements: {{ (rider.achievements_sv or '')|tojson }},
+        bio: {{ (bio_source.bio_sv or '')|tojson }},
+        achievements: {{ (bio_source.achievements_sv or '')|tojson }},
       },
     };
 

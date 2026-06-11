@@ -805,6 +805,23 @@ def admin_racerx_bio_apply():
 		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
 
 
+@bp.post("/admin/tools/racerx_bio/sync_twins")
+@login_required
+def admin_racerx_bio_sync_twins():
+	"""Kopiera bio och porträtt från 450/250 till WSX-dubletter (samma namn)."""
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from racerx_rider_bio import sync_all_rider_name_twins
+
+		stats = sync_all_rider_name_twins()
+		db.session.commit()
+		return jsonify({"ok": True, **stats})
+	except Exception as e:
+		db.session.rollback()
+		return jsonify({"ok": False, "error": str(e), "traceback": traceback.format_exc()}), 500
+
+
 @bp.post("/admin/tools/racerx_bio/bulk")
 @login_required
 def admin_racerx_bio_bulk():
@@ -908,6 +925,16 @@ def admin_racerx_bio_bulk():
 		)
 		skipped_this_run = sum(1 for r in results if r.get("skipped"))
 
+		twin_sync = {"bio_rows_updated": 0, "portrait_rows_updated": 0}
+		try:
+			from racerx_rider_bio import sync_all_rider_name_twins
+
+			twin_sync = sync_all_rider_name_twins(riders=all_riders)
+			db.session.commit()
+		except Exception as _twin_exc:
+			db.session.rollback()
+			print(f"racerx_bio bulk twin sync: {_twin_exc}")
+
 		return jsonify({
 			"ok": True,
 			"processed": len(results),
@@ -916,6 +943,7 @@ def admin_racerx_bio_bulk():
 			"remaining_without_bio": remaining_count,
 			"remaining_to_fetch": remaining_to_fetch,
 			"elapsed_seconds": round(time.monotonic() - t0, 1),
+			"twin_sync": twin_sync,
 			"results": results,
 		})
 	except Exception as e:

@@ -2397,7 +2397,19 @@ def template_rider_image_src(
     """Bild-URL för Jinja (förarlista, bio) — inkl. dublett-fallback."""
     if not rider:
         return None
+    try:
+        from racerx_rider_bio import find_best_portrait_rider_for_name
+
+        best = find_best_portrait_rider_for_name(rider.name or "")
+    except Exception:
+        best = None
+    lookup_riders: list[Rider] = []
+    if best is not None:
+        lookup_riders.append(best)
     for r in _riders_for_image_lookup(rider, riders_by_name=riders_by_name):
+        if r.id not in {x.id for x in lookup_riders}:
+            lookup_riders.append(r)
+    for r in lookup_riders:
         raw_data = getattr(r, "rider_image_data", None)
         if raw_data and str(raw_data).strip().startswith("data:image"):
             return f"/rider_portrait/{r.id}"
@@ -2503,12 +2515,22 @@ def rider_portrait(rider_id: int):
     import base64
     import hashlib
 
-    raw = db.session.query(Rider.rider_image_data).filter_by(id=rider_id).scalar()
+    rider = Rider.query.get_or_404(rider_id)
+    try:
+        from racerx_rider_bio import find_best_portrait_rider_for_name
+
+        best = find_best_portrait_rider_for_name(rider.name or "")
+        if best is not None and best.id != rider.id:
+            rider = best
+    except Exception:
+        pass
+
+    raw = db.session.query(Rider.rider_image_data).filter_by(id=rider.id).scalar()
     s = str(raw or "").strip()
     if not s.startswith("data:image"):
         ext = (
             db.session.query(Rider.image_url)
-            .filter_by(id=rider_id)
+            .filter_by(id=rider.id)
             .scalar()
         )
         ext_s = str(ext or "").strip()
@@ -5852,10 +5874,14 @@ def run_migration():
 # Public rider profile
 @app.get('/rider/<int:rider_id>')
 def rider_profile(rider_id: int):
+    from racerx_rider_bio import resolve_rider_bio_source
+
     rider = Rider.query.get_or_404(rider_id)
+    bio_source = resolve_rider_bio_source(rider)
     return render_template(
         'rider_detail.html',
         rider=rider,
+        bio_source=bio_source,
         rider_image_src=template_rider_image_src(rider, bio_card=True),
         username=session.get('username'),
     )
@@ -5864,7 +5890,10 @@ def rider_profile(rider_id: int):
 @app.get('/api/rider/<int:rider_id>/bio')
 def rider_bio_i18n(rider_id: int):
     """Bio/meriter på engelska eller svenska (översätter och cachar vid behov)."""
+    from racerx_rider_bio import resolve_rider_bio_source
+
     rider = Rider.query.get_or_404(rider_id)
+    bio_source = resolve_rider_bio_source(rider)
     lang = (request.args.get("lang") or "sv").strip().lower()
     if lang not in ("en", "sv"):
         lang = "sv"
@@ -5872,13 +5901,13 @@ def rider_bio_i18n(rider_id: int):
         return jsonify({
             "ok": True,
             "lang": "en",
-            "bio": rider.bio or "",
-            "achievements": rider.achievements or "",
+            "bio": bio_source.bio or "",
+            "achievements": bio_source.achievements or "",
         })
     try:
         from rider_bio_translate import ensure_swedish_bio
 
-        bio_sv, ach_sv = ensure_swedish_bio(rider)
+        bio_sv, ach_sv = ensure_swedish_bio(bio_source)
         db.session.commit()
         return jsonify({
             "ok": True,
@@ -5892,8 +5921,8 @@ def rider_bio_i18n(rider_id: int):
         return jsonify({
             "ok": False,
             "error": "translate_failed",
-            "bio": rider.bio or "",
-            "achievements": rider.achievements or "",
+            "bio": bio_source.bio or "",
+            "achievements": bio_source.achievements or "",
         }), 502
 
 def _rider_directory_sort_key(rider: Rider) -> tuple:
