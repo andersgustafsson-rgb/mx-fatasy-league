@@ -2398,11 +2398,19 @@ def template_rider_image_src(
     if not rider:
         return None
     try:
-        from racerx_rider_bio import find_best_portrait_rider_for_name
+        from racerx_rider_bio import (
+            _normalize_rider_lookup_name,
+            find_best_portrait_rider_for_name,
+            rider_ids_with_db_portrait,
+        )
 
-        best = find_best_portrait_rider_for_name(rider.name or "")
+        twin_list: list[Rider] | None = None
+        if riders_by_name is not None:
+            twin_list = riders_by_name.get(_normalize_rider_lookup_name(rider.name or ""))
+        best = find_best_portrait_rider_for_name(rider.name or "", riders=twin_list)
     except Exception:
         best = None
+        twin_list = None
     lookup_riders: list[Rider] = []
     if best is not None:
         lookup_riders.append(best)
@@ -2410,11 +2418,10 @@ def template_rider_image_src(
         if r.id not in {x.id for x in lookup_riders}:
             lookup_riders.append(r)
     try:
-        from racerx_rider_bio import rider_ids_with_db_portrait
-
         db_portrait_ids = rider_ids_with_db_portrait([int(r.id) for r in lookup_riders])
     except Exception:
         db_portrait_ids = set()
+    brand_fallback: str | None = None
     for r in lookup_riders:
         if int(r.id) in db_portrait_ids:
             return f"/rider_portrait/{r.id}"
@@ -2429,13 +2436,17 @@ def template_rider_image_src(
             bike_brand=getattr(r, "bike_brand", None),
             series_participation=getattr(r, "series_participation", None),
         )
-        if url:
-            if bio_card and url.startswith("http"):
-                from app.portrait_urls import normalize_racerx_portrait_url_bio
+        if not url:
+            continue
+        if "/static/brand_logos/" in url:
+            brand_fallback = brand_fallback or url
+            continue
+        if bio_card and url.startswith("http"):
+            from app.portrait_urls import normalize_racerx_portrait_url_bio
 
-                return normalize_racerx_portrait_url_bio(url) or url
-            return url
-    return None
+            return normalize_racerx_portrait_url_bio(url) or url
+        return url
+    return brand_fallback
 
 
 def _display_image_url_for_rider_row(
@@ -5881,7 +5892,7 @@ def run_migration():
 @app.get('/rider/<int:rider_id>')
 def rider_profile(rider_id: int):
     from sqlalchemy.orm import defer
-    from racerx_rider_bio import resolve_rider_bio_source
+    from racerx_rider_bio import ensure_rider_content_from_twins, resolve_rider_bio_source
 
     rider = (
         Rider.query.options(
@@ -5890,6 +5901,12 @@ def rider_profile(rider_id: int):
         .filter_by(id=rider_id)
         .first_or_404()
     )
+    try:
+        if ensure_rider_content_from_twins(rider):
+            db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        print(f"ensure_rider_content_from_twins: {exc}")
     bio_source = resolve_rider_bio_source(rider)
     return render_template(
         'rider_detail.html',
@@ -6030,7 +6047,7 @@ def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, 
 def riders_directory():
     from racerx_rider_bio import build_riders_by_name_map
 
-    all_riders = Rider.query.order_by(Rider.id).all()
+    all_riders = rider_query_for_list_ui().order_by(Rider.id).all()
     riders_by_name = build_riders_by_name_map(all_riders)
     groups = _group_riders_for_directory(all_riders)
 

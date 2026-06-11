@@ -242,6 +242,20 @@ def rider_ids_with_db_portrait(rider_ids: list[int]) -> set[int]:
     return {int(r.id) for r in rows}
 
 
+def _get_rider_name_index() -> dict[str, list[Any]]:
+    """Request-cache: normaliserat namn → alla rader (450 + WSX osv.)."""
+    try:
+        from flask import g
+
+        cached = getattr(g, "_rider_name_index", None)
+        if cached is None:
+            cached = build_riders_by_name_map(_rider_query_light().all())
+            g._rider_name_index = cached
+        return cached
+    except Exception:
+        return build_riders_by_name_map(_rider_query_light().all())
+
+
 def build_riders_by_name_map(riders: list[Any]) -> dict[str, list[Any]]:
     """Indexera förare per normaliserat namn (en query, återanvänds i mallar)."""
     out: dict[str, list[Any]] = {}
@@ -259,12 +273,7 @@ def find_riders_by_name(name: str, riders: list[Any] | None = None) -> list[Any]
         return []
     if riders is not None:
         return [r for r in riders if _normalize_rider_lookup_name(r.name) == key]
-    canonical = _canonical_rider_name(name)
-    if not canonical:
-        return []
-    from models import Rider
-
-    return _rider_query_light().filter(Rider.name == canonical).all()
+    return list(_get_rider_name_index().get(key, []))
 
 
 def pick_primary_rider_for_name(name: str, riders: list[Any] | None = None) -> Any | None:
@@ -458,6 +467,22 @@ def find_rider_with_bio_by_name(name: str, riders: list[Any] | None = None) -> A
     if not matches:
         return None
     return min(matches, key=lambda r: (_rider_class_priority(r.class_name), r.id))
+
+
+def ensure_rider_content_from_twins(rider: Any, riders: list[Any] | None = None) -> bool:
+    """Kopiera bio och porträtt-URL från syskon-rad (t.ex. 450 → wsx_sx1). Returnerar True om något ändrades."""
+    changed = False
+    if not (getattr(rider, "bio", None) or "").strip() and not (
+        getattr(rider, "achievements", None) or ""
+    ).strip():
+        twin_bio = find_rider_with_bio_by_name(getattr(rider, "name", None) or "", riders=riders)
+        if twin_bio and twin_bio.id != rider.id and copy_bio_between_riders(twin_bio, rider):
+            changed = True
+    best = find_best_portrait_rider_for_name(getattr(rider, "name", None) or "", riders=riders)
+    if best and best.id != rider.id:
+        if copy_portrait_between_riders(best, rider, overwrite=False):
+            changed = True
+    return changed
 
 
 def resolve_rider_bio_source(rider: Any, riders: list[Any] | None = None) -> Any:
