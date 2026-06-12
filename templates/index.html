@@ -129,77 +129,90 @@
       box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
     }
 
-    /* Snabba åtgärder + veckans prestationer — diskret glaslook */
-    .home-tile {
+    /* Snabba åtgärder / veckans prestationer — samma shell som I rampljuset */
+    .home-panel {
+      background-size: cover;
+      background-position: center;
+    }
+    .home-panel--cyan { border-color: rgb(6 182 212); }
+    .home-panel--amber { border-color: rgb(245 158 11); }
+    .home-panel__title--cyan { text-shadow: 0 0 10px rgba(34, 211, 238, 0.75); }
+    .home-panel__title--amber { text-shadow: 0 0 10px rgba(251, 191, 36, 0.8); }
+
+    .home-inner-tile {
+      position: relative;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.4rem;
-      min-height: 5.5rem;
-      padding: 1rem 0.75rem;
-      border-radius: 0.75rem;
-      background: rgba(15, 23, 42, 0.78);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-left: 3px solid var(--tile-accent, rgba(148, 163, 184, 0.45));
+      text-align: center;
+      gap: 0.35rem;
+      min-height: 5.25rem;
+      padding: 0.875rem 0.65rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgb(34 211 238);
       color: #f8fafc;
       text-decoration: none;
-      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(15, 23, 42, 0.94) 100%);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
     }
-    .home-tile:hover {
-      background: rgba(30, 41, 59, 0.9);
-      border-color: rgba(255, 255, 255, 0.16);
-      transform: translateY(-2px);
+    .home-inner-tile::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.35;
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,.03) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.03) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.03) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.03) 75%);
+      background-size: 12px 12px;
     }
-    .home-tile--cyan { --tile-accent: #22d3ee; }
-    .home-tile--rose { --tile-accent: #fb7185; }
-    .home-tile--amber { --tile-accent: #fbbf24; }
-    .home-tile--orange { --tile-accent: #fb923c; }
-    .home-tile--emerald { --tile-accent: #34d399; }
-    .home-tile--muted {
-      --tile-accent: #64748b;
-      opacity: 0.65;
+    .home-inner-tile:hover {
+      border-color: rgb(103 232 249);
+      box-shadow: 0 0 14px rgba(34, 211, 238, 0.18);
+      transform: translateY(-1px);
+    }
+    .home-inner-tile--muted {
+      opacity: 0.55;
       cursor: not-allowed;
       pointer-events: none;
+      border-color: rgba(148, 163, 184, 0.45);
     }
-    .home-tile__icon { font-size: 1.65rem; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
-    .home-tile__label { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em; text-align: center; }
-    button.home-tile {
+    .home-inner-tile__icon,
+    .home-inner-tile__label,
+    .home-inner-tile__title,
+    .home-inner-tile__name,
+    .home-inner-tile__meta,
+    .home-inner-tile__link {
+      position: relative;
+      z-index: 1;
+    }
+    .home-inner-tile__icon { font-size: 1.5rem; line-height: 1; }
+    .home-inner-tile__label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; }
+    button.home-inner-tile {
       font: inherit;
       width: 100%;
       cursor: pointer;
       appearance: none;
     }
-
     .home-weekly-tile {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      padding: 0.875rem 0.75rem;
-      border-radius: 0.75rem;
-      background: rgba(15, 23, 42, 0.78);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-top: 2px solid var(--stat-accent, #94a3b8);
+      min-height: auto;
+      padding: 0.8rem 0.65rem;
     }
-    .home-weekly-tile--empty { opacity: 0.55; }
-    .home-weekly-tile--emerald { --stat-accent: #34d399; }
-    .home-weekly-tile--rose { --stat-accent: #fb7185; }
-    .home-weekly-tile--cyan { --stat-accent: #22d3ee; }
-    .home-weekly-tile--violet { --stat-accent: #a78bfa; }
-    .home-weekly-tile__icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
-    .home-weekly-tile__title {
-      font-size: 0.7rem;
+    .home-weekly-tile--empty { opacity: 0.5; }
+    .home-inner-tile__title {
+      font-size: 0.65rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: rgba(255, 255, 255, 0.55);
-      margin-bottom: 0.2rem;
+      letter-spacing: 0.07em;
+      color: rgba(165, 243, 252, 0.75);
     }
-    .home-weekly-tile__name {
-      font-size: 0.85rem;
+    .home-inner-tile__name {
+      font-size: 0.82rem;
       font-weight: 700;
       color: #f1f5f9;
       max-width: 100%;
@@ -207,18 +220,13 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .home-weekly-tile__meta { font-size: 0.7rem; color: rgba(203, 213, 225, 0.85); margin-top: 0.15rem; }
-    .home-weekly-tile__link {
+    .home-inner-tile__meta { font-size: 0.68rem; color: rgba(203, 213, 225, 0.88); margin-top: 0.1rem; }
+    .home-inner-tile__link {
       font-size: 0.65rem;
-      color: var(--stat-accent, #94a3b8);
-      margin-top: 0.35rem;
-      opacity: 0.9;
+      color: rgb(103 232 249);
+      margin-top: 0.3rem;
     }
-    .home-weekly-tile__link:hover { text-decoration: underline; opacity: 1; }
-    .home-section-title {
-      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
-      letter-spacing: 0.02em;
-    }
+    .home-inner-tile__link:hover { text-decoration: underline; }
     
     /* Glömt lösenord-länken ska alltid vara klickbar i modalen */
     .readonly-mode a[href*="forgot_password"] {
@@ -1240,57 +1248,58 @@
             </a>
             {% endif %}
             
+            {% set home_panel_bg = url_for("static", filename=upcoming_race_bg_url) if upcoming_race_bg_url else url_for("static", filename="trackmaps/compressed/anaheim1.jpg") %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Quick Actions -->
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border border-white/15" 
-                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-black bg-opacity-45"></div>
+              <div class="home-panel home-panel--cyan bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
+                   style="background-image: url('{{ home_panel_bg }}');">
+                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
                 <div class="relative z-10">
-                <h2 class="home-section-title text-xl sm:text-2xl font-bold text-white mb-4 text-center">🚀 Snabba Åtgärder</h2>
+                <h2 class="home-panel__title--cyan text-xl sm:text-2xl font-bold text-white mb-4 text-center">🚀 Snabba Åtgärder</h2>
 
                 <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl mx-auto">
                   {% if not upcoming_race or upcoming_race.series != 'WSX' %}
-                  <a href="{{ url_for('season_team_page') }}" class="home-tile home-tile--cyan">
-                    <span class="home-tile__icon" aria-hidden="true">👥</span>
-                    <span class="home-tile__label">Säsongsteam</span>
+                  <a href="{{ url_for('season_team_page') }}" class="home-inner-tile">
+                    <span class="home-inner-tile__icon" aria-hidden="true">👥</span>
+                    <span class="home-inner-tile__label">Säsongsteam</span>
                   </a>
                   {% endif %}
 
-                  <a href="{{ url_for('race_results_page') }}" class="home-tile home-tile--rose">
-                    <span class="home-tile__icon" aria-hidden="true">📊</span>
-                    <span class="home-tile__label">Race Resultat</span>
+                  <a href="{{ url_for('race_results_page') }}" class="home-inner-tile">
+                    <span class="home-inner-tile__icon" aria-hidden="true">📊</span>
+                    <span class="home-inner-tile__label">Race Resultat</span>
                   </a>
 
-                  <a href="{{ url_for('my_scores') }}" class="home-tile home-tile--amber">
-                    <span class="home-tile__icon" aria-hidden="true">🏆</span>
-                    <span class="home-tile__label">Mina Poäng</span>
+                  <a href="{{ url_for('my_scores') }}" class="home-inner-tile">
+                    <span class="home-inner-tile__icon" aria-hidden="true">🏆</span>
+                    <span class="home-inner-tile__label">Mina Poäng</span>
                   </a>
 
-                  <a href="{{ url_for('finished_series_page') }}" class="home-tile home-tile--orange">
-                    <span class="home-tile__icon" aria-hidden="true">📜</span>
-                    <span class="home-tile__label">Färdiga Serier</span>
+                  <a href="{{ url_for('finished_series_page') }}" class="home-inner-tile">
+                    <span class="home-inner-tile__icon" aria-hidden="true">📜</span>
+                    <span class="home-inner-tile__label">Färdiga Serier</span>
                   </a>
 
                   {% if view_picks_race %}
                   <button type="button" id="se-andras-picks-btn" onclick="showOtherUsersPicksFromMain()"
-                          class="home-tile home-tile--emerald{% if not can_view_other_picks %} hidden{% endif %}">
-                    <span class="home-tile__icon" aria-hidden="true">👀</span>
-                    <span class="home-tile__label">Se Andras Picks</span>
+                          class="home-inner-tile{% if not can_view_other_picks %} hidden{% endif %}">
+                    <span class="home-inner-tile__icon" aria-hidden="true">👀</span>
+                    <span class="home-inner-tile__label">Se Andras Picks</span>
                   </button>
-                  <div id="picks-locked-disabled-btn" class="home-tile home-tile--muted{% if can_view_other_picks %} hidden{% endif %}">
-                    <span class="home-tile__icon" aria-hidden="true">🔒</span>
-                    <span class="home-tile__label">Picks Låsta</span>
+                  <div id="picks-locked-disabled-btn" class="home-inner-tile home-inner-tile--muted{% if can_view_other_picks %} hidden{% endif %}">
+                    <span class="home-inner-tile__icon" aria-hidden="true">🔒</span>
+                    <span class="home-inner-tile__label">Picks Låsta</span>
                   </div>
                   {% endif %}
                 </div>
                 </div>
               </div>
               <!-- Weekly Fun Stats -->
-              <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border border-white/15" 
-                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-black bg-opacity-45"></div>
+              <div class="home-panel home-panel--amber bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
+                   style="background-image: url('{{ home_panel_bg }}');">
+                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
                 <div class="relative z-10">
-                  <h2 class="home-section-title text-xl sm:text-2xl font-bold text-white mb-4 text-center">🎉 Veckans Prestationer</h2>
+                  <h2 class="home-panel__title--amber text-xl sm:text-2xl font-bold text-white mb-4 text-center">🎉 Veckans Prestationer</h2>
                   <div id="weekly-fun-stats" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <p class="text-slate-300 text-center col-span-full text-sm">Laddar...</p>
                   </div>
@@ -2428,20 +2437,20 @@
       }
     }
 
-    function weeklyStatTile(icon, title, accent, winner, metaLines, profileId) {
+    function weeklyStatTile(icon, title, winner, metaLines, profileId) {
       const empty = !winner;
       const name = empty ? 'Ingen data ännu' : (winner.display_name || winner.username || '');
       const meta = (metaLines || []).filter(Boolean).map((line) =>
-        '<p class="home-weekly-tile__meta">' + line + '</p>'
+        '<p class="home-inner-tile__meta">' + line + '</p>'
       ).join('');
       const link = (!empty && profileId)
-        ? '<a href="/profile/' + profileId + '" class="home-weekly-tile__link">Visa profil →</a>'
+        ? '<a href="/profile/' + profileId + '" class="home-inner-tile__link">Visa profil →</a>'
         : '';
       return `
-        <div class="home-weekly-tile home-weekly-tile--${accent}${empty ? ' home-weekly-tile--empty' : ''}">
-          <div class="home-weekly-tile__icon" aria-hidden="true">${icon}</div>
-          <div class="home-weekly-tile__title">${title}</div>
-          <div class="home-weekly-tile__name">${name}</div>
+        <div class="home-inner-tile home-weekly-tile${empty ? ' home-weekly-tile--empty' : ''}">
+          <div class="home-inner-tile__icon" aria-hidden="true">${icon}</div>
+          <div class="home-inner-tile__title">${title}</div>
+          <div class="home-inner-tile__name">${name}</div>
           ${meta}
           ${link}
         </div>`;
@@ -2482,10 +2491,10 @@
         }
 
         let html = '';
-        html += weeklyStatTile('🚀', 'Veckans Raket', 'emerald', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id);
-        html += weeklyStatTile('⚓', 'Veckans Ankare', 'rose', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id);
+        html += weeklyStatTile('🚀', 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id);
+        html += weeklyStatTile('⚓', 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id);
         html += weeklyStatTile(
-          '🎯', 'Perfekt Gissning', 'cyan', data.perfect_picks,
+          '🎯', 'Perfekt Gissning', data.perfect_picks,
           data.perfect_picks ? [
             data.perfect_picks.perfect_count + ' perfekta picks',
             data.perfect_picks.total_perfect_points + 'p totalt'
@@ -2493,7 +2502,7 @@
           data.perfect_picks && data.perfect_picks.user_id
         );
         html += weeklyStatTile(
-          '⚡', 'Holeshot-Mästare', 'violet', data.holeshot_master,
+          '⚡', 'Holeshot-Mästare', data.holeshot_master,
           data.holeshot_master ? [
             data.holeshot_master.total_holeshot_points + 'p holeshot',
             'Denna vecka'
