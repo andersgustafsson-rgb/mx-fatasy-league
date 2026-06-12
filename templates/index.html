@@ -133,6 +133,19 @@
     .home-panel {
       background-size: cover;
       background-position: center;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .home-panel__body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .home-panel__tiles {
+      flex: 1;
+      width: 100%;
+      grid-auto-rows: 1fr;
     }
     .home-panel--cyan { border-color: rgb(6 182 212); }
     .home-panel--amber { border-color: rgb(245 158 11); }
@@ -148,8 +161,9 @@
       justify-content: center;
       text-align: center;
       gap: 0.35rem;
-      min-height: 5.25rem;
-      padding: 0.875rem 0.65rem;
+      min-height: 6.5rem;
+      height: 100%;
+      padding: 1rem 0.75rem;
       border-radius: 0.5rem;
       border: 1px solid rgb(34 211 238);
       color: #f8fafc;
@@ -191,8 +205,8 @@
       position: relative;
       z-index: 1;
     }
-    .home-inner-tile__icon { font-size: 1.5rem; line-height: 1; }
-    .home-inner-tile__label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.02em; }
+    .home-inner-tile__icon { font-size: 1.75rem; line-height: 1; }
+    .home-inner-tile__label { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; }
     button.home-inner-tile {
       font: inherit;
       width: 100%;
@@ -1249,15 +1263,15 @@
             {% endif %}
             
             {% set home_panel_bg = url_for("static", filename=upcoming_race_bg_url) if upcoming_race_bg_url else url_for("static", filename="trackmaps/compressed/anaheim1.jpg") %}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8 lg:items-stretch">
               <!-- Quick Actions -->
               <div class="home-panel home-panel--cyan bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10">
-                <h2 class="home-panel__title--cyan text-xl sm:text-2xl font-bold text-white mb-4 text-center">🚀 Snabba Åtgärder</h2>
+                <div class="relative z-10 home-panel__body">
+                <h2 class="home-panel__title--cyan text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center shrink-0">🚀 Snabba Åtgärder</h2>
 
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 max-w-5xl mx-auto">
+                <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                   {% if not upcoming_race or upcoming_race.series != 'WSX' %}
                   <a href="{{ url_for('season_team_page') }}" class="home-inner-tile">
                     <span class="home-inner-tile__icon" aria-hidden="true">👥</span>
@@ -1298,9 +1312,9 @@
               <div class="home-panel home-panel--amber bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10">
-                  <h2 class="home-panel__title--amber text-xl sm:text-2xl font-bold text-white mb-4 text-center">🎉 Veckans Prestationer</h2>
-                  <div id="weekly-fun-stats" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="relative z-10 home-panel__body">
+                  <h2 class="home-panel__title--amber text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center shrink-0">🎉 Veckans Prestationer</h2>
+                  <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     <p class="text-slate-300 text-center col-span-full text-sm">Laddar...</p>
                   </div>
                 </div>
@@ -2482,7 +2496,7 @@
       if (!container) return;
       
       try {
-        const res = await fetch('/get_weekly_fun_stats');
+        const res = await mxFetchTimed('weekly_fun_stats', '/get_weekly_fun_stats');
         const data = await res.json();
         
         if (data.error) {
@@ -2681,7 +2695,7 @@
 
     async function fetchRiderSpotlight() {
       try {
-        const res = await fetch('/get_rider_spotlight');
+        const res = await mxFetchTimed('rider_spotlight', '/get_rider_spotlight');
         const data = await res.json();
         updateRiderSpotlight(data);
       } catch (e) {
@@ -4007,19 +4021,33 @@
     }
 
     window.__MX_SERIES_STATUS__ = {{ series_status_data | tojson }};
-    window.__MX_RIDER_SPOTLIGHT__ = {{ rider_spotlight_data | tojson }};
+    window.__MX_DEBUG_PERF__ = /(?:\?|&)perf=1(?:&|$)/.test(window.location.search);
+
+    async function mxFetchTimed(label, url, options) {
+      const t0 = performance.now();
+      const res = await fetch(url, options);
+      const ms = Math.round(performance.now() - t0);
+      if (window.__MX_DEBUG_PERF__) {
+        console.info('[MX perf]', label, ms + 'ms', res.status);
+      }
+      return res;
+    }
 
     document.addEventListener("DOMContentLoaded", function() {
+      if (window.__MX_DEBUG_PERF__) {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav) {
+          console.info('[MX perf] HTML document', Math.round(nav.responseEnd - nav.requestStart) + 'ms');
+          console.info('[MX perf] DOM ready', Math.round(nav.domContentLoadedEventEnd - nav.requestStart) + 'ms');
+        }
+      }
+
       if (window.__MX_SERIES_STATUS__ && window.__MX_SERIES_STATUS__.length) {
         renderSeriesSelection(window.__MX_SERIES_STATUS__);
       } else {
         loadSeriesSelection();
       }
-      if (window.__MX_RIDER_SPOTLIGHT__) {
-        updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
-      } else {
-        fetchRiderSpotlight();
-      }
+      fetchRiderSpotlight();
 
       setTimeout(function() {
         fetchSeasonLeaderboard();
@@ -4029,7 +4057,7 @@
         loadSeriesLeaders();
         loadWSXLeaders();
         fetchPowerRanking();
-      }, 150);
+      }, 300);
 
       setTimeout(updateTabScrollIndicators, 300);
 

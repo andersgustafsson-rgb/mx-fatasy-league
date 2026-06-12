@@ -1677,15 +1677,10 @@ def index():
     )
 
     series_status_data: list[dict] = []
-    rider_spotlight_data: dict = {"available": False}
     try:
         series_status_data = build_series_status_list()
     except Exception as e:
         print(f"index series_status: {e}")
-    try:
-        rider_spotlight_data = build_rider_spotlight()
-    except Exception as e:
-        print(f"index rider_spotlight: {e}")
 
     return render_template(
         "index.html",
@@ -1719,7 +1714,6 @@ def index():
         best_position=best_position,
         sx_season_wrap=sx_season_wrap,
         series_status_data=series_status_data,
-        rider_spotlight_data=rider_spotlight_data,
     )
 
 
@@ -6412,7 +6406,7 @@ def _aggregate_pick_rates_for_comp(
     from collections import Counter
 
     is_wsx = (comp.series or "") == "WSX"
-    riders_dict = {r.id: r for r in Rider.query.all()}
+    riders_dict = {r.id: r for r in rider_query_for_list_ui().all()}
     n_lineups = 0
     picked: Counter[int] = Counter()
     p1_picks: Counter[int] = Counter()
@@ -6521,6 +6515,9 @@ def _spotlight_rocket_from_comp(
         db.session.query(CompetitionResult, Competition, Rider)
         .join(Competition, Competition.id == CompetitionResult.competition_id)
         .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(Competition.event_date.isnot(None))
+        .filter(Competition.event_date >= date(int(year), 1, 1))
+        .filter(Competition.event_date <= date(int(year), 12, 31))
         .all()
     )
     for cr, c, rider in rows:
