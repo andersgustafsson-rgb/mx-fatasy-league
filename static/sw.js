@@ -1,5 +1,5 @@
-/* Minimal PWA service worker: cache static shell + offline fallback. */
-const CACHE = "mx-fantasy-v15";
+/* PWA service worker: cache static assets only; never block API/HTML fetches. */
+const CACHE = "mx-fantasy-v16";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -28,32 +28,50 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function sameOrigin(url) {
+  try {
+    return url.origin === self.location.origin;
+  } catch (_) {
+    return false;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        // Never cache failed HTML navigations (avoids "stuck" offline shell).
-        if (req.mode === "navigate" && !res.ok) return res;
-        const copy = res.clone();
-        // Best-effort cache of same-origin static assets.
-        try {
-          const url = new URL(req.url);
-          if (url.origin === self.location.origin && url.pathname.startsWith("/static/")) {
+  let url;
+  try {
+    url = new URL(req.url);
+  } catch (_) {
+    return;
+  }
+
+  if (!sameOrigin(url)) return;
+
+  // Static assets: network-first, cache successful responses.
+  if (url.pathname.startsWith("/static/")) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy));
           }
-        } catch (_) {}
-        return res;
-      })
-      .catch(async () => {
-        const cached = await caches.match(req);
-        if (cached) return cached;
-        // For navigations, show offline page.
-        if (req.mode === "navigate") return caches.match(OFFLINE_URL);
-        throw new Error("offline");
-      })
-  );
-});
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
 
+  // HTML navigations: network-only; offline fallback page if truly offline.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req).catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
+
+  // API, portraits, everything else: browser handles directly (no SW interception).
+});

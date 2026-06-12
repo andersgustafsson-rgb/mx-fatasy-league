@@ -41,6 +41,51 @@ _POWER_RANKING_CACHE: dict[int, tuple[float, dict]] = {}
 _HOMEPAGE_CACHE_TTL = 600.0
 _SERIES_STATUS_CACHE_TTL = 120.0
 _POWER_RANKING_CACHE_TTL = 300.0
+_HOMEPAGE_CACHE_WARM_STARTED = False
+
+
+def _peek_rider_spotlight_cache() -> dict | None:
+    global _RIDER_SPOTLIGHT_CACHE
+    now = time.time()
+    if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
+        return _RIDER_SPOTLIGHT_CACHE[1]
+    return None
+
+
+def _peek_power_ranking_cache(competition_id: int) -> dict | None:
+    cached = _POWER_RANKING_CACHE.get(int(competition_id))
+    if cached and cached[0] > time.time():
+        return cached[1]
+    return None
+
+
+def _warm_homepage_caches() -> None:
+    """Pre-build heavy homepage payloads so first visitor does not wait on cold cache."""
+    with app.app_context():
+        try:
+            build_series_status_list()
+        except Exception as e:
+            print(f"warm series_status: {e}")
+        try:
+            build_rider_spotlight()
+        except Exception as e:
+            print(f"warm rider_spotlight: {e}")
+        try:
+            target = _resolve_power_ranking_competition(None)
+            if target:
+                build_power_ranking_payload(target)
+        except Exception as e:
+            print(f"warm power_ranking: {e}")
+
+
+def _start_homepage_cache_warm() -> None:
+    global _HOMEPAGE_CACHE_WARM_STARTED
+    if _HOMEPAGE_CACHE_WARM_STARTED:
+        return
+    _HOMEPAGE_CACHE_WARM_STARTED = True
+    import threading
+
+    threading.Thread(target=_warm_homepage_caches, daemon=True).start()
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -1684,6 +1729,11 @@ def index():
     except Exception as e:
         print(f"index series_status: {e}")
 
+    rider_spotlight_data = _peek_rider_spotlight_cache()
+    power_ranking_data = None
+    if upcoming_race:
+        power_ranking_data = _peek_power_ranking_cache(int(upcoming_race.id))
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -1716,6 +1766,8 @@ def index():
         best_position=best_position,
         sx_season_wrap=sx_season_wrap,
         series_status_data=series_status_data,
+        rider_spotlight_data=rider_spotlight_data,
+        power_ranking_data=power_ranking_data,
     )
 
 
@@ -2848,6 +2900,123 @@ def _rank_bucket(
     return rows, False
 
 
+def build_power_ranking_payload(target: Competition) -> dict:
+    """Build power ranking JSON (cached)."""
+    cache_key = int(target.id)
+    now = time.time()
+    cached = _POWER_RANKING_CACHE.get(cache_key)
+    if cached and cached[0] > now:
+        return cached[1]
+
+    # Form: senaste avklarade race i samma serie (inte hela säsongen — undvik att MX #2 ser ut som #1)
+    past = _past_races_for_form(target, limit=5)
+    out_ids = _out_rider_ids(target.id)
+
+    try:
+        picks_locked = is_picks_locked(target)
+    except Exception:
+        picks_locked = False
+
+    crowd_users = (
+        db.session.query(db.func.count(db.distinct(RacePick.user_id)))
+        .filter(RacePick.competition_id == target.id)
+        .scalar()
+        or 0
+    )
+
+    # Tunn form (t.ex. bara Fox) → lita mer på picks till aktuellt race
+    if len(past) <= 1:
+        fw, cw = 0.35, 0.65
+    else:
+        fw, cw = 0.55, 0.45
+
+    riders_450 = _riders_450_scope(out_ids)
+    # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
+    if getattr(target, "series", None) == "SX":
+        single_250, split_250 = _riders_250_scope(out_ids, "both")
+    else:
+        single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
+
+    top_450, picks_only_450 = _rank_bucket(
+        riders_450, target, past, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+    )
+
+    past_east = _past_comps_for_250_coast(past, "east")
+    past_west = _past_comps_for_250_coast(past, "west")
+
+    picks_only_any = picks_only_450
+    form_names = [c.name for c in past if c and c.name]
+    if len(past) == 0:
+        method = (
+            "Baserat på spelarnas picks till denna tävling (inget tidigare resultat i serien)"
+        )
+        form_scope_label = "ingen form ännu"
+    elif len(past) == 1:
+        method = (
+            f"Form från {past[0].name} · picks till {target.name} "
+            f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
+        )
+        form_scope_label = f"form: {past[0].name}"
+    else:
+        method = (
+            f"Form från {len(past)} senaste race · picks till {target.name} "
+            f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
+        )
+        form_scope_label = f"{len(past)} senaste race"
+
+    payload: dict = {
+        "ok": True,
+        "competition": {
+            "id": target.id,
+            "name": target.name,
+            "series": target.series,
+            "coast_250": target.coast_250,
+            "event_date": target.event_date.isoformat() if target.event_date else None,
+        },
+        "method": method,
+        "past_races_used": len(past),
+        "form_races": form_names,
+        "form_scope_label": form_scope_label,
+        "crowd_users": int(crowd_users),
+        "crowd_picks_locked": bool(picks_locked),
+        "ranking_source": "picks" if picks_only_any and len(past) == 0 else "results",
+        "riders_450": top_450,
+        "riders_250": None,
+        "riders_250_east": None,
+        "riders_250_west": None,
+    }
+
+    if split_250:
+        east_r, west_r = split_250
+        top_east, po_e = _rank_bucket(
+            east_r, target, past_east, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+        )
+        top_west, po_w = _rank_bucket(
+            west_r, target, past_west, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+        )
+        payload["riders_250_east"] = top_east
+        payload["riders_250_west"] = top_west
+        picks_only_any = picks_only_any or po_e or po_w
+    else:
+        coast = str(getattr(target, "coast_250", None) or "").strip().lower()
+        past_250 = _past_comps_for_250_coast(past, coast) if coast in ("east", "west") else past
+        top_250, po_250 = _rank_bucket(
+            single_250, target, past_250, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
+        )
+        payload["riders_250"] = top_250
+        picks_only_any = picks_only_any or po_250
+
+    if picks_only_any and len(past) > 0:
+        payload["method"] = (
+            "Delvis baserat på spelarnas picks där det saknas tillräckligt "
+            "med tidigare resultat i klassen"
+        )
+        payload["ranking_source"] = "mixed"
+
+    _POWER_RANKING_CACHE[cache_key] = (now + _POWER_RANKING_CACHE_TTL, payload)
+    return payload
+
+
 @app.get("/api/power_ranking")
 def api_power_ranking():
     """
@@ -2859,120 +3028,7 @@ def api_power_ranking():
         target = _resolve_power_ranking_competition(comp_id)
         if not target:
             return jsonify({"ok": False, "error": "no_competition"}), 404
-
-        cache_key = int(target.id)
-        now = time.time()
-        cached = _POWER_RANKING_CACHE.get(cache_key)
-        if cached and cached[0] > now:
-            return jsonify(cached[1])
-
-        # Form: senaste avklarade race i samma serie (inte hela säsongen — undvik att MX #2 ser ut som #1)
-        past = _past_races_for_form(target, limit=5)
-        out_ids = _out_rider_ids(target.id)
-
-        try:
-            picks_locked = is_picks_locked(target)
-        except Exception:
-            picks_locked = False
-
-        crowd_users = (
-            db.session.query(db.func.count(db.distinct(RacePick.user_id)))
-            .filter(RacePick.competition_id == target.id)
-            .scalar()
-            or 0
-        )
-
-        # Tunn form (t.ex. bara Fox) → lita mer på picks till aktuellt race
-        if len(past) <= 1:
-            fw, cw = 0.35, 0.65
-        else:
-            fw, cw = 0.55, 0.45
-
-        riders_450 = _riders_450_scope(out_ids)
-        # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
-        if getattr(target, "series", None) == "SX":
-            single_250, split_250 = _riders_250_scope(out_ids, "both")
-        else:
-            single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
-
-        top_450, picks_only_450 = _rank_bucket(
-            riders_450, target, past, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
-        )
-
-        past_east = _past_comps_for_250_coast(past, "east")
-        past_west = _past_comps_for_250_coast(past, "west")
-
-        picks_only_any = picks_only_450
-        form_names = [c.name for c in past if c and c.name]
-        if len(past) == 0:
-            method = (
-                "Baserat på spelarnas picks till denna tävling (inget tidigare resultat i serien)"
-            )
-            form_scope_label = "ingen form ännu"
-        elif len(past) == 1:
-            method = (
-                f"Form från {past[0].name} · picks till {target.name} "
-                f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
-            )
-            form_scope_label = f"form: {past[0].name}"
-        else:
-            method = (
-                f"Form från {len(past)} senaste race · picks till {target.name} "
-                f"({'låsta' if picks_locked else 'pågående'}, {int(crowd_users)} spelare)"
-            )
-            form_scope_label = f"{len(past)} senaste race"
-
-        payload: dict = {
-            "ok": True,
-            "competition": {
-                "id": target.id,
-                "name": target.name,
-                "series": target.series,
-                "coast_250": target.coast_250,
-                "event_date": target.event_date.isoformat() if target.event_date else None,
-            },
-            "method": method,
-            "past_races_used": len(past),
-            "form_races": form_names,
-            "form_scope_label": form_scope_label,
-            "crowd_users": int(crowd_users),
-            "crowd_picks_locked": bool(picks_locked),
-            "ranking_source": "picks" if picks_only_any and len(past) == 0 else "results",
-            "riders_450": top_450,
-            "riders_250": None,
-            "riders_250_east": None,
-            "riders_250_west": None,
-        }
-
-        if split_250:
-            east_r, west_r = split_250
-            top_east, po_e = _rank_bucket(
-                east_r, target, past_east, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
-            )
-            top_west, po_w = _rank_bucket(
-                west_r, target, past_west, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
-            )
-            payload["riders_250_east"] = top_east
-            payload["riders_250_west"] = top_west
-            picks_only_any = picks_only_any or po_e or po_w
-        else:
-            coast = str(getattr(target, "coast_250", None) or "").strip().lower()
-            past_250 = _past_comps_for_250_coast(past, coast) if coast in ("east", "west") else past
-            top_250, po_250 = _rank_bucket(
-                single_250, target, past_250, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
-            )
-            payload["riders_250"] = top_250
-            picks_only_any = picks_only_any or po_250
-
-        if picks_only_any and len(past) > 0:
-            payload["method"] = (
-                "Delvis baserat på spelarnas picks där det saknas tillräckligt "
-                "med tidigare resultat i klassen"
-            )
-            payload["ranking_source"] = "mixed"
-
-        _POWER_RANKING_CACHE[cache_key] = (now + _POWER_RANKING_CACHE_TTL, payload)
-        return jsonify(payload)
+        return jsonify(build_power_ranking_payload(target))
     except Exception as e:
         print(f"power_ranking error: {e}")
         import traceback
@@ -22702,6 +22758,9 @@ def tidrapport():
         username=session.get("username") or "",
         is_logged_in=True,
     )
+
+_start_homepage_cache_warm()
+
 
 if __name__ == "__main__":
     # Production vs Development configuration

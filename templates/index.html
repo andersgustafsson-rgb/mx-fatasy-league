@@ -13,6 +13,7 @@
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
   <meta name="theme-color" content="#06b6d4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <script>
     // iOS PWA: show an in-app splash overlay on cold start (iOS doesn't reliably show a native splash).
@@ -34,10 +35,15 @@
   </script>
   {% endif %}
   <script>
-    // Suppress Tailwind CDN warning in production
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      console.warn = function() {}; // Suppress console warnings in production
-    }
+    // Suppress only the Tailwind CDN production warning (keep other console output).
+    (function () {
+      const origWarn = console.warn;
+      console.warn = function () {
+        const msg = arguments[0];
+        if (msg && String(msg).indexOf('cdn.tailwindcss.com') !== -1) return;
+        return origWarn.apply(console, arguments);
+      };
+    })();
   </script>
   <script>
     // PWA: register service worker (safe no-op if unsupported)
@@ -3941,11 +3947,39 @@
       return h;
     }
 
-    async function fetchPowerRanking() {
+    function applyPowerRankingData(data) {
       const wrap = document.getElementById('power-ranking-wrap');
       const body = document.getElementById('power-ranking-body');
       const sub = document.getElementById('power-ranking-sub');
-      if (!wrap || !body) return;
+      if (!wrap || !body || !sub) return;
+      if (!data || !data.ok) {
+        wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+      const c = data.competition || {};
+      const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
+      const crowdN = data.crowd_users != null ? `${data.crowd_users} spelares picks` : '';
+      const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
+      sub.textContent = [c.name, c.series, scopeLabel, crowdN ? `picks ${lockedLbl} (${crowdN})` : '']
+        .filter(Boolean).join(' · ');
+      let html = '';
+      html += renderPowerRankingRows(data.riders_450, '450cc — topp 3');
+      if (data.riders_250_east && data.riders_250_west) {
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+          '<div>' + renderPowerRankingRows(data.riders_250_east, '250cc East') + '</div>' +
+          '<div>' + renderPowerRankingRows(data.riders_250_west, '250cc West') + '</div>' +
+          '</div>';
+      } else {
+        html += renderPowerRankingRows(data.riders_250, '250cc — topp 3');
+      }
+      if (data.method) {
+        html += `<p class="text-[10px] text-gray-600 pt-2 border-t border-gray-700/80">${data.method}</p>`;
+      }
+      body.innerHTML = html;
+    }
+
+    async function fetchPowerRanking() {
       let url = '/api/power_ranking';
       {% if upcoming_race %}
       url += '?competition_id={{ upcoming_race.id }}';
@@ -3953,34 +3987,14 @@
       try {
         const res = await mxFetchTimed('power_ranking', url);
         const data = await res.json();
-        if (!data.ok || res.status !== 200) {
-          wrap.classList.add('hidden');
+        if (res.status !== 200) {
+          applyPowerRankingData(null);
           return;
         }
-        wrap.classList.remove('hidden');
-        const c = data.competition || {};
-        const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
-        const crowdN = data.crowd_users != null ? `${data.crowd_users} spelares picks` : '';
-        const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
-        sub.textContent = [c.name, c.series, scopeLabel, crowdN ? `picks ${lockedLbl} (${crowdN})` : '']
-          .filter(Boolean).join(' · ');
-        let html = '';
-        html += renderPowerRankingRows(data.riders_450, '450cc — topp 3');
-        if (data.riders_250_east && data.riders_250_west) {
-          html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-            '<div>' + renderPowerRankingRows(data.riders_250_east, '250cc East') + '</div>' +
-            '<div>' + renderPowerRankingRows(data.riders_250_west, '250cc West') + '</div>' +
-            '</div>';
-        } else {
-          html += renderPowerRankingRows(data.riders_250, '250cc — topp 3');
-        }
-        if (data.method) {
-          html += `<p class="text-[10px] text-gray-600 pt-2 border-t border-gray-700/80">${data.method}</p>`;
-        }
-        body.innerHTML = html;
+        applyPowerRankingData(data);
       } catch (e) {
         console.warn('power_ranking', e);
-        wrap.classList.add('hidden');
+        applyPowerRankingData(null);
       }
     }
 
@@ -4021,6 +4035,8 @@
     }
 
     window.__MX_SERIES_STATUS__ = {{ series_status_data | tojson }};
+    window.__MX_RIDER_SPOTLIGHT__ = {{ rider_spotlight_data | tojson }};
+    window.__MX_POWER_RANKING__ = {{ power_ranking_data | tojson }};
     window.__MX_DEBUG_PERF__ = /(?:\?|&)perf=1(?:&|$)/.test(window.location.search);
 
     async function mxFetchTimed(label, url, options) {
@@ -4047,9 +4063,17 @@
       } else {
         loadSeriesSelection();
       }
-      fetchRiderSpotlight();
+      if (window.__MX_RIDER_SPOTLIGHT__ && window.__MX_RIDER_SPOTLIGHT__.available) {
+        updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
+      } else {
+        fetchRiderSpotlight();
+      }
 
-      setTimeout(fetchPowerRanking, 400);
+      if (window.__MX_POWER_RANKING__ && window.__MX_POWER_RANKING__.ok) {
+        applyPowerRankingData(window.__MX_POWER_RANKING__);
+      } else {
+        setTimeout(fetchPowerRanking, 400);
+      }
 
       [
         fetchSeasonLeaderboard,
