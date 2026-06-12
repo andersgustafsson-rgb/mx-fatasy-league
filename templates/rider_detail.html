@@ -166,6 +166,24 @@
         {% endif %}
       </div>
       <div class="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        {% if gc.championships %}
+        <div class="space-y-2 sm:col-span-2">
+          <p class="text-slate-500 text-xs uppercase tracking-wide">Mästerskap {{ gc.season_year }}</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {% for s in gc.championships %}
+            <div class="rounded-lg bg-slate-800/40 border border-slate-700/50 px-3 py-2.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{{ s.label }}</div>
+              <div class="mt-1 text-white font-bold tabular-nums">
+                #{{ s.rank }}
+                <span class="text-slate-400 font-normal text-sm">av {{ s.of }}</span>
+              </div>
+              <div class="text-cyan-300/90 text-sm font-semibold tabular-nums">{{ s.points }} p</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
         {% if gc.upcoming %}
         <div class="space-y-2">
           <p class="text-slate-500 text-xs uppercase tracking-wide">

@@ -6093,6 +6093,146 @@ def _rider_recent_race_results(rider_id: int, *, limit: int = 4) -> list[dict[st
     return out
 
 
+def _current_racing_season_year() -> int:
+    row = (
+        Competition.query.filter(
+            Competition.event_date.isnot(None),
+            Competition.series.in_(("SX", "MX", "SMX", "WSX")),
+        )
+        .order_by(Competition.event_date.desc())
+        .first()
+    )
+    if row and row.event_date:
+        return int(row.event_date.year)
+    return get_today().year
+
+
+def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, dict[int, float]]:
+    """Samma bucket-logik som race results — valfritt filter på kalenderår."""
+    from collections import defaultdict
+
+    totals: dict[tuple, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    promoted_250_coasts = _promoted_250_coast_by_name()
+
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .all()
+    )
+
+    for cr, comp, rider in rows:
+        if year is not None and (not comp.event_date or int(comp.event_date.year) != int(year)):
+            continue
+
+        s = str(comp.series).strip() if comp.series is not None else ""
+        if s not in ("WSX", "SX", "MX", "SMX"):
+            continue
+
+        if s == "WSX":
+            if cr.rider_points is not None:
+                pts = float(cr.rider_points)
+            else:
+                pts = float(get_smx_qualification_points(cr.position))
+        elif s == "SMX":
+            mult = comp.point_multiplier or 1.0
+            pts = float(get_smx_qualification_points(cr.position)) * float(mult)
+        else:
+            pts = float(_result_points_for_standing(cr, comp))
+
+        if s == "WSX":
+            rider_class = getattr(cr, "class_name", None) or rider.class_name
+            if rider_class not in ("wsx_sx1", "wsx_sx2"):
+                continue
+            bucket = ("wsx", rider_class)
+        else:
+            rider_class, result_coast = _standing_class_and_coast(
+                cr, comp, rider, promoted_250_coasts
+            )
+            if rider_class == "450cc":
+                bucket = (s.lower(), "450")
+            elif rider_class == "250cc":
+                rc = (result_coast or rider.coast_250 or "").strip().lower()
+                if rc not in ("east", "west"):
+                    continue
+                cc = (comp.coast_250 or "").strip().lower()
+                if s == "SMX":
+                    bucket = ("smx", "250", rc)
+                elif cc in ("both", "showdown"):
+                    bucket = (s.lower(), "250", rc)
+                elif cc in ("east", "west") and cc == rc:
+                    bucket = (s.lower(), "250", rc)
+                else:
+                    continue
+            else:
+                continue
+
+        totals[bucket][int(rider.id)] += pts
+
+    return {k: dict(v) for k, v in totals.items()}
+
+
+def _rank_in_points_map(points_map: dict[int, float], rider_id: int) -> dict[str, int] | None:
+    if rider_id not in points_map:
+        return None
+    items = sorted(points_map.items(), key=lambda x: (-x[1], x[0]))
+    pts_raw = float(points_map[rider_id])
+    pts = int(pts_raw) if abs(pts_raw - round(pts_raw)) < 0.001 else round(pts_raw, 1)
+    rank = next(i + 1 for i, (rid, _) in enumerate(items) if int(rid) == rider_id)
+    return {"rank": rank, "points": pts, "of": len(items)}
+
+
+def _merge_championship_maps(
+    totals: dict[tuple, dict[int, float]],
+    *buckets: tuple,
+) -> dict[int, float]:
+    from collections import defaultdict
+
+    merged: dict[int, float] = defaultdict(float)
+    for bucket in buckets:
+        for rid, pts in (totals.get(bucket) or {}).items():
+            merged[int(rid)] += float(pts)
+    return dict(merged)
+
+
+def _rider_championship_standings(rider: Rider, year: int) -> list[dict[str, Any]]:
+    """SX / MX / SMX-placering för säsongen (samma regler som resultatsidan)."""
+    totals = _accumulate_championship_totals(year=year)
+    rid = int(rider.id)
+    cls = (rider.class_name or "").strip().lower()
+    coast = (rider.coast_250 or "").strip().lower()
+    rows: list[dict[str, Any]] = []
+
+    def add_row(series: str, label: str, points_map: dict[int, float]) -> None:
+        standing = _rank_in_points_map(points_map, rid)
+        if standing:
+            rows.append({"series": series, "label": label, **standing})
+
+    if cls in ("wsx_sx1", "wsx_sx2"):
+        add_row("WSX", f"WSX {year}", totals.get(("wsx", cls)) or {})
+        return rows
+
+    if cls in ("450cc", "450"):
+        sx_b: tuple = ("sx", "450")
+        mx_b = ("mx", "450")
+        smx_b = ("smx", "450")
+        add_row("SX", f"SX {year}", totals.get(sx_b) or {})
+        add_row("MX", f"MX {year}", totals.get(mx_b) or {})
+        add_row("SMX", f"SMX {year}", _merge_championship_maps(totals, sx_b, mx_b, smx_b))
+        return rows
+
+    if cls in ("250cc", "250") and coast in ("east", "west"):
+        sx_b = ("sx", "250", coast)
+        mx_b = ("mx", "250", coast)
+        smx_b = ("smx", "250", coast)
+        tag = "250E" if coast == "east" else "250W"
+        add_row("SX", f"SX {tag} {year}", totals.get(sx_b) or {})
+        add_row("MX", f"MX {tag} {year}", totals.get(mx_b) or {})
+        add_row("SMX", f"SMX {tag} {year}", _merge_championship_maps(totals, sx_b, mx_b, smx_b))
+
+    return rows
+
+
 def build_rider_game_context(rider: Rider) -> dict[str, Any]:
     """Plockstatistik + senaste race — kopplar biosidan till fantasy."""
     series = _picks_series_for_rider(rider)
@@ -6115,10 +6255,14 @@ def build_rider_game_context(rider: Rider) -> dict[str, Any]:
         }
 
     recent = _rider_recent_race_results(int(rider.id))
+    season_year = _current_racing_season_year()
+    championships = _rider_championship_standings(rider, season_year)
     return {
+        "season_year": season_year,
         "upcoming": upcoming_block,
         "recent_results": recent,
-        "has_any": bool(upcoming_block or recent),
+        "championships": championships,
+        "has_any": bool(upcoming_block or recent or championships),
     }
 
 
