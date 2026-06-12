@@ -3951,7 +3951,7 @@
       url += '?competition_id={{ upcoming_race.id }}';
       {% endif %}
       try {
-        const res = await fetch(url);
+        const res = await mxFetchTimed('power_ranking', url);
         const data = await res.json();
         if (!data.ok || res.status !== 200) {
           wrap.classList.add('hidden');
@@ -4049,15 +4049,18 @@
       }
       fetchRiderSpotlight();
 
-      setTimeout(function() {
-        fetchSeasonLeaderboard();
-        fetchLeagueLeaderboard();
-        fetchCrossDinoHighscores();
-        fetchWeeklyFunStats();
-        loadSeriesLeaders();
-        loadWSXLeaders();
-        fetchPowerRanking();
-      }, 300);
+      setTimeout(fetchPowerRanking, 400);
+
+      [
+        fetchSeasonLeaderboard,
+        fetchLeagueLeaderboard,
+        fetchCrossDinoHighscores,
+        fetchWeeklyFunStats,
+        loadSeriesLeaders,
+        loadWSXLeaders,
+      ].forEach(function(fn, i) {
+        setTimeout(fn, 700 + i * 200);
+      });
 
       setTimeout(updateTabScrollIndicators, 300);
 
