@@ -36,6 +36,13 @@ _RIDER_IMAGE_COLUMN_CHECKED = False
 _MOTO_COLUMNS_CHECKED = False
 _CHAMPIONSHIP_TOTALS_CACHE: dict[int, tuple[float, dict]] = {}
 _RIDER_SPOTLIGHT_CACHE: tuple[float, dict] | None = None
+_RIDER_SPOTLIGHT_MODE_CACHE: dict[str, tuple[float, dict]] = {}
+_SPOTLIGHT_TAB_META: dict[str, dict[str, str]] = {
+    "last_race": {"label": "Senaste race", "icon": "🏁"},
+    "crowd_pick": {"label": "Crowd pick", "icon": "🔥"},
+    "rocket": {"label": "Veckans raket", "icon": "🚀"},
+    "dark_horse": {"label": "Mörk häst", "icon": "🌙"},
+}
 _SERIES_STATUS_CACHE: tuple[float, list] | None = None
 _POWER_RANKING_CACHE: dict[int, tuple[float, dict]] = {}
 _HOMEPAGE_CACHE_TTL = 600.0
@@ -3690,6 +3697,12 @@ def aggregate_weekly_holeshot_points_from_picks(comp_ids: list[int]) -> dict[int
 def get_rider_spotlight():
     """Featured rider from the most recent completed race (homepage spotlight box)."""
     try:
+        mode = (request.args.get("mode") or "").strip()
+        if mode:
+            data = build_spotlight_mode(mode)
+            if not data:
+                return jsonify({"available": False, "mode": mode}), 404
+            return jsonify({"available": True, "mode": mode, "data": data})
         return jsonify(build_rider_spotlight())
     except Exception as e:
         print(f"get_rider_spotlight: {e}")
@@ -6800,19 +6813,212 @@ def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
     return cards
 
 
+def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
+    for card in mode.get("riders") or []:
+        if not card.get("portrait_url"):
+            return True
+    return False
+
+
 def _spotlight_cache_needs_refresh(payload: dict) -> bool:
     """Äldre cache kan sakna porträtt-URL efter bildfix."""
     if not payload.get("available"):
         return False
     for mode in (payload.get("modes") or {}).values():
-        for card in mode.get("riders") or []:
-            if not card.get("portrait_url"):
-                return True
+        if _spotlight_mode_needs_portrait_refresh(mode):
+            return True
     return False
 
 
+def _spotlight_season_year(last_comp: Competition | None) -> int:
+    if last_comp and last_comp.event_date:
+        return int(last_comp.event_date.year)
+    return _current_racing_season_year()
+
+
+def _spotlight_available_mode_keys(
+    last_comp: Competition | None,
+    upcoming: Competition | None,
+) -> list[str]:
+    keys: list[str] = []
+    if last_comp:
+        keys.extend(["last_race", "rocket", "dark_horse"])
+    if upcoming:
+        try:
+            locked = is_picks_locked(upcoming)
+        except Exception:
+            locked = True
+        if not locked:
+            keys.append("crowd_pick")
+    return keys
+
+
+def _spotlight_default_mode_key(
+    available: list[str],
+    upcoming: Competition | None,
+) -> str:
+    default_mode = "last_race"
+    if "crowd_pick" in available and upcoming and upcoming.event_date:
+        days = (upcoming.event_date - get_today()).days
+        if 0 <= days <= 7:
+            default_mode = "crowd_pick"
+    if default_mode not in available and available:
+        default_mode = available[0]
+    return default_mode
+
+
+def _build_spotlight_mode_data(
+    mode_key: str,
+    *,
+    last_comp: Competition | None,
+    upcoming: Competition | None,
+    season_year: int,
+) -> tuple[dict[str, Any] | None, list[Rider]]:
+    riders: list[Rider] = []
+
+    if mode_key == "last_race" and last_comp:
+        winners = _p1_winners_for_comp(last_comp)
+        if not winners:
+            return None, []
+        race_cards = []
+        for rider, result, badge in winners:
+            riders.append(rider)
+            if (last_comp.series or "") == "WSX":
+                pts = (
+                    int(result.rider_points)
+                    if result.rider_points is not None
+                    else int(get_smx_qualification_points(result.position))
+                )
+            else:
+                pts = int(_result_points_for_standing(result, last_comp))
+            race_cards.append(
+                _spotlight_rider_card(
+                    rider,
+                    comp=last_comp,
+                    result=result,
+                    reason=f"Vann {last_comp.name} · {pts} p",
+                    badge=badge,
+                    badge_emoji="🥇",
+                    season_year=season_year,
+                )
+            )
+        meta = _SPOTLIGHT_TAB_META["last_race"]
+        return {
+            "available": True,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "headline": f"Vinnare — {last_comp.name}",
+            "riders": race_cards,
+        }, riders
+
+    if mode_key == "rocket" and last_comp:
+        rocket_hit = _spotlight_rocket_from_comp(last_comp, season_year)
+        if not rocket_hit or rocket_hit[1] <= 0:
+            return None, []
+        rider, climb, rb, ra = rocket_hit
+        riders.append(rider)
+        meta = _SPOTLIGHT_TAB_META["rocket"]
+        return {
+            "available": True,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "headline": "Störst klättring i mästerskapet",
+            "riders": [
+                _spotlight_rider_card(
+                    rider,
+                    comp=last_comp,
+                    reason=f"Klättrade {climb} platser efter {last_comp.name}",
+                    subtitle=f"Mästerskap: #{rb} → #{ra}",
+                    badge_emoji="🚀",
+                    season_year=season_year,
+                    extra_stats=[],
+                    include_championship=False,
+                )
+            ],
+        }, riders
+
+    if mode_key == "dark_horse" and last_comp:
+        dark = _spotlight_dark_horse_from_comp(last_comp)
+        if not dark:
+            return None, []
+        rider, result, pct = dark
+        riders.append(rider)
+        meta = _SPOTLIGHT_TAB_META["dark_horse"]
+        return {
+            "available": True,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "headline": "Ingen såg det komma",
+            "riders": [
+                _spotlight_rider_card(
+                    rider,
+                    comp=last_comp,
+                    result=result,
+                    reason=f"P{result.position} i {last_comp.name} — bara {pct}% hade honom",
+                    subtitle="Alla tror på stjärnorna — han levererade ändå",
+                    badge_emoji="🌙",
+                    season_year=season_year,
+                    extra_stats=[],
+                    include_championship=False,
+                )
+            ],
+        }, riders
+
+    if mode_key == "crowd_pick" and upcoming:
+        try:
+            if is_picks_locked(upcoming):
+                return None, []
+        except Exception:
+            return None, []
+        crowd_cards = _spotlight_crowd_cards(upcoming)
+        if not crowd_cards:
+            return None, []
+        for card in crowd_cards:
+            rid = int(card.get("rider_id") or 0)
+            if rid:
+                row = Rider.query.get(rid)
+                if row:
+                    riders.append(row)
+        meta = _SPOTLIGHT_TAB_META["crowd_pick"]
+        return {
+            "available": True,
+            "label": meta["label"],
+            "icon": meta["icon"],
+            "headline": f"Folkets favorit inför {upcoming.name}",
+            "riders": crowd_cards,
+        }, riders
+
+    return None, []
+
+
+def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
+    """Bygg ett spotlight-läge (cachad per flik)."""
+    now = time.time()
+    cached = _RIDER_SPOTLIGHT_MODE_CACHE.get(mode_key)
+    if cached and cached[0] > now:
+        mode_data = cached[1]
+        if not _spotlight_mode_needs_portrait_refresh(mode_data):
+            return mode_data
+
+    last_comp = _last_completed_competition()
+    upcoming = _current_picks_competition()
+    season_year = _spotlight_season_year(last_comp)
+    mode_data, riders = _build_spotlight_mode_data(
+        mode_key,
+        last_comp=last_comp,
+        upcoming=upcoming,
+        season_year=season_year,
+    )
+    if not mode_data:
+        return None
+
+    _patch_spotlight_portraits({mode_key: mode_data}, riders)
+    _RIDER_SPOTLIGHT_MODE_CACHE[mode_key] = (now + _HOMEPAGE_CACHE_TTL, mode_data)
+    return mode_data
+
+
 def build_rider_spotlight() -> dict[str, Any]:
-    """Flera spotlight-lägen för startsidan — cachad."""
+    """Spotlight-shell: metadata + endast standardflik (övriga laddas lazy)."""
     global _RIDER_SPOTLIGHT_CACHE
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
@@ -6822,145 +7028,36 @@ def build_rider_spotlight() -> dict[str, Any]:
 
     last_comp = _last_completed_competition()
     upcoming = _current_picks_competition()
-    season_year = (
-        int(last_comp.event_date.year)
-        if last_comp and last_comp.event_date
-        else _current_racing_season_year()
-    )
-
-    modes: dict[str, dict[str, Any]] = {}
-    spotlight_riders: list[Rider] = []
-
-    if last_comp:
-        winners = _p1_winners_for_comp(last_comp)
-        if winners:
-            race_cards = []
-            for rider, result, badge in winners:
-                spotlight_riders.append(rider)
-                pts_suffix = ""
-                if (last_comp.series or "") == "WSX":
-                    pts = (
-                        int(result.rider_points)
-                        if result.rider_points is not None
-                        else int(get_smx_qualification_points(result.position))
-                    )
-                else:
-                    pts = int(_result_points_for_standing(result, last_comp))
-                pts_suffix = f" · {pts} p"
-                race_cards.append(
-                    _spotlight_rider_card(
-                        rider,
-                        comp=last_comp,
-                        result=result,
-                        reason=f"Vann {last_comp.name}{pts_suffix}",
-                        badge=badge,
-                        badge_emoji="🥇",
-                        season_year=season_year,
-                    )
-                )
-            modes["last_race"] = {
-                "available": True,
-                "label": "Senaste race",
-                "icon": "🏁",
-                "headline": f"Vinnare — {last_comp.name}",
-                "riders": race_cards,
-            }
-
-        rocket_hit = _spotlight_rocket_from_comp(last_comp, season_year)
-        if rocket_hit and rocket_hit[1] > 0:
-            rider, climb, rb, ra = rocket_hit
-            spotlight_riders.append(rider)
-            modes["rocket"] = {
-                "available": True,
-                "label": "Veckans raket",
-                "icon": "🚀",
-                "headline": "Störst klättring i mästerskapet",
-                "riders": [
-                    _spotlight_rider_card(
-                        rider,
-                        comp=last_comp,
-                        reason=f"Klättrade {climb} platser efter {last_comp.name}",
-                        subtitle=f"Mästerskap: #{rb} → #{ra}",
-                        badge_emoji="🚀",
-                        season_year=season_year,
-                        extra_stats=[],
-                        include_championship=False,
-                    )
-                ],
-            }
-
-        dark = _spotlight_dark_horse_from_comp(last_comp)
-        if dark:
-            rider, result, pct = dark
-            spotlight_riders.append(rider)
-            modes["dark_horse"] = {
-                "available": True,
-                "label": "Mörk häst",
-                "icon": "🌙",
-                "headline": "Ingen såg det komma",
-                "riders": [
-                    _spotlight_rider_card(
-                        rider,
-                        comp=last_comp,
-                        result=result,
-                        reason=f"P{result.position} i {last_comp.name} — bara {pct}% hade honom",
-                        subtitle="Alla tror på stjärnorna — han levererade ändå",
-                        badge_emoji="🌙",
-                        season_year=season_year,
-                        extra_stats=[],
-                        include_championship=False,
-                    )
-                ],
-            }
-
-    crowd_comp = upcoming
-    if crowd_comp and not is_picks_locked(crowd_comp):
-        crowd_cards = _spotlight_crowd_cards(crowd_comp)
-        if crowd_cards:
-            modes["crowd_pick"] = {
-                "available": True,
-                "label": "Crowd pick",
-                "icon": "🔥",
-                "headline": f"Folkets favorit inför {crowd_comp.name}",
-                "riders": crowd_cards,
-            }
-
-    if not modes:
+    available = _spotlight_available_mode_keys(last_comp, upcoming)
+    if not available:
         payload = {"available": False}
         _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
         return payload
 
-    seen_rider_ids: set[int] = set()
-    unique_spotlight_riders: list[Rider] = []
-    for r in spotlight_riders:
-        if int(r.id) in seen_rider_ids:
-            continue
-        seen_rider_ids.add(int(r.id))
-        unique_spotlight_riders.append(r)
-    for card in modes.get("crowd_pick", {}).get("riders") or []:
-        rid = int(card.get("rider_id") or 0)
-        if not rid or rid in seen_rider_ids:
-            continue
-        row = Rider.query.get(rid)
-        if row:
-            seen_rider_ids.add(rid)
-            unique_spotlight_riders.append(row)
-    _patch_spotlight_portraits(modes, unique_spotlight_riders)
+    default_mode = _spotlight_default_mode_key(available, upcoming)
+    default_data = build_spotlight_mode(default_mode)
+    if not default_data:
+        fallback = next((k for k in available if k != default_mode), None)
+        if fallback:
+            default_mode = fallback
+            default_data = build_spotlight_mode(default_mode)
+    if not default_data:
+        payload = {"available": False}
+        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        return payload
 
-    default_mode = "last_race"
-    if modes.get("crowd_pick", {}).get("available"):
-        if upcoming and upcoming.event_date:
-            days = (upcoming.event_date - get_today()).days
-            if 0 <= days <= 7:
-                default_mode = "crowd_pick"
-    if default_mode not in modes:
-        default_mode = next(iter(modes.keys()))
-
+    mode_tabs = [
+        {**_SPOTLIGHT_TAB_META[k], "key": k}
+        for k in ("last_race", "crowd_pick", "rocket", "dark_horse")
+        if k in available
+    ]
     payload = {
         "available": True,
         "title": "I rampljuset",
         "default_mode": default_mode,
-        "modes": modes,
+        "mode_tabs": mode_tabs,
+        "lazy_modes": [k for k in available if k != default_mode],
+        "modes": {default_mode: default_data},
     }
     _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
     return payload
