@@ -6698,33 +6698,48 @@ def _spotlight_rocket_from_comp(
         .all()
     )
 
-    best: tuple[Rider, int, int, int] | None = None
-    best_climb = 0
+    comp_deductions: dict[tuple, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    riders_by_bucket: dict[tuple, list[tuple[CompetitionResult, Rider]]] = defaultdict(list)
     for cr_row, rider in comp_rows:
         bucket = _championship_bucket_for_rider(cr_row, comp, rider, promoted)
         if not bucket:
             continue
         rid = int(rider.id)
-        after_map = totals_after.get(bucket) or {}
-        if rid not in after_map:
-            continue
-        pts = _standing_points_for_comp_result(cr_row, comp)
+        comp_deductions[bucket][rid] += _standing_points_for_comp_result(cr_row, comp)
+        riders_by_bucket[bucket].append((cr_row, rider))
+
+    totals_before: dict[tuple, dict[int, float]] = {}
+    for bucket, after_map in totals_after.items():
         before_map = dict(after_map)
-        before_pts = before_map[rid] - pts
-        if before_pts <= 0:
-            del before_map[rid]
-        else:
-            before_map[rid] = before_pts
-        rank_before = _rank_in_points_map(before_map, rid)
-        rank_after = _rank_in_points_map(after_map, rid)
-        if not rank_after or not rank_before:
-            continue
-        rb = int(rank_before["rank"])
-        ra = int(rank_after["rank"])
-        climb = rb - ra
-        if climb > best_climb:
-            best_climb = climb
-            best = (rider, climb, rb, ra)
+        for deduct_rid, deduct_pts in comp_deductions.get(bucket, {}).items():
+            if deduct_rid not in before_map:
+                continue
+            new_pts = before_map[deduct_rid] - deduct_pts
+            if new_pts <= 0:
+                del before_map[deduct_rid]
+            else:
+                before_map[deduct_rid] = new_pts
+        totals_before[bucket] = before_map
+
+    best: tuple[Rider, int, int, int] | None = None
+    best_climb = 0
+    for bucket, rows in riders_by_bucket.items():
+        after_map = totals_after.get(bucket) or {}
+        before_map = totals_before.get(bucket) or {}
+        for _cr_row, rider in rows:
+            rid = int(rider.id)
+            if rid not in after_map:
+                continue
+            rank_before = _rank_in_points_map(before_map, rid)
+            rank_after = _rank_in_points_map(after_map, rid)
+            if not rank_after or not rank_before:
+                continue
+            rb = int(rank_before["rank"])
+            ra = int(rank_after["rank"])
+            climb = rb - ra
+            if climb > best_climb:
+                best_climb = climb
+                best = (rider, climb, rb, ra)
 
     return best
 
@@ -6997,7 +7012,9 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
     cached = _RIDER_SPOTLIGHT_MODE_CACHE.get(mode_key)
     if cached and cached[0] > now:
         mode_data = cached[1]
-        if not _spotlight_mode_needs_portrait_refresh(mode_data):
+        if mode_key == "rocket" and int(mode_data.get("_calc_v") or 0) < 2:
+            pass
+        elif not _spotlight_mode_needs_portrait_refresh(mode_data):
             return mode_data
 
     last_comp = _last_completed_competition()
@@ -7013,6 +7030,8 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
         return None
 
     _patch_spotlight_portraits({mode_key: mode_data}, riders)
+    if mode_key == "rocket":
+        mode_data["_calc_v"] = 2
     _RIDER_SPOTLIGHT_MODE_CACHE[mode_key] = (now + _HOMEPAGE_CACHE_TTL, mode_data)
     return mode_data
 
