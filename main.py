@@ -6226,32 +6226,9 @@ def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, d
         else:
             pts = float(_result_points_for_standing(cr, comp))
 
-        if s == "WSX":
-            rider_class = getattr(cr, "class_name", None) or rider.class_name
-            if rider_class not in ("wsx_sx1", "wsx_sx2"):
-                continue
-            bucket = ("wsx", rider_class)
-        else:
-            rider_class, result_coast = _standing_class_and_coast(
-                cr, comp, rider, promoted_250_coasts
-            )
-            if rider_class == "450cc":
-                bucket = (s.lower(), "450")
-            elif rider_class == "250cc":
-                rc = (result_coast or rider.coast_250 or "").strip().lower()
-                if rc not in ("east", "west"):
-                    continue
-                cc = (comp.coast_250 or "").strip().lower()
-                if s == "SMX":
-                    bucket = ("smx", "250", rc)
-                elif cc in ("both", "showdown"):
-                    bucket = (s.lower(), "250", rc)
-                elif cc in ("east", "west") and cc == rc:
-                    bucket = (s.lower(), "250", rc)
-                else:
-                    continue
-            else:
-                continue
+        bucket = _championship_bucket_for_rider(cr, comp, rider, promoted_250_coasts)
+        if not bucket:
+            continue
 
         totals[bucket][int(rider.id)] += pts
 
@@ -6499,6 +6476,7 @@ def _championship_bucket_for_rider(
     rider: Rider,
     promoted_250_coasts: dict[str, str],
 ) -> tuple | None:
+    """Bucket-nyckel för mästerskap — samma regler överallt (bio, resultat, spotlight)."""
     s = str(comp.series).strip() if comp.series is not None else ""
     if s not in ("WSX", "SX", "MX", "SMX"):
         return None
@@ -6517,6 +6495,9 @@ def _championship_bucket_for_rider(
         if rc not in ("east", "west"):
             return None
         cc = (comp.coast_250 or "").strip().lower()
+        # Pro Motocross: alla 250 kör tillsammans — äldre rader kan sakna coast_250.
+        if s == "MX" and cc not in ("both", "showdown", "east", "west"):
+            cc = "both"
         if s == "SMX":
             return ("smx", "250", rc)
         if cc in ("both", "showdown"):
@@ -10585,32 +10566,9 @@ def compute_series_championship_totals():
         else:
             pts = float(_result_points_for_standing(cr, comp))
 
-        if s == "WSX":
-            rider_class = getattr(cr, "class_name", None) or rider.class_name
-            if rider_class not in ("wsx_sx1", "wsx_sx2"):
-                continue
-            bucket = ("wsx", rider_class)
-        else:
-            rider_class, result_coast = _standing_class_and_coast(cr, comp, rider, promoted_250_coasts)
-            if rider_class == "450cc":
-                bucket = (s.lower(), "450")
-            elif rider_class == "250cc":
-                rc = (result_coast or rider.coast_250 or "").strip().lower()
-                if rc not in ("east", "west"):
-                    continue
-                cc = (comp.coast_250 or "").strip().lower()
-                # SMX: tävling saknar ofta coast — räkna per förares East/West.
-                if s == "SMX":
-                    bucket = ("smx", "250", rc)
-                elif cc in ("both", "showdown"):
-                    # MX m.fl.: kombinerad 250-klass — fördela per förares region.
-                    bucket = (s.lower(), "250", rc)
-                elif cc in ("east", "west") and cc == rc:
-                    bucket = (s.lower(), "250", rc)
-                else:
-                    continue
-            else:
-                continue
+        bucket = _championship_bucket_for_rider(cr, comp, rider, promoted_250_coasts)
+        if not bucket:
+            continue
 
         rid = rider.id
         totals[bucket][rid] += pts
