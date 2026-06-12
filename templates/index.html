@@ -107,6 +107,27 @@
       pointer-events: auto !important;
       cursor: pointer !important;
     }
+    .rider-spotlight-pill {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: rgba(0, 0, 0, 0.35);
+      color: rgba(255, 255, 255, 0.85);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .rider-spotlight-pill:hover {
+      border-color: rgba(251, 191, 36, 0.6);
+      color: #fff;
+    }
+    .rider-spotlight-pill.active {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(245, 158, 11, 0.85));
+      border-color: rgba(255, 255, 255, 0.5);
+      color: #1e293b;
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
+    }
     
     /* Glömt lösenord-länken ska alltid vara klickbar i modalen */
     .readonly-mode a[href*="forgot_password"] {
@@ -1251,39 +1272,10 @@
                    style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
                 <div class="absolute inset-0 bg-black bg-opacity-30"></div>
                 <div class="relative z-10">
-                  <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center" style="text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">✨ I rampljuset</h2>
-                  <a id="rider-spotlight-link" href="#" class="rider-spotlight-card group block rounded-xl border border-amber-400/30 overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-300/50">
-                    <div class="relative rider-spotlight-checkered">
-                      <div class="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/40 pointer-events-none"></div>
-                      <div class="relative flex flex-col sm:flex-row items-stretch min-h-[8.5rem]">
-                        <div class="sm:w-36 md:w-40 shrink-0 flex items-end justify-center p-4 sm:py-5 sm:pr-0">
-                          <div class="relative">
-                            <div class="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400/40 to-orange-600/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                            <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden ring-2 ring-amber-400/50 bg-slate-800 shadow-xl">
-                              <img id="rider-spotlight-img" src="" alt="" class="w-full h-full object-cover object-top">
-                            </div>
-                            <div class="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-base shadow-lg ring-2 ring-slate-900">🥇</div>
-                          </div>
-                        </div>
-                        <div class="flex-1 p-4 sm:py-5 sm:pl-3 sm:pr-5 flex flex-col justify-center min-w-0">
-                          <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/90" id="rider-spotlight-title">I rampljuset</span>
-                            <span id="rider-spotlight-class" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/40 text-amber-100/90 border border-amber-500/30"></span>
-                          </div>
-                          <h3 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight mb-1">
-                            <span id="rider-spotlight-number" class="text-amber-300/90"></span>
-                            <span id="rider-spotlight-name"></span>
-                          </h3>
-                          <p id="rider-spotlight-reason" class="text-amber-100/90 text-sm font-medium mb-1.5"></p>
-                          <p id="rider-spotlight-hook" class="text-white/70 text-sm leading-snug line-clamp-2 hidden italic"></p>
-                          <div id="rider-spotlight-stats" class="flex flex-wrap gap-3 mt-2 text-xs text-amber-100/70"></div>
-                          <span class="mt-2.5 inline-flex items-center gap-1 text-cyan-300 text-sm font-semibold group-hover:text-cyan-200">
-                            Läs profil <span class="transition-transform group-hover:translate-x-0.5">→</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </a>
+                  <h2 class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center" style="text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">✨ I rampljuset</h2>
+                  <div id="rider-spotlight-tabs" class="flex flex-wrap justify-center gap-2 mb-3 px-1 overflow-x-auto"></div>
+                  <p id="rider-spotlight-headline" class="text-center text-amber-100/90 text-sm font-medium mb-3 hidden"></p>
+                  <div id="rider-spotlight-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
                 </div>
               </div>
             </div>
@@ -2732,56 +2724,145 @@
       }
     }
 
+    let _spotlightPayload = null;
+    let _spotlightActiveMode = null;
+
+    function _escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function _spotlightCardHtml(rider) {
+      const href = rider.profile_url || ('/rider/' + rider.rider_id);
+      const num = rider.number ? ('#' + rider.number + ' ') : '';
+      const badge = rider.class_badge ? ('<span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/40 text-amber-100/90 border border-amber-500/30">' + _escapeHtml(rider.class_badge) + '</span>') : '';
+      const hook = rider.bio_hook
+        ? ('<p class="text-white/70 text-sm leading-snug line-clamp-2 italic mt-1">"' + _escapeHtml(rider.bio_hook) + '"</p>')
+        : '';
+      const subtitle = rider.subtitle
+        ? ('<p class="text-amber-100/75 text-xs mt-1">' + _escapeHtml(rider.subtitle) + '</p>')
+        : '';
+      const stats = (rider.stats && rider.stats.length)
+        ? ('<div class="flex flex-wrap gap-2 mt-2 text-xs text-amber-100/70">' + rider.stats.map((t) => '<span>' + _escapeHtml(t) + '</span>').join('') + '</div>')
+        : '';
+      const emoji = rider.badge_emoji || '🏁';
+      const portrait = rider.portrait_url || '';
+      return `
+        <a href="${_escapeHtml(href)}" class="rider-spotlight-card group block rounded-xl border border-amber-400/30 overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-300/50">
+          <div class="relative rider-spotlight-checkered">
+            <div class="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/40 pointer-events-none"></div>
+            <div class="relative flex flex-col sm:flex-row items-stretch min-h-[8rem]">
+              <div class="sm:w-32 shrink-0 flex items-end justify-center p-3 sm:py-4 sm:pr-0">
+                <div class="relative">
+                  <div class="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400/40 to-orange-600/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden ring-2 ring-amber-400/50 bg-slate-800 shadow-xl">
+                    <img src="${_escapeHtml(portrait)}" alt="${_escapeHtml(rider.name)}" class="w-full h-full object-cover object-top" loading="lazy">
+                  </div>
+                  <div class="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-sm shadow-lg ring-2 ring-slate-900">${emoji}</div>
+                </div>
+              </div>
+              <div class="flex-1 p-3 sm:py-4 sm:pl-2 sm:pr-4 flex flex-col justify-center min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                  <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-200/90">${_escapeHtml(rider.class_label || rider.brand || '')}</span>
+                  ${badge}
+                </div>
+                <h3 class="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight">
+                  <span class="text-amber-300/90">${_escapeHtml(num)}</span>${_escapeHtml(rider.name)}
+                </h3>
+                <p class="text-amber-100/90 text-sm font-medium">${_escapeHtml(rider.reason || '')}</p>
+                ${subtitle}
+                ${hook}
+                ${stats}
+                <span class="mt-2 inline-flex items-center gap-1 text-cyan-300 text-xs font-semibold group-hover:text-cyan-200">
+                  Läs profil <span class="transition-transform group-hover:translate-x-0.5">→</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </a>`;
+    }
+
+    function _renderSpotlightMode(modeKey) {
+      if (!_spotlightPayload || !_spotlightPayload.modes) return;
+      const mode = _spotlightPayload.modes[modeKey];
+      const tabsEl = document.getElementById('rider-spotlight-tabs');
+      const headlineEl = document.getElementById('rider-spotlight-headline');
+      const cardsEl = document.getElementById('rider-spotlight-cards');
+      if (!mode || !mode.available || !cardsEl) return;
+
+      _spotlightActiveMode = modeKey;
+      if (tabsEl) {
+        tabsEl.querySelectorAll('.rider-spotlight-pill').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.mode === modeKey);
+        });
+      }
+      if (headlineEl) {
+        if (mode.headline) {
+          headlineEl.textContent = mode.headline;
+          headlineEl.classList.remove('hidden');
+        } else {
+          headlineEl.classList.add('hidden');
+        }
+      }
+      const riders = mode.riders || [];
+      const gridClass = riders.length > 1 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1';
+      cardsEl.className = 'grid gap-3 ' + gridClass;
+      cardsEl.innerHTML = riders.map(_spotlightCardHtml).join('');
+    }
+
     function updateRiderSpotlight(spotlight) {
       const section = document.getElementById('rider-spotlight-section');
-      const link = document.getElementById('rider-spotlight-link');
-      if (!section || !link) return;
+      const tabsEl = document.getElementById('rider-spotlight-tabs');
+      const cardsEl = document.getElementById('rider-spotlight-cards');
+      if (!section || !tabsEl || !cardsEl) return;
+
       if (!spotlight || !spotlight.available) {
         section.classList.add('hidden');
+        _spotlightPayload = null;
         return;
       }
+
+      if (spotlight.modes) {
+        _spotlightPayload = spotlight;
+        section.classList.remove('hidden');
+        const modeOrder = ['last_race', 'crowd_pick', 'rocket', 'dark_horse'];
+        const keys = modeOrder.filter((k) => spotlight.modes[k] && spotlight.modes[k].available);
+        Object.keys(spotlight.modes).forEach((k) => {
+          if (!keys.includes(k) && spotlight.modes[k].available) keys.push(k);
+        });
+        tabsEl.innerHTML = keys.map((k) => {
+          const m = spotlight.modes[k];
+          const label = (m.icon ? m.icon + ' ' : '') + (m.label || k);
+          return '<button type="button" class="rider-spotlight-pill" data-mode="' + k + '">' + _escapeHtml(label) + '</button>';
+        }).join('');
+        tabsEl.querySelectorAll('.rider-spotlight-pill').forEach((btn) => {
+          btn.addEventListener('click', function() {
+            _renderSpotlightMode(btn.dataset.mode);
+          });
+        });
+        const start = spotlight.default_mode && spotlight.modes[spotlight.default_mode]
+          ? spotlight.default_mode
+          : keys[0];
+        _renderSpotlightMode(start);
+        return;
+      }
+
+      // Legacy single-rider payload
+      _spotlightPayload = {
+        available: true,
+        default_mode: 'legacy',
+        modes: {
+          legacy: {
+            available: true,
+            label: spotlight.title || 'I rampljuset',
+            icon: '✨',
+            headline: spotlight.reason || '',
+            riders: [spotlight],
+          },
+        },
+      };
       section.classList.remove('hidden');
-      link.href = spotlight.profile_url || ('/rider/' + spotlight.rider_id);
-
-      const titleEl = document.getElementById('rider-spotlight-title');
-      if (titleEl) titleEl.textContent = spotlight.title || 'I rampljuset';
-
-      const img = document.getElementById('rider-spotlight-img');
-      if (img) {
-        img.src = spotlight.portrait_url || '';
-        img.alt = spotlight.name || '';
-      }
-      const numEl = document.getElementById('rider-spotlight-number');
-      if (numEl) numEl.textContent = spotlight.number ? ('#' + spotlight.number + ' ') : '';
-      const nameEl = document.getElementById('rider-spotlight-name');
-      if (nameEl) nameEl.textContent = spotlight.name || '';
-      const reasonEl = document.getElementById('rider-spotlight-reason');
-      if (reasonEl) {
-        const pts = spotlight.points != null ? (' · ' + spotlight.points + ' p') : '';
-        reasonEl.textContent = (spotlight.reason || '') + pts;
-      }
-      const classEl = document.getElementById('rider-spotlight-class');
-      if (classEl) classEl.textContent = spotlight.class_label || spotlight.brand || '';
-      const hookEl = document.getElementById('rider-spotlight-hook');
-      if (hookEl) {
-        if (spotlight.bio_hook) {
-          hookEl.textContent = '"' + spotlight.bio_hook + '"';
-          hookEl.classList.remove('hidden');
-        } else {
-          hookEl.classList.add('hidden');
-        }
-      }
-      const statsEl = document.getElementById('rider-spotlight-stats');
-      if (statsEl) {
-        const bits = [];
-        if (spotlight.sx_rank != null && spotlight.sx_points != null) {
-          bits.push('SX ' + (spotlight.season_year || '') + ': #' + spotlight.sx_rank + ' · ' + spotlight.sx_points + ' p');
-        }
-        if (spotlight.mx_rank != null && spotlight.mx_points != null) {
-          bits.push('MX: #' + spotlight.mx_rank + ' · ' + spotlight.mx_points + ' p');
-        }
-        statsEl.innerHTML = bits.map((t) => '<span>' + t + '</span>').join('');
-      }
+      tabsEl.innerHTML = '';
+      _renderSpotlightMode('legacy');
     }
 
     const RACE_WEATHER_ICONS = {

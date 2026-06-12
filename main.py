@@ -6334,13 +6334,17 @@ def _last_completed_competition() -> Competition | None:
     )
 
 
-def _spotlight_winner_for_comp(comp: Competition) -> tuple[Rider, CompetitionResult] | None:
-    """P1 i 450/SX1 först, annars 250/SX2."""
+def _p1_winners_for_comp(comp: Competition) -> list[tuple[Rider, CompetitionResult, str]]:
+    """P1 per huvudklass — 450 + 250 (eller SX1 + SX2)."""
     is_wsx = (comp.series or "") == "WSX"
-    class_order = ("wsx_sx1", "wsx_sx2") if is_wsx else ("450cc", "250cc")
-
-    for cls in class_order:
-        row = (
+    class_specs = (
+        [("wsx_sx1", "SX1"), ("wsx_sx2", "SX2")]
+        if is_wsx
+        else [("450cc", "450"), ("250cc", "250")]
+    )
+    winners: list[tuple[Rider, CompetitionResult, str]] = []
+    for cls, badge in class_specs:
+        rows = (
             db.session.query(CompetitionResult, Rider)
             .join(Rider, Rider.id == CompetitionResult.rider_id)
             .filter(CompetitionResult.competition_id == comp.id)
@@ -6348,96 +6352,461 @@ def _spotlight_winner_for_comp(comp: Competition) -> tuple[Rider, CompetitionRes
             .filter(
                 db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == cls
             )
-            .first()
+            .order_by(CompetitionResult.result_id.asc())
+            .all()
         )
-        if row:
-            return row[1], row[0]
+        for result, rider in rows:
+            badge_final = badge
+            if cls == "250cc":
+                coast = (rider.coast_250 or "").strip().lower()
+                if coast == "east":
+                    badge_final = "250E"
+                elif coast == "west":
+                    badge_final = "250W"
+            winners.append((rider, result, badge_final))
+    return winners
 
-    row = (
-        db.session.query(CompetitionResult, Rider)
-        .join(Rider, Rider.id == CompetitionResult.rider_id)
-        .filter(CompetitionResult.competition_id == comp.id)
-        .filter(CompetitionResult.position == 1)
-        .order_by(CompetitionResult.result_id.asc())
-        .first()
+
+def _spotlight_rider_card(
+    rider: Rider,
+    *,
+    comp: Competition | None = None,
+    result: CompetitionResult | None = None,
+    reason: str = "",
+    subtitle: str = "",
+    badge: str = "",
+    badge_emoji: str = "🥇",
+    season_year: int | None = None,
+    extra_stats: list[str] | None = None,
+) -> dict[str, Any]:
+    year = season_year or _current_racing_season_year()
+    bio_text = (getattr(rider, "bio_sv", None) or getattr(rider, "bio", None) or "").strip()
+    bio_parts = _bio_content_parts(bio_text) if bio_text else {}
+    hook = (bio_parts.get("hook") or bio_parts.get("full") or "")[:220]
+
+    championships = _rider_championship_standings(rider, year)
+    sx_row = next((c for c in championships if c.get("series") == "SX"), None)
+    mx_row = next((c for c in championships if c.get("series") == "MX"), None)
+    wsx_row = next((c for c in championships if c.get("series") == "WSX"), None)
+
+    stats = list(extra_stats or [])
+    if sx_row:
+        stats.append(f'SX {year}: #{sx_row["rank"]} · {sx_row["points"]} p')
+    if mx_row:
+        stats.append(f'MX: #{mx_row["rank"]} · {mx_row["points"]} p')
+    if wsx_row:
+        stats.append(f'WSX: #{wsx_row["rank"]} · {wsx_row["points"]} p')
+
+    pts = None
+    if result and comp:
+        if (comp.series or "") == "WSX":
+            pts = (
+                int(result.rider_points)
+                if result.rider_points is not None
+                else int(get_smx_qualification_points(result.position))
+            )
+        else:
+            pts = int(_result_points_for_standing(result, comp))
+
+    return {
+        "rider_id": int(rider.id),
+        "name": rider.name,
+        "number": rider.rider_number,
+        "class_label": _rider_directory_series_label(rider),
+        "class_badge": badge,
+        "brand": rider.bike_brand or "",
+        "portrait_url": template_rider_image_src(rider, bio_card=True),
+        "profile_url": url_for("rider_profile", rider_id=int(rider.id)),
+        "bio_hook": hook,
+        "reason": reason,
+        "subtitle": subtitle,
+        "badge_emoji": badge_emoji,
+        "points": pts,
+        "position": int(result.position) if result else None,
+        "stats": stats,
+        "season_year": year,
+    }
+
+
+def _aggregate_pick_rates_for_comp(
+    comp: Competition,
+) -> tuple[int, dict[int, dict[str, Any]]]:
+    """Andel lagn som plockat varje förare (en pass över alla snapshots)."""
+    from collections import Counter
+
+    is_wsx = (comp.series or "") == "WSX"
+    riders_dict = {r.id: r for r in Rider.query.all()}
+    n_lineups = 0
+    picked: Counter[int] = Counter()
+    p1_picks: Counter[int] = Counter()
+    pos_counts: dict[int, Counter[int]] = defaultdict(Counter)
+
+    for _uid, payload in _iter_crowd_pick_payloads(int(comp.id), ensure_snapshots=True):
+        race_picks = payload.get("race_picks") or []
+        lineup_riders: set[int] = set()
+        for p in race_picks:
+            try:
+                rid = int(p.get("rider_id"))
+                pos = int(p.get("predicted_position"))
+            except (TypeError, ValueError):
+                continue
+            r = riders_dict.get(rid)
+            if not r:
+                continue
+            cls = (r.class_name or "").strip().lower()
+            if is_wsx and cls not in ("wsx_sx1", "wsx_sx2"):
+                continue
+            if not is_wsx and cls not in ("450cc", "250cc"):
+                continue
+            lineup_riders.add(rid)
+            if pos == 1:
+                p1_picks[rid] += 1
+            pos_counts[rid][pos] += 1
+        if lineup_riders:
+            n_lineups += 1
+            for rid in lineup_riders:
+                picked[rid] += 1
+
+    if n_lineups <= 0:
+        return 0, {}
+
+    out: dict[int, dict[str, Any]] = {}
+    for rid, cnt in picked.items():
+        r = riders_dict.get(rid)
+        if not r:
+            continue
+        common = pos_counts[rid].most_common(1)[0] if pos_counts.get(rid) else None
+        out[rid] = {
+            "picked_pct": round(100.0 * cnt / n_lineups, 1),
+            "p1_pct": round(100.0 * p1_picks.get(rid, 0) / n_lineups, 1),
+            "common_position": common[0] if common else None,
+            "common_position_pct": (
+                round(100.0 * common[1] / n_lineups, 1) if common else None
+            ),
+            "class_name": r.class_name,
+            "class_group": (
+                "450"
+                if (r.class_name or "") in ("450cc", "wsx_sx1")
+                else "250"
+            ),
+        }
+    return n_lineups, out
+
+
+def _championship_bucket_for_rider(
+    cr: CompetitionResult,
+    comp: Competition,
+    rider: Rider,
+    promoted_250_coasts: dict[str, str],
+) -> tuple | None:
+    s = str(comp.series).strip() if comp.series is not None else ""
+    if s not in ("WSX", "SX", "MX", "SMX"):
+        return None
+    if s == "WSX":
+        rider_class = getattr(cr, "class_name", None) or rider.class_name
+        if rider_class not in ("wsx_sx1", "wsx_sx2"):
+            return None
+        return ("wsx", rider_class)
+    rider_class, result_coast = _standing_class_and_coast(
+        cr, comp, rider, promoted_250_coasts
     )
-    if row:
-        return row[1], row[0]
+    if rider_class == "450cc":
+        return (s.lower(), "450")
+    if rider_class == "250cc":
+        rc = (result_coast or rider.coast_250 or "").strip().lower()
+        if rc not in ("east", "west"):
+            return None
+        cc = (comp.coast_250 or "").strip().lower()
+        if s == "SMX":
+            return ("smx", "250", rc)
+        if cc in ("both", "showdown"):
+            return (s.lower(), "250", rc)
+        if cc in ("east", "west") and cc == rc:
+            return (s.lower(), "250", rc)
     return None
 
 
+def _spotlight_rocket_from_comp(
+    comp: Competition,
+    year: int,
+) -> tuple[Rider, int, int, int] | None:
+    """Förare med störst mästerskapsklättring efter senaste race."""
+    promoted = _promoted_250_coast_by_name()
+    totals_before: dict[tuple, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    totals_after: dict[tuple, dict[int, float]] = defaultdict(lambda: defaultdict(float))
+    riders_in_comp: set[int] = set()
+
+    rows = (
+        db.session.query(CompetitionResult, Competition, Rider)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .all()
+    )
+    for cr, c, rider in rows:
+        if not c.event_date or int(c.event_date.year) != int(year):
+            continue
+        bucket = _championship_bucket_for_rider(cr, c, rider, promoted)
+        if not bucket:
+            continue
+        if (c.series or "") == "WSX":
+            pts = (
+                float(cr.rider_points)
+                if cr.rider_points is not None
+                else float(get_smx_qualification_points(cr.position))
+            )
+        elif (c.series or "") == "SMX":
+            mult = c.point_multiplier or 1.0
+            pts = float(get_smx_qualification_points(cr.position)) * float(mult)
+        else:
+            pts = float(_result_points_for_standing(cr, c))
+        rid = int(rider.id)
+        totals_after[bucket][rid] += pts
+        if int(c.id) != int(comp.id):
+            totals_before[bucket][rid] += pts
+        else:
+            riders_in_comp.add(rid)
+
+    best: tuple[Rider, int, int, int] | None = None
+    best_climb = 0
+    for rid in riders_in_comp:
+        rider = Rider.query.get(rid)
+        if not rider:
+            continue
+        cr_row = (
+            CompetitionResult.query.filter_by(competition_id=comp.id, rider_id=rid)
+            .first()
+        )
+        if not cr_row:
+            continue
+        bucket = _championship_bucket_for_rider(cr_row, comp, rider, promoted)
+        if not bucket:
+            continue
+        before_map = dict(totals_before.get(bucket, {}))
+        after_map = dict(totals_after.get(bucket, {}))
+        rank_before = _rank_in_points_map(before_map, rid)
+        rank_after = _rank_in_points_map(after_map, rid)
+        if not rank_after:
+            continue
+        rb = rank_before["rank"] if rank_before else None
+        ra = rank_after["rank"]
+        if rb is None:
+            continue
+        climb = int(rb) - int(ra)
+        if climb > best_climb:
+            best_climb = climb
+            best = (rider, climb, int(rb), int(ra))
+
+    return best
+
+
+def _spotlight_dark_horse_from_comp(
+    comp: Competition,
+) -> tuple[Rider, CompetitionResult, float] | None:
+    """Topp 5 med låg pick-rate — ingen såg det komma."""
+    n_lineups, rates = _aggregate_pick_rates_for_comp(comp)
+    if n_lineups < 2:
+        return None
+
+    rows = (
+        db.session.query(CompetitionResult, Rider)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(CompetitionResult.competition_id == comp.id)
+        .filter(CompetitionResult.position <= 5)
+        .order_by(CompetitionResult.position.asc())
+        .all()
+    )
+    best: tuple[Rider, CompetitionResult, float] | None = None
+    best_score = -1.0
+    for result, rider in rows:
+        rate = rates.get(int(rider.id))
+        if not rate:
+            continue
+        pct = float(rate.get("picked_pct") or 100.0)
+        if pct > 20.0:
+            continue
+        pos = int(result.position)
+        score = (6 - pos) * (100.0 - pct)
+        if score > best_score:
+            best_score = score
+            best = (rider, result, pct)
+    return best
+
+
+def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
+    n_lineups, rates = _aggregate_pick_rates_for_comp(comp)
+    if n_lineups < 2 or not rates:
+        return []
+
+    is_wsx = (comp.series or "") == "WSX"
+    groups = ("450", "250") if not is_wsx else ("450", "250")
+    group_labels = {"450": "SX1" if is_wsx else "450", "250": "SX2" if is_wsx else "250"}
+    cards: list[dict[str, Any]] = []
+    year = (
+        int(comp.event_date.year)
+        if comp.event_date
+        else _current_racing_season_year()
+    )
+
+    for grp in groups:
+        candidates = [
+            (rid, data)
+            for rid, data in rates.items()
+            if data.get("class_group") == grp
+        ]
+        if not candidates:
+            continue
+        rid, data = max(candidates, key=lambda x: (x[1]["picked_pct"], x[1]["p1_pct"]))
+        rider = Rider.query.get(int(rid))
+        if not rider:
+            continue
+        badge = group_labels[grp]
+        common_pos = data.get("common_position")
+        common_pct = data.get("common_position_pct")
+        sub_parts = [f'{data["picked_pct"]}% har honom i laget']
+        if data.get("p1_pct"):
+            sub_parts.append(f'{data["p1_pct"]}% som P1')
+        if common_pos and common_pct:
+            sub_parts.append(f'vanligast P{common_pos} ({common_pct}%)')
+        cards.append(
+            _spotlight_rider_card(
+                rider,
+                comp=comp,
+                reason=f'Folkets favorit — {badge}',
+                subtitle=" · ".join(sub_parts),
+                badge=badge,
+                badge_emoji="🔥",
+                season_year=year,
+                extra_stats=[],
+            )
+        )
+    return cards
+
+
 def build_rider_spotlight() -> dict[str, Any]:
-    """Senaste racets vinnare (450/SX1) med bio-hook — cachad för startsidan."""
+    """Flera spotlight-lägen för startsidan — cachad."""
     global _RIDER_SPOTLIGHT_CACHE
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
         return _RIDER_SPOTLIGHT_CACHE[1]
 
-    comp = _last_completed_competition()
-    if not comp:
-        payload = {"available": False}
-        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
-        return payload
-
-    winner = _spotlight_winner_for_comp(comp)
-    if not winner:
-        payload = {"available": False}
-        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
-        return payload
-
-    rider, result = winner
-    bio_text = (getattr(rider, "bio_sv", None) or getattr(rider, "bio", None) or "").strip()
-    bio_parts = _bio_content_parts(bio_text) if bio_text else {}
-    hook = (bio_parts.get("hook") or bio_parts.get("full") or "")[:220]
-
-    if (comp.series or "") == "WSX":
-        pts = (
-            int(result.rider_points)
-            if result.rider_points is not None
-            else int(get_smx_qualification_points(result.position))
-        )
-    else:
-        pts = int(_result_points_for_standing(result, comp))
-
+    last_comp = _last_completed_competition()
+    upcoming = _current_picks_competition()
     season_year = (
-        int(comp.event_date.year)
-        if comp.event_date
+        int(last_comp.event_date.year)
+        if last_comp and last_comp.event_date
         else _current_racing_season_year()
     )
-    championships = _rider_championship_standings(rider, season_year)
-    sx_row = next((c for c in championships if c.get("series") == "SX"), None)
-    mx_row = next((c for c in championships if c.get("series") == "MX"), None)
 
-    portrait = template_rider_image_src(rider, bio_card=True)
-    series_tag = comp.series or "SX"
-    if series_tag == "WSX":
-        reason = f"Vann {comp.name} (SX1)"
-    elif series_tag == "MX":
-        reason = f"Vann {comp.name} (MX)"
-    else:
-        reason = f"Vann {comp.name}"
+    modes: dict[str, dict[str, Any]] = {}
+
+    if last_comp:
+        winners = _p1_winners_for_comp(last_comp)
+        if winners:
+            race_cards = []
+            for rider, result, badge in winners:
+                pts_suffix = ""
+                if (last_comp.series or "") == "WSX":
+                    pts = (
+                        int(result.rider_points)
+                        if result.rider_points is not None
+                        else int(get_smx_qualification_points(result.position))
+                    )
+                else:
+                    pts = int(_result_points_for_standing(result, last_comp))
+                pts_suffix = f" · {pts} p"
+                race_cards.append(
+                    _spotlight_rider_card(
+                        rider,
+                        comp=last_comp,
+                        result=result,
+                        reason=f"Vann {last_comp.name}{pts_suffix}",
+                        badge=badge,
+                        badge_emoji="🥇",
+                        season_year=season_year,
+                    )
+                )
+            modes["last_race"] = {
+                "available": True,
+                "label": "Senaste race",
+                "icon": "🏁",
+                "headline": f"Vinnare — {last_comp.name}",
+                "riders": race_cards,
+            }
+
+        rocket_hit = _spotlight_rocket_from_comp(last_comp, season_year)
+        if rocket_hit and rocket_hit[1] > 0:
+            rider, climb, rb, ra = rocket_hit
+            modes["rocket"] = {
+                "available": True,
+                "label": "Veckans raket",
+                "icon": "🚀",
+                "headline": "Störst klättring i mästerskapet",
+                "riders": [
+                    _spotlight_rider_card(
+                        rider,
+                        comp=last_comp,
+                        reason=f"Klättrade {climb} platser efter {last_comp.name}",
+                        subtitle=f"Mästerskap: #{rb} → #{ra}",
+                        badge_emoji="🚀",
+                        season_year=season_year,
+                        extra_stats=[],
+                    )
+                ],
+            }
+
+        dark = _spotlight_dark_horse_from_comp(last_comp)
+        if dark:
+            rider, result, pct = dark
+            modes["dark_horse"] = {
+                "available": True,
+                "label": "Mörk häst",
+                "icon": "🌙",
+                "headline": "Ingen såg det komma",
+                "riders": [
+                    _spotlight_rider_card(
+                        rider,
+                        comp=last_comp,
+                        result=result,
+                        reason=f"P{result.position} i {last_comp.name} — bara {pct}% hade honom",
+                        subtitle="Alla tror på stjärnorna — han levererade ändå",
+                        badge_emoji="🌙",
+                        season_year=season_year,
+                        extra_stats=[],
+                    )
+                ],
+            }
+
+    crowd_comp = upcoming
+    if crowd_comp and not is_picks_locked(crowd_comp):
+        crowd_cards = _spotlight_crowd_cards(crowd_comp)
+        if crowd_cards:
+            modes["crowd_pick"] = {
+                "available": True,
+                "label": "Crowd pick",
+                "icon": "🔥",
+                "headline": f"Folkets favorit inför {crowd_comp.name}",
+                "riders": crowd_cards,
+            }
+
+    if not modes:
+        payload = {"available": False}
+        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        return payload
+
+    default_mode = "last_race"
+    if modes.get("crowd_pick", {}).get("available"):
+        if upcoming and upcoming.event_date:
+            days = (upcoming.event_date - get_today()).days
+            if 0 <= days <= 7:
+                default_mode = "crowd_pick"
+    if default_mode not in modes:
+        default_mode = next(iter(modes.keys()))
 
     payload = {
         "available": True,
         "title": "I rampljuset",
-        "reason": reason,
-        "race_name": comp.name,
-        "race_series": series_tag,
-        "position": int(result.position),
-        "points": pts,
-        "rider_id": int(rider.id),
-        "name": rider.name,
-        "number": rider.rider_number,
-        "brand": rider.bike_brand or "",
-        "class_label": _rider_directory_series_label(rider),
-        "portrait_url": portrait,
-        "bio_hook": hook,
-        "profile_url": url_for("rider_profile", rider_id=int(rider.id)),
-        "season_year": season_year,
-        "sx_rank": sx_row.get("rank") if sx_row else None,
-        "sx_points": sx_row.get("points") if sx_row else None,
-        "mx_rank": mx_row.get("rank") if mx_row else None,
-        "mx_points": mx_row.get("points") if mx_row else None,
+        "default_mode": default_mode,
+        "modes": modes,
     }
     _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
     return payload
