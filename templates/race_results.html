@@ -163,6 +163,14 @@
     {%- endif -%}
   {%- endmacro %}
 
+  {% macro rider_profile_link(row, extra_class='') %}
+    {%- if row and row.rider_id -%}
+      <a href="{{ url_for('rider_profile', rider_id=row.rider_id) }}" class="hover:text-cyan-300 underline-offset-2 hover:underline transition-colors {{ extra_class }}">{{ row.rider_name }}</a>
+    {%- elif row -%}
+      {{ row.rider_name }}
+    {%- else -%}—{%- endif -%}
+  {% endmacro %}
+
   {% macro rider_avatar(r, extra_class) %}
     {% set src = rider_image_src(r) %}
     {% if r and src %}
@@ -198,23 +206,29 @@
         <div class="podium-stage">
           <div class="podium-col second order-1">
             <span class="podium-medal">🥈</span>
+            {% if p2 and p2.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p2.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p2, '') }}
+            {% if p2 and p2.rider_id %}</a>{% endif %}
             <div class="podium-block second">2</div>
-            <div class="podium-name">{% if p2 %}{{ p2.rider_name }}{% else %}—{% endif %}</div>
+            <div class="podium-name">{% if p2 %}{{ rider_profile_link(p2) }}{% else %}—{% endif %}</div>
             {% if p2 %}<div class="podium-meta">#{{ p2.rider_number }} · {{ p2.points or 0 }} pt{% if p2.bike_brand %} · {{ p2.bike_brand }}{% endif %}</div>{% endif %}
           </div>
           <div class="podium-col first order-2">
             <span class="podium-medal">🥇</span>
+            {% if p1 and p1.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p1.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p1, '') }}
+            {% if p1 and p1.rider_id %}</a>{% endif %}
             <div class="podium-block first">1</div>
-            <div class="podium-name">{{ p1.rider_name }}</div>
+            <div class="podium-name">{{ rider_profile_link(p1) }}</div>
             <div class="podium-meta">#{{ p1.rider_number }} · {{ p1.points or 0 }} pt{% if p1.bike_brand %} · {{ p1.bike_brand }}{% endif %}</div>
           </div>
           <div class="podium-col third order-3">
             <span class="podium-medal">🥉</span>
+            {% if p3 and p3.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p3.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p3, '') }}
+            {% if p3 and p3.rider_id %}</a>{% endif %}
             <div class="podium-block third">3</div>
-            <div class="podium-name">{% if p3 %}{{ p3.rider_name }}{% else %}—{% endif %}</div>
+            <div class="podium-name">{% if p3 %}{{ rider_profile_link(p3) }}{% else %}—{% endif %}</div>
             {% if p3 %}<div class="podium-meta">#{{ p3.rider_number }} · {{ p3.points or 0 }} pt{% if p3.bike_brand %} · {{ p3.bike_brand }}{% endif %}</div>{% endif %}
           </div>
         </div>
@@ -236,7 +250,7 @@
         {% endif %}
       </td>
       <td class="py-3 align-middle pr-4 min-w-0">
-        <div class="font-semibold text-slate-100 text-base sm:text-lg leading-snug break-words">{{ r.rider_name }}</div>
+        <div class="font-semibold text-slate-100 text-base sm:text-lg leading-snug break-words">{{ rider_profile_link(r) }}</div>
         <div class="text-sm text-slate-500 mt-0.5">{% if r.rider_number %}#{{ r.rider_number }}{% endif %}{% if r.bike_brand %} · {{ r.bike_brand }}{% endif %}</div>
       </td>
       <td class="py-3 pl-3 pr-5 align-middle text-right font-bold text-amber-300 tabular-nums text-lg sm:text-xl whitespace-nowrap">{{ r.points }}</td>
@@ -556,7 +570,7 @@
                               <span class="inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold text-white
                                 {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-emerald-700{% endif %}">{{ result.position }}</span>
                             </td>
-                            <td class="px-3 py-2 font-medium text-slate-100">{{ result.rider_name }}</td>
+                            <td class="px-3 py-2 font-medium text-slate-100">{{ rider_profile_link(result) }}</td>
                             <td class="px-3 py-2 text-slate-400">#{{ result.rider_number }}</td>
                             <td class="px-3 py-2 text-slate-400">{{ result.bike_brand }}</td>
                             <td class="px-3 py-2 font-semibold text-white">{{ result.points or 0 }}</td>
@@ -586,7 +600,7 @@
                                 <span class="inline-flex w-6 h-6 items-center justify-center rounded-full text-[10px] font-bold text-white
                                   {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-blue-700{% endif %}">{{ result.position }}</span>
                               </td>
-                              <td class="px-2 py-1.5 font-medium text-slate-100">{{ result.rider_name }}</td>
+                              <td class="px-2 py-1.5 font-medium text-slate-100">{{ rider_profile_link(result) }}</td>
                               <td class="px-2 py-1.5 text-slate-400">#{{ result.rider_number }}</td>
                               <td class="px-2 py-1.5 text-slate-400">{{ result.bike_brand }}</td>
                               <td class="px-2 py-1.5 font-semibold text-white">{{ result.points or 0 }}</td>
@@ -642,7 +656,7 @@
                             <span class="inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold text-white
                               {% if result.position == 1 %}bg-amber-500{% elif result.position == 2 %}bg-slate-400{% elif result.position == 3 %}bg-orange-700{% else %}bg-emerald-700{% endif %}">{{ result.position }}</span>
                           </td>
-                          <td class="px-3 py-2 font-medium text-slate-100">{{ result.rider_name }}</td>
+                          <td class="px-3 py-2 font-medium text-slate-100">{{ rider_profile_link(result) }}</td>
                           <td class="px-3 py-2 text-slate-400">#{{ result.rider_number }}</td>
                           <td class="px-3 py-2 text-slate-400">{{ result.bike_brand }}</td>
                           <td class="px-3 py-2 font-semibold text-white">{{ result.points or 0 }}</td>
@@ -684,7 +698,7 @@
                         {% endif %}
                       </div>
                       <div class="min-w-0">
-                        <div class="font-bold text-amber-100 truncate">{{ display_class }}: {{ holeshot.rider_name }}</div>
+                        <div class="font-bold text-amber-100 truncate">{{ display_class }}: {{ rider_profile_link(holeshot) }}</div>
                         <div class="text-sm text-amber-200/80">#{{ holeshot.rider_number }}{% if holeshot.bike_brand %} · {{ holeshot.bike_brand }}{% endif %}</div>
                       </div>
                     </div>

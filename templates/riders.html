@@ -46,11 +46,11 @@
         <p class="text-cyan-100/70 text-sm mt-1">Bio, meriter och bilder — sök på nummer eller namn</p>
         <div class="flex flex-wrap gap-2 mt-4" id="seriesPills">
           <button type="button" data-series="all" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500 text-gray-900">Alla</button>
-          <button type="button" data-series="250e" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-cyan-900/80 text-cyan-200 border border-cyan-600/40">250E · {{ riders_250_east|length }}</button>
-          <button type="button" data-series="250w" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-orange-900/80 text-orange-200 border border-orange-600/40">250W · {{ riders_250_west|length }}</button>
-          <button type="button" data-series="450" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-yellow-900/80 text-yellow-200 border border-yellow-600/40">450 · {{ riders_450|length }}</button>
-          <button type="button" data-series="wsx1" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-purple-900/80 text-purple-200 border border-purple-600/40">WSX SX1 · {{ riders_wsx_sx1|length }}</button>
-          <button type="button" data-series="wsx2" class="series-pill px-3 py-1 rounded-full text-xs font-semibold bg-pink-900/80 text-pink-200 border border-pink-600/40">WSX SX2 · {{ riders_wsx_sx2|length }}</button>
+          <button type="button" data-series="250e" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-cyan-300/90 border border-slate-600/60">250E · {{ riders_250_east|length }}</button>
+          <button type="button" data-series="250w" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-orange-300/90 border border-slate-600/60">250W · {{ riders_250_west|length }}</button>
+          <button type="button" data-series="450" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-amber-300/90 border border-slate-600/60">450 · {{ riders_450|length }}</button>
+          <button type="button" data-series="wsx1" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-purple-300/90 border border-slate-600/60">WSX SX1 · {{ riders_wsx_sx1|length }}</button>
+          <button type="button" data-series="wsx2" class="series-pill px-3 py-1 rounded-full text-xs font-medium bg-slate-800/80 text-pink-300/90 border border-slate-600/60">WSX SX2 · {{ riders_wsx_sx2|length }}</button>
         </div>
       </div>
     </div>
@@ -79,11 +79,14 @@
     </div>
 
     <div id="columnView" class="space-y-3">
-      {% macro rider_column(title, riders, series_key, list_id, header_class, border_class) %}
-      <div class="rider-column rounded-xl border {{ border_class }} bg-gray-900/70 overflow-hidden backdrop-blur" data-series="{{ series_key }}">
-        <button type="button" class="column-toggle w-full flex items-center justify-between gap-3 px-4 py-3 {{ header_class }} text-white font-bold text-left">
-          <span>{{ title }} <span class="font-normal opacity-80 text-sm">({{ riders|length }})</span></span>
-          <svg class="col-chevron w-5 h-5 shrink-0 transition-transform opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      {% macro rider_column(title, riders, series_key, list_id, accent_dot) %}
+      <div class="rider-column rounded-xl border border-slate-700/60 bg-slate-900/50 overflow-hidden backdrop-blur" data-series="{{ series_key }}">
+        <button type="button" class="column-toggle w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-900/40 hover:bg-slate-800/50 border-b border-slate-700/50 text-left transition-colors">
+          <span class="flex items-center gap-2.5 min-w-0">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ accent_dot }}"></span>
+            <span class="font-semibold text-slate-200 truncate">{{ title }} <span class="font-normal text-slate-500 text-sm">({{ riders|length }})</span></span>
+          </span>
+          <svg class="col-chevron w-4 h-4 shrink-0 transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
         <div class="column-body">
           <ul id="{{ list_id }}" class="divide-y divide-gray-800/80 overflow-y-auto px-1 pb-2">
@@ -113,18 +116,21 @@
       </div>
       {% endmacro %}
 
-      {{ rider_column('250 East', riders_250_east, '250e', 'list-250e', 'bg-gradient-to-r from-cyan-600 to-cyan-800', 'border-cyan-500/40') }}
-      {{ rider_column('250 West', riders_250_west, '250w', 'list-250w', 'bg-gradient-to-r from-orange-600 to-orange-800', 'border-orange-500/40') }}
-      {{ rider_column('450', riders_450, '450', 'list-450', 'bg-gradient-to-r from-yellow-600 to-amber-700', 'border-yellow-500/40') }}
-      {{ rider_column('WSX SX1', riders_wsx_sx1, 'wsx1', 'list-wsx1', 'bg-gradient-to-r from-purple-600 to-purple-800', 'border-purple-500/40') }}
-      {{ rider_column('WSX SX2', riders_wsx_sx2, 'wsx2', 'list-wsx2', 'bg-gradient-to-r from-pink-600 to-rose-700', 'border-pink-500/40') }}
+      {{ rider_column('250 East', riders_250_east, '250e', 'list-250e', 'bg-cyan-400/80') }}
+      {{ rider_column('250 West', riders_250_west, '250w', 'list-250w', 'bg-orange-400/80') }}
+      {{ rider_column('450', riders_450, '450', 'list-450', 'bg-amber-400/70') }}
+      {{ rider_column('WSX SX1', riders_wsx_sx1, 'wsx1', 'list-wsx1', 'bg-purple-400/70') }}
+      {{ rider_column('WSX SX2', riders_wsx_sx2, 'wsx2', 'list-wsx2', 'bg-pink-400/70') }}
     </div>
 
     {% if riders_250_unassigned %}
-    <div id="unassignedBlock" class="mt-4 rider-column rounded-xl border border-amber-500/50 bg-gray-900/70 overflow-hidden" data-series="250u">
-      <button type="button" class="column-toggle w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-amber-600 to-orange-700 text-white font-bold">
-        <span>250 · saknar coast ({{ riders_250_unassigned|length }})</span>
-        <svg class="col-chevron w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    <div id="unassignedBlock" class="mt-4 rider-column rounded-xl border border-slate-700/60 bg-slate-900/50 overflow-hidden" data-series="250u">
+      <button type="button" class="column-toggle w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-900/40 hover:bg-slate-800/50 border-b border-slate-700/50 text-left transition-colors">
+        <span class="flex items-center gap-2.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400/60 shrink-0"></span>
+          <span class="font-semibold text-slate-200">250 · saknar coast <span class="font-normal text-slate-500 text-sm">({{ riders_250_unassigned|length }})</span></span>
+        </span>
+        <svg class="col-chevron w-4 h-4 shrink-0 transition-transform text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </button>
       <div class="column-body">
         <ul id="list-250u" class="divide-y divide-gray-800 max-h-48 overflow-y-auto">

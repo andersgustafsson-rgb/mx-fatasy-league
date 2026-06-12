@@ -3,88 +3,286 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ rider.name }} - Rider Bio</title>
+  <title>{{ rider.name }} — Förarprofil</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .page-bg {
+      background:
+        radial-gradient(ellipse 120% 80% at 20% -10%, rgba(59, 130, 246, 0.16), transparent 55%),
+        radial-gradient(ellipse 100% 60% at 100% 20%, rgba(251, 146, 60, 0.1), transparent 50%),
+        linear-gradient(180deg, #0f172a 0%, #1e293b 35%, #0f172a 100%);
+      min-height: 100vh;
+    }
+    .checkered {
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.06) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+    }
+    .portrait-glow {
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.45);
+    }
+    .bio-hook-wrap {
+      border-left: 2px solid color-mix(in srgb, var(--accent, #22d3ee) 45%, transparent);
+    }
+    details.bio-details > summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    details.bio-details > summary::-webkit-details-marker { display: none; }
+    details.bio-details > summary::after {
+      content: " ▼";
+      font-size: 0.7rem;
+      opacity: 0.6;
+    }
+    details.bio-details[open] > summary::after { content: " ▲"; }
+  </style>
+  {% set sl = series_label or '?' %}
+  {% if sl == '250E' %}
+    {% set accent = '#22d3ee' %}
+    {% set hero_grad = 'from-cyan-600/30 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-cyan-900/80 text-cyan-200 border-cyan-500/40' %}
+    {% set title_grad = 'from-cyan-500 to-blue-600' %}
+  {% elif sl == '250W' %}
+    {% set accent = '#fb923c' %}
+    {% set hero_grad = 'from-orange-600/25 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-orange-900/80 text-orange-200 border-orange-500/40' %}
+    {% set title_grad = 'from-orange-500 to-amber-600' %}
+  {% elif sl == '450' %}
+    {% set accent = '#fbbf24' %}
+    {% set hero_grad = 'from-amber-600/20 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-yellow-900/80 text-yellow-200 border-yellow-500/40' %}
+    {% set title_grad = 'from-yellow-500 to-amber-600' %}
+  {% elif sl == 'WSX SX1' %}
+    {% set accent = '#c084fc' %}
+    {% set hero_grad = 'from-purple-600/25 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-purple-900/80 text-purple-200 border-purple-500/40' %}
+    {% set title_grad = 'from-purple-500 to-violet-600' %}
+  {% elif sl == 'WSX SX2' %}
+    {% set accent = '#f472b6' %}
+    {% set hero_grad = 'from-pink-600/25 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-pink-900/80 text-pink-200 border-pink-500/40' %}
+    {% set title_grad = 'from-pink-500 to-rose-600' %}
+  {% else %}
+    {% set accent = '#22d3ee' %}
+    {% set hero_grad = 'from-cyan-600/20 via-slate-900 to-slate-950' %}
+    {% set pill_cls = 'bg-slate-800 text-slate-200 border-slate-600/40' %}
+    {% set title_grad = 'from-cyan-500 to-blue-600' %}
+  {% endif %}
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
-  <div class="container mx-auto p-4 sm:p-6">
-    <div class="flex items-center justify-between mb-6">
-      <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
-      <a href="javascript:history.back()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded">← Tillbaka</a>
+<body class="page-bg text-slate-100" style="--accent: {{ accent }};">
+  <div class="container mx-auto p-4 sm:p-6 max-w-5xl">
+    <!-- Top bar -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
+      <div class="flex gap-2">
+        <a href="{{ url_for('riders_directory') }}" class="px-3 py-1.5 text-sm bg-slate-800/80 border border-slate-600 text-slate-200 rounded-lg hover:bg-slate-700">Förarguide</a>
+        <button type="button" onclick="history.back()" class="px-3 py-1.5 text-sm bg-slate-800/80 border border-slate-600 text-slate-200 rounded-lg hover:bg-slate-700">← Tillbaka</button>
+      </div>
     </div>
 
-    <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-      <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3">
-        <h1 class="text-2xl font-bold text-white text-center">#{{ rider.rider_number }} {{ rider.name }}</h1>
-      </div>
-      <div class="p-4 bg-gray-900">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="md:col-span-1">
-            <div class="mx-auto w-full max-w-[17rem] aspect-square rounded-xl overflow-hidden border border-gray-700 bg-gradient-to-b from-gray-800 to-gray-950 shadow-inner">
+    <!-- Hero card -->
+    <div class="relative rounded-2xl overflow-hidden border border-slate-600/50 shadow-2xl mb-6">
+      <div class="absolute inset-0 bg-gradient-to-br {{ hero_grad }}"></div>
+      <div class="absolute inset-0 checkered opacity-30 pointer-events-none"></div>
+      <div class="absolute -right-8 -bottom-8 w-48 h-48 rounded-full opacity-20 blur-3xl pointer-events-none" style="background: {{ accent }};"></div>
+
+      <div class="relative p-5 sm:p-8">
+        <div class="flex flex-col sm:flex-row gap-6 sm:gap-8 items-center sm:items-start">
+          <!-- Portrait -->
+          <div class="relative shrink-0">
+            <div class="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden portrait-glow bg-slate-800 ring-2 ring-white/10">
               {% if rider_image_src %}
-              <img src="{{ rider_image_src }}" alt="{{ rider.name }}" class="w-full h-full object-cover object-center">
+              <img src="{{ rider_image_src }}" alt="{{ rider.name }}" class="w-full h-full object-cover object-top">
               {% else %}
-              <div class="w-full h-full min-h-[16rem] flex items-center justify-center text-gray-400 bg-gradient-to-b from-gray-800 to-gray-900">
-                <span class="text-4xl font-bold text-cyan-500/40">#{{ rider.rider_number or '?' }}</span>
+              <div class="w-full h-full flex items-center justify-center bg-gradient-to-b from-slate-700 to-slate-900">
+                <span class="text-5xl font-black opacity-30" style="color: {{ accent }};">#{{ rider.rider_number or '?' }}</span>
               </div>
               {% endif %}
             </div>
-            <div class="mt-4 space-y-2 text-sm">
-              <div><span class="text-gray-400">Klass:</span> <span class="text-white">{{ rider.class_name }}</span></div>
-              <div><span class="text-gray-400">Märke:</span> <span class="text-white">{{ rider.bike_brand }}</span></div>
-              {% if rider.nickname %}<div><span class="text-gray-400">Smeknamn:</span> <span class="text-white">{{ rider.nickname }}</span></div>{% endif %}
-              {% if rider.hometown %}<div><span class="text-gray-400">Hometown:</span> <span class="text-white">{{ rider.hometown }}</span></div>{% endif %}
-              {% if rider.residence %}<div><span class="text-gray-400">Boende:</span> <span class="text-white">{{ rider.residence }}</span></div>{% endif %}
-              {% if rider.birthdate %}<div><span class="text-gray-400">Född:</span> <span class="text-white">{{ rider.birthdate.strftime('%Y-%m-%d') }}</span></div>{% endif %}
-              {% if rider.height_cm %}<div><span class="text-gray-400">Längd:</span> <span class="text-white">{{ rider.height_cm }} cm</span></div>{% endif %}
-              {% if rider.weight_kg %}<div><span class="text-gray-400">Vikt:</span> <span class="text-white">{{ rider.weight_kg }} kg</span></div>{% endif %}
-              {% if rider.team %}<div><span class="text-gray-400">Team:</span> <span class="text-white">{{ rider.team }}</span></div>{% endif %}
-              {% if rider.manufacturer %}<div><span class="text-gray-400">Manufacturer:</span> <span class="text-white">{{ rider.manufacturer }}</span></div>{% endif %}
-              {% if rider.team_manager %}<div><span class="text-gray-400">Team Manager:</span> <span class="text-white">{{ rider.team_manager }}</span></div>{% endif %}
-              {% if rider.mechanic %}<div><span class="text-gray-400">Mechanic:</span> <span class="text-white">{{ rider.mechanic }}</span></div>{% endif %}
-              {% if rider.turned_pro %}<div><span class="text-gray-400">Turned Pro:</span> <span class="text-white">{{ rider.turned_pro }}</span></div>{% endif %}
-
-              <div class="mt-3 flex gap-2">
-                {% if rider.instagram %}<a href="https://instagram.com/{{ rider.instagram|replace('@','') }}" target="_blank" class="text-pink-400 hover:text-pink-300">Instagram</a>{% endif %}
-                {% if rider.twitter %}<a href="https://twitter.com/{{ rider.twitter|replace('@','') }}" target="_blank" class="text-sky-400 hover:text-sky-300">Twitter</a>{% endif %}
-                {% if rider.facebook %}<a href="https://facebook.com/{{ rider.facebook|replace('@','') }}" target="_blank" class="text-blue-500 hover:text-blue-400">Facebook</a>{% endif %}
-                {% if rider.website %}<a href="{{ rider.website }}" target="_blank" class="text-cyan-400 hover:text-cyan-300">Webb</a>{% endif %}
-              </div>
-            </div>
+            {% if brand_logo_url %}
+            <img src="{{ brand_logo_url }}" alt="" class="absolute -bottom-2 -right-2 w-11 h-11 rounded-full bg-slate-900 border-2 border-slate-600 p-1 object-contain shadow-lg"
+                 onerror="this.style.display='none'">
+            {% endif %}
           </div>
 
-          <div class="md:col-span-2 space-y-6">
-            {% set bio_source = bio_source if bio_source is defined else rider %}
-            {% set has_bio_content = bio_source.bio or bio_source.achievements %}
-            {% if has_bio_content %}
-            <div class="flex justify-end">
-              <div id="bio-lang-toggle" class="inline-flex rounded-lg border border-gray-600 overflow-hidden text-sm" role="group" aria-label="Språk för bio">
-                <button type="button" data-lang="sv" class="bio-lang-btn px-3 py-1.5 bg-cyan-600 text-white font-medium">🇸🇪 Svenska</button>
-                <button type="button" data-lang="en" class="bio-lang-btn px-3 py-1.5 bg-gray-800 text-gray-300 hover:bg-gray-700">🇺🇸 English</button>
-              </div>
+          <!-- Identity -->
+          <div class="flex-1 text-center sm:text-left min-w-0">
+            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border {{ pill_cls }}">{{ sl }}</span>
+              {% if rider.bike_brand %}
+              <span class="text-slate-400 text-sm">{{ rider.bike_brand }}</span>
+              {% endif %}
             </div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              <span class="text-slate-400 font-bold">#{{ rider.rider_number or '–' }}</span>
+              {{ rider.name }}
+            </h1>
+            {% if rider.nickname %}
+            <p class="text-slate-400 italic mt-1">"{{ rider.nickname }}"</p>
             {% endif %}
 
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h2 class="text-lg font-bold text-cyan-400 mb-2">Biografi</h2>
-              <p id="rider-bio-text" class="text-gray-200 whitespace-pre-line">{{ bio_source.bio or 'Ingen biografi tillagd ännu.' }}</p>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-slate-300 justify-center sm:justify-start">
+              {% if rider.hometown %}<span>📍 {{ rider.hometown }}</span>{% endif %}
+              {% if rider.team %}<span>🏢 {{ rider.team }}</span>{% endif %}
+              {% if rider.turned_pro %}<span>⭐ Pro {{ rider.turned_pro }}</span>{% endif %}
             </div>
-            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
-              <h2 class="text-lg font-bold text-cyan-400 mb-2">Meriter</h2>
-              <div id="rider-achievements-text" class="text-gray-200 whitespace-pre-line">{{ bio_source.achievements or 'Inga meriter tillagda ännu.' }}</div>
-            </div>
-            <p id="bio-translate-status" class="text-xs text-gray-500 hidden"></p>
           </div>
         </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="relative border-t border-slate-600/40 bg-slate-950/50 backdrop-blur-sm">
+        <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-700/50 text-center text-sm">
+          {% if rider.height_cm %}
+          <div class="px-3 py-3"><div class="text-slate-500 text-xs uppercase tracking-wide">Längd</div><div class="font-semibold text-white">{{ rider.height_cm }} cm</div></div>
+          {% endif %}
+          {% if rider.weight_kg %}
+          <div class="px-3 py-3"><div class="text-slate-500 text-xs uppercase tracking-wide">Vikt</div><div class="font-semibold text-white">{{ rider.weight_kg }} kg</div></div>
+          {% endif %}
+          {% if rider.birthdate %}
+          <div class="px-3 py-3"><div class="text-slate-500 text-xs uppercase tracking-wide">Född</div><div class="font-semibold text-white">{{ rider.birthdate.strftime('%Y') }}</div></div>
+          {% endif %}
+          {% if rider.residence %}
+          <div class="px-3 py-3"><div class="text-slate-500 text-xs uppercase tracking-wide">Boende</div><div class="font-semibold text-white truncate">{{ rider.residence }}</div></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% set bio_source = bio_source if bio_source is defined else rider %}
+    {% set has_bio_content = bio_source.bio or bio_source.achievements or achievements_en or achievements_sv %}
+    {% set gc = game_context if game_context is defined else {} %}
+
+    {% if gc.get('has_any') %}
+    <div class="rounded-xl border border-slate-700/60 bg-slate-900/50 backdrop-blur-sm mb-5 overflow-hidden">
+      <div class="px-4 py-2.5 border-b border-slate-700/60 flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">I spelet</h2>
+        {% if gc.upcoming and gc.upcoming.picks_url %}
+        <a href="{{ gc.upcoming.picks_url }}" class="text-xs text-cyan-400/90 hover:text-cyan-300">Gå till picks →</a>
+        {% endif %}
+      </div>
+      <div class="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        {% if gc.upcoming %}
+        <div class="space-y-2">
+          <p class="text-slate-500 text-xs uppercase tracking-wide">
+            {% if gc.upcoming.picks_open %}Inför{% else %}Picks låsta —{% endif %}
+            <span class="text-slate-300 font-medium normal-case">{{ gc.upcoming.comp_name }}</span>
+          </p>
+          {% if gc.upcoming.lineups and gc.upcoming.lineups > 0 %}
+          <ul class="space-y-1.5 text-slate-300">
+            {% if gc.upcoming.picked_pct is not none %}
+            <li><span class="text-white font-semibold">{{ gc.upcoming.picked_pct }}%</span> av lagen har plockat {{ rider.name.split()[-1] }}
+              <span class="text-slate-500">({{ gc.upcoming.picked_count }}/{{ gc.upcoming.lineups }})</span></li>
+            {% endif %}
+            {% if gc.upcoming.p1_pct and gc.upcoming.p1_pct > 0 %}
+            <li><span class="text-white font-semibold">{{ gc.upcoming.p1_pct }}%</span> tror på P1</li>
+            {% endif %}
+            {% if gc.upcoming.common_position and gc.upcoming.common_position_pct %}
+            <li>Vanligast som <span class="text-white font-semibold">P{{ gc.upcoming.common_position }}</span> ({{ gc.upcoming.common_position_pct }}%)</li>
+            {% endif %}
+            {% if gc.upcoming.holeshot_pct and gc.upcoming.holeshot_pct > 0 %}
+            <li>Holeshot: <span class="text-white font-semibold">{{ gc.upcoming.holeshot_pct }}%</span></li>
+            {% endif %}
+          </ul>
+          {% else %}
+          <p class="text-slate-500 italic">Inga lag har plockat till det här racet ännu.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if gc.recent_results %}
+        <div class="space-y-2">
+          <p class="text-slate-500 text-xs uppercase tracking-wide">Senaste race</p>
+          <ul class="space-y-1.5">
+            {% for r in gc.recent_results %}
+            <li class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span class="text-slate-300 truncate">{{ r.comp_name }}</span>
+              <span class="text-slate-400 shrink-0">
+                P<span class="text-white font-semibold">{{ r.position }}</span>
+                · {{ r.points }} p
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <!-- Bio column -->
+      <div class="lg:col-span-2 space-y-4">
+        {% if has_bio_content %}
+        <div class="flex justify-end">
+          <div id="bio-lang-toggle" class="inline-flex rounded-lg border border-slate-600 overflow-hidden text-sm" role="group" aria-label="Språk för bio">
+            <button type="button" data-lang="sv" class="bio-lang-btn px-3 py-1.5 bg-cyan-600 text-white font-medium">🇸🇪 Svenska</button>
+            <button type="button" data-lang="en" class="bio-lang-btn px-3 py-1.5 bg-slate-800 text-slate-300 hover:bg-slate-700">🇺🇸 English</button>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="rounded-xl border border-slate-600/50 bg-slate-900/60 backdrop-blur-sm overflow-hidden">
+          <div class="px-4 py-2.5 border-b border-slate-700/60 bg-slate-900/40">
+            <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Biografi</h2>
+          </div>
+          <div class="p-4 sm:p-5 space-y-4">
+            <div id="rider-bio-hook-wrap" class="bio-hook-wrap hidden rounded-lg bg-slate-800/40 pl-4 pr-4 py-4">
+              <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">I korthet</p>
+              <blockquote id="rider-bio-hook" class="text-base sm:text-lg font-medium text-slate-100 leading-relaxed"></blockquote>
+            </div>
+            <p id="rider-bio-body" class="text-slate-400 text-sm sm:text-base leading-relaxed whitespace-pre-line hidden"></p>
+            <p id="rider-bio-fallback" class="text-slate-500 italic text-sm">Ingen biografi tillagd ännu.</p>
+          </div>
+        </div>
+
+        <details class="bio-details rounded-xl border border-slate-600/50 bg-slate-900/60 backdrop-blur-sm overflow-hidden">
+          <summary class="px-4 py-3 bg-slate-800/80 border-b border-slate-600/40 text-sm font-bold text-slate-200 uppercase tracking-wider hover:bg-slate-700/50 transition-colors">
+            Meriter
+          </summary>
+          <div class="p-4 sm:p-5">
+            <div id="rider-achievements-text" class="text-slate-300 whitespace-pre-line text-sm leading-relaxed">Inga meriter tillagda ännu.</div>
+          </div>
+        </details>
+        <p id="bio-translate-status" class="text-xs text-slate-500 hidden"></p>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-4">
+        <div class="rounded-xl border border-slate-600/50 bg-slate-900/60 p-4 space-y-3 text-sm">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Detaljer</h3>
+          {% if rider.manufacturer %}<div><span class="text-slate-500">Tillverkare</span><div class="text-white">{{ rider.manufacturer }}</div></div>{% endif %}
+          {% if rider.team_manager %}<div><span class="text-slate-500">Team Manager</span><div class="text-white">{{ rider.team_manager }}</div></div>{% endif %}
+          {% if rider.mechanic %}<div><span class="text-slate-500">Mekaniker</span><div class="text-white">{{ rider.mechanic }}</div></div>{% endif %}
+          {% if rider.birthdate and not rider.height_cm %}<div><span class="text-slate-500">Födelsedatum</span><div class="text-white">{{ rider.birthdate.strftime('%Y-%m-%d') }}</div></div>{% endif %}
+        </div>
+
+        {% if rider.instagram or rider.twitter or rider.facebook or rider.website %}
+        <div class="rounded-xl border border-slate-600/50 bg-slate-900/60 p-4">
+          <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Socialt</h3>
+          <div class="flex flex-wrap gap-2">
+            {% if rider.instagram %}<a href="https://instagram.com/{{ rider.instagram|replace('@','') }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-pink-900/40 text-pink-300 text-sm border border-pink-600/30 hover:bg-pink-900/60">Instagram</a>{% endif %}
+            {% if rider.twitter %}<a href="https://twitter.com/{{ rider.twitter|replace('@','') }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-sky-900/40 text-sky-300 text-sm border border-sky-600/30 hover:bg-sky-900/60">X / Twitter</a>{% endif %}
+            {% if rider.facebook %}<a href="https://facebook.com/{{ rider.facebook|replace('@','') }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-blue-900/40 text-blue-300 text-sm border border-blue-600/30 hover:bg-blue-900/60">Facebook</a>{% endif %}
+            {% if rider.website %}<a href="{{ rider.website }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-cyan-900/40 text-cyan-300 text-sm border border-cyan-600/30 hover:bg-cyan-900/60">Webb</a>{% endif %}
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  {% if has_bio_content %}
   <script>
   (function () {
     const riderId = {{ rider.id }};
-    const bioEl = document.getElementById('rider-bio-text');
+    const hookWrapEl = document.getElementById('rider-bio-hook-wrap');
+    const hookEl = document.getElementById('rider-bio-hook');
+    const bodyEl = document.getElementById('rider-bio-body');
+    const fallbackEl = document.getElementById('rider-bio-fallback');
     const achEl = document.getElementById('rider-achievements-text');
     const statusEl = document.getElementById('bio-translate-status');
     const buttons = document.querySelectorAll('.bio-lang-btn');
@@ -92,12 +290,16 @@
 
     const content = {
       en: {
-        bio: {{ (bio_source.bio or '')|tojson }},
-        achievements: {{ (bio_source.achievements or '')|tojson }},
+        hook: {{ bio_en.hook | tojson }},
+        body: {{ bio_en.body | tojson }},
+        full: {{ bio_en.full | tojson }},
+        achievements: {{ achievements_en | tojson }},
       },
       sv: {
-        bio: {{ (bio_source.bio_sv or '')|tojson }},
-        achievements: {{ (bio_source.achievements_sv or '')|tojson }},
+        hook: {{ bio_sv.hook | tojson }},
+        body: {{ bio_sv.body | tojson }},
+        full: {{ bio_sv.full | tojson }},
+        achievements: {{ achievements_sv | tojson }},
       },
     };
 
@@ -110,25 +312,79 @@
         btn.classList.toggle('bg-cyan-600', on);
         btn.classList.toggle('text-white', on);
         btn.classList.toggle('font-medium', on);
-        btn.classList.toggle('bg-gray-800', !on);
-        btn.classList.toggle('text-gray-300', !on);
+        btn.classList.toggle('bg-slate-800', !on);
+        btn.classList.toggle('text-slate-300', !on);
       });
     }
 
-    function render(lang) {
+    function splitBioClient(full) {
+      const cleaned = String(full || '').replace(/^\(MX Fantasy\)\s*/i, '').trim();
+      if (!cleaned) return { hook: '', body: '', full: '' };
+      const sentences = cleaned.match(/[^.!?]+[.!?]+/g) || [cleaned];
+      const trimmed = sentences.map((s) => s.trim()).filter(Boolean);
+      const boring = (s) => /\b(was born|föddes|born on|började tävla|turned pro)\b/i.test(s);
+      const score = (s) => {
+        let n = 0;
+        if (boring(s)) n -= 8;
+        if (/\b(champion|mästare|vann|won|debut|title|titlar|dominer)\b/i.test(s)) n += 3;
+        return n;
+      };
+      let idx = 0;
+      if (trimmed.length > 1) {
+        let best = 0;
+        let bestScore = score(trimmed[0]);
+        trimmed.slice(0, 6).forEach((s, i) => {
+          const sc = score(s);
+          if (sc > bestScore) { best = i; bestScore = sc; }
+        });
+        idx = best;
+      }
+      const hook = trimmed[idx] || cleaned;
+      const body = trimmed.filter((_, i) => i !== idx).join(' ').trim();
+      return { hook, body, full: cleaned };
+    }
+
+    function renderBio(lang) {
       const pack = content[lang] || content.en;
-      bioEl.textContent = pack.bio || (lang === 'sv' ? emptyBioSv : (content.en.bio || emptyBioSv));
+      const hook = pack.hook || '';
+      const body = pack.body || '';
+      const full = pack.full || '';
+      fallbackEl.classList.add('hidden');
+      hookWrapEl.classList.add('hidden');
+      bodyEl.classList.add('hidden');
+
+      if (!full && !hook && !body) {
+        fallbackEl.textContent = lang === 'sv' ? emptyBioSv : (content.en.full || emptyBioSv);
+        fallbackEl.classList.remove('hidden');
+        return;
+      }
+      if (hook) {
+        hookEl.textContent = hook;
+        hookWrapEl.classList.remove('hidden');
+      }
+      if (body) {
+        bodyEl.textContent = body;
+        bodyEl.classList.remove('hidden');
+      } else if (full && !hook) {
+        bodyEl.textContent = full;
+        bodyEl.classList.remove('hidden');
+      }
+    }
+
+    function render(lang) {
+      renderBio(lang);
+      const pack = content[lang] || content.en;
       achEl.textContent = pack.achievements || (lang === 'sv' ? emptyAchSv : (content.en.achievements || emptyAchSv));
       setActive(lang);
       try { localStorage.setItem(storageKey, lang); } catch (_) {}
     }
 
     async function loadSwedish() {
-      if (content.sv.bio || content.sv.achievements) {
+      if (content.sv.full || content.sv.hook) {
         render('sv');
         return;
       }
-      if (content.en.bio || content.en.achievements) {
+      if (content.en.full || content.en.hook) {
         render('en');
       }
       statusEl.textContent = 'Översätter till svenska…';
@@ -138,7 +394,10 @@
         const res = await fetch(`/api/rider/${riderId}/bio?lang=sv`);
         const data = await res.json();
         if (data.ok) {
-          content.sv.bio = data.bio || '';
+          const parts = splitBioClient(data.bio || '');
+          content.sv.hook = parts.hook;
+          content.sv.body = parts.body;
+          content.sv.full = parts.full;
           content.sv.achievements = data.achievements || '';
           render('sv');
           statusEl.textContent = 'Översatt automatiskt (maskinöversättning).';
@@ -163,17 +422,22 @@
     });
 
     const saved = (() => { try { return localStorage.getItem(storageKey); } catch (_) { return null; } })();
-    if (saved === 'sv' && (content.sv.bio || content.sv.achievements)) {
+    const hasBio = content.en.full || content.en.hook || content.sv.full || content.sv.hook;
+    const hasAch = content.en.achievements || content.sv.achievements;
+    if (!hasBio && !hasAch) {
+      /* static empty state already in HTML */
+    } else if (!hasBio && hasAch) {
+      render(content.sv.achievements && saved === 'sv' ? 'sv' : (content.en.achievements ? 'en' : 'sv'));
+    } else if (saved === 'sv' && (content.sv.full || content.sv.hook)) {
       render('sv');
     } else if (saved === 'sv') {
       loadSwedish();
-    } else if (content.sv.bio || content.sv.achievements) {
+    } else if (content.sv.full || content.sv.hook) {
       render('sv');
     } else {
       render('en');
     }
   })();
   </script>
-  {% endif %}
 </body>
 </html>

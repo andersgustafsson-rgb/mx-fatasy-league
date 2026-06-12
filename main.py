@@ -5888,6 +5888,259 @@ def run_migration():
 
 ## Moved to api blueprint in app/routes/api.py
 
+def _clean_bio_text(text: str) -> str:
+    """Ta bort RacerX/MX Fantasy-brusrubriker innan visning."""
+    import re
+
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    raw = re.sub(r"^\(MX Fantasy\)\s*", "", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"^MX Fantasy[:\s]+", "", raw, flags=re.IGNORECASE)
+    return raw.strip()
+
+
+def _bio_sentences(text: str) -> list[str]:
+    import re
+
+    cleaned = _clean_bio_text(text)
+    if not cleaned:
+        return []
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _bio_sentence_is_boilerplate(sentence: str) -> bool:
+    import re
+
+    s = sentence.lower()
+    patterns = (
+        r"\bwas born\b",
+        r"\bföddes\b",
+        r"\bborn on\b",
+        r"\bbörjade tävla professionellt\b",
+        r"\bturned pro\b",
+        r"\bbegan his professional\b",
+        r"\bbegan her professional\b",
+        r"\bstarted racing professionally\b",
+    )
+    return any(re.search(p, s) for p in patterns)
+
+
+def _bio_sentence_hook_score(sentence: str) -> int:
+    score = 0
+    s = sentence.lower()
+    if _bio_sentence_is_boilerplate(sentence):
+        score -= 8
+    keywords = (
+        "champion",
+        "mästare",
+        "championship",
+        "vann",
+        "won",
+        "first",
+        "första",
+        "debut",
+        "superstar",
+        "led",
+        "dominer",
+        "dominated",
+        "title",
+        "titlar",
+        "main event",
+    )
+    for kw in keywords:
+        if kw in s:
+            score += 3
+    if 40 <= len(sentence) <= 180:
+        score += 1
+    return score
+
+
+def _split_bio_hook(text: str) -> tuple[str, str]:
+    """Välj en intressant mening som hook — hoppa över födelse/pro-debut."""
+    sentences = _bio_sentences(text)
+    if not sentences:
+        return "", ""
+
+    ranked = sorted(
+        enumerate(sentences[:6]),
+        key=lambda item: (-_bio_sentence_hook_score(item[1]), item[0]),
+    )
+    hook_idx, hook = ranked[0]
+    if _bio_sentence_hook_score(hook) < 0 and len(sentences) > 1:
+        hook_idx, hook = 1, sentences[1]
+    if _bio_sentence_hook_score(hook) < 0:
+        hook_idx, hook = 0, sentences[0]
+
+    body_parts = [s for i, s in enumerate(sentences) if i != hook_idx]
+    return hook, " ".join(body_parts).strip()
+
+
+def _bio_content_parts(bio: str | None) -> dict[str, str]:
+    full = _clean_bio_text(bio or "")
+    hook, body = _split_bio_hook(full)
+    return {"hook": hook, "body": body, "full": full}
+
+
+def _picks_series_for_rider(rider: Rider) -> str:
+    if (rider.class_name or "") in ("wsx_sx1", "wsx_sx2"):
+        return "WSX"
+    return "SX"
+
+
+def _rider_pick_class_names(rider: Rider, *, is_wsx: bool) -> set[str]:
+    cls = (rider.class_name or "").strip().lower()
+    if is_wsx:
+        if cls == "wsx_sx1":
+            return {"wsx_sx1"}
+        if cls == "wsx_sx2":
+            return {"wsx_sx2"}
+        return set()
+    if cls in ("450cc", "450"):
+        return {"450cc"}
+    if cls in ("250cc", "250"):
+        return {"250cc"}
+    return set()
+
+
+def _rider_pick_stats_for_comp(rider: Rider, comp: Competition) -> dict[str, Any] | None:
+    """Andel lagn som plockat föraren inför en tävling."""
+    from collections import Counter
+
+    rider_id = int(rider.id)
+    is_wsx = (comp.series or "") == "WSX"
+    allowed = _rider_pick_class_names(rider, is_wsx=is_wsx)
+    if not allowed:
+        return None
+
+    riders_dict = {r.id: r for r in Rider.query.all()}
+    n_lineups = 0
+    picked = 0
+    p1 = 0
+    pos_counts: Counter[int] = Counter()
+    holeshot = 0
+
+    for _uid, payload in _iter_crowd_pick_payloads(int(comp.id), ensure_snapshots=True):
+        race_picks = payload.get("race_picks") or []
+        has_lineup = False
+        for p in race_picks:
+            try:
+                rid = int(p.get("rider_id"))
+                pos = int(p.get("predicted_position"))
+            except (TypeError, ValueError):
+                continue
+            r = riders_dict.get(rid)
+            if not r or (r.class_name or "").strip().lower() not in allowed:
+                continue
+            has_lineup = True
+            if rid == rider_id:
+                picked += 1
+                pos_counts[pos] += 1
+                if pos == 1:
+                    p1 += 1
+        if has_lineup:
+            n_lineups += 1
+
+        holos = payload.get("holeshot_picks") or {}
+        for _cls, rid in holos.items():
+            if rid is not None and int(rid) == rider_id:
+                holeshot += 1
+
+    if n_lineups <= 0:
+        return None
+
+    common = pos_counts.most_common(1)[0] if pos_counts else None
+    return {
+        "lineups": n_lineups,
+        "picked_count": picked,
+        "picked_pct": round(100.0 * picked / n_lineups, 1),
+        "p1_pct": round(100.0 * p1 / n_lineups, 1),
+        "common_position": common[0] if common else None,
+        "common_position_pct": round(100.0 * common[1] / n_lineups, 1) if common else None,
+        "holeshot_pct": round(100.0 * holeshot / n_lineups, 1),
+    }
+
+
+def _rider_recent_race_results(rider_id: int, *, limit: int = 4) -> list[dict[str, Any]]:
+    rows = (
+        db.session.query(CompetitionResult, Competition)
+        .join(Competition, Competition.id == CompetitionResult.competition_id)
+        .filter(CompetitionResult.rider_id == int(rider_id))
+        .order_by(Competition.event_date.desc(), Competition.id.desc())
+        .limit(limit)
+        .all()
+    )
+    out: list[dict[str, Any]] = []
+    for cr, comp in rows:
+        if (comp.series or "") == "WSX":
+            pts = (
+                int(cr.rider_points)
+                if cr.rider_points is not None
+                else int(get_smx_qualification_points(cr.position))
+            )
+        else:
+            pts = int(_result_points_for_standing(cr, comp))
+        out.append(
+            {
+                "comp_name": comp.name,
+                "event_date": comp.event_date,
+                "position": int(cr.position),
+                "points": pts,
+                "series": comp.series or "",
+            }
+        )
+    return out
+
+
+def build_rider_game_context(rider: Rider) -> dict[str, Any]:
+    """Plockstatistik + senaste race — kopplar biosidan till fantasy."""
+    series = _picks_series_for_rider(rider)
+    upcoming = _next_competition_for_picks(series=series, require_open=False)
+    upcoming_block: dict[str, Any] | None = None
+    if upcoming:
+        stats = _rider_pick_stats_for_comp(rider, upcoming) or {}
+        upcoming_block = {
+            "comp_name": upcoming.name,
+            "comp_id": int(upcoming.id),
+            "picks_open": not is_picks_locked(upcoming),
+            "picks_url": url_for("race_picks_page", competition_id=upcoming.id),
+            "lineups": int(stats.get("lineups") or 0),
+            "picked_count": int(stats.get("picked_count") or 0),
+            "picked_pct": stats.get("picked_pct"),
+            "p1_pct": stats.get("p1_pct"),
+            "common_position": stats.get("common_position"),
+            "common_position_pct": stats.get("common_position_pct"),
+            "holeshot_pct": stats.get("holeshot_pct"),
+        }
+
+    recent = _rider_recent_race_results(int(rider.id))
+    return {
+        "upcoming": upcoming_block,
+        "recent_results": recent,
+        "has_any": bool(upcoming_block or recent),
+    }
+
+
+def _rider_brand_logo_url(bike_brand: str | None) -> str | None:
+    if not bike_brand:
+        return None
+    brand = str(bike_brand).lower().strip()
+    brand_map = {
+        "honda": "honda",
+        "ktm": "ktm",
+        "yamaha": "yamaha",
+        "kawasaki": "kawasaki",
+        "suzuki": "suzuki",
+        "husqvarna": "husqvarna",
+        "gasgas": "gasgas",
+        "beta": "beta",
+        "triumph": "triumph",
+    }
+    logo = brand_map.get(brand, brand)
+    return f"/static/brand_logos/{logo}.png"
+
+
 # Public rider profile
 @app.get('/rider/<int:rider_id>')
 def rider_profile(rider_id: int):
@@ -5918,13 +6171,23 @@ def rider_profile(rider_id: int):
         key = twin_group_key(rider.name or "", rider.rider_number)
         if key:
             img_map = {key: twins}
+    bio_en = _bio_content_parts(bio_source.bio)
+    bio_sv_raw = (bio_source.bio_sv or "").strip()
+    bio_sv = _bio_content_parts(bio_sv_raw) if bio_sv_raw else {"hook": "", "body": "", "full": ""}
     return render_template(
         'rider_detail.html',
         rider=rider,
         bio_source=bio_source,
+        series_label=_rider_directory_series_label(rider),
+        brand_logo_url=_rider_brand_logo_url(rider.bike_brand),
+        bio_en=bio_en,
+        bio_sv=bio_sv,
+        achievements_en=(bio_source.achievements or "").strip(),
+        achievements_sv=(bio_source.achievements_sv or "").strip(),
         rider_image_src=template_rider_image_src(
             rider, bio_card=True, riders_by_name=img_map
         ),
+        game_context=build_rider_game_context(rider),
         username=session.get('username'),
     )
 
@@ -9865,6 +10128,7 @@ def race_results_page():
                 )
                 competition_results[comp_id]["holeshots"].append(
                     {
+                        "rider_id": h.rider_id,
                         "rider_name": h.rider_name,
                         "class_name": h.class_name,
                         "rider_number": h.rider_number,
