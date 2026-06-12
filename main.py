@@ -34,6 +34,11 @@ from models import db, User, GlobalSimulation, Series, Competition, Rider, Seaso
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
 _MOTO_COLUMNS_CHECKED = False
+_CHAMPIONSHIP_TOTALS_CACHE: dict[int, tuple[float, dict]] = {}
+_RIDER_SPOTLIGHT_CACHE: tuple[float, dict] | None = None
+_SERIES_STATUS_CACHE: tuple[float, list] | None = None
+_HOMEPAGE_CACHE_TTL = 300.0
+_SERIES_STATUS_CACHE_TTL = 120.0
 
 
 def _build_picks_snapshot_payload(user_id: int, competition_id: int) -> dict:
@@ -1061,95 +1066,147 @@ def logout():
 # -------------------------------------------------
 # Pages
 # -------------------------------------------------
+def _upcoming_competitions_without_results() -> dict[str, list[Competition]]:
+    """Framtida tävlingar utan resultat, grupperade per series-kod (en DB-pass)."""
+    today = get_today()
+    result_comp_ids = {
+        int(row[0])
+        for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+        if row[0] is not None
+    }
+    comps = (
+        Competition.query.filter(Competition.event_date.isnot(None))
+        .filter(Competition.event_date >= today)
+        .order_by(Competition.event_date.asc(), Competition.id.asc())
+        .all()
+    )
+    grouped: dict[str, list[Competition]] = defaultdict(list)
+    for comp in comps:
+        if comp.id in result_comp_ids:
+            continue
+        code = (comp.series or "").strip()
+        if code:
+            grouped[code].append(comp)
+    return grouped
+
+
+def _pick_next_competition(
+    candidates: list[Competition],
+    *,
+    require_open: bool,
+) -> Competition | None:
+    for comp in candidates:
+        if require_open and is_picks_locked(comp):
+            continue
+        return comp
+    return None
+
+
+def build_series_status_list() -> list[dict]:
+    """Seriekort för startsidan — cachad, undviker upprepade fullskanningar."""
+    global _SERIES_STATUS_CACHE
+    now = time.time()
+    if _SERIES_STATUS_CACHE and _SERIES_STATUS_CACHE[0] > now:
+        return _SERIES_STATUS_CACHE[1]
+
+    from sqlalchemy import or_, and_
+
+    current_date = get_today()
+    all_series = Series.query.filter(
+        or_(
+            Series.year == 2026,
+            and_(Series.year == 2025, Series.end_date != None, Series.end_date >= current_date),
+        )
+    ).all()
+
+    series_order = {"WSX": 1, "Supercross": 2, "Motocross": 3, "SMX Finals": 4}
+    all_series.sort(key=lambda s: series_order.get(s.name, 999))
+
+    simulation_active = False
+    try:
+        simulation_active = (
+            GlobalSimulation.query.filter_by(id=1, active=True).first() is not None
+        )
+    except Exception:
+        simulation_active = False
+
+    upcoming_by_series = _upcoming_competitions_without_results()
+    series_data: list[dict] = []
+
+    for s in all_series:
+        is_currently_active = s.is_active
+        if not simulation_active:
+            if s.start_date and s.end_date:
+                is_currently_active = s.start_date <= current_date <= s.end_date
+            elif s.start_date:
+                is_currently_active = current_date >= s.start_date
+
+        series_code = None
+        if s.name == "Supercross":
+            series_code = "SX"
+        elif s.name == "Motocross":
+            series_code = "MX"
+        elif s.name == "SMX Finals":
+            series_code = "SMX"
+        elif s.name == "WSX":
+            series_code = "WSX"
+
+        next_race = None
+        if series_code:
+            candidates = upcoming_by_series.get(series_code, [])
+            next_race = _pick_next_competition(candidates, require_open=True)
+            if not next_race:
+                next_race = _pick_next_competition(candidates, require_open=False)
+        if not next_race:
+            next_race = (
+                Competition.query.filter_by(series_id=s.id)
+                .filter(Competition.event_date >= current_date)
+                .order_by(Competition.event_date)
+                .first()
+            )
+
+        days_until_next_race = None
+        if next_race and next_race.event_date:
+            days_until_next_race = (next_race.event_date - current_date).days
+
+        days_until_start = None
+        if s.start_date:
+            days_until_start = (s.start_date - current_date).days
+
+        series_data.append(
+            {
+                "id": s.id,
+                "name": s.name,
+                "is_active": is_currently_active,
+                "start_date": s.start_date.isoformat() if s.start_date else None,
+                "end_date": s.end_date.isoformat() if s.end_date else None,
+                "days_until_start": days_until_start,
+                "days_until_next_race": days_until_next_race,
+                "next_race": (
+                    {
+                        "name": next_race.name,
+                        "date": next_race.event_date.isoformat(),
+                    }
+                    if next_race
+                    else None
+                ),
+            }
+        )
+
+    _SERIES_STATUS_CACHE = (now + _SERIES_STATUS_CACHE_TTL, series_data)
+    return series_data
+
+
 @app.route("/api/series_status")
 def series_status():
     """Get status of all series for user interface"""
     try:
-        from sqlalchemy import or_, and_
-        
-        # Include all 2026 series + ongoing 2025 series (e.g., WSX 2025)
-        current_date = get_today()
-        all_series = Series.query.filter(
-            or_(
-                Series.year == 2026,
-                and_(Series.year == 2025, Series.end_date != None, Series.end_date >= current_date)
-            )
-        ).all()
-        
-        # Custom sort order - WSX first (active series), then others
-        series_order = {'WSX': 1, 'Supercross': 2, 'Motocross': 3, 'SMX Finals': 4}
-        all_series.sort(key=lambda s: series_order.get(s.name, 999))
-        
-        series_data = []
-        for s in all_series:
-            
-            # Use is_active from database (set by simulation) or fallback to date-based logic
-            is_currently_active = s.is_active
-            
-            # If not explicitly set by simulation, use date-based logic as fallback
-            # Check if any series is currently being simulated
-            try:
-                simulation = GlobalSimulation.query.filter_by(id=1, active=True).first()
-                if not simulation:
-                    # No active simulation, use date-based logic
-                    if s.start_date and s.end_date:
-                        is_currently_active = s.start_date <= current_date <= s.end_date
-                    elif s.start_date:
-                        is_currently_active = current_date >= s.start_date
-            except Exception as sim_error:
-                # Fallback to date-based logic
-                if s.start_date and s.end_date:
-                    is_currently_active = s.start_date <= current_date <= s.end_date
-                elif s.start_date:
-                    is_currently_active = current_date >= s.start_date
-            
-            # Nästa race i serien (öppna picks om möjligt, annars nästa utan resultat)
-            series_code = None
-            if s.name == "Supercross":
-                series_code = "SX"
-            elif s.name == "Motocross":
-                series_code = "MX"
-            elif s.name == "SMX Finals":
-                series_code = "SMX"
-            elif s.name == "WSX":
-                series_code = "WSX"
-            next_race = None
-            if series_code:
-                next_race = _next_competition_for_picks(series=series_code, require_open=True)
-                if not next_race:
-                    next_race = _next_competition_for_picks(series=series_code, require_open=False)
-            if not next_race:
-                next_race = Competition.query.filter_by(series_id=s.id).filter(
-                    Competition.event_date >= current_date
-                ).order_by(Competition.event_date).first()
-                
-            days_until_next_race = None
-            if next_race and next_race.event_date:
-                days_until_next_race = (next_race.event_date - current_date).days
-
-            days_until_start = None
-            if s.start_date:
-                days_until_start = (s.start_date - current_date).days
-
-            series_data.append({
-                'id': s.id,
-                'name': s.name,
-                'is_active': is_currently_active,
-                'start_date': s.start_date.isoformat() if s.start_date else None,
-                'end_date': s.end_date.isoformat() if s.end_date else None,
-                'days_until_start': days_until_start,
-                'days_until_next_race': days_until_next_race,
-                'next_race': {
-                    'name': next_race.name,
-                    'date': next_race.event_date.isoformat()
-                } if next_race else None
-            })
-        
-        return jsonify(series_data)
+        return jsonify(build_series_status_list())
     except Exception as e:
         import traceback
+
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/")
 def index():
@@ -1619,6 +1676,17 @@ def index():
         _can_view_other_users_picks(view_picks_race) if view_picks_race else False
     )
 
+    series_status_data: list[dict] = []
+    rider_spotlight_data: dict = {"available": False}
+    try:
+        series_status_data = build_series_status_list()
+    except Exception as e:
+        print(f"index series_status: {e}")
+    try:
+        rider_spotlight_data = build_rider_spotlight()
+    except Exception as e:
+        print(f"index rider_spotlight: {e}")
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -1650,6 +1718,8 @@ def index():
         races_participated=races_participated,
         best_position=best_position,
         sx_season_wrap=sx_season_wrap,
+        series_status_data=series_status_data,
+        rider_spotlight_data=rider_spotlight_data,
     )
 
 
@@ -6119,6 +6189,12 @@ def _current_racing_season_year() -> int:
 
 def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, dict[int, float]]:
     """Samma bucket-logik som race results — valfritt filter på kalenderår."""
+    if year is not None:
+        now = time.time()
+        cached = _CHAMPIONSHIP_TOTALS_CACHE.get(int(year))
+        if cached and cached[0] > now:
+            return cached[1]
+
     from collections import defaultdict
 
     totals: dict[tuple, dict[int, float]] = defaultdict(lambda: defaultdict(float))
@@ -6179,7 +6255,10 @@ def _accumulate_championship_totals(*, year: int | None = None) -> dict[tuple, d
 
         totals[bucket][int(rider.id)] += pts
 
-    return {k: dict(v) for k, v in totals.items()}
+    result = {k: dict(v) for k, v in totals.items()}
+    if year is not None:
+        _CHAMPIONSHIP_TOTALS_CACHE[int(year)] = (time.time() + _HOMEPAGE_CACHE_TTL, result)
+    return result
 
 
 def _rank_in_points_map(points_map: dict[int, float], rider_id: int) -> dict[str, int] | None:
@@ -6245,16 +6324,14 @@ def _rider_championship_standings(rider: Rider, year: int) -> list[dict[str, Any
 
 def _last_completed_competition() -> Competition | None:
     today = get_today()
-    comps = (
-        Competition.query.filter(Competition.event_date.isnot(None))
+    return (
+        db.session.query(Competition)
+        .join(CompetitionResult, CompetitionResult.competition_id == Competition.id)
+        .filter(Competition.event_date.isnot(None))
         .filter(Competition.event_date <= today)
         .order_by(Competition.event_date.desc(), Competition.id.desc())
-        .all()
+        .first()
     )
-    for comp in comps:
-        if CompetitionResult.query.filter_by(competition_id=comp.id).first():
-            return comp
-    return None
 
 
 def _spotlight_winner_for_comp(comp: Competition) -> tuple[Rider, CompetitionResult] | None:
@@ -6290,27 +6367,28 @@ def _spotlight_winner_for_comp(comp: Competition) -> tuple[Rider, CompetitionRes
 
 
 def build_rider_spotlight() -> dict[str, Any]:
-    """Veckans förare — senaste racets vinnare (450/SX1) med bio-hook."""
+    """Senaste racets vinnare (450/SX1) med bio-hook — cachad för startsidan."""
+    global _RIDER_SPOTLIGHT_CACHE
+    now = time.time()
+    if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
+        return _RIDER_SPOTLIGHT_CACHE[1]
+
     comp = _last_completed_competition()
     if not comp:
-        return {"available": False}
+        payload = {"available": False}
+        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        return payload
 
     winner = _spotlight_winner_for_comp(comp)
     if not winner:
-        return {"available": False}
+        payload = {"available": False}
+        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        return payload
 
     rider, result = winner
-    try:
-        from racerx_rider_bio import resolve_rider_bio_source
-
-        bio_source = resolve_rider_bio_source(rider)
-        bio_text = (bio_source.bio_sv or bio_source.bio or "").strip()
-        if not bio_text:
-            bio_text = (bio_source.bio or "").strip()
-        bio_parts = _bio_content_parts(bio_text)
-        hook = (bio_parts.get("hook") or bio_parts.get("full") or "")[:220]
-    except Exception:
-        hook = ""
+    bio_text = (getattr(rider, "bio_sv", None) or getattr(rider, "bio", None) or "").strip()
+    bio_parts = _bio_content_parts(bio_text) if bio_text else {}
+    hook = (bio_parts.get("hook") or bio_parts.get("full") or "")[:220]
 
     if (comp.series or "") == "WSX":
         pts = (
@@ -6339,7 +6417,7 @@ def build_rider_spotlight() -> dict[str, Any]:
     else:
         reason = f"Vann {comp.name}"
 
-    return {
+    payload = {
         "available": True,
         "title": "I rampljuset",
         "reason": reason,
@@ -6361,6 +6439,8 @@ def build_rider_spotlight() -> dict[str, Any]:
         "mx_rank": mx_row.get("rank") if mx_row else None,
         "mx_points": mx_row.get("points") if mx_row else None,
     }
+    _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+    return payload
 
 
 def build_rider_game_context(rider: Rider) -> dict[str, Any]:

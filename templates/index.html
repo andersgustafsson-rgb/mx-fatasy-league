@@ -3645,15 +3645,11 @@
       }
     }
     
-    async function loadSeriesSelection() {
-      try {
-        // Loading series selection
-        const response = await fetch('/api/series_status');
-        const series = await response.json();
-        
+    function renderSeriesSelection(series) {
         const seriesContainer = document.getElementById('series-selection');
-        
-        if (series.length === 0) {
+        if (!seriesContainer) return;
+
+        if (!series || series.length === 0) {
           seriesContainer.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
           return;
         }
@@ -3811,10 +3807,20 @@
         } catch (dbgErr) {
           console.error('[WSX-BG] debug failed:', dbgErr);
         }
-        
+    }
+
+    async function loadSeriesSelection() {
+      try {
+        const response = await fetch('/api/series_status');
+        const series = await response.json();
+        if (series.error) throw new Error(series.error);
+        renderSeriesSelection(series);
       } catch (error) {
         console.error('Error loading series:', error);
-        document.getElementById('series-selection').innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
+        const el = document.getElementById('series-selection');
+        if (el) {
+          el.innerHTML = '<div class="text-center text-red-400 py-8">Fel vid laddning av serier</div>';
+        }
       }
     }
     
@@ -3953,32 +3959,35 @@
       {% endif %}
     }
 
+    window.__MX_SERIES_STATUS__ = {{ series_status_data | tojson }};
+    window.__MX_RIDER_SPOTLIGHT__ = {{ rider_spotlight_data | tojson }};
+
     document.addEventListener("DOMContentLoaded", function() {
-      // DOM loaded, fetching leaderboard
-      fetchSeasonLeaderboard();
-      fetchLeagueLeaderboard();
-      fetchCrossDinoHighscores();
-      fetchWeeklyFunStats();
-      fetchRiderSpotlight();
-      
-      // Initialize tab scroll indicators after a short delay to ensure layout is complete
+      if (window.__MX_SERIES_STATUS__ && window.__MX_SERIES_STATUS__.length) {
+        renderSeriesSelection(window.__MX_SERIES_STATUS__);
+      } else {
+        loadSeriesSelection();
+      }
+      if (window.__MX_RIDER_SPOTLIGHT__) {
+        updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
+      } else {
+        fetchRiderSpotlight();
+      }
+
+      setTimeout(function() {
+        fetchSeasonLeaderboard();
+        fetchLeagueLeaderboard();
+        fetchCrossDinoHighscores();
+        fetchWeeklyFunStats();
+        loadSeriesLeaders();
+        loadWSXLeaders();
+        fetchPowerRanking();
+      }, 150);
+
       setTimeout(updateTabScrollIndicators, 300);
-      
-      // Load series leaders & SMX
-      loadSeriesLeaders();
-      
-      // Load WSX leaders
-      loadWSXLeaders();
-      
-      // Load series selection
-      loadSeriesSelection();
-      fetchPowerRanking();
-      
-      // Start countdown system
+
       startCountdown();
       startActiveNow();
-      
-      // Initialize tabs
       initTabs();
       
       // Check and show admin announcement if needed
