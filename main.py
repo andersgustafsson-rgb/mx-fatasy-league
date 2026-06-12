@@ -48,7 +48,9 @@ def _peek_rider_spotlight_cache() -> dict | None:
     global _RIDER_SPOTLIGHT_CACHE
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
-        return _RIDER_SPOTLIGHT_CACHE[1]
+        cached = _RIDER_SPOTLIGHT_CACHE[1]
+        if not _spotlight_cache_needs_refresh(cached):
+            return cached
     return None
 
 
@@ -6414,12 +6416,38 @@ def _p1_winners_for_comp(comp: Competition) -> list[tuple[Rider, CompetitionResu
     return winners
 
 
-def _spotlight_portrait_url(rider: Rider) -> str:
-    """Snabb porträtt-URL utan twin/portrait-sökning."""
-    url = getattr(rider, "image_url", None)
-    if url:
-        return str(url)
-    return f"/rider_portrait/{int(rider.id)}"
+def _riders_by_name_for(riders: list[Rider]) -> dict[str, list[Rider]]:
+    """Namn → alla rader (450/250-dubletter) för porträttsökning."""
+    from collections import defaultdict
+
+    names = list({(r.name or "").strip() for r in riders if (r.name or "").strip()})
+    by_name: dict[str, list[Rider]] = defaultdict(list)
+    if not names:
+        return by_name
+    for row in Rider.query.filter(Rider.name.in_(names)).all():
+        key = (row.name or "").strip().lower()
+        if key:
+            by_name[key].append(row)
+    return by_name
+
+
+def _patch_spotlight_portraits(
+    modes: dict[str, dict[str, Any]],
+    riders: list[Rider],
+) -> None:
+    """Sätt korrekta porträtt-URL:er (samma logik som bio/resultat)."""
+    if not riders or not modes:
+        return
+    riders_by_name = _riders_by_name_for(riders)
+    by_id = {int(r.id): r for r in riders}
+    for mode in modes.values():
+        for card in mode.get("riders") or []:
+            r = by_id.get(int(card.get("rider_id") or 0))
+            if not r:
+                continue
+            url = template_rider_image_src(r, bio_card=True, riders_by_name=riders_by_name)
+            if url:
+                card["portrait_url"] = url
 
 
 def _standing_points_for_comp_result(cr: CompetitionResult, comp: Competition) -> float:
@@ -6483,7 +6511,7 @@ def _spotlight_rider_card(
         "class_label": _rider_directory_series_label(rider),
         "class_badge": badge,
         "brand": rider.bike_brand or "",
-        "portrait_url": _spotlight_portrait_url(rider),
+        "portrait_url": "",
         "profile_url": url_for("rider_profile", rider_id=int(rider.id)),
         "bio_hook": hook,
         "reason": reason,
@@ -6772,12 +6800,25 @@ def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
     return cards
 
 
+def _spotlight_cache_needs_refresh(payload: dict) -> bool:
+    """Äldre cache kan sakna porträtt-URL efter bildfix."""
+    if not payload.get("available"):
+        return False
+    for mode in (payload.get("modes") or {}).values():
+        for card in mode.get("riders") or []:
+            if not card.get("portrait_url"):
+                return True
+    return False
+
+
 def build_rider_spotlight() -> dict[str, Any]:
     """Flera spotlight-lägen för startsidan — cachad."""
     global _RIDER_SPOTLIGHT_CACHE
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
-        return _RIDER_SPOTLIGHT_CACHE[1]
+        cached = _RIDER_SPOTLIGHT_CACHE[1]
+        if not _spotlight_cache_needs_refresh(cached):
+            return cached
 
     last_comp = _last_completed_competition()
     upcoming = _current_picks_competition()
@@ -6788,12 +6829,14 @@ def build_rider_spotlight() -> dict[str, Any]:
     )
 
     modes: dict[str, dict[str, Any]] = {}
+    spotlight_riders: list[Rider] = []
 
     if last_comp:
         winners = _p1_winners_for_comp(last_comp)
         if winners:
             race_cards = []
             for rider, result, badge in winners:
+                spotlight_riders.append(rider)
                 pts_suffix = ""
                 if (last_comp.series or "") == "WSX":
                     pts = (
@@ -6826,6 +6869,7 @@ def build_rider_spotlight() -> dict[str, Any]:
         rocket_hit = _spotlight_rocket_from_comp(last_comp, season_year)
         if rocket_hit and rocket_hit[1] > 0:
             rider, climb, rb, ra = rocket_hit
+            spotlight_riders.append(rider)
             modes["rocket"] = {
                 "available": True,
                 "label": "Veckans raket",
@@ -6848,6 +6892,7 @@ def build_rider_spotlight() -> dict[str, Any]:
         dark = _spotlight_dark_horse_from_comp(last_comp)
         if dark:
             rider, result, pct = dark
+            spotlight_riders.append(rider)
             modes["dark_horse"] = {
                 "available": True,
                 "label": "Mörk häst",
@@ -6884,6 +6929,23 @@ def build_rider_spotlight() -> dict[str, Any]:
         payload = {"available": False}
         _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
         return payload
+
+    seen_rider_ids: set[int] = set()
+    unique_spotlight_riders: list[Rider] = []
+    for r in spotlight_riders:
+        if int(r.id) in seen_rider_ids:
+            continue
+        seen_rider_ids.add(int(r.id))
+        unique_spotlight_riders.append(r)
+    for card in modes.get("crowd_pick", {}).get("riders") or []:
+        rid = int(card.get("rider_id") or 0)
+        if not rid or rid in seen_rider_ids:
+            continue
+        row = Rider.query.get(rid)
+        if row:
+            seen_rider_ids.add(rid)
+            unique_spotlight_riders.append(row)
+    _patch_spotlight_portraits(modes, unique_spotlight_riders)
 
     default_mode = "last_race"
     if modes.get("crowd_pick", {}).get("available"):
