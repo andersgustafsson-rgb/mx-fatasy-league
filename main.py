@@ -3544,6 +3544,16 @@ def aggregate_weekly_holeshot_points_from_picks(comp_ids: list[int]) -> dict[int
     return dict(user_totals)
 
 
+@app.get("/get_rider_spotlight")
+def get_rider_spotlight():
+    """Featured rider from the most recent completed race (homepage spotlight box)."""
+    try:
+        return jsonify(build_rider_spotlight())
+    except Exception as e:
+        print(f"get_rider_spotlight: {e}")
+        return jsonify({"available": False, "error": str(e)})
+
+
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
     """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
@@ -6231,6 +6241,126 @@ def _rider_championship_standings(rider: Rider, year: int) -> list[dict[str, Any
         add_row("SMX", f"SMX {tag} {year}", _merge_championship_maps(totals, sx_b, mx_b, smx_b))
 
     return rows
+
+
+def _last_completed_competition() -> Competition | None:
+    today = get_today()
+    comps = (
+        Competition.query.filter(Competition.event_date.isnot(None))
+        .filter(Competition.event_date <= today)
+        .order_by(Competition.event_date.desc(), Competition.id.desc())
+        .all()
+    )
+    for comp in comps:
+        if CompetitionResult.query.filter_by(competition_id=comp.id).first():
+            return comp
+    return None
+
+
+def _spotlight_winner_for_comp(comp: Competition) -> tuple[Rider, CompetitionResult] | None:
+    """P1 i 450/SX1 först, annars 250/SX2."""
+    is_wsx = (comp.series or "") == "WSX"
+    class_order = ("wsx_sx1", "wsx_sx2") if is_wsx else ("450cc", "250cc")
+
+    for cls in class_order:
+        row = (
+            db.session.query(CompetitionResult, Rider)
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(CompetitionResult.competition_id == comp.id)
+            .filter(CompetitionResult.position == 1)
+            .filter(
+                db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == cls
+            )
+            .first()
+        )
+        if row:
+            return row[1], row[0]
+
+    row = (
+        db.session.query(CompetitionResult, Rider)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(CompetitionResult.competition_id == comp.id)
+        .filter(CompetitionResult.position == 1)
+        .order_by(CompetitionResult.result_id.asc())
+        .first()
+    )
+    if row:
+        return row[1], row[0]
+    return None
+
+
+def build_rider_spotlight() -> dict[str, Any]:
+    """Veckans förare — senaste racets vinnare (450/SX1) med bio-hook."""
+    comp = _last_completed_competition()
+    if not comp:
+        return {"available": False}
+
+    winner = _spotlight_winner_for_comp(comp)
+    if not winner:
+        return {"available": False}
+
+    rider, result = winner
+    try:
+        from racerx_rider_bio import resolve_rider_bio_source
+
+        bio_source = resolve_rider_bio_source(rider)
+        bio_text = (bio_source.bio_sv or bio_source.bio or "").strip()
+        if not bio_text:
+            bio_text = (bio_source.bio or "").strip()
+        bio_parts = _bio_content_parts(bio_text)
+        hook = (bio_parts.get("hook") or bio_parts.get("full") or "")[:220]
+    except Exception:
+        hook = ""
+
+    if (comp.series or "") == "WSX":
+        pts = (
+            int(result.rider_points)
+            if result.rider_points is not None
+            else int(get_smx_qualification_points(result.position))
+        )
+    else:
+        pts = int(_result_points_for_standing(result, comp))
+
+    season_year = (
+        int(comp.event_date.year)
+        if comp.event_date
+        else _current_racing_season_year()
+    )
+    championships = _rider_championship_standings(rider, season_year)
+    sx_row = next((c for c in championships if c.get("series") == "SX"), None)
+    mx_row = next((c for c in championships if c.get("series") == "MX"), None)
+
+    portrait = template_rider_image_src(rider, bio_card=True)
+    series_tag = comp.series or "SX"
+    if series_tag == "WSX":
+        reason = f"Vann {comp.name} (SX1)"
+    elif series_tag == "MX":
+        reason = f"Vann {comp.name} (MX)"
+    else:
+        reason = f"Vann {comp.name}"
+
+    return {
+        "available": True,
+        "title": "I rampljuset",
+        "reason": reason,
+        "race_name": comp.name,
+        "race_series": series_tag,
+        "position": int(result.position),
+        "points": pts,
+        "rider_id": int(rider.id),
+        "name": rider.name,
+        "number": rider.rider_number,
+        "brand": rider.bike_brand or "",
+        "class_label": _rider_directory_series_label(rider),
+        "portrait_url": portrait,
+        "bio_hook": hook,
+        "profile_url": url_for("rider_profile", rider_id=int(rider.id)),
+        "season_year": season_year,
+        "sx_rank": sx_row.get("rank") if sx_row else None,
+        "sx_points": sx_row.get("points") if sx_row else None,
+        "mx_rank": mx_row.get("rank") if mx_row else None,
+        "mx_points": mx_row.get("points") if mx_row else None,
+    }
 
 
 def build_rider_game_context(rider: Rider) -> dict[str, Any]:

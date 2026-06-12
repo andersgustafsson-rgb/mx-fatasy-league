@@ -83,6 +83,30 @@
     .sx-season-hero-animate {
       animation: sx-hero-glow 5s ease-in-out infinite;
     }
+
+    @keyframes rider-spotlight-glow {
+      0%, 100% { box-shadow: 0 0 24px rgba(251, 191, 36, 0.12), 0 8px 32px rgba(0, 0, 0, 0.45); }
+      50% { box-shadow: 0 0 36px rgba(251, 191, 36, 0.22), 0 12px 40px rgba(0, 0, 0, 0.5); }
+    }
+    .rider-spotlight-card {
+      animation: rider-spotlight-glow 6s ease-in-out infinite;
+      background:
+        radial-gradient(ellipse 80% 60% at 0% 50%, rgba(251, 191, 36, 0.08), transparent 55%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.97) 0%, rgba(30, 41, 59, 0.92) 45%, rgba(15, 23, 42, 0.97) 100%);
+    }
+    .rider-spotlight-checkered {
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,.04) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,.04) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.04) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.04) 75%);
+      background-size: 14px 14px;
+    }
+    .readonly-mode a.rider-spotlight-card {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
     
     /* Glömt lösenord-länken ska alltid vara klickbar i modalen */
     .readonly-mode a[href*="forgot_password"] {
@@ -848,7 +872,7 @@
             <!-- Test Countdown Widget removed -->
           </div>
         </div>
-        
+
         <!-- Tab Navigation -->
         <div class="mb-6 relative z-10">
           <div class="relative flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
@@ -1220,6 +1244,46 @@
                   <div id="weekly-fun-stats" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <p class="text-yellow-400 text-center col-span-full text-sm sm:text-base" style="text-shadow: 0 0 5px rgba(250, 204, 21, 0.3);">Laddar...</p>
                   </div>
+                </div>
+              </div>
+              <!-- I rampljuset -->
+              <div id="rider-spotlight-section" class="hidden lg:col-span-2 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2 border-amber-500"
+                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
+                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
+                <div class="relative z-10">
+                  <h2 class="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 text-center" style="text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">✨ I rampljuset</h2>
+                  <a id="rider-spotlight-link" href="#" class="rider-spotlight-card group block rounded-xl border border-amber-400/30 overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-300/50">
+                    <div class="relative rider-spotlight-checkered">
+                      <div class="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/40 pointer-events-none"></div>
+                      <div class="relative flex flex-col sm:flex-row items-stretch min-h-[8.5rem]">
+                        <div class="sm:w-36 md:w-40 shrink-0 flex items-end justify-center p-4 sm:py-5 sm:pr-0">
+                          <div class="relative">
+                            <div class="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400/40 to-orange-600/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                            <div class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden ring-2 ring-amber-400/50 bg-slate-800 shadow-xl">
+                              <img id="rider-spotlight-img" src="" alt="" class="w-full h-full object-cover object-top">
+                            </div>
+                            <div class="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-base shadow-lg ring-2 ring-slate-900">🥇</div>
+                          </div>
+                        </div>
+                        <div class="flex-1 p-4 sm:py-5 sm:pl-3 sm:pr-5 flex flex-col justify-center min-w-0">
+                          <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/90" id="rider-spotlight-title">I rampljuset</span>
+                            <span id="rider-spotlight-class" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/40 text-amber-100/90 border border-amber-500/30"></span>
+                          </div>
+                          <h3 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight mb-1">
+                            <span id="rider-spotlight-number" class="text-amber-300/90"></span>
+                            <span id="rider-spotlight-name"></span>
+                          </h3>
+                          <p id="rider-spotlight-reason" class="text-amber-100/90 text-sm font-medium mb-1.5"></p>
+                          <p id="rider-spotlight-hook" class="text-white/70 text-sm leading-snug line-clamp-2 hidden italic"></p>
+                          <div id="rider-spotlight-stats" class="flex flex-wrap gap-3 mt-2 text-xs text-amber-100/70"></div>
+                          <span class="mt-2.5 inline-flex items-center gap-1 text-cyan-300 text-sm font-semibold group-hover:text-cyan-200">
+                            Läs profil <span class="transition-transform group-hover:translate-x-0.5">→</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </a>
                 </div>
               </div>
             </div>
@@ -2657,6 +2721,69 @@
       }
     }
 
+    async function fetchRiderSpotlight() {
+      try {
+        const res = await fetch('/get_rider_spotlight');
+        const data = await res.json();
+        updateRiderSpotlight(data);
+      } catch (e) {
+        console.error('Error loading rider spotlight:', e);
+        updateRiderSpotlight(null);
+      }
+    }
+
+    function updateRiderSpotlight(spotlight) {
+      const section = document.getElementById('rider-spotlight-section');
+      const link = document.getElementById('rider-spotlight-link');
+      if (!section || !link) return;
+      if (!spotlight || !spotlight.available) {
+        section.classList.add('hidden');
+        return;
+      }
+      section.classList.remove('hidden');
+      link.href = spotlight.profile_url || ('/rider/' + spotlight.rider_id);
+
+      const titleEl = document.getElementById('rider-spotlight-title');
+      if (titleEl) titleEl.textContent = spotlight.title || 'I rampljuset';
+
+      const img = document.getElementById('rider-spotlight-img');
+      if (img) {
+        img.src = spotlight.portrait_url || '';
+        img.alt = spotlight.name || '';
+      }
+      const numEl = document.getElementById('rider-spotlight-number');
+      if (numEl) numEl.textContent = spotlight.number ? ('#' + spotlight.number + ' ') : '';
+      const nameEl = document.getElementById('rider-spotlight-name');
+      if (nameEl) nameEl.textContent = spotlight.name || '';
+      const reasonEl = document.getElementById('rider-spotlight-reason');
+      if (reasonEl) {
+        const pts = spotlight.points != null ? (' · ' + spotlight.points + ' p') : '';
+        reasonEl.textContent = (spotlight.reason || '') + pts;
+      }
+      const classEl = document.getElementById('rider-spotlight-class');
+      if (classEl) classEl.textContent = spotlight.class_label || spotlight.brand || '';
+      const hookEl = document.getElementById('rider-spotlight-hook');
+      if (hookEl) {
+        if (spotlight.bio_hook) {
+          hookEl.textContent = '"' + spotlight.bio_hook + '"';
+          hookEl.classList.remove('hidden');
+        } else {
+          hookEl.classList.add('hidden');
+        }
+      }
+      const statsEl = document.getElementById('rider-spotlight-stats');
+      if (statsEl) {
+        const bits = [];
+        if (spotlight.sx_rank != null && spotlight.sx_points != null) {
+          bits.push('SX ' + (spotlight.season_year || '') + ': #' + spotlight.sx_rank + ' · ' + spotlight.sx_points + ' p');
+        }
+        if (spotlight.mx_rank != null && spotlight.mx_points != null) {
+          bits.push('MX: #' + spotlight.mx_rank + ' · ' + spotlight.mx_points + ' p');
+        }
+        statsEl.innerHTML = bits.map((t) => '<span>' + t + '</span>').join('');
+      }
+    }
+
     const RACE_WEATHER_ICONS = {
       sun: '☀️',
       partly: '🌤️',
@@ -3832,6 +3959,7 @@
       fetchLeagueLeaderboard();
       fetchCrossDinoHighscores();
       fetchWeeklyFunStats();
+      fetchRiderSpotlight();
       
       // Initialize tab scroll indicators after a short delay to ensure layout is complete
       setTimeout(updateTabScrollIndicators, 300);
