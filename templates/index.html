@@ -2793,6 +2793,8 @@
           _spotlightPayload.modes[modeKey] = data.data;
           _renderSpotlightMode(modeKey);
         } else if (cardsEl) {
+          const headlineEl = document.getElementById('rider-spotlight-headline');
+          if (headlineEl) headlineEl.classList.add('hidden');
           cardsEl.innerHTML = '<p class="text-amber-100/50 text-sm text-center py-8">Ingen data för detta läge.</p>';
         }
       } catch (e) {

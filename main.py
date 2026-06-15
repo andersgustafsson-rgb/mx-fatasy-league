@@ -56,7 +56,7 @@ def _peek_rider_spotlight_cache() -> dict | None:
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
         cached = _RIDER_SPOTLIGHT_CACHE[1]
-        if not _spotlight_cache_needs_refresh(cached):
+        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(cached):
             return cached
     return None
 
@@ -6853,6 +6853,24 @@ def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
     return False
 
 
+def _spotlight_shell_stale(payload: dict) -> bool:
+    """Shell med crowd_pick-flik ska byggas om när picks ännu/inte längre finns."""
+    if not payload.get("available"):
+        return False
+    lazy = payload.get("lazy_modes") or []
+    modes = payload.get("modes") or {}
+    has_crowd_tab = "crowd_pick" in lazy or "crowd_pick" in modes
+    upcoming = _current_picks_competition()
+    try:
+        locked = is_picks_locked(upcoming) if upcoming else True
+    except Exception:
+        locked = True
+    crowd_ok = bool(
+        upcoming and not locked and _crowd_spotlight_ready(upcoming)
+    )
+    return has_crowd_tab != crowd_ok
+
+
 def _spotlight_cache_needs_refresh(payload: dict) -> bool:
     """Äldre cache kan sakna porträtt-URL efter bildfix."""
     if not payload.get("available"):
@@ -6869,6 +6887,29 @@ def _spotlight_season_year(last_comp: Competition | None) -> int:
     return _current_racing_season_year()
 
 
+def _crowd_pick_lineup_count(comp: Competition) -> int:
+    """Antal unika spelare med minst ett race pick till tävlingen."""
+    comp_id = int(comp.id)
+    snap_users = (
+        db.session.query(db.func.count(db.distinct(PicksSnapshot.user_id)))
+        .filter(PicksSnapshot.competition_id == comp_id)
+        .scalar()
+        or 0
+    )
+    if snap_users >= 2:
+        return int(snap_users)
+    return (
+        db.session.query(db.func.count(db.distinct(RacePick.user_id)))
+        .filter(RacePick.competition_id == comp_id)
+        .scalar()
+        or 0
+    )
+
+
+def _crowd_spotlight_ready(comp: Competition) -> bool:
+    return _crowd_pick_lineup_count(comp) >= 2
+
+
 def _spotlight_available_mode_keys(
     last_comp: Competition | None,
     upcoming: Competition | None,
@@ -6881,7 +6922,7 @@ def _spotlight_available_mode_keys(
             locked = is_picks_locked(upcoming)
         except Exception:
             locked = True
-        if not locked:
+        if not locked and _crowd_spotlight_ready(upcoming):
             keys.append("crowd_pick")
     return keys
 
@@ -7060,7 +7101,7 @@ def build_rider_spotlight() -> dict[str, Any]:
     now = time.time()
     if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
         cached = _RIDER_SPOTLIGHT_CACHE[1]
-        if not _spotlight_cache_needs_refresh(cached):
+        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(cached):
             return cached
 
     last_comp = _last_completed_competition()
