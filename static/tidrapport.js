@@ -2137,6 +2137,22 @@ function buildStatusFilters(statuses, selected) {
 
 let chart = null;
 
+function drawChartValueText(ctx, txt, x, y, vertical) {
+  if (vertical) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeText(txt, 0, 0);
+    ctx.fillText(txt, 0, 0);
+    ctx.restore();
+    return;
+  }
+  ctx.strokeText(txt, x, y);
+  ctx.fillText(txt, x, y);
+}
+
 (() => {
   if (typeof Chart === "undefined" || window.__tidrapport_merge_bar_plugin) return;
   window.__tidrapport_merge_bar_plugin = true;
@@ -2170,12 +2186,11 @@ let chart = null;
           } else {
             const top = Math.min(props.y, props.base) - 4;
             ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
+            ctx.textBaseline = "middle";
             ctx.lineWidth = 3;
             ctx.strokeStyle = "rgba(15, 23, 42, 0.85)";
             ctx.fillStyle = "#f8fafc";
-            ctx.strokeText(short, props.x, top);
-            ctx.fillText(short, props.x, top);
+            drawChartValueText(ctx, short, props.x, top, true);
           }
         });
       });
@@ -2210,6 +2225,7 @@ let chart = null;
       ctx.fillStyle = fill;
 
       const intLabels = !!plug.integerLabels;
+      const rotateVertical = plug.rotateVertical != null ? !!plug.rotateVertical : !isHorizontal;
       const fmt = (n) => {
         if (!(Number(n) > 0)) return "";
         if (intLabels) return String(Math.round(n));
@@ -2244,9 +2260,8 @@ let chart = null;
             } else {
               const top = Math.min(props.y, props.base) - pad;
               ctx.textAlign = "center";
-              ctx.textBaseline = "bottom";
-              ctx.strokeText(txt, props.x, top);
-              ctx.fillText(txt, props.x, top);
+              ctx.textBaseline = "middle";
+              drawChartValueText(ctx, txt, props.x, top, rotateVertical);
             }
           }
           continue;
@@ -2294,9 +2309,8 @@ let chart = null;
         } else {
           const top = Math.min(anchorProps.y, anchorProps.base) - pad;
           ctx.textAlign = "center";
-          ctx.textBaseline = "bottom";
-          ctx.strokeText(txt, anchorProps.x, top);
-          ctx.fillText(txt, anchorProps.x, top);
+          ctx.textBaseline = "middle";
+          drawChartValueText(ctx, txt, anchorProps.x, top, rotateVertical);
         }
       }
 
@@ -2554,9 +2568,17 @@ function applyOrientation(mode, opts = {}) {
     c.options.scales.x.ticks.minRotation = forceAllLabels ? 90 : 60;
     c.options.scales.x.ticks.font = { size: forceAllLabels ? 8 : 10 };
     c.options.scales.y.ticks.precision = 0;
+    if (c.options.plugins.tidrapportValueLabels) {
+      c.options.plugins.tidrapportValueLabels.rotateVertical = true;
+      c.options.plugins.tidrapportValueLabels.fontSize = forceAllLabels ? 8 : 9;
+    }
   } else {
     c.options.plugins.legend.position = "right";
     c.options.plugins.legend.labels.font = { size: 12 };
+    if (c.options.plugins.tidrapportValueLabels) {
+      c.options.plugins.tidrapportValueLabels.rotateVertical = false;
+      c.options.plugins.tidrapportValueLabels.fontSize = 11;
+    }
     // Reset rotations (Chart.js ignores some of these in horizontal mode, but safe).
     c.options.scales.x.ticks.maxRotation = 0;
     c.options.scales.x.ticks.minRotation = 0;
