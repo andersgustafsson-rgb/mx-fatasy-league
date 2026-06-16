@@ -97,18 +97,14 @@
           </summary>
           <div class="px-4 pb-4 pt-1 space-y-3 border-t border-slate-800">
             <div class="space-y-1">
-              <label for="companyName" class="block text-xs font-medium text-slate-400">Företagsnamn</label>
-              <input id="companyName" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-            </div>
-            <div class="grid sm:grid-cols-2 gap-3">
-              <div class="space-y-1">
-                <label for="senderName" class="block text-xs font-medium text-slate-400">Ditt namn (signatur)</label>
-                <input id="senderName" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-              </div>
-              <div class="space-y-1">
-                <label for="supportEmail" class="block text-xs font-medium text-slate-400">Kundtjänst-e-post</label>
-                <input id="supportEmail" type="email" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
-              </div>
+              <label for="customSignature" class="block text-xs font-medium text-slate-400">Din signatur</label>
+              <textarea
+                id="customSignature"
+                rows="3"
+                placeholder="support agent Anders Gustafsson&#10;Motoaction Europe AB"
+                class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm leading-relaxed resize-y"
+              ></textarea>
+              <p class="text-[11px] text-slate-500">Visas under «Med vänliga hälsningar» i mailet. En rad eller flera rader — sparas i webbläsaren.</p>
             </div>
             <div class="space-y-1">
               <label for="tone" class="block text-xs font-medium text-slate-400">Ton</label>

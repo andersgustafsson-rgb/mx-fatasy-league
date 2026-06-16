@@ -215,7 +215,12 @@ function loadSettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("kundmail_settings_v1");
     if (!raw) return defaultSettings();
-    return { ...defaultSettings(), ...JSON.parse(raw) };
+    const parsed = { ...defaultSettings(), ...JSON.parse(raw) };
+    if (!cleanStr(parsed.customSignature)) {
+      const legacy = [parsed.senderName, parsed.companyName, parsed.supportEmail].map(cleanStr).filter(Boolean);
+      if (legacy.length) parsed.customSignature = legacy.join("\n");
+    }
+    return parsed;
   } catch {
     return defaultSettings();
   }
@@ -223,6 +228,7 @@ function loadSettings() {
 
 function defaultSettings() {
   return {
+    customSignature: "",
     companyName: "",
     senderName: "",
     supportEmail: "",
@@ -280,6 +286,10 @@ function greeting(customerName, tone, langPack) {
 }
 
 function signature(settings, langPack) {
+  const custom = cleanStr(settings.customSignature);
+  if (custom) {
+    return `${langPack.mail.signatureEmpty}\n${custom}`;
+  }
   const parts = [];
   if (cleanStr(settings.senderName)) parts.push(cleanStr(settings.senderName));
   if (cleanStr(settings.companyName)) parts.push(cleanStr(settings.companyName));
@@ -731,9 +741,7 @@ function generate() {
   els.validation.textContent = "";
 
   const settings = {
-    companyName: cleanStr(els.companyName?.value),
-    senderName: cleanStr(els.senderName?.value),
-    supportEmail: cleanStr(els.supportEmail?.value),
+    customSignature: cleanStr(els.customSignature?.value),
     tone: els.tone?.value || "formal",
     language: currentMailLang(),
   };
@@ -790,18 +798,14 @@ function init() {
   els.productName = $("productName");
   els.customerName = $("customerName");
   els.orderNumber = $("orderNumber");
-  els.companyName = $("companyName");
-  els.senderName = $("senderName");
-  els.supportEmail = $("supportEmail");
+  els.customSignature = $("customSignature");
   els.tone = $("tone");
   els.subjectOut = $("subjectOut");
   els.bodyOut = $("bodyOut");
   els.validation = $("validation");
 
   const settings = loadSettings();
-  els.companyName.value = settings.companyName;
-  els.senderName.value = settings.senderName;
-  els.supportEmail.value = settings.supportEmail;
+  els.customSignature.value = settings.customSignature || "";
   els.tone.value = settings.tone;
   els.language.value = settings.language || "sv";
 
@@ -817,9 +821,7 @@ function init() {
     els.productName,
     els.customerName,
     els.orderNumber,
-    els.companyName,
-    els.senderName,
-    els.supportEmail,
+    els.customSignature,
     els.tone,
   ].forEach((el) => {
     if (!el) return;
