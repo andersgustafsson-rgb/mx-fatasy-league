@@ -227,6 +227,21 @@ const MAIL_I18N = {
 
 const els = {};
 const datePickerInstances = [];
+let outputManuallyEdited = false;
+
+function markOutputPristine() {
+  outputManuallyEdited = false;
+  els.subjectOut?.classList.remove("ring-1", "ring-amber-500/50");
+  els.bodyOut?.classList.remove("ring-1", "ring-amber-500/50");
+  if (els.outputEditHint) els.outputEditHint.classList.add("hidden");
+}
+
+function markOutputEdited() {
+  outputManuallyEdited = true;
+  els.subjectOut?.classList.add("ring-1", "ring-amber-500/50");
+  els.bodyOut?.classList.add("ring-1", "ring-amber-500/50");
+  if (els.outputEditHint) els.outputEditHint.classList.remove("hidden");
+}
 
 function destroyDatePickers() {
   while (datePickerInstances.length) {
@@ -982,6 +997,7 @@ function generate() {
 
   els.subjectOut.value = mail.subject;
   els.bodyOut.value = mail.body;
+  markOutputPristine();
   rememberProduct(els.productName.value);
 }
 
@@ -1029,6 +1045,8 @@ function init() {
   els.tone = $("tone");
   els.subjectOut = $("subjectOut");
   els.bodyOut = $("bodyOut");
+  els.outputEditHint = $("outputEditHint");
+  els.regenerateMail = $("regenerateMail");
   els.validation = $("validation");
 
   const settings = loadSettings();
@@ -1093,6 +1111,10 @@ function init() {
   $("copyAll")?.addEventListener("click", (e) => {
     copyText(`${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${els.bodyOut.value}`, e.currentTarget);
   });
+
+  els.subjectOut?.addEventListener("input", markOutputEdited);
+  els.bodyOut?.addEventListener("input", markOutputEdited);
+  els.regenerateMail?.addEventListener("click", generate);
 
   generate();
 }

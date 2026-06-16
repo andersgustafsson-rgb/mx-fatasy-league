@@ -212,6 +212,9 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-sm font-semibold text-slate-200">Genererat mail</h2>
           <div class="flex flex-wrap gap-2">
+            <button id="regenerateMail" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">
+              Generera om från mall
+            </button>
             <button id="copySubject" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera ämne</button>
             <button id="copyBody" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera text</button>
             <button id="copyAll" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold">Kopiera allt</button>
@@ -220,21 +223,22 @@
 
         <p id="validation" class="text-xs text-amber-400"></p>
 
+        <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten manuellt. Byt språk eller klicka «Generera om från mall» för ny översättning från mallen.</p>
+
         <div class="space-y-1">
-          <label for="subjectOut" class="block text-xs font-medium text-slate-400">Ämne</label>
-          <input id="subjectOut" readonly class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+          <label for="subjectOut" class="block text-xs font-medium text-slate-400">Ämne (kan redigeras)</label>
+          <input id="subjectOut" class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600/40" />
         </div>
 
         <div class="space-y-1 flex-1 flex flex-col min-h-0">
-          <label for="bodyOut" class="block text-xs font-medium text-slate-400">Meddelande</label>
+          <label for="bodyOut" class="block text-xs font-medium text-slate-400">Meddelande (kan redigeras)</label>
           <textarea
             id="bodyOut"
-            readonly
-            class="w-full flex-1 min-h-[280px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 leading-relaxed resize-y"
+            class="w-full flex-1 min-h-[280px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 leading-relaxed resize-y focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600/40"
           ></textarea>
         </div>
 
-        <p class="text-[11px] text-slate-500">Inget skickas från den här sidan — klistra in i Outlook, Gmail eller ert ärendesystem.</p>
+        <p class="text-[11px] text-slate-500">Byt «Språk i kundens mail» för att generera svenska eller danska från mallen. Redigera fritt innan du kopierar — inget skickas från sidan.</p>
       </section>
     </div>
   </div>
