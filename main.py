@@ -22996,6 +22996,17 @@ def tidrapport():
         is_logged_in=True,
     )
 
+
+@app.get("/kundmail")
+def kundmail():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return render_template(
+        "kundmail.html",
+        username=session.get("username") or "",
+        is_logged_in=True,
+    )
+
 _start_homepage_cache_warm()
 
 

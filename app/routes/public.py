@@ -19,3 +19,11 @@ def tidrapport_page():
 
 	# Vi har ingen gemensam base-template, så sidan är fristående.
 	return render_template("tidrapport.html", username=session.get("username") or "")
+
+
+@bp.get("/kundmail")
+def kundmail_page():
+	if "user_id" not in session:
+		return redirect("/login")
+
+	return render_template("kundmail.html", username=session.get("username") or "")

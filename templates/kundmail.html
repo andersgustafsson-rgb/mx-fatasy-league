@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kundmail — svarsmallar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-6">
+    <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold">Kundmail</h1>
+        <p class="text-sm text-slate-400 mt-1">Generera färdiga svar till kundtjänst — kopiera ämne och text till ditt mailprogram.</p>
+      </div>
+      {% if username %}
+      <div class="text-xs text-slate-500">Inloggad som {{ username }}</div>
+      {% endif %}
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+      <section class="space-y-4">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
+          <h2 class="text-sm font-semibold text-slate-200">Uppgift</h2>
+
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div class="space-y-1">
+              <label for="language" class="block text-xs font-medium text-slate-400">Språk i mailet</label>
+              <select id="language" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+                <option value="sv">Svenska</option>
+                <option value="da">Danska</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label for="templateType" class="block text-xs font-medium text-slate-400">Typ av mail</label>
+              <select id="templateType" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"></select>
+            </div>
+          </div>
+          <p id="templateHelp" class="text-xs text-slate-500"></p>
+
+          <div id="extraFields" class="space-y-3 border-t border-slate-800 pt-3"></div>
+
+          <div class="grid sm:grid-cols-2 gap-3 border-t border-slate-800 pt-3">
+            <div class="space-y-1 sm:col-span-2">
+              <label for="productName" class="block text-xs font-medium text-slate-400">Produkt *</label>
+              <input
+                id="productName"
+                list="productList"
+                type="text"
+                placeholder="t.ex. Shimano XT bromsset bak"
+                class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+                autocomplete="off"
+              />
+              <datalist id="productList"></datalist>
+              <p class="text-[11px] text-slate-500">Senaste produkter sparas lokalt i webbläsaren.</p>
+            </div>
+
+            <div class="space-y-1">
+              <label for="customerName" class="block text-xs font-medium text-slate-400">Kundens förnamn</label>
+              <input id="customerName" type="text" placeholder="valfritt" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </div>
+
+            <div class="space-y-1">
+              <label for="orderNumber" class="block text-xs font-medium text-slate-400">Ordernummer</label>
+              <input id="orderNumber" type="text" placeholder="valfritt" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </div>
+          </div>
+        </div>
+
+        <details class="rounded-xl border border-slate-800 bg-slate-900/40">
+          <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800/40 rounded-xl list-none [&::-webkit-details-marker]:hidden">
+            Inställningar (sparas i webbläsaren)
+          </summary>
+          <div class="px-4 pb-4 pt-1 space-y-3 border-t border-slate-800">
+            <div class="space-y-1">
+              <label for="companyName" class="block text-xs font-medium text-slate-400">Företagsnamn</label>
+              <input id="companyName" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3">
+              <div class="space-y-1">
+                <label for="senderName" class="block text-xs font-medium text-slate-400">Ditt namn (signatur)</label>
+                <input id="senderName" type="text" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+              </div>
+              <div class="space-y-1">
+                <label for="supportEmail" class="block text-xs font-medium text-slate-400">Kundtjänst-e-post</label>
+                <input id="supportEmail" type="email" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+              </div>
+            </div>
+            <div class="space-y-1">
+              <label for="tone" class="block text-xs font-medium text-slate-400">Ton</label>
+              <select id="tone" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+                <option value="formal">Formell (Hej, / Hej Anna,)</option>
+                <option value="informal">Lite mer avslappnad</option>
+              </select>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 flex flex-col min-h-[420px]">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-sm font-semibold text-slate-200">Genererat mail</h2>
+          <div class="flex flex-wrap gap-2">
+            <button id="copySubject" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera ämne</button>
+            <button id="copyBody" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera text</button>
+            <button id="copyAll" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold">Kopiera allt</button>
+          </div>
+        </div>
+
+        <p id="validation" class="text-xs text-amber-400"></p>
+
+        <div class="space-y-1">
+          <label for="subjectOut" class="block text-xs font-medium text-slate-400">Ämne</label>
+          <input id="subjectOut" readonly class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100" />
+        </div>
+
+        <div class="space-y-1 flex-1 flex flex-col min-h-0">
+          <label for="bodyOut" class="block text-xs font-medium text-slate-400">Meddelande</label>
+          <textarea
+            id="bodyOut"
+            readonly
+            class="w-full flex-1 min-h-[280px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 leading-relaxed resize-y"
+          ></textarea>
+        </div>
+
+        <p class="text-[11px] text-slate-500">Inget skickas från den här sidan — klistra in i Outlook, Gmail eller ert ärendesystem.</p>
+      </section>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='kundmail.js') }}"></script>
+</body>
+</html>
