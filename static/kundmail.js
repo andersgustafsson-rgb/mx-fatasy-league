@@ -159,8 +159,8 @@ const MAIL_I18N = {
     locale: "sv-SE",
     currency: "kr",
     mail: {
-      greetingNamed: (name) => `Hej ${name}!`,
-      greetingFormal: "Hej!",
+      greetingNamed: (name, tone) => (tone === "informal" ? `Hej ${name}!` : `Hej ${name},`),
+      greetingFormal: (tone) => (tone === "informal" ? "Hej!" : "Hej,"),
       greetingInformal: "Hej!",
       signatureEmpty: "Med vänliga hälsningar",
       signature: (parts) => `Med vänliga hälsningar\n${parts.join("\n")}`,
@@ -169,8 +169,12 @@ const MAIL_I18N = {
       productFallback: "produkten",
       soon: "inom kort",
       replyThanks: (ord) => `Tack för ditt meddelande${ord}.`,
-      sympathy: "Vi är ledsna för eventuella besvär detta kan ha orsakat.",
-      helpOffer: "Hör gärna av dig om du har frågor — vi hjälper dig gärna vidare.",
+      sympathy: (tone) => (tone === "informal"
+        ? "Vi är ledsna om det här strular till det för dig."
+        : "Vi är ledsna för eventuella besvär detta kan ha orsakat."),
+      helpOffer: (tone) => (tone === "informal"
+        ? "Hör av dig om du undrar över något — vi hjälper gärna till."
+        : "Hör gärna av dig om du har frågor — vi hjälper dig gärna vidare."),
     },
     subjectOrder: "Angående order",
     subjectStatus: {
@@ -189,8 +193,8 @@ const MAIL_I18N = {
     locale: "da-DK",
     currency: "kr",
     mail: {
-      greetingNamed: (name) => `Hej ${name}!`,
-      greetingFormal: "Hej!",
+      greetingNamed: (name, tone) => (tone === "informal" ? `Hej ${name}!` : `Hej ${name},`),
+      greetingFormal: (tone) => (tone === "informal" ? "Hej!" : "Hej,"),
       greetingInformal: "Hej!",
       signatureEmpty: "Med venlig hilsen",
       signature: (parts) => `Med venlig hilsen\n${parts.join("\n")}`,
@@ -199,8 +203,12 @@ const MAIL_I18N = {
       productFallback: "produktet",
       soon: "inden for kort tid",
       replyThanks: (ord) => `Tak for din henvendelse${ord}.`,
-      sympathy: "Vi er kede af eventuelle gener, dette måtte medføre.",
-      helpOffer: "Kontakt os gerne, hvis du har spørgsmål — vi hjælper dig videre.",
+      sympathy: (tone) => (tone === "informal"
+        ? "Vi er kede af, hvis det her er besværligt for dig."
+        : "Vi er kede af eventuelle gener, dette måtte medføre."),
+      helpOffer: (tone) => (tone === "informal"
+        ? "Skriv endelig, hvis du har spørgsmål — vi hjælper gerne."
+        : "Kontakt os gerne, hvis du har spørgsmål — vi hjælper dig videre."),
     },
     subjectOrder: "Angående ordre",
     subjectStatus: {
@@ -476,8 +484,20 @@ function formatLocaleDate(iso) {
 
 function greeting(customerName, tone, langPack) {
   const name = cleanStr(customerName);
-  if (name) return langPack.mail.greetingNamed(name);
-  return tone === "informal" ? langPack.mail.greetingInformal : langPack.mail.greetingFormal;
+  const t = tone === "informal" ? "informal" : "formal";
+  if (name) return langPack.mail.greetingNamed(name, t);
+  return langPack.mail.greetingFormal(t);
+}
+
+function mailPhrase(fn, tone) {
+  const t = tone === "informal" ? "informal" : "formal";
+  return typeof fn === "function" ? fn(t) : fn;
+}
+
+function mailOutro(ctx) {
+  const m = ctx.lang.mail;
+  const tone = ctx.settings?.tone;
+  return `${mailPhrase(m.sympathy, tone)}\n\n${mailPhrase(m.helpOffer, tone)}\n\n${ctx.sig}`;
 }
 
 function signature(settings, langPack) {
@@ -510,11 +530,6 @@ function mailIntro(ctx) {
   return `${g}\n\n`;
 }
 
-function mailOutro(ctx) {
-  const m = ctx.lang.mail;
-  return `${m.sympathy}\n\n${m.helpOffer}\n\n${ctx.sig}`;
-}
-
 function buildSubject(ctx) {
   const pack = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
   const status = pack.subjectStatus[ctx.templateId] || pack.subjectStatus.default;
@@ -528,7 +543,7 @@ function buildSubject(ctx) {
 }
 
 function buildMailSv(ctx) {
-  const { templateId, prod, ord, sig, extras, lang, replyToCustomer } = ctx;
+  const { templateId, prod, sig, extras, lang } = ctx;
   const intro = mailIntro(ctx);
   const outro = mailOutro(ctx);
   const whenSoon = lang.mail.soon;
@@ -635,7 +650,7 @@ ${outro}`;
 
 När vi mottagit och kontrollerat returen återbetalar vi enligt våra returvillkor.
 
-${lang.mail.helpOffer}
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 
 ${sig}`;
       break;
@@ -754,7 +769,7 @@ ${outro}`;
 
 Når vi har modtaget og kontrolleret returneringen, refunderer vi i henhold til vores returvilkår.
 
-${lang.mail.helpOffer}
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 
 ${sig}`;
       break;
