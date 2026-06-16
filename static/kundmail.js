@@ -61,88 +61,90 @@ const TEMPLATE_DEFS = [
   },
 ];
 
-const I18N = {
-  sv: {
-    locale: "sv-SE",
-    currency: "kr",
-    copySubject: "Kopiera ämne",
-    copyBody: "Kopiera text",
-    copyAll: "Kopiera allt",
-    copied: "Kopierat!",
-    copyAllPrefix: "Ämne:",
-    errProduct: "Ange produktnamn.",
-    errField: (label) => `Fyll i: ${label}`,
-    toneFormal: "Formell (Hej, / Hej Anna,)",
-    toneInformal: "Lite mer avslappnad",
-    templates: {
-      slut: {
-        label: "Slut i lager (tillfälligt)",
-        description: "Produkten finns inte just nu. Fråga om kunden vill vänta eller avboka.",
-        fields: {
-          waitOption: { label: "Erbjud vänta på åter i lager" },
-        },
+const UI = {
+  copySubject: "Kopiera ämne",
+  copyBody: "Kopiera text",
+  copyAll: "Kopiera allt",
+  copied: "Kopierat!",
+  copyAllPrefix: "Ämne:",
+  errProduct: "Ange produktnamn.",
+  errField: (label) => `Fyll i: ${label}`,
+  templates: {
+    slut: {
+      label: "Slut i lager (tillfälligt)",
+      description: "Produkten finns inte just nu. Fråga om kunden vill vänta eller avboka.",
+      fields: {
+        waitOption: { label: "Erbjud vänta på åter i lager" },
       },
-      inkommer: {
-        label: "Kommer in i lager senare",
-        description: "Förväntad åter i lager med datum.",
-        fields: {
-          expectedDate: { label: "Förväntat datum" },
-          waitOption: { label: "Fråga om kunden vill vänta" },
-        },
+    },
+    inkommer: {
+      label: "Kommer in i lager senare",
+      description: "Förväntad åter i lager med datum.",
+      fields: {
+        expectedDate: { label: "Förväntat datum" },
+        waitOption: { label: "Fråga om kunden vill vänta" },
       },
-      utgatt: {
-        label: "Utgått / discontinuerad",
-        description: "Produkten tas bort ur sortimentet.",
-        fields: {
-          alternativeProduct: { label: "Föreslagen ersättning (valfritt)" },
-        },
+    },
+    utgatt: {
+      label: "Utgått / discontinuerad",
+      description: "Produkten tas bort ur sortimentet.",
+      fields: {
+        alternativeProduct: { label: "Föreslagen ersättning (valfritt)" },
       },
-      forsening: {
-        label: "Leveransförsening",
-        description: "Ordern blir sen — nytt leveransdatum.",
-        fields: {
-          newDeliveryDate: { label: "Nytt leveransdatum" },
-          delayReason: { label: "Orsak (valfritt)", placeholder: "t.ex. försening från leverantör" },
-        },
+    },
+    forsening: {
+      label: "Leveransförsening",
+      description: "Ordern blir sen — nytt leveransdatum.",
+      fields: {
+        newDeliveryDate: { label: "Nytt leveransdatum" },
+        delayReason: { label: "Orsak (valfritt)", placeholder: "t.ex. försening från leverantör" },
       },
-      alternativ: {
-        label: "Föreslår alternativ produkt",
-        description: "Original saknas — erbjud liknande artikel.",
-        fields: {
-          alternativeProduct: { label: "Alternativ produkt" },
-          productLink: { label: "Länk till alternativ (valfritt)" },
-        },
+    },
+    alternativ: {
+      label: "Föreslår alternativ produkt",
+      description: "Original saknas — erbjud liknande artikel.",
+      fields: {
+        alternativeProduct: { label: "Alternativ produkt" },
+        productLink: { label: "Länk till alternativ (valfritt)" },
       },
-      avbokad: {
-        label: "Order avbruten p.g.a. slut",
-        description: "Bekräfta att ordern avbrutits och ev. återbetalning.",
-        fields: {
-          refundNote: {
-            label: "Återbetalning",
-            options: {
-              auto: "Återbetalning sker automatiskt inom några bankdagar",
-              manual: "Vi återbetalar manuellt — återkommer när det är gjort",
-              none: "Nämn inte återbetalning",
-            },
+    },
+    avbokad: {
+      label: "Order avbruten p.g.a. slut",
+      description: "Bekräfta att ordern avbrutits och ev. återbetalning.",
+      fields: {
+        refundNote: {
+          label: "Återbetalning",
+          options: {
+            auto: "Återbetalning sker automatiskt inom några bankdagar",
+            manual: "Vi återbetalar manuellt — återkommer när det är gjort",
+            none: "Nämn inte återbetalning",
           },
         },
       },
-      prisandring: {
-        label: "Pris har ändrats",
-        description: "Informera om nytt pris innan leverans.",
-        fields: {
-          oldPrice: { label: "Gammalt pris (kr)" },
-          newPrice: { label: "Nytt pris (kr)" },
-        },
-      },
-      retur: {
-        label: "Returinstruktioner",
-        description: "Skicka retursedel och steg för retur.",
-        fields: {
-          returnDeadline: { label: "Sista returdatum (valfritt)" },
-        },
+    },
+    prisandring: {
+      label: "Pris har ändrats",
+      description: "Informera om nytt pris innan leverans.",
+      fields: {
+        oldPrice: { label: "Gammalt pris (kr)" },
+        newPrice: { label: "Nytt pris (kr)" },
       },
     },
+    retur: {
+      label: "Returinstruktioner",
+      description: "Skicka retursedel och steg för retur.",
+      fields: {
+        returnDeadline: { label: "Sista returdatum (valfritt)" },
+      },
+    },
+  },
+};
+
+/** Endast genererat mail — UI är alltid på svenska. */
+const MAIL_I18N = {
+  sv: {
+    locale: "sv-SE",
+    currency: "kr",
     mail: {
       greetingNamed: (name) => `Hej ${name},`,
       greetingFormal: "Hej,",
@@ -157,84 +159,6 @@ const I18N = {
   da: {
     locale: "da-DK",
     currency: "kr",
-    copySubject: "Kopiér emne",
-    copyBody: "Kopiér tekst",
-    copyAll: "Kopiér alt",
-    copied: "Kopieret!",
-    copyAllPrefix: "Emne:",
-    errProduct: "Angiv produktnavn.",
-    errField: (label) => `Udfyld: ${label}`,
-    toneFormal: "Formel (Hej, / Hej Anna,)",
-    toneInformal: "Lidt mere afslappet",
-    templates: {
-      slut: {
-        label: "Udsolgt (midlertidigt)",
-        description: "Produktet er ikke på lager lige nu. Spørg om kunden vil vente eller annullere.",
-        fields: {
-          waitOption: { label: "Tilbyd at vente på genopfyldning" },
-        },
-      },
-      inkommer: {
-        label: "Kommer på lager senere",
-        description: "Forventet tilbage på lager med dato.",
-        fields: {
-          expectedDate: { label: "Forventet dato" },
-          waitOption: { label: "Spørg om kunden vil vente" },
-        },
-      },
-      utgatt: {
-        label: "Udgået / discontinued",
-        description: "Produktet fjernes fra sortimentet.",
-        fields: {
-          alternativeProduct: { label: "Foreslået erstatning (valgfrit)" },
-        },
-      },
-      forsening: {
-        label: "Leveringsforsinkelse",
-        description: "Ordren bliver forsinket — ny leveringsdato.",
-        fields: {
-          newDeliveryDate: { label: "Ny leveringsdato" },
-          delayReason: { label: "Årsag (valgfrit)", placeholder: "f.eks. forsinkelse fra leverandør" },
-        },
-      },
-      alternativ: {
-        label: "Foreslår alternativt produkt",
-        description: "Originalen mangler — tilbyd lignende vare.",
-        fields: {
-          alternativeProduct: { label: "Alternativt produkt" },
-          productLink: { label: "Link til alternativ (valgfrit)" },
-        },
-      },
-      avbokad: {
-        label: "Ordre annulleret pga. udsolgt",
-        description: "Bekræft at ordren er annulleret og evt. refusion.",
-        fields: {
-          refundNote: {
-            label: "Refusion",
-            options: {
-              auto: "Refusion sker automatisk inden for få bankdage",
-              manual: "Vi refunderer manuelt — vender tilbage når det er gjort",
-              none: "Nævn ikke refusion",
-            },
-          },
-        },
-      },
-      prisandring: {
-        label: "Pris er ændret",
-        description: "Informer om ny pris før levering.",
-        fields: {
-          oldPrice: { label: "Gammel pris (kr)" },
-          newPrice: { label: "Ny pris (kr)" },
-        },
-      },
-      retur: {
-        label: "Returinstruktioner",
-        description: "Send returseddel og trin for returnering.",
-        fields: {
-          returnDeadline: { label: "Sidste returdato (valgfrit)" },
-        },
-      },
-    },
     mail: {
       greetingNamed: (name) => `Hej ${name},`,
       greetingFormal: "Hej,",
@@ -258,13 +182,13 @@ function cleanStr(v) {
   return String(v ?? "").trim();
 }
 
-function currentLang() {
+function currentMailLang() {
   const v = cleanStr(els.language?.value) || cleanStr(loadSettings().language);
   return v === "da" ? "da" : "sv";
 }
 
-function t() {
-  return I18N[currentLang()];
+function mailPack() {
+  return MAIL_I18N[currentMailLang()] || MAIL_I18N.sv;
 }
 
 function loadSettings() {
@@ -326,7 +250,7 @@ function formatLocaleDate(iso) {
   if (!s) return "";
   const d = new Date(`${s}T12:00:00`);
   if (Number.isNaN(d.getTime())) return s;
-  return d.toLocaleDateString(t().locale, { year: "numeric", month: "long", day: "numeric" });
+  return d.toLocaleDateString(mailPack().locale, { year: "numeric", month: "long", day: "numeric" });
 }
 
 function greeting(customerName, tone, langPack) {
@@ -652,7 +576,7 @@ ${sig}`;
 }
 
 function buildMail(ctx) {
-  const lang = I18N[ctx.lang] || I18N.sv;
+  const lang = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
   const g = greeting(ctx.customerName, ctx.settings.tone, lang);
   const prod = productPhrase(ctx.productName, lang);
   const ord = orderLine(ctx.orderNumber, lang);
@@ -675,7 +599,7 @@ function getSelectedTemplate() {
 }
 
 function templateStrings(tplId) {
-  return t().templates[tplId] || {};
+  return UI.templates[tplId] || {};
 }
 
 function fieldStrings(tplId, fieldId) {
@@ -757,16 +681,7 @@ function renderExtraFields() {
   }
 }
 
-function refreshUiLabels() {
-  const lang = t();
-  $("copySubject").textContent = lang.copySubject;
-  $("copyBody").textContent = lang.copyBody;
-  $("copyAll").textContent = lang.copyAll;
-  const tone = els.tone;
-  if (tone?.options?.length >= 2) {
-    tone.options[0].textContent = lang.toneFormal;
-    tone.options[1].textContent = lang.toneInformal;
-  }
+function refreshUi() {
   renderTemplateOptions();
   renderExtraFields();
 }
@@ -784,15 +699,14 @@ function collectExtras() {
 }
 
 function validate() {
-  const lang = t();
   const product = cleanStr(els.productName?.value);
-  if (!product) return lang.errProduct;
+  if (!product) return UI.errProduct;
   const tpl = getSelectedTemplate();
   for (const field of tpl.fields || []) {
     if (!field.required) continue;
     const el = $(`extra_${field.id}`);
     const label = fieldStrings(tpl.id, field.id).label || field.id;
-    if (!el || !cleanStr(el.value)) return lang.errField(label);
+    if (!el || !cleanStr(el.value)) return UI.errField(label);
   }
   return "";
 }
@@ -812,7 +726,7 @@ function generate() {
     senderName: cleanStr(els.senderName?.value),
     supportEmail: cleanStr(els.supportEmail?.value),
     tone: els.tone?.value || "formal",
-    language: currentLang(),
+    language: currentMailLang(),
   };
   saveSettings(settings);
 
@@ -823,7 +737,7 @@ function generate() {
     orderNumber: cleanStr(els.orderNumber?.value),
     settings,
     extras: collectExtras(),
-    lang: currentLang(),
+    lang: currentMailLang(),
   });
 
   els.subjectOut.value = mail.subject;
@@ -846,7 +760,7 @@ async function copyText(text, btn) {
   }
   if (!btn) return;
   const old = btn.textContent;
-  btn.textContent = I18N[currentLang()].copied;
+  btn.textContent = UI.copied;
   setTimeout(() => { btn.textContent = old; }, 1400);
 }
 
@@ -874,7 +788,7 @@ function init() {
   els.language.value = settings.language || "sv";
 
   refreshProductDatalist();
-  refreshUiLabels();
+  refreshUi();
 
   const regen = () => generate();
   [
@@ -893,10 +807,7 @@ function init() {
     el.addEventListener("change", regen);
   });
 
-  els.language.addEventListener("change", () => {
-    refreshUiLabels();
-    generate();
-  });
+  els.language.addEventListener("change", generate);
 
   els.templateType.addEventListener("change", () => {
     renderExtraFields();
@@ -906,8 +817,7 @@ function init() {
   $("copySubject")?.addEventListener("click", (e) => copyText(els.subjectOut.value, e.currentTarget));
   $("copyBody")?.addEventListener("click", (e) => copyText(els.bodyOut.value, e.currentTarget));
   $("copyAll")?.addEventListener("click", (e) => {
-    const prefix = I18N[currentLang()].copyAllPrefix;
-    copyText(`${prefix} ${els.subjectOut.value}\n\n${els.bodyOut.value}`, e.currentTarget);
+    copyText(`${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${els.bodyOut.value}`, e.currentTarget);
   });
 
   generate();
