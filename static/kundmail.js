@@ -1,7 +1,8 @@
 /* Kundtjänst — generera svarsmallar (körs helt i webbläsaren). */
 
-const STORAGE_KEY = "kundmail_settings_v3";
+const STORAGE_KEY = "kundmail_settings_v4";
 const PRODUCTS_KEY = "kundmail_products_v1";
+const SIGNATURES_KEY = "kundmail_signature_profiles_v1";
 
 const TEMPLATE_DEFS = [
   {
@@ -269,14 +270,9 @@ function mailPack() {
 
 function loadSettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("kundmail_settings_v1");
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem("kundmail_settings_v3");
     if (!raw) return defaultSettings();
-    const parsed = { ...defaultSettings(), ...JSON.parse(raw) };
-    if (!cleanStr(parsed.customSignature)) {
-      const legacy = [parsed.senderName, parsed.companyName, parsed.supportEmail].map(cleanStr).filter(Boolean);
-      if (legacy.length) parsed.customSignature = legacy.join("\n");
-    }
-    return parsed;
+    return { ...defaultSettings(), ...JSON.parse(raw) };
   } catch {
     return defaultSettings();
   }
@@ -285,10 +281,155 @@ function loadSettings() {
 function defaultSettings() {
   return {
     companyName: "",
-    customSignature: "",
+    activeSignatureId: "",
     tone: "formal",
     language: "sv",
   };
+}
+
+function newSignatureId() {
+  return `sig_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+}
+
+function loadSignatureProfiles() {
+  try {
+    const raw = localStorage.getItem(SIGNATURES_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((p) => p && cleanStr(p.id))
+      .map((p) => ({
+        id: cleanStr(p.id),
+        name: cleanStr(p.name) || "Signatur",
+        text: String(p.text ?? ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveSignatureProfiles(profiles) {
+  localStorage.setItem(SIGNATURES_KEY, JSON.stringify(profiles));
+}
+
+function ensureSignatureProfiles() {
+  let profiles = loadSignatureProfiles();
+  const settings = loadSettings();
+
+  if (!profiles.length) {
+    const legacyText = cleanStr(settings.customSignature);
+    if (!legacyText) {
+      try {
+        const oldRaw = localStorage.getItem("kundmail_settings_v3")
+          || localStorage.getItem("kundmail_settings_v2")
+          || localStorage.getItem("kundmail_settings_v1");
+        if (oldRaw) {
+          const old = JSON.parse(oldRaw);
+          const migrated = cleanStr(old.customSignature);
+          if (migrated) profiles = [{ id: newSignatureId(), name: "Min signatur", text: migrated }];
+        }
+      } catch {
+        /* ignore */
+      }
+    } else {
+      profiles = [{ id: newSignatureId(), name: "Min signatur", text: legacyText }];
+    }
+  }
+
+  if (!profiles.length) {
+    profiles = [{ id: newSignatureId(), name: "Min signatur", text: "" }];
+  }
+
+  saveSignatureProfiles(profiles);
+
+  if (!profiles.some((p) => p.id === settings.activeSignatureId)) {
+    settings.activeSignatureId = profiles[0].id;
+    saveSettings(settings);
+  }
+
+  return profiles;
+}
+
+function getActiveSignatureProfile() {
+  const profiles = ensureSignatureProfiles();
+  const settings = loadSettings();
+  return profiles.find((p) => p.id === settings.activeSignatureId) || profiles[0];
+}
+
+function persistProfile(id, name, text) {
+  const profiles = loadSignatureProfiles();
+  const profile = profiles.find((p) => p.id === id);
+  if (!profile) return;
+  profile.name = cleanStr(name) || "Signatur";
+  profile.text = text ?? "";
+  saveSignatureProfiles(profiles);
+}
+
+function saveActiveProfileFromForm() {
+  const id = cleanStr(els.signatureProfileSelect?.value) || getActiveSignatureProfile().id;
+  persistProfile(id, els.signatureProfileName?.value, els.signatureProfileText?.value);
+  renderSignatureProfileOptions();
+}
+
+function renderSignatureProfileOptions() {
+  const select = els.signatureProfileSelect;
+  if (!select) return;
+  const profiles = ensureSignatureProfiles();
+  const activeId = getActiveSignatureProfile().id;
+  select.innerHTML = "";
+  for (const p of profiles) {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.textContent = p.name || "Signatur";
+    select.appendChild(opt);
+  }
+  select.value = activeId;
+  if (els.deleteSignatureProfile) {
+    els.deleteSignatureProfile.disabled = profiles.length <= 1;
+  }
+}
+
+function loadActiveProfileIntoForm() {
+  const profile = getActiveSignatureProfile();
+  if (!profile) return;
+  if (els.signatureProfileSelect) els.signatureProfileSelect.value = profile.id;
+  if (els.signatureProfileName) els.signatureProfileName.value = profile.name;
+  if (els.signatureProfileText) els.signatureProfileText.value = profile.text;
+}
+
+function setActiveSignatureProfile(id) {
+  const settings = loadSettings();
+  settings.activeSignatureId = id;
+  saveSettings(settings);
+}
+
+function addSignatureProfile() {
+  saveActiveProfileFromForm();
+  const profiles = loadSignatureProfiles();
+  const profile = {
+    id: newSignatureId(),
+    name: `Ny signatur ${profiles.length + 1}`,
+    text: "",
+  };
+  profiles.push(profile);
+  saveSignatureProfiles(profiles);
+  setActiveSignatureProfile(profile.id);
+  renderSignatureProfileOptions();
+  loadActiveProfileIntoForm();
+  generate();
+}
+
+function deleteActiveSignatureProfile() {
+  const profiles = loadSignatureProfiles();
+  if (profiles.length <= 1) return;
+  const active = getActiveSignatureProfile();
+  if (!window.confirm(`Ta bort signatur «${active.name}»?`)) return;
+  const next = profiles.filter((p) => p.id !== active.id);
+  saveSignatureProfiles(next);
+  setActiveSignatureProfile(next[0].id);
+  renderSignatureProfileOptions();
+  loadActiveProfileIntoForm();
+  generate();
 }
 
 function saveSettings(settings) {
@@ -344,12 +485,7 @@ function signature(settings, langPack) {
   if (custom) {
     return `${langPack.mail.signatureEmpty}\n${custom}`;
   }
-  const parts = [];
-  if (cleanStr(settings.senderName)) parts.push(cleanStr(settings.senderName));
-  if (cleanStr(settings.companyName)) parts.push(cleanStr(settings.companyName));
-  if (cleanStr(settings.supportEmail)) parts.push(cleanStr(settings.supportEmail));
-  if (!parts.length) return langPack.mail.signatureEmpty;
-  return langPack.mail.signature(parts);
+  return langPack.mail.signatureEmpty;
 }
 
 function orderLine(orderNumber, langPack) {
@@ -806,9 +942,13 @@ function generate() {
   }
   els.validation.textContent = "";
 
+  saveActiveProfileFromForm();
+  const activeSignature = getActiveSignatureProfile();
+
   const settings = {
     companyName: cleanStr(els.companyName?.value),
-    customSignature: cleanStr(els.customSignature?.value),
+    customSignature: cleanStr(activeSignature?.text),
+    activeSignatureId: activeSignature?.id || "",
     tone: els.tone?.value || "formal",
     language: currentMailLang(),
   };
@@ -865,7 +1005,11 @@ function init() {
   els.productName = $("productName");
   els.customerName = $("customerName");
   els.orderNumber = $("orderNumber");
-  els.customSignature = $("customSignature");
+  els.signatureProfileSelect = $("signatureProfileSelect");
+  els.signatureProfileName = $("signatureProfileName");
+  els.signatureProfileText = $("signatureProfileText");
+  els.addSignatureProfile = $("addSignatureProfile");
+  els.deleteSignatureProfile = $("deleteSignatureProfile");
   els.companyName = $("companyName");
   els.tone = $("tone");
   els.subjectOut = $("subjectOut");
@@ -874,9 +1018,12 @@ function init() {
 
   const settings = loadSettings();
   els.companyName.value = settings.companyName || "";
-  els.customSignature.value = settings.customSignature || "";
   els.tone.value = settings.tone;
   els.language.value = settings.language || "sv";
+
+  ensureSignatureProfiles();
+  renderSignatureProfileOptions();
+  loadActiveProfileIntoForm();
 
   refreshProductDatalist();
   applyReplyDefault();
@@ -891,13 +1038,32 @@ function init() {
     els.customerName,
     els.orderNumber,
     els.companyName,
-    els.customSignature,
+    els.signatureProfileName,
+    els.signatureProfileText,
     els.tone,
   ].forEach((el) => {
     if (!el) return;
     el.addEventListener("input", regen);
     el.addEventListener("change", regen);
   });
+
+  els.signatureProfileSelect?.addEventListener("focus", () => {
+    els.signatureProfileSelect.dataset.prevId = els.signatureProfileSelect.value;
+  });
+
+  els.signatureProfileSelect?.addEventListener("change", () => {
+    const prevId = els.signatureProfileSelect.dataset.prevId;
+    if (prevId) {
+      persistProfile(prevId, els.signatureProfileName?.value, els.signatureProfileText?.value);
+    }
+    setActiveSignatureProfile(els.signatureProfileSelect.value);
+    renderSignatureProfileOptions();
+    loadActiveProfileIntoForm();
+    generate();
+  });
+
+  els.addSignatureProfile?.addEventListener("click", addSignatureProfile);
+  els.deleteSignatureProfile?.addEventListener("click", deleteActiveSignatureProfile);
 
   els.language.addEventListener("change", generate);
 

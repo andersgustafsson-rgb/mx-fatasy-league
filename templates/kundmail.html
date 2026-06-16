@@ -150,7 +150,7 @@
 
         <details class="rounded-xl border border-slate-800 bg-slate-900/40">
           <summary class="cursor-pointer px-4 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800/40 rounded-xl list-none [&::-webkit-details-marker]:hidden">
-            Inställningar (sparas i webbläsaren)
+            Inställningar (företagsnamn &amp; signaturer)
           </summary>
           <div class="px-4 pb-4 pt-1 space-y-3 border-t border-slate-800">
             <div class="space-y-1">
@@ -162,15 +162,40 @@
                 class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
               />
             </div>
-            <div class="space-y-1">
-              <label for="customSignature" class="block text-xs font-medium text-slate-400">Din signatur</label>
-              <textarea
-                id="customSignature"
-                rows="3"
-                placeholder="support agent Anders Gustafsson&#10;Motoaction Europe AB"
-                class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm leading-relaxed resize-y"
-              ></textarea>
-              <p class="text-[11px] text-slate-500">Visas under «Med vänliga hälsningar» i mailet. En rad eller flera rader — sparas i webbläsaren.</p>
+            <div class="space-y-2 border-t border-slate-800 pt-3">
+              <div class="flex flex-wrap items-end justify-between gap-2">
+                <div class="space-y-1 flex-1 min-w-[12rem]">
+                  <label for="signatureProfileSelect" class="block text-xs font-medium text-slate-400">Välj signatur</label>
+                  <select id="signatureProfileSelect" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"></select>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button id="addSignatureProfile" type="button" class="px-3 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-xs font-semibold border border-emerald-700">
+                    + Ny signatur
+                  </button>
+                  <button id="deleteSignatureProfile" type="button" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">
+                    Ta bort
+                  </button>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <label for="signatureProfileName" class="block text-xs font-medium text-slate-400">Namn på signaturen</label>
+                <input
+                  id="signatureProfileName"
+                  type="text"
+                  placeholder="t.ex. Anders — kundtjänst"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm"
+                />
+              </div>
+              <div class="space-y-1">
+                <label for="signatureProfileText" class="block text-xs font-medium text-slate-400">Signaturtext</label>
+                <textarea
+                  id="signatureProfileText"
+                  rows="3"
+                  placeholder="support agent Anders Gustafsson&#10;Motoaction Europe AB"
+                  class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm leading-relaxed resize-y"
+                ></textarea>
+              </div>
+              <p class="text-[11px] text-slate-500">Varje kollega skapar sin egen signatur här — sparas i webbläsaren på den dator du använder. Byt signatur i listan ovan.</p>
             </div>
             <div class="space-y-1">
               <label for="tone" class="block text-xs font-medium text-slate-400">Ton</label>
