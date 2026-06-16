@@ -344,10 +344,11 @@ def add_cache_headers(response):
         if path.startswith("/static/"):
             # Longer cache for images; shorter for everything else to avoid stale JS/CSS issues.
             lower = path.lower()
-            is_image = lower.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"))
-            max_age = 60 * 60 * 24 * (30 if is_image else 7)
+            is_image = lower.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico", ".avif"))
+            is_asset = is_image or lower.endswith((".js", ".css", ".woff", ".woff2"))
+            max_age = 60 * 60 * 24 * (30 if is_asset else 7)
             cc = f"public, max-age={max_age}"
-            if is_image:
+            if is_asset:
                 cc += ", immutable"
             response.headers["Cache-Control"] = cc
             return response

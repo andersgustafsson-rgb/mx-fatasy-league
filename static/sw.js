@@ -1,5 +1,5 @@
-/* PWA service worker: cache static assets only; never block API/HTML fetches. */
-const CACHE = "mx-fantasy-v16";
+/* PWA service worker: cache static assets aggressively to cut Render egress. */
+const CACHE = "mx-fantasy-v17";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -49,18 +49,19 @@ self.addEventListener("fetch", (event) => {
 
   if (!sameOrigin(url)) return;
 
-  // Static assets: network-first, cache successful responses.
+  // Static assets: cache-first (repeat visits should not re-download from Render).
   if (url.pathname.startsWith("/static/")) {
     event.respondWith(
-      fetch(req)
-        .then((res) => {
+      caches.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
           if (res.ok) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy));
           }
           return res;
-        })
-        .catch(() => caches.match(req))
+        });
+      })
     );
     return;
   }
