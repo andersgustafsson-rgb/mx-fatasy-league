@@ -171,6 +171,18 @@ const MAIL_I18N = {
       sympathy: "Vi är ledsna för eventuella besvär detta kan ha orsakat.",
       helpOffer: "Hör gärna av dig om du har frågor — vi hjälper dig gärna vidare.",
     },
+    subjectOrder: "Angående order",
+    subjectStatus: {
+      slut: "Slut i lager",
+      inkommer: "Kommer in i lager",
+      utgatt: "Produkt utgått",
+      forsening: "Produkt försenad",
+      alternativ: "Alternativ produkt",
+      avbokad: "Order avbruten",
+      prisandring: "Prisändring",
+      retur: "Retur",
+      default: "Angående din beställning",
+    },
   },
   da: {
     locale: "da-DK",
@@ -188,6 +200,18 @@ const MAIL_I18N = {
       replyThanks: (ord) => `Tak for din henvendelse${ord}.`,
       sympathy: "Vi er kede af eventuelle gener, dette måtte medføre.",
       helpOffer: "Kontakt os gerne, hvis du har spørgsmål — vi hjælper dig videre.",
+    },
+    subjectOrder: "Angående ordre",
+    subjectStatus: {
+      slut: "Udsolgt",
+      inkommer: "Kommer på lager",
+      utgatt: "Produkt udgået",
+      forsening: "Produkt forsinket",
+      alternativ: "Alternativt produkt",
+      avbokad: "Ordre annulleret",
+      prisandring: "Prisændring",
+      retur: "Returnering",
+      default: "Angående din bestilling",
     },
   },
 };
@@ -260,10 +284,8 @@ function loadSettings() {
 
 function defaultSettings() {
   return {
-    customSignature: "",
     companyName: "",
-    senderName: "",
-    supportEmail: "",
+    customSignature: "",
     tone: "formal",
     language: "sv",
   };
@@ -357,6 +379,18 @@ function mailOutro(ctx) {
   return `${m.sympathy}\n\n${m.helpOffer}\n\n${ctx.sig}`;
 }
 
+function buildSubject(ctx) {
+  const pack = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
+  const status = pack.subjectStatus[ctx.templateId] || pack.subjectStatus.default;
+  const company = cleanStr(ctx.settings?.companyName);
+  const order = cleanStr(ctx.orderNumber);
+  const parts = [];
+  if (company) parts.push(company);
+  parts.push(order ? `${pack.subjectOrder} ${order}` : pack.subjectOrder);
+  parts.push(status);
+  return parts.join(" — ");
+}
+
 function buildMailSv(ctx) {
   const { templateId, prod, ord, sig, extras, lang, replyToCustomer } = ctx;
   const intro = mailIntro(ctx);
@@ -364,12 +398,10 @@ function buildMailSv(ctx) {
   const whenSoon = lang.mail.soon;
   const orderNo = orderNum(ctx.orderNumber);
   const orderRef = lang.mail.orderRef(orderNo);
-  let subject = "";
   let body = "";
 
   switch (templateId) {
     case "slut":
-      subject = `Angående ${prod}${ord}`;
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager för tillfället.`;
       body += extras.waitOption
         ? `
@@ -382,7 +414,6 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
-      subject = `${prod} — förväntas åter i lager`;
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager just nu.`;
       body += ` Vi förväntar oss att den finns tillgänglig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
       if (extras.waitOption) {
@@ -394,7 +425,6 @@ Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi 
       break;
     }
     case "utgatt":
-      subject = `${prod} — utgått ur sortimentet`;
       body = `${intro}Vi måste tyvärr meddela att ${prod} har utgått ur vårt sortiment och inte kommer tillbaka i lager.`;
       body += cleanStr(extras.alternativeProduct)
         ? `
@@ -408,7 +438,6 @@ Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alte
     case "forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
-      subject = `Leveransförsening${ord}`;
       body = `${intro}Vi måste tyvärr meddela att leveransen av ${prod} blir försenad`;
       body += when ? ` och beräknas ske omkring ${when}` : "";
       body += ".";
@@ -423,7 +452,6 @@ ${outro}`;
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
-      subject = `Förslag på alternativ till ${prod}`;
       body = `${intro}Tyvärr är ${prod} inte tillgänglig just nu. Vi kan istället erbjuda ${alt} som ett liknande alternativ.`;
       if (link) body += `\n\nDu hittar produkten här: ${link}`;
       body += `
@@ -434,7 +462,6 @@ ${outro}`;
       break;
     }
     case "avbokad":
-      subject = `Order avbruten${ord}`;
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager. Därför har vi behövt avbryta ${orderRef}.`;
       if (extras.refundNote === "auto") {
         body += `
@@ -451,7 +478,6 @@ Vi återbetalar orderbeloppet manuellt och återkommer när återbetalningen är
       const oldP = cleanStr(extras.oldPrice);
       const newP = cleanStr(extras.newPrice);
       const cur = lang.currency;
-      subject = `Prisuppdatering — ${prod}`;
       body = `${intro}Vi behöver informera dig om att priset på ${prod} har ändrats`;
       body += oldP && newP ? ` från ${oldP} ${cur} till ${newP} ${cur}` : newP ? ` till ${newP} ${cur}` : "";
       body += ` innan leverans.
@@ -463,7 +489,6 @@ ${outro}`;
     }
     case "retur": {
       const deadline = formatLocaleDate(extras.returnDeadline);
-      subject = `Returinstruktioner${ord}`;
       body = `${intro}Så här gör du för att returnera ${prod}:
 
 1. Packa varan väl i originalförpackning om möjligt.
@@ -480,10 +505,9 @@ ${sig}`;
       break;
     }
     default:
-      subject = `Angående ${prod}`;
       body = `${intro}${outro}`;
   }
-  return { subject, body };
+  return body;
 }
 
 function buildMailDa(ctx) {
@@ -493,12 +517,10 @@ function buildMailDa(ctx) {
   const whenSoon = lang.mail.soon;
   const orderNo = orderNum(ctx.orderNumber);
   const orderRef = lang.mail.orderRef(orderNo);
-  let subject = "";
   let body = "";
 
   switch (templateId) {
     case "slut":
-      subject = `Angående ${prod}${ord}`;
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt i øjeblikket.`;
       body += extras.waitOption
         ? `
@@ -511,7 +533,6 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
-      subject = `${prod} — forventes på lager igen`;
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt lige nu.`;
       body += ` Vi forventer, at den er tilgængelig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
       if (extras.waitOption) {
@@ -523,7 +544,6 @@ Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, 
       break;
     }
     case "utgatt":
-      subject = `${prod} — udgået af sortimentet`;
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udgået af vores sortiment og ikke kommer tilbage på lager.`;
       body += cleanStr(extras.alternativeProduct)
         ? `
@@ -537,7 +557,6 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med a
     case "forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
-      subject = `Leveringsforsinkelse${ord}`;
       body = `${intro}Vi er desværre nødt til at meddele, at leveringen af ${prod} bliver forsinket`;
       body += when ? ` og forventes omkring ${when}` : "";
       body += ".";
@@ -552,7 +571,6 @@ ${outro}`;
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
-      subject = `Forslag til alternativ til ${prod}`;
       body = `${intro}Desværre er ${prod} ikke tilgængelig lige nu. Vi kan i stedet tilbyde ${alt} som et lignende alternativ.`;
       if (link) body += `\n\nDu finder produktet her: ${link}`;
       body += `
@@ -563,7 +581,6 @@ ${outro}`;
       break;
     }
     case "avbokad":
-      subject = `Ordre annulleret${ord}`;
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt. Derfor har vi måttet annullere ${orderRef}.`;
       if (extras.refundNote === "auto") {
         body += `
@@ -580,7 +597,6 @@ Vi refunderer ordrebeløbet manuelt og vender tilbage, når refusionen er gennem
       const oldP = cleanStr(extras.oldPrice);
       const newP = cleanStr(extras.newPrice);
       const cur = lang.currency;
-      subject = `Prisopdatering — ${prod}`;
       body = `${intro}Vi er nødt til at informere dig om, at prisen på ${prod} er ændret`;
       body += oldP && newP ? ` fra ${oldP} ${cur} til ${newP} ${cur}` : newP ? ` til ${newP} ${cur}` : "";
       body += ` før levering.
@@ -592,7 +608,6 @@ ${outro}`;
     }
     case "retur": {
       const deadline = formatLocaleDate(extras.returnDeadline);
-      subject = `Returinstruktioner${ord}`;
       body = `${intro}Sådan returnerer du ${prod}:
 
 1. Pak varen godt ind i originalemballage, hvis det er muligt.
@@ -609,10 +624,9 @@ ${sig}`;
       break;
     }
     default:
-      subject = `Angående ${prod}`;
       body = `${intro}${outro}`;
   }
-  return { subject, body };
+  return body;
 }
 
 function buildMail(ctx) {
@@ -631,8 +645,13 @@ function buildMail(ctx) {
     lang,
     replyToCustomer: ctx.replyToCustomer,
     orderNumber: ctx.orderNumber,
+    settings: ctx.settings,
   };
-  return ctx.lang === "da" ? buildMailDa(mailCtx) : buildMailSv(mailCtx);
+  const body = ctx.lang === "da" ? buildMailDa(mailCtx) : buildMailSv(mailCtx);
+  return {
+    subject: buildSubject({ ...ctx, templateId: ctx.templateId }),
+    body,
+  };
 }
 
 function getSelectedTemplate() {
@@ -788,6 +807,7 @@ function generate() {
   els.validation.textContent = "";
 
   const settings = {
+    companyName: cleanStr(els.companyName?.value),
     customSignature: cleanStr(els.customSignature?.value),
     tone: els.tone?.value || "formal",
     language: currentMailLang(),
@@ -846,12 +866,14 @@ function init() {
   els.customerName = $("customerName");
   els.orderNumber = $("orderNumber");
   els.customSignature = $("customSignature");
+  els.companyName = $("companyName");
   els.tone = $("tone");
   els.subjectOut = $("subjectOut");
   els.bodyOut = $("bodyOut");
   els.validation = $("validation");
 
   const settings = loadSettings();
+  els.companyName.value = settings.companyName || "";
   els.customSignature.value = settings.customSignature || "";
   els.tone.value = settings.tone;
   els.language.value = settings.language || "sv";
@@ -868,6 +890,7 @@ function init() {
     els.productName,
     els.customerName,
     els.orderNumber,
+    els.companyName,
     els.customSignature,
     els.tone,
   ].forEach((el) => {
