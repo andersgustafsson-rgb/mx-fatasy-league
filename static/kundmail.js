@@ -193,6 +193,38 @@ const MAIL_I18N = {
 };
 
 const els = {};
+const datePickerInstances = [];
+
+function destroyDatePickers() {
+  while (datePickerInstances.length) {
+    const fp = datePickerInstances.pop();
+    try {
+      fp.destroy();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function initDatePicker(input, btn) {
+  if (typeof flatpickr === "undefined") return null;
+  const fp = flatpickr(input, {
+    locale: flatpickr.l10ns.sv,
+    dateFormat: "Y-m-d",
+    altInput: true,
+    altFormat: "j F Y",
+    minDate: "today",
+    disableMobile: true,
+    allowInput: false,
+    clickOpens: true,
+    onChange() {
+      generate();
+    },
+  });
+  btn.addEventListener("click", () => fp.open());
+  datePickerInstances.push(fp);
+  return fp;
+}
 
 function $(id) {
   return document.getElementById(id);
@@ -633,6 +665,7 @@ function renderTemplateOptions() {
 function renderExtraFields() {
   const wrap = els.extraFields;
   if (!wrap) return;
+  destroyDatePickers();
   wrap.innerHTML = "";
   const tpl = getSelectedTemplate();
   const ts = templateStrings(tpl.id);
@@ -676,14 +709,26 @@ function renderExtraFields() {
         }
         if (field.default) input.value = field.default;
       } else if (field.type === "date") {
+        const dateWrap = document.createElement("div");
+        dateWrap.className = "kundmail-date-wrap";
         input = document.createElement("input");
-        input.type = "date";
-        input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm date-picker-input";
-        row.appendChild(input);
+        input.type = "text";
+        input.readOnly = true;
+        input.placeholder = "Välj datum i kalendern";
+        input.className = "rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
+        const dateBtn = document.createElement("button");
+        dateBtn.type = "button";
+        dateBtn.className = "kundmail-date-btn";
+        dateBtn.textContent = "Välj datum";
+        dateWrap.appendChild(input);
+        dateWrap.appendChild(dateBtn);
+        row.appendChild(dateWrap);
         const hint = document.createElement("p");
         hint.className = "text-[11px] text-slate-500";
-        hint.textContent = "Klicka i fältet för att välja datum i kalendern.";
+        hint.textContent = "Klicka i fältet eller på knappen — kalendern öppnas.";
         row.appendChild(hint);
+        input.id = `extra_${field.id}`;
+        initDatePicker(input, dateBtn);
       } else {
         input = document.createElement("input");
         input.type = field.type === "url" ? "url" : field.type || "text";
@@ -691,9 +736,11 @@ function renderExtraFields() {
         input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
         row.appendChild(input);
       }
-      input.id = `extra_${field.id}`;
-      input.addEventListener("input", generate);
-      input.addEventListener("change", generate);
+      if (field.type !== "date") {
+        input.id = `extra_${field.id}`;
+        input.addEventListener("input", generate);
+        input.addEventListener("change", generate);
+      }
     }
 
     wrap.appendChild(row);

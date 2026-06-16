@@ -5,16 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kundmail — svarsmallar</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/sv.js"></script>
   <style>
-    input[type="date"].date-picker-input {
-      color-scheme: dark;
-      min-height: 2.75rem;
+    .kundmail-date-wrap {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+    .kundmail-date-wrap input {
+      flex: 1;
+      min-width: 0;
       cursor: pointer;
     }
-    input[type="date"].date-picker-input::-webkit-calendar-picker-indicator {
+    .kundmail-date-btn {
+      flex-shrink: 0;
+      padding: 0.5rem 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid #059669;
+      background: #065f46;
+      color: #ecfdf5;
+      font-size: 0.8125rem;
+      font-weight: 600;
       cursor: pointer;
-      filter: invert(0.85);
-      opacity: 0.9;
+      white-space: nowrap;
+    }
+    .kundmail-date-btn:hover {
+      background: #047857;
+    }
+    .flatpickr-calendar {
+      background: #1e293b;
+      border: 1px solid #475569;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-weekdays,
+    span.flatpickr-weekday {
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    .flatpickr-day {
+      color: #e2e8f0;
+    }
+    .flatpickr-day:hover,
+    .flatpickr-day:focus {
+      background: #334155;
+      border-color: #334155;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange {
+      background: #059669;
+      border-color: #059669;
+    }
+    .flatpickr-day.today {
+      border-color: #34d399;
+    }
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+      fill: #e2e8f0;
+    }
+    .numInputWrapper span.arrowUp:after {
+      border-bottom-color: #e2e8f0;
+    }
+    .numInputWrapper span.arrowDown:after {
+      border-top-color: #e2e8f0;
     }
   </style>
 </head>
