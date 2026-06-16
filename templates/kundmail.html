@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kundmail — svarsmallar</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    input[type="date"].date-picker-input {
+      color-scheme: dark;
+      min-height: 2.75rem;
+      cursor: pointer;
+    }
+    input[type="date"].date-picker-input::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      filter: invert(0.85);
+      opacity: 0.9;
+    }
+  </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
   <div class="max-w-6xl mx-auto px-4 py-6">
@@ -37,6 +49,18 @@
             </div>
           </div>
           <p id="templateHelp" class="text-xs text-slate-500"></p>
+
+          <label class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer border border-slate-800 rounded-lg px-3 py-2.5 bg-slate-950/40">
+            <input
+              id="replyToCustomer"
+              type="checkbox"
+              class="rounded border-slate-600 bg-slate-800 text-emerald-500"
+            />
+            <span>
+              <span class="block font-medium">Svar på kundens meddelande</span>
+              <span class="block text-[11px] text-slate-500 mt-0.5">Avmarkera om ni kontaktar kunden först (t.ex. order avbruten eller leveransförsening).</span>
+            </span>
+          </label>
 
           <div id="extraFields" class="space-y-3 border-t border-slate-800 pt-3"></div>
 

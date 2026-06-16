@@ -1,6 +1,6 @@
 /* Kundtjänst — generera svarsmallar (körs helt i webbläsaren). */
 
-const STORAGE_KEY = "kundmail_settings_v2";
+const STORAGE_KEY = "kundmail_settings_v3";
 const PRODUCTS_KEY = "kundmail_products_v1";
 
 const TEMPLATE_DEFS = [
@@ -61,6 +61,18 @@ const TEMPLATE_DEFS = [
   },
 ];
 
+/** Standard: svar på kund vs att vi kontaktar kunden först. */
+const REPLY_DEFAULTS = {
+  slut: true,
+  inkommer: false,
+  utgatt: false,
+  forsening: false,
+  alternativ: true,
+  avbokad: false,
+  prisandring: false,
+  retur: true,
+};
+
 const UI = {
   copySubject: "Kopiera ämne",
   copyBody: "Kopiera text",
@@ -81,7 +93,7 @@ const UI = {
       label: "Kommer in i lager senare",
       description: "Förväntad åter i lager med datum.",
       fields: {
-        expectedDate: { label: "Förväntat datum" },
+        expectedDate: { label: "Välj förväntat datum" },
         waitOption: { label: "Fråga om kunden vill vänta" },
       },
     },
@@ -96,7 +108,7 @@ const UI = {
       label: "Leveransförsening",
       description: "Ordern blir sen — nytt leveransdatum.",
       fields: {
-        newDeliveryDate: { label: "Nytt leveransdatum" },
+        newDeliveryDate: { label: "Välj nytt leveransdatum" },
         delayReason: { label: "Orsak (valfritt)", placeholder: "t.ex. försening från leverantör" },
       },
     },
@@ -134,7 +146,7 @@ const UI = {
       label: "Returinstruktioner",
       description: "Skicka retursedel och steg för retur.",
       fields: {
-        returnDeadline: { label: "Sista returdatum (valfritt)" },
+        returnDeadline: { label: "Välj sista returdatum (valfritt)" },
       },
     },
   },
@@ -146,28 +158,36 @@ const MAIL_I18N = {
     locale: "sv-SE",
     currency: "kr",
     mail: {
-      greetingNamed: (name) => `Hej ${name},`,
-      greetingFormal: "Hej,",
+      greetingNamed: (name) => `Hej ${name}!`,
+      greetingFormal: "Hej!",
       greetingInformal: "Hej!",
       signatureEmpty: "Med vänliga hälsningar",
       signature: (parts) => `Med vänliga hälsningar\n${parts.join("\n")}`,
       orderLine: (o) => ` gällande order ${o}`,
+      orderRef: (o) => (o ? `din order ${o}` : "din order"),
       productFallback: "produkten",
       soon: "inom kort",
+      replyThanks: (ord) => `Tack för ditt meddelande${ord}.`,
+      sympathy: "Vi är ledsna för eventuella besvär detta kan ha orsakat.",
+      helpOffer: "Hör gärna av dig om du har frågor — vi hjälper dig gärna vidare.",
     },
   },
   da: {
     locale: "da-DK",
     currency: "kr",
     mail: {
-      greetingNamed: (name) => `Hej ${name},`,
-      greetingFormal: "Hej,",
+      greetingNamed: (name) => `Hej ${name}!`,
+      greetingFormal: "Hej!",
       greetingInformal: "Hej!",
       signatureEmpty: "Med venlig hilsen",
       signature: (parts) => `Med venlig hilsen\n${parts.join("\n")}`,
       orderLine: (o) => ` vedrørende ordre ${o}`,
+      orderRef: (o) => (o ? `din ordre ${o}` : "din ordre"),
       productFallback: "produktet",
       soon: "inden for kort tid",
+      replyThanks: (ord) => `Tak for din henvendelse${ord}.`,
+      sympathy: "Vi er kede af eventuelle gener, dette måtte medføre.",
+      helpOffer: "Kontakt os gerne, hvis du har spørgsmål — vi hjælper dig videre.",
     },
   },
 };
@@ -277,300 +297,278 @@ function productPhrase(productName, langPack) {
   return cleanStr(productName) || langPack.mail.productFallback;
 }
 
+function orderNum(orderNumber) {
+  return cleanStr(orderNumber);
+}
+
+function mailIntro(ctx) {
+  const { g, ord, replyToCustomer, lang } = ctx;
+  const m = lang.mail;
+  if (replyToCustomer) {
+    return `${g}\n\n${m.replyThanks(ord)}\n\n`;
+  }
+  return `${g}\n\n`;
+}
+
+function mailOutro(ctx) {
+  const m = ctx.lang.mail;
+  return `${m.sympathy}\n\n${m.helpOffer}\n\n${ctx.sig}`;
+}
+
 function buildMailSv(ctx) {
-  const { templateId, g, prod, ord, sig, extras, lang } = ctx;
+  const { templateId, prod, ord, sig, extras, lang, replyToCustomer } = ctx;
+  const intro = mailIntro(ctx);
+  const outro = mailOutro(ctx);
   const whenSoon = lang.mail.soon;
+  const orderNo = orderNum(ctx.orderNumber);
+  const orderRef = lang.mail.orderRef(orderNo);
   let subject = "";
   let body = "";
 
   switch (templateId) {
     case "slut":
       subject = `Angående ${prod}${ord}`;
-      body = `${g}
-
-Tack för ditt meddelande${ord}.
-
-Vi har tyvärr slut på ${prod} för tillfället. Vi beklagar besväret.
-
-`;
+      body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager för tillfället.`;
       body += extras.waitOption
-        ? `Vill du vänta tills produkten finns i lager igen, eller vill du att vi avbryter ordern? Svara gärna på detta mail så hjälper vi dig vidare.
+        ? `
 
-`
-        : `Hör av dig om du vill att vi avbryter ordern eller om du har frågor.
+Vill du vänta tills produkten finns i lager igen, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`
+        : `
 
-`;
-      body += `Om du har fler frågor är du välkommen att höra av dig.
-
-${sig}`;
+Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
+      body += `\n\n${outro}`;
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
       subject = `${prod} — förväntas åter i lager`;
-      body = `${g}
-
-Tack för ditt tålamod${ord}.
-
-${prod} är för tillfället slut, men vi förväntar oss att den finns i lager igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.
-
-`;
+      body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager just nu.`;
+      body += ` Vi förväntar oss att den finns tillgänglig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
       if (extras.waitOption) {
-        body += `Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.
+        body += `
 
-`;
+Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.`;
       }
-      body += sig;
+      body += `\n\n${outro}`;
       break;
     }
     case "utgatt":
       subject = `${prod} — utgått ur sortimentet`;
-      body = `${g}
-
-Tack för att du hörde av dig${ord}.
-
-Vi vill informera om att ${prod} tyvärr har utgått ur vårt sortiment och inte kommer tillbaka i lager.
-`;
+      body = `${intro}Vi måste tyvärr meddela att ${prod} har utgått ur vårt sortiment och inte kommer tillbaka i lager.`;
       body += cleanStr(extras.alternativeProduct)
-        ? `\nSom alternativ kan vi rekommendera ${cleanStr(extras.alternativeProduct)}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.\n`
-        : `\nHör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alternativ.\n`;
-      body += `\n${sig}`;
+        ? `
+
+Som alternativ kan vi rekommendera ${cleanStr(extras.alternativeProduct)}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.`
+        : `
+
+Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alternativ.`;
+      body += `\n\n${outro}`;
       break;
     case "forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
       subject = `Leveransförsening${ord}`;
-      body = `${g}
+      body = `${intro}Vi måste tyvärr meddela att leveransen av ${prod} blir försenad`;
+      body += when ? ` och beräknas ske omkring ${when}` : "";
+      body += ".";
+      if (reason) body += ` Orsaken är ${reason}.`;
+      body += `
 
-Tack för ditt tålamod${ord}.
+Vi gör vårt bästa för att leverera så snart som möjligt.
 
-Vi vill informera om att leveransen av ${prod} blir försenad${when ? ` och beräknas ske omkring ${when}` : ""}.${reason ? ` Orsaken är ${reason}.` : ""}
-
-Vi beklagar förseningen och gör vårt bästa för att leverera så snart som möjligt.
-
-${sig}`;
+${outro}`;
       break;
     }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
       subject = `Förslag på alternativ till ${prod}`;
-      body = `${g}
+      body = `${intro}Tyvärr är ${prod} inte tillgänglig just nu. Vi kan istället erbjuda ${alt} som ett liknande alternativ.`;
+      if (link) body += `\n\nDu hittar produkten här: ${link}`;
+      body += `
 
-Tack för ditt meddelande${ord}.
+Vill du byta till alternativet, vänta på originalvaran eller avbryta ordern? Svara gärna på detta mail.
 
-${prod} är tyvärr inte tillgänglig just nu. Vi kan istället erbjuda ${alt} som ett liknande alternativ.
-`;
-      if (link) body += `\nDu hittar produkten här: ${link}\n`;
-      body += `\nVill du byta till alternativet, vänta på originalvaran eller avbryta ordern? Svara gärna på detta mail.
-
-${sig}`;
+${outro}`;
       break;
     }
     case "avbokad":
       subject = `Order avbruten${ord}`;
-      body = `${g}
-
-Tack för ditt meddelande.
-
-Eftersom ${prod} är slut har vi avbrutit din order${ord.replace(" gällande", "")}.
-`;
+      body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager. Därför har vi behövt avbryta ${orderRef}.`;
       if (extras.refundNote === "auto") {
-        body += `\nEventuell betalning återbetalas automatiskt till samma betalningsmetod inom några bankdagar.\n`;
-      } else if (extras.refundNote === "manual") {
-        body += `\nVi återbetalar orderbeloppet manuellt och återkommer när återbetalningen är genomförd.\n`;
-      }
-      body += `\nHör av dig om du har frågor.
+        body += `
 
-${sig}`;
+Eventuell betalning återbetalas automatiskt till samma betalningsmetod inom några bankdagar.`;
+      } else if (extras.refundNote === "manual") {
+        body += `
+
+Vi återbetalar orderbeloppet manuellt och återkommer när återbetalningen är genomförd.`;
+      }
+      body += `\n\n${outro}`;
       break;
     case "prisandring": {
       const oldP = cleanStr(extras.oldPrice);
       const newP = cleanStr(extras.newPrice);
       const cur = lang.currency;
       subject = `Prisuppdatering — ${prod}`;
-      body = `${g}
-
-Tack för din order${ord}.
-
-Vi vill informera om att priset på ${prod} har ändrats${oldP && newP ? ` från ${oldP} ${cur} till ${newP} ${cur}` : newP ? ` till ${newP} ${cur}` : ""} innan leverans.
+      body = `${intro}Vi behöver informera dig om att priset på ${prod} har ändrats`;
+      body += oldP && newP ? ` från ${oldP} ${cur} till ${newP} ${cur}` : newP ? ` till ${newP} ${cur}` : "";
+      body += ` innan leverans.
 
 Vill du behålla ordern till det nya priset eller avbryta? Svara gärna på detta mail så hjälper vi dig.
 
-${sig}`;
+${outro}`;
       break;
     }
     case "retur": {
       const deadline = formatLocaleDate(extras.returnDeadline);
       subject = `Returinstruktioner${ord}`;
-      body = `${g}
-
-Tack för ditt meddelande${ord}.
-
-Så här gör du för att returnera ${prod}:
+      body = `${intro}Så här gör du för att returnera ${prod}:
 
 1. Packa varan väl i originalförpackning om möjligt.
 2. Bifoga retursedel eller orderbekräftelse i paketet.
-3. Skicka till vår returadress (se bifogad retursedel eller vår webbplats).
-${deadline ? `\nReturen behöver vara oss tillhanda senast ${deadline}.\n` : "\n"}
+3. Skicka till vår returadress (se bifogad retursedel eller vår webbplats).`;
+      if (deadline) body += `\n\nReturen behöver vara oss tillhanda senast ${deadline}.`;
+      body += `
+
 När vi mottagit och kontrollerat returen återbetalar vi enligt våra returvillkor.
 
-Hör av dig om något är oklart.
+${lang.mail.helpOffer}
 
 ${sig}`;
       break;
     }
     default:
       subject = `Angående ${prod}`;
-      body = `${g}\n\n${sig}`;
+      body = `${intro}${outro}`;
   }
   return { subject, body };
 }
 
 function buildMailDa(ctx) {
-  const { templateId, g, prod, ord, sig, extras, lang } = ctx;
+  const { templateId, prod, ord, sig, extras, lang, replyToCustomer } = ctx;
+  const intro = mailIntro(ctx);
+  const outro = mailOutro(ctx);
   const whenSoon = lang.mail.soon;
+  const orderNo = orderNum(ctx.orderNumber);
+  const orderRef = lang.mail.orderRef(orderNo);
   let subject = "";
   let body = "";
 
   switch (templateId) {
     case "slut":
       subject = `Angående ${prod}${ord}`;
-      body = `${g}
-
-Tak for din henvendelse${ord}.
-
-Vi har desværre udsolgt af ${prod} i øjeblikket. Vi beklager ulejligheden.
-
-`;
+      body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt i øjeblikket.`;
       body += extras.waitOption
-        ? `Vil du vente, til produktet er på lager igen, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så hjælper vi dig videre.
+        ? `
 
-`
-        : `Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.
+Vil du vente, til produktet er på lager igen, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`
+        : `
 
-`;
-      body += `Hvis du har flere spørgsmål, er du velkommen til at kontakte os.
-
-${sig}`;
+Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`;
+      body += `\n\n${outro}`;
       break;
     case "inkommer": {
       const when = formatLocaleDate(extras.expectedDate);
       subject = `${prod} — forventes på lager igen`;
-      body = `${g}
-
-Tak for din tålmodighed${ord}.
-
-${prod} er i øjeblikket udsolgt, men vi forventer, at den er på lager igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.
-
-`;
+      body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt lige nu.`;
+      body += ` Vi forventer, at den er tilgængelig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
       if (extras.waitOption) {
-        body += `Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.
+        body += `
 
-`;
+Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.`;
       }
-      body += sig;
+      body += `\n\n${outro}`;
       break;
     }
     case "utgatt":
       subject = `${prod} — udgået af sortimentet`;
-      body = `${g}
-
-Tak for din henvendelse${ord}.
-
-Vi vil gerne informere om, at ${prod} desværre er udgået af vores sortiment og ikke kommer tilbage på lager.
-`;
+      body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udgået af vores sortiment og ikke kommer tilbage på lager.`;
       body += cleanStr(extras.alternativeProduct)
-        ? `\nSom alternativ kan vi anbefale ${cleanStr(extras.alternativeProduct)}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.\n`
-        : `\nKontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med at finde et alternativ.\n`;
-      body += `\n${sig}`;
+        ? `
+
+Som alternativ kan vi anbefale ${cleanStr(extras.alternativeProduct)}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.`
+        : `
+
+Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med at finde et alternativ.`;
+      body += `\n\n${outro}`;
       break;
     case "forsening": {
       const when = formatLocaleDate(extras.newDeliveryDate);
       const reason = cleanStr(extras.delayReason);
       subject = `Leveringsforsinkelse${ord}`;
-      body = `${g}
+      body = `${intro}Vi er desværre nødt til at meddele, at leveringen af ${prod} bliver forsinket`;
+      body += when ? ` og forventes omkring ${when}` : "";
+      body += ".";
+      if (reason) body += ` Årsagen er ${reason}.`;
+      body += `
 
-Tak for din tålmodighed${ord}.
+Vi gør vores bedste for at levere så hurtigt som muligt.
 
-Vi vil informere om, at leveringen af ${prod} bliver forsinket${when ? ` og forventes omkring ${when}` : ""}.${reason ? ` Årsagen er ${reason}.` : ""}
-
-Vi beklager forsinkelsen og gør vores bedste for at levere så hurtigt som muligt.
-
-${sig}`;
+${outro}`;
       break;
     }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
       subject = `Forslag til alternativ til ${prod}`;
-      body = `${g}
+      body = `${intro}Desværre er ${prod} ikke tilgængelig lige nu. Vi kan i stedet tilbyde ${alt} som et lignende alternativ.`;
+      if (link) body += `\n\nDu finder produktet her: ${link}`;
+      body += `
 
-Tak for din henvendelse${ord}.
+Vil du skifte til alternativet, vente på originalvaren eller annullere ordren? Svar gerne på denne mail.
 
-${prod} er desværre ikke tilgængelig lige nu. Vi kan i stedet tilbyde ${alt} som et lignende alternativ.
-`;
-      if (link) body += `\nDu finder produktet her: ${link}\n`;
-      body += `\nVil du skifte til alternativet, vente på originalvaren eller annullere ordren? Svar gerne på denne mail.
-
-${sig}`;
+${outro}`;
       break;
     }
     case "avbokad":
       subject = `Ordre annulleret${ord}`;
-      body = `${g}
-
-Tak for din henvendelse.
-
-Da ${prod} er udsolgt, har vi annulleret din ordre${ord.replace(" vedrørende", "")}.
-`;
+      body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt. Derfor har vi måttet annullere ${orderRef}.`;
       if (extras.refundNote === "auto") {
-        body += `\nEventuel betaling refunderes automatisk til samme betalingsmetode inden for få bankdage.\n`;
-      } else if (extras.refundNote === "manual") {
-        body += `\nVi refunderer ordrebeløbet manuelt og vender tilbage, når refusionen er gennemført.\n`;
-      }
-      body += `\nKontakt os, hvis du har spørgsmål.
+        body += `
 
-${sig}`;
+Eventuel betaling refunderes automatisk til samme betalingsmetode inden for få bankdage.`;
+      } else if (extras.refundNote === "manual") {
+        body += `
+
+Vi refunderer ordrebeløbet manuelt og vender tilbage, når refusionen er gennemført.`;
+      }
+      body += `\n\n${outro}`;
       break;
     case "prisandring": {
       const oldP = cleanStr(extras.oldPrice);
       const newP = cleanStr(extras.newPrice);
       const cur = lang.currency;
       subject = `Prisopdatering — ${prod}`;
-      body = `${g}
-
-Tak for din ordre${ord}.
-
-Vi vil informere om, at prisen på ${prod} er ændret${oldP && newP ? ` fra ${oldP} ${cur} til ${newP} ${cur}` : newP ? ` til ${newP} ${cur}` : ""} før levering.
+      body = `${intro}Vi er nødt til at informere dig om, at prisen på ${prod} er ændret`;
+      body += oldP && newP ? ` fra ${oldP} ${cur} til ${newP} ${cur}` : newP ? ` til ${newP} ${cur}` : "";
+      body += ` før levering.
 
 Vil du beholde ordren til den nye pris eller annullere? Svar gerne på denne mail, så hjælper vi dig.
 
-${sig}`;
+${outro}`;
       break;
     }
     case "retur": {
       const deadline = formatLocaleDate(extras.returnDeadline);
       subject = `Returinstruktioner${ord}`;
-      body = `${g}
-
-Tak for din henvendelse${ord}.
-
-Sådan returnerer du ${prod}:
+      body = `${intro}Sådan returnerer du ${prod}:
 
 1. Pak varen godt ind i originalemballage, hvis det er muligt.
 2. Vedlæg returseddel eller ordrebekræftelse i pakken.
-3. Send til vores returadresse (se vedlagte returseddel eller vores hjemmeside).
-${deadline ? `\nReturneringen skal være os i hænde senest ${deadline}.\n` : "\n"}
+3. Send til vores returadresse (se vedlagte returseddel eller vores hjemmeside).`;
+      if (deadline) body += `\n\nReturneringen skal være os i hænde senest ${deadline}.`;
+      body += `
+
 Når vi har modtaget og kontrolleret returneringen, refunderer vi i henhold til vores returvilkår.
 
-Kontakt os, hvis noget er uklart.
+${lang.mail.helpOffer}
 
 ${sig}`;
       break;
     }
     default:
       subject = `Angående ${prod}`;
-      body = `${g}\n\n${sig}`;
+      body = `${intro}${outro}`;
   }
   return { subject, body };
 }
@@ -589,6 +587,8 @@ function buildMail(ctx) {
     sig,
     extras: ctx.extras,
     lang,
+    replyToCustomer: ctx.replyToCustomer,
+    orderNumber: ctx.orderNumber,
   };
   return ctx.lang === "da" ? buildMailDa(mailCtx) : buildMailSv(mailCtx);
 }
@@ -665,16 +665,25 @@ function renderExtraFields() {
           input.appendChild(o);
         }
         if (field.default) input.value = field.default;
+      } else if (field.type === "date") {
+        input = document.createElement("input");
+        input.type = "date";
+        input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm date-picker-input";
+        row.appendChild(input);
+        const hint = document.createElement("p");
+        hint.className = "text-[11px] text-slate-500";
+        hint.textContent = "Klicka i fältet för att välja datum i kalendern.";
+        row.appendChild(hint);
       } else {
         input = document.createElement("input");
         input.type = field.type === "url" ? "url" : field.type || "text";
         input.placeholder = fs.placeholder || "";
         input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
+        row.appendChild(input);
       }
       input.id = `extra_${field.id}`;
       input.addEventListener("input", generate);
       input.addEventListener("change", generate);
-      row.appendChild(input);
     }
 
     wrap.appendChild(row);
@@ -738,6 +747,7 @@ function generate() {
     settings,
     extras: collectExtras(),
     lang: currentMailLang(),
+    replyToCustomer: !!els.replyToCustomer?.checked,
   });
 
   els.subjectOut.value = mail.subject;
@@ -764,8 +774,16 @@ async function copyText(text, btn) {
   setTimeout(() => { btn.textContent = old; }, 1400);
 }
 
+function applyReplyDefault() {
+  const tpl = getSelectedTemplate();
+  if (els.replyToCustomer) {
+    els.replyToCustomer.checked = REPLY_DEFAULTS[tpl.id] ?? false;
+  }
+}
+
 function init() {
   els.language = $("language");
+  els.replyToCustomer = $("replyToCustomer");
   els.templateType = $("templateType");
   els.templateHelp = $("templateHelp");
   els.extraFields = $("extraFields");
@@ -788,11 +806,13 @@ function init() {
   els.language.value = settings.language || "sv";
 
   refreshProductDatalist();
+  applyReplyDefault();
   refreshUi();
 
   const regen = () => generate();
   [
     els.language,
+    els.replyToCustomer,
     els.templateType,
     els.productName,
     els.customerName,
@@ -810,6 +830,7 @@ function init() {
   els.language.addEventListener("change", generate);
 
   els.templateType.addEventListener("change", () => {
+    applyReplyDefault();
     renderExtraFields();
     generate();
   });
