@@ -7,7 +7,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 def score_racerx_portrait_url(url: str) -> int:
 	"""Higher = better headshot for avatar UI."""
 	u = (url or "").lower()
-	if not u or "post_thumb" in u:
+	if not u or "post_thumb" in u or "/i/logos/" in u or "/logos/" in u:
 		return -1000
 	score = 0
 	if "removebg" in u:

@@ -1613,7 +1613,8 @@ function normalizePortraitUrl(url) {
   if (!url || !url.includes('iscdn.net')) return url;
   // RacerX placeholder/logo should never be used as portrait.
   const low = String(url).toLowerCase();
-  if (low.includes('post_thumb.png') || low.includes('/i/logos/')) return null;
+  if (low.includes('post_thumb.png') || low.includes('/i/logos/') || low.includes('/logos/')) return null;
+  if (low.includes('h=630') || low.includes('w=1200')) return null;
   try {
     const u = new URL(url);
     u.searchParams.set('w', '600');
@@ -1704,7 +1705,11 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
 
-  // CDN/extern URL först — undvik trasig legacy DB-porträtt som blockerar RacerX-bild
+  if (r.has_db_portrait) {
+    return `/rider_portrait/${r.id}`;
+  }
+
+  // Extern CDN efter DB-porträtt (undvik team-loggor som blockerar riktigt porträtt)
   if (r.image_url) {
     if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) {
       const u = normalizePortraitUrl(r.image_url);
@@ -1712,11 +1717,6 @@ function imgSrcFor(riderId) {
     }
   }
 
-  if (r.has_db_portrait) {
-    return `/rider_portrait/${r.id}`;
-  }
-  
-  // 1. Try rider image (data-URL eller filsökväg)
   if (r.image_url) {
     if (r.image_url.startsWith('data:')) return r.image_url;
     if (staticRiderImages) {
