@@ -178,7 +178,19 @@ def main() -> None:
         help="Sätt rider_image_data=NULL efter lyckad export (minskar DB-storlek + RAM).",
     )
     parser.add_argument("--limit", type=int, default=None, help="Max antal förare (test).")
+    parser.add_argument(
+        "--production",
+        action="store_true",
+        help="Använd PRODUCTION_DATABASE_URL (Render) istället för lokal DATABASE_URL.",
+    )
     args = parser.parse_args()
+
+    if args.production:
+        prod = (os.getenv("PRODUCTION_DATABASE_URL") or "").strip()
+        if not prod:
+            print("ERROR: PRODUCTION_DATABASE_URL saknas i .env")
+            sys.exit(1)
+        os.environ["DATABASE_URL"] = prod
 
     db_target = (os.getenv("DATABASE_URL") or "")[:60]
     print(f"DATABASE_URL: {db_target}...")

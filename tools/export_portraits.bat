@@ -17,6 +17,6 @@ echo  2) Kor pa riktigt: export_portraits.bat --clear-blobs
 echo  3) git add static/riders/portraits ^&^& git commit ^&^& git push
 echo.
 
-"%PY%" tools\export_db_portraits_to_files.py %*
+"%PY%" tools\export_db_portraits_to_files.py --production %*
 
 pause
