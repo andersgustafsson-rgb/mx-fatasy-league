@@ -2565,6 +2565,18 @@ def _rider_portrait_url(r: Rider) -> str | None:
     return s or None
 
 
+def _static_rider_file_url(image_url: str | None) -> str | None:
+    """Om image_url pekar på en fil under static/ som finns — använd den (ej DB-blob)."""
+    u = str(image_url or "").strip()
+    if not u or u.startswith(("http://", "https://", "data:")):
+        return None
+    rel = u if u.startswith(("riders/", "uploads/", "trackmaps/")) else f"riders/{u}"
+    path = os.path.join(app.root_path, "static", rel.replace("/", os.sep))
+    if os.path.isfile(path):
+        return f"/static/{rel}"
+    return None
+
+
 def _riders_for_image_lookup(
     rider: Rider,
     *,
@@ -2626,6 +2638,9 @@ def template_rider_image_src(
         db_portrait_ids = set()
     brand_fallback: str | None = None
     for r in lookup_riders:
+        static_u = _static_rider_file_url(getattr(r, "image_url", None))
+        if static_u:
+            return static_u
         if int(r.id) in db_portrait_ids:
             return f"/rider_portrait/{r.id}"
         url = _display_image_url_for_rider_row(
@@ -2669,6 +2684,11 @@ def _display_image_url_for_rider_row(
     """
     if has_db_portrait:
         return f"/rider_portrait/{int(rider_id)}"
+
+    if image_url:
+        static_u = _static_rider_file_url(image_url)
+        if static_u:
+            return static_u
 
     if image_url:
         u = str(image_url).strip()
@@ -2745,6 +2765,12 @@ def rider_portrait(rider_id: int):
             portrait_id = int(best.id)
     except Exception:
         pass
+
+    for pid in dict.fromkeys((int(portrait_id), int(rider_id))):
+        img_u = db.session.query(Rider.image_url).filter_by(id=pid).scalar()
+        static_u = _static_rider_file_url(str(img_u or "").strip() or None)
+        if static_u:
+            return redirect(static_u, code=302)
 
     for pid in dict.fromkeys((int(portrait_id), int(rider_id))):
         hit = _cached_portrait_file(pid)
