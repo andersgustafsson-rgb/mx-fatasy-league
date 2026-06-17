@@ -92,7 +92,7 @@ const UI = {
       description: "Produkten finns inte just nu. Fråga om kunden vill vänta eller avboka.",
       fields: {
         waitOption: { label: "Erbjud vänta på åter i lager" },
-        shipRestOfOrder: { label: "Fråga om övriga artiklar i ordern ska skickas" },
+        shipRestOfOrder: { label: "Fråga om vänta på hela ordern eller stryka artikel" },
       },
     },
     inkommer: {
@@ -101,7 +101,7 @@ const UI = {
       fields: {
         expectedDate: { label: "Välj förväntat datum" },
         waitOption: { label: "Fråga om kunden vill vänta" },
-        shipRestOfOrder: { label: "Fråga om övriga artiklar i ordern ska skickas" },
+        shipRestOfOrder: { label: "Fråga om vänta på hela ordern eller stryka artikel" },
       },
     },
     utgatt: {
@@ -578,19 +578,20 @@ function buildMailSv(ctx) {
       if (extras.shipRestOfOrder) {
         body += `
 
-Om det finns fler artiklar i din order kan vi skicka övriga varor redan nu. Vill du att vi skickar resten av ordern medan vi väntar på ${prod}, eller vill du vänta tills allt kan skickas tillsammans?`;
-      }
-      body += extras.waitOption
-        ? `
+Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du vänta tills hela ordern kan skickas när ${prod} finns i lager igen, eller vill du att vi stryker ${prod} och skickar övriga artiklar?`;
+        if (extras.waitOption) {
+          body += ` Du kan också välja att avbryta hela ordern.`;
+        }
+        body += ` Svara gärna på detta mail så ordnar vi det som passar dig bäst.`;
+      } else if (extras.waitOption) {
+        body += `
 
-Vill du vänta tills produkten finns i lager igen, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`
-        : extras.shipRestOfOrder
-          ? `
-
-Svara gärna på detta mail så ordnar vi det som passar dig bäst.`
-          : `
+Vill du vänta tills produkten finns i lager igen, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`;
+      } else {
+        body += `
 
 Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
+      }
       body += `\n\n${outro}`;
       break;
     case "inkommer": {
@@ -600,16 +601,15 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       if (extras.shipRestOfOrder) {
         body += `
 
-Om det finns fler artiklar i din order kan vi skicka övriga varor redan nu. Vill du att vi skickar resten av ordern medan vi väntar på ${prod}, eller vill du vänta tills allt kan skickas tillsammans?`;
-      }
-      if (extras.waitOption) {
+Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du vänta tills hela ordern kan skickas när ${prod} finns i lager igen, eller vill du att vi stryker ${prod} och skickar övriga artiklar?`;
+        if (extras.waitOption) {
+          body += ` Du kan också välja att avbryta hela ordern.`;
+        }
+        body += ` Återkom gärna med vad som passar dig bäst.`;
+      } else if (extras.waitOption) {
         body += `
 
 Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.`;
-      } else if (extras.shipRestOfOrder) {
-        body += `
-
-Återkom gärna med vad som passar dig bäst.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -715,19 +715,20 @@ function buildMailDa(ctx) {
       if (extras.shipRestOfOrder) {
         body += `
 
-Hvis der er flere varer i din ordre, kan vi sende de øvrige varer allerede nu. Vil du have resten af ordren sendt, mens vi venter på ${prod}, eller vil du vente, til hele ordren kan sendes samlet?`;
-      }
-      body += extras.waitOption
-        ? `
+Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du vente, til hele ordren kan sendes, når ${prod} er på lager igen, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
+        if (extras.waitOption) {
+          body += ` Du kan også vælge at annullere hele ordren.`;
+        }
+        body += ` Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`;
+      } else if (extras.waitOption) {
+        body += `
 
-Vil du vente, til produktet er på lager igen, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`
-        : extras.shipRestOfOrder
-          ? `
-
-Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`
-          : `
+Vil du vente, til produktet er på lager igen, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`;
+      } else {
+        body += `
 
 Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`;
+      }
       body += `\n\n${outro}`;
       break;
     case "inkommer": {
@@ -737,16 +738,15 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
       if (extras.shipRestOfOrder) {
         body += `
 
-Hvis der er flere varer i din ordre, kan vi sende de øvrige varer allerede nu. Vil du have resten af ordren sendt, mens vi venter på ${prod}, eller vil du vente, til hele ordren kan sendes samlet?`;
-      }
-      if (extras.waitOption) {
+Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du vente, til hele ordren kan sendes, når ${prod} er på lager igen, eller vil du have os til at stryge ${prod} og sende de øvrige varer?`;
+        if (extras.waitOption) {
+          body += ` Du kan også vælge at annullere hele ordren.`;
+        }
+        body += ` Vend gerne tilbage med, hvad der passer dig bedst.`;
+      } else if (extras.waitOption) {
         body += `
 
 Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.`;
-      } else if (extras.shipRestOfOrder) {
-        body += `
-
-Vend gerne tilbage med, hvad der passer dig bedst.`;
       }
       body += `\n\n${outro}`;
       break;
