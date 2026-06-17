@@ -1705,6 +1705,10 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
 
+  if (r.portrait_url) {
+    return r.portrait_url;
+  }
+
   if (r.has_db_portrait) {
     return `/rider_portrait/${r.id}`;
   }

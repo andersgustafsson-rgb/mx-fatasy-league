@@ -5236,13 +5236,20 @@ def race_picks_page(competition_id):
         )
 
     from app.portrait_urls import normalize_racerx_portrait_url, score_racerx_portrait_url
+    from racerx_rider_bio import build_riders_by_name_map
+
+    all_pick_riders = riders_450 + riders_250
+    riders_by_name = build_riders_by_name_map(all_pick_riders)
 
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
-        # Render 512MB: aldrig base64 i sid-JSON; DB-bilder via /rider_portrait/<id>
-        has_portrait = r.id in ids_with_db_portrait
+        # Samma porträttslogik som spotlight/bio (inkl. dublett-förare som Jett 450/250).
+        portrait_url = template_rider_image_src(r, riders_by_name=riders_by_name)
+        has_portrait = bool(
+            portrait_url and str(portrait_url).startswith("/rider_portrait/")
+        )
         img_url = None
-        if not has_portrait and r.image_url:
+        if not portrait_url and r.image_url:
             raw = str(r.image_url).strip()
             if raw.startswith(("http://", "https://")):
                 if score_racerx_portrait_url(raw) >= 0:
@@ -5251,6 +5258,8 @@ def race_picks_page(competition_id):
                 img_url = raw
             elif not raw.startswith(("riders/http",)) and "://" not in raw:
                 img_url = normalize_racerx_portrait_url(raw) if raw else None
+        if not portrait_url and img_url:
+            portrait_url = img_url
         return {
             "id": r.id,
             "name": r.name,
@@ -5260,6 +5269,7 @@ def race_picks_page(competition_id):
             "price": r.price,
             "is_out": (r.id in out_ids),
             "image_url": img_url,
+            "portrait_url": portrait_url,
             "coast_250": r.coast_250,
             "has_db_portrait": has_portrait,
         }
