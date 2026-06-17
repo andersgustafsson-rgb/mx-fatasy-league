@@ -140,6 +140,8 @@ def rider_query_for_list_ui():
         defer(Rider.rider_image_data),
         defer(Rider.bio),
         defer(Rider.achievements),
+        defer(Rider.bio_sv),
+        defer(Rider.achievements_sv),
     )
 
 

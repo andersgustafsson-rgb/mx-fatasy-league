@@ -88,6 +88,9 @@ def _warm_homepage_caches() -> None:
 
 
 def _start_homepage_cache_warm() -> None:
+    # Render: undvik att fylla RAM med spotlight/power-ranking vid boot.
+    if os.getenv("RENDER"):
+        return
     if os.getenv("DISABLE_HOMEPAGE_CACHE_WARM", "").lower() in ("1", "true", "yes"):
         return
     global _HOMEPAGE_CACHE_WARM_STARTED
@@ -328,6 +331,28 @@ else:
     print(f"Using local SQLite database file ({app.config['SQLALCHEMY_DATABASE_URI']})")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
+
+
+@app.teardown_appcontext
+def _shutdown_session(exception=None):
+    """Släpp ORM-objekt mellan requests — viktigt när porträtt-blobs laddats."""
+    db.session.remove()
+
+
+def _portrait_cache_dir() -> str:
+    d = os.environ.get("PORTRAIT_CACHE_DIR") or (
+        "/tmp/mx_portrait_cache"
+        if os.getenv("RENDER")
+        else os.path.join(app.instance_path, "portrait_cache")
+    )
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _portrait_cache_paths(portrait_id: int, etag: str) -> tuple[str, str]:
+    safe = etag.strip('"').replace("/", "_")[:40]
+    base = os.path.join(_portrait_cache_dir(), f"{portrait_id}_{safe}")
+    return base + ".bin", base + ".mime"
 
 
 @app.after_request
@@ -1506,7 +1531,9 @@ def index():
                     pick_rider_ids.add(wildcard_pick.rider_id)
                 riders_by_id = {
                     r.id: r
-                    for r in Rider.query.filter(Rider.id.in_(pick_rider_ids)).all()
+                    for r in rider_query_for_list_ui()
+                    .filter(Rider.id.in_(pick_rider_ids))
+                    .all()
                 } if pick_rider_ids else {}
                 
                 # Check if picks are complete (all required picks must be filled)
@@ -2470,7 +2497,7 @@ def _out_rider_ids(competition_id: int) -> set[int]:
 
 
 def _riders_450_scope(out_ids: set[int]) -> list[Rider]:
-    q = Rider.query.filter(Rider.class_name == "450cc")
+    q = rider_query_for_list_ui().filter(Rider.class_name == "450cc")
     riders = [r for r in q.all() if r.id not in out_ids]
     return riders
 
@@ -2481,7 +2508,11 @@ def _riders_250_scope(out_ids: set[int], coast: str | None) -> tuple[list[Rider]
     If coast is 'both', single_list is empty and split_pair is (east_riders, west_riders).
     Otherwise single_list is filtered 250 riders for that coast.
     """
-    base = [r for r in Rider.query.filter(Rider.class_name == "250cc").all() if r.id not in out_ids]
+    base = [
+        r
+        for r in rider_query_for_list_ui().filter(Rider.class_name == "250cc").all()
+        if r.id not in out_ids
+    ]
     c = (coast or "").lower()
     if c == "both":
         east = [r for r in base if (r.coast_250 or "") in ("east", "both")]
@@ -2672,7 +2703,7 @@ def rider_portrait(rider_id: int):
     import base64
     import hashlib
 
-    rider = Rider.query.filter_by(id=rider_id).first_or_404()
+    rider = rider_query_for_list_ui().filter_by(id=rider_id).first_or_404()
     portrait_id = rider_id
     try:
         from racerx_rider_bio import find_best_portrait_rider_for_name, find_rider_twins
@@ -2700,9 +2731,23 @@ def rider_portrait(rider_id: int):
     try:
         # ETag based on the stored data-url (cheap, avoids hashing decoded bytes).
         etag = '"' + hashlib.sha1(s.encode("utf-8")).hexdigest() + '"'
+        cache_bin, cache_mime = _portrait_cache_paths(portrait_id, etag)
         inm = request.headers.get("If-None-Match")
         if inm and inm == etag:
             resp = Response(status=304)
+            resp.headers["ETag"] = etag
+            resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+            return resp
+
+        if os.path.isfile(cache_bin):
+            with open(cache_bin, "rb") as f:
+                blob = f.read()
+            mime = "image/jpeg"
+            if os.path.isfile(cache_mime):
+                with open(cache_mime, encoding="utf-8") as f:
+                    mime = (f.read() or mime).strip() or mime
+            resp = make_response(blob)
+            resp.headers["Content-Type"] = mime
             resp.headers["ETag"] = etag
             resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
             return resp
@@ -2714,6 +2759,13 @@ def rider_portrait(rider_id: int):
             mime = meta[5:].split(";")[0].strip() or mime
         blob = base64.b64decode(b64part)
         del b64part, meta
+        try:
+            with open(cache_bin, "wb") as f:
+                f.write(blob)
+            with open(cache_mime, "w", encoding="utf-8") as f:
+                f.write(mime)
+        except OSError:
+            pass
         resp = make_response(blob)
         resp.headers["Content-Type"] = mime
         resp.headers["ETag"] = etag
@@ -6456,7 +6508,7 @@ def _riders_by_name_for(riders: list[Rider]) -> dict[str, list[Rider]]:
     by_name: dict[str, list[Rider]] = defaultdict(list)
     if not names:
         return by_name
-    for row in Rider.query.filter(Rider.name.in_(names)).all():
+    for row in rider_query_for_list_ui().filter(Rider.name.in_(names)).all():
         key = (row.name or "").strip().lower()
         if key:
             by_name[key].append(row)
@@ -7069,7 +7121,7 @@ def _build_spotlight_mode_data(
         for card in crowd_cards:
             rid = int(card.get("rider_id") or 0)
             if rid:
-                row = Rider.query.get(rid)
+                row = rider_query_for_list_ui().filter_by(id=rid).first()
                 if row:
                     riders.append(row)
         meta = _SPOTLIGHT_TAB_META["crowd_pick"]

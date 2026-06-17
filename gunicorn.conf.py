@@ -22,6 +22,6 @@ errorlog = "-"
 loglevel = os.getenv("GUNICORN_LOG_LEVEL", "info")
 
 # Recycle worker before gradual heap growth becomes permanent.
-max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1500" if _on_render else "8000"))
-max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100" if _on_render else "50"))
+max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "800" if _on_render else "8000"))
+max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "80" if _on_render else "50"))
 
