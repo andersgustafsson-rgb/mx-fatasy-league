@@ -7,13 +7,17 @@ const SIGNATURES_KEY = "kundmail_signature_profiles_v1";
 const TEMPLATE_DEFS = [
   {
     id: "slut",
-    fields: [{ id: "waitOption", type: "checkbox", default: true }],
+    fields: [
+      { id: "waitOption", type: "checkbox", default: true },
+      { id: "shipRestOfOrder", type: "checkbox", default: false },
+    ],
   },
   {
     id: "inkommer",
     fields: [
       { id: "expectedDate", type: "date", required: true },
       { id: "waitOption", type: "checkbox", default: true },
+      { id: "shipRestOfOrder", type: "checkbox", default: false },
     ],
   },
   {
@@ -88,6 +92,7 @@ const UI = {
       description: "Produkten finns inte just nu. Fråga om kunden vill vänta eller avboka.",
       fields: {
         waitOption: { label: "Erbjud vänta på åter i lager" },
+        shipRestOfOrder: { label: "Fråga om övriga artiklar i ordern ska skickas" },
       },
     },
     inkommer: {
@@ -96,6 +101,7 @@ const UI = {
       fields: {
         expectedDate: { label: "Välj förväntat datum" },
         waitOption: { label: "Fråga om kunden vill vänta" },
+        shipRestOfOrder: { label: "Fråga om övriga artiklar i ordern ska skickas" },
       },
     },
     utgatt: {
@@ -569,11 +575,20 @@ function buildMailSv(ctx) {
   switch (templateId) {
     case "slut":
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager för tillfället.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Om det finns fler artiklar i din order kan vi skicka övriga varor redan nu. Vill du att vi skickar resten av ordern medan vi väntar på ${prod}, eller vill du vänta tills allt kan skickas tillsammans?`;
+      }
       body += extras.waitOption
         ? `
 
 Vill du vänta tills produkten finns i lager igen, eller vill du att vi avbryter ordern? Svara gärna på detta mail så ordnar vi det som passar dig bäst.`
-        : `
+        : extras.shipRestOfOrder
+          ? `
+
+Svara gärna på detta mail så ordnar vi det som passar dig bäst.`
+          : `
 
 Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       body += `\n\n${outro}`;
@@ -582,10 +597,19 @@ Hör av dig om du vill att vi avbryter ordern eller om du har frågor.`;
       const when = formatLocaleDate(extras.expectedDate);
       body = `${intro}Vi måste tyvärr meddela att ${prod} är slut i lager just nu.`;
       body += ` Vi förväntar oss att den finns tillgänglig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Om det finns fler artiklar i din order kan vi skicka övriga varor redan nu. Vill du att vi skickar resten av ordern medan vi väntar på ${prod}, eller vill du vänta tills allt kan skickas tillsammans?`;
+      }
       if (extras.waitOption) {
         body += `
 
 Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi avbryter ordern? Återkom gärna med vad som passar dig bäst.`;
+      } else if (extras.shipRestOfOrder) {
+        body += `
+
+Återkom gärna med vad som passar dig bäst.`;
       }
       body += `\n\n${outro}`;
       break;
@@ -688,11 +712,20 @@ function buildMailDa(ctx) {
   switch (templateId) {
     case "slut":
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt i øjeblikket.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Hvis der er flere varer i din ordre, kan vi sende de øvrige varer allerede nu. Vil du have resten af ordren sendt, mens vi venter på ${prod}, eller vil du vente, til hele ordren kan sendes samlet?`;
+      }
       body += extras.waitOption
         ? `
 
 Vil du vente, til produktet er på lager igen, eller ønsker du, at vi annullerer ordren? Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`
-        : `
+        : extras.shipRestOfOrder
+          ? `
+
+Svar gerne på denne mail, så finder vi den løsning, der passer dig bedst.`
+          : `
 
 Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`;
       body += `\n\n${outro}`;
@@ -701,10 +734,19 @@ Kontakt os, hvis du ønsker at annullere ordren, eller hvis du har spørgsmål.`
       const when = formatLocaleDate(extras.expectedDate);
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udsolgt lige nu.`;
       body += ` Vi forventer, at den er tilgængelig igen${when ? ` omkring ${when}` : ` ${whenSoon}`}.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+Hvis der er flere varer i din ordre, kan vi sende de øvrige varer allerede nu. Vil du have resten af ordren sendt, mens vi venter på ${prod}, eller vil du vente, til hele ordren kan sendes samlet?`;
+      }
       if (extras.waitOption) {
         body += `
 
 Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, at vi annullerer ordren? Vend gerne tilbage med, hvad der passer dig bedst.`;
+      } else if (extras.shipRestOfOrder) {
+        body += `
+
+Vend gerne tilbage med, hvad der passer dig bedst.`;
       }
       body += `\n\n${outro}`;
       break;
