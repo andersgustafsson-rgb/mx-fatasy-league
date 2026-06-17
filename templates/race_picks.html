@@ -225,6 +225,21 @@
     background: #1f2937;
   }
 
+  /* Prod: ingen bild i listan — bara placeholder tills förare väljs */
+  .rider-avatar-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin-right: 10px;
+    background: #374151;
+    border: 2px solid #4b5563;
+    flex-shrink: 0;
+  }
+
+  .preview-img.is-loading {
+    opacity: 0.45;
+  }
+
   .rider-info {
     flex: 1;
     display: flex;
@@ -535,7 +550,7 @@
     <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
-        <img id="prev-450-{{ i }}" class="preview-img" alt="" />
+        <img id="prev-450-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
         <div class="flex items-center gap-2">
           <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
@@ -563,7 +578,7 @@
     <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
     {% for i in range(1, 7) %}
       <div class="pick-row mb-1.5">
-        <img id="prev-250-{{ i }}" class="preview-img" alt="" />
+        <img id="prev-250-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
         <div class="flex items-center gap-2">
           <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
           <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
@@ -784,10 +799,11 @@
       div.dataset.out = 'true';
     }
     const outHtml = div.dataset.out === 'true' ? '<span class="out-badge">OUT</span>' : '';
+    const avatarHtml = portraitsInDropdown
+      ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '">'
+      : '<span class="rider-avatar-placeholder" aria-hidden="true"></span>';
     div.innerHTML =
-      '<img alt="" class="rider-avatar" data-rider-id="' +
-      rider.id +
-      '">' +
+      avatarHtml +
       '<span class="rider-info">' +
       '<span class="rider-number">#' +
       rider.rider_number +
@@ -1127,8 +1143,10 @@
         updateRiderSelectors(riderClass);
       }
       
-      // Load rider images when dropdown opens
-      loadRiderImages(riderClass, position);
+      // Dropdown-lista: porträtt bara lokalt (prod = placeholder, porträtt vid val)
+      if (portraitsInDropdown) {
+        loadRiderImages(riderClass, position);
+      }
       
       // Don't focus search input on mobile to prevent keyboard from appearing
       // This allows scrolling without keyboard blocking the view
@@ -1142,8 +1160,9 @@
     }
   }
 
-  // Load rider images for dropdown
+  // Load rider images for dropdown (endast lokalt / portraitsInDropdown)
   function loadRiderImages(riderClass, position) {
+    if (!portraitsInDropdown) return;
     // Handle both regular race picks (with position) and holeshot/wildcard (without position)
     let selector;
     if (position !== undefined && position !== 0) {
@@ -1643,11 +1662,40 @@ function brandLogoSrcFor(rider) {
 }
 
 function imgSrcForDropdown(riderId) {
-  if (!portraitsInDropdown) {
-    const r = allRiders.find((x) => Number(x.id) === Number(riderId));
-    return brandLogoSrcFor(r);
-  }
+  if (!portraitsInDropdown) return null;
   return imgSrcFor(riderId);
+}
+
+/** Porträtt i förhandsrutan (vänster) när förare väljs — alltid riktig bild. */
+function loadSelectedRiderPortrait(riderId, imgEl) {
+  if (!imgEl) return;
+  if (!riderId) {
+    imgEl.removeAttribute('src');
+    imgEl.removeAttribute('data-rider-id');
+    imgEl.classList.remove('has-src', 'is-loading', 'portrait-photo', 'portrait-brand', 'portrait-cutout');
+    imgEl.style.background = '#4b5563';
+    return;
+  }
+  imgEl.setAttribute('data-rider-id', String(riderId));
+  const src = imgSrcFor(riderId);
+  if (!src) {
+    imgEl.classList.remove('is-loading', 'has-src');
+    imgEl.removeAttribute('src');
+    imgEl.style.background = '#4b5563';
+    return;
+  }
+  imgEl.classList.add('is-loading');
+  imgEl.onload = function () {
+    imgEl.classList.remove('is-loading');
+    imgEl.classList.add('has-src');
+    imgEl.style.background = 'transparent';
+  };
+  imgEl.onerror = function () {
+    imgEl.classList.remove('is-loading');
+    handleImageError(this);
+  };
+  imgEl.src = src;
+  applyRiderPortraitFraming(imgEl);
 }
 
 function imgSrcFor(riderId) {
@@ -1938,28 +1986,8 @@ function onPickChange(cls, pos, riderId = null) {
   const imgId = is450 ? `prev-450-${pos}` : `prev-250-${pos}`;
   const img = document.getElementById(imgId);
 
-
-  const src = val ? imgSrcFor(val) : null;
-  
-  
   if (img) {
-    if (src) {
-      // Always set data-rider-id so handleImageError can find the rider
-      if (val) {
-        img.setAttribute('data-rider-id', String(val));
-      }
-      img.src = src;
-      applyRiderPortraitFraming(img);
-      img.classList.add("has-src"); // gör preview tydligare
-      img.style.background = "transparent";
-      img.onerror = function() { 
-        handleImageError(this); 
-      };
-    } else {
-      img.removeAttribute("src");
-      img.classList.remove("has-src");
-      img.style.background = "#4b5563";
-    }
+    loadSelectedRiderPortrait(val, img);
   }
 
   updateDropdowns(cls);
@@ -2116,18 +2144,7 @@ function onPickChange(cls, pos, riderId = null) {
             : `prev-250-${p.predicted_position}`;
           const img = document.getElementById(imgId);
           if (img) {
-            // Always set data-rider-id so handleImageError can find the rider
-            img.setAttribute('data-rider-id', String(p.rider_id));
-            const src = imgSrcFor(p.rider_id);
-            if (src) {
-              img.src = src;
-              applyRiderPortraitFraming(img);
-              img.classList.add('has-src');
-              img.style.background = 'transparent';
-              img.onerror = function() {
-                handleImageError(this);
-              };
-            }
+            loadSelectedRiderPortrait(p.rider_id, img);
           }
         });
         
