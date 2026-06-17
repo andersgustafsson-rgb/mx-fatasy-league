@@ -21,6 +21,7 @@ from flask import (
     Response,
 )
 import re
+import threading
 import unicodedata
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -49,6 +50,9 @@ _HOMEPAGE_CACHE_TTL = 600.0
 _SERIES_STATUS_CACHE_TTL = 120.0
 _POWER_RANKING_CACHE_TTL = 300.0
 _HOMEPAGE_CACHE_WARM_STARTED = False
+_PORTRAIT_DECODE_SEM = threading.Semaphore(
+    int(os.getenv("PORTRAIT_DECODE_CONCURRENCY", "2" if os.getenv("RENDER") else "4"))
+)
 
 
 def _peek_rider_spotlight_cache() -> dict | None:
@@ -353,6 +357,33 @@ def _portrait_cache_paths(portrait_id: int, etag: str) -> tuple[str, str]:
     safe = etag.strip('"').replace("/", "_")[:40]
     base = os.path.join(_portrait_cache_dir(), f"{portrait_id}_{safe}")
     return base + ".bin", base + ".mime"
+
+
+def _cached_portrait_file(portrait_id: int) -> tuple[str, str] | None:
+    """Senast cachade fil för förare — undvik DB-läsning."""
+    import glob
+
+    pattern = os.path.join(_portrait_cache_dir(), f"{int(portrait_id)}_*.bin")
+    files = sorted(glob.glob(pattern))
+    if not files:
+        return None
+    bin_path = files[-1]
+    mime_path = bin_path.replace(".bin", ".mime")
+    mime = "image/jpeg"
+    if os.path.isfile(mime_path):
+        with open(mime_path, encoding="utf-8") as f:
+            mime = (f.read() or mime).strip() or mime
+    return bin_path, mime
+
+
+def _portrait_file_response(bin_path: str, mime: str, etag: str | None = None):
+    from flask import send_file
+
+    resp = send_file(bin_path, mimetype=mime, conditional=True)
+    if etag:
+        resp.headers["ETag"] = etag
+    resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    return resp
 
 
 @app.after_request
@@ -2715,64 +2746,68 @@ def rider_portrait(rider_id: int):
     except Exception:
         pass
 
-    raw = db.session.query(Rider.rider_image_data).filter_by(id=portrait_id).scalar()
-    s = str(raw or "").strip()
-    del raw
-    if not s.startswith("data:image"):
-        ext = (
-            db.session.query(Rider.image_url)
-            .filter_by(id=portrait_id)
-            .scalar()
-        )
-        ext_s = str(ext or "").strip()
-        if ext_s.startswith("http://") or ext_s.startswith("https://"):
-            return redirect(ext_s, code=302)
-        return Response(status=404)
-    try:
-        # ETag based on the stored data-url (cheap, avoids hashing decoded bytes).
-        etag = '"' + hashlib.sha1(s.encode("utf-8")).hexdigest() + '"'
-        cache_bin, cache_mime = _portrait_cache_paths(portrait_id, etag)
-        inm = request.headers.get("If-None-Match")
-        if inm and inm == etag:
-            resp = Response(status=304)
-            resp.headers["ETag"] = etag
-            resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
-            return resp
+    for pid in dict.fromkeys((int(portrait_id), int(rider_id))):
+        hit = _cached_portrait_file(pid)
+        if hit:
+            return _portrait_file_response(hit[0], hit[1])
 
-        if os.path.isfile(cache_bin):
-            with open(cache_bin, "rb") as f:
-                blob = f.read()
+    with _PORTRAIT_DECODE_SEM:
+        for pid in dict.fromkeys((int(portrait_id), int(rider_id))):
+            hit = _cached_portrait_file(pid)
+            if hit:
+                return _portrait_file_response(hit[0], hit[1])
+
+        raw = db.session.query(Rider.rider_image_data).filter_by(id=portrait_id).scalar()
+        s = str(raw or "").strip()
+        del raw
+        if not s.startswith("data:image"):
+            ext = (
+                db.session.query(Rider.image_url)
+                .filter_by(id=portrait_id)
+                .scalar()
+            )
+            ext_s = str(ext or "").strip()
+            if ext_s.startswith("http://") or ext_s.startswith("https://"):
+                return redirect(ext_s, code=302)
+            return Response(status=404)
+        try:
+            etag = '"' + hashlib.sha1(s.encode("utf-8")).hexdigest() + '"'
+            cache_bin, cache_mime = _portrait_cache_paths(portrait_id, etag)
+            inm = request.headers.get("If-None-Match")
+            if inm and inm == etag:
+                resp = Response(status=304)
+                resp.headers["ETag"] = etag
+                resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+                return resp
+
+            if os.path.isfile(cache_bin):
+                mime = "image/jpeg"
+                if os.path.isfile(cache_mime):
+                    with open(cache_mime, encoding="utf-8") as f:
+                        mime = (f.read() or mime).strip() or mime
+                return _portrait_file_response(cache_bin, mime, etag)
+
+            meta, b64part = s.split(",", 1)
+            del s
             mime = "image/jpeg"
-            if os.path.isfile(cache_mime):
-                with open(cache_mime, encoding="utf-8") as f:
-                    mime = (f.read() or mime).strip() or mime
+            if ";" in meta:
+                mime = meta[5:].split(";")[0].strip() or mime
+            blob = base64.b64decode(b64part)
+            del b64part, meta
+            try:
+                with open(cache_bin, "wb") as f:
+                    f.write(blob)
+                with open(cache_mime, "w", encoding="utf-8") as f:
+                    f.write(mime)
+            except OSError:
+                pass
             resp = make_response(blob)
             resp.headers["Content-Type"] = mime
             resp.headers["ETag"] = etag
             resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
             return resp
-
-        meta, b64part = s.split(",", 1)
-        del s
-        mime = "image/jpeg"
-        if ";" in meta:
-            mime = meta[5:].split(";")[0].strip() or mime
-        blob = base64.b64decode(b64part)
-        del b64part, meta
-        try:
-            with open(cache_bin, "wb") as f:
-                f.write(blob)
-            with open(cache_mime, "w", encoding="utf-8") as f:
-                f.write(mime)
-        except OSError:
-            pass
-        resp = make_response(blob)
-        resp.headers["Content-Type"] = mime
-        resp.headers["ETag"] = etag
-        resp.headers["Cache-Control"] = "public, max-age=2592000, immutable"
-        return resp
-    except Exception:
-        return Response(status=404)
+        except Exception:
+            return Response(status=404)
 
 
 def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
@@ -4423,7 +4458,7 @@ def season_team_builder():
     try:
         # IMPORTANT: Only get SMX riders (450cc and 250cc) for season teams
         # WSX riders (wsx_sx1, wsx_sx2) should NOT appear in season team builder
-        all_riders = Rider.query.filter(
+        all_riders = rider_query_for_list_ui().filter(
             Rider.class_name.in_(['450cc', '250cc'])
         ).order_by(Rider.rider_number).all()
         print(f"Found {len(all_riders)} SMX riders for season team builder")
@@ -5286,6 +5321,7 @@ def race_picks_page(competition_id):
         is_mx_race=is_mx_race,
         picks_locked=picks_locked,
         static_rider_images=not _on_render,
+        portraits_in_dropdown=not _on_render,
     )
 
 

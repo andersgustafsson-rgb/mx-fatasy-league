@@ -721,6 +721,7 @@
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
   const staticRiderImages = {{ static_rider_images | tojson }};
+  const portraitsInDropdown = {{ portraits_in_dropdown | tojson }};
   // NYTT: OUT-lista från servern för att kunna validera i UI
   const OUT_IDS = {{ out_ids | tojson }};
   // Coast-filtrering för 250cc
@@ -1167,7 +1168,7 @@
         // Set data-rider-id so handleImageError can find the rider for brand logo fallback
         img.setAttribute('data-rider-id', riderId);
         // Use imgSrcFor to get the correct image source (handles all cases including brand logos)
-        const imageSrc = imgSrcFor(riderId);
+        const imageSrc = imgSrcForDropdown(riderId);
         if (imageSrc) {
           img.src = imageSrc;
           applyRiderPortraitFraming(img);
@@ -1627,6 +1628,26 @@ function applyRiderPortraitFraming(img) {
   ) {
     img.classList.add('portrait-photo');
   }
+}
+
+function brandLogoSrcFor(rider) {
+  if (!rider || !rider.bike_brand) return '/static/brand_logos/honda.png';
+  const brandName = (rider.bike_brand || '').toLowerCase().trim();
+  const brandMap = {
+    honda: 'honda', ktm: 'ktm', yamaha: 'yamaha', kawasaki: 'kawasaki',
+    suzuki: 'suzuki', husqvarna: 'husqvarna', gasgas: 'gasgas',
+    beta: 'beta', triumph: 'triumph', ducati: 'ducati',
+  };
+  const logoName = brandMap[brandName] || brandName;
+  return `/static/brand_logos/${logoName}.png`;
+}
+
+function imgSrcForDropdown(riderId) {
+  if (!portraitsInDropdown) {
+    const r = allRiders.find((x) => Number(x.id) === Number(riderId));
+    return brandLogoSrcFor(r);
+  }
+  return imgSrcFor(riderId);
 }
 
 function imgSrcFor(riderId) {

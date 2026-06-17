@@ -13,7 +13,7 @@ workers = int(os.getenv("WEB_CONCURRENCY", "1"))
 
 worker_class = "gthread"
 # Fewer threads = less concurrent portrait decoding in RAM on small instances.
-threads = int(os.getenv("GUNICORN_THREADS", "4" if _on_render else "8"))
+threads = int(os.getenv("GUNICORN_THREADS", "2" if _on_render else "8"))
 
 timeout = int(os.getenv("GUNICORN_TIMEOUT", "180" if _on_render else "120"))
 
