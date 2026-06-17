@@ -88,6 +88,8 @@ def _warm_homepage_caches() -> None:
 
 
 def _start_homepage_cache_warm() -> None:
+    if os.getenv("DISABLE_HOMEPAGE_CACHE_WARM", "").lower() in ("1", "true", "yes"):
+        return
     global _HOMEPAGE_CACHE_WARM_STARTED
     if _HOMEPAGE_CACHE_WARM_STARTED:
         return
@@ -393,13 +395,14 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent XSS attacks
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 
 # Database engine options - different for different database types
+_on_render = bool(os.getenv("RENDER"))
 if 'postgresql' in app.config['SQLALCHEMY_DATABASE_URI']:
-    # PostgreSQL options
+    # PostgreSQL options — small pool on Render (1 worker, few threads)
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
-        'pool_size': 10,
-        'max_overflow': 20,
+        'pool_size': int(os.getenv('DB_POOL_SIZE', '3' if _on_render else '10')),
+        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', '5' if _on_render else '20')),
     }
 else:
     # SQLite options
@@ -2683,6 +2686,7 @@ def rider_portrait(rider_id: int):
 
     raw = db.session.query(Rider.rider_image_data).filter_by(id=portrait_id).scalar()
     s = str(raw or "").strip()
+    del raw
     if not s.startswith("data:image"):
         ext = (
             db.session.query(Rider.image_url)
@@ -2704,10 +2708,12 @@ def rider_portrait(rider_id: int):
             return resp
 
         meta, b64part = s.split(",", 1)
+        del s
         mime = "image/jpeg"
         if ";" in meta:
             mime = meta[5:].split(";")[0].strip() or mime
         blob = base64.b64decode(b64part)
+        del b64part, meta
         resp = make_response(blob)
         resp.headers["Content-Type"] = mime
         resp.headers["ETag"] = etag
@@ -5148,6 +5154,9 @@ def race_picks_page(competition_id):
     def serialize_rider(r: Rider):
         # Render 512MB: aldrig base64 i sid-JSON; DB-bilder via /rider_portrait/<id>
         img_url = normalize_racerx_portrait_url(r.image_url) if r.image_url else None
+        if img_url and not img_url.startswith(("http://", "https://", "data:")):
+            if "://" in img_url or img_url.startswith("riders/http"):
+                img_url = None
         return {
             "id": r.id,
             "name": r.name,
@@ -5224,6 +5233,7 @@ def race_picks_page(competition_id):
         picks_good_to_know=picks_good_to_know,
         is_mx_race=is_mx_race,
         picks_locked=picks_locked,
+        static_rider_images=not _on_render,
     )
 
 
@@ -6155,6 +6165,14 @@ def _picks_series_for_rider(rider: Rider) -> str:
     return "SX"
 
 
+def _rider_class_by_id() -> dict[int, str]:
+    """Id → class_name utan att ladda rider_image_data (OOM-skydd)."""
+    return {
+        int(rid): str(cls or "")
+        for rid, cls in db.session.query(Rider.id, Rider.class_name).all()
+    }
+
+
 def _rider_pick_class_names(rider: Rider, *, is_wsx: bool) -> set[str]:
     cls = (rider.class_name or "").strip().lower()
     if is_wsx:
@@ -6180,7 +6198,7 @@ def _rider_pick_stats_for_comp(rider: Rider, comp: Competition) -> dict[str, Any
     if not allowed:
         return None
 
-    riders_dict = {r.id: r for r in Rider.query.all()}
+    class_by_id = _rider_class_by_id()
     n_lineups = 0
     picked = 0
     p1 = 0
@@ -6196,8 +6214,8 @@ def _rider_pick_stats_for_comp(rider: Rider, comp: Competition) -> dict[str, Any
                 pos = int(p.get("predicted_position"))
             except (TypeError, ValueError):
                 continue
-            r = riders_dict.get(rid)
-            if not r or (r.class_name or "").strip().lower() not in allowed:
+            r_cls = (class_by_id.get(rid) or "").strip().lower()
+            if not r_cls or r_cls not in allowed:
                 continue
             has_lineup = True
             if rid == rider_id:
@@ -7317,7 +7335,7 @@ def _group_riders_for_directory(riders: list[Rider] | None = None) -> dict[str, 
     250cc with coast 'both' appears in both 250E and 250W (same as race picks).
   """
     if riders is None:
-        riders = Rider.query.all()
+        riders = rider_query_for_list_ui().order_by(Rider.id).all()
     riders_450: list[Rider] = []
     riders_250_east: list[Rider] = []
     riders_250_west: list[Rider] = []
@@ -11654,7 +11672,7 @@ def _build_crowd_picks_summary(competition_id: int, comp: Competition, ensure_sn
     Uses snapshots when available so results stay stable after lock.
     """
     is_wsx = getattr(comp, "series", None) == "WSX"
-    riders_dict = {r.id: r for r in Rider.query.all()}
+    riders_dict = {r.id: r for r in rider_query_for_list_ui().all()}
 
     slot_450: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
     slot_250: dict[int, dict[int, int]] = defaultdict(lambda: defaultdict(int))
@@ -11876,9 +11894,8 @@ def get_other_users_picks(competition_id):
         
         is_wsx = getattr(comp, 'series', None) == 'WSX'
         
-        # Get all riders once as master list
-        all_riders = Rider.query.all()
-        riders_dict = {rider.id: rider for rider in all_riders}
+        # Ladda inte rider_image_data — varje blob kan vara hundratals KB (OOM på Render).
+        riders_dict = {r.id: r for r in rider_query_for_list_ui().all()}
         
         # Get all users except current user
         current_user_id = session["user_id"]

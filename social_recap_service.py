@@ -22,6 +22,7 @@ from models import (
     PicksSnapshot,
     HoleshotPick,
     WildcardPick,
+    rider_query_for_list_ui,
 )
 
 # Brand palette
@@ -545,7 +546,7 @@ def _rider_podium(
     from main import _promoted_250_coast_by_name
 
     promoted = _promoted_250_coast_by_name()
-    riders = {r.id: r for r in Rider.query.all()}
+    riders = {r.id: r for r in rider_query_for_list_ui().all()}
     found: list[tuple[int, Rider]] = []
     for res in _latest_results_by_rider(competition_id).values():
         pos = res.position
@@ -678,7 +679,7 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
         {"id": "picker_count", "group": "meta", "text": f"{picker_n} spelare lämnade tips"}
     ]
 
-    riders = {r.id: r for r in Rider.query.all()}
+    riders = {r.id: r for r in rider_query_for_list_ui().all()}
     actual = _actual_positions(competition_id)
     cfg = _class_config(comp)
     cls450 = (cfg["primary"][0],)

@@ -1,29 +1,27 @@
 """
 Gunicorn runtime settings for Render.
 
-Memory: set WEB_CONCURRENCY=1 on 512MB, 2 on 2GB+ (env on Render).
-gthread handles concurrent requests without extra processes when workers=1.
+Memory: WEB_CONCURRENCY=1 on 512MB–2GB; gthread handles concurrency without extra processes.
 """
 
 import os
 
 bind = f"0.0.0.0:{os.getenv('PORT', '5000')}"
 
-# 512MB instance: keep a single process.
+_on_render = bool(os.getenv("RENDER"))
 workers = int(os.getenv("WEB_CONCURRENCY", "1"))
 
-# Threads require gthread.
 worker_class = "gthread"
-threads = int(os.getenv("GUNICORN_THREADS", "8"))
+# Fewer threads = less concurrent portrait decoding in RAM on small instances.
+threads = int(os.getenv("GUNICORN_THREADS", "4" if _on_render else "8"))
 
-timeout = int(os.getenv("GUNICORN_TIMEOUT", "120"))
+timeout = int(os.getenv("GUNICORN_TIMEOUT", "180" if _on_render else "120"))
 
-# Log to stdout/stderr so Render shows it.
 accesslog = "-"
 errorlog = "-"
 loglevel = os.getenv("GUNICORN_LOG_LEVEL", "info")
 
-# Proactively recycle the worker to avoid gradual bloat.
-max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "8000"))
-max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "50"))
+# Recycle worker before gradual heap growth becomes permanent.
+max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1500" if _on_render else "8000"))
+max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100" if _on_render else "50"))
 

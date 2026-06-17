@@ -4,8 +4,8 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     # 512MB RAM: 2 workers = två kopior av appen i minnet -> OOM/502.
-    # Logga till stdout/stderr så Render visar root-cause direkt.
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 180 --access-logfile - --error-logfile - --log-level info main:app
+    # gunicorn.conf.py: 1 worker, 4 threads, worker recycle vid ~1500 req.
+    startCommand: gunicorn -c gunicorn.conf.py main:app
     envVars:
       - key: SECRET_KEY
         value: my-super-secret-key-for-mx-fantasy-league-2025
