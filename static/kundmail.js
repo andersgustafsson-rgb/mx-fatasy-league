@@ -75,16 +75,16 @@ const TEMPLATE_DEFS = [
   },
 ];
 
-/** Standard: svar på kund vs att vi kontaktar kunden först. */
+/** Standard: vi kontaktar kunden först — kryssa i vid svar på inkommande mail. */
 const REPLY_DEFAULTS = {
-  slut: true,
+  slut: false,
   inkommer: false,
   utgatt: false,
   forsening: false,
-  alternativ: true,
+  alternativ: false,
   avbokad: false,
   prisandring: false,
-  retur: true,
+  retur: false,
   outlost: false,
 };
 
