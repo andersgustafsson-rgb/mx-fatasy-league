@@ -558,10 +558,16 @@ function mailPhrase(fn, tone) {
   return typeof fn === "function" ? fn(t) : fn;
 }
 
-function mailOutro(ctx) {
+function mailOutro(ctx, options = {}) {
   const m = ctx.lang.mail;
   const tone = ctx.settings?.tone;
-  return `${mailPhrase(m.sympathy, tone)}\n\n${mailPhrase(m.helpOffer, tone)}\n\n${ctx.sig}`;
+  const parts = [];
+  if (!options.skipSympathy) {
+    parts.push(mailPhrase(m.sympathy, tone));
+  }
+  parts.push(mailPhrase(m.helpOffer, tone));
+  parts.push(ctx.sig);
+  return parts.join("\n\n");
 }
 
 function signature(settings, langPack) {
@@ -729,7 +735,7 @@ ${outro}`;
 
 ${link}
 
-${outro}`;
+${mailOutro(ctx, { skipSympathy: true })}`;
       break;
     }
     case "retur": {
@@ -907,7 +913,7 @@ ${outro}`;
 
 ${link}
 
-${outro}`;
+${mailOutro(ctx, { skipSympathy: true })}`;
       break;
     }
     case "retur": {
