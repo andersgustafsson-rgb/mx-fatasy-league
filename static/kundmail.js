@@ -64,6 +64,15 @@ const TEMPLATE_DEFS = [
     id: "retur",
     fields: [{ id: "returnDeadline", type: "date" }],
   },
+  {
+    id: "outlost",
+    fields: [
+      { id: "resendFee", type: "text", default: "99" },
+      { id: "unclaimedFee", type: "text", default: "300" },
+      { id: "responseDays", type: "text", default: "7" },
+      { id: "paymentPartner", type: "text", default: "Walley" },
+    ],
+  },
 ];
 
 /** Standard: svar på kund vs att vi kontaktar kunden först. */
@@ -76,6 +85,7 @@ const REPLY_DEFAULTS = {
   avbokad: false,
   prisandring: false,
   retur: true,
+  outlost: false,
 };
 
 const UI = {
@@ -156,6 +166,16 @@ const UI = {
         returnDeadline: { label: "Välj sista returdatum (valfritt)" },
       },
     },
+    outlost: {
+      label: "Outlöst paket / retur till oss",
+      description: "Paketet kom tillbaka från ombudet — kunden väljer omsändning eller makulering.",
+      fields: {
+        resendFee: { label: "Ny fraktavgift vid omsändning (kr)", placeholder: "99" },
+        unclaimedFee: { label: "Avgift outlöst paket (kr)", placeholder: "300" },
+        responseDays: { label: "Svarsfrist (dagar)", placeholder: "7" },
+        paymentPartner: { label: "Betalpartner (SMS-länk)", placeholder: "Walley" },
+      },
+    },
   },
 };
 
@@ -192,6 +212,7 @@ const MAIL_I18N = {
       avbokad: "Order avbruten",
       prisandring: "Prisändring",
       retur: "Retur",
+      outlost: "Returpaket mottaget",
       default: "Angående din beställning",
     },
   },
@@ -226,6 +247,7 @@ const MAIL_I18N = {
       avbokad: "Ordre annulleret",
       prisandring: "Prisændring",
       retur: "Returnering",
+      outlost: "Returpakke modtaget",
       default: "Angående din bestilling",
     },
   },
@@ -694,6 +716,35 @@ ${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 ${sig}`;
       break;
     }
+    case "outlost": {
+      const resendFee = cleanStr(extras.resendFee) || "99";
+      const unclaimedFee = cleanStr(extras.unclaimedFee) || "300";
+      const responseDays = cleanStr(extras.responseDays) || "7";
+      const partner = cleanStr(extras.paymentPartner) || "Walley";
+      body = `${intro}Vi skriver för att meddela dig att vi har mottagit ditt paket i retur till oss. Anledningen är vanligtvis att paketet inte har hämtats ut från ombudet inom utsatt tid.
+
+Du har nu två val för hur vi ska gå vidare:
+
+Alternativ 1: Skicka paketet på nytt
+Om du fortfarande önskar få din beställning, vänligen svara på detta e-postmeddelande och bekräfta att du vill ha paketet skickat igen.
+
+När vi har mottagit ditt svar kommer vi att skapa en betalning för den nya fraktavgiften på ${resendFee} kr. En betallänk kommer därefter att skickas till dig via SMS från vår betalpartner ${partner}.
+
+Så snart betalningen är genomförd skickar vi ut ditt paket på nytt och meddelar dig det nya spårningsnumret.
+
+Alternativ 2: Makulera ordern (outlöst paket)
+Om du inte längre önskar ditt paket kommer vi att makulera din order. I enlighet med våra köpvillkor kommer vi i detta fall att debitera en avgift för ett outlöst paket på ${unclaimedFee} kr.
+
+Avgiften är nödvändig för att täcka våra kostnader för fraktavgifter samt administrativa omkostnader. Om värdet på din order överstiger ${unclaimedFee} kr kommer vi att återbetala mellanskillnaden till dig via samma betalningsmetod som du använde vid köpet. Om den totala köpesumman understiger ${unclaimedFee} kr så debiteras det ursprungliga beloppet.
+
+Vänligen meddela oss ditt val inom ${responseDays} dagar
+Vi behöver ditt beslut senast ${responseDays} dagar från det att detta e-postmeddelande skickades. Om vi inte har mottagit något svar från dig inom denna tidsram kommer vi automatiskt att hantera din order enligt Alternativ 2.
+
+Tveka inte att höra av dig om du har några frågor.
+
+${sig}`;
+      break;
+    }
     default:
       body = `${intro}${outro}`;
   }
@@ -831,6 +882,35 @@ ${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 ${sig}`;
       break;
     }
+    case "outlost": {
+      const resendFee = cleanStr(extras.resendFee) || "99";
+      const unclaimedFee = cleanStr(extras.unclaimedFee) || "300";
+      const responseDays = cleanStr(extras.responseDays) || "7";
+      const partner = cleanStr(extras.paymentPartner) || "Walley";
+      body = `${intro}Vi skriver for at informere dig om, at vi har modtaget din pakke retur til os. Årsagen er som regel, at pakken ikke er blevet afhentet hos pakkeshoppen inden for fristen.
+
+Du har nu to valgmuligheder for, hvordan vi går videre:
+
+Alternativ 1: Send pakken igen
+Hvis du stadig ønsker at modtage din bestilling, bedes du svare på denne e-mail og bekræfte, at du vil have pakken sendt igen.
+
+Når vi har modtaget dit svar, opretter vi en betaling for den nye fragtafgift på ${resendFee} kr. Et betalingslink sendes derefter til dig via SMS fra vores betalingspartner ${partner}.
+
+Så snart betalingen er gennemført, sender vi din pakke igen og giver dig det nye trackingnummer.
+
+Alternativ 2: Annuller ordren (udestående pakke)
+Hvis du ikke længere ønsker din pakke, annullerer vi din ordre. I henhold til vores købsbetingelser opkræver vi i dette tilfælde et gebyr for udestående pakke på ${unclaimedFee} kr.
+
+Gebyret er nødvendigt for at dække vores omkostninger til fragt og administration. Hvis værdien af din ordre overstiger ${unclaimedFee} kr, refunderer vi differencen til dig via samme betalingsmetode, som du brugte ved købet. Hvis det samlede købsbeløb er under ${unclaimedFee} kr, opkræves det oprindelige beløb.
+
+Meddel os venligst dit valg inden for ${responseDays} dage
+Vi skal bruge dit svar senest ${responseDays} dage fra den dato, denne e-mail sendes. Hvis vi ikke har modtaget svar inden for denne frist, håndterer vi automatisk din ordre i henhold til Alternativ 2.
+
+Tøv ikke med at kontakte os, hvis du har spørgsmål.
+
+${sig}`;
+      break;
+    }
     default:
       body = `${intro}${outro}`;
   }
@@ -960,6 +1040,9 @@ function renderExtraFields() {
         input = document.createElement("input");
         input.type = field.type === "url" ? "url" : field.type || "text";
         input.placeholder = fs.placeholder || "";
+        if (field.default != null && field.type !== "date") {
+          input.value = String(field.default);
+        }
         input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
         row.appendChild(input);
       }
@@ -986,15 +1069,20 @@ function collectExtras() {
     const el = $(`extra_${field.id}`);
     if (!el) continue;
     if (field.type === "checkbox") out[field.id] = el.checked;
-    else out[field.id] = el.value;
+    else {
+      const val = cleanStr(el.value);
+      out[field.id] = val || (field.default != null ? String(field.default) : "");
+    }
   }
   return out;
 }
 
+const PRODUCT_OPTIONAL_TEMPLATES = new Set(["outlost"]);
+
 function validate() {
-  const product = cleanStr(els.productName?.value);
-  if (!product) return UI.errProduct;
   const tpl = getSelectedTemplate();
+  const product = cleanStr(els.productName?.value);
+  if (!PRODUCT_OPTIONAL_TEMPLATES.has(tpl.id) && !product) return UI.errProduct;
   for (const field of tpl.fields || []) {
     if (!field.required) continue;
     const el = $(`extra_${field.id}`);
@@ -1066,6 +1154,12 @@ function applyReplyDefault() {
   const tpl = getSelectedTemplate();
   if (els.replyToCustomer) {
     els.replyToCustomer.checked = REPLY_DEFAULTS[tpl.id] ?? false;
+  }
+  const productLabel = document.querySelector('label[for="productName"]');
+  if (productLabel) {
+    productLabel.textContent = PRODUCT_OPTIONAL_TEMPLATES.has(tpl.id)
+      ? "Produkt (valfritt)"
+      : "Produkt *";
   }
 }
 
