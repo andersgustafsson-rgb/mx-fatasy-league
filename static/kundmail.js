@@ -73,6 +73,13 @@ const TEMPLATE_DEFS = [
       { id: "paymentPartner", type: "text", default: "Walley" },
     ],
   },
+  {
+    id: "produktlank",
+    fields: [
+      { id: "productLink", type: "url", required: true },
+      { id: "phoneCall", type: "checkbox", default: true },
+    ],
+  },
 ];
 
 /** Standard: vi kontaktar kunden först — kryssa i vid svar på inkommande mail. */
@@ -86,6 +93,7 @@ const REPLY_DEFAULTS = {
   prisandring: false,
   retur: false,
   outlost: false,
+  produktlank: false,
 };
 
 const UI = {
@@ -176,6 +184,17 @@ const UI = {
         paymentPartner: { label: "Betalpartner (SMS-länk)", placeholder: "Walley" },
       },
     },
+    produktlank: {
+      label: "Skicka produktlänk",
+      description: "Efter telefonsamtal — skicka länk till produkt på hemsidan.",
+      fields: {
+        productLink: {
+          label: "Länk till produkt",
+          placeholder: "https://www.motoaction.se/...",
+        },
+        phoneCall: { label: "Tacka för telefonsamtal" },
+      },
+    },
   },
 };
 
@@ -213,6 +232,7 @@ const MAIL_I18N = {
       prisandring: "Prisändring",
       retur: "Retur",
       outlost: "Returpaket mottaget",
+      produktlank: "Produktlänk",
       default: "Angående din beställning",
     },
   },
@@ -248,6 +268,7 @@ const MAIL_I18N = {
       prisandring: "Prisændring",
       retur: "Returnering",
       outlost: "Returpakke modtaget",
+      produktlank: "Produktlink",
       default: "Angående din bestilling",
     },
   },
@@ -699,6 +720,18 @@ Vill du behålla ordern till det nya priset eller avbryta? Svara gärna på dett
 ${outro}`;
       break;
     }
+    case "produktlank": {
+      const link = cleanStr(extras.productLink);
+      const phoneThanks = extras.phoneCall
+        ? "Tack för att du ringde oss. "
+        : "";
+      body = `${intro}${phoneThanks}Här är länken till ${prod} på vår hemsida:
+
+${link}
+
+${outro}`;
+      break;
+    }
     case "retur": {
       const deadline = formatLocaleDate(extras.returnDeadline);
       body = `${intro}Så här gör du för att returnera ${prod}:
@@ -861,6 +894,18 @@ Vi refunderer ordrebeløbet manuelt og vender tilbage, når refusionen er gennem
       body += ` før levering.
 
 Vil du beholde ordren til den nye pris eller annullere? Svar gerne på denne mail, så hjælper vi dig.
+
+${outro}`;
+      break;
+    }
+    case "produktlank": {
+      const link = cleanStr(extras.productLink);
+      const phoneThanks = extras.phoneCall
+        ? "Tak fordi du ringede til os. "
+        : "";
+      body = `${intro}${phoneThanks}Her er linket til ${prod} på vores hjemmeside:
+
+${link}
 
 ${outro}`;
       break;
