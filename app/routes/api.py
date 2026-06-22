@@ -375,6 +375,14 @@ def _default_rider_price(class_name: str) -> int:
 	return 100000
 
 
+def _resolve_bike_brand(data: dict) -> str:
+	"""Använd fritext när klient skickar bike_brand=custom + bike_brand_custom."""
+	brand = (data.get('bike_brand') or '').strip()
+	if brand.lower() == 'custom':
+		brand = (data.get('bike_brand_custom') or '').strip()
+	return brand or 'Unknown'
+
+
 @bp.route('/riders/quick-from-result', methods=['POST'])
 def quick_add_rider_from_result():
 	"""Lägg till förare från bulk preview (namn + klass, minimal input)."""
@@ -395,7 +403,7 @@ def quick_add_rider_from_result():
 	else:
 		rider_number = _suggest_rider_number(class_name)
 
-	bike_brand = (data.get('bike_brand') or '').strip() or 'Unknown'
+	bike_brand = _resolve_bike_brand(data)
 	coast_250 = data.get('coast_250')
 	if class_name == '250cc' and not coast_250:
 		coast_250 = 'west'
@@ -458,6 +466,7 @@ def add_rider():
 		pass
 
 	data = request.get_json() if request.is_json else request.form.to_dict()
+	data['bike_brand'] = _resolve_bike_brand(data)
 
 	# Optional image upload – spara både till fil (lokalt) och som base64 i DB (överlever deploy på Render)
 	image_url = None
@@ -577,6 +586,7 @@ def update_rider(rider_id: int):
 			return jsonify({'error': 'Unauthorized'}), 401
 		rider = Rider.query.get_or_404(rider_id)
 		data = request.get_json() if request.is_json else request.form.to_dict()
+		data['bike_brand'] = _resolve_bike_brand(data)
 
 		# Validate required fields
 		if 'name' not in data:

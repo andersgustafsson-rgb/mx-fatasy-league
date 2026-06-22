@@ -1499,11 +1499,16 @@
                 
                 const data = Object.fromEntries(formData);
                 
-                // Handle custom bike brand
+                // Handle custom bike brand — måste in i FormData som skickas till servern
                 if (data.bike_brand === 'custom') {
-                    data.bike_brand = data.bike_brand_custom;
+                    const customBrand = (data.bike_brand_custom || '').trim();
+                    if (!customBrand) {
+                        alert('Ange märke när du väljer Annan.');
+                        return;
+                    }
+                    formData.set('bike_brand', customBrand);
                 }
-                delete data.bike_brand_custom;
+                formData.delete('bike_brand_custom');
                 
                 try {
                     const response = await fetch('/api/riders', {
@@ -1540,8 +1545,12 @@
             document.getElementById('edit-rider-price').value = price;
             
             // Handle bike brand - check if it's a custom brand
-            const predefinedBrands = ['Honda', 'Yamaha', 'KTM', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta'];
-            if (predefinedBrands.includes(brand)) {
+            const predefinedBrands = ['Honda', 'Yamaha', 'KTM', 'Kawasaki', 'Suzuki', 'Husqvarna', 'GasGas', 'Beta', 'Triumph', 'Ducati'];
+            if (brand === 'custom') {
+                document.getElementById('edit-rider-brand').value = 'custom';
+                document.getElementById('edit-rider-brand-custom').value = '';
+                document.getElementById('edit-rider-brand-custom').classList.remove('hidden');
+            } else if (predefinedBrands.includes(brand)) {
                 document.getElementById('edit-rider-brand').value = brand;
                 document.getElementById('edit-rider-brand-custom').classList.add('hidden');
             } else {
@@ -1676,7 +1685,11 @@
             // Handle custom bike brand
             let bikeBrand = document.getElementById('edit-rider-brand').value;
             if (bikeBrand === 'custom') {
-                bikeBrand = document.getElementById('edit-rider-brand-custom').value;
+                bikeBrand = (document.getElementById('edit-rider-brand-custom').value || '').trim();
+                if (!bikeBrand) {
+                    alert('Ange märke när du väljer Annan.');
+                    return;
+                }
             }
             
             // Validate required fields
