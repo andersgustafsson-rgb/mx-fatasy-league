@@ -315,7 +315,7 @@ function initDatePicker(input, btn) {
     allowInput: false,
     clickOpens: true,
     onChange() {
-      generate();
+      forceGenerate();
     },
   });
   btn.addEventListener("click", () => fp.open());
@@ -1042,7 +1042,7 @@ function renderExtraFields() {
       input.id = `extra_${field.id}`;
       input.checked = field.default !== false;
       input.className = "rounded border-slate-600 bg-slate-800 text-emerald-500";
-      input.addEventListener("change", generate);
+      input.addEventListener("change", forceGenerate);
       const span = document.createElement("span");
       span.textContent = fs.label || field.id;
       label.appendChild(input);
@@ -1099,8 +1099,8 @@ function renderExtraFields() {
       }
       if (field.type !== "date") {
         input.id = `extra_${field.id}`;
-        input.addEventListener("input", generate);
-        input.addEventListener("change", generate);
+        input.addEventListener("input", forceGenerate);
+        input.addEventListener("change", forceGenerate);
       }
     }
 
@@ -1143,7 +1143,10 @@ function validate() {
   return "";
 }
 
-function generate() {
+function generate(opts = {}) {
+  const force = opts.force === true;
+  if (outputManuallyEdited && !force) return;
+
   const err = validate();
   if (err) {
     els.validation.textContent = err;
@@ -1201,7 +1204,9 @@ async function copyText(text, btn) {
   setTimeout(() => { btn.textContent = old; }, 1400);
 }
 
-function applyReplyDefault() {
+function forceGenerate() {
+  generate({ force: true });
+}
   const tpl = getSelectedTemplate();
   if (els.replyToCustomer) {
     els.replyToCustomer.checked = REPLY_DEFAULTS[tpl.id] ?? false;
@@ -1251,21 +1256,21 @@ function init() {
 
   const regen = () => generate();
   [
-    els.language,
-    els.replyToCustomer,
-    els.templateType,
     els.productName,
     els.customerName,
     els.orderNumber,
     els.companyName,
     els.signatureProfileName,
     els.signatureProfileText,
-    els.tone,
   ].forEach((el) => {
     if (!el) return;
     el.addEventListener("input", regen);
     el.addEventListener("change", regen);
   });
+
+  els.replyToCustomer?.addEventListener("change", forceGenerate);
+  els.tone?.addEventListener("change", forceGenerate);
+  els.language?.addEventListener("change", forceGenerate);
 
   els.signatureProfileSelect?.addEventListener("focus", () => {
     els.signatureProfileSelect.dataset.prevId = els.signatureProfileSelect.value;
@@ -1285,12 +1290,10 @@ function init() {
   els.addSignatureProfile?.addEventListener("click", addSignatureProfile);
   els.deleteSignatureProfile?.addEventListener("click", deleteActiveSignatureProfile);
 
-  els.language.addEventListener("change", generate);
-
   els.templateType.addEventListener("change", () => {
     applyReplyDefault();
     renderExtraFields();
-    generate();
+    forceGenerate();
   });
 
   $("copySubject")?.addEventListener("click", (e) => copyText(els.subjectOut.value, e.currentTarget));
@@ -1301,7 +1304,7 @@ function init() {
 
   els.subjectOut?.addEventListener("input", markOutputEdited);
   els.bodyOut?.addEventListener("input", markOutputEdited);
-  els.regenerateMail?.addEventListener("click", generate);
+  els.regenerateMail?.addEventListener("click", forceGenerate);
 
   generate();
 }
