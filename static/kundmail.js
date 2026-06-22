@@ -1207,6 +1207,8 @@ async function copyText(text, btn) {
 function forceGenerate() {
   generate({ force: true });
 }
+
+function applyReplyDefault() {
   const tpl = getSelectedTemplate();
   if (els.replyToCustomer) {
     els.replyToCustomer.checked = REPLY_DEFAULTS[tpl.id] ?? false;
