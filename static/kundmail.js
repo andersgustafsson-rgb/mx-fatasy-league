@@ -1208,6 +1208,55 @@ function forceGenerate() {
   generate({ force: true });
 }
 
+async function translateMailToDanish() {
+  const subject = cleanStr(els.subjectOut?.value);
+  const body = cleanStr(els.bodyOut?.value);
+  if (!subject && !body) {
+    if (els.validation) els.validation.textContent = "Skriv eller generera mail först.";
+    return;
+  }
+
+  const btn = els.translateToDanish;
+  const oldLabel = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Översätter…";
+  }
+  if (els.validation) els.validation.textContent = "";
+
+  try {
+    const res = await fetch("/api/kundmail/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject, body, from: "sv", to: "da" }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      if (els.validation) els.validation.textContent = data.error || "Översättning misslyckades.";
+      return;
+    }
+    els.subjectOut.value = data.subject || "";
+    els.bodyOut.value = data.body || "";
+    if (els.language) els.language.value = "da";
+    markOutputPristine();
+    if (els.validation) {
+      els.validation.textContent = "Översatt till danska.";
+      setTimeout(() => {
+        if (els.validation?.textContent === "Översatt till danska.") {
+          els.validation.textContent = "";
+        }
+      }, 2500);
+    }
+  } catch {
+    if (els.validation) els.validation.textContent = "Kunde inte nå servern.";
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldLabel || "Översätt till danska";
+    }
+  }
+}
+
 function applyReplyDefault() {
   const tpl = getSelectedTemplate();
   if (els.replyToCustomer) {
@@ -1241,6 +1290,7 @@ function init() {
   els.bodyOut = $("bodyOut");
   els.outputEditHint = $("outputEditHint");
   els.regenerateMail = $("regenerateMail");
+  els.translateToDanish = $("translateToDanish");
   els.validation = $("validation");
 
   const settings = loadSettings();
@@ -1307,6 +1357,7 @@ function init() {
   els.subjectOut?.addEventListener("input", markOutputEdited);
   els.bodyOut?.addEventListener("input", markOutputEdited);
   els.regenerateMail?.addEventListener("click", forceGenerate);
+  els.translateToDanish?.addEventListener("click", translateMailToDanish);
 
   generate();
 }

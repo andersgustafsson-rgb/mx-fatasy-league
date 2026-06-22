@@ -215,6 +215,9 @@
             <button id="regenerateMail" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">
               Generera om från mall
             </button>
+            <button id="translateToDanish" type="button" class="px-3 py-1.5 rounded-lg bg-sky-900/60 hover:bg-sky-800/80 text-xs border border-sky-700 text-sky-100">
+              Översätt till danska
+            </button>
             <button id="copySubject" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera ämne</button>
             <button id="copyBody" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera text</button>
             <button id="copyAll" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold">Kopiera allt</button>
@@ -223,7 +226,7 @@
 
         <p id="validation" class="text-xs text-amber-400"></p>
 
-        <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten manuellt. Byt «Språk i kundens mail» eller klicka «Generera om från mall» för att få ny text på valt språk.</p>
+        <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten. «Generera om från mall» byter till mall på valt språk. «Översätt till danska» översätter det du skrivit.</p>
 
         <div class="space-y-1">
           <label for="subjectOut" class="block text-xs font-medium text-slate-400">Ämne (kan redigeras)</label>
@@ -238,7 +241,7 @@
           ></textarea>
         </div>
 
-        <p class="text-[11px] text-slate-500">Byt «Språk i kundens mail» för att generera svenska eller danska från mallen. Redigera fritt innan du kopierar — inget skickas från sidan.</p>
+        <p class="text-[11px] text-slate-500">«Generera om från mall» = ny text från mallen. «Översätt till danska» = översätter ämne och meddelande som de står (även efter egna ändringar).</p>
       </section>
     </div>
   </div>

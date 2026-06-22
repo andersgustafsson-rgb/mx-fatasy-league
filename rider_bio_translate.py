@@ -42,13 +42,13 @@ def _split_for_translation(text: str, *, max_len: int = 3200) -> list[str]:
     return [p for p in parts if p]
 
 
-def _translate_chunk_en_sv(text: str) -> str:
+def _translate_chunk(text: str, *, source: str, target: str) -> str:
     text = (text or "").strip()
     if not text:
         return ""
     resp = requests.get(
         _GTX_URL,
-        params={"client": "gtx", "sl": "en", "tl": "sv", "dt": "t", "q": text},
+        params={"client": "gtx", "sl": source, "tl": target, "dt": "t", "q": text},
         headers=_HEADERS,
         timeout=12,
     )
@@ -57,6 +57,21 @@ def _translate_chunk_en_sv(text: str) -> str:
     if not data or not data[0]:
         return text
     return "".join(part[0] for part in data[0] if part and part[0])
+
+
+def _translate_chunk_en_sv(text: str) -> str:
+    return _translate_chunk(text, source="en", target="sv")
+
+
+def translate_text(text: str, *, source: str, target: str) -> str:
+    """Översätt text mellan språk (bevarar radbrytningar)."""
+    text = (text or "").strip()
+    if not text:
+        return ""
+    if source == target:
+        return text
+    chunks = _split_for_translation(text)
+    return "\n\n".join(_translate_chunk(chunk, source=source, target=target) for chunk in chunks).strip()
 
 
 def translate_en_to_sv(text: str) -> str:
