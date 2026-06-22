@@ -22,7 +22,10 @@ const TEMPLATE_DEFS = [
   },
   {
     id: "utgatt",
-    fields: [{ id: "alternativeProduct", type: "text" }],
+    fields: [
+      { id: "alternativeProduct", type: "text" },
+      { id: "shipRestOfOrder", type: "checkbox", default: false },
+    ],
   },
   {
     id: "forsening",
@@ -127,6 +130,7 @@ const UI = {
       description: "Produkten tas bort ur sortimentet.",
       fields: {
         alternativeProduct: { label: "Föreslagen ersättning (valfritt)" },
+        shipRestOfOrder: { label: "Fråga om stryka artikel och skicka övriga i ordern" },
       },
     },
     forsening: {
@@ -665,13 +669,23 @@ Vill du vänta på leverans när produkten kommit in, eller föredrar du att vi 
     }
     case "utgatt":
       body = `${intro}Vi måste tyvärr meddela att ${prod} har utgått ur vårt sortiment och inte kommer tillbaka i lager.`;
-      body += cleanStr(extras.alternativeProduct)
-        ? `
+      if (extras.shipRestOfOrder) {
+        body += `
 
-Som alternativ kan vi rekommendera ${cleanStr(extras.alternativeProduct)}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.`
-        : `
+Om du har fler artiklar i samma order kan vi tyvärr inte dela upp leveransen. Vill du att vi stryker ${prod} och skickar övriga artiklar i ordern, eller vill du avbryta hela ordern?`;
+        if (cleanStr(extras.alternativeProduct)) {
+          body += ` Som alternativ kan vi rekommendera ${cleanStr(extras.alternativeProduct)} om du vill byta artikel i stället.`;
+        }
+        body += ` Återkom gärna med vad som passar dig bäst.`;
+      } else if (cleanStr(extras.alternativeProduct)) {
+        body += `
+
+Som alternativ kan vi rekommendera ${cleanStr(extras.alternativeProduct)}. Säg till om du vill att vi hjälper dig med en ersättning eller avbryter ordern.`;
+      } else {
+        body += `
 
 Hör av dig om du vill avbryta ordern eller om vi kan hjälpa dig hitta ett alternativ.`;
+      }
       body += `\n\n${outro}`;
       break;
     case "forsening": {
@@ -843,13 +857,23 @@ Vil du vente på levering, når produktet er kommet ind, eller foretrækker du, 
     }
     case "utgatt":
       body = `${intro}Vi er desværre nødt til at meddele, at ${prod} er udgået af vores sortiment og ikke kommer tilbage på lager.`;
-      body += cleanStr(extras.alternativeProduct)
-        ? `
+      if (extras.shipRestOfOrder) {
+        body += `
 
-Som alternativ kan vi anbefale ${cleanStr(extras.alternativeProduct)}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.`
-        : `
+Hvis du har flere varer i samme ordre, kan vi desværre ikke dele leveringen. Vil du have os til at stryge ${prod} og sende de øvrige varer i ordren, eller vil du annullere hele ordren?`;
+        if (cleanStr(extras.alternativeProduct)) {
+          body += ` Som alternativ kan vi anbefale ${cleanStr(extras.alternativeProduct)}, hvis du vil skifte vare i stedet.`;
+        }
+        body += ` Vend gerne tilbage med, hvad der passer dig bedst.`;
+      } else if (cleanStr(extras.alternativeProduct)) {
+        body += `
+
+Som alternativ kan vi anbefale ${cleanStr(extras.alternativeProduct)}. Sig til, hvis du ønsker hjælp til en erstatning eller annullering af ordren.`;
+      } else {
+        body += `
 
 Kontakt os, hvis du ønsker at annullere ordren, eller hvis vi kan hjælpe med at finde et alternativ.`;
+      }
       body += `\n\n${outro}`;
       break;
     case "forsening": {
