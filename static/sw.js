@@ -1,5 +1,5 @@
 /* PWA service worker: cache static assets aggressively to cut Render egress. */
-const CACHE = "mx-fantasy-v21";
+const CACHE = "mx-fantasy-v22";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -48,6 +48,22 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (!sameOrigin(url)) return;
+
+  // kundmail.js uppdateras ofta — network-first så nya knappar/funktioner syns direkt.
+  if (url.pathname.endsWith("/kundmail.js")) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
 
   // Static assets: cache-first (repeat visits should not re-download from Render).
   if (url.pathname.startsWith("/static/")) {

@@ -1208,11 +1208,80 @@ function forceGenerate() {
   generate({ force: true });
 }
 
+function splitTranslateChunks(text, maxLen = 3000) {
+  const t = cleanStr(text);
+  if (!t) return [];
+  if (t.length <= maxLen) return [t];
+  const parts = [];
+  let buf = "";
+  for (const block of t.split(/(\n\n+)/)) {
+    if (buf.length + block.length > maxLen && buf) {
+      parts.push(buf.trim());
+      buf = "";
+    }
+    buf += block;
+  }
+  if (buf.trim()) parts.push(buf.trim());
+  return parts;
+}
+
+async function gtxTranslateChunk(text, source, target) {
+  const url = new URL("https://translate.googleapis.com/translate_a/single");
+  url.searchParams.set("client", "gtx");
+  url.searchParams.set("sl", source);
+  url.searchParams.set("tl", target);
+  url.searchParams.set("dt", "t");
+  url.searchParams.set("q", text);
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Översättning HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error("Ogiltigt översättningssvar");
+  return data[0].map((part) => part?.[0] || "").join("");
+}
+
+async function translateTextGtx(text, source = "sv", target = "da") {
+  if (source === target) return cleanStr(text);
+  const chunks = splitTranslateChunks(text);
+  if (!chunks.length) return "";
+  const out = [];
+  for (const chunk of chunks) {
+    out.push(await gtxTranslateChunk(chunk, source, target));
+  }
+  return out.join("\n\n");
+}
+
+async function translateViaServer(subject, body, source, target) {
+  const res = await fetch("/api/kundmail/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ subject, body, from: source, to: target }),
+  });
+  const raw = await res.text();
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("Servern svarade inte som förväntat — prova logga in igen.");
+  }
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Serveröversättning misslyckades");
+  }
+  return { subject: data.subject || "", body: data.body || "" };
+}
+
+function setTranslateStatus(msg, isError = false) {
+  if (!els.validation) return;
+  els.validation.textContent = msg || "";
+  els.validation.classList.toggle("text-amber-400", !isError);
+  els.validation.classList.toggle("text-rose-400", isError);
+}
+
 async function translateMailToDanish() {
   const subject = cleanStr(els.subjectOut?.value);
   const body = cleanStr(els.bodyOut?.value);
   if (!subject && !body) {
-    if (els.validation) els.validation.textContent = "Skriv eller generera mail först.";
+    setTranslateStatus("Skriv eller generera mail först.", true);
     return;
   }
 
@@ -1222,33 +1291,37 @@ async function translateMailToDanish() {
     btn.disabled = true;
     btn.textContent = "Översätter…";
   }
-  if (els.validation) els.validation.textContent = "";
+  setTranslateStatus("Översätter…");
 
   try {
-    const res = await fetch("/api/kundmail/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, body, from: "sv", to: "da" }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      if (els.validation) els.validation.textContent = data.error || "Översättning misslyckades.";
-      return;
+    let subjectDa = "";
+    let bodyDa = "";
+    try {
+      [subjectDa, bodyDa] = await Promise.all([
+        subject ? translateTextGtx(subject, "sv", "da") : Promise.resolve(""),
+        body ? translateTextGtx(body, "sv", "da") : Promise.resolve(""),
+      ]);
+    } catch (clientErr) {
+      console.warn("kundmail: client translate failed, trying server", clientErr);
+      const serverResult = await translateViaServer(subject, body, "sv", "da");
+      subjectDa = serverResult.subject;
+      bodyDa = serverResult.body;
     }
-    els.subjectOut.value = data.subject || "";
-    els.bodyOut.value = data.body || "";
+
+    if (!subjectDa && !bodyDa) {
+      throw new Error("Översättningen blev tom — försök igen.");
+    }
+
+    els.subjectOut.value = subjectDa;
+    els.bodyOut.value = bodyDa;
     if (els.language) els.language.value = "da";
     markOutputPristine();
-    if (els.validation) {
-      els.validation.textContent = "Översatt till danska.";
-      setTimeout(() => {
-        if (els.validation?.textContent === "Översatt till danska.") {
-          els.validation.textContent = "";
-        }
-      }, 2500);
-    }
-  } catch {
-    if (els.validation) els.validation.textContent = "Kunde inte nå servern.";
+    setTranslateStatus("Översatt till danska.");
+    setTimeout(() => {
+      if (els.validation?.textContent === "Översatt till danska.") setTranslateStatus("");
+    }, 3000);
+  } catch (err) {
+    setTranslateStatus(err?.message || "Översättning misslyckades.", true);
   } finally {
     if (btn) {
       btn.disabled = false;
