@@ -1367,6 +1367,10 @@
                     {% set is_complete = picks_status == 'has_picks' %}
                     {% set is_partial = picks_status == 'partial_picks' %}
                     {% include 'partials/picks_summary_board.html' %}
+                    {% if home_pick_portraits %}
+                    <script>window.HOME_PICK_PORTRAITS = {{ home_pick_portraits | tojson }};</script>
+                    <script src="{{ url_for('static', filename='home_picks_portraits.js') }}" defer></script>
+                    {% endif %}
                     <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
                       {% if picks_status == 'has_picks' %}
                         ✅ Inlämnat till tävlingen.

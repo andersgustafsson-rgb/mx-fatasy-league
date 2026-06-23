@@ -95,8 +95,17 @@
     html += '<div class="wizard-quick-picks__row">';
     chips.forEach((r) => {
       const used = isRiderSelectedInClass(riderClass, r.id);
+      let photo = r.portrait_url || r.racerx_portrait_url || '';
+      if (!photo && typeof window.effectivePhotoUrl === 'function') {
+        const rider = (window.allRiders || []).find((x) => Number(x.id) === Number(r.id));
+        photo = rider ? window.effectivePhotoUrl(rider) || '' : '';
+      }
+      const imgHtml = photo
+        ? `<img class="wizard-quick-chip__img" src="${escapeHtml(photo)}" alt="" loading="lazy" decoding="async" data-rider-id="${r.id}">`
+        : `<span class="wizard-quick-chip__img wizard-quick-chip__img--empty" aria-hidden="true"></span>`;
       html += `<button type="button" class="wizard-quick-chip${used ? ' is-used' : ''}"
         data-rider-id="${r.id}" data-rider-class="${riderClass}" ${used ? 'disabled' : ''}>
+        ${imgHtml}
         <span class="wizard-quick-chip__num">#${r.rider_number}</span>
         <span>${escapeHtml(r.name)}</span>
       </button>`;
@@ -118,6 +127,19 @@
         const rc = btn.dataset.riderClass;
         onQuickPick(rid, rc);
       });
+    });
+
+    el.querySelectorAll('.wizard-quick-chip__img[src]').forEach((img) => {
+      img.onerror = function () {
+        if (typeof window.handleImageError === 'function' && img.dataset.riderId) {
+          window.handleImageError(img);
+        } else {
+          img.style.visibility = 'hidden';
+        }
+      };
+      if (typeof window.applyRiderPortraitFraming === 'function') {
+        window.applyRiderPortraitFraming(img);
+      }
     });
 
     el.querySelectorAll('[data-action="last-race"]').forEach((btn) => {

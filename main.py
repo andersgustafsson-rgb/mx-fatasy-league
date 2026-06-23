@@ -1461,6 +1461,7 @@ def index():
     current_holeshot_450 = None
     current_holeshot_250 = None
     current_wildcard = None
+    home_pick_portraits: dict[str, dict[str, str]] = {}
     picks_status = "no_picks"
     picks_locked = True
     league_requests_count = 0
@@ -1572,10 +1573,12 @@ def index():
                     else {}
                 )
 
-                def _pick_portrait(rider: Rider) -> str:
-                    return _display_portrait_url_for_rider(
+                def _remember_pick_portraits(rider: Rider) -> dict[str, str]:
+                    payload = _rider_portrait_payload(
                         rider, riders_by_name=riders_by_name
                     )
+                    home_pick_portraits[str(rider.id)] = payload
+                    return payload
 
                 current_holeshot_450 = None
                 current_holeshot_250 = None
@@ -1595,13 +1598,17 @@ def index():
                 for pick in sorted_race_picks:
                         rider = riders_by_id.get(pick.rider_id)
                         if rider:
+                            portraits = _remember_pick_portraits(rider)
                             pick_data = {
                                 "position": pick.predicted_position,
                                 "rider_id": rider.id,
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
                                 "class": rider.class_name,
-                                "portrait_url": _pick_portrait(rider),
+                                "portrait_url": portraits["portrait_url"],
+                                "image_url": portraits["image_url"],
+                                "racerx_portrait_url": portraits["racerx_portrait_url"],
+                                "bike_brand": portraits["bike_brand"],
                             }
                             
                             # Separate by class (map WSX classes to display classes)
@@ -1666,12 +1673,16 @@ def index():
                 for holeshot in holeshot_picks:
                     rider = riders_by_id.get(holeshot.rider_id)
                     if rider:
+                        portraits = _remember_pick_portraits(rider)
                         hs_data = {
                             "rider_id": rider.id,
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
                             "class": rider.class_name,
-                            "portrait_url": _pick_portrait(rider),
+                            "portrait_url": portraits["portrait_url"],
+                            "image_url": portraits["image_url"],
+                            "racerx_portrait_url": portraits["racerx_portrait_url"],
+                            "bike_brand": portraits["bike_brand"],
                         }
                         if rider.class_name in ("450cc", "wsx_sx1"):
                             current_holeshot_450 = hs_data
@@ -1681,13 +1692,17 @@ def index():
                 if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
                     rider = riders_by_id.get(wildcard_pick.rider_id)
                     if rider:
+                        portraits = _remember_pick_portraits(rider)
                         current_wildcard = {
                             "rider_id": rider.id,
                             "rider_name": rider.name,
                             "rider_number": rider.rider_number,
                             "class": rider.class_name,
                             "position": wildcard_pick.position,
-                            "portrait_url": _pick_portrait(rider),
+                            "portrait_url": portraits["portrait_url"],
+                            "image_url": portraits["image_url"],
+                            "racerx_portrait_url": portraits["racerx_portrait_url"],
+                            "bike_brand": portraits["bike_brand"],
                         }
             except Exception as e:
                 print(f"Error getting current picks: {e}")
@@ -1846,6 +1861,7 @@ def index():
         league_requests_count=league_requests_count if is_logged_in else 0,
         picks_status=picks_status,
         picks_locked=picks_locked,
+        home_pick_portraits=home_pick_portraits if is_logged_in else {},
         is_admin=is_admin_user() if is_logged_in else False,
         is_logged_in=is_logged_in,
         needs_email=needs_email if is_logged_in else False,
@@ -2723,6 +2739,29 @@ def _display_portrait_url_for_rider(
 
     portrait_url = template_rider_image_src(rider, riders_by_name=riders_by_name)
     return portrait_url or ""
+
+
+def _rider_portrait_payload(
+    rider: Rider,
+    *,
+    riders_by_name: dict[str, list[Rider]] | None = None,
+) -> dict[str, str]:
+    """Porträttfält för UI — samma logik som race_picks JSON."""
+    from app.portrait_urls import lookup_racerx_portrait_by_name
+
+    racerx_url = lookup_racerx_portrait_by_name(rider.name) or ""
+    portrait_url = _display_portrait_url_for_rider(rider, riders_by_name=riders_by_name)
+    img_url = _extract_rider_image_url(rider) or racerx_url or ""
+    if (not portrait_url or "/static/brand_logos/" in str(portrait_url)) and (
+        racerx_url or img_url
+    ):
+        portrait_url = racerx_url or img_url or portrait_url
+    return {
+        "portrait_url": portrait_url or "",
+        "image_url": img_url or "",
+        "racerx_portrait_url": racerx_url,
+        "bike_brand": (rider.bike_brand or "").lower(),
+    }
 
 
 def _display_image_url_for_rider_row(
@@ -5268,6 +5307,22 @@ def _build_pick_suggestions_for_user(
             row["position"] = int(position)
         return row
 
+    def _enrich_chips_with_portraits(chips: list[dict]) -> list[dict]:
+        if not chips:
+            return chips
+        ids = [int(c["id"]) for c in chips]
+        riders = rider_query_for_list_ui().filter(Rider.id.in_(ids)).all()
+        by_id = {int(r.id): r for r in riders}
+        by_name = _riders_by_name_for(list(by_id.values()))
+        for chip in chips:
+            rider = by_id.get(int(chip["id"]))
+            if not rider:
+                continue
+            payload = _rider_portrait_payload(rider, riders_by_name=by_name)
+            chip["portrait_url"] = payload["portrait_url"]
+            chip["racerx_portrait_url"] = payload["racerx_portrait_url"]
+        return chips
+
     def _frequent_for_class(class_name: str, limit: int = 8) -> list[dict]:
         comp_ids = [
             c.id
@@ -5331,12 +5386,12 @@ def _build_pick_suggestions_for_user(
         "class_450": class_450,
         "class_250": class_250,
         "450": {
-            "last_race": _last_race_for_class(class_450),
-            "frequent": _frequent_for_class(class_450),
+            "last_race": _enrich_chips_with_portraits(_last_race_for_class(class_450)),
+            "frequent": _enrich_chips_with_portraits(_frequent_for_class(class_450)),
         },
         "250": {
-            "last_race": _last_race_for_class(class_250),
-            "frequent": _frequent_for_class(class_250),
+            "last_race": _enrich_chips_with_portraits(_last_race_for_class(class_250)),
+            "frequent": _enrich_chips_with_portraits(_frequent_for_class(class_250)),
         },
     }
 
