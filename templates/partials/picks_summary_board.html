@@ -27,9 +27,7 @@
           <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
             <span class="wizard-summary-pos">{{ i }}</span>
             {% if pick %}
-            <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async"
-              data-rider-id="{{ pick.rider_id }}"
-              {% if pick.portrait_url and '/brand_logos/' not in pick.portrait_url %}src="{{ pick.portrait_url }}"{% endif %}>
+            <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async" data-rider-id="{{ pick.rider_id }}">
             <div class="wizard-summary-rider">
               <span class="wizard-summary-num">#{{ pick.rider_number }}</span>
               <span class="wizard-summary-name">{{ pick.rider_name }}</span>
@@ -50,9 +48,7 @@
           <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
             <span class="wizard-summary-pos">{{ i }}</span>
             {% if pick %}
-            <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async"
-              data-rider-id="{{ pick.rider_id }}"
-              {% if pick.portrait_url and '/brand_logos/' not in pick.portrait_url %}src="{{ pick.portrait_url }}"{% endif %}>
+            <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async" data-rider-id="{{ pick.rider_id }}">
             <div class="wizard-summary-rider">
               <span class="wizard-summary-num">#{{ pick.rider_number }}</span>
               <span class="wizard-summary-name">{{ pick.rider_name }}</span>
@@ -71,9 +67,7 @@
       <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_450 %} wizard-summary-extra--empty{% endif %}">
         <span class="wizard-summary-extra__icon">⚡</span>
         {% if holeshot_450 %}
-        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async"
-          data-rider-id="{{ holeshot_450.rider_id }}"
-          {% if holeshot_450.portrait_url and '/brand_logos/' not in holeshot_450.portrait_url %}src="{{ holeshot_450.portrait_url }}"{% endif %}>
+        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async" data-rider-id="{{ holeshot_450.rider_id }}">
         {% else %}
         <div class="wizard-summary-portrait"></div>
         {% endif %}
@@ -85,9 +79,7 @@
       <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_250 %} wizard-summary-extra--empty{% endif %}">
         <span class="wizard-summary-extra__icon">⚡</span>
         {% if holeshot_250 %}
-        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async"
-          data-rider-id="{{ holeshot_250.rider_id }}"
-          {% if holeshot_250.portrait_url and '/brand_logos/' not in holeshot_250.portrait_url %}src="{{ holeshot_250.portrait_url }}"{% endif %}>
+        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async" data-rider-id="{{ holeshot_250.rider_id }}">
         {% else %}
         <div class="wizard-summary-portrait"></div>
         {% endif %}
@@ -101,9 +93,7 @@
         <span class="wizard-summary-extra__icon">🎲</span>
         <span class="wizard-summary-wc-pos">{% if wildcard and wildcard.position %}{{ wildcard.position }}{% else %}?{% endif %}</span>
         {% if wildcard %}
-        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async"
-          data-rider-id="{{ wildcard.rider_id }}"
-          {% if wildcard.portrait_url and '/brand_logos/' not in wildcard.portrait_url %}src="{{ wildcard.portrait_url }}"{% endif %}>
+        <img class="wizard-summary-portrait" alt="" loading="lazy" decoding="async" data-rider-id="{{ wildcard.rider_id }}">
         {% else %}
         <div class="wizard-summary-portrait"></div>
         {% endif %}
