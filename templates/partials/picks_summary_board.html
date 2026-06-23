@@ -1,0 +1,114 @@
+{# Visuell sammanfattning av picks (samma stil som race picks steg 3) #}
+{% set _p450 = picks_450 | default([]) %}
+{% set _p250 = picks_250 | default([]) %}
+{% set _l450 = class_450_label | default('450cc') %}
+{% set _l250 = class_250_label | default('250cc') %}
+{% set _is_wsx = is_wsx | default(false) %}
+{% set _complete = is_complete | default(false) %}
+{% set _partial = is_partial | default(false) %}
+
+<div class="wizard-picks-summary{% if _complete %} is-complete{% endif %} picks-summary--on-home">
+  <div class="wizard-summary-banner{% if not _complete %} is-pending{% endif %}">
+    {% if _complete %}
+      🏁 Alla val klara!
+    {% elif _partial %}
+      📝 Påbörjat — komplettera dina val
+    {% else %}
+      📋 Dina val
+    {% endif %}
+  </div>
+  <div class="wizard-summary-body">
+    <div class="wizard-summary-grid">
+      <div class="wizard-summary-col wizard-summary-col--450">
+        <h4 class="wizard-summary-col__title">{{ _l450 }} topp 6</h4>
+        <ol class="wizard-summary-list">
+          {% for i in range(1, 7) %}
+          {% set pick = _p450 | selectattr('position', 'equalto', i) | first %}
+          <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
+            <span class="wizard-summary-pos">{{ i }}</span>
+            {% if pick and pick.portrait_url %}
+            <img class="wizard-summary-portrait" src="{{ pick.portrait_url }}" alt="" loading="lazy" data-rider-id="{{ pick.rider_id }}" onerror="if(window.handleImageError){handleImageError(this);}else{this.onerror=null;this.style.visibility='hidden';}">
+            {% else %}
+            <div class="wizard-summary-portrait"></div>
+            {% endif %}
+            {% if pick %}
+            <div class="wizard-summary-rider">
+              <span class="wizard-summary-num">#{{ pick.rider_number }}</span>
+              <span class="wizard-summary-name">{{ pick.rider_name }}</span>
+            </div>
+            {% else %}
+            <span class="wizard-summary-empty">—</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      <div class="wizard-summary-col wizard-summary-col--250">
+        <h4 class="wizard-summary-col__title">{{ _l250 }} topp 6</h4>
+        <ol class="wizard-summary-list">
+          {% for i in range(1, 7) %}
+          {% set pick = _p250 | selectattr('position', 'equalto', i) | first %}
+          <li class="wizard-summary-slot{% if pick and i <= 3 %} wizard-summary-slot--p{{ i }}{% endif %}{% if not pick %} wizard-summary-slot--empty{% endif %}">
+            <span class="wizard-summary-pos">{{ i }}</span>
+            {% if pick and pick.portrait_url %}
+            <img class="wizard-summary-portrait" src="{{ pick.portrait_url }}" alt="" loading="lazy" data-rider-id="{{ pick.rider_id }}" onerror="if(window.handleImageError){handleImageError(this);}else{this.onerror=null;this.style.visibility='hidden';}">
+            {% else %}
+            <div class="wizard-summary-portrait"></div>
+            {% endif %}
+            {% if pick %}
+            <div class="wizard-summary-rider">
+              <span class="wizard-summary-num">#{{ pick.rider_number }}</span>
+              <span class="wizard-summary-name">{{ pick.rider_name }}</span>
+            </div>
+            {% else %}
+            <span class="wizard-summary-empty">—</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+
+    <div class="wizard-summary-extras">
+      <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_450 %} wizard-summary-extra--empty{% endif %}">
+        <span class="wizard-summary-extra__icon">⚡</span>
+        {% if holeshot_450 and holeshot_450.portrait_url %}
+        <img class="wizard-summary-portrait" src="{{ holeshot_450.portrait_url }}" alt="" loading="lazy" data-rider-id="{{ holeshot_450.rider_id }}" onerror="if(window.handleImageError){handleImageError(this);}">
+        {% else %}
+        <div class="wizard-summary-portrait"></div>
+        {% endif %}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">Holeshot {{ _l450 }}</div>
+          <div class="wizard-summary-extra__name">{% if holeshot_450 %}#{{ holeshot_450.rider_number }} {{ holeshot_450.rider_name }}{% else %}Ej vald{% endif %}</div>
+        </div>
+      </div>
+      <div class="wizard-summary-extra wizard-summary-extra--holeshot{% if not holeshot_250 %} wizard-summary-extra--empty{% endif %}">
+        <span class="wizard-summary-extra__icon">⚡</span>
+        {% if holeshot_250 and holeshot_250.portrait_url %}
+        <img class="wizard-summary-portrait" src="{{ holeshot_250.portrait_url }}" alt="" loading="lazy" data-rider-id="{{ holeshot_250.rider_id }}" onerror="if(window.handleImageError){handleImageError(this);}">
+        {% else %}
+        <div class="wizard-summary-portrait"></div>
+        {% endif %}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">Holeshot {{ _l250 }}</div>
+          <div class="wizard-summary-extra__name">{% if holeshot_250 %}#{{ holeshot_250.rider_number }} {{ holeshot_250.rider_name }}{% else %}Ej vald{% endif %}</div>
+        </div>
+      </div>
+      {% if not _is_wsx %}
+      <div class="wizard-summary-extra wizard-summary-extra--wildcard{% if not wildcard %} wizard-summary-extra--empty{% endif %}">
+        <span class="wizard-summary-extra__icon">🎲</span>
+        <span class="wizard-summary-wc-pos">{% if wildcard and wildcard.position %}{{ wildcard.position }}{% else %}?{% endif %}</span>
+        {% if wildcard and wildcard.portrait_url %}
+        <img class="wizard-summary-portrait" src="{{ wildcard.portrait_url }}" alt="" loading="lazy" data-rider-id="{{ wildcard.rider_id }}" onerror="if(window.handleImageError){handleImageError(this);}">
+        {% else %}
+        <div class="wizard-summary-portrait"></div>
+        {% endif %}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">Wildcard plats {{ wildcard.position if wildcard and wildcard.position else '—' }}</div>
+          <div class="wizard-summary-extra__name">{% if wildcard %}#{{ wildcard.rider_number }} {{ wildcard.rider_name }}{% else %}Ej valt{% endif %}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

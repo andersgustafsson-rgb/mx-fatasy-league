@@ -27,7 +27,7 @@
   }
 
   /* Smalare rader + större preview */
-  .pick-row { grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
+  .pick-row { display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
   .preview-img {
     width: 64px; height: 64px; border-radius: 9999px;
     /* RacerX-style cutouts (transparent PNG) ser bäst ut med contain i cirkel. */
@@ -295,7 +295,101 @@
       font-size: 13px;
     }
   }
+
+  /* Inför racet — ihopfällbara paneler */
+  .race-prep-panel {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(71, 85, 105, 0.45);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  .race-prep-panel--mx { border-color: rgba(52, 211, 153, 0.25); }
+  .race-prep-panel--sx { border-color: rgba(34, 211, 238, 0.2); }
+
+  .race-prep-head {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.35);
+    background: rgba(17, 24, 39, 0.5);
+  }
+  .race-prep-head h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+  .race-prep-head--mx h2 { color: #6ee7b7; }
+  .race-prep-head--sx h2 { color: #67e8f9; }
+  .race-prep-teaser {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0.25rem 0 0;
+  }
+
+  .race-prep-accordions {
+    display: flex;
+    flex-direction: column;
+  }
+  .race-prep-details {
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+  }
+  .race-prep-details:last-child { border-bottom: none; }
+  .race-prep-details summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+  }
+  .race-prep-details summary::-webkit-details-marker { display: none; }
+  .race-prep-details summary::after {
+    content: '＋';
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 400;
+    flex-shrink: 0;
+  }
+  .race-prep-details[open] summary::after { content: '−'; color: #94a3b8; }
+  .race-prep-details summary:hover {
+    background: rgba(51, 65, 85, 0.35);
+    color: #f1f5f9;
+  }
+  .race-prep-details[open] summary {
+    color: #e2e8f0;
+    background: rgba(30, 41, 59, 0.45);
+  }
+  .race-prep-details__body {
+    padding: 0 1rem 0.85rem;
+    font-size: 0.82rem;
+    color: #94a3b8;
+  }
+  .race-prep-kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+  }
+  .race-prep-kv:last-child { border-bottom: none; }
+  .race-prep-kv span:last-child { color: #e2e8f0; font-weight: 600; text-align: right; }
+  .race-prep-tip {
+    display: flex;
+    gap: 0.45rem;
+    padding: 0.25rem 0;
+    line-height: 1.4;
+  }
+  .race-prep-tip::before {
+    content: '·';
+    color: #64748b;
+    flex-shrink: 0;
+  }
 </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
@@ -393,106 +487,71 @@
 
     <!-- Trackmap + Bra att veta (MX alltid synlig; SX om bild i DB) -->
     {% if _trackmap_urls|length > 0 or _is_mx or _good_to_know %}
-    <div class="mb-6 bg-gray-800 rounded-lg p-4 border-2 {% if _is_mx %}border-emerald-500{% else %}border-cyan-500{% endif %}">
-      <h2 class="text-xl font-bold {% if _is_mx %}text-emerald-400{% else %}text-cyan-400{% endif %} mb-4 flex items-center">
-        {% if _show_layout_images %}🗺️ Banlayout{% else %}📌 Inför racet{% endif %}
-      </h2>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
+      <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
+        <h2>{% if _show_layout_images %}🗺️ Banlayout &amp; inför racet{% else %}📌 Inför racet{% endif %}</h2>
+        <p class="race-prep-teaser">
+          {{ competition.name }}
+          {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
+          · {{ riders_450_json|length + riders_250_json|length }} aktiva förare
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-4 lg:p-4">
         {% if _show_layout_images %}
-        <div class="lg:col-span-2 bg-gray-700 rounded-lg p-4 border border-cyan-500">
+        <div class="lg:col-span-2 p-4 lg:p-0 border-b lg:border-b-0 border-gray-700/50">
           <img id="main-trackmap"
                src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
                alt="Banlayout {{ competition.name }}"
-               class="w-full max-h-80 object-contain rounded mb-4 bg-gray-600">
-          
+               class="w-full max-h-56 lg:max-h-80 object-contain rounded bg-gray-800/80">
           {% if _trackmap_urls|length > 1 %}
-          <div class="flex flex-wrap gap-2 justify-center">
+          <div class="flex flex-wrap gap-2 justify-center mt-3">
             {% for turl in _trackmap_urls[:5] %}
               <img src="{{ url_for('static', filename=turl) }}"
-                   class="thumb w-16 h-12 object-cover rounded cursor-pointer {% if loop.first %}ring-2 ring-cyan-400{% endif %}"
+                   class="thumb w-14 h-10 object-cover rounded cursor-pointer opacity-80 hover:opacity-100 {% if loop.first %}ring-2 ring-cyan-500/50{% endif %}"
                    onclick="setMainTrackmap(this.src, this)">
             {% endfor %}
           </div>
           {% endif %}
         </div>
         {% endif %}
-        
-        <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} space-y-4">
-          <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-lg p-4">
-            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-              🏁 Race Info
-            </h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-blue-200">Bana:</span>
-                <span class="text-white font-semibold">{{ competition.name }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-blue-200">Datum:</span>
-                <span class="text-white font-semibold">{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span>
-              </div>
+
+        <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} race-prep-accordions">
+          <details class="race-prep-details" open>
+            <summary>🏁 Race Info</summary>
+            <div class="race-prep-details__body">
+              <div class="race-prep-kv"><span>Bana</span><span>{{ competition.name }}</span></div>
+              <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
               {% if _is_mx %}
-              <div class="flex justify-between">
-                <span class="text-blue-200">Serie:</span>
-                <span class="text-white font-semibold">Pro Motocross</span>
-              </div>
+              <div class="race-prep-kv"><span>Serie</span><span>Pro Motocross</span></div>
               {% elif competition.coast_250 %}
-              <div class="flex justify-between">
-                <span class="text-blue-200">250SX:</span>
-                <span class="text-white font-semibold">{{ competition.coast_250|capitalize }}</span>
-              </div>
+              <div class="race-prep-kv"><span>250SX</span><span>{{ competition.coast_250|capitalize }}</span></div>
               {% endif %}
             </div>
-          </div>
-          
-          <!-- Bra att veta -->
-          <div class="bg-gradient-to-br from-amber-600 to-orange-800 rounded-lg p-4 border border-amber-400/30">
-            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-              📌 Bra att veta
-            </h3>
-            <div class="space-y-2 text-sm text-amber-50">
+          </details>
+
+          <details class="race-prep-details">
+            <summary>📌 Bra att veta</summary>
+            <div class="race-prep-details__body">
               {% if _good_to_know %}
                 {% for tip in _good_to_know %}
-                <div class="flex items-start space-x-2">
-                  <span class="text-amber-200 shrink-0">•</span>
-                  <span>{{ tip }}</span>
-                </div>
+                <div class="race-prep-tip">{{ tip }}</div>
                 {% endfor %}
               {% else %}
-                <div class="flex items-start space-x-2">
-                  <span class="text-amber-200">•</span>
-                  <span>Kolla förares form från senaste racen</span>
-                </div>
-                <div class="flex items-start space-x-2">
-                  <span class="text-amber-200">•</span>
-                  <span>Holeshot är ofta avgörande</span>
-                </div>
+                <div class="race-prep-tip">Kolla förares form från senaste racen</div>
+                <div class="race-prep-tip">Holeshot är ofta avgörande</div>
               {% endif %}
+            </div>
+          </details>
 
+          <details class="race-prep-details">
+            <summary>📊 Statistik</summary>
+            <div class="race-prep-details__body">
+              <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
+              <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
+              <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
             </div>
-          </div>
-          
-          <!-- Stats -->
-          <div class="bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg p-4">
-            <h3 class="text-lg font-bold text-white mb-3 flex items-center">
-              📊 Statistik
-            </h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-purple-200">Aktiva förare:</span>
-                <span class="text-white font-semibold">{{ riders_450_json|length + riders_250_json|length }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-purple-200">{{ _class_450_hdr }}:</span>
-                <span class="text-white font-semibold">{{ riders_450_json|length }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-purple-200">{{ _class_250_hdr }}:</span>
-                <span class="text-white font-semibold">{{ riders_250_json|length }}</span>
-              </div>
-            </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>
@@ -500,6 +559,11 @@
 
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
+    {% set is_wsx = competition.series == 'WSX' %}
+    {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
+    {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
+    {% set class_450_data = 'wsx_sx1' if is_wsx else '450cc' %}
+    {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
     
     <!-- Picks Status Indicator -->
     <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800">
@@ -537,87 +601,105 @@
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
-<!-- START: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
-<div id="pick-form" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
-  {% set is_wsx = competition.series == 'WSX' %}
-  {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
-  {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
-  {% set class_450_data = 'wsx_sx1' if is_wsx else '450cc' %}
-  {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
+<div id="picks-wizard" class="picks-wizard">
+  <div class="picks-wizard-progress" aria-hidden="true">
+    <div class="picks-wizard-progress__seg" data-step="1"></div>
+    <div class="picks-wizard-progress__seg" data-step="2"></div>
+    <div class="picks-wizard-progress__seg" data-step="3"></div>
+  </div>
 
-  <!-- Kolumn: 450cc / SX1 -->
-  <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
-    {% for i in range(1, 7) %}
-      <div class="pick-row mb-1.5">
-        <img id="prev-450-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
-        <div class="flex items-center gap-2">
-          <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
-          <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
-            <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_450_data }}', {{ i }})">
-              <span class="selected-rider">-- välj förare --</span>
-              <div class="flex items-center gap-2">
-                <span class="clear-selection" onclick="clearRiderSelection('{{ class_450_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
-                <span class="dropdown-arrow">▼</span>
+  <!-- Steg 1: 450 / SX1 -->
+  <section id="wizard-step-1" class="wizard-step wizard-step-active" data-step="1">
+    <header class="wizard-step-hero wizard-step-hero--450">
+      <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bikers.svg') }}" alt="">
+      <div>
+        <h2>Steg 1 — {{ class_450_label }} topp 6</h2>
+        <p>Välj dina 6 förare. Snabbval ovan eller listan nedan.</p>
+      </div>
+    </header>
+    <div id="wizard-quick-450" class="wizard-quick-picks"></div>
+    <p id="wizard-slot-hint" class="wizard-slot-hint">Nu väljer du plats 1</p>
+    <div class="wizard-picks-column">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
+      {% for i in range(1, 7) %}
+        <div class="pick-row mb-1.5">
+          <img id="prev-450-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+          <div class="flex items-center gap-2">
+            <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
+            <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
+              <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_450_data }}', {{ i }})">
+                <span class="selected-rider">-- välj förare --</span>
+                <div class="flex items-center gap-2">
+                  <span class="clear-selection" onclick="clearRiderSelection('{{ class_450_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                  <span class="dropdown-arrow">▼</span>
+                </div>
               </div>
-            </div>
-            <div class="rider-selector-dropdown" style="display: none;">
-              <div class="search-box">
-                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_450_data }}', {{ i }}, this.value)">
+              <div class="rider-selector-dropdown" style="display: none;">
+                <div class="search-box">
+                  <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_450_data }}', {{ i }}, this.value)">
+                </div>
+                <div class="rider-list"></div>
               </div>
-              <div class="rider-list"></div>
             </div>
           </div>
         </div>
-      </div>
-    {% endfor %}
-  </div>
+      {% endfor %}
+    </div>
+  </section>
 
-  <!-- Kolumn: 250cc / SX2 -->
-  <div>
-    <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
-    {% for i in range(1, 7) %}
-      <div class="pick-row mb-1.5">
-        <img id="prev-250-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
-        <div class="flex items-center gap-2">
-          <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
-          <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
-            <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_250_data }}', {{ i }})">
-              <span class="selected-rider">-- välj förare --</span>
-              <div class="flex items-center gap-2">
-                <span class="clear-selection" onclick="clearRiderSelection('{{ class_250_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
-                <span class="dropdown-arrow">▼</span>
+  <!-- Steg 2: 250 / SX2 -->
+  <section id="wizard-step-2" class="wizard-step" data-step="2" hidden>
+    <header class="wizard-step-hero wizard-step-hero--250">
+      <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
+      <div>
+        <h2>Steg 2 — {{ class_250_label }} topp 6</h2>
+        <p>Välj 6 förare i {{ class_250_label }}.</p>
+      </div>
+    </header>
+    <div id="wizard-quick-250" class="wizard-quick-picks"></div>
+    <p class="wizard-slot-hint">Nu väljer du plats 1</p>
+    <div class="wizard-picks-column">
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
+      {% for i in range(1, 7) %}
+        <div class="pick-row mb-1.5">
+          <img id="prev-250-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+          <div class="flex items-center gap-2">
+            <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
+            <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
+              <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_250_data }}', {{ i }})">
+                <span class="selected-rider">-- välj förare --</span>
+                <div class="flex items-center gap-2">
+                  <span class="clear-selection" onclick="clearRiderSelection('{{ class_250_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
+                  <span class="dropdown-arrow">▼</span>
+                </div>
               </div>
-            </div>
-            <div class="rider-selector-dropdown" style="display: none;">
-              <div class="search-box">
-                <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_250_data }}', {{ i }}, this.value)">
+              <div class="rider-selector-dropdown" style="display: none;">
+                <div class="search-box">
+                  <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('{{ class_250_data }}', {{ i }}, this.value)">
+                </div>
+                <div class="rider-list"></div>
               </div>
-              <div class="rider-list"></div>
             </div>
           </div>
         </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Steg 3: Holeshot + Wildcard -->
+  <section id="wizard-step-3" class="wizard-step" data-step="3" hidden>
+    <header class="wizard-step-hero wizard-step-hero--bonus">
+      <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bike_silhouette.svg') }}" alt="">
+      <div>
+        <h2>Steg 3 — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
+        <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
       </div>
-    {% endfor %}
-  </div>
+    </header>
 
-</div>
+    <div id="wizard-picks-summary" class="wizard-picks-summary" aria-live="polite"></div>
 
-<!-- Hidden select elements for form submission -->
-{% for i in range(1, 7) %}
-  <select name="pick_450_{{ i }}" style="display: none;">
-    <option value="">-- välj förare --</option>
-  </select>
-  <select name="pick_250_{{ i }}" style="display: none;">
-    <option value="">-- välj förare --</option>
-  </select>
-{% endfor %}
-<!-- SLUT: BYT HELA PICK-FORM-BLOCKET TILL DENNA VERSION -->
-
-
-
-
-    <div class="mt-4 sm:mt-6">
+    <div id="wizard-step-3-forms" class="wizard-step-3-forms">
+    <div class="mt-2">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
@@ -651,54 +733,80 @@
           </div>
         </div>
       </div>
-      
-      <!-- Hidden select elements for form submission -->
       <select id="holeshot-450" name="holeshot_450" style="display: none;">
         <option value="">-- välj förare --</option>
       </select>
       <select id="holeshot-250" name="holeshot_250" style="display: none;">
         <option value="">-- välj förare --</option>
       </select>
-        </div>
+    </div>
 
     {% if competition.series != 'WSX' %}
     <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-100 dark:bg-purple-800 rounded">
-      <h3 class="font-bold text-base sm:text-lg text-purple-900 dark:text-purple-200">🎲 Wildcard – slumpa en plats (10–20) & välj en 450cc‑förare</h3>
-      <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2 sm:items-center">
-        <button type="button" id="wildcard-roll-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm sm:text-base" onclick="rollWildcard()">Slumpa plats</button>
+      <h3 class="font-bold text-base sm:text-lg text-purple-900 dark:text-purple-200">Wildcard</h3>
+      <p class="text-sm text-purple-800 dark:text-purple-200/90 mt-1 mb-3">Snurra för plats 10–20, välj sedan en 450-förare.</p>
+      <div class="wildcard-wheel-wrap">
+        <div class="wildcard-wheel-pointer" aria-hidden="true"></div>
+        <div id="wildcard-wheel" class="wildcard-wheel">
+          <div id="wildcard-wheel-hub" class="wildcard-wheel__hub">?</div>
+        </div>
+        <button type="button" id="wildcard-roll-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm sm:text-base font-bold">Snurra plats</button>
         <span id="wildcard-position-label" class="font-bold text-purple-900 dark:text-purple-100 text-sm sm:text-base"></span>
         <input type="hidden" id="wildcard-position" />
-        <div class="rider-selector flex-1" data-class="wildcard-pick">
-          <div class="rider-selector-input" onclick="toggleRiderSelector('wildcard-pick', 0)">
-            <span class="selected-rider">-- välj 450cc förare --</span>
-            <span class="dropdown-arrow">▼</span>
+      </div>
+      <div class="rider-selector w-full" data-class="wildcard-pick">
+        <div class="rider-selector-input" onclick="toggleRiderSelector('wildcard-pick', 0)">
+          <span class="selected-rider">-- välj 450cc förare --</span>
+          <span class="dropdown-arrow">▼</span>
+        </div>
+        <div class="rider-selector-dropdown" style="display: none;">
+          <div class="search-box">
+            <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('wildcard-pick', 0, this.value)">
           </div>
-          <div class="rider-selector-dropdown" style="display: none;">
-            <div class="search-box">
-              <input type="text" placeholder="Sök förare..." onkeyup="filterRiders('wildcard-pick', 0, this.value)">
-            </div>
-            <div class="rider-list"></div>
+          <div class="rider-list"></div>
+        </div>
       </div>
-    </div>
-
-        <!-- Hidden select element for form submission -->
-        <select id="wildcard-pick" name="wildcard_pick" style="display: none;">
-  <option value="">-- välj 450cc förare --</option>
-        </select>
-      </div>
+      <select id="wildcard-pick" name="wildcard_pick" style="display: none;">
+        <option value="">-- välj 450cc förare --</option>
+      </select>
     </div>
     {% endif %}
+    </div><!-- /wizard-step-3-forms -->
 
-    <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
-      <button id="save-picks-btn" onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">💾 Spara Mina Val</button>
-      {% if picks_locked %}
-      <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
-      {% else %}
-      <button type="button" onclick="clearMyPicks()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">🧹 Rensa alla val</button>
-      {% endif %}
+    <div id="wizard-step-save" class="wizard-step-save" style="display: none;">
+      <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
+        <button id="save-picks-btn" onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">✅ Lämna in mina val</button>
+        {% if picks_locked %}
+        <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
+        {% else %}
+        <button type="button" onclick="clearMyPicks()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">🧹 Rensa alla val</button>
+        {% endif %}
+      </div>
     </div>
+  </section>
+
+  <footer class="wizard-nav">
+    <button type="button" id="wizard-btn-back" class="wizard-nav__btn wizard-nav__btn--back" disabled>← Tillbaka</button>
+    <span id="wizard-step-label" class="wizard-nav__label">Steg 1 av 3</span>
+    <button type="button" id="wizard-btn-next" class="wizard-nav__btn wizard-nav__btn--next">Nästa: {{ class_250_label }} →</button>
+  </footer>
+  <p class="wizard-draft-note">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
+</div>
+
+<!-- Hidden select elements for form submission -->
+{% for i in range(1, 7) %}
+  <select name="pick_450_{{ i }}" style="display: none;">
+    <option value="">-- välj förare --</option>
+  </select>
+  <select name="pick_250_{{ i }}" style="display: none;">
+    <option value="">-- välj förare --</option>
+  </select>
+{% endfor %}
 
     {% else %}
+    {% set is_wsx = competition.series == 'WSX' %}
+    {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
+    {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">Resultat vs Dina Val</h2>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
       <div>
@@ -735,14 +843,15 @@
   const actualResults = {{ actual_results|tojson }};
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
+  window.allRiders = allRiders;
   const staticRiderImages = {{ static_rider_images | tojson }};
   const portraitsInDropdown = {{ portraits_in_dropdown | tojson }};
   // NYTT: OUT-lista från servern för att kunna validera i UI
   const OUT_IDS = {{ out_ids | tojson }};
   // Coast-filtrering för 250cc
   const competitionCoast = {{ competition.coast_250|tojson }};
+  const pickSuggestions = {{ pick_suggestions | default({}) | tojson }};
 
-  /** Dolda select name="pick_450_N" / pick_250_N även för WSX (HTML använder alltid 450/250). */
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
     if (Number.isNaN(pos) || pos < 1 || pos > 6) return null;
@@ -750,6 +859,7 @@
     if (riderClass === '250cc' || riderClass === 'wsx_sx2') return `pick_250_${pos}`;
     return null;
   }
+  window.hiddenPickSelectName = hiddenPickSelectName;
 
   function isOutRiderId(rid) {
     return OUT_IDS.some((x) => Number(x) === Number(rid));
@@ -759,6 +869,7 @@
     const brand = r.bike_brand || '';
     return `#${r.rider_number} ${r.name} (${brand})`;
   }
+  window.riderOptionLabel = riderOptionLabel;
 
   function pickColumn450List() {
     return allRiders
@@ -799,9 +910,12 @@
       div.dataset.out = 'true';
     }
     const outHtml = div.dataset.out === 'true' ? '<span class="out-badge">OUT</span>' : '';
-    const avatarHtml = portraitsInDropdown
-      ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '">'
-      : '<span class="rider-avatar-placeholder" aria-hidden="true"></span>';
+    const photo = effectivePhotoUrl(rider);
+    const avatarHtml = photo
+      ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '" src="' + String(photo).replace(/"/g, '&quot;') + '">'
+      : (portraitsInDropdown
+        ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '">'
+        : '<span class="rider-avatar-placeholder" aria-hidden="true"></span>');
     div.innerHTML =
       avatarHtml +
       '<span class="rider-info">' +
@@ -815,6 +929,16 @@
       outHtml;
     div.querySelector('.rider-name').textContent = rider.name || '';
     div.querySelector('.rider-brand').textContent = rider.bike_brand || '';
+
+    if (photo) {
+      const av = div.querySelector('.rider-avatar');
+      if (av) {
+        applyRiderPortraitFraming(av);
+        av.onerror = function () {
+          handleImageError(this);
+        };
+      }
+    }
 
     div.addEventListener('click', () => {
       if (dataClass === 'wildcard-pick') {
@@ -957,6 +1081,10 @@
       }
     }
 
+    if (window.PicksWizard && typeof window.PicksWizard.getStep === 'function') {
+      picks.wizardStep = window.PicksWizard.getStep();
+    }
+
     localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(picks));
   }
 
@@ -1025,6 +1153,7 @@
             if (hiddenSelect) {
               hiddenSelect.value = pick.riderId;
             }
+            selector.dataset.selectedRiderId = String(pick.riderId);
           }
         }
       });
@@ -1042,6 +1171,7 @@
           if (hiddenSelect) {
             hiddenSelect.value = pick.riderId;
           }
+          selector.dataset.selectedRiderId = String(pick.riderId);
         }
       }
 
@@ -1049,8 +1179,17 @@
       if (!isWSXSeries && picks.wildcardPosition) {
         const wildcardPosEl = document.getElementById('wildcard-position');
         const wildcardLabelEl = document.getElementById('wildcard-position-label');
+        const wildcardHub = document.getElementById('wildcard-wheel-hub');
         if (wildcardPosEl) wildcardPosEl.value = picks.wildcardPosition;
-        if (wildcardLabelEl) wildcardLabelEl.textContent = `Plats ${picks.wildcardPosition}`;
+        if (wildcardLabelEl) wildcardLabelEl.textContent = `Din plats: ${picks.wildcardPosition}`;
+        if (wildcardHub) {
+          wildcardHub.textContent = String(picks.wildcardPosition);
+          wildcardHub.classList.add('has-result');
+        }
+      }
+
+      if (picks.wizardStep && window.PicksWizard && typeof window.PicksWizard.goToStep === 'function') {
+        window.PicksWizard.goToStep(Number(picks.wizardStep), { skipSave: true });
       }
 
       // Update rider selectors to hide selected riders
@@ -1059,6 +1198,8 @@
       
       // Remove wrong coast selections after loading picks
       removeWrongCoastSelections();
+
+      if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
 
     } catch (error) {
       console.error('Error loading picks from localStorage:', error);
@@ -1292,6 +1433,7 @@
     
     // Save picks to localStorage
     savePicksToStorage();
+    if (window.PicksWizard && window.PicksWizard.refresh) window.PicksWizard.refresh();
   }
 
   function filterRiders(riderClass, position, searchTerm) {
@@ -1394,9 +1536,11 @@
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
     }
+    if (selector) selector.dataset.selectedRiderId = String(riderId);
     
     // Save picks to localStorage
     savePicksToStorage();
+    if (window.PicksWizard && window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
   }
 
   // Handle holeshot rider selection
@@ -1424,9 +1568,11 @@
     if (hiddenSelect) {
       hiddenSelect.value = riderId;
     }
+    if (selector) selector.dataset.selectedRiderId = String(riderId);
     
     // Save picks to localStorage
     savePicksToStorage();
+    if (window.PicksWizard && window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
   }
 
   // Clear rider selection
@@ -1461,6 +1607,7 @@
     
     // Save picks to localStorage
     savePicksToStorage();
+    if (window.PicksWizard && window.PicksWizard.refresh) window.PicksWizard.refresh();
   }
 
   // Update rider selector options (replaces updateDropdowns for new system)
@@ -1662,6 +1809,29 @@ function brandLogoSrcFor(rider) {
   return `/static/brand_logos/${logoName}.png`;
 }
 
+/** Riktigt porträtt från server-JSON (samma som gamla race picks). */
+function effectivePhotoUrl(r) {
+  if (!r) return null;
+  if (r.racerx_portrait_url) {
+    const u = normalizePortraitUrl(r.racerx_portrait_url);
+    if (u) return u;
+  }
+  if (r.portrait_url && !r.portrait_url.includes('/static/brand_logos/')) {
+    return r.portrait_url;
+  }
+  if (r.has_db_portrait) {
+    return `/rider_portrait/${r.id}`;
+  }
+  if (r.image_url) {
+    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) {
+      const u = normalizePortraitUrl(r.image_url);
+      if (u) return u;
+    }
+    if (r.image_url.startsWith('data:')) return r.image_url;
+  }
+  return null;
+}
+
 function imgSrcForDropdown(riderId) {
   if (!portraitsInDropdown) return null;
   return imgSrcFor(riderId);
@@ -1705,21 +1875,8 @@ function imgSrcFor(riderId) {
     return '/static/brand_logos/honda.png'; // Default fallback
   }
 
-  if (r.portrait_url) {
-    return r.portrait_url;
-  }
-
-  if (r.has_db_portrait) {
-    return `/rider_portrait/${r.id}`;
-  }
-
-  // Extern CDN efter DB-porträtt (undvik team-loggor som blockerar riktigt porträtt)
-  if (r.image_url) {
-    if (r.image_url.startsWith('http://') || r.image_url.startsWith('https://')) {
-      const u = normalizePortraitUrl(r.image_url);
-      if (u) return u;
-    }
-  }
+  const photo = effectivePhotoUrl(r);
+  if (photo) return photo;
 
   if (r.image_url) {
     if (r.image_url.startsWith('data:')) return r.image_url;
@@ -1781,6 +1938,13 @@ function imgSrcFor(riderId) {
   // 6. Final fallback to Honda logo
   return '/static/brand_logos/honda.png';
 }
+
+window.imgSrcFor = imgSrcFor;
+window.handleImageError = handleImageError;
+window.normalizePortraitUrl = normalizePortraitUrl;
+window.loadSelectedRiderPortrait = loadSelectedRiderPortrait;
+window.applyRiderPortraitFraming = applyRiderPortraitFraming;
+window.effectivePhotoUrl = effectivePhotoUrl;
 
   // Function to handle image loading errors
 function handleImageError(img) {
@@ -2171,7 +2335,7 @@ function onPickChange(cls, pos, riderId = null) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
           if (selector) {
-            const rider = allRiders.find(r => r.id === holeshot450Id);
+            const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
             if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
@@ -2182,6 +2346,7 @@ function onPickChange(cls, pos, riderId = null) {
               if (clearBtn) {
                 clearBtn.style.display = 'block';
               }
+              selector.dataset.selectedRiderId = String(holeshot450Id);
             }
           }
         }
@@ -2192,7 +2357,7 @@ function onPickChange(cls, pos, riderId = null) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
           if (selector) {
-            const rider = allRiders.find(r => r.id === holeshot250Id);
+            const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
             if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
@@ -2203,6 +2368,7 @@ function onPickChange(cls, pos, riderId = null) {
               if (clearBtn) {
                 clearBtn.style.display = 'block';
               }
+              selector.dataset.selectedRiderId = String(holeshot250Id);
             }
           }
         }
@@ -2215,7 +2381,7 @@ function onPickChange(cls, pos, riderId = null) {
           // Update visual selector
           const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
           if (selector) {
-            const rider = allRiders.find(r => r.id === riderId);
+            const rider = allRiders.find(r => Number(r.id) === Number(riderId));
             if (rider) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
@@ -2226,6 +2392,7 @@ function onPickChange(cls, pos, riderId = null) {
               if (clearBtn) {
                 clearBtn.style.display = 'block';
               }
+              selector.dataset.selectedRiderId = String(riderId);
             }
           }
         }
@@ -2241,6 +2408,11 @@ function onPickChange(cls, pos, riderId = null) {
               const wildcardLabelEl = document.getElementById("wildcard-position-label");
               if (wildcardPosEl) wildcardPosEl.value = posVal;
               if (wildcardLabelEl) wildcardLabelEl.textContent = `Din plats: ${posVal}`;
+              const wildcardHub = document.getElementById('wildcard-wheel-hub');
+              if (wildcardHub) {
+                wildcardHub.textContent = String(posVal);
+                wildcardHub.classList.add('has-result');
+              }
               btn.disabled = true;
               btn.classList.add("opacity-50", "cursor-not-allowed");
             } else {
@@ -2292,6 +2464,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
       // Remove wrong coast selections after loading picks from server
       removeWrongCoastSelections();
+
+      if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
       
     } catch (e) {
       console.error(e);
@@ -2472,6 +2646,29 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       if (!Number.isNaN(id) && id > 0) return id;
     }
 
+    const dataClass = selector.dataset.class || '';
+    if (dataClass === 'holeshot-450') {
+      const h = document.getElementById('holeshot-450');
+      if (h?.value) {
+        const id = parseInt(h.value, 10);
+        if (!Number.isNaN(id) && id > 0) return id;
+      }
+    }
+    if (dataClass === 'holeshot-250') {
+      const h = document.getElementById('holeshot-250');
+      if (h?.value) {
+        const id = parseInt(h.value, 10);
+        if (!Number.isNaN(id) && id > 0) return id;
+      }
+    }
+    if (dataClass === 'wildcard-pick') {
+      const h = document.getElementById('wildcard-pick');
+      if (h?.value) {
+        const id = parseInt(h.value, 10);
+        if (!Number.isNaN(id) && id > 0) return id;
+      }
+    }
+
     const riderClass = selector.dataset.class;
     const position = selector.dataset.position;
     if (riderClass && position) {
@@ -2507,6 +2704,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
     return null;
   }
+  window.getRiderIdFromSelector = getRiderIdFromSelector;
 
   async function savePicks() {
     
@@ -2856,6 +3054,28 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
       // Load user picks (don't clear them automatically)
       await fetchAndDisplayMyPicks();
+
+      // Återställ utkast från localStorage (över skriver server om osparat utkast finns)
+      if (localStorage.getItem(`race_picks_${competitionId}`)) {
+        loadSavedPicksFromStorage();
+      }
+
+      const wizardRoot = document.getElementById('picks-wizard');
+      if (wizardRoot && window.PicksWizard) {
+        const ps = pickSuggestions || {};
+        window.PicksWizard.init({
+          competitionId,
+          isWSX: isWSXSeries,
+          class450: ps.class_450 || (isWSXSeries ? 'wsx_sx1' : '450cc'),
+          class250: ps.class_250 || (isWSXSeries ? 'wsx_sx2' : '250cc'),
+          label450: isWSXSeries ? 'SX1' : '450cc',
+          label250: isWSXSeries ? 'SX2' : '250cc',
+          suggestions: ps,
+        });
+        setTimeout(() => {
+          if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
+        }, 150);
+      }
       
       // Mark picks as saved after loading
       setTimeout(() => {
@@ -2899,6 +3119,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}"></script>
 
 </body>
 </html>

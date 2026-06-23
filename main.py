@@ -1566,6 +1566,20 @@ def index():
                     .filter(Rider.id.in_(pick_rider_ids))
                     .all()
                 } if pick_rider_ids else {}
+                riders_by_name = (
+                    _riders_by_name_for(list(riders_by_id.values()))
+                    if riders_by_id
+                    else {}
+                )
+
+                def _pick_portrait(rider: Rider) -> str:
+                    return _display_portrait_url_for_rider(
+                        rider, riders_by_name=riders_by_name
+                    )
+
+                current_holeshot_450 = None
+                current_holeshot_250 = None
+                current_wildcard = None
                 
                 # Check if picks are complete (all required picks must be filled)
                 is_wsx = upcoming_race.series == "WSX"
@@ -1583,9 +1597,11 @@ def index():
                         if rider:
                             pick_data = {
                                 "position": pick.predicted_position,
+                                "rider_id": rider.id,
                                 "rider_name": rider.name,
                                 "rider_number": rider.rider_number,
-                                "class": rider.class_name
+                                "class": rider.class_name,
+                                "portrait_url": _pick_portrait(rider),
                             }
                             
                             # Separate by class (map WSX classes to display classes)
@@ -1635,40 +1651,44 @@ def index():
                 # Only mark as "has_picks" if ALL required picks are complete
                 if race_picks_complete and holeshot_complete and wildcard_complete:
                     picks_status = "has_picks"
+                elif (
+                    race_picks_450_count > 0
+                    or race_picks_250_count > 0
+                    or holeshot_450
+                    or holeshot_250
+                    or (wildcard_pick and wildcard_pick.rider_id)
+                ):
+                    picks_status = "partial_picks"
                 else:
                     picks_status = "no_picks"
                 
                 # Process holeshot picks for display
-                    current_holeshot_450 = None
-                    current_holeshot_250 = None
-                    for holeshot in holeshot_picks:
-                        rider = riders_by_id.get(holeshot.rider_id)
-                        if rider:
-                            # Map WSX classes to display classes
-                            if rider.class_name in ("450cc", "wsx_sx1"):
-                                current_holeshot_450 = {
-                                    "rider_name": rider.name,
-                                    "rider_number": rider.rider_number,
-                                    "class": rider.class_name
-                                }
-                            elif rider.class_name in ("250cc", "wsx_sx2"):
-                                current_holeshot_250 = {
-                                    "rider_name": rider.name,
-                                    "rider_number": rider.rider_number,
-                                "class": rider.class_name
-                            }
-                    
-                    # Process wildcard pick (only for non-WSX series)
-                    current_wildcard = None
-                    if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
-                        rider = riders_by_id.get(wildcard_pick.rider_id)
-                        if rider:
-                            current_wildcard = {
-                                "rider_name": rider.name,
-                                "rider_number": rider.rider_number,
-                                "class": rider.class_name,
-                                "position": wildcard_pick.position
-                            }
+                for holeshot in holeshot_picks:
+                    rider = riders_by_id.get(holeshot.rider_id)
+                    if rider:
+                        hs_data = {
+                            "rider_id": rider.id,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name,
+                            "portrait_url": _pick_portrait(rider),
+                        }
+                        if rider.class_name in ("450cc", "wsx_sx1"):
+                            current_holeshot_450 = hs_data
+                        elif rider.class_name in ("250cc", "wsx_sx2"):
+                            current_holeshot_250 = hs_data
+                
+                if wildcard_pick and wildcard_pick.rider_id and upcoming_race and upcoming_race.series != "WSX":
+                    rider = riders_by_id.get(wildcard_pick.rider_id)
+                    if rider:
+                        current_wildcard = {
+                            "rider_id": rider.id,
+                            "rider_name": rider.name,
+                            "rider_number": rider.rider_number,
+                            "class": rider.class_name,
+                            "position": wildcard_pick.position,
+                            "portrait_url": _pick_portrait(rider),
+                        }
             except Exception as e:
                 print(f"Error getting current picks: {e}")
                 current_picks_450 = []
@@ -2665,6 +2685,44 @@ def template_rider_image_src(
             return normalize_racerx_portrait_url_bio(url) or url
         return url
     return brand_fallback
+
+
+def _extract_rider_image_url(rider: Rider) -> str | None:
+    """Normaliserad extern/lokal image_url — DB, syskon, sedan RacerX-CSV."""
+    from app.portrait_urls import lookup_racerx_portrait_by_name, normalize_racerx_portrait_url, score_racerx_portrait_url
+
+    if rider and rider.image_url:
+        raw = str(rider.image_url).strip()
+        if raw:
+            if raw.startswith(("http://", "https://")):
+                if score_racerx_portrait_url(raw) >= 0:
+                    return normalize_racerx_portrait_url(raw)
+            elif raw.startswith("data:"):
+                return raw
+            elif not raw.startswith(("riders/http",)) and "://" not in raw:
+                return normalize_racerx_portrait_url(raw) if raw else None
+    return lookup_racerx_portrait_by_name(getattr(rider, "name", None) if rider else None)
+
+
+def _display_portrait_url_for_rider(
+    rider: Rider,
+    *,
+    riders_by_name: dict[str, list[Rider]] | None = None,
+) -> str:
+    """Porträtt-URL för race picks — RacerX/DB före statiska gissningar och märkeslogga."""
+    img_url = _extract_rider_image_url(rider)
+    if not img_url:
+        for alt in _riders_for_image_lookup(rider, riders_by_name=riders_by_name):
+            if alt.id == rider.id:
+                continue
+            img_url = _extract_rider_image_url(alt)
+            if img_url:
+                break
+    if img_url:
+        return img_url
+
+    portrait_url = template_rider_image_src(rider, riders_by_name=riders_by_name)
+    return portrait_url or ""
 
 
 def _display_image_url_for_rider_row(
@@ -5185,6 +5243,104 @@ def _ensure_competition_result_moto_columns():
         print(f"Warning: moto column ensure failed: {e}")
 
 
+def _build_pick_suggestions_for_user(
+    user_id: int,
+    comp: Competition,
+    out_ids: set[int],
+) -> dict:
+    """Quick-pick chips: last race top-6 + most frequent picks in same series."""
+    from sqlalchemy import func
+
+    series = (getattr(comp, "series", None) or "").strip()
+    is_wsx = series == "WSX"
+    class_450 = "wsx_sx1" if is_wsx else "450cc"
+    class_250 = "wsx_sx2" if is_wsx else "250cc"
+    blocked = set(int(x) for x in (out_ids or []))
+
+    def _chip(rider: Rider, position: int | None = None) -> dict:
+        row = {
+            "id": int(rider.id),
+            "name": rider.name,
+            "rider_number": rider.rider_number,
+            "bike_brand": rider.bike_brand or "",
+        }
+        if position is not None:
+            row["position"] = int(position)
+        return row
+
+    def _frequent_for_class(class_name: str, limit: int = 8) -> list[dict]:
+        comp_ids = [
+            c.id
+            for c in Competition.query.filter(Competition.series == series).all()
+            if c.id != comp.id
+        ]
+        if not comp_ids:
+            return []
+        rows = (
+            db.session.query(RacePick.rider_id, func.count(RacePick.pick_id).label("cnt"))
+            .join(Rider, Rider.id == RacePick.rider_id)
+            .filter(RacePick.user_id == user_id)
+            .filter(RacePick.competition_id.in_(comp_ids))
+            .filter(Rider.class_name == class_name)
+            .group_by(RacePick.rider_id)
+            .order_by(func.count(RacePick.pick_id).desc())
+            .limit(limit + len(blocked))
+            .all()
+        )
+        out: list[dict] = []
+        for rider_id, _cnt in rows:
+            rid = int(rider_id)
+            if rid in blocked:
+                continue
+            rider = Rider.query.get(rid)
+            if rider and rider.class_name == class_name:
+                out.append(_chip(rider))
+            if len(out) >= limit:
+                break
+        return out
+
+    def _last_race_for_class(class_name: str) -> list[dict]:
+        prev_q = Competition.query.filter(
+            Competition.series == series,
+            Competition.id != comp.id,
+        )
+        if comp.event_date:
+            prev_q = prev_q.filter(Competition.event_date < comp.event_date)
+        prev_comp = prev_q.order_by(Competition.event_date.desc()).first()
+        if not prev_comp:
+            return []
+        picks = (
+            RacePick.query.filter_by(user_id=user_id, competition_id=prev_comp.id)
+            .order_by(RacePick.predicted_position.asc())
+            .all()
+        )
+        chips: list[dict] = []
+        for p in picks:
+            if not p.rider_id or not p.predicted_position:
+                continue
+            rid = int(p.rider_id)
+            if rid in blocked:
+                continue
+            rider = Rider.query.get(rid)
+            if not rider or rider.class_name != class_name:
+                continue
+            chips.append(_chip(rider, int(p.predicted_position)))
+        return chips
+
+    return {
+        "class_450": class_450,
+        "class_250": class_250,
+        "450": {
+            "last_race": _last_race_for_class(class_450),
+            "frequent": _frequent_for_class(class_450),
+        },
+        "250": {
+            "last_race": _last_race_for_class(class_250),
+            "frequent": _frequent_for_class(class_250),
+        },
+    }
+
+
 @app.route("/race_picks/<int:competition_id>")
 @login_required
 def race_picks_page(competition_id):
@@ -5261,7 +5417,6 @@ def race_picks_page(competition_id):
             .all()
         )
 
-    from app.portrait_urls import normalize_racerx_portrait_url, score_racerx_portrait_url
     from racerx_rider_bio import build_riders_by_name_map
 
     all_pick_riders = riders_450 + riders_250
@@ -5270,22 +5425,18 @@ def race_picks_page(competition_id):
     # 3) Serialisering för JS (inkl is_out + image_url)
     def serialize_rider(r: Rider):
         # Samma porträttslogik som spotlight/bio (inkl. dublett-förare som Jett 450/250).
-        portrait_url = template_rider_image_src(r, riders_by_name=riders_by_name)
+        from app.portrait_urls import lookup_racerx_portrait_by_name
+
+        racerx_url = lookup_racerx_portrait_by_name(r.name) or ""
+        portrait_url = _display_portrait_url_for_rider(r, riders_by_name=riders_by_name)
+        img_url = _extract_rider_image_url(r) or racerx_url or None
+        if (not portrait_url or "/static/brand_logos/" in str(portrait_url)) and (
+            racerx_url or img_url
+        ):
+            portrait_url = racerx_url or img_url or portrait_url
         has_portrait = bool(
             portrait_url and str(portrait_url).startswith("/rider_portrait/")
         )
-        img_url = None
-        if not portrait_url and r.image_url:
-            raw = str(r.image_url).strip()
-            if raw.startswith(("http://", "https://")):
-                if score_racerx_portrait_url(raw) >= 0:
-                    img_url = normalize_racerx_portrait_url(raw)
-            elif raw.startswith("data:"):
-                img_url = raw
-            elif not raw.startswith(("riders/http",)) and "://" not in raw:
-                img_url = normalize_racerx_portrait_url(raw) if raw else None
-        if not portrait_url and img_url:
-            portrait_url = img_url
         return {
             "id": r.id,
             "name": r.name,
@@ -5296,6 +5447,7 @@ def race_picks_page(competition_id):
             "is_out": (r.id in out_ids),
             "image_url": img_url,
             "portrait_url": portrait_url,
+            "racerx_portrait_url": racerx_url,
             "coast_250": r.coast_250,
             "has_db_portrait": has_portrait,
         }
@@ -5348,6 +5500,10 @@ def race_picks_page(competition_id):
         ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
     ]
 
+    pick_suggestions = _build_pick_suggestions_for_user(
+        int(session["user_id"]), comp, out_ids
+    )
+
     # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
         "race_picks.html",
@@ -5365,6 +5521,7 @@ def race_picks_page(competition_id):
         picks_locked=picks_locked,
         static_rider_images=not _on_render,
         portraits_in_dropdown=not _on_render,
+        pick_suggestions=pick_suggestions,
     )
 
 
