@@ -1186,6 +1186,9 @@
           wildcardHub.textContent = String(picks.wildcardPosition);
           wildcardHub.classList.add('has-result');
         }
+        if (typeof window.syncWildcardRollLockedState === 'function') {
+          window.syncWildcardRollLockedState();
+        }
       }
 
       if (picks.wizardStep && window.PicksWizard && typeof window.PicksWizard.goToStep === 'function') {
@@ -2413,11 +2416,19 @@ function onPickChange(cls, pos, riderId = null) {
                 wildcardHub.textContent = String(posVal);
                 wildcardHub.classList.add('has-result');
               }
-              btn.disabled = true;
-              btn.classList.add("opacity-50", "cursor-not-allowed");
+              if (typeof window.syncWildcardRollLockedState === 'function') {
+                window.syncWildcardRollLockedState();
+              } else {
+                btn.disabled = true;
+                btn.classList.add("opacity-50", "cursor-not-allowed");
+              }
             } else {
-              btn.disabled = false;
-              btn.classList.remove("opacity-50", "cursor-not-allowed");
+              if (typeof window.syncWildcardRollLockedState === 'function') {
+                window.syncWildcardRollLockedState();
+              } else {
+                btn.disabled = false;
+                btn.classList.remove("opacity-50", "cursor-not-allowed");
+              }
               const wildcardPosEl = document.getElementById("wildcard-position");
               const wildcardLabelEl = document.getElementById("wildcard-position-label");
               if (wildcardPosEl) wildcardPosEl.value = "";
@@ -2477,7 +2488,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
   async function rollWildcard() {
     const btn = document.getElementById("wildcard-roll-btn");
-    if (btn.disabled) return;
+    const posEl = document.getElementById("wildcard-position");
+    if (btn?.disabled || String(posEl?.value || '').trim() !== '') return;
     const pos = Math.floor(Math.random() * 11) + 10; // 10-20
     try {
       const resp = await fetch("/lock_wildcard_pos", {
@@ -2486,16 +2498,27 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         body: JSON.stringify({ competition_id: competitionId, position: pos }),
       });
       const data = await resp.json();
+      if (data.status === "already_locked" && data.position) {
+        if (typeof window.syncWildcardRollLockedState === 'function') {
+          document.getElementById("wildcard-position").value = data.position;
+          document.getElementById("wildcard-position-label").textContent =
+            `Din plats: ${data.position}`;
+          window.syncWildcardRollLockedState();
+        }
+        return;
+      }
       if (!resp.ok) {
         alert(data.error || "Kunde inte låsa wildcard");
         return;
       }
       if (data.status === "locked") {
-        document.getElementById("wildcard-position").value = pos;
+        const lockedPos = data.position || pos;
+        document.getElementById("wildcard-position").value = lockedPos;
         document.getElementById("wildcard-position-label").textContent =
-          `Din plats: ${pos}`;
-        btn.disabled = true;
-        btn.classList.add("opacity-50", "cursor-not-allowed");
+          `Din plats: ${lockedPos}`;
+        if (typeof window.syncWildcardRollLockedState === 'function') {
+          window.syncWildcardRollLockedState();
+        }
         
         // Save picks to localStorage
         savePicksToStorage();
@@ -2937,6 +2960,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       if (!isWSXSeries && savedWcPos) {
         if (wcPosEl) wcPosEl.value = savedWcPos;
         if (wcLabelEl) wcLabelEl.textContent = savedWcLabel || ("Plats " + savedWcPos);
+        if (typeof window.syncWildcardRollLockedState === 'function') {
+          window.syncWildcardRollLockedState();
+        }
       }
 
       // 7) Markera att inga picks är sparade ännu (visa spara-knapp)
@@ -3070,14 +3096,6 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       
       // Initialize all preview images
       initializePreviewImages();
-      
-      // Load user picks (don't clear them automatically)
-      await fetchAndDisplayMyPicks();
-
-      // Återställ utkast från localStorage (över skriver server om osparat utkast finns)
-      if (localStorage.getItem(`race_picks_${competitionId}`)) {
-        loadSavedPicksFromStorage();
-      }
 
       const wizardRoot = document.getElementById('picks-wizard');
       if (wizardRoot && window.PicksWizard) {
@@ -3091,6 +3109,22 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
           label250: isWSXSeries ? 'SX2' : '250cc',
           suggestions: ps,
         });
+      }
+      
+      // Load user picks (don't clear them automatically)
+      await fetchAndDisplayMyPicks();
+
+      // Återställ utkast från localStorage (över skriver server om osparat utkast finns)
+      if (localStorage.getItem(`race_picks_${competitionId}`)) {
+        loadSavedPicksFromStorage();
+      }
+
+      if (wizardRoot && window.PicksWizard) {
+        if (typeof window.PicksWizard.initAfterDraftLoad === 'function') {
+          window.PicksWizard.initAfterDraftLoad();
+        } else if (typeof window.PicksWizard.refresh === 'function') {
+          window.PicksWizard.refresh();
+        }
         setTimeout(() => {
           if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
         }, 150);

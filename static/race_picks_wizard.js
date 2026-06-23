@@ -75,6 +75,21 @@
     return out;
   }
 
+  function chipPhotoSrc(chip) {
+    const norm =
+      typeof window.normalizePortraitUrl === 'function'
+        ? window.normalizePortraitUrl
+        : (u) => String(u || '').trim();
+    const candidates = [chip.racerx_portrait_url, chip.portrait_url];
+    for (const raw of candidates) {
+      const u = norm(raw);
+      if (!u || u.includes('/brand_logos/') || u.startsWith('/rider_portrait/')) continue;
+      return u;
+    }
+    const brand = String(chip.bike_brand || 'honda').toLowerCase();
+    return `/static/brand_logos/${brand}.png`;
+  }
+
   function renderQuickPicks(containerId, classKey, riderClass) {
     const el = $(containerId);
     if (!el || !cfg.suggestions) return;
@@ -95,9 +110,11 @@
     html += '<div class="wizard-quick-picks__row">';
     chips.forEach((r) => {
       const used = isRiderSelectedInClass(riderClass, r.id);
+      const photoSrc = chipPhotoSrc(r);
       html += `<button type="button" class="wizard-quick-chip${used ? ' is-used' : ''}"
         data-rider-id="${r.id}" data-rider-class="${riderClass}" ${used ? 'disabled' : ''}>
-        <img class="wizard-quick-chip__img" alt="" loading="lazy" decoding="async" data-rider-id="${r.id}">
+        <img class="wizard-quick-chip__img" alt="" loading="eager" decoding="async"
+          src="${escapeHtml(photoSrc)}" data-rider-id="${r.id}">
         <span class="wizard-quick-chip__num">#${r.rider_number}</span>
         <span>${escapeHtml(r.name)}</span>
       </button>`;
@@ -119,17 +136,6 @@
         const rc = btn.dataset.riderClass;
         onQuickPick(rid, rc);
       });
-    });
-
-    el.querySelectorAll('.wizard-quick-chip__img[data-rider-id]').forEach((img) => {
-      const rid = Number(img.dataset.riderId);
-      if (!rid) return;
-      if (typeof window.loadSelectedRiderPortrait === 'function') {
-        window.loadSelectedRiderPortrait(rid, img);
-      } else if (typeof window.imgSrcFor === 'function') {
-        const src = window.imgSrcFor(rid);
-        if (src) img.src = src;
-      }
     });
 
     el.querySelectorAll('[data-action="last-race"]').forEach((btn) => {
@@ -315,17 +321,43 @@
     return 3;
   }
 
+  function syncWildcardRollLockedState() {
+    const btn = $('wildcard-roll-btn');
+    const posEl = $('wildcard-position');
+    if (!btn || !posEl) return;
+    const locked = String(posEl.value || '').trim() !== '';
+    btn.disabled = locked;
+    btn.classList.toggle('opacity-50', locked);
+    btn.classList.toggle('cursor-not-allowed', locked);
+  }
+
+  function applyWildcardPosition(pos) {
+    const hub = $('wildcard-wheel-hub');
+    const posEl = $('wildcard-position');
+    const labelEl = $('wildcard-position-label');
+    if (posEl) posEl.value = String(pos);
+    if (labelEl) labelEl.textContent = `Din plats: ${pos}`;
+    if (hub) {
+      hub.textContent = String(pos);
+      hub.classList.add('has-result');
+    }
+    syncWildcardRollLockedState();
+  }
+
   function setupWildcardWheel() {
     const btn = $('wildcard-roll-btn');
     const wheel = $('wildcard-wheel');
     const hub = $('wildcard-wheel-hub');
     if (!btn || !wheel) return;
 
+    syncWildcardRollLockedState();
+
     const origOnClick = btn.onclick;
     btn.onclick = null;
 
     btn.addEventListener('click', async () => {
       if (btn.disabled || wheel.classList.contains('is-spinning')) return;
+      if (String($('wildcard-position')?.value || '').trim() !== '') return;
 
       wheel.classList.add('is-spinning');
       if (hub) {
@@ -345,22 +377,21 @@
 
         setTimeout(() => {
           wheel.classList.remove('is-spinning');
+          if (data.status === 'already_locked' && data.position) {
+            applyWildcardPosition(data.position);
+            if (typeof window.savePicksToStorage === 'function') {
+              window.savePicksToStorage();
+            }
+            renderPicksSummary();
+            return;
+          }
           if (!resp.ok || data.status !== 'locked') {
             alert(data.error || 'Kunde inte låsa wildcard');
             if (hub) hub.textContent = '?';
             return;
           }
 
-          const posEl = $('wildcard-position');
-          const labelEl = $('wildcard-position-label');
-          if (posEl) posEl.value = pos;
-          if (labelEl) labelEl.textContent = `Din plats: ${pos}`;
-          if (hub) {
-            hub.textContent = String(pos);
-            hub.classList.add('has-result');
-          }
-          btn.disabled = true;
-          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          applyWildcardPosition(data.position || pos);
           if (typeof window.savePicksToStorage === 'function') {
             window.savePicksToStorage();
           }
@@ -673,6 +704,7 @@
 
   function initAfterDraftLoad() {
     showStep(resolveStartStep(), { skipSave: true });
+    syncWildcardRollLockedState();
     refreshUI();
   }
 
@@ -688,5 +720,7 @@
     persistStep,
     refresh: refreshUI,
     renderSummary: renderPicksSummary,
+    syncWildcardRollLockedState,
   };
+  window.syncWildcardRollLockedState = syncWildcardRollLockedState;
 })();

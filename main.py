@@ -5296,6 +5296,12 @@ def _build_pick_suggestions_for_user(
     class_250 = "wsx_sx2" if is_wsx else "250cc"
     blocked = set(int(x) for x in (out_ids or []))
 
+    series_comp_ids = [
+        c.id
+        for c in Competition.query.filter(Competition.series == series).all()
+        if c.id != comp.id
+    ]
+
     def _chip(rider: Rider, position: int | None = None) -> dict:
         row = {
             "id": int(rider.id),
@@ -5307,51 +5313,39 @@ def _build_pick_suggestions_for_user(
             row["position"] = int(position)
         return row
 
-    def _enrich_chips_with_portraits(chips: list[dict]) -> list[dict]:
-        if not chips:
-            return chips
-        ids = [int(c["id"]) for c in chips]
-        riders = rider_query_for_list_ui().filter(Rider.id.in_(ids)).all()
-        by_id = {int(r.id): r for r in riders}
-        by_name = _riders_by_name_for(list(by_id.values()))
-        for chip in chips:
-            rider = by_id.get(int(chip["id"]))
-            if not rider:
-                continue
-            payload = _rider_portrait_payload(rider, riders_by_name=by_name)
-            chip["portrait_url"] = payload["portrait_url"]
-            chip["racerx_portrait_url"] = payload["racerx_portrait_url"]
-        return chips
-
     def _frequent_for_class(class_name: str, limit: int = 8) -> list[dict]:
-        comp_ids = [
-            c.id
-            for c in Competition.query.filter(Competition.series == series).all()
-            if c.id != comp.id
-        ]
-        if not comp_ids:
+        if not series_comp_ids:
             return []
         rows = (
             db.session.query(RacePick.rider_id, func.count(RacePick.pick_id).label("cnt"))
             .join(Rider, Rider.id == RacePick.rider_id)
             .filter(RacePick.user_id == user_id)
-            .filter(RacePick.competition_id.in_(comp_ids))
+            .filter(RacePick.competition_id.in_(series_comp_ids))
             .filter(Rider.class_name == class_name)
             .group_by(RacePick.rider_id)
             .order_by(func.count(RacePick.pick_id).desc())
             .limit(limit + len(blocked))
             .all()
         )
-        out: list[dict] = []
+        rider_ids: list[int] = []
         for rider_id, _cnt in rows:
             rid = int(rider_id)
             if rid in blocked:
                 continue
-            rider = Rider.query.get(rid)
+            rider_ids.append(rid)
+            if len(rider_ids) >= limit:
+                break
+        if not rider_ids:
+            return []
+        riders_by_id = {
+            int(r.id): r
+            for r in Rider.query.filter(Rider.id.in_(rider_ids)).all()
+        }
+        out: list[dict] = []
+        for rid in rider_ids:
+            rider = riders_by_id.get(rid)
             if rider and rider.class_name == class_name:
                 out.append(_chip(rider))
-            if len(out) >= limit:
-                break
         return out
 
     def _last_race_for_class(class_name: str) -> list[dict]:
@@ -5369,29 +5363,70 @@ def _build_pick_suggestions_for_user(
             .order_by(RacePick.predicted_position.asc())
             .all()
         )
-        chips: list[dict] = []
+        rider_ids: list[int] = []
+        positions: dict[int, int] = {}
         for p in picks:
             if not p.rider_id or not p.predicted_position:
                 continue
             rid = int(p.rider_id)
             if rid in blocked:
                 continue
-            rider = Rider.query.get(rid)
+            rider_ids.append(rid)
+            positions[rid] = int(p.predicted_position)
+        if not rider_ids:
+            return []
+        riders_by_id = {
+            int(r.id): r
+            for r in Rider.query.filter(Rider.id.in_(rider_ids)).all()
+        }
+        chips: list[dict] = []
+        for rid in rider_ids:
+            rider = riders_by_id.get(rid)
             if not rider or rider.class_name != class_name:
                 continue
-            chips.append(_chip(rider, int(p.predicted_position)))
+            chips.append(_chip(rider, positions[rid]))
+        return chips
+
+    last_450 = _last_race_for_class(class_450)
+    freq_450 = _frequent_for_class(class_450)
+    last_250 = _last_race_for_class(class_250)
+    freq_250 = _frequent_for_class(class_250)
+    all_chip_ids = list(
+        {
+            int(c["id"])
+            for c in (last_450 + freq_450 + last_250 + freq_250)
+        }
+    )
+    portrait_riders = (
+        rider_query_for_list_ui().filter(Rider.id.in_(all_chip_ids)).all()
+        if all_chip_ids
+        else []
+    )
+    portrait_by_id = {int(r.id): r for r in portrait_riders}
+    portrait_by_name = _riders_by_name_for(list(portrait_by_id.values()))
+
+    def _enrich_chips_with_portraits(chips: list[dict]) -> list[dict]:
+        if not chips:
+            return chips
+        for chip in chips:
+            rider = portrait_by_id.get(int(chip["id"]))
+            if not rider:
+                continue
+            payload = _rider_portrait_payload(rider, riders_by_name=portrait_by_name)
+            chip["portrait_url"] = payload["portrait_url"]
+            chip["racerx_portrait_url"] = payload["racerx_portrait_url"]
         return chips
 
     return {
         "class_450": class_450,
         "class_250": class_250,
         "450": {
-            "last_race": _enrich_chips_with_portraits(_last_race_for_class(class_450)),
-            "frequent": _enrich_chips_with_portraits(_frequent_for_class(class_450)),
+            "last_race": _enrich_chips_with_portraits(last_450),
+            "frequent": _enrich_chips_with_portraits(freq_450),
         },
         "250": {
-            "last_race": _enrich_chips_with_portraits(_last_race_for_class(class_250)),
-            "frequent": _enrich_chips_with_portraits(_frequent_for_class(class_250)),
+            "last_race": _enrich_chips_with_portraits(last_250),
+            "frequent": _enrich_chips_with_portraits(freq_250),
         },
     }
 
@@ -12616,13 +12651,16 @@ def clear_my_picks(competition_id: int):
 
     deleted_race = RacePick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
     deleted_holo = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
-    deleted_wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+    if wc:
+        wc.rider_id = None
+    deleted_wc = 0
 
     db.session.commit()
 
     print(
         f"DEBUG: clear_my_picks – user_id={uid}, competition_id={competition_id}, "
-        f"deleted race={deleted_race}, holeshot={deleted_holo}, wildcard={deleted_wc}"
+        f"deleted race={deleted_race}, holeshot={deleted_holo}, wildcard_rider_cleared={bool(wc)}"
     )
 
     return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200
@@ -12640,13 +12678,25 @@ def lock_wildcard_pos():
     uid = session["user_id"]
 
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
+    if wc and wc.position is not None:
+        return (
+            jsonify(
+                {
+                    "error": "Wildcard-platsen är redan bestämd.",
+                    "status": "already_locked",
+                    "position": int(wc.position),
+                }
+            ),
+            409,
+        )
+
     if not wc:
         wc = WildcardPick(user_id=uid, competition_id=comp_id, position=pos)
         db.session.add(wc)
     else:
         wc.position = pos
     db.session.commit()
-    return jsonify({"status": "locked"}), 200
+    return jsonify({"status": "locked", "position": pos}), 200
 
 
 def holeshot_result_class_bucket(raw_class: str | None) -> str:

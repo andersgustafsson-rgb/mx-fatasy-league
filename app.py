@@ -1271,13 +1271,25 @@ def lock_wildcard_pos():
     uid = session["user_id"]
 
     wc = WildcardPick.query.filter_by(user_id=uid, competition_id=comp_id).first()
+    if wc and wc.position is not None:
+        return (
+            jsonify(
+                {
+                    "error": "Wildcard-platsen är redan bestämd.",
+                    "status": "already_locked",
+                    "position": int(wc.position),
+                }
+            ),
+            409,
+        )
+
     if not wc:
         wc = WildcardPick(user_id=uid, competition_id=comp_id, position=pos)
         db.session.add(wc)
     else:
         wc.position = pos
     db.session.commit()
-    return jsonify({"status": "locked"}), 200
+    return jsonify({"status": "locked", "position": pos}), 200
 
 
 @app.get("/get_my_race_results/<int:competition_id>")
