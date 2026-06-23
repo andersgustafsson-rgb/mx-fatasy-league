@@ -2876,6 +2876,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         if (sel450) {
           const span = sel450.querySelector('.selected-rider');
           if (span) span.textContent = '-- välj förare --';
+          const clearBtn = sel450.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'none';
+          delete sel450.dataset.selectedRiderId;
           const hn = hiddenPickSelectName(class450, i);
           if (hn) {
           const hidden = document.querySelector(`select[name="${hn}"]`);
@@ -2886,6 +2889,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         if (sel250) {
           const span = sel250.querySelector('.selected-rider');
           if (span) span.textContent = '-- välj förare --';
+          const clearBtn = sel250.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'none';
+          delete sel250.dataset.selectedRiderId;
           const hn2 = hiddenPickSelectName(class250, i);
           if (hn2) {
           const hidden = document.querySelector(`select[name="${hn2}"]`);
@@ -2896,10 +2902,14 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       }
 
       // 2) Nollställ holeshot selectors
-      const hs450Sel = document.querySelector('.rider-selector[data-class="holeshot-450"] .selected-rider');
-      const hs250Sel = document.querySelector('.rider-selector[data-class="holeshot-250"] .selected-rider');
+      const hs450SelEl = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+      const hs250SelEl = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+      const hs450Sel = hs450SelEl?.querySelector('.selected-rider');
+      const hs250Sel = hs250SelEl?.querySelector('.selected-rider');
       if (hs450Sel) hs450Sel.textContent = '-- välj förare --';
       if (hs250Sel) hs250Sel.textContent = '-- välj förare --';
+      if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
+      if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
       const hs450Hidden = document.getElementById("holeshot-450");
       const hs250Hidden = document.getElementById("holeshot-250");
       if (hs450Hidden) hs450Hidden.value = "";
@@ -2907,8 +2917,10 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
       // 3) Nollställ wildcard-föraren; behåll den slumpade platsen (10–20)
       if (!isWSXSeries) {
-        const wcSel = document.querySelector('.rider-selector[data-class="wildcard-pick"] .selected-rider');
+        const wcSelEl = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+        const wcSel = wcSelEl?.querySelector('.selected-rider');
         if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
+        if (wcSelEl) delete wcSelEl.dataset.selectedRiderId;
         const wcHidden = document.getElementById("wildcard-pick");
         if (wcHidden) wcHidden.value = "";
       }
@@ -2919,6 +2931,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
 
       // 5) Ta bort ev. sparade picks i localStorage
       localStorage.removeItem(`race_picks_${competitionId}`);
+      localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
 
       // 6) Återställ wildcard-platsen (användaren ska inte behöva slå om)
       if (!isWSXSeries && savedWcPos) {
@@ -2929,6 +2942,12 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       // 7) Markera att inga picks är sparade ännu (visa spara-knapp)
       savedPicksState = null;
       updateSaveButtonVisibility();
+
+      if (window.PicksWizard) {
+        if (window.PicksWizard.goToStep) window.PicksWizard.goToStep(1);
+        if (window.PicksWizard.refresh) window.PicksWizard.refresh();
+        if (window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
+      }
 
       alert(data.message || "Alla dina val har rensats.");
     } catch (e) {
