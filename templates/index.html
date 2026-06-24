@@ -616,20 +616,7 @@
       }
     }
     
-    /* Tab hover effects */
-    .tab-btn {
-      transition: all 0.3s ease;
-    }
-    
-    .tab-btn:hover {
-      transform: translateY(-2px);
-    }
-    
-    .tab-btn.active {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
-    }
-
+    /* Tab buttons use rp-tab-btn in rp-buttons.css */
   </style>
 </head>
 <body class="relative font-sans min-h-screen text-gray-200">
@@ -921,14 +908,14 @@
               <div class="flex items-center gap-2 mb-2">
                 <!-- Login/Logout Button -->
                 {% if is_logged_in %}
-                  <a href="{{ url_for('logout') }}" class="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 border border-red-400 shadow-md" title="Logga ut">
+                  <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                     </svg>
                     <span>Logga ut</span>
                   </a>
                 {% else %}
-                  <button onclick="openLoginModal();" class="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 border border-green-400 shadow-md" title="Logga in">
+                  <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                     </svg>
@@ -937,36 +924,16 @@
                 {% endif %}
                 
                 <!-- Settings button -->
-                <button 
-                  class="flex-1 tab-btn settings-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
-                  data-tab="settings"
-                >
-                  ⚙️ Settings
+                <button type="button" class="flex-1 tab-btn rp-tab-btn settings-btn" data-tab="settings">
+                  Settings
                 </button>
               </div>
               
               <!-- Row 2: Quick access tabs -->
               <div class="grid grid-cols-3 gap-2">
-                <button 
-                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
-                  data-tab="leaderboard"
-                >
-                  👥 Leaderboard
-                </button>
-                <button 
-                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 border border-gray-500 bg-gray-800 bg-opacity-60"
-                  data-tab="games"
-                >
-                  🎮 Spel
-                </button>
-                <a 
-                  href="{{ url_for('manual_page') }}"
-                  class="tab-btn px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0 text-center border border-gray-500 bg-gray-800 bg-opacity-60"
-                  target="_blank"
-                  title="Öppna spelmanualen i ny flik"
-                >
-                  📖 Manual
-                </a>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard">Leaderboard</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
+                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn text-center" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
               </div>
             </div>
           </div>
@@ -1003,7 +970,7 @@
                 </div>
                 <div id="real-picks-status" class="mt-3 text-xs sm:text-sm">
                   <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
-                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold">
+                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden rp-btn rp-btn--primary rp-btn--sm">
                     {% if picks_status == 'has_picks' %}✅ Picks klara (Visa){% else %}✅ Picks öppna (Gå till){% endif %}
                   </a>
                 </div>
@@ -1021,14 +988,14 @@
             <!-- Desktop: Login/Logout Button (hidden on mobile, moved above countdown) -->
             <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
             {% if is_logged_in %}
-              <a href="{{ url_for('logout') }}" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" title="Logga ut">
+              <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                 </svg>
                 <span>Logga ut</span>
               </a>
           {% else %}
-              <button onclick="openLoginModal();" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200" title="Logga in">
+              <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                 </svg>
@@ -1038,12 +1005,7 @@
             </div>
             
             <!-- Desktop: Settings tab button (hidden on mobile, moved above countdown) -->
-            <button 
-              class="hidden sm:block tab-btn settings-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-              data-tab="settings"
-            >
-              ⚙️ Settings
-            </button>
+            <button type="button" class="hidden sm:block tab-btn rp-tab-btn settings-btn" data-tab="settings">Settings</button>
 
             <!-- Center: Tab Buttons (now has more space on mobile) -->
             <div class="flex flex-1 items-center relative">
@@ -1134,59 +1096,19 @@
                     }
                   }
                 </style>
-                <button 
-                  class="tab-btn active px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 bg-yellow-500 text-white whitespace-nowrap flex-shrink-0"
-                  data-tab="race-info"
-                >
-                  🏁 Race Info
-                </button>
-                <!-- Leaderboard button - hidden on mobile (moved above) -->
-                <button 
-                  class="tab-btn hidden sm:flex px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="leaderboard"
-                >
-                  👥 Leaderboard
-                </button>
-                <button 
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="stats"
-                >
-                  📊 Stats
-                </button>
-                <!-- Spel button - hidden on mobile (moved above) -->
-                <button 
-                  class="tab-btn hidden sm:flex px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="games"
-                >
-                  🎮 Spel
-                </button>
-                <button 
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="leagues"
-                >
-                  🏆 Ligor
-                </button>
-                <button 
+                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info">Race Info</button>
+                <button type="button" class="tab-btn rp-tab-btn hidden sm:inline-flex" data-tab="leaderboard">Leaderboard</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
+                <button type="button" class="tab-btn rp-tab-btn hidden sm:inline-flex" data-tab="games">Spel</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
+                <button type="button"
                   {% if upcoming_race and upcoming_race.series == 'WSX' %}
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-500 bg-gray-800 cursor-not-allowed opacity-60 whitespace-nowrap flex-shrink-0"
-                  disabled
-                  title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
+                  class="tab-btn rp-tab-btn" disabled title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
                   {% else %}
-                  class="tab-btn px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  data-tab="season-team"
+                  class="tab-btn rp-tab-btn" data-tab="season-team"
                   {% endif %}
-                >
-                  👤 Team
-                </button>
-                <!-- Manual link - hidden on mobile (moved above) -->
-                <a 
-                  href="{{ url_for('manual_page') }}"
-                  class="tab-btn hidden sm:flex px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 text-gray-300 hover:text-white hover:bg-gray-700 whitespace-nowrap flex-shrink-0"
-                  target="_blank"
-                  title="Öppna spelmanualen i ny flik"
-                >
-                  📖 Manual
-                </a>
+                >Team</button>
+                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn hidden sm:inline-flex" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
               </div>
             </div>
 
@@ -1637,13 +1559,7 @@
                       <span class="font-bold text-yellow-600 dark:text-yellow-400">{{ best_position or '-' }}</span>
                     </div>
                   </div>
-                  <a href="{{ url_for('my_scores') }}" class="group relative bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 hover:from-green-400 hover:via-green-500 hover:to-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-xl group-hover:scale-110 transition-transform duration-300">📊</span>
-                      <span>Visa detaljerade stats</span>
-                    </div>
-                  </a>
+                  <a href="{{ url_for('my_scores') }}" class="rp-btn rp-btn--block rp-btn--primary">Visa detaljerade stats</a>
                 </div>
               </div>
               
@@ -1659,13 +1575,7 @@
                       📈 Se prestationer, statistik och bakgrundshistorier
                     </div>
                   </div>
-                  <a href="{{ url_for('riders_directory') }}" class="group relative bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700 hover:from-purple-400 hover:via-purple-500 hover:to-indigo-600 text-white font-bold py-3 px-6 rounded-xl shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-xl group-hover:scale-110 transition-transform duration-300">🧑‍✈️</span>
-                      <span>Rider Bio</span>
-                    </div>
-                  </a>
+                  <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--block rp-btn--accent">Förarguide</a>
                 </div>
               </div>
             </div>
@@ -1676,52 +1586,12 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-purple-500 mb-4">🎮 Spel & Underhållning</h2>
-                <div class="space-y-4">
-                  <a href="{{ url_for('cross_jump_modern') }}" class="group relative bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700 hover:from-cyan-400 hover:via-blue-500 hover:to-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-cyan-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🚀</span>
-                      <div class="text-left">
-                        <div class="text-lg font-bold">Cross Jump Modern</div>
-                        <div class="text-xs opacity-75">Ny! Modern grafik & effekter</div>
-                      </div>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('dino_game') }}" class="group relative bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700 hover:from-purple-400 hover:via-purple-500 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🏍️</span>
-                      <div class="text-left">
-                        <div class="text-lg font-bold">Cross Jump</div>
-                        <div class="text-xs opacity-75">Klassisk version</div>
-                      </div>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('trackmaps_page') }}" class="group relative bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-700 hover:from-teal-400 hover:via-teal-500 hover:to-cyan-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-teal-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🗺️</span>
-                      <span class="text-lg">Track Maps</span>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('motocross_quiz') }}" class="group relative bg-gradient-to-br from-orange-500 via-orange-600 to-red-700 hover:from-orange-400 hover:via-orange-500 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-orange-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🏁</span>
-                      <span class="text-lg">Motocross Quiz</span>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('bulletin_board') }}" class="group relative bg-gradient-to-br from-orange-500 via-orange-600 to-red-700 hover:from-orange-400 hover:via-orange-500 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-orange-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">📢</span>
-                      <span class="text-lg">Trash Talk Brädan</span>
-                    </div>
-                  </a>
+                <div class="rp-btn-stack">
+                  <a href="{{ url_for('cross_jump_modern') }}" class="rp-btn rp-btn--block rp-btn--accent">Cross Jump Modern</a>
+                  <a href="{{ url_for('dino_game') }}" class="rp-btn rp-btn--block rp-btn--secondary">Cross Jump (klassisk)</a>
+                  <a href="{{ url_for('trackmaps_page') }}" class="rp-btn rp-btn--block rp-btn--secondary">Track Maps</a>
+                  <a href="{{ url_for('motocross_quiz') }}" class="rp-btn rp-btn--block rp-btn--warm">Motocross Quiz</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
                 </div>
               </div>
               
@@ -1753,22 +1623,9 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🏆 Mina Ligor</h2>
-                <div class="space-y-4">
-                  <a href="{{ url_for('leagues_page') }}" class="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 hover:from-blue-400 hover:via-blue-500 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🏆</span>
-                      <span class="text-lg">Hantera Ligor</span>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('leagues_leaderboard') }}" class="group relative bg-gradient-to-br from-cyan-500 via-cyan-600 to-teal-700 hover:from-cyan-400 hover:via-cyan-500 hover:to-teal-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-cyan-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🏁</span>
-                      <span class="text-lg">Liga Leaderboard</span>
-                    </div>
-                  </a>
+                <div class="rp-btn-stack">
+                  <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Hantera Ligor</a>
+                  <a href="{{ url_for('leagues_leaderboard') }}" class="rp-btn rp-btn--block rp-btn--primary">Liga Leaderboard</a>
                 </div>
               </div>
               
@@ -1840,42 +1697,15 @@
                       <div class="text-sm text-gray-600 dark:text-gray-300">Inga förare i teamet ännu.</div>
                     {% endif %}
 
-                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <a href="{{ url_for('season_team_builder') }}"
-                         class="group relative bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 hover:from-green-400 hover:via-green-500 hover:to-emerald-600 text-white font-bold py-3 px-5 rounded-xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-[1.02] transition-all duration-300 text-center block overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <div class="relative z-10 flex items-center justify-center gap-3">
-                          <span class="text-xl">⚙️</span>
-                          <span class="text-base">Ändra team</span>
-                        </div>
-                      </a>
-                      <a href="{{ url_for('season_team_page') }}"
-                         class="group relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 hover:from-emerald-400 hover:via-emerald-500 hover:to-teal-600 text-white font-bold py-3 px-5 rounded-xl shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-[1.02] transition-all duration-300 text-center block overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <div class="relative z-10 flex items-center justify-center gap-3">
-                          <span class="text-xl">📊</span>
-                          <span class="text-base">Poäng per tävling</span>
-                        </div>
-                      </a>
+                    <div class="mt-4 rp-btn-row">
+                      <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--primary flex-1">Ändra team</a>
+                      <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--accent flex-1">Poäng per tävling</a>
                     </div>
                   </div>
                 {% else %}
-                  <div class="space-y-4">
-                    <a href="{{ url_for('season_team_builder') }}" class="group relative bg-gradient-to-br from-green-500 via-green-600 to-emerald-700 hover:from-green-400 hover:via-green-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                      <div class="relative z-10 flex items-center justify-center gap-3">
-                        <span class="text-2xl group-hover:scale-110 transition-transform duration-300">⚙️</span>
-                        <span class="text-lg">Bygg Säsongsteam</span>
-                      </div>
-                    </a>
-                    
-                    <a href="{{ url_for('season_team_page') }}" class="group relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 hover:from-emerald-400 hover:via-emerald-500 hover:to-teal-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                      <div class="relative z-10 flex items-center justify-center gap-3">
-                        <span class="text-2xl group-hover:scale-110 transition-transform duration-300">👥</span>
-                        <span class="text-lg">Mitt Säsongsteam</span>
-                      </div>
-                    </a>
+                  <div class="rp-btn-stack">
+                    <a href="{{ url_for('season_team_builder') }}" class="rp-btn rp-btn--block rp-btn--primary">Bygg Säsongsteam</a>
+                    <a href="{{ url_for('season_team_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Mitt Säsongsteam</a>
                   </div>
                 {% endif %}
               </div>
@@ -1896,38 +1726,13 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">👤 Profil & Inställningar</h2>
-                <div class="space-y-4">
+                <div class="rp-btn-stack">
                   {% if is_logged_in %}
-                  <a href="{{ url_for('profile_page') }}" class="group relative bg-gradient-to-br from-pink-500 via-pink-600 to-rose-700 hover:from-pink-400 hover:via-pink-500 hover:to-rose-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-pink-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">👤</span>
-                      <span class="text-lg">Min Profil</span>
-                    </div>
-                  </a>
-                  
-                  <a href="{{ url_for('bulletin_board') }}" class="group relative bg-gradient-to-br from-orange-500 via-orange-600 to-red-700 hover:from-orange-400 hover:via-orange-500 hover:to-red-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-orange-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">📢</span>
-                      <span class="text-lg">Trash Talk Brädan</span>
-                    </div>
-                  </a>
+                  <a href="{{ url_for('profile_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Min Profil</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
                   {% else %}
-                  <button onclick="openLoginModal();" class="w-full group relative bg-gradient-to-br from-green-500 via-green-600 to-green-700 hover:from-green-400 hover:via-green-500 hover:to-green-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-green-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">🔐</span>
-                      <span class="text-lg">Logga in</span>
-                    </div>
-                  </button>
-                  <a href="{{ url_for('register') }}" class="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-400 hover:via-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 text-center block overflow-hidden">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <div class="relative z-10 flex items-center justify-center gap-3">
-                      <span class="text-2xl group-hover:scale-110 transition-transform duration-300">📝</span>
-                      <span class="text-lg">Registrera dig</span>
-                    </div>
-                  </a>
+                  <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--block rp-btn--primary">Logga in</button>
+                  <a href="{{ url_for('register') }}" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</a>
                   {% endif %}
                 </div>
               </div>
@@ -1935,11 +1740,9 @@
 
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
                 <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🔧 Admin & System</h2>
-                <div class="space-y-3">
+                <div class="rp-btn-stack">
                   {% if is_admin %}
-                  <a href="{{ url_for('admin_page') }}" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded shadow text-sm w-full text-center block">
-                    Admin Panel
-                  </a>
+                  <a href="{{ url_for('admin_page') }}" class="rp-btn rp-btn--block rp-btn--gold">Admin Panel</a>
                   {% endif %}
                 </div>
               </div>
@@ -1950,7 +1753,7 @@
         <footer class="relative z-20 mt-10 border-t border-cyan-500/15 pt-6 pb-4">
           <div class="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-4">
             <span class="text-xs font-semibold uppercase tracking-wider text-gray-500">Följ oss</span>
-            <a href="{{ facebook_page_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-900/30 transition hover:bg-[#166fe5] focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-gray-900">
+            <a href="{{ facebook_page_url }}" target="_blank" rel="noopener noreferrer" class="rp-btn rp-btn--facebook">
               <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
               Facebook
             </a>
@@ -3135,8 +2938,7 @@
           // Remove active class from all buttons and panels
           tabButtons.forEach(btn => {
             if (!btn.disabled) {
-              btn.classList.remove('active', 'bg-yellow-500', 'text-white');
-              btn.classList.add('text-gray-300', 'hover:text-white', 'hover:bg-gray-700');
+              btn.classList.remove('active');
             }
           });
           
@@ -3146,8 +2948,7 @@
           });
           
           // Add active class to clicked button and corresponding panel
-          button.classList.add('active', 'bg-yellow-500', 'text-white');
-          button.classList.remove('text-gray-300', 'hover:text-white', 'hover:bg-gray-700');
+          button.classList.add('active');
           
           const targetPanel = document.getElementById(targetTab);
           if (targetPanel) {
