@@ -122,7 +122,7 @@
     html += '</div>';
 
     if (lastRace.length) {
-      html += `<button type="button" class="wizard-quick-action" data-action="last-race"
+      html += `<button type="button" class="rp-btn rp-btn--link wizard-quick-action" data-action="last-race"
         data-class-key="${classKey}" data-rider-class="${riderClass}">
         Samma som förra racet (1–6)
       </button>`;

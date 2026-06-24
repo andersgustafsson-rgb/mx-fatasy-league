@@ -622,16 +622,16 @@
     
     <!-- Picks Status Indicator -->
     <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
           <div id="status-icon" class="text-2xl">⏳</div>
           <div>
             <h3 id="status-title" class="text-lg font-semibold text-cyan-400">Laddar picks-status...</h3>
             <p id="status-message" class="text-sm text-gray-300">Kontrollerar om du har gjort dina val</p>
           </div>
         </div>
-        <div id="status-actions" class="hidden">
-          <button onclick="clearAllPicks()" class="text-sm text-red-400 hover:text-red-300">
+        <div id="status-actions" class="hidden shrink-0">
+          <button type="button" onclick="clearAllPicks()" class="rp-btn rp-btn--ghost-danger">
             Rensa alla val
           </button>
         </div>
@@ -804,7 +804,7 @@
           <div id="wildcard-wheel-hub" class="wildcard-wheel__hub">?</div>
         </div>
         <div class="wildcard-roll__actions">
-          <button type="button" id="wildcard-roll-btn" class="wildcard-roll__btn">Snurra plats</button>
+          <button type="button" id="wildcard-roll-btn" class="rp-btn rp-btn--secondary wildcard-roll__btn">Snurra plats</button>
           <span id="wildcard-position-label" class="wildcard-roll__label"></span>
         </div>
       </div>
@@ -829,21 +829,21 @@
     </div><!-- /wizard-step-3-forms -->
 
     <div id="wizard-step-save" class="wizard-step-save" style="display: none;">
-      <div class="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
-        <button id="save-picks-btn" onclick="savePicks()" class="flex-1 bg-green-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">✅ Lämna in mina val</button>
+      <div class="wizard-step-save__actions mt-4 sm:mt-6">
+        <button type="button" id="save-picks-btn" onclick="savePicks()" class="rp-btn rp-btn--primary">Lämna in mina val</button>
         {% if picks_locked %}
-        <button onclick="showOtherUsersPicks()" class="bg-blue-600 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">👥 Visa Andras Picks</button>
+        <button type="button" onclick="showOtherUsersPicks()" class="rp-btn rp-btn--accent">Visa andras picks</button>
         {% else %}
-        <button type="button" onclick="clearMyPicks()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 sm:py-3 rounded text-sm sm:text-base">🧹 Rensa alla val</button>
+        <button type="button" onclick="clearMyPicks()" class="rp-btn rp-btn--danger">Rensa alla val</button>
         {% endif %}
       </div>
     </div>
   </section>
 
   <footer class="wizard-nav">
-    <button type="button" id="wizard-btn-back" class="wizard-nav__btn wizard-nav__btn--back" disabled>← Tillbaka</button>
+    <button type="button" id="wizard-btn-back" class="rp-btn rp-btn--secondary wizard-nav__btn wizard-nav__btn--back" disabled>← Tillbaka</button>
     <span id="wizard-step-label" class="wizard-nav__label">Steg 1 av 3</span>
-    <button type="button" id="wizard-btn-next" class="wizard-nav__btn wizard-nav__btn--next">Nästa: {{ class_250_label }} →</button>
+    <button type="button" id="wizard-btn-next" class="rp-btn rp-btn--accent wizard-nav__btn wizard-nav__btn--next">Nästa: {{ class_250_label }} →</button>
   </footer>
   <p class="wizard-draft-note">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
 </div>
