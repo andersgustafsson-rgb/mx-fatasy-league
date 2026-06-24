@@ -145,7 +145,8 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-2">Tidszon</label>
                         <select id="competition-timezone" onchange="updateCurrentTime()" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
-                            <option value="America/New_York">Eastern Time</option>
+                            <option value="America/New_York">Eastern Time (US)</option>
+                            <option value="America/Detroit">Eastern Time — Michigan</option>
                             <option value="America/Chicago">Central Time</option>
                             <option value="America/Denver">Mountain Time</option>
                             <option value="America/Los_Angeles">Pacific Time</option>
@@ -156,7 +157,7 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-2">Race Start Tid (lokaltid)</label>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Race Start Tid (i vald tidszon ovan)</label>
                         <input type="time" id="competition-start-time" value="20:00" class="w-full bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600">
                         <p class="text-xs text-gray-400 mt-1">Tid när racet startar i vald tidszon (default: 8:00 PM)</p>
                     </div>

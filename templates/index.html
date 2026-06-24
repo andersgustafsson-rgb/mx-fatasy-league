@@ -951,7 +951,8 @@
               </div>
               <div class="relative z-10">
               <div class="text-center">
-                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-2" id="real-countdown-race-name">Laddar...</h3>
+                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-1" id="real-countdown-race-name">Laddar...</h3>
+                <p id="real-race-schedule-label" class="text-cyan-100/80 text-xs sm:text-sm mb-2 hidden"></p>
                 <div id="race-day-weather" class="hidden mb-3 flex justify-center">
                   <div class="inline-flex items-center gap-2 bg-black/50 border border-cyan-400/30 rounded-full px-3 py-1.5 backdrop-blur-sm max-w-full">
                     <span id="race-weather-icon" class="text-xl sm:text-2xl leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
@@ -2408,6 +2409,27 @@
         
         // Update race name
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
+
+        const schedEl = document.getElementById('real-race-schedule-label');
+        if (schedEl && data.next_race) {
+          const nr = data.next_race;
+          let sched = '';
+          if (nr.race_start_display) {
+            sched = `Start ${nr.race_start_display}`;
+            if (nr.pick_deadline_display) {
+              sched += ` · Picks till ${nr.pick_deadline_display}`;
+            }
+          }
+          if (nr.stockholm_display && nr.timezone !== 'Europe/Stockholm') {
+            sched += ` · ${nr.stockholm_display}`;
+          }
+          if (sched) {
+            schedEl.textContent = sched;
+            schedEl.classList.remove('hidden');
+          } else {
+            schedEl.classList.add('hidden');
+          }
+        }
         updateNextMxDaysLabel(data);
         updateRaceDayWeather(data.weather);
         
@@ -2684,7 +2706,7 @@
       function formatTimeFromTotal(totalSeconds) {
         const ts = Math.max(0, Math.floor(Number(totalSeconds || 0)));
         if (ts <= 0) {
-          return '00:00:00';
+          return 'Nu';
         }
         
         const days = Math.floor(ts / 86400);
@@ -2692,11 +2714,16 @@
         const minutes = Math.floor((ts % 3600) / 60);
         const seconds = ts % 60;
         
-        if (days > 0) {
-          return `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        } else {
-          return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const parts = [];
+        if (days > 0) parts.push(`${days} d`);
+        if (days > 0 || hours > 0) parts.push(`${hours} h`);
+        parts.push(`${minutes} min`);
+        if (days === 0 && hours === 0) {
+          parts.push(`${seconds} s`);
+        } else if (days === 0) {
+          parts.push(`${String(seconds).padStart(2, '0')} s`);
         }
+        return parts.join(' ');
       }
       
       document.getElementById('real-race-countdown').textContent = formatTimeFromTotal(raceTotal);

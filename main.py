@@ -21137,6 +21137,159 @@ def fix_missing_bike_brands():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+
+_SV_MONTHS = (
+    "",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "maj",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "okt",
+    "nov",
+    "dec",
+)
+
+
+def _parse_start_time_value(val):
+    """Parse DB start_time (time object or HH:MM string)."""
+    from datetime import time as time_type
+
+    if val is None:
+        return None
+    if isinstance(val, time_type):
+        return val
+    if isinstance(val, str):
+        s = val.strip()
+        if not s:
+            return None
+        parts = s.split(":")
+        if len(parts) < 2:
+            return None
+        return time_type(
+            int(parts[0]),
+            int(parts[1]),
+            int(parts[2]) if len(parts) > 2 else 0,
+        )
+    return None
+
+
+def _tz_display_label(tz_name: str | None) -> str:
+    mapping = {
+        "Europe/Stockholm": "Stockholm",
+        "America/New_York": "Eastern (US)",
+        "America/Detroit": "Eastern (US)",
+        "America/Chicago": "Central (US)",
+        "America/Denver": "Mountain (US)",
+        "America/Los_Angeles": "Pacific (US)",
+        "America/Phoenix": "Arizona (US)",
+    }
+    tz = (tz_name or "").strip()
+    if tz in mapping:
+        return mapping[tz]
+    return tz.split("/")[-1].replace("_", " ") if tz else "lokal tid"
+
+
+def _competition_race_schedule(comp) -> dict:
+    """
+    Race start + pick deadline in UTC (naive) and labels for countdown UI.
+    start_time is interpreted in competition.timezone (banens lokala tidszon).
+    """
+    from datetime import date, datetime, timedelta
+
+    raw_date = getattr(comp, "event_date", None)
+    if isinstance(raw_date, str):
+        event_date = datetime.fromisoformat(raw_date.replace("Z", "+00:00")).date()
+    elif isinstance(raw_date, datetime):
+        event_date = raw_date.date()
+    elif isinstance(raw_date, date):
+        event_date = raw_date
+    else:
+        raise ValueError("competition has no event_date")
+
+    timezone_val = (getattr(comp, "timezone", None) or "America/Los_Angeles").strip()
+    start_time = _parse_start_time_value(getattr(comp, "start_time", None))
+
+    if start_time:
+        race_local_naive = datetime.combine(event_date, start_time)
+    else:
+        race_local_naive = datetime.combine(
+            event_date, datetime.min.time().replace(hour=20, minute=0)
+        )
+
+    race_datetime_utc = None
+    race_aware = None
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(timezone_val)
+        race_aware = race_local_naive.replace(tzinfo=tz)
+        race_datetime_utc = race_aware.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    except Exception:
+        try:
+            import pytz
+
+            tz = pytz.timezone(timezone_val)
+            race_aware = tz.localize(race_local_naive)
+            race_datetime_utc = race_aware.astimezone(pytz.UTC).replace(tzinfo=None)
+        except Exception:
+            # Last resort — approximate offset (summer-aware for common US/EU zones)
+            month = event_date.month
+            summer = month in (3, 4, 5, 6, 7, 8, 9, 10)
+            offsets = {
+                "America/Los_Angeles": -7 if summer else -8,
+                "America/Denver": -6 if summer else -7,
+                "America/Phoenix": -7,
+                "America/Chicago": -5 if summer else -6,
+                "America/New_York": -4 if summer else -5,
+                "America/Detroit": -4 if summer else -5,
+                "America/Argentina/Buenos_Aires": -3,
+                "Australia/Brisbane": 10,
+                "Europe/Stockholm": 2 if summer else 1,
+            }
+            utc_offset = offsets.get(timezone_val, -8)
+            race_datetime_utc = race_local_naive - timedelta(hours=utc_offset)
+
+    deadline_datetime_utc = race_datetime_utc - timedelta(hours=2)
+    deadline_local_naive = race_local_naive - timedelta(hours=2)
+
+    tz_label = _tz_display_label(timezone_val)
+    m = _SV_MONTHS[event_date.month]
+    race_start_display = (
+        f"{event_date.day} {m} {event_date.year} kl "
+        f"{race_local_naive.strftime('%H:%M')} ({tz_label})"
+    )
+    pick_deadline_display = (
+        f"{deadline_local_naive.day} {m} kl "
+        f"{deadline_local_naive.strftime('%H:%M')} ({tz_label})"
+    )
+
+    stockholm_display = None
+    try:
+        from zoneinfo import ZoneInfo
+
+        if race_aware is not None:
+            se = race_aware.astimezone(ZoneInfo("Europe/Stockholm"))
+            stockholm_display = (
+                f"{se.day} {_SV_MONTHS[se.month]} kl {se.strftime('%H:%M')} (Stockholm)"
+            )
+    except Exception:
+        pass
+
+    return {
+        "race_utc": race_datetime_utc,
+        "deadline_utc": deadline_datetime_utc,
+        "timezone": timezone_val,
+        "race_start_display": race_start_display,
+        "pick_deadline_display": pick_deadline_display,
+        "stockholm_display": stockholm_display,
+    }
+
+
 @app.route("/race_countdown")
 def race_countdown():
     """Countdown for main page - supports both real and test modes"""
@@ -21268,68 +21421,19 @@ def race_countdown():
             # Self-heal and autoset were causing DB writes on a hot endpoint.
             # Keep behavior read-only; any fixes should be done via admin tools/migrations.
             
-            # Calculate countdown to race start using start_time from database
-            # Ensure event_date is a datetime object
-            if isinstance(next_race_obj.event_date, str):
-                event_date = datetime.fromisoformat(next_race_obj.event_date.replace('Z', '+00:00'))
-            elif isinstance(next_race_obj.event_date, date) and not isinstance(next_race_obj.event_date, datetime):
-                # Convert date to datetime at midnight
-                event_date = datetime.combine(next_race_obj.event_date, datetime.min.time())
-            else:
-                event_date = next_race_obj.event_date
-            
-            # Use start_time from database if available, otherwise default to 8 PM
-            start_time = next_race_obj.start_time
-            timezone_val = getattr(next_race_obj, 'timezone', 'America/Los_Angeles')
-            
-            if start_time:
-                race_datetime_local = datetime.combine(event_date.date(), start_time)
-            else:
-                race_datetime_local = event_date.replace(hour=20, minute=0, second=0, microsecond=0)
-            
-            # Convert local time to UTC for accurate countdown
-            # Use proper timezone handling with zoneinfo (Python 3.9+) or pytz fallback
-            timezone = timezone_val  # Use the value we already got above
-            
-            try:
-                # Try using zoneinfo (Python 3.9+)
-                from zoneinfo import ZoneInfo
-                tz = ZoneInfo(timezone)
-                # Make race_datetime_local timezone-aware
-                race_datetime_aware = race_datetime_local.replace(tzinfo=tz)
-                # Convert to UTC
-                race_datetime = race_datetime_aware.astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
-            except (ImportError, Exception):
-                # Fallback to pytz if zoneinfo not available
-                try:
-                    import pytz
-                    tz = pytz.timezone(timezone)
-                    # Make race_datetime_local timezone-aware
-                    race_datetime_aware = tz.localize(race_datetime_local)
-                    # Convert to UTC
-                    race_datetime = race_datetime_aware.astimezone(pytz.UTC).replace(tzinfo=None)
-                except ImportError:
-                    # Final fallback: use fixed offsets (not ideal, but works)
-                    timezone_offsets = {
-                        'America/Los_Angeles': -8,  # PST (winter) / -7 PDT (summer)
-                        'America/Denver': -7,       # MST (winter) / -6 MDT (summer)
-                        'America/Phoenix': -7,      # MST (no DST)
-                        'America/Chicago': -6,      # CST (winter) / -5 CDT (summer)
-                        'America/New_York': -5,     # EST (winter) / -4 EDT (summer)
-                        'America/Argentina/Buenos_Aires': -3,  # ART (no DST)
-                        'Australia/Brisbane': 10,  # AEST (no DST)
-                        'Europe/Stockholm': 1  # CET (UTC+1 in winter, UTC+2 in summer)
-                    }
-                    # For January, use winter offsets
-                    utc_offset = timezone_offsets.get(timezone, -8)
-                    race_datetime = race_datetime_local - timedelta(hours=utc_offset)
-            
-            deadline_datetime = race_datetime - timedelta(hours=2)  # 2 hours before race
+            # Calculate countdown to race start using start_time + timezone
+            schedule = _competition_race_schedule(next_race_obj)
+            race_datetime = schedule["race_utc"]
+            deadline_datetime = schedule["deadline_utc"]
             
             next_race = {
                 "id": next_race_obj.id,
                 "name": next_race_obj.name,
-                "event_date": next_race_obj.event_date.isoformat()
+                "event_date": next_race_obj.event_date.isoformat(),
+                "race_start_display": schedule["race_start_display"],
+                "pick_deadline_display": schedule["pick_deadline_display"],
+                "stockholm_display": schedule.get("stockholm_display"),
+                "timezone": schedule["timezone"],
             }
         
         now = datetime.utcnow()

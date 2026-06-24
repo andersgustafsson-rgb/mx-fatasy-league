@@ -79,7 +79,18 @@ class Competition(db.Model):
             ).fetchone()
             if result and result[0]:
                 from datetime import time
-                return result[0] if isinstance(result[0], time) else None
+                raw = result[0]
+                if isinstance(raw, time):
+                    return raw
+                if isinstance(raw, str):
+                    s = raw.strip()
+                    if s and ':' in s:
+                        parts = s.split(':')
+                        return time(
+                            int(parts[0]),
+                            int(parts[1]),
+                            int(parts[2]) if len(parts) > 2 else 0,
+                        )
             return None
         except Exception:
             return None
