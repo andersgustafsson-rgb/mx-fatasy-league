@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spelmanual - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
     <style>
         /* Dark background for mobile and desktop */
         body {
@@ -82,7 +83,7 @@
                     <h1 class="text-base sm:text-xl font-semibold text-gray-200">📖 Spelmanual</h1>
                 </div>
                 <div class="flex items-center space-x-2 sm:space-x-4">
-                    <a href="/" class="text-cyan-400 hover:text-cyan-300 hover:underline text-sm sm:text-base">← Tillbaka</a>
+                    <a href="/" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
                 </div>
             </div>
         </div>

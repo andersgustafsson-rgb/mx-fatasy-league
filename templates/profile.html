@@ -5,6 +5,7 @@
   <title>Min Profil - MX Fantasy League</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-4 md:p-8">
@@ -17,11 +18,8 @@
           Hantera din profil och inställningar
         </p>
       </header>
-      <div class="flex gap-3">
-        <a href="{{ url_for('index') }}"
-           class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-           Tillbaka till Huvudsidan
-        </a>
+      <div class="rp-btn-row">
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">Tillbaka till Huvudsidan</a>
       </div>
     </div>
 

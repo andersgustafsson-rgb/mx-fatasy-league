@@ -444,6 +444,7 @@
     flex-shrink: 0;
   }
 </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
@@ -474,13 +475,9 @@
     {% endif %}
   </div>
 
-      <div class="flex gap-2">
-        <a href="{{ url_for('index') }}" class="bg-gray-500 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base self-start sm:self-center">
-    ⬅ Tillbaka
-  </a>
-        <a href="{{ url_for('bulletin_board') }}" class="bg-orange-600 hover:bg-orange-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base self-start sm:self-center">
-          📋 Trash Talk Brädan
-  </a>
+      <div class="rp-btn-row rp-btn-row--end shrink-0">
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
+        <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm">Trash Talk Brädan</a>
       </div>
 </div>
 

@@ -5,6 +5,7 @@
   <title>Track Maps 2026 – Supercross</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <style>
     .thumb { opacity: .6; cursor: pointer; border: 2px solid transparent; }
     .thumb.active { opacity: 1; border-color: #60a5fa; }
@@ -14,8 +15,7 @@
   <div class="container mx-auto p-6">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-blue-500">Track Maps – AMA Supercross 2026</h1>
-      <a href="{{ url_for('index') }}"
-         class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-4 py-2 rounded">⬅ Tillbaka</a>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

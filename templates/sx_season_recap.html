@@ -6,6 +6,7 @@
   <title>Supercross {{ year }} — Säsong klar | MX Fantasy</title>
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -300,7 +301,7 @@
         </div>
         <div class="flex flex-col items-center sm:items-end gap-2">
           <p class="text-amber-400/90 font-orbit text-[10px] tracking-[0.28em] uppercase">SX {{ year }}</p>
-          <a href="{{ url_for('index') }}" class="text-sm font-bold text-cyan-400 hover:text-cyan-300 transition-colors border border-cyan-500/30 rounded-lg px-4 py-2 bg-cyan-950/30 hover:bg-cyan-900/40">← Tillbaka</a>
+          <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
         </div>
       </header>
 

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ rider.name }} — Förarprofil</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <style>
     .page-bg {
       background:
@@ -78,9 +79,9 @@
     <!-- Top bar -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
       <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
-      <div class="flex gap-2">
-        <a href="{{ url_for('riders_directory') }}" class="px-3 py-1.5 text-sm bg-slate-800/80 border border-slate-600 text-slate-200 rounded-lg hover:bg-slate-700">Förarguide</a>
-        <button type="button" onclick="history.back()" class="px-3 py-1.5 text-sm bg-slate-800/80 border border-slate-600 text-slate-200 rounded-lg hover:bg-slate-700">← Tillbaka</button>
+      <div class="rp-btn-row">
+        <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--secondary rp-btn--sm">Förarguide</a>
+        <button type="button" onclick="history.back()" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</button>
       </div>
     </div>
 

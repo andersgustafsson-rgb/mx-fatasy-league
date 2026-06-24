@@ -5,17 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ username }} – Stats</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-6">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-yellow-400">{{ username }} – Stats</h1>
-      <div class="flex gap-2">
-        <a href="{{ url_for('user_scores_page', username=username) }}" 
-           class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white font-bold">
-          📊 Detaljerad poänghistorik
-        </a>
-        <a href="{{ url_for('index') }}" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white font-bold">⬅ Tillbaka</a>
+      <div class="rp-btn-row rp-btn-row--end">
+        <a href="{{ url_for('user_scores_page', username=username) }}" class="rp-btn rp-btn--accent rp-btn--sm">Detaljerad poänghistorik</a>
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
       </div>
     </div>
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyberpunk Trash Talk Brädan - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
     <script>
         // Suppress Tailwind CDN warning in production
         if (window.location.hostname !== 'localhost') {
@@ -466,7 +467,7 @@
                     <h1 class="handwritten-title text-2xl">📋 Trash Talk Brädan</h1>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-cyan-400 hover:text-cyan-300 transition-colors handwritten">← Tillbaka</a>
+                    <a href="/" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
                 </div>
             </div>
         </header>
