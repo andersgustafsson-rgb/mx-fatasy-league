@@ -368,6 +368,61 @@
     font-size: 0.82rem;
     color: #94a3b8;
   }
+
+  .race-picks-out-details {
+    border: 1px solid rgba(248, 113, 113, 0.22);
+    border-radius: 0.5rem;
+    background: rgba(127, 29, 29, 0.12);
+    overflow: hidden;
+  }
+  .race-picks-out-details summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    user-select: none;
+  }
+  .race-picks-out-details summary::-webkit-details-marker { display: none; }
+  .race-picks-out-details summary::after {
+    content: '＋';
+    font-size: 0.85rem;
+    color: #f87171;
+    font-weight: 400;
+    flex-shrink: 0;
+  }
+  .race-picks-out-details[open] summary::after { content: '−'; }
+  .race-picks-out-details summary:hover {
+    background: rgba(127, 29, 29, 0.2);
+  }
+  .race-picks-out-details__body {
+    padding: 0 0.75rem 0.65rem;
+  }
+  .race-picks-out-details__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .race-picks-out-details__list li {
+    font-size: 0.72rem;
+    color: #fecaca;
+    padding: 0.2rem 0.45rem;
+    border-radius: 0.35rem;
+    background: rgba(127, 29, 29, 0.35);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+  }
+  .race-picks-out-details__list li span {
+    color: #f87171;
+  }
+
   .race-prep-kv {
     display: flex;
     justify-content: space-between;
@@ -583,20 +638,19 @@
       </div>
     </div>
     
-    <!-- OUT Riders List -->
     {% if out_ids %}
-    <div class="mb-4 p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
-      <h3 class="text-sm font-semibold text-red-400 mb-2">⚠️ OUT-förare (kan inte väljas)</h3>
-      <div class="flex flex-wrap gap-2">
-        {% for rider in out_riders_mini %}
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-red-800/40 text-red-200 text-xs rounded border border-red-600/50">
-              <span class="w-2 h-2 bg-red-500 rounded-full"></span>
-              #{{ rider.rider_number }} {{ rider.name }}
-              <span class="text-red-300">({{ rider.class }})</span>
-            </span>
-        {% endfor %}
+    <details class="race-picks-out-details mb-3">
+      <summary>
+        {{ out_ids|length }} förare är OUT för detta race (syns inte i listorna)
+      </summary>
+      <div class="race-picks-out-details__body">
+        <ul class="race-picks-out-details__list">
+          {% for rider in out_riders_mini %}
+          <li>#{{ rider.rider_number }} {{ rider.name }} <span>({{ rider.class }})</span></li>
+          {% endfor %}
+        </ul>
       </div>
-    </div>
+    </details>
     {% endif %}
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
@@ -742,19 +796,20 @@
     </div>
 
     {% if competition.series != 'WSX' %}
-    <div class="mt-4 sm:mt-6 p-3 sm:p-4 bg-purple-100 dark:bg-purple-800 rounded">
-      <h3 class="font-bold text-base sm:text-lg text-purple-900 dark:text-purple-200">Wildcard</h3>
-      <p class="text-sm text-purple-800 dark:text-purple-200/90 mt-1 mb-3">Snurra för plats 10–20, välj sedan en 450-förare.</p>
-      <div class="wildcard-wheel-wrap">
-        <div class="wildcard-wheel-pointer" aria-hidden="true"></div>
-        <div id="wildcard-wheel" class="wildcard-wheel">
+    <div class="wildcard-panel mt-4 sm:mt-5">
+      <h3 class="wildcard-panel__title">Wildcard</h3>
+      <p class="wildcard-panel__hint">Slumpa plats 10–20, välj sedan en 450-förare.</p>
+      <div class="wildcard-roll">
+        <div id="wildcard-wheel" class="wildcard-wheel" aria-hidden="true">
           <div id="wildcard-wheel-hub" class="wildcard-wheel__hub">?</div>
         </div>
-        <button type="button" id="wildcard-roll-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm sm:text-base font-bold">Snurra plats</button>
-        <span id="wildcard-position-label" class="font-bold text-purple-900 dark:text-purple-100 text-sm sm:text-base"></span>
-        <input type="hidden" id="wildcard-position" />
+        <div class="wildcard-roll__actions">
+          <button type="button" id="wildcard-roll-btn" class="wildcard-roll__btn">Snurra plats</button>
+          <span id="wildcard-position-label" class="wildcard-roll__label"></span>
+        </div>
       </div>
-      <div class="rider-selector w-full" data-class="wildcard-pick">
+      <input type="hidden" id="wildcard-position" />
+      <div class="rider-selector w-full mt-3" data-class="wildcard-pick">
         <div class="rider-selector-input" onclick="toggleRiderSelector('wildcard-pick', 0)">
           <span class="selected-rider">-- välj 450cc förare --</span>
           <span class="dropdown-arrow">▼</span>
