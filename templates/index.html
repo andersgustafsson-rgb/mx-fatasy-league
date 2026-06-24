@@ -2718,11 +2718,7 @@
         if (days > 0) parts.push(`${days} d`);
         if (days > 0 || hours > 0) parts.push(`${hours} h`);
         parts.push(`${minutes} min`);
-        if (days === 0 && hours === 0) {
-          parts.push(`${seconds} s`);
-        } else if (days === 0) {
-          parts.push(`${String(seconds).padStart(2, '0')} s`);
-        }
+        parts.push(`${String(seconds).padStart(2, '0')} s`);
         return parts.join(' ');
       }
       
