@@ -961,7 +961,7 @@
 
         <!-- Tab Navigation -->
         <div class="mb-6 relative z-10">
-          <div class="relative flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
+          <div class="relative flex items-stretch sm:items-center bg-black bg-opacity-40 rounded-lg p-1.5 sm:p-1">
             <!-- Desktop: Login/Logout Button (hidden on mobile, icon in header) -->
             <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
             {% if is_logged_in %}
@@ -981,97 +981,10 @@
           {% endif %}
             </div>
             
-            <!-- Center: Tab Buttons -->
-            <div class="flex flex-1 items-center relative min-w-0">
-              <!-- Scrollable tabs container -->
-              <div id="tab-scroll-container" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="-webkit-overflow-scrolling: touch; touch-action: pan-x;">
-                <style>
-                  /* Visible scrollbar on mobile for better UX */
-                  @media (max-width: 640px) {
-                    #tab-scroll-container {
-                      touch-action: pan-x !important;
-                      -webkit-overflow-scrolling: touch !important;
-                      overflow-x: auto !important;
-                      overflow-y: hidden !important;
-                      scrollbar-width: thin;
-                      scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-                      /* Add subtle gradient at edges to show more content */
-                      mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
-                      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
-                    }
-                    
-                    /* Custom scrollbar styling for webkit browsers */
-                    #tab-scroll-container::-webkit-scrollbar {
-                      height: 4px;
-                      display: block;
-                    }
-                    
-                    #tab-scroll-container::-webkit-scrollbar-track {
-                      background: rgba(0, 0, 0, 0.3);
-                      border-radius: 2px;
-                    }
-                    
-                    #tab-scroll-container::-webkit-scrollbar-thumb {
-                      background: rgba(156, 163, 175, 0.7);
-                      border-radius: 2px;
-                    }
-                    
-                    #tab-scroll-container::-webkit-scrollbar-thumb:hover {
-                      background: rgba(156, 163, 175, 0.9);
-                    }
-                    
-                    /* Add visible overflow indicators - show partial tabs */
-                    #tab-scroll-container::before {
-                      content: '';
-                      position: absolute;
-                      left: 0;
-                      top: 0;
-                      bottom: 0;
-                      width: 20px;
-                      pointer-events: none;
-                      background: linear-gradient(to right, rgba(0, 0, 0, 0.6), transparent);
-                      opacity: 0;
-                      transition: opacity 0.3s;
-                      z-index: 5;
-                    }
-                    
-                    #tab-scroll-container::after {
-                      content: '';
-                      position: absolute;
-                      right: 0;
-                      top: 0;
-                      bottom: 0;
-                      width: 20px;
-                      pointer-events: none;
-                      background: linear-gradient(to left, rgba(0, 0, 0, 0.6), transparent);
-                      opacity: 0;
-                      transition: opacity 0.3s;
-                      z-index: 5;
-                    }
-                    
-                    /* Show indicators when scrollable */
-                    #tab-scroll-container.scrollable-left::before {
-                      opacity: 1;
-                    }
-                    
-                    #tab-scroll-container.scrollable-right::after {
-                      opacity: 1;
-                    }
-                  }
-                  
-                  /* Hide scrollbar on desktop */
-                  @media (min-width: 641px) {
-                    #tab-scroll-container::-webkit-scrollbar {
-                      display: none;
-                    }
-                    #tab-scroll-container {
-                      scrollbar-width: none;
-                      -ms-overflow-style: none;
-                    }
-                  }
-                </style>
-                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info">Race Info</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard">Leaderboard</button>
+            <!-- Tab grid on mobile, wrapped row on desktop -->
+            <div id="tab-scroll-container" class="w-full min-w-0 sm:flex sm:flex-1 sm:flex-wrap sm:justify-center sm:gap-1">
+                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden">Toppl.</span><span class="hidden sm:inline">Leaderboard</span></button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
@@ -1082,9 +995,8 @@
                   class="tab-btn rp-tab-btn" data-tab="season-team"
                   {% endif %}
                 >Team</button>
-                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings">Settings</button>
+                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden">Inst.</span><span class="hidden sm:inline">Settings</span></button>
                 <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
-              </div>
             </div>
           </div>
         </div>
@@ -2869,53 +2781,10 @@
       }
     }
     
-    // Update scroll indicators for tab container
-    function updateTabScrollIndicators() {
-      const container = document.getElementById('tab-scroll-container');
-      if (!container) return;
-      
-      // Only show on mobile
-      const isMobile = window.innerWidth <= 640;
-      if (!isMobile) {
-        container.classList.remove('scrollable-left', 'scrollable-right');
-        return;
-      }
-      
-      const scrollLeft = container.scrollLeft;
-      const scrollWidth = container.scrollWidth;
-      const clientWidth = container.clientWidth;
-      const maxScroll = scrollWidth - clientWidth;
-      
-      // Show/hide left indicator
-      if (scrollLeft > 10) {
-        container.classList.add('scrollable-left');
-      } else {
-        container.classList.remove('scrollable-left');
-      }
-      
-      // Show/hide right indicator
-      if (scrollLeft < maxScroll - 10) {
-        container.classList.add('scrollable-right');
-      } else {
-        container.classList.remove('scrollable-right');
-      }
-    }
-    
     // Tab System
     function initTabs() {
       const tabButtons = document.querySelectorAll('.tab-btn');
       const tabPanels = document.querySelectorAll('.tab-panel');
-      
-      // Initialize scroll indicators
-      const tabContainer = document.getElementById('tab-scroll-container');
-      if (tabContainer) {
-        // Update on scroll
-        tabContainer.addEventListener('scroll', updateTabScrollIndicators);
-        // Update on resize
-        window.addEventListener('resize', updateTabScrollIndicators);
-        // Initial update
-        setTimeout(updateTabScrollIndicators, 100);
-      }
       
       tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -3855,8 +3724,6 @@
       ].forEach(function(fn, i) {
         setTimeout(fn, 700 + i * 200);
       });
-
-      setTimeout(updateTabScrollIndicators, 300);
 
       startCountdown();
       startActiveNow();

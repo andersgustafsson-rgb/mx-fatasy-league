@@ -197,6 +197,28 @@
   cursor: not-allowed;
 }
 
+/* Homepage tabs: 4×2 grid on mobile (no horizontal scroll) */
+@media (max-width: 639px) {
+  #tab-scroll-container {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+    overflow: visible;
+  }
+
+  #tab-scroll-container > .tab-btn,
+  #tab-scroll-container > a.tab-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0.45rem 0.2rem;
+    font-size: 0.68rem;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.15;
+    min-height: 2.55rem;
+  }
+}
+
 .rp-btn--gold {
   background: rgba(161, 98, 7, 0.4);
   color: #fef3c7;
