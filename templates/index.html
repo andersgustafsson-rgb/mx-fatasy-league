@@ -748,8 +748,21 @@
             </div>
         </header>
         {% if is_logged_in %}
-        <div class="flex-shrink-0 self-start sm:self-center">
+        <div class="flex-shrink-0 self-start sm:self-center flex items-center gap-2">
+          <a href="{{ url_for('logout') }}" class="sm:hidden rp-btn rp-btn--danger rp-btn--sm" title="Logga ut" aria-label="Logga ut">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+          </a>
           {% include 'includes/pit_lane_bell.html' %}
+        </div>
+        {% else %}
+        <div class="flex-shrink-0 self-start sm:self-center">
+          <button type="button" onclick="openLoginModal();" class="sm:hidden rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+            </svg>
+          </button>
         </div>
         {% endif %}
 
@@ -901,43 +914,6 @@
           </div>
           {% endif %}
           
-          <!-- Mobile: Quick Access Buttons above countdown -->
-          <div class="mb-4 sm:hidden">
-            <div class="bg-black bg-opacity-40 rounded-lg p-2 border border-gray-600">
-              <!-- Row 1: Login/Logout and Settings -->
-              <div class="flex items-center gap-2 mb-2">
-                <!-- Login/Logout Button -->
-                {% if is_logged_in %}
-                  <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                    </svg>
-                    <span>Logga ut</span>
-                  </a>
-                {% else %}
-                  <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                    </svg>
-                    <span>Logga in</span>
-                  </button>
-                {% endif %}
-                
-                <!-- Settings button -->
-                <button type="button" class="flex-1 tab-btn rp-tab-btn settings-btn" data-tab="settings">
-                  Settings
-                </button>
-              </div>
-              
-              <!-- Row 2: Quick access tabs -->
-              <div class="grid grid-cols-3 gap-2">
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard">Leaderboard</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
-                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn text-center" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
-              </div>
-            </div>
-          </div>
-
           <!-- Countdown Widgets Container -->
           <div class="flex flex-col lg:flex-row gap-4 min-w-[280px] sm:min-w-[400px] lg:min-w-[1000px]">
             
@@ -986,7 +962,7 @@
         <!-- Tab Navigation -->
         <div class="mb-6 relative z-10">
           <div class="relative flex items-center justify-between bg-black bg-opacity-40 rounded-lg p-1">
-            <!-- Desktop: Login/Logout Button (hidden on mobile, moved above countdown) -->
+            <!-- Desktop: Login/Logout Button (hidden on mobile, icon in header) -->
             <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
             {% if is_logged_in %}
               <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
@@ -1005,11 +981,8 @@
           {% endif %}
             </div>
             
-            <!-- Desktop: Settings tab button (hidden on mobile, moved above countdown) -->
-            <button type="button" class="hidden sm:block tab-btn rp-tab-btn settings-btn" data-tab="settings">Settings</button>
-
-            <!-- Center: Tab Buttons (now has more space on mobile) -->
-            <div class="flex flex-1 items-center relative">
+            <!-- Center: Tab Buttons -->
+            <div class="flex flex-1 items-center relative min-w-0">
               <!-- Scrollable tabs container -->
               <div id="tab-scroll-container" class="flex flex-1 gap-1 overflow-x-auto sm:flex-wrap sm:justify-center sm:overflow-x-visible" style="-webkit-overflow-scrolling: touch; touch-action: pan-x;">
                 <style>
@@ -1098,9 +1071,9 @@
                   }
                 </style>
                 <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info">Race Info</button>
-                <button type="button" class="tab-btn rp-tab-btn hidden sm:inline-flex" data-tab="leaderboard">Leaderboard</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard">Leaderboard</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
-                <button type="button" class="tab-btn rp-tab-btn hidden sm:inline-flex" data-tab="games">Spel</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
                 <button type="button"
                   {% if upcoming_race and upcoming_race.series == 'WSX' %}
@@ -1109,12 +1082,10 @@
                   class="tab-btn rp-tab-btn" data-tab="season-team"
                   {% endif %}
                 >Team</button>
-                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn hidden sm:inline-flex" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
+                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings">Settings</button>
+                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
               </div>
             </div>
-
-            <!-- Right: Spacer to keep center alignment (hidden on mobile) -->
-            <div class="hidden sm:block w-[110px] sm:w-[120px]"></div>
           </div>
         </div>
       </div>
