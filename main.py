@@ -9002,6 +9002,140 @@ def admin_debug_results(competition_id):
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
+
+def _competition_picks_assessment(comp: Competition) -> dict:
+    """Per-user pick completeness for admin stats (matches homepage has_picks rules)."""
+    is_wsx = (comp.series or "") == "WSX"
+    comp_id = int(comp.id)
+    class_450 = "wsx_sx1" if is_wsx else "450cc"
+    class_250 = "wsx_sx2" if is_wsx else "250cc"
+    label_450 = "SX1" if is_wsx else "450cc"
+    label_250 = "SX2" if is_wsx else "250cc"
+
+    race_picks = RacePick.query.filter_by(competition_id=comp_id).order_by(RacePick.id).all()
+    holeshots = HoleshotPick.query.filter_by(competition_id=comp_id).all()
+    wildcards = {
+        wc.user_id: wc
+        for wc in WildcardPick.query.filter_by(competition_id=comp_id).all()
+    }
+
+    rider_ids = {p.rider_id for p in race_picks}
+    rider_ids.update(h.rider_id for h in holeshots)
+    rider_ids.update(wc.rider_id for wc in wildcards.values() if wc.rider_id)
+    riders_by_id = {}
+    if rider_ids:
+        riders_by_id = {r.id: r for r in Rider.query.filter(Rider.id.in_(rider_ids)).all()}
+
+    race_by_user: dict[int, dict[int, RacePick]] = {}
+    for pick in race_picks:
+        uid = int(pick.user_id)
+        rid = int(pick.rider_id)
+        bucket = race_by_user.setdefault(uid, {})
+        if rid not in bucket or pick.id > bucket[rid].id:
+            bucket[rid] = pick
+
+    holeshot_by_user: dict[int, dict[str, bool]] = {}
+    for hs in holeshots:
+        uid = int(hs.user_id)
+        rider = riders_by_id.get(hs.rider_id)
+        if not rider:
+            continue
+        cls = (rider.class_name or "").strip().lower()
+        flags = holeshot_by_user.setdefault(uid, {class_450: False, class_250: False})
+        if cls in (class_450, "450cc", "wsx_sx1"):
+            flags[class_450] = True
+        elif cls in (class_250, "250cc", "wsx_sx2"):
+            flags[class_250] = True
+
+    all_user_ids = set(race_by_user) | set(holeshot_by_user) | set(wildcards)
+    users_by_id = {}
+    if all_user_ids:
+        users_by_id = {u.id: u for u in User.query.filter(User.id.in_(all_user_ids)).all()}
+
+    def _user_row(uid: int) -> dict:
+        user = users_by_id.get(uid)
+        picks_map = race_by_user.get(uid, {})
+        n450 = 0
+        n250 = 0
+        for pick in picks_map.values():
+            rider = riders_by_id.get(pick.rider_id)
+            if not rider:
+                continue
+            cls = (rider.class_name or "").strip().lower()
+            if cls in (class_450, "450cc", "wsx_sx1"):
+                n450 += 1
+            elif cls in (class_250, "250cc", "wsx_sx2"):
+                n250 += 1
+
+        hs_flags = holeshot_by_user.get(uid, {class_450: False, class_250: False})
+        wc = wildcards.get(uid)
+        wc_pos = bool(wc and wc.position is not None)
+        wc_rider = bool(wc and wc.rider_id)
+
+        race_complete = n450 == 6 and n250 == 6
+        holeshot_complete = hs_flags[class_450] and hs_flags[class_250]
+        if is_wsx:
+            wildcard_complete = True
+        else:
+            wildcard_complete = wc_pos and wc_rider
+
+        missing: list[str] = []
+        if n450 < 6:
+            missing.append(f"{label_450}: {n450}/6")
+        if n250 < 6:
+            missing.append(f"{label_250}: {n250}/6")
+        if not hs_flags[class_450]:
+            missing.append(f"Holeshot {label_450}")
+        if not hs_flags[class_250]:
+            missing.append(f"Holeshot {label_250}")
+        if not is_wsx:
+            if not wc_pos:
+                missing.append("Wildcard position")
+            elif not wc_rider:
+                missing.append("Wildcard förare")
+
+        if race_complete and holeshot_complete and wildcard_complete:
+            status = "complete"
+        elif n450 or n250 or hs_flags[class_450] or hs_flags[class_250] or wc_pos or wc_rider:
+            status = "partial"
+        else:
+            status = "none"
+
+        return {
+            "user_id": uid,
+            "username": user.username if user else f"#{uid}",
+            "display_name": (user.display_name if user else None) or (user.username if user else f"#{uid}"),
+            "status": status,
+            "race_450": n450,
+            "race_250": n250,
+            "holeshot_450": hs_flags[class_450],
+            "holeshot_250": hs_flags[class_250],
+            "wildcard_position": wc_pos,
+            "wildcard_rider": wc_rider,
+            "missing": missing,
+        }
+
+    rows = [_user_row(uid) for uid in sorted(all_user_ids)]
+    complete = [r for r in rows if r["status"] == "complete"]
+    partial = [r for r in rows if r["status"] == "partial"]
+    total_users = User.query.count()
+
+    return {
+        "is_wsx": is_wsx,
+        "label_450": label_450,
+        "label_250": label_250,
+        "users_complete": len(complete),
+        "users_partial": len(partial),
+        "users_started": len(rows),
+        "users_not_started": max(0, total_users - len(rows)),
+        "total_users": total_users,
+        "complete_pct": round((len(complete) / total_users * 100) if total_users > 0 else 0, 1),
+        "started_pct": round((len(rows) / total_users * 100) if total_users > 0 else 0, 1),
+        "users_complete_list": complete,
+        "users_partial_list": partial,
+    }
+
+
 @app.get("/admin/picks_stats/<int:competition_id>")
 def admin_picks_stats(competition_id):
     """Get statistics about picks made for a competition"""
@@ -9009,88 +9143,26 @@ def admin_picks_stats(competition_id):
         return jsonify({"error": "unauthorized"}), 403
 
     try:
-        # Count distinct users who have made picks
-        # A user has made picks if they have at least one RacePick, HoleshotPick, or WildcardPick
-        
-        # Get all users who have RacePicks
-        users_with_race_picks = db.session.query(RacePick.user_id).filter_by(
-            competition_id=competition_id
-        ).distinct().all()
-        
-        # Get all users who have HoleshotPicks
-        users_with_holeshot = db.session.query(HoleshotPick.user_id).filter_by(
-            competition_id=competition_id
-        ).distinct().all()
-        
-        # Get all users who have WildcardPicks (only for non-WSX series)
         comp = Competition.query.get(competition_id)
-        users_with_wildcard = []
-        if comp and comp.series != "WSX":
-            users_with_wildcard = db.session.query(WildcardPick.user_id).filter_by(
-                competition_id=competition_id
-            ).distinct().all()
-        
-        # Combine all user IDs
-        all_user_ids = set()
-        for (user_id,) in users_with_race_picks:
-            all_user_ids.add(user_id)
-        for (user_id,) in users_with_holeshot:
-            all_user_ids.add(user_id)
-        for (user_id,) in users_with_wildcard:
-            all_user_ids.add(user_id)
-        
-        # Total number of users who have made at least one pick
-        total_users_with_picks = len(all_user_ids)
-        
-        # Get total number of registered users
-        total_users = User.query.count()
-        
-        # Calculate percentage
-        percentage = round((total_users_with_picks / total_users * 100) if total_users > 0 else 0, 1)
-        
-        # Find users who have race picks but are missing holeshot or wildcard
-        users_missing_holeshot = []
-        users_missing_wildcard = []
-        
-        # Get all user IDs who have race picks
-        users_with_race_pick_ids = {uid for (uid,) in users_with_race_picks}
-        users_with_holeshot_ids = {uid for (uid,) in users_with_holeshot}
-        users_with_wildcard_ids = {uid for (uid,) in users_with_wildcard} if comp and comp.series != "WSX" else set()
-        
-        # Find users missing holeshot (have race picks but no holeshot)
-        for user_id in users_with_race_pick_ids:
-            if user_id not in users_with_holeshot_ids:
-                user = User.query.get(user_id)
-                if user:
-                    users_missing_holeshot.append({
-                        "user_id": user_id,
-                        "username": user.username,
-                        "display_name": user.display_name
-                    })
-        
-        # Find users missing wildcard (have race picks but no wildcard, only for non-WSX)
-        if comp and comp.series != "WSX":
-            for user_id in users_with_race_pick_ids:
-                if user_id not in users_with_wildcard_ids:
-                    user = User.query.get(user_id)
-                    if user:
-                        users_missing_wildcard.append({
-                            "user_id": user_id,
-                            "username": user.username,
-                            "display_name": user.display_name
-                        })
-        
+        if not comp:
+            return jsonify({"error": "Competition not found"}), 404
+
+        assessment = _competition_picks_assessment(comp)
+
         return jsonify({
             "competition_id": competition_id,
-            "competition_name": comp.name if comp else "Unknown",
-            "total_users_with_picks": total_users_with_picks,
-            "total_users": total_users,
-            "percentage": percentage,
-            "users_with_race_picks": len(users_with_race_picks),
-            "users_with_holeshot": len(users_with_holeshot),
-            "users_with_wildcard": len(users_with_wildcard) if comp and comp.series != "WSX" else 0,
-            "users_missing_holeshot": users_missing_holeshot,
-            "users_missing_wildcard": users_missing_wildcard
+            "competition_name": comp.name,
+            "series": comp.series,
+            "is_wsx": assessment["is_wsx"],
+            "total_users": assessment["total_users"],
+            "users_complete": assessment["users_complete"],
+            "users_partial": assessment["users_partial"],
+            "users_started": assessment["users_started"],
+            "users_not_started": assessment["users_not_started"],
+            "complete_pct": assessment["complete_pct"],
+            "started_pct": assessment["started_pct"],
+            "users_complete_list": assessment["users_complete_list"],
+            "users_partial_list": assessment["users_partial_list"],
         })
     except Exception as e:
         import traceback

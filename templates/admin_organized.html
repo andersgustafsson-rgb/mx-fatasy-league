@@ -402,39 +402,56 @@
                         
                         <!-- Stats Display -->
                         <div id="picks-stats-display" class="hidden bg-gray-900 rounded-lg p-4 border border-gray-700">
-                            <h4 class="text-lg font-semibold text-cyan-400 mb-3" id="picks-stats-title">Picks Statistik</h4>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <h4 class="text-lg font-semibold text-cyan-400 mb-1" id="picks-stats-title">Picks Statistik</h4>
+                            <p class="text-xs text-gray-400 mb-4" id="picks-stats-subtitle">Komplett = 6+6 topp 6, båda holeshots och wildcard (ej WSX)</p>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                                 <div class="text-center">
-                                    <div class="text-3xl font-bold text-cyan-400" id="picks-stats-total">-</div>
-                                    <div class="text-sm text-gray-400 mt-1">Totalt med picks</div>
+                                    <div class="text-3xl font-bold text-emerald-400" id="picks-stats-complete">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">✅ Klara</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-3xl font-bold text-green-400" id="picks-stats-percentage">-</div>
-                                    <div class="text-sm text-gray-400 mt-1">Procent</div>
+                                    <div class="text-3xl font-bold text-amber-400" id="picks-stats-partial">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">⚠️ Ofullständiga</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-3xl font-bold text-yellow-400" id="picks-stats-race">-</div>
-                                    <div class="text-sm text-gray-400 mt-1">Race picks</div>
+                                    <div class="text-3xl font-bold text-gray-400" id="picks-stats-not-started">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">Ej börjat</div>
                                 </div>
                                 <div class="text-center">
-                                    <div class="text-3xl font-bold text-orange-400" id="picks-stats-holeshot">-</div>
-                                    <div class="text-sm text-gray-400 mt-1">Holeshot</div>
+                                    <div class="text-3xl font-bold text-green-400" id="picks-stats-complete-pct">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">% klara</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-cyan-400" id="picks-stats-started-pct">-</div>
+                                    <div class="text-sm text-gray-400 mt-1">% påbörjat</div>
                                 </div>
                             </div>
                             <div class="mt-3 text-sm text-gray-400">
                                 <span id="picks-stats-total-users">Totalt antal användare: -</span>
                             </div>
-                            
-                            <!-- Users missing holeshot/wildcard -->
-                            <div id="picks-stats-missing" class="mt-4 hidden">
-                                <div id="picks-stats-missing-holeshot" class="mb-3 hidden">
-                                    <h5 class="text-sm font-semibold text-red-400 mb-2">⚠️ Användare som saknar holeshot:</h5>
-                                    <ul id="picks-stats-missing-holeshot-list" class="text-sm text-gray-300 space-y-1"></ul>
+
+                            <div id="picks-stats-partial-section" class="mt-4 hidden">
+                                <h5 class="text-sm font-semibold text-amber-300 mb-2">⚠️ Ofullständiga lineups — vad som saknas:</h5>
+                                <div class="overflow-x-auto rounded-lg border border-gray-700">
+                                    <table class="w-full text-sm text-left">
+                                        <thead class="bg-gray-800 text-gray-300 text-xs uppercase">
+                                            <tr>
+                                                <th class="px-3 py-2">Användare</th>
+                                                <th class="px-3 py-2">450 / SX1</th>
+                                                <th class="px-3 py-2">250 / SX2</th>
+                                                <th class="px-3 py-2">HS</th>
+                                                <th class="px-3 py-2 hidden sm:table-cell">WC</th>
+                                                <th class="px-3 py-2">Saknas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="picks-stats-partial-body" class="text-gray-200 divide-y divide-gray-800"></tbody>
+                                    </table>
                                 </div>
-                                <div id="picks-stats-missing-wildcard" class="mb-3 hidden">
-                                    <h5 class="text-sm font-semibold text-red-400 mb-2">⚠️ Användare som saknar wildcard:</h5>
-                                    <ul id="picks-stats-missing-wildcard-list" class="text-sm text-gray-300 space-y-1"></ul>
-                                </div>
+                            </div>
+
+                            <div id="picks-stats-complete-section" class="mt-4 hidden">
+                                <h5 class="text-sm font-semibold text-emerald-300 mb-2">✅ Klara lineups:</h5>
+                                <ul id="picks-stats-complete-list" class="text-sm text-gray-300 flex flex-wrap gap-x-4 gap-y-1"></ul>
                             </div>
                         </div>
                     </div>
@@ -1483,49 +1500,59 @@
                     alert('❌ Fel vid hämtning av statistik: ' + data.error);
                     return;
                 }
-                
-                // Update display
+
+                document.getElementById('picks-stats-subtitle').textContent = data.is_wsx
+                    ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
+                    : 'Komplett = 6+6 topp 6, båda holeshots och wildcard med position + förare';
+
                 document.getElementById('picks-stats-title').textContent = `Picks Statistik: ${data.competition_name}`;
-                document.getElementById('picks-stats-total').textContent = data.total_users_with_picks;
-                document.getElementById('picks-stats-percentage').textContent = data.percentage + '%';
-                document.getElementById('picks-stats-race').textContent = data.users_with_race_picks;
-                document.getElementById('picks-stats-holeshot').textContent = data.users_with_holeshot;
-                document.getElementById('picks-stats-total-users').textContent = `Totalt antal användare: ${data.total_users}`;
-                
-                // Show users missing holeshot
-                const missingHoleshotDiv = document.getElementById('picks-stats-missing-holeshot');
-                const missingHoleshotList = document.getElementById('picks-stats-missing-holeshot-list');
-                if (data.users_missing_holeshot && data.users_missing_holeshot.length > 0) {
-                    missingHoleshotList.innerHTML = data.users_missing_holeshot.map(u => 
-                        `<li>• ${u.display_name || u.username} (${u.username})</li>`
-                    ).join('');
-                    missingHoleshotDiv.classList.remove('hidden');
+                document.getElementById('picks-stats-complete').textContent = data.users_complete;
+                document.getElementById('picks-stats-partial').textContent = data.users_partial;
+                document.getElementById('picks-stats-not-started').textContent = data.users_not_started;
+                document.getElementById('picks-stats-complete-pct').textContent = data.complete_pct + '%';
+                document.getElementById('picks-stats-started-pct').textContent = data.started_pct + '%';
+                document.getElementById('picks-stats-total-users').textContent =
+                    `Totalt antal användare: ${data.total_users} · Påbörjat: ${data.users_started}`;
+
+                const partialBody = document.getElementById('picks-stats-partial-body');
+                const partialSection = document.getElementById('picks-stats-partial-section');
+                if (data.users_partial_list && data.users_partial_list.length > 0) {
+                    partialBody.innerHTML = data.users_partial_list.map((u) => {
+                        const hs = `${u.holeshot_450 ? '✓' : '—'} / ${u.holeshot_250 ? '✓' : '—'}`;
+                        const wc = data.is_wsx ? '—' : (
+                            u.wildcard_position && u.wildcard_rider ? '✓' :
+                            u.wildcard_position ? 'pos' : '—'
+                        );
+                        const missing = (u.missing || []).join(', ');
+                        const name = u.display_name || u.username;
+                        return `<tr>
+                            <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
+                            <td class="px-3 py-2">${u.race_450}/6</td>
+                            <td class="px-3 py-2">${u.race_250}/6</td>
+                            <td class="px-3 py-2">${hs}</td>
+                            <td class="px-3 py-2 hidden sm:table-cell">${wc}</td>
+                            <td class="px-3 py-2 text-amber-200/90 text-xs">${missing}</td>
+                        </tr>`;
+                    }).join('');
+                    partialSection.classList.remove('hidden');
                 } else {
-                    missingHoleshotDiv.classList.add('hidden');
+                    partialBody.innerHTML = '';
+                    partialSection.classList.add('hidden');
+                }
+
+                const completeList = document.getElementById('picks-stats-complete-list');
+                const completeSection = document.getElementById('picks-stats-complete-section');
+                if (data.users_complete_list && data.users_complete_list.length > 0) {
+                    completeList.innerHTML = data.users_complete_list.map((u) => {
+                        const name = u.display_name || u.username;
+                        return `<li>• ${name} <span class="text-gray-500">(${u.username})</span></li>`;
+                    }).join('');
+                    completeSection.classList.remove('hidden');
+                } else {
+                    completeList.innerHTML = '';
+                    completeSection.classList.add('hidden');
                 }
                 
-                // Show users missing wildcard
-                const missingWildcardDiv = document.getElementById('picks-stats-missing-wildcard');
-                const missingWildcardList = document.getElementById('picks-stats-missing-wildcard-list');
-                if (data.users_missing_wildcard && data.users_missing_wildcard.length > 0) {
-                    missingWildcardList.innerHTML = data.users_missing_wildcard.map(u => 
-                        `<li>• ${u.display_name || u.username} (${u.username})</li>`
-                    ).join('');
-                    missingWildcardDiv.classList.remove('hidden');
-                } else {
-                    missingWildcardDiv.classList.add('hidden');
-                }
-                
-                // Show/hide the missing section
-                const missingSection = document.getElementById('picks-stats-missing');
-                if ((data.users_missing_holeshot && data.users_missing_holeshot.length > 0) ||
-                    (data.users_missing_wildcard && data.users_missing_wildcard.length > 0)) {
-                    missingSection.classList.remove('hidden');
-                } else {
-                    missingSection.classList.add('hidden');
-                }
-                
-                // Show the display
                 document.getElementById('picks-stats-display').classList.remove('hidden');
             } catch (error) {
                 console.error('Error loading picks stats:', error);
