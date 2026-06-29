@@ -1536,7 +1536,7 @@ def index():
                     if pick.rider_id not in seen_rider_ids:
                         seen_rider_ids[pick.rider_id] = pick
                         race_picks.append(pick)
-                    elif pick.id > seen_rider_ids[pick.rider_id].id:
+                    elif pick.pick_id > seen_rider_ids[pick.rider_id].pick_id:
                         # Replace with more recent pick
                         race_picks.remove(seen_rider_ids[pick.rider_id])
                         seen_rider_ids[pick.rider_id] = pick
@@ -9012,7 +9012,7 @@ def _competition_picks_assessment(comp: Competition) -> dict:
     label_450 = "SX1" if is_wsx else "450cc"
     label_250 = "SX2" if is_wsx else "250cc"
 
-    race_picks = RacePick.query.filter_by(competition_id=comp_id).order_by(RacePick.id).all()
+    race_picks = RacePick.query.filter_by(competition_id=comp_id).order_by(RacePick.pick_id).all()
     holeshots = HoleshotPick.query.filter_by(competition_id=comp_id).all()
     wildcards = {
         wc.user_id: wc
@@ -9031,7 +9031,7 @@ def _competition_picks_assessment(comp: Competition) -> dict:
         uid = int(pick.user_id)
         rid = int(pick.rider_id)
         bucket = race_by_user.setdefault(uid, {})
-        if rid not in bucket or pick.id > bucket[rid].id:
+        if rid not in bucket or pick.pick_id > bucket[rid].pick_id:
             bucket[rid] = pick
 
     holeshot_by_user: dict[int, dict[str, bool]] = {}
