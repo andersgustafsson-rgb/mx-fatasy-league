@@ -12738,6 +12738,41 @@ def clear_my_picks(competition_id: int):
     return jsonify({"message": "Alla dina val för denna tävling har rensats."}), 200
 
 
+@app.post("/clear_my_bonus_picks/<int:competition_id>")
+def clear_my_bonus_picks(competition_id: int):
+    """
+    Rensa holeshot + wildcard-förare men behåll topp 6 och wildcard-plats.
+    """
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({"error": "competition_not_found"}), 404
+
+    if is_picks_locked(comp):
+        return jsonify({"error": "Picks är låsta! Du kan inte längre ändra eller rensa dina val."}), 403
+
+    uid = session["user_id"]
+    deleted_holo = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).delete()
+    wc = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+    if wc:
+        wc.rider_id = None
+
+    db.session.commit()
+
+    print(
+        f"DEBUG: clear_my_bonus_picks – user_id={uid}, competition_id={competition_id}, "
+        f"deleted holeshot={deleted_holo}, wildcard_rider_cleared={bool(wc)}"
+    )
+
+    return jsonify({
+        "message": "Holeshot och wildcard-förare rensade. Topp 6 och wildcard-plats behölls.",
+        "deleted_holeshot": deleted_holo,
+        "wildcard_position_kept": bool(wc and wc.position is not None),
+    }), 200
+
+
 
 
 @app.post("/lock_wildcard_pos")

@@ -627,8 +627,14 @@
             <p id="status-message" class="text-sm text-gray-300">Kontrollerar om du har gjort dina val</p>
           </div>
         </div>
-        <div id="status-actions" class="hidden shrink-0">
-          <button type="button" onclick="clearAllPicks()" class="rp-btn rp-btn--ghost-danger">
+        <div id="status-actions" class="hidden shrink-0 flex flex-wrap gap-2 justify-end">
+          <button type="button" onclick="openBonusPicksAdjust()" class="rp-btn rp-btn--warm rp-btn--sm">
+            Ändra holeshot{% if competition.series != 'WSX' %} & wildcard{% endif %}
+          </button>
+          <button type="button" onclick="clearBonusPicks()" class="rp-btn rp-btn--secondary rp-btn--sm">
+            Rensa holeshot{% if competition.series != 'WSX' %} & wildcard{% endif %}
+          </button>
+          <button type="button" onclick="clearAllPicks()" class="rp-btn rp-btn--ghost-danger rp-btn--sm">
             Rensa alla val
           </button>
         </div>
@@ -831,6 +837,7 @@
         {% if picks_locked %}
         <button type="button" onclick="showOtherUsersPicks()" class="rp-btn rp-btn--accent">Visa andras picks</button>
         {% else %}
+        <button type="button" onclick="clearBonusPicks()" class="rp-btn rp-btn--warm">Rensa holeshot{% if competition.series != 'WSX' %} & wildcard{% endif %}</button>
         <button type="button" onclick="clearMyPicks()" class="rp-btn rp-btn--danger">Rensa alla val</button>
         {% endif %}
       </div>
@@ -903,6 +910,7 @@
   // Coast-filtrering för 250cc
   const competitionCoast = {{ competition.coast_250|tojson }};
   const pickSuggestions = {{ pick_suggestions | default({}) | tojson }};
+  const picksAreLocked = {{ picks_locked | tojson }};
 
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
@@ -2149,6 +2157,8 @@ function updatePicksStatus(myPicks) {
     statusMessage.textContent = isWSXSeries ? 'Gör dina val för topp 6 och holeshot' : 'Gör dina val för topp 6, holeshot och wildcard';
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
     statusActions.classList.add('hidden');
+  } else if (picksAreLocked) {
+    statusActions.classList.add('hidden');
   } else if (totalPicks < totalRequired) {
     // Partial picks
     statusIcon.textContent = '⚠️';
@@ -2167,31 +2177,80 @@ function updatePicksStatus(myPicks) {
 }
 
 // Function to clear all picks
-async function clearAllPicks() {
-  if (!confirm('Är du säker på att du vill rensa alla dina val för detta race?')) {
+function openBonusPicksAdjust() {
+  if (window.PicksWizard && window.PicksWizard.openBonusAdjust) {
+    window.PicksWizard.openBonusAdjust();
     return;
   }
-  
-  try {
-    const response = await fetch(`/clear_my_picks_for_competition/${competitionId}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    if (response.ok) {
-      // Don't clear form fields - keep picks visible
-      
-      // Update status
-      updatePicksStatus({ top6_picks: [], holeshot_picks: {}, wildcard_pick: null });
-      
-      alert('Alla val har rensats!');
-    } else {
-      alert('Kunde inte rensa valen. Försök igen.');
-    }
-  } catch (error) {
-    console.error('Error clearing picks:', error);
-    alert('Ett fel uppstod vid rensning av val.');
+  if (window.PicksWizard && window.PicksWizard.goToStep) {
+    window.PicksWizard.goToStep(3);
   }
+}
+
+function resetBonusPicksUI() {
+  const hs450SelEl = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+  const hs250SelEl = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+  const hs450Sel = hs450SelEl?.querySelector('.selected-rider');
+  const hs250Sel = hs250SelEl?.querySelector('.selected-rider');
+  if (hs450Sel) hs450Sel.textContent = '-- välj förare --';
+  if (hs250Sel) hs250Sel.textContent = '-- välj förare --';
+  if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
+  if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
+  const hs450Hidden = document.getElementById('holeshot-450');
+  const hs250Hidden = document.getElementById('holeshot-250');
+  if (hs450Hidden) hs450Hidden.value = '';
+  if (hs250Hidden) hs250Hidden.value = '';
+
+  if (!isWSXSeries) {
+    const wcSelEl = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+    const wcSel = wcSelEl?.querySelector('.selected-rider');
+    if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
+    if (wcSelEl) delete wcSelEl.dataset.selectedRiderId;
+    const wcHidden = document.getElementById('wildcard-pick');
+    if (wcHidden) wcHidden.value = '';
+  }
+
+  if (typeof window.syncWildcardRollLockedState === 'function') {
+    window.syncWildcardRollLockedState();
+  }
+}
+
+async function clearBonusPicks() {
+  if (!confirm('Rensa holeshot' + (isWSXSeries ? '' : ' och wildcard-förare') + '?\n\nDina topp 6-val behålls' + (isWSXSeries ? '.' : ' och wildcard-platsen (10–20) behålls.') + '\n\nDu kan välja nya och spara igen.')) {
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/clear_my_bonus_picks/${competitionId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      alert(data.error || 'Kunde inte rensa holeshot/wildcard.');
+      return;
+    }
+
+    resetBonusPicksUI();
+    savedPicksState = null;
+    updateSaveButtonVisibility();
+
+    if (window.PicksWizard) {
+      if (window.PicksWizard.openBonusAdjust) window.PicksWizard.openBonusAdjust();
+      else if (window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
+    }
+
+    await fetchAndDisplayMyPicks();
+    alert(data.message || 'Holeshot och wildcard rensade.');
+  } catch (e) {
+    console.error('Error clearing bonus picks:', e);
+    alert('Ett fel uppstod vid rensning.');
+  }
+}
+
+async function clearAllPicks() {
+  await clearMyPicks();
 }
 function onPickChange(cls, pos, riderId = null) {
   
@@ -2976,31 +3035,8 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
         }
       }
 
-      // 2) Nollställ holeshot selectors
-      const hs450SelEl = document.querySelector('.rider-selector[data-class="holeshot-450"]');
-      const hs250SelEl = document.querySelector('.rider-selector[data-class="holeshot-250"]');
-      const hs450Sel = hs450SelEl?.querySelector('.selected-rider');
-      const hs250Sel = hs250SelEl?.querySelector('.selected-rider');
-      if (hs450Sel) hs450Sel.textContent = '-- välj förare --';
-      if (hs250Sel) hs250Sel.textContent = '-- välj förare --';
-      if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
-      if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
-      const hs450Hidden = document.getElementById("holeshot-450");
-      const hs250Hidden = document.getElementById("holeshot-250");
-      if (hs450Hidden) hs450Hidden.value = "";
-      if (hs250Hidden) hs250Hidden.value = "";
-
-      // 3) Nollställ wildcard-föraren; behåll den slumpade platsen (10–20)
-      if (!isWSXSeries) {
-        const wcSelEl = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
-        const wcSel = wcSelEl?.querySelector('.selected-rider');
-        if (wcSel) wcSel.textContent = '-- välj 450cc förare --';
-        if (wcSelEl) delete wcSelEl.dataset.selectedRiderId;
-        const wcHidden = document.getElementById("wildcard-pick");
-        if (wcHidden) wcHidden.value = "";
-      }
-
-      // 4) Återställ dolda alternativ i dropdowns
+      // 2) Nollställ holeshot + wildcard-förare i UI
+      resetBonusPicksUI();
       updateRiderSelectors(class450);
       updateRiderSelectors(class250);
 
@@ -3224,7 +3260,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=2"></script>
 
 </body>
 </html>

@@ -619,12 +619,19 @@
         <div class="wizard-summary-edit">
           <button type="button" class="wizard-summary-edit__btn" data-goto-step="1">✏️ Ändra ${escapeHtml(cfg.label450)}</button>
           <button type="button" class="wizard-summary-edit__btn" data-goto-step="2">✏️ Ändra ${escapeHtml(cfg.label250)}</button>
+          <button type="button" class="wizard-summary-edit__btn wizard-summary-edit__btn--bonus" data-open-bonus-adjust>✏️ Holeshot${cfg.isWSX ? '' : ' & wildcard'}</button>
         </div>
       </div>`;
 
     el.querySelectorAll('[data-goto-step]').forEach((btn) => {
       btn.addEventListener('click', () => {
         showStep(Number(btn.dataset.gotoStep));
+      });
+    });
+
+    el.querySelectorAll('[data-open-bonus-adjust]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        openBonusAdjust();
       });
     });
 
@@ -712,11 +719,19 @@
     return currentStep;
   }
 
+  function openBonusAdjust() {
+    showStep(3);
+    refreshUI();
+    const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
+    if (panel) panel.open = true;
+  }
+
   window.PicksWizard = {
     init,
     initAfterDraftLoad,
     getStep,
     goToStep: showStep,
+    openBonusAdjust,
     persistStep,
     refresh: refreshUI,
     renderSummary: renderPicksSummary,
