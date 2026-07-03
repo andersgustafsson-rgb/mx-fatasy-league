@@ -5590,9 +5590,20 @@ def race_picks_page(competition_id):
         ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
     ]
 
-    pick_suggestions = _build_pick_suggestions_for_user(
-        int(session["user_id"]), comp, out_ids
-    )
+    user_id = int(session["user_id"])
+    pick_suggestions = _build_pick_suggestions_for_user(user_id, comp, out_ids)
+
+    initial_my_picks = None
+    initial_picks_status = None
+    try:
+        initial_my_picks = _my_picks_api_dict(user_id, comp)
+        initial_picks_status = _picks_status_summary(
+            initial_my_picks, is_wsx=is_wsx, picks_locked=picks_locked
+        )
+    except Exception:
+        app.logger.exception(
+            "race_picks initial_my_picks failed for competition_id=%s", competition_id
+        )
 
     # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
@@ -5612,6 +5623,8 @@ def race_picks_page(competition_id):
         static_rider_images=not _on_render,
         portraits_in_dropdown=not _on_render,
         pick_suggestions=pick_suggestions,
+        initial_my_picks=initial_my_picks,
+        initial_picks_status=initial_picks_status,
     )
 
 
@@ -12003,81 +12016,176 @@ def season_team_build():
 
 
 
-@app.get("/get_my_picks/<int:competition_id>")
-def get_my_picks(competition_id):
-    if "user_id" not in session:
-        return jsonify({"error": "not_logged_in"}), 401
-    uid = session["user_id"]
-    
-    # Force session refresh to ensure we see latest data
-    db.session.expire_all()
-    
-    comp = Competition.query.get(competition_id)
-    is_wsx = comp and getattr(comp, 'series', None) == 'WSX'
-    picks_locked = bool(comp) and is_picks_locked(comp)
+def _ensure_user_picks_snapshot_if_locked(user_id: int, comp: Competition) -> PicksSnapshot | None:
+    """Create a snapshot for one user when picks are locked (not the whole competition)."""
+    import json
 
-    # Self-heal: when locked, ensure snapshots exist so we can always show picks later
-    if picks_locked:
-        try:
-            ensure_picks_snapshots_for_competition(int(competition_id), source="auto_lock")
-        except Exception:
-            pass
+    if not is_picks_locked(comp):
+        return None
+
+    competition_id = int(comp.id)
+    snap = PicksSnapshot.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+    if snap:
+        return snap
+
+    payload = _build_picks_snapshot_payload(user_id, competition_id)
+    has_any = bool(payload.get("race_picks")) or bool(payload.get("holeshot_picks")) or (
+        payload.get("wildcard_pick") is not None
+    )
+    if not has_any:
+        return None
+
+    try:
+        snap = PicksSnapshot(
+            user_id=user_id,
+            competition_id=competition_id,
+            payload_json=json.dumps(payload, separators=(",", ":")),
+            source="auto_lock",
+        )
+        db.session.add(snap)
+        db.session.commit()
+        return snap
+    except Exception:
+        db.session.rollback()
+        return PicksSnapshot.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+
+
+def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
+    """Normalized picks payload for /get_my_picks and race_picks page embed."""
+    import json
+
+    competition_id = int(comp.id)
+    is_wsx = (getattr(comp, "series", None) or "") == "WSX"
+    picks_locked = is_picks_locked(comp)
 
     snap = None
     if picks_locked:
-        snap = PicksSnapshot.query.filter_by(user_id=uid, competition_id=competition_id).first()
+        snap = _ensure_user_picks_snapshot_if_locked(user_id, comp)
 
     if snap:
-        import json
-
         payload = json.loads(snap.payload_json or "{}")
-        race_picks = payload.get("race_picks", []) or []
-        holeshot_map = payload.get("holeshot_picks", {}) or {}
+        picks = payload.get("race_picks", []) or []
+        holos_map = payload.get("holeshot_picks", {}) or {}
         wc_rider = payload.get("wildcard_pick")
         wc_pos = payload.get("wildcard_pos")
-        picks = race_picks
-        holos_map = holeshot_map
     else:
-        picks_rows = (
-            RacePick.query.filter_by(user_id=uid, competition_id=competition_id)
-            .order_by(RacePick.predicted_position)
-            .all()
-        )
-        holos_rows = HoleshotPick.query.filter_by(user_id=uid, competition_id=competition_id).all()
-        wc_row = WildcardPick.query.filter_by(user_id=uid, competition_id=competition_id).first()
+        payload = _build_picks_snapshot_payload(user_id, competition_id)
+        picks = payload["race_picks"]
+        holos_map = payload["holeshot_picks"]
+        wc_rider = payload["wildcard_pick"]
+        wc_pos = payload["wildcard_pos"]
 
-        picks = [
-            {"rider_id": p.rider_id, "predicted_position": p.predicted_position}
-            for p in picks_rows
-            if p.rider_id is not None and p.predicted_position is not None
-        ]
-        holos_map = {h.class_name: h.rider_id for h in holos_rows if h.class_name and h.rider_id is not None}
-        wc_rider = wc_row.rider_id if wc_row else None
-        wc_pos = wc_row.position if wc_row else None
+    rider_ids = [int(p["rider_id"]) for p in picks if p.get("rider_id") is not None]
+    class_by_rider: dict[int, str] = {}
+    if rider_ids:
+        class_by_rider = {
+            int(r.id): (r.class_name or "")
+            for r in Rider.query.filter(Rider.id.in_(rider_ids)).all()
+        }
 
-    result = {
+    return {
         "top6_picks": [
             {
                 "rider_id": p.get("rider_id"),
                 "predicted_position": p.get("predicted_position"),
-                "class": Rider.query.get(p.get("rider_id")).class_name if p.get("rider_id") else "",
+                "class": class_by_rider.get(int(p["rider_id"]), "") if p.get("rider_id") else "",
             }
             for p in picks
         ],
         "holeshot_picks": {
-            # For WSX, check both regular and WSX classes
             "450cc": next((rid for cls, rid in holos_map.items() if cls in ("450cc", "wsx_sx1")), None),
             "250cc": next((rid for cls, rid in holos_map.items() if cls in ("250cc", "wsx_sx2")), None),
-            # Also include WSX keys if it's a WSX competition
-            **({"wsx_sx1": holos_map.get("wsx_sx1"),
-                "wsx_sx2": holos_map.get("wsx_sx2")} if is_wsx else {})
+            **(
+                {
+                    "wsx_sx1": holos_map.get("wsx_sx1"),
+                    "wsx_sx2": holos_map.get("wsx_sx2"),
+                }
+                if is_wsx
+                else {}
+            ),
         },
         "wildcard_pick": wc_rider,
         "wildcard_pos": wc_pos,
         "snapshot_used": bool(snap),
     }
-    
-    return jsonify(result)
+
+
+def _picks_status_summary(my_picks: dict, *, is_wsx: bool, picks_locked: bool) -> dict:
+    """UI strings for picks status banner (mirrors updatePicksStatus in race_picks.html)."""
+    top6 = my_picks.get("top6_picks") or []
+    hs = my_picks.get("holeshot_picks") or {}
+    holeshot450 = hs.get("450cc") or hs.get("wsx_sx1")
+    holeshot250 = hs.get("250cc") or hs.get("wsx_sx2")
+    has_wc = bool(my_picks.get("wildcard_pick")) and not is_wsx
+    holeshot_count = (1 if holeshot450 else 0) + (1 if holeshot250 else 0)
+    total = len(top6) + holeshot_count + (1 if has_wc else 0)
+    required = 14 if is_wsx else 15
+
+    if total == 0:
+        return {
+            "icon": "📝",
+            "title": "Inga val gjorda än",
+            "message": (
+                "Gör dina val för topp 6 och holeshot"
+                if is_wsx
+                else "Gör dina val för topp 6, holeshot och wildcard"
+            ),
+            "container_class": (
+                "mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30"
+            ),
+            "show_actions": False,
+        }
+    if picks_locked:
+        if total >= required:
+            return {
+                "icon": "✅",
+                "title": "Alla val gjorda!",
+                "message": "Du har gjort alla dina val för detta race. Lycka till!",
+                "container_class": (
+                    "mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30"
+                ),
+                "show_actions": False,
+            }
+        return {
+            "icon": "⚠️",
+            "title": f"Delvis klart ({total}/{required} val)",
+            "message": "Du har gjort några val, men inte alla. Komplettera dina picks!",
+            "container_class": (
+                "mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30"
+            ),
+            "show_actions": False,
+        }
+    if total < required:
+        return {
+            "icon": "⚠️",
+            "title": f"Delvis klart ({total}/{required} val)",
+            "message": "Du har gjort några val, men inte alla. Komplettera dina picks!",
+            "container_class": (
+                "mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30"
+            ),
+            "show_actions": True,
+        }
+    return {
+        "icon": "✅",
+        "title": "Alla val gjorda!",
+        "message": "Du har gjort alla dina val för detta race. Lycka till!",
+        "container_class": (
+            "mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30"
+        ),
+        "show_actions": True,
+    }
+
+
+@app.get("/get_my_picks/<int:competition_id>")
+def get_my_picks(competition_id):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({"error": "not_found"}), 404
+
+    return jsonify(_my_picks_api_dict(session["user_id"], comp))
 
 
 def _iter_crowd_pick_payloads(competition_id: int, ensure_snapshots: bool):

@@ -618,16 +618,16 @@
     {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
     
     <!-- Picks Status Indicator -->
-    <div id="picks-status" class="mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800">
+    <div id="picks-status" class="{{ initial_picks_status.container_class if initial_picks_status else 'mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800' }}">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-3 min-w-0 flex-1">
-          <div id="status-icon" class="text-2xl">⏳</div>
+          <div id="status-icon" class="text-2xl">{{ initial_picks_status.icon if initial_picks_status else '⏳' }}</div>
           <div>
-            <h3 id="status-title" class="text-lg font-semibold text-cyan-400">Laddar picks-status...</h3>
-            <p id="status-message" class="text-sm text-gray-300">Kontrollerar om du har gjort dina val</p>
+            <h3 id="status-title" class="text-lg font-semibold text-cyan-400">{{ initial_picks_status.title if initial_picks_status else 'Laddar picks-status...' }}</h3>
+            <p id="status-message" class="text-sm text-gray-300">{{ initial_picks_status.message if initial_picks_status else 'Kontrollerar om du har gjort dina val' }}</p>
           </div>
         </div>
-        <div id="status-actions" class="hidden shrink-0 flex flex-wrap gap-2 justify-end">
+        <div id="status-actions" class="{{ '' if initial_picks_status and initial_picks_status.show_actions else 'hidden' }} shrink-0 flex flex-wrap gap-2 justify-end">
           <button type="button" onclick="openBonusPicksAdjust()" class="rp-btn rp-btn--warm rp-btn--sm">
             Ändra holeshot{% if competition.series != 'WSX' %} & wildcard{% endif %}
           </button>
@@ -911,6 +911,7 @@
   const competitionCoast = {{ competition.coast_250|tojson }};
   const pickSuggestions = {{ pick_suggestions | default({}) | tojson }};
   const picksAreLocked = {{ picks_locked | tojson }};
+  const initialMyPicks = {{ initial_my_picks | tojson }};
 
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
@@ -2362,233 +2363,202 @@ function onPickChange(cls, pos, riderId = null) {
   }
 
 
+  function applyMyPicksToForm(myPicks, { loadPortraits = true } = {}) {
+    if (!myPicks || (actualResults && actualResults.length > 0)) return;
+
+    (myPicks.top6_picks || []).forEach((p) => {
+      let dataClass = p.class;
+      if (dataClass === 'wsx_sx1') {
+        dataClass = 'wsx_sx1';
+      } else if (dataClass === 'wsx_sx2') {
+        dataClass = 'wsx_sx2';
+      }
+
+      const rider = allRiders.find(r => Number(r.id) === Number(p.rider_id));
+      if (!rider) return;
+
+      const selector = document.querySelector(
+        `.rider-selector[data-class="${dataClass}"][data-position="${p.predicted_position}"]`
+      );
+      if (!selector) return;
+
+      const selectedRiderSpan = selector.querySelector('.selected-rider');
+      if (!selectedRiderSpan) return;
+
+      const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+      selectedRiderSpan.textContent = riderText;
+
+      const clearBtn = selector.querySelector('.clear-selection');
+      if (clearBtn) clearBtn.style.display = 'block';
+
+      const hiddenSelectClass = (p.class === 'wsx_sx1' || p.class === '450cc') ? '450' : '250';
+      const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
+      if (hiddenSelect) hiddenSelect.value = p.rider_id;
+      selector.dataset.selectedRiderId = String(p.rider_id);
+
+      if (loadPortraits) {
+        const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || p.class.startsWith("450"))
+          ? `prev-450-${p.predicted_position}`
+          : `prev-250-${p.predicted_position}`;
+        const img = document.getElementById(imgId);
+        if (img) loadSelectedRiderPortrait(p.rider_id, img);
+      }
+    });
+
+    const isWSX = competitionSeries === 'WSX';
+    const class450 = isWSX ? 'wsx_sx1' : '450cc';
+    const class250 = isWSX ? 'wsx_sx2' : '250cc';
+    updateRiderSelectors(class450);
+    updateRiderSelectors(class250);
+
+    const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"];
+    const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"];
+
+    if (holeshot450Id) {
+      document.getElementById("holeshot-450").value = holeshot450Id;
+      const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+      if (selector) {
+        const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
+        if (rider) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          const clearBtn = selector.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'block';
+          selector.dataset.selectedRiderId = String(holeshot450Id);
+        }
+      }
+    }
+
+    if (holeshot250Id) {
+      document.getElementById("holeshot-250").value = holeshot250Id;
+      const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+      if (selector) {
+        const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
+        if (rider) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          const clearBtn = selector.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'block';
+          selector.dataset.selectedRiderId = String(holeshot250Id);
+        }
+      }
+    }
+
+    if (myPicks.wildcard_pick) {
+      const riderId = myPicks.wildcard_pick;
+      document.getElementById("wildcard-pick").value = riderId;
+      const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+      if (selector) {
+        const rider = allRiders.find(r => Number(r.id) === Number(riderId));
+        if (rider) {
+          const selectedRiderSpan = selector.querySelector('.selected-rider');
+          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          const clearBtn = selector.querySelector('.clear-selection');
+          if (clearBtn) clearBtn.style.display = 'block';
+          selector.dataset.selectedRiderId = String(riderId);
+        }
+      }
+    }
+
+    if (!isWSXSeries) {
+      const btn = document.getElementById("wildcard-roll-btn");
+      const posVal = myPicks.wildcard_pos;
+      if (btn) {
+        if (posVal !== null && posVal !== undefined && String(posVal).trim() !== "") {
+          const wildcardPosEl = document.getElementById("wildcard-position");
+          const wildcardLabelEl = document.getElementById("wildcard-position-label");
+          if (wildcardPosEl) wildcardPosEl.value = posVal;
+          if (wildcardLabelEl) wildcardLabelEl.textContent = `Din plats: ${posVal}`;
+          const wildcardHub = document.getElementById('wildcard-wheel-hub');
+          if (wildcardHub) {
+            wildcardHub.textContent = String(posVal);
+            wildcardHub.classList.add('has-result');
+          }
+          if (typeof window.syncWildcardRollLockedState === 'function') {
+            window.syncWildcardRollLockedState();
+          } else {
+            btn.disabled = true;
+            btn.classList.add("opacity-50", "cursor-not-allowed");
+          }
+        } else {
+          if (typeof window.syncWildcardRollLockedState === 'function') {
+            window.syncWildcardRollLockedState();
+          } else {
+            btn.disabled = false;
+            btn.classList.remove("opacity-50", "cursor-not-allowed");
+          }
+          const wildcardPosEl = document.getElementById("wildcard-position");
+          const wildcardLabelEl = document.getElementById("wildcard-position-label");
+          if (wildcardPosEl) wildcardPosEl.value = "";
+          if (wildcardLabelEl) wildcardLabelEl.textContent = "";
+        }
+      }
+    }
+
+    const hs450Sel = document.getElementById("holeshot-450");
+    if (hs450Sel && hs450Sel.value && OUT_IDS.includes(Number(hs450Sel.value))) {
+      hs450Sel.value = "";
+    }
+    const hs250Sel = document.getElementById("holeshot-250");
+    if (hs250Sel && hs250Sel.value && OUT_IDS.includes(Number(hs250Sel.value))) {
+      hs250Sel.value = "";
+    }
+    const wcSel = document.getElementById("wildcard-pick");
+    if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
+      wcSel.value = "";
+    }
+
+    document.querySelectorAll(".pick-select").forEach((sel) => {
+      const chosen = sel.value;
+      if (chosen && OUT_IDS.includes(Number(chosen))) {
+        sel.value = "";
+      }
+    });
+
+    updateDropdowns("450cc");
+    updateDropdowns("250cc");
+    updateHoleshotDropdowns();
+  }
+
+  function deferLoadPickPortraits(myPicks) {
+    const run = () => {
+      (myPicks.top6_picks || []).forEach((p) => {
+        const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || (p.class && p.class.startsWith("450")))
+          ? `prev-450-${p.predicted_position}`
+          : `prev-250-${p.predicted_position}`;
+        const img = document.getElementById(imgId);
+        if (img && p.rider_id) loadSelectedRiderPortrait(p.rider_id, img);
+      });
+    };
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(run, { timeout: 800 });
+    } else {
+      requestAnimationFrame(run);
+    }
+  }
+
   async function fetchAndDisplayMyPicks() {
     try {
       const res = await fetch(`/get_my_picks/${competitionId}`);
       if (!res.ok) throw new Error("Kunde inte hämta dina val");
       const myPicks = await res.json();
-      
-      // Update picks status
+
       updatePicksStatus(myPicks);
 
-      if (!actualResults || actualResults.length === 0) {
-        // Återställ tidigare val i UI - samma logik som holeshot picksen
-        (myPicks.top6_picks || []).forEach((p) => {
-          // Map WSX classes to data-class attributes in HTML
-          let dataClass = p.class;
-          if (dataClass === 'wsx_sx1') {
-            dataClass = 'wsx_sx1'; // Match the data-class we set in HTML
-          } else if (dataClass === 'wsx_sx2') {
-            dataClass = 'wsx_sx2'; // Match the data-class we set in HTML
-          }
-          
-          // Find the rider name from the rider ID (same logic as holeshot uses)
-          const rider = allRiders.find(r => Number(r.id) === Number(p.rider_id));
-          
-          if (!rider) {
-            return;
-          }
-          
-          const selector = document.querySelector(
-            `.rider-selector[data-class="${dataClass}"][data-position="${p.predicted_position}"]`
-          );
-          
-          if (!selector) {
-            return;
-          }
-          
-          const selectedRiderSpan = selector.querySelector('.selected-rider');
-          if (!selectedRiderSpan) {
-            return;
-          }
-          
-          // Update visual selector (same as holeshot does)
-          const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
-          selectedRiderSpan.textContent = riderText;
-          
-          // Show clear button
-          const clearBtn = selector.querySelector('.clear-selection');
-          if (clearBtn) {
-            clearBtn.style.display = 'block';
-          }
-          
-          // Update hidden select element - use 450/250 for hidden selects regardless of WSX
-          const hiddenSelectClass = (p.class === 'wsx_sx1' || p.class === '450cc') ? '450' : '250';
-          const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
-          if (hiddenSelect) {
-            hiddenSelect.value = p.rider_id;
-          }
-          selector.dataset.selectedRiderId = String(p.rider_id);
-          
-          // Update preview image
-          const imgId = (p.class === 'wsx_sx1' || p.class === '450cc' || p.class.startsWith("450"))
-            ? `prev-450-${p.predicted_position}`
-            : `prev-250-${p.predicted_position}`;
-          const img = document.getElementById(imgId);
-          if (img) {
-            loadSelectedRiderPortrait(p.rider_id, img);
-          }
-        });
-        
-        // Update rider selectors to reflect loaded picks (hide selected riders in other dropdowns)
-        // For WSX, use wsx_sx1 and wsx_sx2, otherwise use 450cc and 250cc
-        const isWSX = competitionSeries === 'WSX';
-        const class450 = isWSX ? 'wsx_sx1' : '450cc';
-        const class250 = isWSX ? 'wsx_sx2' : '250cc';
-        updateRiderSelectors(class450);
-        updateRiderSelectors(class250);
-        
-        // Update holeshot picks - both hidden selects and visual elements
-        // Backend may return '450cc'/'250cc' or 'wsx_sx1'/'wsx_sx2' for holeshot
-        const holeshot450Id = myPicks.holeshot_picks?.["450cc"] || myPicks.holeshot_picks?.["wsx_sx1"];
-        const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"];
-        
-        if (holeshot450Id) {
-          document.getElementById("holeshot-450").value = holeshot450Id;
-          
-          // Update visual selector
-          const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
-          if (selector) {
-            const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
-            if (rider) {
-              const selectedRiderSpan = selector.querySelector('.selected-rider');
-              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
-              selectedRiderSpan.textContent = riderText;
-              
-              // Show clear button
-              const clearBtn = selector.querySelector('.clear-selection');
-              if (clearBtn) {
-                clearBtn.style.display = 'block';
-              }
-              selector.dataset.selectedRiderId = String(holeshot450Id);
-            }
-          }
+      const hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
+      if (!hasLocalDraft) {
+        if (!actualResults || actualResults.length === 0) {
+          applyMyPicksToForm(myPicks, { loadPortraits: false });
+          deferLoadPickPortraits(myPicks);
+        } else {
+          displayResults(myPicks);
         }
-        
-        if (holeshot250Id) {
-          document.getElementById("holeshot-250").value = holeshot250Id;
-          
-          // Update visual selector
-          const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
-          if (selector) {
-            const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
-            if (rider) {
-              const selectedRiderSpan = selector.querySelector('.selected-rider');
-              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
-              selectedRiderSpan.textContent = riderText;
-              
-              // Show clear button
-              const clearBtn = selector.querySelector('.clear-selection');
-              if (clearBtn) {
-                clearBtn.style.display = 'block';
-              }
-              selector.dataset.selectedRiderId = String(holeshot250Id);
-            }
-          }
-        }
-        
-        // Update wildcard pick - both hidden select and visual element
-        if (myPicks.wildcard_pick) {
-          const riderId = myPicks.wildcard_pick;
-          document.getElementById("wildcard-pick").value = riderId;
-          
-          // Update visual selector
-          const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
-          if (selector) {
-            const rider = allRiders.find(r => Number(r.id) === Number(riderId));
-            if (rider) {
-              const selectedRiderSpan = selector.querySelector('.selected-rider');
-              const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
-              selectedRiderSpan.textContent = riderText;
-              
-              // Show clear button
-              const clearBtn = selector.querySelector('.clear-selection');
-              if (clearBtn) {
-                clearBtn.style.display = 'block';
-              }
-              selector.dataset.selectedRiderId = String(riderId);
-            }
-          }
-        }
-
-        // Wildcard-knapp: lås endast om position faktiskt finns
-        // Update wildcard pick - both hidden select and visual element (only for non-WSX)
-        if (!isWSXSeries) {
-          const btn = document.getElementById("wildcard-roll-btn");
-          const posVal = myPicks.wildcard_pos;
-          if (btn) {
-            if (posVal !== null && posVal !== undefined && String(posVal).trim() !== "") {
-              const wildcardPosEl = document.getElementById("wildcard-position");
-              const wildcardLabelEl = document.getElementById("wildcard-position-label");
-              if (wildcardPosEl) wildcardPosEl.value = posVal;
-              if (wildcardLabelEl) wildcardLabelEl.textContent = `Din plats: ${posVal}`;
-              const wildcardHub = document.getElementById('wildcard-wheel-hub');
-              if (wildcardHub) {
-                wildcardHub.textContent = String(posVal);
-                wildcardHub.classList.add('has-result');
-              }
-              if (typeof window.syncWildcardRollLockedState === 'function') {
-                window.syncWildcardRollLockedState();
-              } else {
-                btn.disabled = true;
-                btn.classList.add("opacity-50", "cursor-not-allowed");
-              }
-            } else {
-              if (typeof window.syncWildcardRollLockedState === 'function') {
-                window.syncWildcardRollLockedState();
-              } else {
-                btn.disabled = false;
-                btn.classList.remove("opacity-50", "cursor-not-allowed");
-              }
-              const wildcardPosEl = document.getElementById("wildcard-position");
-              const wildcardLabelEl = document.getElementById("wildcard-position-label");
-              if (wildcardPosEl) wildcardPosEl.value = "";
-              if (wildcardLabelEl) wildcardLabelEl.textContent = "";
-            }
-          }
-        }
-
-        // Holeshot: rensa om OUT
-const hs450Sel = document.getElementById("holeshot-450");
-if (hs450Sel && hs450Sel.value && OUT_IDS.includes(Number(hs450Sel.value))) {
-  hs450Sel.value = "";
-}
-const hs250Sel = document.getElementById("holeshot-250");
-if (hs250Sel && hs250Sel.value && OUT_IDS.includes(Number(hs250Sel.value))) {
-  hs250Sel.value = "";
-}
-
-// Wildcard: rensa om OUT
-const wcSel = document.getElementById("wildcard-pick");
-if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
-  wcSel.value = "";
-}
-
-        // NYTT: Rensa bort OUT som råkat ligga kvar som "vald"
-        document.querySelectorAll(".pick-select").forEach((sel) => {
-          const chosen = sel.value;
-          if (chosen && OUT_IDS.includes(Number(chosen))) {
-            sel.value = "";
-          }
-        });
-
-        
-
-        // Applicera disable-regler och OUT disable
-        updateDropdowns("450cc");
-        updateDropdowns("250cc");
-  updateHoleshotDropdowns();
       }
 
-      if (actualResults && actualResults.length > 0) {
-        displayResults(myPicks);
-      }
-      
-      // Remove wrong coast selections after loading picks from server
       removeWrongCoastSelections();
 
       if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
-      
+
     } catch (e) {
       console.error(e);
     }
@@ -3176,7 +3146,7 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
       updateSaveButtonVisibility();
     }
     
-    document.addEventListener("DOMContentLoaded", async () => {
+    document.addEventListener("DOMContentLoaded", () => {
       // Initialize rider selectors with coast filtering
       const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
       riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
@@ -3198,12 +3168,14 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
           suggestions: ps,
         });
       }
-      
-      // Load user picks (don't clear them automatically)
-      await fetchAndDisplayMyPicks();
 
-      // Återställ utkast från localStorage (över skriver server om osparat utkast finns)
-      if (localStorage.getItem(`race_picks_${competitionId}`)) {
+      const hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
+      if (!hasLocalDraft && initialMyPicks) {
+        applyMyPicksToForm(initialMyPicks, { loadPortraits: false });
+        deferLoadPickPortraits(initialMyPicks);
+      }
+
+      if (hasLocalDraft) {
         loadSavedPicksFromStorage();
       }
 
@@ -3217,6 +3189,9 @@ if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
           if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
         }, 150);
       }
+
+      // Background refresh (status already shown from server on first paint)
+      void fetchAndDisplayMyPicks();
       
       // Mark picks as saved after loading
       setTimeout(() => {
