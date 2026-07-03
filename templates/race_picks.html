@@ -616,6 +616,7 @@
     {% set class_250_label = 'SX2' if is_wsx else '250cc' %}
     {% set class_450_data = 'wsx_sx1' if is_wsx else '450cc' %}
     {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
+    {% set initial_wiz_step = initial_wizard_step | default(1) %}
     
     <!-- Picks Status Indicator -->
     <div id="picks-status" class="{{ initial_picks_status.container_class if initial_picks_status else 'mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800' }}">
@@ -658,15 +659,15 @@
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
-<div id="picks-wizard" class="picks-wizard">
+<div id="picks-wizard" class="picks-wizard is-booting">
   <div class="picks-wizard-progress" aria-hidden="true">
-    <div class="picks-wizard-progress__seg" data-step="1"></div>
-    <div class="picks-wizard-progress__seg" data-step="2"></div>
-    <div class="picks-wizard-progress__seg" data-step="3"></div>
+    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 1 %} is-active{% endif %}" data-step="1"></div>
+    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 2 %} is-active{% endif %}" data-step="2"></div>
+    <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 3 %} is-active{% endif %}" data-step="3"></div>
   </div>
 
   <!-- Steg 1: 450 / SX1 -->
-  <section id="wizard-step-1" class="wizard-step wizard-step-active" data-step="1">
+  <section id="wizard-step-1" class="wizard-step{% if initial_wiz_step == 1 %} wizard-step-active{% endif %}" data-step="1"{% if initial_wiz_step != 1 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--450">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bikers.svg') }}" alt="">
       <div>
@@ -705,7 +706,7 @@
   </section>
 
   <!-- Steg 2: 250 / SX2 -->
-  <section id="wizard-step-2" class="wizard-step" data-step="2" hidden>
+  <section id="wizard-step-2" class="wizard-step{% if initial_wiz_step == 2 %} wizard-step-active{% endif %}" data-step="2"{% if initial_wiz_step != 2 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--250">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
       <div>
@@ -744,7 +745,7 @@
   </section>
 
   <!-- Steg 3: Holeshot + Wildcard -->
-  <section id="wizard-step-3" class="wizard-step" data-step="3" hidden>
+  <section id="wizard-step-3" class="wizard-step{% if initial_wiz_step == 3 %} wizard-step-active{% endif %}{% if initial_picks_status and initial_picks_status.icon == '✅' %} wizard-step--complete{% endif %}" data-step="3"{% if initial_wiz_step != 3 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--bonus">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bike_silhouette.svg') }}" alt="">
       <div>
@@ -831,7 +832,7 @@
     {% endif %}
     </div><!-- /wizard-step-3-forms -->
 
-    <div id="wizard-step-save" class="wizard-step-save" style="display: none;">
+    <div id="wizard-step-save" class="wizard-step-save" style="display: {% if initial_wiz_step >= 3 %}block{% else %}none{% endif %};">
       <div class="wizard-step-save__actions mt-4 sm:mt-6">
         <button type="button" id="save-picks-btn" onclick="savePicks()" class="rp-btn rp-btn--primary">Lämna in mina val</button>
         {% if picks_locked %}
@@ -912,6 +913,7 @@
   const pickSuggestions = {{ pick_suggestions | default({}) | tojson }};
   const picksAreLocked = {{ picks_locked | tojson }};
   const initialMyPicks = {{ initial_my_picks | tojson }};
+  const initialWizardStep = {{ initial_wizard_step | default(1) | tojson }};
 
   function hiddenPickSelectName(riderClass, position) {
     const pos = Number(position);
@@ -1252,9 +1254,7 @@
         }
       }
 
-      if (picks.wizardStep && window.PicksWizard && typeof window.PicksWizard.goToStep === 'function') {
-        window.PicksWizard.goToStep(Number(picks.wizardStep), { skipSave: true });
-      }
+      // Wizard step resolved in initAfterDraftLoad (respects complete picks → step 3)
 
       // Update rider selectors to hide selected riders
       const riderClassesForUpdate = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
@@ -2125,6 +2125,19 @@ function handleImageError(img) {
 }
 
 // Function to update picks status indicator
+function isMyPicksComplete(myPicks) {
+  if (!myPicks) return false;
+  const hasTop6 = myPicks.top6_picks && myPicks.top6_picks.length > 0;
+  const holeshot450 = myPicks.holeshot_picks?.['450cc'] || myPicks.holeshot_picks?.['wsx_sx1'];
+  const holeshot250 = myPicks.holeshot_picks?.['250cc'] || myPicks.holeshot_picks?.['wsx_sx2'];
+  const hasHoleshot = Boolean(holeshot450 || holeshot250);
+  const hasWildcardPick = myPicks.wildcard_pick && !isWSXSeries;
+  const holeshotCount = (holeshot450 ? 1 : 0) + (holeshot250 ? 1 : 0);
+  const totalPicks = (myPicks.top6_picks?.length || 0) + holeshotCount + (hasWildcardPick ? 1 : 0);
+  const totalRequired = isWSXSeries ? 14 : 15;
+  return totalPicks >= totalRequired;
+}
+
 function updatePicksStatus(myPicks) {
   const statusIcon = document.getElementById('status-icon');
   const statusTitle = document.getElementById('status-title');
@@ -2557,7 +2570,11 @@ function onPickChange(cls, pos, riderId = null) {
 
       removeWrongCoastSelections();
 
-      if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
+      if (window.PicksWizard?.initAfterDraftLoad) {
+        window.PicksWizard.initAfterDraftLoad();
+      } else if (window.PicksWizard?.renderSummary) {
+        window.PicksWizard.renderSummary();
+      }
 
     } catch (e) {
       console.error(e);
@@ -3156,6 +3173,20 @@ function onPickChange(cls, pos, riderId = null) {
       initializePreviewImages();
 
       const wizardRoot = document.getElementById('picks-wizard');
+      const serverPicksComplete = isMyPicksComplete(initialMyPicks);
+      let hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
+
+      // Saved server picks beat stale local draft (avoids step-1 flash when all picks are done)
+      if (serverPicksComplete && hasLocalDraft) {
+        localStorage.removeItem(`race_picks_${competitionId}`);
+        hasLocalDraft = false;
+      }
+
+      if (initialMyPicks) {
+        applyMyPicksToForm(initialMyPicks, { loadPortraits: false });
+        deferLoadPickPortraits(initialMyPicks);
+      }
+
       if (wizardRoot && window.PicksWizard) {
         const ps = pickSuggestions || {};
         window.PicksWizard.init({
@@ -3166,13 +3197,8 @@ function onPickChange(cls, pos, riderId = null) {
           label450: isWSXSeries ? 'SX1' : '450cc',
           label250: isWSXSeries ? 'SX2' : '250cc',
           suggestions: ps,
+          startStep: initialWizardStep,
         });
-      }
-
-      const hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
-      if (!hasLocalDraft && initialMyPicks) {
-        applyMyPicksToForm(initialMyPicks, { loadPortraits: false });
-        deferLoadPickPortraits(initialMyPicks);
       }
 
       if (hasLocalDraft) {
@@ -3185,9 +3211,7 @@ function onPickChange(cls, pos, riderId = null) {
         } else if (typeof window.PicksWizard.refresh === 'function') {
           window.PicksWizard.refresh();
         }
-        setTimeout(() => {
-          if (window.PicksWizard?.renderSummary) window.PicksWizard.renderSummary();
-        }, 150);
+        wizardRoot.classList.remove('is-booting');
       }
 
       // Background refresh (status already shown from server on first paint)

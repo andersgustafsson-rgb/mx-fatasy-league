@@ -5595,11 +5595,13 @@ def race_picks_page(competition_id):
 
     initial_my_picks = None
     initial_picks_status = None
+    initial_wizard_step = 1
     try:
         initial_my_picks = _my_picks_api_dict(user_id, comp)
         initial_picks_status = _picks_status_summary(
             initial_my_picks, is_wsx=is_wsx, picks_locked=picks_locked
         )
+        initial_wizard_step = _initial_wizard_step(initial_my_picks, is_wsx=is_wsx)
     except Exception:
         app.logger.exception(
             "race_picks initial_my_picks failed for competition_id=%s", competition_id
@@ -5625,6 +5627,7 @@ def race_picks_page(competition_id):
         pick_suggestions=pick_suggestions,
         initial_my_picks=initial_my_picks,
         initial_picks_status=initial_picks_status,
+        initial_wizard_step=initial_wizard_step,
     )
 
 
@@ -12108,6 +12111,18 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         "wildcard_pos": wc_pos,
         "snapshot_used": bool(snap),
     }
+
+
+def _initial_wizard_step(my_picks: dict, *, is_wsx: bool) -> int:
+    """Which wizard step to open (1=450, 2=250, 3=bonus/summary)."""
+    top6 = my_picks.get("top6_picks") or []
+    n450 = sum(1 for p in top6 if (p.get("class") or "") in ("450cc", "wsx_sx1"))
+    n250 = sum(1 for p in top6 if (p.get("class") or "") in ("250cc", "wsx_sx2"))
+    if n450 < 6:
+        return 1
+    if n250 < 6:
+        return 2
+    return 3
 
 
 def _picks_status_summary(my_picks: dict, *, is_wsx: bool, picks_locked: bool) -> dict:

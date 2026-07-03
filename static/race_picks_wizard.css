@@ -59,6 +59,10 @@
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
 }
 
+.picks-wizard.is-booting {
+  visibility: hidden;
+}
+
 .wizard-step {
   display: none;
   animation: wizardFadeIn 0.35s ease;
@@ -242,6 +246,37 @@
 .wizard-nav__btn--back {
   flex: 0 1 auto;
   min-width: 6.5rem;
+}
+
+.wizard-nav__btn--edit {
+  flex: 1 1 auto;
+  min-width: 9rem;
+  max-width: 14rem;
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.35);
+}
+
+.wizard-nav__btn--edit:hover:not(:disabled) {
+  border-color: rgba(251, 191, 36, 0.75);
+  background: rgba(120, 53, 15, 0.55);
+}
+
+.wizard-picks-summary.is-editing {
+  display: none;
+}
+
+.wizard-step-3-forms.is-editing .wizard-adjust-panel summary {
+  display: none;
+}
+
+.wizard-step-3-forms.is-editing .wizard-adjust-panel {
+  border: none;
+  background: transparent;
+}
+
+.wizard-step-3-forms.is-editing .wizard-adjust-panel[open] {
+  padding: 0;
 }
 
 .wizard-draft-note {

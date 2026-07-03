@@ -9,6 +9,8 @@
   let cfg = {};
   let currentStep = 1;
   let totalSteps = 3;
+  /** Step 3 complete: true = summary overview, false = edit holeshot/wildcard (or walking back to 250/450). */
+  let step3ShowingSummary = true;
 
   function $(id) {
     return document.getElementById(id);
@@ -249,7 +251,74 @@
         return false;
       }
     }
+    if (step === 3) {
+      if (!getHoleshotRider('450') || !getHoleshotRider('250')) {
+        alert(
+          `Välj holeshot för ${cfg.label450} och ${cfg.label250} innan du går vidare.`
+        );
+        return false;
+      }
+      if (!cfg.isWSX) {
+        const pos = String($('wildcard-position')?.value || '').trim();
+        if (!pos) {
+          alert('Slumpa wildcard-plats (10–20) innan du går vidare.');
+          return false;
+        }
+        if (!getWildcardRider()) {
+          alert('Välj wildcard-förare innan du går vidare.');
+          return false;
+        }
+      }
+    }
     return true;
+  }
+
+  function showStep3Overview() {
+    step3ShowingSummary = true;
+    showStep(3, { skipSave: true });
+    $('wizard-picks-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function updateNavButtons() {
+    const back = $('wizard-btn-back');
+    const label = $('wizard-step-label');
+    if (!back) return;
+
+    const onCompleteOverview =
+      currentStep === 3 && isPicksFullyComplete() && step3ShowingSummary;
+
+    if (onCompleteOverview) {
+      back.disabled = false;
+      back.textContent = '✏️ Redigera mina val';
+      back.classList.add('wizard-nav__btn--edit');
+      back.setAttribute('aria-label', 'Redigera holeshot, wildcard och topp 6');
+      if (label) label.textContent = 'Klart — alla val gjorda';
+      return;
+    }
+
+    back.classList.remove('wizard-nav__btn--edit');
+    back.textContent = '← Tillbaka';
+    back.setAttribute('aria-label', 'Tillbaka till föregående steg');
+    back.disabled = currentStep <= 1;
+
+    if (label) {
+      if (currentStep === 3 && isPicksFullyComplete()) {
+        label.textContent = cfg.isWSX
+          ? 'Redigera holeshot'
+          : 'Redigera holeshot & wildcard';
+      } else {
+        label.textContent = `Steg ${currentStep} av ${totalSteps}`;
+      }
+    }
+  }
+
+  function enterStep3BonusEdit() {
+    step3ShowingSummary = false;
+    showStep(3, { skipSave: true });
+    const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
+    if (panel) panel.open = true;
+    $('wizard-step-3-forms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateNavButtons();
   }
 
   function showStep(step, opts = {}) {
@@ -262,16 +331,22 @@
       el.hidden = n !== s;
     });
 
-    const back = $('wizard-btn-back');
     const next = $('wizard-btn-next');
-    if (back) back.disabled = s <= 1;
 
     if (next) {
-      if (s >= totalSteps) {
+      const showOverviewNext =
+        s === 3 && isPicksFullyComplete() && !step3ShowingSummary;
+      if (s >= totalSteps && !showOverviewNext) {
         next.style.display = 'none';
       } else {
         next.style.display = '';
-        next.textContent = s === 1 ? `Nästa: ${cfg.label250} →` : 'Nästa: Holeshot →';
+        if (showOverviewNext) {
+          next.textContent = 'Nästa: Översikt →';
+        } else if (s === 1) {
+          next.textContent = `Nästa: ${cfg.label250} →`;
+        } else {
+          next.textContent = 'Nästa: Holeshot →';
+        }
       }
     }
 
@@ -285,6 +360,8 @@
     if (rc) highlightNextSlot(rc);
 
     if (s === 3) renderPicksSummary();
+
+    updateNavButtons();
 
     if (!opts.skipSave) persistStep();
   }
@@ -411,11 +488,19 @@
 
   function bindNav() {
     $('wizard-btn-back')?.addEventListener('click', () => {
+      if (currentStep === 3 && isPicksFullyComplete() && step3ShowingSummary) {
+        enterStep3BonusEdit();
+        return;
+      }
       if (currentStep > 1) showStep(currentStep - 1);
     });
 
     $('wizard-btn-next')?.addEventListener('click', () => {
       if (!validateStep(currentStep)) return;
+      if (currentStep === 3 && isPicksFullyComplete() && !step3ShowingSummary) {
+        showStep3Overview();
+        return;
+      }
       showStep(currentStep + 1);
     });
 
@@ -607,7 +692,11 @@
       </div>`;
     }
 
-    el.className = 'wizard-picks-summary' + (complete ? ' is-complete' : '');
+    el.className =
+      'wizard-picks-summary' +
+      (complete ? ' is-complete' : '') +
+      (complete && step3ShowingSummary ? ' is-overview' : '') +
+      (complete && !step3ShowingSummary ? ' is-editing' : '');
     el.innerHTML = `
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
@@ -625,6 +714,7 @@
 
     el.querySelectorAll('[data-goto-step]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        step3ShowingSummary = false;
         showStep(Number(btn.dataset.gotoStep));
       });
     });
@@ -654,13 +744,16 @@
         if (!forms.querySelector('.wizard-adjust-panel')) {
           const panel = document.createElement('details');
           panel.className = 'wizard-adjust-panel';
-          panel.innerHTML = '<summary>Justera holeshot' + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
+          panel.innerHTML =
+            '<summary>Justera holeshot' + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
           while (forms.firstChild) {
             panel.appendChild(forms.firstChild);
           }
           forms.appendChild(panel);
-          panel.open = false;
         }
+        const panel = forms.querySelector('.wizard-adjust-panel');
+        if (panel) panel.open = !step3ShowingSummary;
+        forms.classList.toggle('is-editing', !step3ShowingSummary);
         forms.classList.remove('is-collapsed');
       } else {
         const panel = forms.querySelector('.wizard-adjust-panel');
@@ -676,16 +769,17 @@
   }
 
   function resolveStartStep() {
-    const stored = readStoredStep();
+    if (isPicksFullyComplete()) return 3;
+
     const inferred = inferStepFromPicks();
+    if (inferred >= 3) return 3;
+
     const filled450 = countFilledSlots(cfg.class450);
     const filled250 = countFilledSlots(cfg.class250);
 
-    let step = stored >= 1 && stored <= totalSteps ? stored : inferred;
-    if (filled450 < 6) step = 1;
-    else if (filled250 < 6 && step > 2) step = 2;
-    else if (step < inferred) step = inferred;
-    return step;
+    if (filled450 < 6) return 1;
+    if (filled250 < 6) return 2;
+    return inferred;
   }
 
   function refreshUI() {
@@ -705,12 +799,23 @@
     bindNav();
     setupWildcardWheel();
 
-    const stored = resolveStartStep();
-    showStep(stored, { skipSave: true });
+    let step = resolveStartStep();
+    const hint = Number(cfg.startStep);
+    if (hint >= 1 && hint <= totalSteps && hint > step) {
+      step = hint;
+    }
+    if (step === 3 && isPicksFullyComplete()) {
+      step3ShowingSummary = true;
+    }
+    showStep(step, { skipSave: true });
   }
 
   function initAfterDraftLoad() {
-    showStep(resolveStartStep(), { skipSave: true });
+    const step = resolveStartStep();
+    if (step === 3 && isPicksFullyComplete()) {
+      step3ShowingSummary = true;
+    }
+    showStep(step, { skipSave: true });
     syncWildcardRollLockedState();
     refreshUI();
   }
@@ -720,10 +825,13 @@
   }
 
   function openBonusAdjust() {
-    showStep(3);
+    step3ShowingSummary = false;
+    showStep(3, { skipSave: true });
     refreshUI();
     const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
     if (panel) panel.open = true;
+    $('wizard-step-3-forms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateNavButtons();
   }
 
   window.PicksWizard = {
