@@ -391,6 +391,35 @@
     .series-leaders-details > summary::-webkit-details-marker {
       display: none;
     }
+    .home-lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(55, 65, 81, 0.7);
+      background: rgba(3, 7, 18, 0.5);
+      padding: 0.5rem 0.75rem;
+      transition: border-color 0.15s ease;
+    }
+    .home-lb-row:hover {
+      border-color: rgba(75, 85, 99, 0.85);
+    }
+    .home-lb-panel {
+      border-radius: 0.75rem;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.05);
+      padding: 0.75rem;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    }
+    .home-lb-panel--green {
+      border-color: rgba(74, 222, 128, 0.35);
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .home-lb-panel--violet {
+      border-color: rgba(167, 139, 250, 0.35);
+      background: rgba(139, 92, 246, 0.05);
+    }
     .bg-smx {
       background-image: url('/static/images/smx playoffs.webp');
       background-size: cover;
@@ -1342,7 +1371,10 @@
       </div>
               <div class="p-4 sm:p-6 bg-gray-900">
                 <div id="season-leaderboard-list">
-                  <p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Laddar...</p>
+                  <div class="text-center text-cyan-400 py-4">
+                    <div class="animate-spin inline-block w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full"></div>
+                    <span class="ml-2 text-xs">Laddar...</span>
+                  </div>
                 </div>
                 <div class="mt-4 text-center">
                   <a href="{{ url_for('my_scores') }}" class="inline-block bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);">
@@ -1360,9 +1392,12 @@
       <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);">
         <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">👥 Säsongsteam Leaderboard</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-green-900">
+      <div class="p-4 sm:p-6 bg-gray-900">
         <div id="season-team-leaderboard-list">
-          <p class="text-green-400 text-center" style="text-shadow: 0 0 5px rgba(34, 197, 94, 0.3);">Laddar...</p>
+          <div class="text-center text-green-400 py-4">
+            <div class="animate-spin inline-block w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full"></div>
+            <span class="ml-2 text-xs">Laddar...</span>
+          </div>
         </div>
         <div class="mt-4 text-center">
           <a href="{{ url_for('season_team_page') }}" class="inline-block bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">
@@ -1377,9 +1412,12 @@
       <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);">
         <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 Liga Leaderboard</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-purple-900">
+      <div class="p-4 sm:p-6 bg-gray-900">
         <div id="league-leaderboard-list">
-          <p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Laddar...</p>
+          <div class="text-center text-purple-300 py-4">
+            <div class="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full"></div>
+            <span class="ml-2 text-xs">Laddar...</span>
+          </div>
         </div>
         <div class="mt-4 text-center">
           <a href="{{ url_for('leagues_leaderboard') }}" class="inline-block bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">
@@ -1715,11 +1753,57 @@
       return `<span class="text-gray-400 text-lg">—</span>`;
     }
 
+    const homeLbAccent = {
+      rank: (i) => (i === 0 ? 'text-yellow-300' : i === 1 ? 'text-cyan-300' : i === 2 ? 'text-green-300' : 'text-gray-400'),
+      points: (i) => (i === 0 ? 'text-yellow-200' : i === 1 ? 'text-cyan-200' : i === 2 ? 'text-green-200' : 'text-gray-200'),
+    };
+
+    function homeLbLoading(accent) {
+      const colors = {
+        cyan: 'text-cyan-400 border-cyan-400',
+        green: 'text-green-400 border-green-400',
+        violet: 'text-purple-300 border-purple-400',
+      };
+      const cls = colors[accent] || colors.cyan;
+      return `<div class="text-center py-4 ${cls.split(' ')[0]}"><div class="animate-spin inline-block w-4 h-4 border-2 ${cls.split(' ')[1]} border-t-transparent rounded-full"></div><span class="ml-2 text-xs">Laddar...</span></div>`;
+    }
+
+    function homeLbEmpty(msg, accent = 'cyan') {
+      const text = accent === 'green' ? 'text-green-300' : accent === 'violet' ? 'text-purple-300' : 'text-cyan-300';
+      return `<p class="${text} text-center text-sm py-3">${msg}</p>`;
+    }
+
+    function homeLbRow(rank, nameHtml, points, opts = {}) {
+      const i = rank - 1;
+      const hidden = opts.hidden ? ' hidden' : '';
+      const sub = opts.sub ? `<div class="text-[10px] text-gray-400 pl-8">${opts.sub}</div>` : '';
+      const extra = opts.extraRight || '';
+      return `
+        <div class="leaderboard-entry home-lb-row${hidden}">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="${homeLbAccent.rank(i)} font-black tabular-nums w-6 shrink-0">${rank}.</span>
+              <div class="min-w-0 text-white font-semibold text-sm truncate">${nameHtml}</div>
+            </div>
+            ${sub}
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${extra}
+            <span class="${homeLbAccent.points(i)} font-black tabular-nums whitespace-nowrap text-sm">${points}p</span>
+          </div>
+        </div>`;
+    }
+
+    function homeLbPanel(rowsHtml, accent = 'cyan') {
+      const panelClass = accent === 'green' ? 'home-lb-panel--green' : accent === 'violet' ? 'home-lb-panel--violet' : 'home-lb-panel';
+      return `<div class="${panelClass}"><div class="space-y-1">${rowsHtml}</div></div>`;
+    }
+
     async function fetchSeasonLeaderboard() {
       const c = document.getElementById("season-leaderboard-list");
       const requestId = (window.seasonLeaderboardRequestId || 0) + 1;
       window.seasonLeaderboardRequestId = requestId;
-      c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Laddar...</p>';
+      c.innerHTML = homeLbLoading('cyan');
       try {
         const res = await fetch(`/get_season_leaderboard`);
         if (requestId !== window.seasonLeaderboardRequestId) return;
@@ -1748,7 +1832,7 @@
         }
         
         if (leaderboard.length === 0) {
-          c.innerHTML = '<p class="text-cyan-400 text-center" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga poäng registrerade ännu.</p>';
+          c.innerHTML = homeLbEmpty('Inga poäng registrerade ännu.', 'cyan');
         } else {
           // Store leaderboard data globally for expand/collapse
           window.seasonLeaderboardData = leaderboard;
@@ -1823,45 +1907,31 @@
           }
 
           if (requestId !== window.seasonLeaderboardRequestId) return;
-          c.innerHTML = "";
           seasonLeaderboardExpanded = false;
-          
-          // Show first 15 entries
+
           const initialCount = Math.min(15, leaderboard.length);
           const remainingCount = leaderboard.length - initialCount;
-          
+          let rowsHtml = '';
+
           leaderboard.forEach((row, i) => {
-            const el = document.createElement("div");
-            const neonColor = i === 0 ? 'border-yellow-400' : i === 1 ? 'border-cyan-400' : i === 2 ? 'border-orange-400' : 'border-gray-600';
-            const glowColor = i === 0 ? 'rgba(250, 204, 21, 0.2)' : i === 1 ? 'rgba(34, 211, 238, 0.2)' : i === 2 ? 'rgba(251, 146, 60, 0.2)' : 'rgba(75, 85, 99, 0.2)';
-            const textColor = i === 0 ? 'text-yellow-300' : i === 1 ? 'text-cyan-300' : i === 2 ? 'text-orange-300' : 'text-gray-300';
-            
-            // Hide entries after first 15
-            const isHidden = i >= 15;
-            
-            el.className = `leaderboard-entry flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-gray-700 gap-1 sm:gap-0 shadow-lg ${isHidden ? 'hidden' : ''}`;
-            el.style.boxShadow = `0 0 10px ${glowColor}`;
-            el.innerHTML = `
-              <a class="flex-1 flex items-center gap-2" href="/profile/${row.user_id}" title="Visa ${row.display_name || row.username}'s profil">
-                <span class="font-bold w-6 text-right text-sm sm:text-base ${textColor}" style="text-shadow: 0 0 5px ${glowColor};">${i + 1}.</span>
-                <span class="text-sm sm:text-base truncate text-white" style="text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs sm:text-sm text-gray-400">/ ${row.team_name}</span>` : ''}</span>
-              </a>
-              <span class="flex items-center gap-2 text-sm sm:text-base">
-                ${deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta))}
-                <span class="font-bold text-green-400" style="text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);">${row.total_points} poäng</span>
-              </span>`;
-            c.appendChild(el);
+            const name = `<a href="/profile/${row.user_id}" class="hover:text-cyan-200 transition-colors" title="Visa ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
+            const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
+            rowsHtml += homeLbRow(i + 1, name, row.total_points, {
+              hidden: i >= 15,
+              extraRight: delta,
+            });
           });
-          
-          // Add expand/collapse button if there are more than 15 entries
+
+          c.innerHTML = homeLbPanel(rowsHtml, 'cyan');
+
           if (leaderboard.length > 15) {
             const expandBtn = document.createElement("div");
             expandBtn.className = "mt-4 text-center";
             expandBtn.id = "expand-leaderboard-btn-container";
             expandBtn.innerHTML = `
-              <button id="expand-leaderboard-btn" 
+              <button id="expand-leaderboard-btn"
                       onclick="toggleSeasonLeaderboard()"
-                      class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors">
+                      class="w-full text-xs text-cyan-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
                 📋 Visa fler (${remainingCount} till)
               </button>
             `;
@@ -1902,37 +1972,24 @@
 
     async function fetchSeasonTeamLeaderboard() {
       const c = document.getElementById("season-team-leaderboard-list");
-      if (!c) return; // Element might not exist on all pages
-      c.innerHTML = '<p class="text-green-400 text-center" style="text-shadow: 0 0 5px rgba(34, 197, 94, 0.3);">Laddar...</p>';
+      if (!c) return;
+      c.innerHTML = homeLbLoading('green');
       try {
         const res = await fetch(`/get_season_team_leaderboard`);
         const leaderboard = await res.json();
-        c.innerHTML = "";
         if (leaderboard.length === 0) {
-          c.innerHTML = '<p class="text-green-400 text-center" style="text-shadow: 0 0 5px rgba(34, 197, 94, 0.3);">Inga säsongsteam ännu.</p>';
+          c.innerHTML = homeLbEmpty('Inga säsongsteam ännu.', 'green');
         } else {
+          let rowsHtml = '';
           leaderboard.forEach((row, i) => {
-            const el = document.createElement("div");
-            const neonColor = i === 0 ? 'border-yellow-400' : i === 1 ? 'border-green-400' : i === 2 ? 'border-emerald-400' : 'border-gray-600';
-            const glowColor = i === 0 ? 'rgba(250, 204, 21, 0.2)' : i === 1 ? 'rgba(34, 197, 94, 0.2)' : i === 2 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(75, 85, 99, 0.2)';
-            const textColor = i === 0 ? 'text-yellow-300' : i === 1 ? 'text-green-300' : i === 2 ? 'text-emerald-300' : 'text-gray-300';
-            
-            el.className = `flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-gray-700 gap-1 sm:gap-0 shadow-lg`;
-            el.style.boxShadow = `0 0 10px ${glowColor}`;
-            el.innerHTML = `
-              <a class="flex-1 flex items-center gap-2" href="/season_team/view/${row.user_id}" title="Säsongsteam poäng per race — ${row.display_name || row.username}">
-                <span class="font-bold w-6 text-right text-sm sm:text-base ${textColor}" style="text-shadow: 0 0 5px ${glowColor};">${i + 1}.</span>
-                <span class="text-sm sm:text-base truncate text-white" style="text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs sm:text-sm text-gray-400">/ ${row.team_name}</span>` : ''}</span>
-              </a>
-              <span class="flex items-center gap-2 text-sm sm:text-base">
-                <span class="font-bold text-green-400" style="text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);">${row.total_points} poäng</span>
-              </span>`;
-            c.appendChild(el);
+            const name = `<a href="/season_team/view/${row.user_id}" class="hover:text-green-200 transition-colors" title="Säsongsteam — ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
+            rowsHtml += homeLbRow(i + 1, name, row.total_points);
           });
+          c.innerHTML = homeLbPanel(rowsHtml, 'green');
         }
       } catch (e) {
         console.error("Season team leaderboard error:", e);
-        c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta säsongsteam leaderboard: ' + e.message + '</p>';
+        c.innerHTML = '<p class="text-red-400 text-center text-sm py-3">Kunde inte hämta säsongsteam leaderboard: ' + e.message + '</p>';
       }
     }
 
@@ -2155,36 +2212,26 @@
 
     async function fetchLeagueLeaderboard() {
       const c = document.getElementById("league-leaderboard-list");
-      c.innerHTML = '<p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Laddar...</p>';
+      c.innerHTML = homeLbLoading('violet');
       try {
         const res = await fetch(`/api/leagues/leaderboard`);
         const leaderboard = await res.json();
-        
-        c.innerHTML = "";
+
         if (leaderboard.length === 0) {
-          c.innerHTML = '<p class="text-purple-400 text-center" style="text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);">Inga ligor ännu.</p>';
+          c.innerHTML = homeLbEmpty('Inga ligor ännu.', 'violet');
         } else {
+          let rowsHtml = '';
           leaderboard.forEach((row, i) => {
-            const el = document.createElement("div");
-            const neonColor = i === 0 ? 'border-yellow-400' : i === 1 ? 'border-purple-400' : i === 2 ? 'border-orange-400' : 'border-gray-600';
-            const glowColor = i === 0 ? 'rgba(250, 204, 21, 0.2)' : i === 1 ? 'rgba(168, 85, 247, 0.2)' : i === 2 ? 'rgba(251, 146, 60, 0.2)' : 'rgba(75, 85, 99, 0.2)';
-            const textColor = i === 0 ? 'text-yellow-300' : i === 1 ? 'text-purple-300' : i === 2 ? 'text-orange-300' : 'text-gray-300';
-            
-            el.className = `flex flex-col sm:flex-row sm:justify-between sm:items-center bg-purple-800 border-2 ${neonColor} p-2 sm:p-3 rounded-md hover:bg-purple-700 gap-1 sm:gap-0 shadow-lg`;
-            el.style.boxShadow = `0 0 10px ${glowColor}`;
-            el.innerHTML = `
-              <div class="flex-1 flex items-center gap-2">
-                <span class="font-bold w-6 text-right text-sm sm:text-base ${textColor}" style="text-shadow: 0 0 5px ${glowColor};">#${i + 1}</span>
-                <span class="text-sm sm:text-base truncate text-white" style="text-shadow: 0 0 3px rgba(255, 255, 255, 0.3);">${row.name}</span>
-                <span class="text-xs text-purple-300">(${row.member_count} medlemmar)</span>
-              </div>
-              <span class="font-bold text-green-400" style="text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);">${row.total_points} poäng</span>`;
-            c.appendChild(el);
+            const name = `<a href="/leagues/${row.id}" class="hover:text-purple-200 transition-colors">${row.name}</a>`;
+            rowsHtml += homeLbRow(i + 1, name, row.total_points, {
+              sub: `${row.member_count} medlemmar`,
+            });
           });
+          c.innerHTML = homeLbPanel(rowsHtml, 'violet');
         }
       } catch (e) {
         console.error("League leaderboard error:", e);
-        c.innerHTML = '<p class="text-red-400 text-center" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte hämta liga leaderboard: ' + e.message + '</p>';
+        c.innerHTML = '<p class="text-red-400 text-center text-sm py-3">Kunde inte hämta liga leaderboard: ' + e.message + '</p>';
       }
     }
     
