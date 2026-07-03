@@ -838,7 +838,7 @@
         {% if picks_locked %}
         <button type="button" onclick="showOtherUsersPicks()" class="rp-btn rp-btn--accent">Visa andras picks</button>
         {% else %}
-        <button type="button" onclick="clearBonusPicks()" class="rp-btn rp-btn--warm">Rensa holeshot{% if competition.series != 'WSX' %} & wildcard{% endif %}</button>
+        <button type="button" id="wizard-btn-edit-picks" class="rp-btn wizard-btn-edit-picks" hidden>✏️ Redigera mina val</button>
         <button type="button" onclick="clearMyPicks()" class="rp-btn rp-btn--danger">Rensa alla val</button>
         {% endif %}
       </div>

@@ -281,25 +281,29 @@
 
   function updateNavButtons() {
     const back = $('wizard-btn-back');
+    const editPicks = $('wizard-btn-edit-picks');
     const label = $('wizard-step-label');
-    if (!back) return;
 
     const onCompleteOverview =
       currentStep === 3 && isPicksFullyComplete() && step3ShowingSummary;
 
     if (onCompleteOverview) {
-      back.disabled = false;
-      back.textContent = '✏️ Redigera mina val';
-      back.classList.add('wizard-nav__btn--edit');
-      back.setAttribute('aria-label', 'Redigera holeshot, wildcard och topp 6');
+      if (back) {
+        back.style.display = 'none';
+        back.classList.remove('wizard-nav__btn--edit');
+      }
+      if (editPicks) editPicks.hidden = false;
       if (label) label.textContent = 'Klart — alla val gjorda';
       return;
     }
 
-    back.classList.remove('wizard-nav__btn--edit');
-    back.textContent = '← Tillbaka';
-    back.setAttribute('aria-label', 'Tillbaka till föregående steg');
-    back.disabled = currentStep <= 1;
+    if (editPicks) editPicks.hidden = true;
+    if (back) {
+      back.style.display = '';
+      back.textContent = '← Tillbaka';
+      back.setAttribute('aria-label', 'Tillbaka till föregående steg');
+      back.disabled = currentStep <= 1;
+    }
 
     if (label) {
       if (currentStep === 3 && isPicksFullyComplete()) {
@@ -488,11 +492,11 @@
 
   function bindNav() {
     $('wizard-btn-back')?.addEventListener('click', () => {
-      if (currentStep === 3 && isPicksFullyComplete() && step3ShowingSummary) {
-        enterStep3BonusEdit();
-        return;
-      }
       if (currentStep > 1) showStep(currentStep - 1);
+    });
+
+    $('wizard-btn-edit-picks')?.addEventListener('click', () => {
+      enterStep3BonusEdit();
     });
 
     $('wizard-btn-next')?.addEventListener('click', () => {
