@@ -1,5 +1,5 @@
 /* PWA service worker: cache static assets aggressively to cut Render egress. */
-const CACHE = "mx-fantasy-v51";
+const CACHE = "mx-fantasy-v52";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {

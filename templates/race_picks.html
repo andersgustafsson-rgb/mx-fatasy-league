@@ -3102,11 +3102,18 @@ function onPickChange(cls, pos, riderId = null) {
     
     // Function to get current picks state
     function getCurrentPicksState() {
+      const hs450Sel = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+      const hs250Sel = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+      const wcSel = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+      const hs450Id = getRiderIdFromSelector(hs450Sel) || document.getElementById("holeshot-450")?.value || "";
+      const hs250Id = getRiderIdFromSelector(hs250Sel) || document.getElementById("holeshot-250")?.value || "";
+      const wcId = getRiderIdFromSelector(wcSel) || document.getElementById("wildcard-pick")?.value || "";
+
       const state = {
         racePicks: [],
-        holeshot450: document.getElementById("holeshot-450")?.value || "",
-        holeshot250: document.getElementById("holeshot-250")?.value || "",
-        wildcardPick: document.getElementById("wildcard-pick")?.value || "",
+        holeshot450: hs450Id ? String(hs450Id) : "",
+        holeshot250: hs250Id ? String(hs250Id) : "",
+        wildcardPick: wcId ? String(wcId) : "",
         wildcardPos: document.getElementById("wildcard-position")?.value || ""
       };
       
@@ -3141,34 +3148,43 @@ function onPickChange(cls, pos, riderId = null) {
       return getCurrentPicksState() !== savedPicksState;
     }
     
+    function myPicksFromFormState() {
+      try {
+        const state = JSON.parse(getCurrentPicksState());
+        return {
+          top6_picks: (state.racePicks || []).map((p) => ({
+            rider_id: p.rider_id,
+            predicted_position: p.position,
+            class: p.class,
+          })),
+          holeshot_picks: {
+            "450cc": state.holeshot450 || null,
+            "wsx_sx1": state.holeshot450 || null,
+            "250cc": state.holeshot250 || null,
+            "wsx_sx2": state.holeshot250 || null,
+          },
+          wildcard_pick: state.wildcardPick || null,
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+
     // Function to update save button visibility
     function updateSaveButtonVisibility() {
       const saveBtn = document.getElementById("save-picks-btn");
       if (!saveBtn) return;
       
-      // Update status based on the currently selected draft picks (including selections loaded from localStorage).
-      // The server picks can lag behind until the user hits "Spara Mina Val".
+      // Update status from form; fall back to server embed if dropdowns not built yet.
       try {
-        const state = JSON.parse(getCurrentPicksState());
-        const draftTop6 = (state.racePicks || []).map((p) => ({
-          rider_id: p.rider_id,
-          predicted_position: p.position,
-          class: p.class,
-        }));
-        const draftHoleshot450 = state.holeshot450 || null;
-        const draftHoleshot250 = state.holeshot250 || null;
-        const draftWildcardPick = state.wildcardPick || null;
-        
-        updatePicksStatus({
-          top6_picks: draftTop6,
-          holeshot_picks: {
-            "450cc": draftHoleshot450,
-            "wsx_sx1": draftHoleshot450,
-            "250cc": draftHoleshot250,
-            "wsx_sx2": draftHoleshot250,
-          },
-          wildcard_pick: draftWildcardPick,
-        });
+        const fromForm = myPicksFromFormState();
+        if (fromForm) {
+          const statusPicks =
+            isMyPicksComplete(initialMyPicks) && !isMyPicksComplete(fromForm)
+              ? initialMyPicks
+              : fromForm;
+          updatePicksStatus(statusPicks);
+        }
       } catch (e) {
         // If anything fails, don't block UI saving; status will update on next interaction.
       }
@@ -3245,14 +3261,20 @@ function onPickChange(cls, pos, riderId = null) {
 
       finishWizardBoot();
 
+      if (initialMyPicks) {
+        updatePicksStatus(initialMyPicks);
+      }
+
       // Background refresh (status already shown from server on first paint)
       void fetchAndDisplayMyPicks();
       
       // Mark picks as saved after loading
       setTimeout(() => {
         markPicksAsSaved();
-        riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
-        removeWrongCoastSelections();
+        if (window._wizardDropdownsReady) {
+          riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
+          removeWrongCoastSelections();
+        }
       }, 500);
       
       // Listen for changes in picks
