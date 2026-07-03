@@ -317,6 +317,9 @@
   }
 
   function enterStep3BonusEdit() {
+    if (typeof window.ensureWizardDropdownsReady === 'function') {
+      window.ensureWizardDropdownsReady();
+    }
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
     const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
@@ -327,6 +330,9 @@
 
   function showStep(step, opts = {}) {
     const s = Math.max(1, Math.min(totalSteps, step));
+    if (s < 3 && typeof window.ensureWizardDropdownsReady === 'function') {
+      window.ensureWizardDropdownsReady();
+    }
     currentStep = s;
 
     document.querySelectorAll('.wizard-step').forEach((el) => {

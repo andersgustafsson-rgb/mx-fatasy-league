@@ -73,6 +73,61 @@
 
 .picks-wizard.is-booting {
   visibility: hidden;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.picks-wizard-shell.is-loading .picks-wizard-loader {
+  display: flex;
+}
+
+.picks-wizard-loader {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 14rem;
+  margin: 0.5rem 0 1.25rem;
+  padding: 1.5rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px dashed rgba(34, 211, 238, 0.35);
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.picks-wizard-loader__inner {
+  text-align: center;
+  max-width: 20rem;
+}
+
+.picks-wizard-loader__spinner {
+  display: inline-block;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 0.85rem;
+  border: 3px solid rgba(34, 211, 238, 0.2);
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: wizardLoaderSpin 0.85s linear infinite;
+}
+
+@keyframes wizardLoaderSpin {
+  to { transform: rotate(360deg); }
+}
+
+.picks-wizard-loader__text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #67e8f9;
+}
+
+.picks-wizard-loader__sub {
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.4;
 }
 
 .wizard-step {

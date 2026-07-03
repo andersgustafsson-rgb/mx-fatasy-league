@@ -659,6 +659,15 @@
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
+<div id="picks-wizard-shell" class="picks-wizard-shell is-loading">
+  <div id="picks-wizard-loader" class="picks-wizard-loader" role="status" aria-live="polite" aria-busy="true">
+    <div class="picks-wizard-loader__inner">
+      <span class="picks-wizard-loader__spinner" aria-hidden="true"></span>
+      <p class="picks-wizard-loader__text">{% if initial_picks_status and initial_picks_status.icon == '✅' %}Laddar din översikt…{% else %}Laddar dina val…{% endif %}</p>
+      <p class="picks-wizard-loader__sub">{% if initial_picks_status and initial_picks_status.icon == '✅' %}Dina val är klara — hämtar sammanfattningen.{% else %}Förarlister och dina sparade val hämtas.{% endif %}</p>
+    </div>
+  </div>
+
 <div id="picks-wizard" class="picks-wizard is-booting">
   <div class="picks-wizard-progress" aria-hidden="true">
     <div class="picks-wizard-progress__seg{% if initial_wiz_step >= 1 %} is-active{% endif %}" data-step="1"></div>
@@ -852,6 +861,7 @@
   </footer>
   <p class="wizard-draft-note">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
 </div>
+</div><!-- /picks-wizard-shell -->
 
 <!-- Hidden select elements for form submission -->
 {% for i in range(1, 7) %}
@@ -1060,11 +1070,7 @@
     fillSelectFromRiders(document.getElementById('wildcard-pick'), l450, '-- välj 450cc förare --');
   }
 
-  populateAllRiderDropdowns();
-  populateHiddenSelectsFromJson();
-
-  // Load saved picks from localStorage on page load (efter att DOM byggts)
-  loadSavedPicksFromStorage();
+  // Dropdowns built on DOMContentLoaded (deferred when overview loads first)
 
   // Save picks to localStorage
   function savePicksToStorage() {
@@ -2138,6 +2144,25 @@ function isMyPicksComplete(myPicks) {
   return totalPicks >= totalRequired;
 }
 
+function finishWizardBoot() {
+  document.getElementById('picks-wizard-shell')?.classList.remove('is-loading');
+  const loader = document.getElementById('picks-wizard-loader');
+  if (loader) loader.setAttribute('aria-busy', 'false');
+  document.getElementById('picks-wizard')?.classList.remove('is-booting');
+}
+
+function ensureWizardDropdownsReady() {
+  if (window._wizardDropdownsReady) return;
+  populateAllRiderDropdowns();
+  populateHiddenSelectsFromJson();
+  const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+  riderClasses.forEach((cls) => updateRiderSelectors(cls));
+  updateHoleshotDropdowns();
+  initializePreviewImages();
+  window._wizardDropdownsReady = true;
+}
+window.ensureWizardDropdownsReady = ensureWizardDropdownsReady;
+
 function updatePicksStatus(myPicks) {
   const statusIcon = document.getElementById('status-icon');
   const statusTitle = document.getElementById('status-title');
@@ -3164,13 +3189,18 @@ function onPickChange(cls, pos, riderId = null) {
     }
     
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize rider selectors with coast filtering
       const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
-      riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
-      updateHoleshotDropdowns();
-      
-      // Initialize all preview images
-      initializePreviewImages();
+      const quickOverview =
+        isMyPicksComplete(initialMyPicks) && Number(initialWizardStep) === 3;
+
+      if (!quickOverview) {
+        populateAllRiderDropdowns();
+        populateHiddenSelectsFromJson();
+        riderClassesForInit.forEach((cls) => updateRiderSelectors(cls));
+        updateHoleshotDropdowns();
+        initializePreviewImages();
+        window._wizardDropdownsReady = true;
+      }
 
       const wizardRoot = document.getElementById('picks-wizard');
       const serverPicksComplete = isMyPicksComplete(initialMyPicks);
@@ -3211,8 +3241,9 @@ function onPickChange(cls, pos, riderId = null) {
         } else if (typeof window.PicksWizard.refresh === 'function') {
           window.PicksWizard.refresh();
         }
-        wizardRoot.classList.remove('is-booting');
       }
+
+      finishWizardBoot();
 
       // Background refresh (status already shown from server on first paint)
       void fetchAndDisplayMyPicks();
