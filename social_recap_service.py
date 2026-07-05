@@ -1973,7 +1973,7 @@ def _draw_season_top_snippet(
             disp, name_f = _fit_podium_name(disp, name_avail, min_px=26, max_px=34)
             pts_line = f"{int(row.get('points', 0)):,} p".replace(",", " ")
             pts_f = _fit_font_px(pts_line, pts_reserve, bold=True, min_px=24, max_px=32)
-            line_h = max(_font_height(name_f), _font_height(rank_f))
+            line_h = max(_font_height(name_f, disp), _font_height(rank_f, f"{rank}."))
             ty = row_mid - line_h // 2
             draw.text((rank_x, ty), f"{rank}.", font=rank_f, fill=medal)
             draw.text((name_x, ty), disp, font=name_f, fill=WHITE)
@@ -2390,7 +2390,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "31"
+RECAP_RENDERER_REV = "32"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
@@ -2551,13 +2551,10 @@ def _tune_recap_stats_weekly_slot(slot: dict[str, Any], index: int = 0) -> dict[
     detail = dict(slot["detail"])
     text_dx = _RECAP_STATS_WEEKLY_TEXT_DX
     name["x0"] = int(name["x0"]) + text_dx
-    name["x1"] = int(name["x1"]) + text_dx
     detail["x0"] = int(detail["x0"]) + text_dx
-    detail["x1"] = int(detail["x1"]) + text_dx
     detail_dy = _RECAP_STATS_WEEKLY_DETAIL_DY
     detail_dx, detail_dy_extra = _RECAP_STATS_WEEKLY_DETAIL_NUDGE.get(index, (0, 0))
     detail["x0"] = int(detail["x0"]) + detail_dx
-    detail["x1"] = int(detail["x1"]) + detail_dx
     detail["y0"] = int(detail["y0"]) + detail_dy + detail_dy_extra
     detail["y1"] = int(detail["y1"]) + detail_dy + detail_dy_extra
     return {**slot, "avatar": av, "name": name, "detail": detail}
@@ -2875,14 +2872,21 @@ def _draw_recap_name_in_box(
     min_px: int = 14,
     pad_x: int = 4,
     pad_y: int = 2,
+    valign: str = "center",
 ) -> None:
     """Kort namn (Förnamn E.) som ryms i recap-ruta."""
     x0, y0, x1, y1 = box
     w = max(10, x1 - x0)
+    h = max(10, y1 - y0)
     text, font = _fit_podium_name(
         _short_recap_display_name(name), w - pad_x * 2, min_px=min_px, max_px=max_px,
     )
-    draw.text((x0 + pad_x, y0 + pad_y), text, font=font, fill=WHITE, anchor="lt")
+    fh = _font_height(font, text)
+    if valign == "center":
+        ty = y0 + max(pad_y, (h - fh) // 2)
+    else:
+        ty = y0 + pad_y
+    draw.text((x0 + pad_x, ty), text, font=font, fill=WHITE, anchor="lt")
 
 
 def _draw_text_in_box(
@@ -3045,6 +3049,16 @@ def _weekly_detail_line1_fill(line1: str):
     return MUTED
 
 
+def _truncate_to_width(text: str, font, max_width: int) -> str:
+    s = (text or "").strip() or "—"
+    if _text_width(font, s) <= max_width:
+        return s
+    ell = "…"
+    while len(s) > 1 and _text_width(font, s + ell) > max_width:
+        s = s[:-1].rstrip()
+    return s + ell if s else ell
+
+
 def _draw_weekly_detail_in_box(
     draw,
     box: tuple[int, int, int, int],
@@ -3061,15 +3075,20 @@ def _draw_weekly_detail_in_box(
     w = max(10, x1 - x0)
     h = max(10, y1 - y0)
     gap = 4
+    pad_x = 8
+    max_w = w - pad_x * 2
     line1 = (line1 or "—").strip()
     line2 = (line2 or "").strip()
-    f1 = _fit_font_px(line1, w - 12, bold=True, min_px=13, max_px=line1_max_px)
-    f2 = _fit_font_px(line2, w - 12, bold=False, min_px=11, max_px=line2_max_px) if line2 else None
-    h1 = _font_height(f1)
-    h2 = _font_height(f2) if f2 else 0
+    f1 = _fit_font_px(line1, max_w, bold=True, min_px=11, max_px=line1_max_px)
+    line1 = _truncate_to_width(line1, f1, max_w)
+    f2 = _fit_font_px(line2, max_w, bold=False, min_px=10, max_px=line2_max_px) if line2 else None
+    if line2 and f2:
+        line2 = _truncate_to_width(line2, f2, max_w)
+    h1 = _font_height(f1, line1)
+    h2 = _font_height(f2, line2) if f2 and line2 else 0
     total = h1 + (gap + h2 if line2 else 0)
     y = y0 + pad_y if valign == "top" else y0 + (h - total) // 2
-    x = x0 + 8
+    x = x0 + pad_x
     draw.text((x, y), line1, font=f1, fill=_weekly_detail_line1_fill(line1), anchor="lt")
     if line2 and f2:
         draw.text((x, y + h1 + gap), line2, font=f2, fill=MUTED, anchor="lt")
