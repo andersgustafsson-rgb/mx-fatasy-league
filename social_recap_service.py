@@ -309,7 +309,7 @@ def _fallback_race_highlights(
                         "title": "Holeshot-kung",
                         "user_id": int(uid),
                         "display_name": _display_name(u),
-                        "detail": f"{int(pts)} holeshot-poäng",
+                        "detail": f"{int(pts)} p · holeshot",
                     }
                 )
     except Exception:
@@ -466,7 +466,7 @@ def _get_weekly_highlights(
                     "title": "Holeshot-kung",
                     "user_id": int(uid),
                     "display_name": _display_name(u),
-                    "detail": f"{int(pts)} holeshot-poäng i veckan",
+                    "detail": f"{int(pts)} p · holeshot",
                 }
             )
 
@@ -2390,7 +2390,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "32"
+RECAP_RENDERER_REV = "33"
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
 _RECAP_RIDER_NAME_Y_SHIFT = 40
@@ -3024,18 +3024,15 @@ def _weekly_detail_recap_lines(detail: str) -> tuple[str, str]:
     if " · " in s:
         line1, line2 = s.split(" · ", 1)
         line1 = line1.replace("platser", "pl.").strip()
-        line2 = (
-            line2.replace(" i veckan", " denna vecka")
-            .replace(" i vk.", " denna vecka")
-            .strip()
-        )
+        line2 = line2.replace(" i veckan", "").replace(" i vk.", "").strip()
         return line1, line2
     if " denna vecka" in s:
         head, tail = s.split(" denna vecka", 1)
         return head.strip(), "denna vecka"
     if " holeshot-poäng" in s:
-        head, tail = s.split(" holeshot-poäng", 1)
-        return head.strip(), f"holeshot-poäng{tail.replace(' i veckan', ' denna vecka')}".strip()
+        head, _tail = s.split(" holeshot-poäng", 1)
+        pts = head.strip()
+        return f"{pts} p" if pts.isdigit() else pts, "holeshot"
     return _short_weekly_detail(s, max_len=36), ""
 
 
