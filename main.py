@@ -2135,17 +2135,13 @@ def sx_season_recap(year: int):
 
 @app.route("/leagues")
 def leagues_page():
-    # Check if user is logged in
-    if "user_id" in session:
-        uid = session["user_id"]
-        is_logged_in = True
-    else:
-        uid = None
-        is_logged_in = False
-    
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    uid = session["user_id"]
+
     # Ensure database is initialized
     try:
-        # Check if tables exist, if not initialize
         from sqlalchemy import inspect
         if not inspect(db.engine).has_table('leagues'):
             print("Tables missing, reinitializing database...")
@@ -2153,27 +2149,13 @@ def leagues_page():
     except Exception as e:
         print(f"Database check error: {e}")
         init_database()
-    
-    # Get leagues with error handling
+
     try:
         my_leagues = League.query.join(LeagueMembership).filter(LeagueMembership.user_id == uid).all()
     except Exception as e:
         print(f"Error getting leagues: {e}")
         my_leagues = []
-    
-    return render_template("leagues.html", 
-                         my_leagues=my_leagues if is_logged_in else [], 
-                         username=session.get("username", "Gäst"),
-                         is_logged_in=is_logged_in)
 
-
-@app.get("/leagues/browse")
-def browse_leagues():
-    """Browse all public leagues"""
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    # Get all public leagues with member count and points
     public_leagues = db.session.query(
         League,
         db.func.count(LeagueMembership.user_id).label('member_count')
@@ -2183,32 +2165,73 @@ def browse_leagues():
         League.total_points.desc(),
         League.created_at.desc()
     ).all()
-    
-    # Get user's current leagues to show which ones they're already in
-    user_league_ids = db.session.query(LeagueMembership.league_id).filter(
-        LeagueMembership.user_id == session["user_id"]
-    ).all()
-    user_league_ids = [lid[0] for lid in user_league_ids]
-    
-    # Get pending requests
-    pending_requests = db.session.query(LeagueRequest.league_id).filter(
-        LeagueRequest.user_id == session["user_id"],
-        LeagueRequest.status == 'pending'
-    ).all()
-    pending_league_ids = [rid[0] for rid in pending_requests]
-    
-    return render_template("browse_leagues.html", 
-                         public_leagues=public_leagues,
-                         user_league_ids=user_league_ids,
-                         pending_league_ids=pending_league_ids,
-                         username=session.get("username"))
+
+    user_league_ids = [
+        lid[0] for lid in db.session.query(LeagueMembership.league_id).filter(
+            LeagueMembership.user_id == uid
+        ).all()
+    ]
+    pending_league_ids = [
+        rid[0] for rid in db.session.query(LeagueRequest.league_id).filter(
+            LeagueRequest.user_id == uid,
+            LeagueRequest.status == 'pending'
+        ).all()
+    ]
+
+    league_leaderboard = []
+    try:
+        leagues_with_members = db.session.query(
+            League,
+            db.func.count(LeagueMembership.user_id).label('member_count')
+        ).select_from(League).outerjoin(
+            LeagueMembership, League.id == LeagueMembership.league_id
+        ).group_by(League.id).order_by(
+            League.total_points.desc(),
+            League.created_at.desc()
+        ).all()
+        for row in leagues_with_members:
+            league = row[0]
+            league_leaderboard.append({
+                'id': league.id,
+                'name': league.name,
+                'member_count': row[1],
+                'total_points': league.total_points or 0,
+                'is_public': getattr(league, 'is_public', True),
+            })
+    except Exception as e:
+        print(f"Error loading league leaderboard: {e}")
+
+    initial_tab = (request.args.get("tab") or "mine").strip().lower()
+    if initial_tab not in ("mine", "create", "join", "explore", "leaderboard"):
+        initial_tab = "mine"
+
+    return render_template(
+        "leagues.html",
+        my_leagues=my_leagues,
+        username=session.get("username", "Gäst"),
+        is_logged_in=True,
+        public_leagues=public_leagues,
+        user_league_ids=user_league_ids,
+        pending_league_ids=pending_league_ids,
+        league_leaderboard=league_leaderboard,
+        initial_tab=initial_tab,
+    )
+
+
+@app.get("/leagues/browse")
+def browse_leagues():
+    """Browse all public leagues"""
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return redirect(url_for("leagues_page", tab="explore"))
 
 
 @app.get("/leagues/leaderboard")
 def leagues_leaderboard():
     """Public league leaderboard sorted by league points."""
-    # Allow viewing without login (readonly UX handled in template/header if needed)
-    is_logged_in = "user_id" in session
+    if "user_id" in session:
+        return redirect(url_for("leagues_page", tab="leaderboard"))
+    is_logged_in = False
     try:
         leagues_with_members = db.session.query(
             League,
@@ -2275,6 +2298,56 @@ def api_leagues_leaderboard():
     return jsonify(leaderboard)
 
 
+def _user_pick_total_points(user_id: int) -> int:
+    """Total pick points (non-WSX), deduped per competition — same logic as season leaderboard."""
+    all_scores = (
+        db.session.query(CompetitionScore)
+        .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+        .filter(CompetitionScore.user_id == user_id)
+        .filter(
+            db.or_(
+                Competition.series.is_(None),
+                Competition.series != "WSX",
+            )
+        )
+        .all()
+    )
+    scores_by_comp: dict[int | None, CompetitionScore] = {}
+    for score in all_scores:
+        comp_id = score.competition_id
+        prev = scores_by_comp.get(comp_id)
+        if prev is None or score.score_id > prev.score_id:
+            scores_by_comp[comp_id] = score
+    return int(sum(s.total_points or 0 for s in scores_by_comp.values()))
+
+
+def _league_member_standings(league_id: int) -> list[dict]:
+    """Individual race-pick standings for league members (excludes WSX)."""
+    member_user_ids = [
+        m.user_id
+        for m in LeagueMembership.query.filter_by(league_id=league_id).all()
+    ]
+    if not member_user_ids:
+        return []
+
+    members = User.query.filter(User.id.in_(member_user_ids)).all()
+    scored = [
+        {
+            "user_id": u.id,
+            "username": u.username,
+            "display_name": getattr(u, "display_name", None) or u.username,
+            "total_points": _user_pick_total_points(u.id),
+        }
+        for u in members
+    ]
+    scored.sort(key=lambda x: x["total_points"], reverse=True)
+
+    standings: list[dict] = []
+    for rank, row in enumerate(scored, start=1):
+        standings.append({"rank": rank, **row})
+    return standings
+
+
 @app.get("/api/leagues/stats")
 def api_leagues_stats():
     """API endpoint for user's league statistics (JSON)."""
@@ -2326,13 +2399,39 @@ def api_leagues_stats():
                         "cumulative": round(cumulative_points, 1)
                     })
             
+            standings = _league_member_standings(league.id)
+            for s in standings:
+                s["is_me"] = s["user_id"] == uid
+            my_entry = next((s for s in standings if s["user_id"] == uid), None)
+            my_rank = my_entry["rank"] if my_entry else None
+            my_points = my_entry["total_points"] if my_entry else 0
+            gap_above = None
+            gap_below = None
+            rival_name = None
+            leader_name = standings[0]["display_name"] if standings else None
+            if my_entry and my_rank:
+                if my_rank > 1:
+                    above = standings[my_rank - 2]
+                    gap_above = int(above["total_points"] - my_points)
+                    rival_name = above["display_name"]
+                if my_rank < len(standings):
+                    below = standings[my_rank]
+                    gap_below = int(my_points - below["total_points"])
+
             stats.append({
                 "league_id": league.id,
                 "name": league.name,
                 "total_points": league.total_points or 0,
                 "member_count": len(member_ids),
                 "competitions": competition_history,
-                "best_competition": max(competition_history, key=lambda x: x["points"]) if competition_history else None
+                "best_competition": max(competition_history, key=lambda x: x["points"]) if competition_history else None,
+                "standings": standings,
+                "my_rank": my_rank,
+                "my_points": my_points,
+                "gap_above": gap_above,
+                "gap_below": gap_below,
+                "rival_name": rival_name,
+                "leader_name": leader_name,
             })
         
         return jsonify({
@@ -3279,42 +3378,15 @@ def league_detail_page(league_id):
         .all()
     )
 
-    member_user_ids = [m[0] for m in db.session.query(LeagueMembership.user_id).filter_by(league_id=league_id).all()]
-    season_leaderboard = []
-    if member_user_ids:
-        # Calculate individual points from CompetitionScore (race picks) for each member
-        # Exkludera WSX-serien - bara räkna SX, MX, SMX
-        user_scores = (
-            db.session.query(
-                User.id,
-                User.username,
-                User.display_name,
-                db.func.sum(CompetitionScore.total_points).label('total_points')
-            )
-            .outerjoin(CompetitionScore, CompetitionScore.user_id == User.id)
-            .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-            .filter(User.id.in_(member_user_ids))
-            .filter(
-                db.or_(
-                    Competition.series == None,  # Include if series is null (backwards compatibility)
-                    Competition.series != 'WSX'  # Exclude WSX series
-                )
-            )
-            .group_by(User.id, User.username, User.display_name)
-            .order_by(db.func.sum(CompetitionScore.total_points).desc().nullslast())
-            .all()
-        )
-        
-        # Convert to list of dicts with proper formatting
-        season_leaderboard = [
-            {
-                "user_id": row.id,
-                "username": row.username,
-                "display_name": getattr(row, 'display_name', None) or row.username,
-                "total_points": int(row.total_points or 0)
-            }
-            for row in user_scores
-        ]
+    season_leaderboard = [
+        {
+            "user_id": row["user_id"],
+            "username": row["username"],
+            "display_name": row["display_name"],
+            "total_points": row["total_points"],
+        }
+        for row in _league_member_standings(league_id)
+    ]
 
     competitions = Competition.query.order_by(Competition.event_date).all()
     
@@ -3717,27 +3789,26 @@ def calculate_leaderboard_deltas():
         recent_week_points = 0
 
         try:
-            all_scores = (
-                db.session.query(CompetitionScore)
-                .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
-                .filter(CompetitionScore.user_id == user_id)
-                .filter(
-                    db.or_(
-                        Competition.series.is_(None),
-                        Competition.series != "WSX",
-                    )
-                )
-                .all()
-            )
-
-            scores_by_comp = {}
-            for score in all_scores:
-                comp_id = score.competition_id
-                if comp_id not in scores_by_comp or score.score_id > scores_by_comp[comp_id].score_id:
-                    scores_by_comp[comp_id] = score
-
-            total = sum(s.total_points or 0 for s in scores_by_comp.values())
+            total = _user_pick_total_points(user_id)
             if recent_comp_ids:
+                all_scores = (
+                    db.session.query(CompetitionScore)
+                    .outerjoin(Competition, Competition.id == CompetitionScore.competition_id)
+                    .filter(CompetitionScore.user_id == user_id)
+                    .filter(
+                        db.or_(
+                            Competition.series.is_(None),
+                            Competition.series != "WSX",
+                        )
+                    )
+                    .all()
+                )
+                scores_by_comp: dict[int | None, CompetitionScore] = {}
+                for score in all_scores:
+                    comp_id = score.competition_id
+                    prev = scores_by_comp.get(comp_id)
+                    if prev is None or score.score_id > prev.score_id:
+                        scores_by_comp[comp_id] = score
                 recent_week_points = sum(
                     (s.total_points or 0)
                     for cid, s in scores_by_comp.items()
@@ -5936,7 +6007,11 @@ def save_season_team():
             if penalty_points > 0:
                 user = User.query.get(uid)
                 if user:
-                    # Create a penalty score entry - put penalty in race_points since that's what gets summed
+                    # Replace any previous season-team penalty rows (avoid stacking -50, -100, …)
+                    CompetitionScore.query.filter(
+                        CompetitionScore.user_id == uid,
+                        CompetitionScore.competition_id.is_(None),
+                    ).delete(synchronize_session=False)
                     penalty_score = CompetitionScore(
                         user_id=uid,
                         competition_id=None,  # Penalty not tied to a specific competition
@@ -16662,30 +16737,38 @@ def calculate_league_points(league_id, competition_id):
 
 
 def update_league_points_for_competition(competition_id):
-    """Update total points for all leagues based on a specific competition"""
+    """Recalculate league totals after a competition is scored (avoids double-count on re-import)."""
     try:
-        # Get all leagues
-        leagues = League.query.all()
-        
-        for league in leagues:
-            # Calculate points for this competition
-            competition_points = calculate_league_points(league.id, competition_id)
-            
-            # Add to total points
-            if league.total_points is None:
-                league.total_points = 0
-            
-            league.total_points += competition_points
-            
-            print(f"🏆 League '{league.name}': +{competition_points} points (Total: {league.total_points})")
-        
-        db.session.commit()
-        print(f"✅ Updated league points for {len(leagues)} leagues based on competition {competition_id}")
-        
+        _recalculate_all_league_totals()
+        print(f"✅ Recalculated league points after competition {competition_id}")
     except Exception as e:
         print(f"❌ Error updating league points: {e}")
         db.session.rollback()
         raise e
+
+
+def _recalculate_all_league_totals() -> None:
+    """Sum fair per-race league scores into League.total_points (excludes WSX)."""
+    competitions_with_results = (
+        db.session.query(Competition.id)
+        .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
+        .filter(
+            db.or_(
+                Competition.series.is_(None),
+                Competition.series != "WSX",
+            )
+        )
+        .distinct()
+        .order_by(Competition.id.asc())
+        .all()
+    )
+    comp_ids = [row[0] for row in competitions_with_results]
+
+    for league in League.query.all():
+        league_total = sum(calculate_league_points(league.id, comp_id) for comp_id in comp_ids)
+        league.total_points = round(league_total, 1)
+
+    db.session.commit()
 
 
 @app.post("/admin/leagues/calculate_all_points")
@@ -16695,42 +16778,11 @@ def calculate_all_league_points():
         return jsonify({"error": "admin_only"}), 403
     
     try:
-        # Get all competitions that have results, excluding WSX
-        competitions_with_results = (
-            db.session.query(Competition.id)
-            .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
-            .filter(
-                db.or_(
-                    Competition.series == None,  # Include if series is null (backwards compatibility)
-                    Competition.series != 'WSX'  # Exclude WSX series
-                )
-            )
-            .distinct()
-            .all()
-        )
-        
-        # Get all leagues
+        _recalculate_all_league_totals()
         leagues = League.query.all()
-        
-        updated_leagues = 0
-        total_points_calculated = 0
-        
-        for league in leagues:
-            league_total = 0
-            
-            # Calculate points for each competition (WSX already filtered out)
-            for comp_id_tuple in competitions_with_results:
-                comp_id = comp_id_tuple[0]
-                points = calculate_league_points(league.id, comp_id)
-                league_total += points
-            
-            # Update league total points
-            league.total_points = round(league_total, 1)
-            updated_leagues += 1
-            total_points_calculated += league_total
-        
-        db.session.commit()
-        
+        updated_leagues = len(leagues)
+        total_points_calculated = sum(league.total_points or 0 for league in leagues)
+
         return jsonify({
             "message": f"Updated points for {updated_leagues} leagues",
             "updated_leagues": updated_leagues,
@@ -16750,33 +16802,9 @@ def calculate_league_points_single(league_id):
     
     try:
         league = League.query.get_or_404(league_id)
-        
-        # Get all competitions that have results, excluding WSX
-        competitions_with_results = (
-            db.session.query(Competition.id)
-            .join(CompetitionScore, Competition.id == CompetitionScore.competition_id)
-            .filter(
-                db.or_(
-                    Competition.series == None,  # Include if series is null (backwards compatibility)
-                    Competition.series != 'WSX'  # Exclude WSX series
-                )
-            )
-            .distinct()
-            .all()
-        )
-        
-        league_total = 0
-        
-        # Calculate points for each competition (WSX already filtered out)
-        for comp_id_tuple in competitions_with_results:
-            comp_id = comp_id_tuple[0]
-            points = calculate_league_points(league.id, comp_id)
-            league_total += points
-        
-        # Update league total points
-        league.total_points = round(league_total, 1)
-        db.session.commit()
-        
+        _recalculate_all_league_totals()
+        db.session.refresh(league)
+
         return jsonify({
             "message": f"League '{league.name}' points calculated: {league.total_points}",
             "league_name": league.name,
@@ -16869,14 +16897,21 @@ def league_image(league_id):
                 print(f"Error decoding base64 image: {e}")
                 return "Error decoding image", 500
         
-        # Fallback to file system (legacy)
+        # Fallback to file system (legacy or local static path)
         elif league.image_url:
             from flask import send_from_directory
             import os
-            
-            filename = league.image_url.split('/')[-1]
+
+            url = str(league.image_url).strip()
+            if url.startswith("/static/"):
+                rel = url[len("/static/"):].lstrip("/")
+                static_path = os.path.join(app.static_folder, rel.replace("/", os.sep))
+                if os.path.isfile(static_path):
+                    return send_from_directory(app.static_folder, rel)
+
+            filename = url.split("/")[-1]
             directory = app.config["UPLOAD_FOLDER"]
-            
+
             if os.path.exists(os.path.join(directory, filename)):
                 return send_from_directory(directory, filename)
         

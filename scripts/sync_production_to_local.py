@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(ROOT, ".env"))
 
-# Same path as start_local.bat (relative to project root)
+# Flask-SQLAlchemy resolves sqlite:///NAME to instance/NAME (do not prefix instance/)
 LOCAL_DB_NAME = "fantasy_mx_local.db"
 LOCAL_URL = f"sqlite:///{LOCAL_DB_NAME}"
 
@@ -62,7 +62,7 @@ SYNC_TABLES = [
 BLOB_COLUMNS = {
     "users": {"profile_picture_url"},
     "riders": {"rider_image_data", "bio", "achievements"},
-    "leagues": {"image_data"},
+    # leagues.image_data included — few rows, needed for ligabilder locally (Render stores in DB)
 }
 
 # Prod has occasional duplicate rows; keep newest by primary key when copying
@@ -179,12 +179,13 @@ def main() -> int:
         print("  .venv\\Scripts\\python.exe -m pip install psycopg2-binary")
         return 1
 
+    local_file = os.path.join(ROOT, "instance", LOCAL_DB_NAME)
     print("=" * 60)
     print("Hamtar produktionsdata till lokal SQLite")
     print("  Kalla: Render Postgres (read-only)")
-    print(f"  Mal:   {os.path.join(ROOT, LOCAL_DB_NAME)}")
+    print(f"  Mal:   {local_file}")
     if skip_blobs:
-        print("  Lage:  utan stora bild-blobs (snabbare)")
+        print("  Lage:  utan stora rider-blobs (snabbare, ligabilder inkluderas)")
     print("=" * 60)
 
     prod_engine = create_engine(prod_url, pool_pre_ping=True)

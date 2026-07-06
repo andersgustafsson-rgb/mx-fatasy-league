@@ -1,5 +1,5 @@
 @echo off
-REM Hamtar en kopia av Render-databasen till fantasy_mx_local.db (read-only mot prod)
+REM Hamtar en kopia av Render-databasen till instance/fantasy_mx_local.db (read-only mot prod)
 chcp 65001 >nul
 cd /d "%~dp0"
 title Hamta prod-data
