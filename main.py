@@ -2453,7 +2453,7 @@ def _completed_competitions_for_league(limit: int | None = None) -> list[Competi
 def _league_race_matrix(league_id: int, race_limit: int = 8) -> dict:
     """Members × recent races grid with per-cell points."""
     standings = _league_member_standings(league_id)
-    races = list(reversed(_completed_competitions_for_league(limit=race_limit)))
+    races = _completed_competitions_for_league(limit=race_limit)
     member_ids = [s["user_id"] for s in standings]
     comp_ids = [c.id for c in races]
 
