@@ -413,6 +413,33 @@
     .duel-status--locked { background: rgba(251, 191, 36, 0.15); color: #fde68a; }
     .duel-status--resolved { background: rgba(34, 197, 94, 0.15); color: #86efac; }
     .duel-status--tie { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+    .duel-picks {
+      margin-top: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(55, 65, 81, 0.75);
+      background: rgba(2, 6, 23, 0.45);
+    }
+    .duel-picks__title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 0.45rem;
+    }
+    .duel-pick-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.5rem;
+      align-items: baseline;
+      font-size: 0.82rem;
+      line-height: 1.35;
+      padding: 0.2rem 0;
+    }
+    .duel-pick-row + .duel-pick-row { border-top: 1px solid rgba(51, 65, 85, 0.55); margin-top: 0.2rem; padding-top: 0.45rem; }
+    .duel-pick-who { color: #94a3b8; font-size: 0.75rem; min-width: 4.5rem; }
+    .duel-pick-val { color: #f1f5f9; font-weight: 600; }
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -811,12 +838,19 @@
             {{ user_avatar(duel.challenged, 'xs') }}
             <span class="font-semibold text-cyan-200">{{ duel.challenged.name }}</span>
           </div>
-          {% if duel.challenge_type == 'head_to_head' and duel.rider_a_id %}
-          <p class="text-xs text-gray-400 mb-2">Duell: två förare utvalda</p>
-          {% elif duel.challenge_type == 'brand_battle' and duel.brand_a %}
-          <p class="text-xs text-gray-400 mb-2">{{ duel.brand_a }} vs {{ duel.brand_b }}</p>
+          {% if duel.picks and duel.picks.show %}
+          <div class="duel-picks">
+            <div class="duel-picks__title">{% if duel.picks.is_locked %}Låsta val{% else %}Val{% endif %}</div>
+            {% for pick in duel.picks.items %}
+            <div class="duel-pick-row">
+              <span class="duel-pick-who">{{ pick.who_name }}</span>
+              <span class="text-gray-500 text-xs">{{ pick.label }}:</span>
+              <span class="duel-pick-val">{{ pick.value }}</span>
+            </div>
+            {% endfor %}
+          </div>
           {% endif %}
-          <div class="flex gap-2 flex-wrap">
+          <div class="flex gap-2 flex-wrap mt-3">
             {% if duel.needs_type or duel.needs_answer %}
             <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">Svara</button>
             {% endif %}
@@ -836,13 +870,29 @@
         <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">Senaste</p>
         <div class="space-y-2">
           {% for duel in challenges.recent %}
-          <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-300">
-            <span>
-              {{ duel.type_icon }}
-              {{ duel.challenger.name }} vs {{ duel.challenged.name }}
-              {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% endif %}
-            </span>
-            <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
+          <div class="text-sm text-gray-300">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                {{ duel.type_icon }}
+                {{ duel.challenger.name }} vs {{ duel.challenged.name }}
+                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% endif %}
+              </span>
+              <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
+            </div>
+            {% if duel.picks and duel.picks.show %}
+            <div class="duel-picks mt-2">
+              {% for pick in duel.picks.items %}
+              <div class="duel-pick-row">
+                <span class="duel-pick-who">{{ pick.who_name }}</span>
+                <span class="text-gray-500 text-xs">{{ pick.label }}:</span>
+                <span class="duel-pick-val">{{ pick.value }}</span>
+              </div>
+              {% endfor %}
+              {% if duel.result_summary %}
+              <p class="text-xs text-gray-500 mt-2">{{ duel.result_summary }}</p>
+              {% endif %}
+            </div>
+            {% endif %}
           </div>
           {% endfor %}
         </div>

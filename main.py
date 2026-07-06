@@ -4078,6 +4078,83 @@ def _challenge_user_label(user_id: int) -> str:
     return u.display_name or u.username
 
 
+def _challenge_rider_short(rider_id: int | None) -> str | None:
+    if not rider_id:
+        return None
+    r = Rider.query.get(rider_id)
+    if not r:
+        return None
+    prefix = f"#{r.rider_number} " if r.rider_number else ""
+    return f"{prefix}{r.name}".strip()
+
+
+def _challenge_picks_summary(ch: LeagueChallenge) -> dict:
+    """Human-readable picks for locked (and partially visible) duels."""
+    is_locked = ch.status in ("locked", "resolved", "tie")
+    items: list[dict] = []
+
+    if ch.challenge_type == "head_to_head":
+        ra = _challenge_rider_short(ch.rider_a_id)
+        rb = _challenge_rider_short(ch.rider_b_id)
+        if ra and rb:
+            items.append({
+                "label": "Matchen",
+                "value": f"{ra} vs {rb}",
+                "who_name": _challenge_user_label(ch.challenged_id),
+            })
+        if ch.challenger_guess_rider_id and (is_locked or ch.challenger_answered_at):
+            guess = _challenge_rider_short(ch.challenger_guess_rider_id)
+            if guess:
+                items.append({
+                    "label": "Gissning",
+                    "value": guess,
+                    "who_name": _challenge_user_label(ch.challenger_id),
+                })
+
+    elif ch.challenge_type == "h2h" and is_locked:
+        cr = _challenge_rider_short(ch.challenger_rider_id)
+        dr = _challenge_rider_short(ch.challenged_rider_id)
+        if cr and ch.challenger_position is not None:
+            items.append({
+                "label": "Prognos",
+                "value": f"{cr} · P{ch.challenger_position}",
+                "who_name": _challenge_user_label(ch.challenger_id),
+            })
+        if dr and ch.challenged_position is not None:
+            items.append({
+                "label": "Prognos",
+                "value": f"{dr} · P{ch.challenged_position}",
+                "who_name": _challenge_user_label(ch.challenged_id),
+            })
+
+    elif ch.challenge_type == "brand_battle":
+        if ch.brand_a and ch.brand_b:
+            items.append({
+                "label": "Märken",
+                "value": f"{ch.brand_a} vs {ch.brand_b}",
+                "who_name": _challenge_user_label(ch.challenged_id),
+            })
+        if is_locked:
+            if ch.challenger_brand_pick:
+                items.append({
+                    "label": "Val",
+                    "value": ch.challenger_brand_pick,
+                    "who_name": _challenge_user_label(ch.challenger_id),
+                })
+            if ch.challenged_brand_pick:
+                items.append({
+                    "label": "Val",
+                    "value": ch.challenged_brand_pick,
+                    "who_name": _challenge_user_label(ch.challenged_id),
+                })
+
+    return {
+        "show": bool(items),
+        "is_locked": is_locked,
+        "items": items,
+    }
+
+
 def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
     comp = Competition.query.get(ch.competition_id)
     challenger = User.query.get(ch.challenger_id)
@@ -4162,6 +4239,7 @@ def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
         "resolved_at": ch.resolved_at.isoformat() if ch.resolved_at else None,
         "challenger_badge": _badge_row(badge_a),
         "challenged_badge": _badge_row(badge_b),
+        "picks": _challenge_picks_summary(ch),
     }
 
 
