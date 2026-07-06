@@ -5,321 +5,775 @@
   <title>{{ league.name }} - MX Fantasy League</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      background-attachment: fixed;
+    }
+    .cyberpunk-header {
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+    }
+    .cyberpunk-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+    .gold-card {
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    .cyberpunk-button {
+      background: linear-gradient(45deg, #22d3ee, #06b6d4);
+      border: 1px solid #22d3ee;
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+      transition: all 0.3s ease;
+    }
+    .cyberpunk-button:hover {
+      box-shadow: 0 0 25px rgba(34, 211, 238, 0.6);
+      transform: translateY(-1px);
+    }
+    .invite-code {
+      background: linear-gradient(45deg, #1e293b, #334155);
+      border: 1px solid #22d3ee;
+      color: #22d3ee;
+      font-family: 'Orbitron', monospace;
+    }
+    .hero-banner {
+      position: relative;
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      min-height: 10rem;
+    }
+    .hero-banner img {
+      width: 100%;
+      height: 100%;
+      min-height: 10rem;
+      object-fit: contain;
+      padding: 1rem;
+    }
+    .hero-stat {
+      font-family: 'Orbitron', monospace;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.08);
+      padding: 0.85rem 1rem;
+    }
+    .hero-stat--rank-1 { border-color: rgba(250, 204, 21, 0.5); background: rgba(234, 179, 8, 0.12); }
+    .hero-stat--rank-2 { border-color: rgba(34, 211, 238, 0.45); background: rgba(34, 211, 238, 0.1); }
+    .hero-stat--rank-3 { border-color: rgba(74, 222, 128, 0.4); background: rgba(74, 222, 128, 0.08); }
+    .lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(55, 65, 81, 0.7);
+      background: rgba(3, 7, 18, 0.5);
+      padding: 0.55rem 0.75rem;
+      transition: border-color 0.15s ease;
+    }
+    .lb-row:hover { border-color: rgba(34, 211, 238, 0.35); }
+    .lb-row--me {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+    .rank-1 { color: #fde047; }
+    .rank-2 { color: #67e8f9; }
+    .rank-3 { color: #86efac; }
+    .rank-n { color: #9ca3af; }
+    .pts-1 { color: #fef08a; }
+    .pts-2 { color: #a5f3fc; }
+    .pts-3 { color: #bbf7d0; }
+    .pts-n { color: #e5e7eb; }
+    .matrix-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(55, 65, 81, 0.7);
+      background: rgba(3, 7, 18, 0.45);
+    }
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      min-width: 28rem;
+    }
+    .matrix-table th,
+    .matrix-table td {
+      padding: 0.4rem 0.35rem;
+      text-align: center;
+      border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+      white-space: nowrap;
+    }
+    .matrix-table th {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.62rem;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.02em;
+      vertical-align: bottom;
+      padding-bottom: 0.55rem;
+    }
+    .matrix-table th a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .matrix-table th a:hover { color: #22d3ee; }
+    .matrix-table td:first-child,
+    .matrix-table th:first-child {
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: rgba(15, 23, 42, 0.98);
+      min-width: 7.5rem;
+      max-width: 9rem;
+      padding-left: 0.65rem;
+    }
+    .matrix-table tr:last-child td { border-bottom: none; }
+    .matrix-cell {
+      font-family: 'Orbitron', monospace;
+      font-weight: 700;
+      font-size: 0.72rem;
+      border-radius: 0.3rem;
+      padding: 0.2rem 0.25rem;
+      display: inline-block;
+      min-width: 1.75rem;
+    }
+    .matrix-cell--best {
+      background: rgba(250, 204, 21, 0.2);
+      color: #fde68a;
+      border: 1px solid rgba(250, 204, 21, 0.35);
+    }
+    .matrix-cell--pts { color: #cbd5e1; }
+    .matrix-cell--empty { color: #475569; }
+    .matrix-row--me td:first-child { color: #fde68a; font-weight: 600; }
+    .upcoming-pill {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      background: rgba(8, 145, 178, 0.08);
+      padding: 0.65rem 0.75rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: inherit;
+      min-width: 9rem;
+      flex: 1;
+    }
+    .upcoming-pill:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      background: rgba(8, 145, 178, 0.15);
+      transform: translateY(-2px);
+    }
+    .member-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(55, 65, 81, 0.8);
+      background: rgba(3, 7, 18, 0.5);
+      padding: 0.25rem 0.65rem;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      transition: border-color 0.15s ease;
+    }
+    .member-chip:hover { border-color: rgba(34, 211, 238, 0.4); color: #e2e8f0; }
+    .series-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      background: rgba(139, 92, 246, 0.2);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    .pulse-card {
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: linear-gradient(135deg, rgba(8, 145, 178, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+      box-shadow: 0 0 24px rgba(34, 211, 238, 0.12);
+    }
+    .digest-card {
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      background: linear-gradient(160deg, rgba(120, 53, 15, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+    }
+    .rival-card {
+      border: 1px solid rgba(248, 113, 113, 0.28);
+      background: linear-gradient(160deg, rgba(127, 29, 29, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+    }
+    .pick-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      padding: 0.28rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    .pick-chip--complete {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(74, 222, 128, 0.35);
+      color: #bbf7d0;
+    }
+    .pick-chip--partial {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.35);
+      color: #fde68a;
+    }
+    .pick-chip--waiting {
+      background: rgba(71, 85, 105, 0.25);
+      border-color: rgba(100, 116, 139, 0.45);
+      color: #94a3b8;
+    }
+    .pick-chip--me { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15); }
+    .story-line {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
+      font-size: 0.85rem;
+      color: #e2e8f0;
+      line-height: 1.45;
+    }
+    .story-line::before {
+      content: "›";
+      color: #fbbf24;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .h2h-bar {
+      display: flex;
+      height: 0.45rem;
+      border-radius: 9999px;
+      overflow: hidden;
+      background: rgba(51, 65, 85, 0.8);
+      margin-top: 0.35rem;
+    }
+    .h2h-bar__me { background: linear-gradient(90deg, #22d3ee, #06b6d4); }
+    .h2h-bar__rival { background: linear-gradient(90deg, #f87171, #ef4444); }
+    .user-avatar {
+      position: relative;
+      display: inline-block;
+      flex-shrink: 0;
+      border-radius: 9999px;
+      overflow: hidden;
+      vertical-align: middle;
+    }
+    .user-avatar--xs { width: 1.35rem; height: 1.35rem; }
+    .user-avatar--sm { width: 1.85rem; height: 1.85rem; }
+    .user-avatar--md { width: 2.5rem; height: 2.5rem; }
+    .user-avatar--lg { width: 3.5rem; height: 3.5rem; }
+    .user-avatar__ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(6, 182, 212, 0.9));
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+      z-index: 0;
+    }
+    .user-avatar__img {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 9999px;
+    }
+    .user-avatar__letter {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #f8fafc;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+      line-height: 1;
+    }
+    .user-avatar:has(.user-avatar__img) .user-avatar__letter {
+      display: none;
+    }
+    .user-avatar--xs .user-avatar__letter { font-size: 0.58rem; }
+    .user-avatar--sm .user-avatar__letter { font-size: 0.72rem; }
+    .user-avatar--md .user-avatar__letter { font-size: 0.95rem; }
+    .user-avatar--lg .user-avatar__letter { font-size: 1.25rem; }
+    .pick-chip { gap: 0.4rem; }
+    .lb-face { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
-  <div class="container mx-auto p-4 md:p-8">
+<body class="text-gray-100 min-h-screen">
 
-    <!-- Header -->
-    <div class="flex flex-wrap justify-between items-center mb-8 gap-4">
-      <header>
-        <h1 class="text-4xl md:text-5xl font-bold text-blue-500">{{ league.name }}</h1>
-        <p class="text-lg mt-2 text-gray-400">
+{% macro user_avatar(row, size='sm') %}
+{% set uid = row.user_id or row.id or row.winner_user_id %}
+<div class="user-avatar user-avatar--{{ size }}" aria-hidden="true">
+  <div class="user-avatar__ring"></div>
+  {% if uid %}
+  <img src="{{ url_for('user_profile_image', user_id=uid) }}"
+       alt=""
+       class="user-avatar__img"
+       loading="lazy"
+       onerror="this.remove()">
+  {% endif %}
+  <span class="user-avatar__letter">{{ row.avatar_letter or '?' }}</span>
+</div>
+{% endmacro %}
+
+  <div class="container mx-auto p-3 sm:p-4 md:p-8 max-w-6xl">
+
+    <!-- Top bar -->
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+      <div class="flex-1 min-w-0">
+        <a href="{{ url_for('leagues_page') }}" class="text-cyan-400/70 hover:text-cyan-300 text-sm mb-2 inline-block">← Mina ligor</a>
+        <h1 class="cyberpunk-header text-3xl sm:text-4xl font-bold text-cyan-400 truncate">{{ league.name }}</h1>
+        <p class="text-gray-400 text-sm mt-1">
           Inbjudningskod:
-          <span class="font-mono bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded">
-            {{ league.invite_code }}
-          </span>
+          <span class="invite-code px-2 py-0.5 rounded text-xs ml-1">{{ league.invite_code }}</span>
+          <span class="text-gray-500 mx-2">·</span>
+          <span>{{ summary.member_count }} medlemmar</span>
         </p>
-      </header>
-      <div class="flex gap-3">
-        <a href="{{ url_for('leagues_page') }}"
-           class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded">
-           Tillbaka till Ligor
+      </div>
+      <div class="flex flex-wrap gap-2 shrink-0">
+        <a href="{{ url_for('index') }}" class="text-sm px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:border-cyan-500/50 hover:text-cyan-300 transition">
+          Huvudsidan
         </a>
-        <a href="{{ url_for('index') }}"
-           class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-           Huvudsidan
-        </a>
+        {% if league.creator_id != session["user_id"] %}
+        <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
+              onsubmit="return confirm('Är du säker på att du vill lämna ligan?');">
+          <button type="submit" class="text-sm px-4 py-2 rounded-lg border border-red-500/60 text-red-400 hover:bg-red-500/10 transition">
+            Lämna liga
+          </button>
+        </form>
+        {% else %}
+        <button onclick="toggleEditForm()" class="text-sm px-4 py-2 rounded-lg border border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 transition">
+          ✏️ Redigera
+        </button>
+        <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
+              onsubmit="return confirm('Vill du ta bort denna liga permanent?');" class="inline">
+          <button type="submit" class="text-sm px-4 py-2 rounded-lg border border-red-600/60 text-red-400 hover:bg-red-500/10 transition">
+            Ta bort
+          </button>
+        </form>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Flash messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="p-3 rounded-md mb-4 text-center {{ 'bg-green-500' if category == 'success' else 'bg-red-500' }} text-white">
+          <div class="cyberpunk-card p-4 rounded-lg mb-6 text-center {{ 'border-green-400/50 bg-green-900/20' if category == 'success' else 'border-red-400/50 bg-red-900/20' }}">
             {{ message }}
           </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- Actions -->
-    <div class="flex gap-3 mb-8">
-      {% if league.creator_id != session["user_id"] %}
-      <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
-            onsubmit="return confirm('Är du säker på att du vill lämna ligan?');">
-        <button type="submit"
-                class="flex items-center gap-2 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white font-semibold px-4 py-2 rounded transition">
-          <span>🚪</span> Lämna liga
-        </button>
-      </form>
-      {% endif %}
-
-      {% if league.creator_id == session["user_id"] %}
-      <button onclick="toggleEditForm()"
-              class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded shadow transition">
-        <span>✏️</span> Redigera liga
-      </button>
-      <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
-            onsubmit="return confirm('Vill du ta bort denna liga permanent?');">
-        <button type="submit"
-                class="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white font-bold px-4 py-2 rounded shadow transition">
-          <span>❌</span> Ta bort liga
-        </button>
-      </form>
-      {% endif %}
-    </div>
-
-    <!-- Pending Requests (for league creators) -->
-    {% if is_creator and pending_requests %}
-    <div class="mb-8 bg-yellow-900 bg-opacity-50 border border-yellow-500 rounded-lg p-6">
-      <h3 class="text-xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
-        <span>📝</span> Väntande ansökningar ({{ pending_requests|length }})
-      </h3>
-      
-      <div class="space-y-4">
+  {% if is_creator and pending_requests %}
+    <div class="gold-card rounded-xl p-5 mb-6 border-yellow-500/40">
+      <h3 class="text-lg font-bold text-yellow-400 mb-4">📝 Väntande ansökningar ({{ pending_requests|length }})</h3>
+      <div class="space-y-3">
         {% for request in pending_requests %}
-        <div class="bg-gray-800 border border-gray-600 rounded-lg p-4">
-          <div class="flex justify-between items-start mb-3">
+        <div class="rounded-lg border border-gray-600/70 bg-gray-900/50 p-4">
+          <div class="flex flex-wrap justify-between items-start gap-3 mb-2">
             <div>
-              <h4 class="text-lg font-semibold text-white">
-                {{ request.display_name or request.username }}
-              </h4>
-              <p class="text-sm text-gray-400">
-                Ansökte: {{ request.created_at.strftime('%Y-%m-%d %H:%M') }}
-              </p>
+              <h4 class="font-semibold text-white">{{ request.display_name or request.username }}</h4>
+              <p class="text-xs text-gray-500">{{ request.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
             </div>
             <div class="flex gap-2">
-              <form action="{{ url_for('approve_league_request', league_id=league.id, request_id=request.id) }}" method="POST" class="inline">
-                <button type="submit" 
-                        onclick="return confirm('Godkänn ansökan från {{ request.display_name or request.username }}?')"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1 rounded text-sm transition">
-                  ✅ Godkänn
-                </button>
+              <form action="{{ url_for('approve_league_request', league_id=league.id, request_id=request.id) }}" method="POST">
+                <button type="submit" onclick="return confirm('Godkänn ansökan?')"
+                        class="text-xs px-3 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white font-semibold">Godkänn</button>
               </form>
-              <form action="{{ url_for('reject_league_request', league_id=league.id, request_id=request.id) }}" method="POST" class="inline">
-                <button type="submit" 
-                        onclick="return confirm('Avslå ansökan från {{ request.display_name or request.username }}?')"
-                        class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-sm transition">
-                  ❌ Avslå
-                </button>
+              <form action="{{ url_for('reject_league_request', league_id=league.id, request_id=request.id) }}" method="POST">
+                <button type="submit" onclick="return confirm('Avslå ansökan?')"
+                        class="text-xs px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white font-semibold">Avslå</button>
               </form>
             </div>
           </div>
           {% if request.message %}
-          <div class="bg-gray-700 rounded p-3">
-            <p class="text-gray-300 text-sm">
-              <strong>Meddelande:</strong> {{ request.message }}
-            </p>
-          </div>
+          <p class="text-sm text-gray-400 bg-gray-800/60 rounded p-2">{{ request.message }}</p>
           {% endif %}
         </div>
         {% endfor %}
       </div>
     </div>
-    {% endif %}
+  {% endif %}
 
-    <!-- Redigeringsformulär (dolt som standard) -->
-    {% if league.creator_id == session["user_id"] %}
-    <div id="editForm" class="hidden mb-8 bg-gray-800 p-6 rounded-lg border border-blue-500">
-      <h3 class="text-xl font-bold text-blue-400 mb-4">✏️ Redigera liga</h3>
-      <form action="{{ url_for('edit_league', league_id=league.id) }}" method="POST" enctype="multipart/form-data">
-        <div class="space-y-4">
-          <!-- Liga namn -->
-          <div>
-            <label for="league_name" class="block text-sm font-medium text-gray-300 mb-2">Liganamn:</label>
-            <input type="text" id="league_name" name="league_name" value="{{ league.name }}"
-                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          
-          <!-- Liga bild -->
-          <div>
-            <label for="league_image" class="block text-sm font-medium text-gray-300 mb-2">Liga bild:</label>
-            <input type="file" id="league_image" name="league_image" accept="image/*"
-                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <p class="text-xs text-gray-400 mt-1">Lämna tomt för att behålla nuvarande bild</p>
-          </div>
-          
-          <!-- Knappar -->
-          <div class="flex gap-3">
-            <button type="submit"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded transition">
-              💾 Spara ändringar
-            </button>
-            <button type="button" onclick="toggleEditForm()"
-                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold px-4 py-2 rounded transition">
-              ❌ Avbryt
-            </button>
-          </div>
+  {% if league.creator_id == session["user_id"] %}
+    <div id="editForm" class="hidden cyberpunk-card rounded-xl p-5 mb-6">
+      <h3 class="text-lg font-bold text-cyan-400 mb-4">Redigera liga</h3>
+      <form action="{{ url_for('edit_league', league_id=league.id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div>
+          <label for="league_name" class="block text-sm text-gray-400 mb-1">Liganamn</label>
+          <input type="text" id="league_name" name="league_name" value="{{ league.name }}"
+                 class="w-full px-3 py-2 bg-gray-800/80 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+        </div>
+        <div>
+          <label for="league_image" class="block text-sm text-gray-400 mb-1">Ligabild</label>
+          <input type="file" id="league_image" name="league_image" accept="image/*"
+                 class="w-full text-sm text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-cyan-600 file:text-white">
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="cyberpunk-button text-white font-bold px-4 py-2 rounded-lg text-sm">Spara</button>
+          <button type="button" onclick="toggleEditForm()" class="px-4 py-2 rounded-lg border border-gray-600 text-gray-400 text-sm">Avbryt</button>
         </div>
       </form>
     </div>
-    {% endif %}
+  {% endif %}
 
-    <!-- Liga-bild - Cool Design -->
-    <div class="mb-8 flex justify-center">
-    {% if league.image_url %}
-        <div class="relative group">
-          <!-- Glow effect background -->
-          <div class="absolute -inset-4 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-          
-          <!-- Main image container -->
-          <div class="relative bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-3xl p-6 shadow-2xl border-2 border-cyan-400/30 group-hover:border-cyan-400/60 transition-all duration-500 group-hover:scale-105 group-hover:rotate-1">
-            <!-- Inner glow -->
-            <div class="absolute inset-2 bg-gradient-to-br from-cyan-400/20 to-purple-600/20 rounded-2xl blur-sm"></div>
-            
-            <!-- Image with cool effects -->
-            <img src="{{ url_for('league_image', league_id=league.id) }}" alt="Ligabild"
-                 class="relative max-h-80 w-full object-contain rounded-2xl shadow-inner border border-cyan-400/20 group-hover:border-cyan-400/40 transition-all duration-500 group-hover:shadow-cyan-400/20 group-hover:shadow-2xl"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            
-            <!-- Floating particles effect -->
-            <div class="absolute top-2 right-2 w-3 h-3 bg-cyan-400 rounded-full animate-ping opacity-60"></div>
-            <div class="absolute bottom-4 left-4 w-2 h-2 bg-purple-400 rounded-full animate-pulse opacity-40"></div>
-            <div class="absolute top-1/2 left-2 w-1 h-1 bg-blue-400 rounded-full animate-bounce opacity-50"></div>
-          </div>
-          
-          <!-- Corner decorations -->
-          <div class="absolute -top-2 -left-2 w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl-lg opacity-60"></div>
-          <div class="absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-purple-400 rounded-tr-lg opacity-60"></div>
-          <div class="absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl-lg opacity-60"></div>
-          <div class="absolute -bottom-2 -right-2 w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br-lg opacity-60"></div>
-    </div>
-    {% endif %}
-      
-      <!-- Fallback design (when no image) -->
-      <div class="relative group max-h-80 w-full {% if league.image_url %}hidden{% endif %}">
-        <!-- Glow effect background -->
-        <div class="absolute -inset-4 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 rounded-3xl blur-lg opacity-30 group-hover:opacity-50 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
-        
-        <!-- Main container -->
-        <div class="relative bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-3xl p-8 shadow-2xl border-2 border-cyan-400/30 group-hover:border-cyan-400/60 transition-all duration-500 group-hover:scale-105 group-hover:rotate-1 flex items-center justify-center">
-          <!-- Inner glow -->
-          <div class="absolute inset-2 bg-gradient-to-br from-cyan-400/20 to-purple-600/20 rounded-2xl blur-sm"></div>
-          
-          <!-- Content -->
-          <div class="relative text-center text-gray-300 group-hover:text-white transition-colors duration-500">
-            <div class="text-8xl mb-6 group-hover:scale-110 transition-transform duration-500 filter drop-shadow-lg">🏆</div>
-            <div class="text-2xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">Ligabild</div>
-            <div class="text-sm opacity-70">Ingen bild uppladdad</div>
-          </div>
-          
-          <!-- Floating particles effect -->
-          <div class="absolute top-4 right-4 w-3 h-3 bg-cyan-400 rounded-full animate-ping opacity-60"></div>
-          <div class="absolute bottom-6 left-6 w-2 h-2 bg-purple-400 rounded-full animate-pulse opacity-40"></div>
-          <div class="absolute top-1/2 left-4 w-1 h-1 bg-blue-400 rounded-full animate-bounce opacity-50"></div>
+    <!-- Hero -->
+    <div class="gold-card rounded-2xl overflow-hidden mb-6">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
+        <div class="lg:col-span-2 hero-banner flex items-center justify-center">
+          {% if league.image_url %}
+          <img src="{{ url_for('league_image', league_id=league.id) }}" alt="{{ league.name }}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <div class="hidden absolute inset-0 items-center justify-center text-6xl opacity-40">🏆</div>
+          {% else %}
+          <div class="flex items-center justify-center w-full min-h-[10rem] text-7xl opacity-30">🏆</div>
+          {% endif %}
         </div>
-        
-        <!-- Corner decorations -->
-        <div class="absolute -top-2 -left-2 w-6 h-6 border-t-2 border-l-2 border-cyan-400 rounded-tl-lg opacity-60"></div>
-        <div class="absolute -top-2 -right-2 w-6 h-6 border-t-2 border-r-2 border-purple-400 rounded-tr-lg opacity-60"></div>
-        <div class="absolute -bottom-2 -left-2 w-6 h-6 border-b-2 border-l-2 border-blue-400 rounded-bl-lg opacity-60"></div>
-        <div class="absolute -bottom-2 -right-2 w-6 h-6 border-b-2 border-r-2 border-cyan-400 rounded-br-lg opacity-60"></div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-      <!-- Medlemmar -->
-      <div class="md:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg h-fit">
-        <h2 class="text-2xl font-semibold mb-4">Medlemmar ({{ members|length }})</h2>
-        <ul class="space-y-2">
-          {% for member in members %}
-            <li class="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-              <a href="{{ url_for('view_user_profile', user_id=member.id) }}" 
-                 class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">
-                {{ member.username }}
-              </a>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-
-      <!-- Leaderboard + Schedule -->
-      <div class="md:col-span-2 space-y-8">
-
-        <!-- League leaderboard -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-          <h2 class="text-2xl font-semibold mb-4">Ligans Leaderboard</h2>
-          <div class="space-y-2">
-            {% if season_leaderboard %}
-              {% for team in season_leaderboard %}
-                <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                  <div>
-                    <span class="font-bold mr-2">{{ loop.index }}.</span>
-                    <a href="{{ url_for('view_user_profile', user_id=team.user_id) }}" 
-                       class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">
-                    <span>{{ team.display_name }}</span>
-                    </a>
-                  </div>
-                  <span class="font-bold text-green-500">{{ team.total_points }} p</span>
-                </div>
-              {% endfor %}
+        <div class="lg:col-span-3 p-5 sm:p-6 flex flex-col justify-center gap-4">
+          {% set my_rank = summary.my_rank %}
+          {% set rank_cls = 'hero-stat--rank-1' if my_rank == 1 else ('hero-stat--rank-2' if my_rank == 2 else ('hero-stat--rank-3' if my_rank == 3 else '')) %}
+          <div class="hero-stat {{ rank_cls }}">
+            <div class="text-xs uppercase tracking-widest text-gray-400 mb-1">Din placering</div>
+            {% if my_rank %}
+            <div class="text-2xl sm:text-3xl font-black text-white">
+              #{{ my_rank }} <span class="text-lg font-normal text-gray-400">av {{ summary.member_count }}</span>
+            </div>
+            <div class="text-xl font-bold text-amber-300 mt-1">{{ summary.my_points }} p</div>
             {% else %}
-              <p class="text-gray-400">Inga poäng registrerade än.</p>
+            <div class="text-gray-400">Ingen poäng ännu</div>
+            {% endif %}
+          </div>
+          <div class="text-sm leading-relaxed">
+            {% if my_rank == 1 %}
+            <span class="text-amber-300 font-semibold">👑 Du leder ligan!</span>
+            {% if summary.gap_below %}
+            <span class="text-gray-400"> · {{ summary.gap_below }} p före {{ summary.standings[1].display_name if summary.standings|length > 1 else 'nästa' }}</span>
+            {% endif %}
+            {% elif my_rank and summary.gap_above %}
+            <span class="text-cyan-300">{{ summary.gap_above }} p efter {{ summary.rival_name }}</span>
+            {% if summary.gap_below %}
+            <span class="text-gray-500"> · </span>
+            <span class="text-gray-400">{{ summary.gap_below }} p före {{ summary.standings[my_rank].display_name if summary.standings|length > my_rank else 'nästa' }}</span>
+            {% endif %}
+            {% elif summary.leader_name %}
+            <span class="text-gray-400">Ledar: <span class="text-white">{{ summary.leader_name }}</span></span>
             {% endif %}
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Schedule -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-  <h2 class="text-2xl font-semibold mb-4">Schedule</h2>
-  <table class="w-full text-sm border-collapse">
-    <thead class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
-      <tr>
-        <th class="p-2 text-left">Datum</th>
-        <th class="p-2 text-left">Tävling</th>
-        <th class="p-2 text-left">250SX</th>
-        <th class="p-2 text-center">Serie</th>
-        <th class="p-2 text-center">Multiplikator</th>
-        <th class="p-2 text-center">Triple Crown</th>
-      </tr>
-    </thead>
+    {% if picks_pulse %}
+    <div class="pulse-card rounded-2xl p-5 mb-6">
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
+        <div>
+          <h2 class="cyberpunk-header text-lg font-bold text-cyan-300">⏱️ Nästa race — picks-läge</h2>
+          <p class="text-white font-semibold mt-1">{{ picks_pulse.name }}</p>
+          <p class="text-sm text-gray-400 mt-0.5">
+            <span class="text-cyan-400 font-bold">{{ picks_pulse.complete_count }}/{{ picks_pulse.member_count }}</span> har klara picks
+            {% if picks_pulse.hours_left is not none %}
+            · stänger om <span class="text-amber-300 font-semibold">{% if picks_pulse.hours_left < 1 %}&lt;1h{% else %}{{ picks_pulse.hours_left }}h{% endif %}</span>
+            {% elif picks_pulse.deadline_display %}
+            · deadline {{ picks_pulse.deadline_display }}
+            {% endif %}
+          </p>
+        </div>
+        <a href="{{ picks_pulse.picks_url }}"
+           class="cyberpunk-button text-white font-bold px-4 py-2.5 rounded-lg text-sm shrink-0">
+          {% if picks_pulse.viewer_status == 'complete' %}Visa picks{% else %}Gör dina picks →{% endif %}
+        </a>
+      </div>
 
-    <tbody class="text-gray-800 dark:text-gray-200">
-      {% for race in competitions %}
-      <tr
-        class="border-t border-gray-200/70 dark:border-gray-600/50 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer"
-        onclick="window.location.href='{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}'">
-
-        <!-- Datum -->
-        <td class="p-2">{{ race.event_date }}</td>
-
-        <!-- Tävling -->
-        <td class="p-2">{{ race.name }}</td>
-
-        <!-- 250SX-badge -->
-        <td class="p-2">
-          {% if race.coast_250 == 'both' %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
-                         bg-purple-100 text-purple-700 dark:bg-purple-700/30 dark:text-purple-200">
-              Showdown
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-widest text-green-400/80 mb-2">✅ Klara ({{ picks_pulse.complete_count }})</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for m in picks_pulse.complete %}
+            <span class="pick-chip pick-chip--complete{% if m.is_me %} pick-chip--me{% endif %}">
+              {{ user_avatar(m, 'xs') }}
+              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
             </span>
-          {% elif race.coast_250 in ['east', 'west'] %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
-                         bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-200">
-              250SX {{ race.coast_250|capitalize }}
+            {% else %}
+            <span class="text-xs text-gray-500">Ingen ännu</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% if picks_pulse.partial %}
+        <div>
+          <p class="text-xs uppercase tracking-widest text-amber-400/80 mb-2">📝 Påbörjade ({{ picks_pulse.partial_count }})</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for m in picks_pulse.partial %}
+            <span class="pick-chip pick-chip--partial{% if m.is_me %} pick-chip--me{% endif %}">
+              {{ user_avatar(m, 'xs') }}
+              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
             </span>
-          {% else %}
-            <span class="text-xs text-gray-400">-</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        {% if picks_pulse.waiting %}
+        <div>
+          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">⏳ Väntar ({{ picks_pulse.waiting_count }})</p>
+          <div class="flex flex-wrap gap-1.5">
+            {% for m in picks_pulse.waiting %}
+            <span class="pick-chip pick-chip--waiting{% if m.is_me %} pick-chip--me{% endif %}">
+              {{ user_avatar(m, 'xs') }}
+              {% if m.is_me %}Du{% else %}{{ m.display_name }}{% endif %}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if last_race_digest or rival_card %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {% if last_race_digest %}
+      <div class="digest-card rounded-2xl p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 class="cyberpunk-header text-lg font-bold text-amber-300">🏁 Senaste race</h2>
+            <a href="{{ last_race_digest.trackmap_url }}" class="text-white font-semibold hover:text-amber-200 transition">
+              {{ last_race_digest.name }}
+            </a>
+          </div>
+          {% if last_race_digest.my_race_rank %}
+          <div class="text-right">
+            <div class="text-xs text-gray-500 uppercase tracking-widest">Du i ligan</div>
+            <div class="font-black text-2xl text-amber-300">#{{ last_race_digest.my_race_rank }}</div>
+            {% if last_race_digest.my_points is not none %}
+            <div class="text-sm text-gray-400">{{ last_race_digest.my_points }}p</div>
+            {% endif %}
+          </div>
           {% endif %}
-        </td>
+        </div>
+        {% if last_race_digest.highlights %}
+        <div class="space-y-2 mb-3">
+          {% for line in last_race_digest.highlights %}
+          <div class="story-line">{{ line }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <p class="text-xs text-gray-500 flex items-center gap-2 flex-wrap">
+          <span>Liga-vinnare:</span>
+          {{ user_avatar(last_race_digest, 'xs') }}
+          <span class="text-amber-200 font-semibold">{{ last_race_digest.winner_name }}</span>
+          <span>· {{ last_race_digest.winner_points }}p</span>
+        </p>
+      </div>
+      {% endif %}
 
-        <!-- Serie -->
-        <td class="p-2 text-center">{{ race.series }}</td>
+      {% if rival_card %}
+      <div class="rival-card rounded-2xl p-5">
+        <h2 class="cyberpunk-header text-lg font-bold text-red-300 mb-1">
+          {% if rival_card.role == 'rival' %}🎯 Din rival{% else %}👀 Jagar dig{% endif %}
+        </h2>
+        <div class="flex items-center gap-3 mt-2 mb-1">
+          {{ user_avatar(rival_card.opp_avatar, 'lg') }}
+          <div>
+            <p class="text-white font-semibold text-lg leading-tight">
+              <a href="{{ url_for('view_user_profile', user_id=rival_card.opp_user_id) }}" class="hover:text-red-200 transition">
+                {{ rival_card.opp_name }}
+              </a>
+              <span class="text-gray-500 text-sm font-normal"> · #{{ rival_card.opp_rank }}</span>
+            </p>
+            <p class="text-sm text-gray-400 mt-0.5">
+              {% if rival_card.role == 'rival' %}
+              {{ rival_card.gap_points }}p före dig totalt
+              {% else %}
+              {{ rival_card.gap_points }}p efter dig
+              {% endif %}
+            </p>
+          </div>
+        </div>
 
-        <!-- Multiplikator -->
-        <td class="p-2 text-center">{{ race.point_multiplier or 1.0 }}</td>
+        {% if rival_card.last_race %}
+        <div class="mt-4 rounded-lg border border-gray-700/70 bg-black/25 p-3">
+          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">Senaste race — {{ rival_card.last_race.short_label }}</p>
+          <div class="flex items-center justify-between gap-3 text-sm">
+            <div class="flex items-center gap-2">
+              {{ user_avatar(rival_card.viewer_avatar, 'xs') }}
+              <span class="text-gray-500">Du</span>
+              <span class="font-bold text-cyan-300">{{ rival_card.last_race.my_points }}p</span>
+            </div>
+            <span class="text-gray-600">vs</span>
+            <div class="flex items-center gap-2 text-right">
+              {{ user_avatar(rival_card.opp_avatar, 'xs') }}
+              <span class="text-gray-500">{{ rival_card.opp_name.split(' ')[0] }}</span>
+              <span class="font-bold text-red-300">{{ rival_card.last_race.opp_points }}p</span>
+            </div>
+          </div>
+          {% set diff = rival_card.last_race.point_diff %}
+          {% if diff > 0 %}
+          <p class="text-xs text-green-400 mt-2">Du +{{ diff }}p detta race ✓</p>
+          {% elif diff < 0 %}
+          <p class="text-xs text-red-400 mt-2">{{ rival_card.opp_name.split(' ')[0] }} +{{-diff}}p detta race</p>
+          {% else %}
+          <p class="text-xs text-gray-500 mt-2">Lika detta race</p>
+          {% endif %}
+        </div>
+        {% endif %}
 
-        <!-- Triple Crown -->
-        <td class="p-2 text-center">
-          {% if race.is_triple_crown %} 👑 Ja {% else %} - {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+        {% if rival_card.pick_highlights %}
+        <div class="mt-3 space-y-1.5">
+          {% for line in rival_card.pick_highlights %}
+          <div class="story-line text-gray-300 text-sm">{{ line }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if rival_card.h2h.races > 0 %}
+        <div class="mt-4 pt-3 border-t border-gray-700/60">
+          <p class="text-xs uppercase tracking-widest text-gray-500 mb-1">Säsong H2H (race för race)</p>
+          <div class="flex justify-between text-sm font-semibold">
+            <span class="text-cyan-300">Du {{ rival_card.h2h.me }}</span>
+            <span class="text-gray-500">{% if rival_card.h2h.ties %}· {{ rival_card.h2h.ties }} lika ·{% endif %}</span>
+            <span class="text-red-300">{{ rival_card.h2h.rival }} {{ rival_card.opp_name.split(' ')[0] }}</span>
+          </div>
+          {% set total = rival_card.h2h.me + rival_card.h2h.rival + rival_card.h2h.ties %}
+          {% if total > 0 %}
+          <div class="h2h-bar">
+            <div class="h2h-bar__me" style="width: {{ (rival_card.h2h.me / total * 100)|round(1) }}%"></div>
+            <div class="h2h-bar__rival" style="width: {{ (rival_card.h2h.rival / total * 100)|round(1) }}%"></div>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+      <!-- Leaderboard -->
+      <div class="lg:col-span-2 cyberpunk-card rounded-xl p-5">
+        <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">🏁 Leaderboard</h2>
+        {% if season_leaderboard %}
+        <div class="space-y-1.5">
+          {% for team in season_leaderboard %}
+          {% set r = team.rank %}
+          {% set is_me = team.user_id == current_user_id %}
+          <div class="lb-row{% if is_me %} lb-row--me{% endif %}">
+            <div class="lb-face flex-1 min-w-0">
+              <span class="font-bold text-sm w-5 shrink-0 rank-{{ '1' if r == 1 else ('2' if r == 2 else ('3' if r == 3 else 'n')) }}">{{ r }}</span>
+              {{ user_avatar(team, 'sm') }}
+              <a href="{{ url_for('view_user_profile', user_id=team.user_id) }}"
+                 class="truncate text-sm hover:text-cyan-300 transition {{ 'text-amber-200 font-semibold' if is_me else 'text-gray-200' }}">
+                {{ team.display_name }}{% if is_me %} <span class="text-amber-400/80 text-xs">(du)</span>{% endif %}
+              </a>
+            </div>
+            <span class="font-bold text-sm shrink-0 pts-{{ '1' if r == 1 else ('2' if r == 2 else ('3' if r == 3 else 'n')) }}">{{ team.total_points }} p</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-500 text-sm">Inga poäng registrerade än.</p>
+        {% endif %}
+
+        <div class="mt-5 pt-4 border-t border-gray-700/60">
+          <h3 class="text-xs uppercase tracking-widest text-gray-500 mb-2">Medlemmar</h3>
+          <div class="flex flex-wrap gap-1.5">
+            {% for member in members %}
+            <a href="{{ url_for('view_user_profile', user_id=member.id) }}" class="member-chip">
+              {{ user_avatar(member, 'xs') }}
+              {{ member.display_name or member.username }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Race matrix + upcoming -->
+      <div class="lg:col-span-3 space-y-6">
+
+        {% if race_matrix.races %}
+        <div class="cyberpunk-card rounded-xl p-5">
+          <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
+            <h2 class="cyberpunk-header text-lg font-bold text-cyan-400">📊 Senaste tävlingar</h2>
+            <span class="text-xs text-gray-500">Guld = bäst i ligan den tävlingen</span>
+          </div>
+          <div class="matrix-wrap">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  {% for race in race_matrix.races %}
+                  <th title="{{ race.name }} ({{ race.date_full }})">
+                    <a href="{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}">
+                      <div>{{ race.date }}</div>
+                      <div class="text-cyan-400/80">{{ race.short_label }}</div>
+                    </a>
+                  </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in race_matrix.rows %}
+                <tr class="{% if row.user_id == current_user_id %}matrix-row--me{% endif %}">
+                  <td>
+                    <a href="{{ url_for('view_user_profile', user_id=row.user_id) }}" class="hover:text-cyan-300 flex items-center gap-1.5 min-w-0">
+                      {{ user_avatar(row, 'xs') }}
+                      <span class="truncate text-sm">{{ row.display_name }}</span>
+                    </a>
+                  </td>
+                  {% for cell in row.cells %}
+                  <td>
+                    {% if cell.points is not none %}
+                    <span class="matrix-cell {% if cell.is_best %}matrix-cell--best{% else %}matrix-cell--pts{% endif %}">{{ cell.points }}</span>
+                    {% else %}
+                    <span class="matrix-cell matrix-cell--empty">–</span>
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if upcoming_races %}
+        <div class="cyberpunk-card rounded-xl p-5">
+          <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">📅 Kommande</h2>
+          <div class="flex flex-wrap gap-3">
+            {% for race in upcoming_races %}
+            <a href="{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}"
+               class="upcoming-pill">
+              <span class="text-xs font-bold text-cyan-400">{{ race.date_short }}</span>
+              <span class="text-sm font-semibold text-white leading-tight line-clamp-2">{{ race.name }}</span>
+              <div class="flex flex-wrap gap-1 mt-0.5">
+                {% if race.series %}<span class="series-badge">{{ race.series }}</span>{% endif %}
+                {% if race.is_triple_crown %}<span class="series-badge" style="background:rgba(250,204,21,0.15);color:#fde68a;border-color:rgba(250,204,21,0.3)">👑 TC</span>{% endif %}
+                {% if race.coast_250 in ['east', 'west'] %}
+                <span class="series-badge" style="background:rgba(59,130,246,0.15);color:#93c5fd;border-color:rgba(59,130,246,0.3)">250 {{ race.coast_250 }}</span>
+                {% elif race.coast_250 == 'both' %}
+                <span class="series-badge" style="background:rgba(168,85,247,0.15);color:#d8b4fe;border-color:rgba(168,85,247,0.3)">Showdown</span>
+                {% endif %}
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
 
       </div>
     </div>
@@ -327,12 +781,8 @@
 
   <script>
     function toggleEditForm() {
-      const editForm = document.getElementById('editForm');
-      if (editForm.classList.contains('hidden')) {
-        editForm.classList.remove('hidden');
-      } else {
-        editForm.classList.add('hidden');
-      }
+      const el = document.getElementById('editForm');
+      if (el) el.classList.toggle('hidden');
     }
   </script>
 </body>

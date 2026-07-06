@@ -34,18 +34,76 @@
       transform: translateY(-1px);
     }
     .league-card {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      border: 1px solid #475569;
-      transition: all 0.3s ease;
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      transition: all 0.25s ease;
+      overflow: hidden;
     }
     .league-card:hover {
-      border-color: #22d3ee;
-      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
-      transform: translateY(-2px);
+      border-color: rgba(251, 191, 36, 0.55);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 24px rgba(251, 191, 36, 0.12);
+      transform: translateY(-3px);
     }
-    .league-image {
-      background: linear-gradient(45deg, #1e293b, #334155);
-      border: 2px solid #475569;
+    .league-card__banner {
+      position: relative;
+      height: 7.5rem;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border-bottom: 1px solid rgba(251, 191, 36, 0.15);
+    }
+    .league-card__banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 0.5rem;
+    }
+    .league-card__rank {
+      position: absolute;
+      top: 0.65rem;
+      left: 0.65rem;
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      padding: 0.3rem 0.55rem;
+      border-radius: 0.4rem;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
+    }
+    .league-card__rank--1 { background: rgba(234, 179, 8, 0.25); color: #fde68a; border-color: rgba(250, 204, 21, 0.45); }
+    .league-card__rank--2 { background: rgba(34, 211, 238, 0.2); color: #a5f3fc; border-color: rgba(34, 211, 238, 0.4); }
+    .league-card__rank--3 { background: rgba(74, 222, 128, 0.18); color: #bbf7d0; border-color: rgba(74, 222, 128, 0.35); }
+    .league-card__rank--n { background: rgba(15, 23, 42, 0.75); color: #e2e8f0; }
+    .league-card__body { padding: 1rem 1.1rem 1.1rem; }
+    .league-card__position {
+      border-radius: 0.55rem;
+      border: 1px solid rgba(251, 191, 36, 0.22);
+      background: rgba(251, 191, 36, 0.07);
+      padding: 0.55rem 0.7rem;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      color: #fde68a;
+      margin-bottom: 0.75rem;
+    }
+    .league-card__lb-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.4rem;
+      font-size: 0.8rem;
+    }
+    .league-card__lb-row--me {
+      background: rgba(251, 191, 36, 0.12);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+    }
+    .league-mini-lb {
+      border-radius: 0.55rem;
+      border: 1px solid rgba(55, 65, 81, 0.7);
+      background: rgba(3, 7, 18, 0.45);
+      padding: 0.35rem;
+      margin-bottom: 0.85rem;
     }
     .invite-code {
       background: linear-gradient(45deg, #1e293b, #334155);
@@ -140,50 +198,95 @@
 
     <!-- Mina ligor -->
     <div id="tab-mine" class="league-tab-panel{% if initial_tab == 'mine' %} active{% endif %}" role="tabpanel">
-      {% if my_leagues %}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {% for league in my_leagues %}
-            <div class="league-card p-5 rounded-xl">
-              <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block group">
-                <div class="league-image h-28 w-full rounded-lg mb-3 p-2 flex items-center justify-center overflow-hidden">
-                  {% if league.image_url %}
-                    <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
-                         class="h-full w-full object-contain rounded"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  {% endif %}
-                  <div class="text-center text-cyan-400 {% if league.image_url %}hidden{% endif %} w-full h-full flex flex-col items-center justify-center">
-                    <div class="text-3xl mb-1">🏆</div>
-                    <div class="text-xs font-semibold">Ligabild</div>
-                  </div>
-                </div>
-                <h3 class="font-bold text-xl text-white mb-1 group-hover:text-cyan-200 transition-colors">{{ league.name }}</h3>
-                <div class="flex items-center gap-2 mb-3">
-                  <span class="text-cyan-300/80 text-xs">Kod:</span>
-                  <span class="invite-code px-2 py-0.5 rounded text-xs font-bold">{{ league.invite_code }}</span>
-                </div>
-              </a>
-              <div class="flex flex-wrap gap-2">
-                <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
-                   class="cyberpunk-button text-white font-bold px-4 py-2 rounded-lg text-sm">
-                  Öppna →
-                </a>
-                {% if league.creator_id != session["user_id"] %}
-                <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
-                      onsubmit="return confirm('Vill du lämna denna liga?');">
-                  <button type="submit" class="border border-red-400 text-red-400 hover:bg-red-400 hover:text-white font-semibold px-3 py-2 rounded-lg text-sm transition">
-                    Lämna
-                  </button>
-                </form>
-                {% else %}
-                <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
-                      onsubmit="return confirm('Radera ligan permanent?');">
-                  <button type="submit" class="bg-red-700 hover:bg-red-800 text-white font-bold px-3 py-2 rounded-lg text-sm">
-                    Ta bort
-                  </button>
-                </form>
+      {% if my_league_cards %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {% for card in my_league_cards %}
+            {% set league = card.league %}
+            {% set rank = card.my_rank %}
+            {% set total = card.member_count %}
+            <article class="league-card rounded-xl">
+              <a href="{{ url_for('league_detail_page', league_id=league.id) }}" class="block league-card__banner group">
+                {% if league.image_url %}
+                  <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 {% endif %}
+                <div class="{% if league.image_url %}hidden {% endif %}absolute inset-0 flex flex-col items-center justify-center text-cyan-400/80">
+                  <span class="text-3xl">🏆</span>
+                </div>
+                {% if rank and total %}
+                  <span class="league-card__rank {% if rank == 1 %}league-card__rank--1{% elif rank == 2 %}league-card__rank--2{% elif rank == 3 %}league-card__rank--3{% else %}league-card__rank--n{% endif %}">
+                    #{{ rank }} av {{ total }}
+                  </span>
+                {% endif %}
+              </a>
+
+              <div class="league-card__body">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                  <div class="min-w-0">
+                    <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
+                       class="font-bold text-lg text-white hover:text-yellow-200 transition-colors truncate block">
+                      {{ league.name }}
+                    </a>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ card.member_count }} medlemmar · kod <span class="font-mono text-cyan-300">{{ league.invite_code }}</span></p>
+                  </div>
+                  <span class="shrink-0 text-sm font-black tabular-nums text-yellow-300">{{ card.my_points or 0 }}p</span>
+                </div>
+
+                {% if rank and total %}
+                  <div class="league-card__position">
+                    {% if rank == 1 %}
+                      Du leder ligan · <strong>{{ card.my_points }} p</strong>
+                      {% if card.gap_below %}<br><span class="text-yellow-200/80 text-xs">{{ card.gap_below }} p före nästa</span>{% endif %}
+                    {% elif card.gap_above and card.rival_name %}
+                      <strong>{{ card.gap_above }} p</strong> efter {{ card.rival_name }}
+                    {% else %}
+                      Plats {{ rank }} av {{ total }}
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div class="league-card__position text-yellow-200/70">Inga poäng registrerade ännu.</div>
+                {% endif %}
+
+                {% if card.standings %}
+                  <div class="league-mini-lb">
+                    {% for row in card.standings[:4] %}
+                      <div class="league-card__lb-row{% if row.is_me %} league-card__lb-row--me{% endif %}">
+                        <span class="truncate {% if row.is_me %}text-yellow-200 font-bold{% else %}text-gray-200{% endif %}">
+                          <span class="text-gray-500 font-black tabular-nums w-4 inline-block">{{ row.rank }}.</span>
+                          {{ row.display_name }}
+                        </span>
+                        <span class="tabular-nums font-bold {% if row.is_me %}text-yellow-300{% else %}text-gray-300{% endif %}">{{ row.total_points }}p</span>
+                      </div>
+                    {% endfor %}
+                    {% if card.standings|length > 4 %}
+                      <p class="text-[10px] text-gray-500 text-center pt-1">+{{ card.standings|length - 4 }} till</p>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="flex flex-wrap gap-2">
+                  <a href="{{ url_for('league_detail_page', league_id=league.id) }}"
+                     class="cyberpunk-button text-white font-bold px-4 py-2 rounded-lg text-sm flex-1 text-center min-w-[7rem]">
+                    Öppna liga →
+                  </a>
+                  {% if league.creator_id != session["user_id"] %}
+                  <form action="{{ url_for('leave_league', league_id=league.id) }}" method="POST"
+                        onsubmit="return confirm('Vill du lämna denna liga?');">
+                    <button type="submit" class="border border-red-400/60 text-red-400 hover:bg-red-500/20 font-semibold px-3 py-2 rounded-lg text-sm transition">
+                      Lämna
+                    </button>
+                  </form>
+                  {% else %}
+                  <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
+                        onsubmit="return confirm('Radera ligan permanent?');">
+                    <button type="submit" class="bg-red-800/80 hover:bg-red-700 text-white font-bold px-3 py-2 rounded-lg text-sm">
+                      Ta bort
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
               </div>
-            </div>
+            </article>
           {% endfor %}
         </div>
       {% else %}

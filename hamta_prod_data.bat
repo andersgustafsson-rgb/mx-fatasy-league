@@ -26,4 +26,7 @@ if errorlevel 1 (
 
 "%PY%" scripts\sync_production_to_local.py %*
 echo.
+echo Synkar profilbilder fran prod...
+"%PY%" scripts\sync_profile_pictures.py
+echo.
 pause

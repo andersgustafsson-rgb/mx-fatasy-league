@@ -60,8 +60,8 @@ SYNC_TABLES = [
 ]
 
 BLOB_COLUMNS = {
-    "users": {"profile_picture_url"},
     "riders": {"rider_image_data", "bio", "achievements"},
+    # users.profile_picture_url included — small JPEG base64, needed for avatars locally
     # leagues.image_data included — few rows, needed for ligabilder locally (Render stores in DB)
 }
 
@@ -185,7 +185,7 @@ def main() -> int:
     print("  Kalla: Render Postgres (read-only)")
     print(f"  Mal:   {local_file}")
     if skip_blobs:
-        print("  Lage:  utan stora rider-blobs (snabbare, ligabilder inkluderas)")
+        print("  Lage:  utan rider-blobs (profilbilder + ligabilder inkluderas)")
     print("=" * 60)
 
     prod_engine = create_engine(prod_url, pool_pre_ping=True)
