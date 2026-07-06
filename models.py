@@ -225,6 +225,63 @@ class LeagueRequest(db.Model):
     processed_at = db.Column(db.DateTime)
     __table_args__ = (db.UniqueConstraint('league_id', 'user_id', name='uq_league_request'),)
 
+
+class LeagueChallenge(db.Model):
+    """1v1 league duel — challenger picks opponent, challenged picks duel type."""
+    __tablename__ = "league_challenges"
+    id = db.Column(db.Integer, primary_key=True)
+    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    challenger_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    challenged_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    # pending_type | pending_answers | locked | resolved | tie | declined | cancelled
+    status = db.Column(db.String(24), nullable=False, default="pending_type", index=True)
+    # h2h | head_to_head | brand_battle
+    challenge_type = db.Column(db.String(24), nullable=True)
+    class_name = db.Column(db.String(16), nullable=True)  # 450cc | 250cc
+    # head_to_head pair (set by challenged)
+    rider_a_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    rider_b_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    # brand_battle (set by challenged)
+    brand_a = db.Column(db.String(50), nullable=True)
+    brand_b = db.Column(db.String(50), nullable=True)
+    # challenger answers
+    challenger_rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    challenger_position = db.Column(db.Integer, nullable=True)
+    challenger_guess_rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    challenger_brand_pick = db.Column(db.String(50), nullable=True)
+    challenger_answered_at = db.Column(db.DateTime, nullable=True)
+    # challenged answers
+    challenged_rider_id = db.Column(db.Integer, db.ForeignKey("riders.id"), nullable=True)
+    challenged_position = db.Column(db.Integer, nullable=True)
+    challenged_brand_pick = db.Column(db.String(50), nullable=True)
+    challenged_answered_at = db.Column(db.DateTime, nullable=True)
+    winner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    result_summary = db.Column(db.String(500), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    __table_args__ = (
+        db.Index("ix_league_challenges_pair_race", "league_id", "competition_id", "challenger_id", "challenged_id"),
+    )
+
+
+class UserLeagueChallengeBadge(db.Model):
+    """One cosmetic badge slot per user per league per race week."""
+    __tablename__ = "user_league_challenge_badges"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    league_id = db.Column(db.Integer, db.ForeignKey("leagues.id"), nullable=False, index=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), nullable=False, index=True)
+    badge_key = db.Column(db.String(32), nullable=False)
+    kind = db.Column(db.String(16), nullable=False)  # glory | shame
+    wins = db.Column(db.Integer, default=0)
+    losses = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "league_id", "competition_id", name="uq_user_league_race_badge"),
+    )
+
+
 class BulletinPost(db.Model):
     __tablename__ = "bulletin_posts"
     id = db.Column(db.Integer, primary_key=True)

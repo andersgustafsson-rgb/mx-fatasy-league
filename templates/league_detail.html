@@ -311,6 +311,108 @@
     .user-avatar--lg .user-avatar__letter { font-size: 1.25rem; }
     .pick-chip { gap: 0.4rem; }
     .lb-face { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+    .duel-card {
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      background: linear-gradient(160deg, rgba(120, 53, 15, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%);
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .duel-card:hover { border-color: rgba(251, 191, 36, 0.45); }
+    .duel-card--action {
+      border-color: rgba(34, 211, 238, 0.45);
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.12);
+    }
+    .duel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .duel-badge--glory {
+      background: rgba(251, 191, 36, 0.15);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      color: #fde68a;
+    }
+    .duel-badge--shame {
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      color: #fca5a5;
+    }
+    .duel-btn {
+      background: linear-gradient(45deg, #f59e0b, #d97706);
+      border: 1px solid rgba(251, 191, 36, 0.6);
+      color: #1e293b;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
+    }
+    .duel-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.4);
+    }
+    .duel-btn--ghost {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      color: #cbd5e1;
+      box-shadow: none;
+    }
+    .duel-btn--ghost:hover { border-color: rgba(34, 211, 238, 0.5); color: #e2e8f0; }
+    .duel-type-btn {
+      border: 1px solid rgba(55, 65, 81, 0.8);
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 0.75rem;
+      padding: 0.85rem;
+      text-align: left;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      width: 100%;
+    }
+    .duel-type-btn:hover, .duel-type-btn.is-selected {
+      border-color: rgba(34, 211, 238, 0.55);
+      background: rgba(8, 145, 178, 0.12);
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.1);
+    }
+    .duel-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(2, 6, 23, 0.82);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .duel-modal-backdrop.is-open { display: flex; }
+    .duel-modal {
+      width: 100%;
+      max-width: 28rem;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 1rem;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: linear-gradient(160deg, #0f172a 0%, #1e293b 100%);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+      padding: 1.25rem;
+    }
+    .duel-status {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.25rem;
+    }
+    .duel-status--pending { background: rgba(34, 211, 238, 0.15); color: #67e8f9; }
+    .duel-status--locked { background: rgba(251, 191, 36, 0.15); color: #fde68a; }
+    .duel-status--resolved { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .duel-status--tie { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -656,6 +758,94 @@
           {% endif %}
         </div>
         {% endif %}
+
+        {% if challenges and challenges.next_competition and challenges.next_competition.picks_open %}
+        <div class="mt-4 pt-3 border-t border-gray-700/60">
+          <button type="button"
+                  class="duel-btn w-full text-center"
+                  id="btnChallengeRival"
+                  data-opponent-id="{{ rival_card.opp_user_id }}">
+            ⚔️ Utmana {{ rival_card.opp_name.split(' ')[0] }}
+          </button>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if challenges and challenges.next_competition and challenges.next_competition.picks_open %}
+    <div class="gold-card rounded-2xl p-5 mb-6" id="duelsSection">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 class="cyberpunk-header text-lg font-bold text-amber-300">⚔️ Dina dueller</h2>
+          <p class="text-sm text-gray-400 mt-0.5">
+            {{ challenges.next_competition.short_label }} — utmana, svara och samla märken
+          </p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          {% if challenges.my_badge %}
+          <span class="duel-badge duel-badge--{{ challenges.my_badge.kind }}">
+            {{ challenges.my_badge.emoji }} {{ challenges.my_badge.label }}
+            <span class="opacity-70">({{ challenges.my_badge.wins }}W-{{ challenges.my_badge.losses }}L)</span>
+          </span>
+          {% endif %}
+          <button type="button" class="duel-btn" id="btnNewChallenge">+ Utmana</button>
+        </div>
+      </div>
+
+      {% if challenges.active %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        {% for duel in challenges.active %}
+        <div class="duel-card rounded-xl p-4{% if duel.needs_type or duel.needs_answer %} duel-card--action{% endif %}" data-challenge-id="{{ duel.id }}">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="duel-status duel-status--{{ 'pending' if duel.status in ['pending_type','pending_answers'] else 'locked' }}">
+              {% if duel.needs_type %}Din tur — välj motfråga{% elif duel.needs_answer %}Din tur{% elif duel.status == 'locked' %}Låst{% else %}Väntar{% endif %}
+            </span>
+            <span class="text-xs text-gray-500">{{ duel.type_icon }} {{ duel.type_label or 'Väljer typ…' }}</span>
+          </div>
+          <div class="flex items-center gap-2 text-sm mb-2">
+            {{ user_avatar(duel.challenger, 'xs') }}
+            <span class="font-semibold text-amber-200">{{ duel.challenger.name }}</span>
+            <span class="text-gray-600">vs</span>
+            {{ user_avatar(duel.challenged, 'xs') }}
+            <span class="font-semibold text-cyan-200">{{ duel.challenged.name }}</span>
+          </div>
+          {% if duel.challenge_type == 'head_to_head' and duel.rider_a_id %}
+          <p class="text-xs text-gray-400 mb-2">Duell: två förare utvalda</p>
+          {% elif duel.challenge_type == 'brand_battle' and duel.brand_a %}
+          <p class="text-xs text-gray-400 mb-2">{{ duel.brand_a }} vs {{ duel.brand_b }}</p>
+          {% endif %}
+          <div class="flex gap-2 flex-wrap">
+            {% if duel.needs_type or duel.needs_answer %}
+            <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">Svara</button>
+            {% endif %}
+            {% if duel.can_decline %}
+            <button type="button" class="duel-btn duel-btn--ghost text-sm js-duel-decline" data-id="{{ duel.id }}">Avböj</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 mb-4">Inga aktiva dueller — utmana en rival innan picks stänger!</p>
+      {% endif %}
+
+      {% if challenges.recent %}
+      <div class="pt-3 border-t border-gray-700/60">
+        <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">Senaste</p>
+        <div class="space-y-2">
+          {% for duel in challenges.recent %}
+          <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-300">
+            <span>
+              {{ duel.type_icon }}
+              {{ duel.challenger.name }} vs {{ duel.challenged.name }}
+              {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% endif %}
+            </span>
+            <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
+          </div>
+          {% endfor %}
+        </div>
       </div>
       {% endif %}
     </div>
@@ -778,6 +968,274 @@
       </div>
     </div>
   </div>
+
+  {% if challenges and challenges.next_competition %}
+  <div class="duel-modal-backdrop" id="duelModal" aria-hidden="true">
+    <div class="duel-modal" role="dialog" aria-labelledby="duelModalTitle">
+      <div class="flex items-center justify-between gap-2 mb-4">
+        <h3 id="duelModalTitle" class="cyberpunk-header text-lg font-bold text-amber-300">⚔️ Liga-duell</h3>
+        <button type="button" class="text-gray-400 hover:text-white text-xl leading-none" id="duelModalClose" aria-label="Stäng">&times;</button>
+      </div>
+      <div id="duelModalBody" class="space-y-4 text-sm"></div>
+      <p id="duelModalError" class="text-red-400 text-sm hidden mt-2"></p>
+    </div>
+  </div>
+  {% endif %}
+
+  <script>
+    const LEAGUE_ID = {{ league.id }};
+    const CHALLENGES_DATA = {{ challenges|tojson if challenges else 'null' }};
+  </script>
+  {% if challenges and challenges.next_competition %}
+  <script>
+  (function() {
+    const modal = document.getElementById('duelModal');
+    const body = document.getElementById('duelModalBody');
+    const errEl = document.getElementById('duelModalError');
+    let activeChallengeId = null;
+    let selectedType = null;
+    let prefillOpponent = null;
+
+    function showError(msg) {
+      errEl.textContent = msg || '';
+      errEl.classList.toggle('hidden', !msg);
+    }
+
+    function openModal() {
+      modal.classList.add('is-open');
+      modal.setAttribute('aria-hidden', 'false');
+      showError('');
+    }
+    function closeModal() {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      activeChallengeId = null;
+      selectedType = null;
+      body.innerHTML = '';
+      showError('');
+    }
+
+    document.getElementById('duelModalClose')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    async function api(path, method, payload) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+      if (payload) opts.body = JSON.stringify(payload);
+      const res = await fetch(path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Något gick fel');
+      return data;
+    }
+
+    function riderOptionsHtml(className) {
+      const groups = CHALLENGES_DATA.rider_options || {};
+      const riders = groups[className] || [];
+      return riders.map(r =>
+        `<option value="${r.id}">#${r.rider_number} ${r.name}${r.bike_brand ? ' (' + r.bike_brand + ')' : ''}</option>`
+      ).join('');
+    }
+
+    function classOptions() {
+      const groups = CHALLENGES_DATA.rider_options || {};
+      return Object.keys(groups).map(k => `<option value="${k}">${k}</option>`).join('');
+    }
+
+    function brandOptionsHtml() {
+      return (CHALLENGES_DATA.brand_options || []).map(b => `<option value="${b}">${b}</option>`).join('');
+    }
+
+    function renderCreateForm() {
+      const opponents = CHALLENGES_DATA.opponents || [];
+      const opts = opponents.map(o =>
+        `<option value="${o.user_id}" ${prefillOpponent == o.user_id ? 'selected' : ''}>${o.name}</option>`
+      ).join('');
+      body.innerHTML = `
+        <p class="text-gray-400">Välj motståndare för <strong class="text-amber-200">${CHALLENGES_DATA.next_competition.short_label}</strong>. De får välja motfrågan.</p>
+        <label class="block">
+          <span class="text-xs uppercase tracking-widest text-gray-500">Motståndare</span>
+          <select id="duelOpponent" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${opts}</select>
+        </label>
+        <button type="button" class="duel-btn w-full mt-2" id="duelSubmitCreate">Skicka utmaning</button>
+      `;
+      document.getElementById('duelSubmitCreate').onclick = async () => {
+        try {
+          const challenged_id = parseInt(document.getElementById('duelOpponent').value, 10);
+          await api(`/api/leagues/${LEAGUE_ID}/challenges`, 'POST', { challenged_id });
+          location.reload();
+        } catch (e) { showError(e.message); }
+      };
+    }
+
+    function renderTypeForm(ch) {
+      const meta = CHALLENGES_DATA.type_meta || {};
+      const types = Object.entries(meta).map(([k, v]) => `
+        <button type="button" class="duel-type-btn" data-type="${k}">
+          <span class="text-lg">${v.icon}</span>
+          <span class="font-bold text-white block">${v.label}</span>
+          <span class="text-xs text-gray-400">${v.hint}</span>
+        </button>
+      `).join('');
+      body.innerHTML = `
+        <p class="text-gray-400">${ch.challenger.name} utmanade dig! Välj motfråga:</p>
+        <div class="space-y-2" id="duelTypeList">${types}</div>
+        <label class="block mt-3">
+          <span class="text-xs uppercase tracking-widest text-gray-500">Klass</span>
+          <select id="duelClass" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${classOptions()}</select>
+        </label>
+        <div id="duelTypeExtra" class="hidden space-y-2"></div>
+        <button type="button" class="duel-btn w-full mt-2" id="duelSubmitType" disabled>Bekräfta motfråga</button>
+      `;
+      document.querySelectorAll('.duel-type-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.duel-type-btn').forEach(b => b.classList.remove('is-selected'));
+          btn.classList.add('is-selected');
+          selectedType = btn.dataset.type;
+          updateTypeExtra();
+          document.getElementById('duelSubmitType').disabled = false;
+        };
+      });
+      document.getElementById('duelClass').onchange = updateTypeExtra;
+      document.getElementById('duelSubmitType').onclick = () => submitType(ch);
+    }
+
+    function updateTypeExtra() {
+      const extra = document.getElementById('duelTypeExtra');
+      const cls = document.getElementById('duelClass')?.value;
+      if (!selectedType || !cls) { extra.classList.add('hidden'); return; }
+      if (selectedType === 'head_to_head') {
+        extra.innerHTML = `
+          <label class="block"><span class="text-xs text-gray-500">Förare A</span>
+            <select id="duelRiderA" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
+          <label class="block"><span class="text-xs text-gray-500">Förare B</span>
+            <select id="duelRiderB" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
+        `;
+        extra.classList.remove('hidden');
+      } else if (selectedType === 'brand_battle') {
+        extra.innerHTML = `
+          <label class="block"><span class="text-xs text-gray-500">Märke A</span>
+            <select id="duelBrandA" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${brandOptionsHtml()}</select></label>
+          <label class="block"><span class="text-xs text-gray-500">Märke B</span>
+            <select id="duelBrandB" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${brandOptionsHtml()}</select></label>
+        `;
+        extra.classList.remove('hidden');
+      } else {
+        extra.classList.add('hidden');
+      }
+    }
+
+    async function submitType(ch) {
+      const payload = { challenge_type: selectedType, class_name: document.getElementById('duelClass').value };
+      if (selectedType === 'head_to_head') {
+        payload.rider_a_id = parseInt(document.getElementById('duelRiderA').value, 10);
+        payload.rider_b_id = parseInt(document.getElementById('duelRiderB').value, 10);
+      } else if (selectedType === 'brand_battle') {
+        payload.brand_a = document.getElementById('duelBrandA').value;
+        payload.brand_b = document.getElementById('duelBrandB').value;
+      }
+      try {
+        await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/respond`, 'POST', payload);
+        location.reload();
+      } catch (e) { showError(e.message); }
+    }
+
+    function renderAnswerForm(ch) {
+      const cls = ch.class_name;
+      if (ch.challenge_type === 'h2h') {
+        body.innerHTML = `
+          <p class="text-gray-400">H2H — välj förare och gissa placering (1–20).</p>
+          <label class="block"><span class="text-xs text-gray-500">Förare</span>
+            <select id="duelRider" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
+          <label class="block"><span class="text-xs text-gray-500">Placering</span>
+            <input type="number" id="duelPos" min="1" max="20" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="1–20"></label>
+          <button type="button" class="duel-btn w-full mt-2" id="duelSubmitAnswer">Lås svar</button>
+        `;
+        document.getElementById('duelSubmitAnswer').onclick = async () => {
+          try {
+            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', {
+              rider_id: parseInt(document.getElementById('duelRider').value, 10),
+              position: parseInt(document.getElementById('duelPos').value, 10),
+            });
+            location.reload();
+          } catch (e) { showError(e.message); }
+        };
+      } else if (ch.challenge_type === 'head_to_head') {
+        body.innerHTML = `
+          <p class="text-gray-400">Vem placerar sig bättre? Välj en av de två förarna.</p>
+          <div class="space-y-2" id="duelGuessBtns"></div>
+        `;
+        const container = document.getElementById('duelGuessBtns');
+        [ch.rider_a_id, ch.rider_b_id].forEach(rid => {
+          const all = Object.values(CHALLENGES_DATA.rider_options || {}).flat();
+          const r = all.find(x => x.id === rid);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'duel-type-btn';
+          btn.textContent = r ? `#${r.rider_number} ${r.name}` : `Förare ${rid}`;
+          btn.onclick = async () => {
+            try {
+              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { guess_rider_id: rid });
+              location.reload();
+            } catch (e) { showError(e.message); }
+          };
+          container.appendChild(btn);
+        });
+      } else if (ch.challenge_type === 'brand_battle') {
+        const brands = [ch.brand_a, ch.brand_b].filter(Boolean);
+        body.innerHTML = `
+          <p class="text-gray-400">Välj vilket märke du tror på: <strong class="text-white">${brands.join(' vs ')}</strong></p>
+          <div class="space-y-2" id="duelBrandBtns"></div>
+        `;
+        const container = document.getElementById('duelBrandBtns');
+        brands.forEach(brand => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'duel-type-btn';
+          btn.textContent = brand;
+          btn.onclick = async () => {
+            try {
+              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { brand_pick: brand });
+              location.reload();
+            } catch (e) { showError(e.message); }
+            };
+          container.appendChild(btn);
+        });
+      }
+    }
+
+    function openChallengeFlow(challengeId) {
+      activeChallengeId = challengeId;
+      const ch = (CHALLENGES_DATA.active || []).find(c => c.id === challengeId);
+      if (!ch) return;
+      openModal();
+      if (ch.needs_type) renderTypeForm(ch);
+      else if (ch.needs_answer) renderAnswerForm(ch);
+    }
+
+    document.getElementById('btnNewChallenge')?.addEventListener('click', () => {
+      prefillOpponent = null;
+      openModal();
+      renderCreateForm();
+    });
+    document.getElementById('btnChallengeRival')?.addEventListener('click', (e) => {
+      prefillOpponent = parseInt(e.currentTarget.dataset.opponentId, 10);
+      openModal();
+      renderCreateForm();
+    });
+    document.querySelectorAll('.js-duel-action').forEach(btn => {
+      btn.addEventListener('click', () => openChallengeFlow(parseInt(btn.dataset.id, 10)));
+    });
+    document.querySelectorAll('.js-duel-decline').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Avböj utmaningen?')) return;
+        try {
+          await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/decline`, 'POST', {});
+          location.reload();
+        } catch (e) { alert(e.message); }
+      });
+    });
+  })();
+  </script>
+  {% endif %}
 
   <script>
     function toggleEditForm() {

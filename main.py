@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -3929,6 +3929,547 @@ def api_power_ranking():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+# ---------------------------------------------------------------------------
+# League challenges (1v1 duels)
+# ---------------------------------------------------------------------------
+
+CHALLENGE_TYPE_META = {
+    "h2h": {
+        "label": "H2H Prognos",
+        "icon": "⚔️",
+        "hint": "Båda väljer förare + placering — närmast vinner",
+    },
+    "head_to_head": {
+        "label": "Vem högre?",
+        "icon": "🏁",
+        "hint": "Utmanad väljer två förare — utmanaren gissar vem som placerar sig bättre",
+    },
+    "brand_battle": {
+        "label": "Brand battle",
+        "icon": "🏍️",
+        "hint": "Utmanad väljer två märken — bästa förarplacering per märke avgör",
+    },
+}
+
+CHALLENGE_GLORY_BADGES = [
+    ("prophet", "🔮", "Profeten"),
+    ("sniper", "🎯", "Prickskytten"),
+    ("oracle", "✨", "Oraklet"),
+]
+CHALLENGE_SHAME_BADGES = [
+    ("camel", "🐫", "Kamelen"),
+    ("onion", "🧅", "Löken"),
+    ("donkey", "🫏", "Åsnan"),
+    ("potato", "🥔", "Potatisen"),
+]
+
+_ACTIVE_CHALLENGE_STATUSES = ("pending_type", "pending_answers", "locked")
+_MAX_CHALLENGES_PER_USER_RACE = 2
+_MAX_PENDING_OUTGOING = 1
+
+
+def _challenge_badge_display(badge_key: str) -> tuple[str, str]:
+    for key, emoji, label in CHALLENGE_GLORY_BADGES + CHALLENGE_SHAME_BADGES:
+        if key == badge_key:
+            return emoji, label
+    return "🏅", badge_key
+
+
+def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]]:
+    """Riders available for challenge picks, keyed by class_name."""
+    out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(
+        CompetitionRiderStatus.competition_id == comp.id,
+        CompetitionRiderStatus.status == "OUT",
+    ).all()
+    out_ids = {rid for (rid,) in out_rows}
+    is_wsx = getattr(comp, "series", None) == "WSX"
+
+    if is_wsx:
+        riders_450 = rider_query_for_list_ui().filter_by(class_name="wsx_sx1").order_by(Rider.rider_number).all()
+        riders_250 = rider_query_for_list_ui().filter_by(class_name="wsx_sx2").order_by(Rider.rider_number).all()
+        keys = ("wsx_sx1", "wsx_sx2")
+    else:
+        riders_450 = rider_query_for_list_ui().filter_by(class_name="450cc").order_by(Rider.rider_number).all()
+        riders_250_query = rider_query_for_list_ui().filter_by(class_name="250cc")
+        coast = (comp.coast_250 or "").lower()
+        if coast in ("east", "west"):
+            riders_250_query = riders_250_query.filter(
+                (Rider.coast_250 == coast) | (Rider.coast_250 == "both")
+            )
+        riders_250 = riders_250_query.order_by(Rider.rider_number).all()
+        keys = ("450cc", "250cc")
+
+    def _row(r: Rider) -> dict:
+        return {
+            "id": r.id,
+            "name": r.name,
+            "rider_number": r.rider_number,
+            "bike_brand": r.bike_brand or "",
+            "class_name": r.class_name,
+            "is_out": r.id in out_ids,
+        }
+
+    groups = [riders_450, riders_250]
+    return {k: [_row(r) for r in grp if r.id not in out_ids] for k, grp in zip(keys, groups)}
+
+
+def _challenge_brands_for_competition(comp: Competition) -> list[str]:
+    brands: set[str] = set()
+    for riders in _challenge_riders_for_competition(comp).values():
+        for r in riders:
+            brand = (r.get("bike_brand") or "").strip()
+            if brand:
+                brands.add(brand)
+    return sorted(brands, key=lambda x: x.lower())
+
+
+def _active_challenge_between(
+    league_id: int, competition_id: int, uid_a: int, uid_b: int
+) -> LeagueChallenge | None:
+    return (
+        LeagueChallenge.query.filter(
+            LeagueChallenge.league_id == league_id,
+            LeagueChallenge.competition_id == competition_id,
+            LeagueChallenge.status.in_(_ACTIVE_CHALLENGE_STATUSES),
+            db.or_(
+                db.and_(
+                    LeagueChallenge.challenger_id == uid_a,
+                    LeagueChallenge.challenged_id == uid_b,
+                ),
+                db.and_(
+                    LeagueChallenge.challenger_id == uid_b,
+                    LeagueChallenge.challenged_id == uid_a,
+                ),
+            ),
+        )
+        .first()
+    )
+
+
+def _user_challenge_count_for_race(user_id: int, league_id: int, competition_id: int) -> int:
+    return (
+        LeagueChallenge.query.filter(
+            LeagueChallenge.league_id == league_id,
+            LeagueChallenge.competition_id == competition_id,
+            LeagueChallenge.status.in_(_ACTIVE_CHALLENGE_STATUSES),
+            db.or_(
+                LeagueChallenge.challenger_id == user_id,
+                LeagueChallenge.challenged_id == user_id,
+            ),
+        ).count()
+    )
+
+
+def _user_pending_outgoing_challenge(user_id: int, league_id: int) -> LeagueChallenge | None:
+    return (
+        LeagueChallenge.query.filter_by(
+            league_id=league_id,
+            challenger_id=user_id,
+            status="pending_type",
+        )
+        .first()
+    )
+
+
+def _challenge_user_label(user_id: int) -> str:
+    u = User.query.get(user_id)
+    if not u:
+        return f"User {user_id}"
+    return u.display_name or u.username
+
+
+def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
+    comp = Competition.query.get(ch.competition_id)
+    challenger = User.query.get(ch.challenger_id)
+    challenged = User.query.get(ch.challenged_id)
+    type_meta = CHALLENGE_TYPE_META.get(ch.challenge_type or "", {})
+    winner = User.query.get(ch.winner_id) if ch.winner_id else None
+
+    def _side(user: User | None) -> dict:
+        if not user:
+            return {}
+        return {
+            "user_id": user.id,
+            "name": user.display_name or user.username,
+            **_user_avatar_fields(user),
+        }
+
+    viewer_is_challenger = ch.challenger_id == viewer_id
+    viewer_is_challenged = ch.challenged_id == viewer_id
+    needs_type = ch.status == "pending_type" and viewer_is_challenged
+    needs_answer = False
+    if ch.status == "pending_answers":
+        if ch.challenge_type == "h2h":
+            if viewer_is_challenger and not ch.challenger_answered_at:
+                needs_answer = True
+            if viewer_is_challenged and not ch.challenged_answered_at:
+                needs_answer = True
+        elif ch.challenge_type == "head_to_head":
+            needs_answer = viewer_is_challenger and not ch.challenger_answered_at
+        elif ch.challenge_type == "brand_battle":
+            if viewer_is_challenger and not ch.challenger_answered_at:
+                needs_answer = True
+            if viewer_is_challenged and not ch.challenged_answered_at:
+                needs_answer = True
+
+    badge_a = UserLeagueChallengeBadge.query.filter_by(
+        user_id=ch.challenger_id, league_id=ch.league_id, competition_id=ch.competition_id
+    ).first()
+    badge_b = UserLeagueChallengeBadge.query.filter_by(
+        user_id=ch.challenged_id, league_id=ch.league_id, competition_id=ch.competition_id
+    ).first()
+
+    def _badge_row(b: UserLeagueChallengeBadge | None) -> dict | None:
+        if not b:
+            return None
+        emoji, label = _challenge_badge_display(b.badge_key)
+        return {
+            "badge_key": b.badge_key,
+            "kind": b.kind,
+            "emoji": emoji,
+            "label": label,
+            "wins": b.wins,
+            "losses": b.losses,
+        }
+
+    return {
+        "id": ch.id,
+        "status": ch.status,
+        "challenge_type": ch.challenge_type,
+        "type_label": type_meta.get("label", ch.challenge_type or ""),
+        "type_icon": type_meta.get("icon", "⚔️"),
+        "class_name": ch.class_name,
+        "competition_id": ch.competition_id,
+        "competition_name": comp.name if comp else "",
+        "competition_short": _short_competition_label(comp) if comp else "",
+        "challenger": _side(challenger),
+        "challenged": _side(challenged),
+        "viewer_is_challenger": viewer_is_challenger,
+        "viewer_is_challenged": viewer_is_challenged,
+        "needs_type": needs_type,
+        "needs_answer": needs_answer,
+        "can_decline": ch.status in ("pending_type", "pending_answers") and viewer_is_challenged,
+        "rider_a_id": ch.rider_a_id,
+        "rider_b_id": ch.rider_b_id,
+        "brand_a": ch.brand_a,
+        "brand_b": ch.brand_b,
+        "challenger_answered": bool(ch.challenger_answered_at),
+        "challenged_answered": bool(ch.challenged_answered_at),
+        "winner_id": ch.winner_id,
+        "winner_name": (winner.display_name or winner.username) if winner else None,
+        "result_summary": ch.result_summary,
+        "created_at": ch.created_at.isoformat() if ch.created_at else None,
+        "resolved_at": ch.resolved_at.isoformat() if ch.resolved_at else None,
+        "challenger_badge": _badge_row(badge_a),
+        "challenged_badge": _badge_row(badge_b),
+    }
+
+
+def _league_challenges_context(league_id: int, user_id: int) -> dict:
+    next_comp = _next_open_picks_competition()
+    challenges = (
+        LeagueChallenge.query.filter(
+            LeagueChallenge.league_id == league_id,
+            db.or_(
+                LeagueChallenge.challenger_id == user_id,
+                LeagueChallenge.challenged_id == user_id,
+            ),
+        )
+        .order_by(LeagueChallenge.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    active = [c for c in challenges if c.status in _ACTIVE_CHALLENGE_STATUSES]
+    recent = [c for c in challenges if c.status in ("resolved", "tie", "declined", "expired", "cancelled")][:8]
+
+    my_badge = None
+    if next_comp:
+        badge = UserLeagueChallengeBadge.query.filter_by(
+            user_id=user_id, league_id=league_id, competition_id=next_comp.id
+        ).first()
+        if badge:
+            emoji, label = _challenge_badge_display(badge.badge_key)
+            my_badge = {
+                "badge_key": badge.badge_key,
+                "kind": badge.kind,
+                "emoji": emoji,
+                "label": label,
+                "wins": badge.wins,
+                "losses": badge.losses,
+            }
+
+    members = (
+        db.session.query(User)
+        .join(LeagueMembership, User.id == LeagueMembership.user_id)
+        .filter(LeagueMembership.league_id == league_id, User.id != user_id)
+        .order_by(User.username)
+        .all()
+    )
+    opponents = [
+        {
+            "user_id": u.id,
+            "name": u.display_name or u.username,
+            **_user_avatar_fields(u),
+        }
+        for u in members
+    ]
+
+    rider_options: dict[str, list] = {}
+    brand_options: list[str] = []
+    picks_open = False
+    if next_comp:
+        picks_open = not is_picks_locked(next_comp)
+        rider_options = _challenge_riders_for_competition(next_comp)
+        brand_options = _challenge_brands_for_competition(next_comp)
+
+    return {
+        "next_competition": {
+            "id": next_comp.id,
+            "name": next_comp.name,
+            "short_label": _short_competition_label(next_comp),
+            "picks_open": picks_open,
+        }
+        if next_comp
+        else None,
+        "active": [_serialize_challenge(c, user_id) for c in active],
+        "recent": [_serialize_challenge(c, user_id) for c in recent],
+        "my_badge": my_badge,
+        "opponents": opponents,
+        "rider_options": rider_options,
+        "brand_options": brand_options,
+        "type_meta": CHALLENGE_TYPE_META,
+        "limits": {
+            "max_per_race": _MAX_CHALLENGES_PER_USER_RACE,
+            "max_pending_outgoing": _MAX_PENDING_OUTGOING,
+        },
+    }
+
+
+def _validate_challenge_create(
+    league_id: int, challenger_id: int, challenged_id: int, competition_id: int
+) -> str | None:
+    if challenger_id == challenged_id:
+        return "Du kan inte utmana dig själv"
+    if not LeagueMembership.query.filter_by(league_id=league_id, user_id=challenger_id).first():
+        return "Du är inte medlem i ligan"
+    if not LeagueMembership.query.filter_by(league_id=league_id, user_id=challenged_id).first():
+        return "Motståndaren är inte medlem i ligan"
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return "Tävlingen finns inte"
+    if is_picks_locked(comp):
+        return "Picks är låsta för detta race"
+    if _active_challenge_between(league_id, competition_id, challenger_id, challenged_id):
+        return "Ni har redan en aktiv utmaning detta race"
+    if _user_challenge_count_for_race(challenger_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
+        return f"Max {_MAX_CHALLENGES_PER_USER_RACE} utmaningar per race"
+    if _user_challenge_count_for_race(challenged_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
+        return "Motståndaren har redan max antal utmaningar detta race"
+    if _user_pending_outgoing_challenge(challenger_id, league_id):
+        return "Du har redan en utmaning som väntar på svar"
+    return None
+
+
+def _lock_challenge_if_ready(ch: LeagueChallenge) -> None:
+    if ch.status != "pending_answers":
+        return
+    if ch.challenge_type == "h2h":
+        if ch.challenger_answered_at and ch.challenged_answered_at:
+            ch.status = "locked"
+    elif ch.challenge_type == "head_to_head":
+        if ch.challenger_answered_at:
+            ch.status = "locked"
+    elif ch.challenge_type == "brand_battle":
+        if ch.challenger_answered_at and ch.challenged_answered_at:
+            ch.status = "locked"
+
+
+def expire_incomplete_challenges(competition_id: int) -> int:
+    """Mark unanswered challenges expired once picks lock."""
+    comp = Competition.query.get(competition_id)
+    if not comp or not is_picks_locked(comp):
+        return 0
+    rows = LeagueChallenge.query.filter(
+        LeagueChallenge.competition_id == competition_id,
+        LeagueChallenge.status.in_(("pending_type", "pending_answers")),
+    ).all()
+    for ch in rows:
+        ch.status = "expired"
+    if rows:
+        db.session.commit()
+    return len(rows)
+
+
+def _best_brand_position(competition_id: int, class_name: str, brand: str) -> int | None:
+    brand_norm = brand.strip().lower()
+    results = (
+        db.session.query(CompetitionResult, Rider)
+        .join(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(
+            CompetitionResult.competition_id == competition_id,
+            Rider.class_name == class_name,
+        )
+        .all()
+    )
+    best = None
+    for result, rider in results:
+        if (rider.bike_brand or "").strip().lower() != brand_norm:
+            continue
+        if result.position and (best is None or result.position < best):
+            best = result.position
+    return best
+
+
+def _rider_position(competition_id: int, rider_id: int) -> int | None:
+    row = CompetitionResult.query.filter_by(
+        competition_id=competition_id, rider_id=rider_id
+    ).first()
+    return row.position if row else None
+
+
+def _resolve_single_challenge(ch: LeagueChallenge) -> None:
+    if ch.status != "locked":
+        return
+    comp_id = ch.competition_id
+    winner_id = None
+    summary = ""
+
+    if ch.challenge_type == "h2h":
+        pos_c = _rider_position(comp_id, ch.challenger_rider_id)
+        pos_d = _rider_position(comp_id, ch.challenged_rider_id)
+        actual_c = pos_c if pos_c else 99
+        actual_d = pos_d if pos_d else 99
+        if ch.challenger_position == actual_c and ch.challenged_position != actual_d:
+            winner_id = ch.challenger_id
+            summary = f"Exakt träff! {_challenge_user_label(ch.challenger_id)} gissade P{actual_c}"
+        elif ch.challenged_position == actual_d and ch.challenger_position != actual_c:
+            winner_id = ch.challenged_id
+            summary = f"Exakt träff! {_challenge_user_label(ch.challenged_id)} gissade P{actual_d}"
+        else:
+            dist_c = abs((ch.challenger_position or 99) - actual_c)
+            dist_d = abs((ch.challenged_position or 99) - actual_d)
+            if dist_c < dist_d:
+                winner_id = ch.challenger_id
+                summary = f"Närmast vinner ({dist_c} vs {dist_d} poäng från mål)"
+            elif dist_d < dist_c:
+                winner_id = ch.challenged_id
+                summary = f"Närmast vinner ({dist_d} vs {dist_c} poäng från mål)"
+            else:
+                ch.status = "tie"
+                ch.result_summary = f"Lika nära målet ({dist_c} poäng) — rematch?"
+                ch.resolved_at = datetime.utcnow()
+                return
+
+    elif ch.challenge_type == "head_to_head":
+        pos_a = _rider_position(comp_id, ch.rider_a_id)
+        pos_b = _rider_position(comp_id, ch.rider_b_id)
+        if not pos_a or not pos_b:
+            ch.status = "tie"
+            ch.result_summary = "Saknade resultat — oavgjort"
+            ch.resolved_at = datetime.utcnow()
+            return
+        if pos_a == pos_b:
+            ch.status = "tie"
+            ch.result_summary = f"Lika placering (P{pos_a}) — rematch?"
+            ch.resolved_at = datetime.utcnow()
+            return
+        winner_rider = ch.rider_a_id if pos_a < pos_b else ch.rider_b_id
+        if ch.challenger_guess_rider_id == winner_rider:
+            winner_id = ch.challenger_id
+            rname = Rider.query.get(winner_rider)
+            summary = f"Rätt gissning — {(rname.name if rname else 'föraren')} P{min(pos_a, pos_b)}"
+        else:
+            winner_id = ch.challenged_id
+            summary = "Fel gissning"
+
+    elif ch.challenge_type == "brand_battle":
+        pos_a = _best_brand_position(comp_id, ch.class_name, ch.brand_a)
+        pos_b = _best_brand_position(comp_id, ch.class_name, ch.brand_b)
+        if not pos_a or not pos_b:
+            ch.status = "tie"
+            ch.result_summary = "Saknade märkesresultat — oavgjort"
+            ch.resolved_at = datetime.utcnow()
+            return
+        if pos_a == pos_b:
+            ch.status = "tie"
+            ch.result_summary = f"Lika bäst per märke (P{pos_a}) — rematch?"
+            ch.resolved_at = datetime.utcnow()
+            return
+        winning_brand = ch.brand_a if pos_a < pos_b else ch.brand_b
+        win_norm = (winning_brand or "").strip().lower()
+        if (ch.challenger_brand_pick or "").strip().lower() == win_norm:
+            winner_id = ch.challenger_id
+        elif (ch.challenged_brand_pick or "").strip().lower() == win_norm:
+            winner_id = ch.challenged_id
+        summary = f"{winning_brand} bäst (P{min(pos_a, pos_b)})"
+
+    ch.status = "resolved"
+    ch.winner_id = winner_id
+    ch.result_summary = summary
+    ch.resolved_at = datetime.utcnow()
+
+
+def _recompute_user_challenge_badge(user_id: int, league_id: int, competition_id: int) -> None:
+    rows = LeagueChallenge.query.filter(
+        LeagueChallenge.league_id == league_id,
+        LeagueChallenge.competition_id == competition_id,
+        LeagueChallenge.status.in_(("resolved", "tie")),
+        db.or_(
+            LeagueChallenge.challenger_id == user_id,
+            LeagueChallenge.challenged_id == user_id,
+        ),
+    ).all()
+    wins = losses = 0
+    for ch in rows:
+        if ch.status == "resolved" and ch.winner_id:
+            if ch.winner_id == user_id:
+                wins += 1
+            else:
+                losses += 1
+    net = wins - losses
+    badge = UserLeagueChallengeBadge.query.filter_by(
+        user_id=user_id, league_id=league_id, competition_id=competition_id
+    ).first()
+    if net == 0:
+        if badge:
+            db.session.delete(badge)
+        return
+    kind = "glory" if net > 0 else "shame"
+    pool = CHALLENGE_GLORY_BADGES if kind == "glory" else CHALLENGE_SHAME_BADGES
+    badge_key = pool[(abs(net) - 1) % len(pool)][0]
+    if not badge:
+        badge = UserLeagueChallengeBadge(
+            user_id=user_id,
+            league_id=league_id,
+            competition_id=competition_id,
+        )
+        db.session.add(badge)
+    badge.badge_key = badge_key
+    badge.kind = kind
+    badge.wins = wins
+    badge.losses = losses
+    badge.updated_at = datetime.utcnow()
+
+
+def resolve_league_challenges_for_competition(competition_id: int) -> int:
+    """Resolve locked duels after race results exist."""
+    expire_incomplete_challenges(competition_id)
+    locked = LeagueChallenge.query.filter_by(
+        competition_id=competition_id, status="locked"
+    ).all()
+    if not locked:
+        return 0
+    touched_users: set[tuple[int, int]] = set()
+    for ch in locked:
+        _resolve_single_challenge(ch)
+        touched_users.add((ch.challenger_id, ch.league_id))
+        touched_users.add((ch.challenged_id, ch.league_id))
+    for uid, lid in touched_users:
+        _recompute_user_challenge_badge(uid, lid, competition_id)
+    db.session.commit()
+    return len(locked)
+
+
 @app.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
     if "user_id" not in session:
@@ -3946,6 +4487,7 @@ def league_detail_page(league_id):
     picks_pulse = _league_picks_pulse(league_id, uid)
     last_race_digest = _league_last_race_digest(league_id, uid, summary)
     rival_card = _league_rival_card(league_id, uid, summary)
+    challenges_ctx = _league_challenges_context(league_id, uid)
 
     member_users = (
         db.session.query(User)
@@ -3992,10 +4534,199 @@ def league_detail_page(league_id):
         picks_pulse=picks_pulse,
         last_race_digest=last_race_digest,
         rival_card=rival_card,
+        challenges=challenges_ctx,
         pending_requests=pending_requests,
         is_creator=is_creator,
         current_user_id=uid,
     )
+
+
+@app.get("/api/leagues/<int:league_id>/challenges")
+def api_league_challenges(league_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    if not LeagueMembership.query.filter_by(league_id=league_id, user_id=session["user_id"]).first():
+        return jsonify({"error": "not_member"}), 403
+    return jsonify({"success": True, "data": _league_challenges_context(league_id, session["user_id"])})
+
+
+@app.post("/api/leagues/<int:league_id>/challenges")
+def api_create_league_challenge(league_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    uid = session["user_id"]
+    if not LeagueMembership.query.filter_by(league_id=league_id, user_id=uid).first():
+        return jsonify({"error": "not_member"}), 403
+    data = request.get_json(silent=True) or {}
+    challenged_id = data.get("challenged_id")
+    if not challenged_id:
+        return jsonify({"error": "challenged_id required"}), 400
+    next_comp = _next_open_picks_competition()
+    competition_id = data.get("competition_id") or (next_comp.id if next_comp else None)
+    if not competition_id:
+        return jsonify({"error": "no_open_race"}), 400
+    err = _validate_challenge_create(league_id, uid, int(challenged_id), int(competition_id))
+    if err:
+        return jsonify({"error": err}), 400
+    ch = LeagueChallenge(
+        league_id=league_id,
+        competition_id=int(competition_id),
+        challenger_id=uid,
+        challenged_id=int(challenged_id),
+        status="pending_type",
+    )
+    db.session.add(ch)
+    db.session.commit()
+    return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)}), 201
+
+
+@app.post("/api/leagues/<int:league_id>/challenges/<int:challenge_id>/respond")
+def api_respond_league_challenge(league_id: int, challenge_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    uid = session["user_id"]
+    ch = LeagueChallenge.query.filter_by(id=challenge_id, league_id=league_id).first_or_404()
+    if ch.challenged_id != uid:
+        return jsonify({"error": "not_challenged"}), 403
+    if ch.status != "pending_type":
+        return jsonify({"error": "invalid_status"}), 400
+    comp = Competition.query.get(ch.competition_id)
+    if not comp or is_picks_locked(comp):
+        return jsonify({"error": "picks_locked"}), 400
+    data = request.get_json(silent=True) or {}
+    ctype = (data.get("challenge_type") or "").strip()
+    if ctype not in CHALLENGE_TYPE_META:
+        return jsonify({"error": "invalid_type"}), 400
+    class_name = (data.get("class_name") or "").strip()
+    riders_by_class = _challenge_riders_for_competition(comp)
+    if class_name not in riders_by_class:
+        return jsonify({"error": "invalid_class"}), 400
+
+    ch.challenge_type = ctype
+    ch.class_name = class_name
+    if ctype == "head_to_head":
+        rider_a = data.get("rider_a_id")
+        rider_b = data.get("rider_b_id")
+        if not rider_a or not rider_b or rider_a == rider_b:
+            return jsonify({"error": "invalid_riders"}), 400
+        ch.rider_a_id = int(rider_a)
+        ch.rider_b_id = int(rider_b)
+        ch.status = "pending_answers"
+    elif ctype == "brand_battle":
+        brand_a = (data.get("brand_a") or "").strip()
+        brand_b = (data.get("brand_b") or "").strip()
+        brands = {b.lower() for b in _challenge_brands_for_competition(comp)}
+        if not brand_a or not brand_b or brand_a.lower() == brand_b.lower():
+            return jsonify({"error": "invalid_brands"}), 400
+        if brand_a.lower() not in brands or brand_b.lower() not in brands:
+            return jsonify({"error": "brand_not_in_race"}), 400
+        ch.brand_a = brand_a
+        ch.brand_b = brand_b
+        ch.status = "pending_answers"
+    else:
+        ch.status = "pending_answers"
+    db.session.commit()
+    return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)})
+
+
+@app.post("/api/leagues/<int:league_id>/challenges/<int:challenge_id>/answer")
+def api_answer_league_challenge(league_id: int, challenge_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    uid = session["user_id"]
+    ch = LeagueChallenge.query.filter_by(id=challenge_id, league_id=league_id).first_or_404()
+    if ch.status != "pending_answers":
+        return jsonify({"error": "invalid_status"}), 400
+    comp = Competition.query.get(ch.competition_id)
+    if not comp or is_picks_locked(comp):
+        return jsonify({"error": "picks_locked"}), 400
+    data = request.get_json(silent=True) or {}
+
+    if ch.challenge_type == "h2h":
+        rider_id = data.get("rider_id")
+        position = data.get("position")
+        if not rider_id or not position:
+            return jsonify({"error": "rider_and_position_required"}), 400
+        try:
+            position = int(position)
+        except (TypeError, ValueError):
+            return jsonify({"error": "invalid_position"}), 400
+        if position < 1 or position > 20:
+            return jsonify({"error": "invalid_position"}), 400
+        if uid == ch.challenger_id:
+            if ch.challenger_answered_at:
+                return jsonify({"error": "already_answered"}), 400
+            if ch.challenged_rider_id and int(rider_id) == ch.challenged_rider_id:
+                return jsonify({"error": "same_rider"}), 400
+            ch.challenger_rider_id = int(rider_id)
+            ch.challenger_position = position
+            ch.challenger_answered_at = datetime.utcnow()
+        elif uid == ch.challenged_id:
+            if ch.challenged_answered_at:
+                return jsonify({"error": "already_answered"}), 400
+            if ch.challenger_rider_id and int(rider_id) == ch.challenger_rider_id:
+                return jsonify({"error": "same_rider"}), 400
+            ch.challenged_rider_id = int(rider_id)
+            ch.challenged_position = position
+            ch.challenged_answered_at = datetime.utcnow()
+        else:
+            return jsonify({"error": "not_participant"}), 403
+
+    elif ch.challenge_type == "head_to_head":
+        if uid != ch.challenger_id:
+            return jsonify({"error": "challenger_only"}), 403
+        if ch.challenger_answered_at:
+            return jsonify({"error": "already_answered"}), 400
+        guess = data.get("guess_rider_id")
+        if guess not in (ch.rider_a_id, ch.rider_b_id):
+            return jsonify({"error": "invalid_guess"}), 400
+        ch.challenger_guess_rider_id = int(guess)
+        ch.challenger_answered_at = datetime.utcnow()
+
+    elif ch.challenge_type == "brand_battle":
+        pick = (data.get("brand_pick") or "").strip()
+        if not pick:
+            return jsonify({"error": "brand_required"}), 400
+        allowed = {ch.brand_a.lower(), ch.brand_b.lower()}
+        if pick.lower() not in allowed:
+            return jsonify({"error": "invalid_brand"}), 400
+        if uid == ch.challenger_id:
+            if ch.challenger_answered_at:
+                return jsonify({"error": "already_answered"}), 400
+            if ch.challenged_brand_pick and pick.lower() == ch.challenged_brand_pick.lower():
+                return jsonify({"error": "brand_taken"}), 400
+            ch.challenger_brand_pick = pick
+            ch.challenger_answered_at = datetime.utcnow()
+        elif uid == ch.challenged_id:
+            if ch.challenged_answered_at:
+                return jsonify({"error": "already_answered"}), 400
+            if ch.challenger_brand_pick and pick.lower() == ch.challenger_brand_pick.lower():
+                return jsonify({"error": "brand_taken"}), 400
+            ch.challenged_brand_pick = pick
+            ch.challenged_answered_at = datetime.utcnow()
+        else:
+            return jsonify({"error": "not_participant"}), 403
+    else:
+        return jsonify({"error": "unknown_type"}), 400
+
+    _lock_challenge_if_ready(ch)
+    db.session.commit()
+    return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)})
+
+
+@app.post("/api/leagues/<int:league_id>/challenges/<int:challenge_id>/decline")
+def api_decline_league_challenge(league_id: int, challenge_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    uid = session["user_id"]
+    ch = LeagueChallenge.query.filter_by(id=challenge_id, league_id=league_id).first_or_404()
+    if ch.challenged_id != uid:
+        return jsonify({"error": "not_challenged"}), 403
+    if ch.status not in ("pending_type", "pending_answers"):
+        return jsonify({"error": "invalid_status"}), 400
+    ch.status = "declined"
+    db.session.commit()
+    return jsonify({"success": True})
 
 
 def _resolve_season_team_user_id() -> int | None:
@@ -14253,6 +14984,13 @@ def calculate_scores(comp_id: int):
     except Exception as e:
         print(f"❌ Error calculating league points: {e}")
         # Don't fail the entire score calculation if league points fail
+
+    try:
+        resolved = resolve_league_challenges_for_competition(comp_id)
+        if resolved:
+            print(f"⚔️ Resolved {resolved} league challenge(s) for competition {comp_id}")
+    except Exception as e:
+        print(f"❌ Error resolving league challenges: {e}")
 
 # -------------------------------------------------
 # Felsökning: lista routes
