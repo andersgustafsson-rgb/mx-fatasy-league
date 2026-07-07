@@ -309,6 +309,26 @@
     .user-avatar--sm .user-avatar__letter { font-size: 0.72rem; }
     .user-avatar--md .user-avatar__letter { font-size: 0.95rem; }
     .user-avatar--lg .user-avatar__letter { font-size: 1.25rem; }
+    .user-avatar--shamed { overflow: visible; }
+    .user-avatar--shamed .user-avatar__ring {
+      background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+    }
+    .user-avatar--shamed .user-avatar__img { filter: grayscale(0.7) brightness(0.85); }
+    .user-avatar__shame {
+      position: absolute;
+      right: -3px; bottom: -3px;
+      z-index: 5;
+      display: flex; align-items: center; justify-content: center;
+      background: #0b1220;
+      border: 1px solid rgba(239, 68, 68, 0.7);
+      border-radius: 9999px;
+      line-height: 1;
+    }
+    .user-avatar--xs .user-avatar__shame { width: 0.95rem; height: 0.95rem; font-size: 0.6rem; }
+    .user-avatar--sm .user-avatar__shame { width: 1.1rem; height: 1.1rem; font-size: 0.72rem; }
+    .user-avatar--md .user-avatar__shame { width: 1.35rem; height: 1.35rem; font-size: 0.9rem; }
+    .user-avatar--lg .user-avatar__shame { width: 1.6rem; height: 1.6rem; font-size: 1.05rem; }
     .pick-chip { gap: 0.4rem; }
     .lb-face { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
     .duel-card {
@@ -682,6 +702,71 @@
       font-family: 'Orbitron', monospace;
       text-align: center;
     }
+    .duel-explain {
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      background: rgba(8, 145, 178, 0.08);
+      border-radius: 0.7rem;
+      padding: 0.65rem 0.8rem;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+    .duel-setup-summary {
+      display: flex; flex-direction: column; gap: 0.4rem;
+      border: 1px dashed rgba(251, 191, 36, 0.45);
+      background: rgba(120, 53, 15, 0.14);
+      border-radius: 0.7rem;
+      padding: 0.7rem 0.8rem;
+    }
+    .duel-setup-summary__label {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.14em;
+      color: #fbbf24; font-weight: 700;
+    }
+    .duel-setup-summary__pair {
+      display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .duel-setup-summary__vs {
+      font-family: 'Orbitron', monospace; font-weight: 900;
+      color: #f87171; font-size: 0.8rem;
+    }
+    .duel-setup-summary__note { font-size: 0.75rem; color: #94a3b8; }
+    /* Brand dropdown */
+    .brand-dd { position: relative; }
+    .brand-dd__toggle {
+      width: 100%;
+      display: flex; align-items: center; gap: 0.55rem;
+      background: #0b1220;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      border-radius: 0.6rem;
+      padding: 0.5rem 0.7rem;
+      color: #e2e8f0; font-size: 0.9rem; cursor: pointer;
+      transition: border-color 0.12s ease;
+    }
+    .brand-dd__toggle:hover { border-color: rgba(34, 211, 238, 0.5); }
+    .brand-dd__label { flex: 1; text-align: left; font-weight: 600; }
+    .brand-dd__placeholder { color: #64748b; font-weight: 400; }
+    .brand-dd__caret { color: #64748b; font-size: 0.75rem; }
+    .brand-dd__menu {
+      position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 0.25rem);
+      max-height: 14rem; overflow-y: auto;
+      background: #0b1220;
+      border: 1px solid rgba(71, 85, 105, 0.9);
+      border-radius: 0.6rem;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+      padding: 0.25rem;
+      display: flex; flex-direction: column; gap: 0.15rem;
+    }
+    .brand-dd__item {
+      display: flex; align-items: center; gap: 0.55rem;
+      width: 100%; text-align: left;
+      padding: 0.45rem 0.55rem; border-radius: 0.45rem;
+      color: #e2e8f0; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+      background: transparent; border: 1px solid transparent;
+      transition: all 0.1s ease;
+    }
+    .brand-dd__item:hover { background: rgba(8, 145, 178, 0.12); border-color: rgba(34, 211, 238, 0.35); }
+    .brand-dd__item.is-selected { background: rgba(120, 53, 15, 0.25); border-color: rgba(251, 191, 36, 0.6); color: #fde68a; }
+    .brand-dd__item:disabled { opacity: 0.35; cursor: not-allowed; }
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -692,7 +777,8 @@
 
 {% macro user_avatar(row, size='sm') %}
 {% set uid = row.user_id or row.id or row.winner_user_id %}
-<div class="user-avatar user-avatar--{{ size }}" aria-hidden="true">
+{% set shame = shame_for(uid) if uid else None %}
+<div class="user-avatar user-avatar--{{ size }}{{ ' user-avatar--shamed' if shame else '' }}" aria-hidden="true"{% if shame %} title="Veckans {{ shame.label }} ({{ shame.losses }} förluster)"{% endif %}>
   <div class="user-avatar__ring"></div>
   {% if uid %}
   <img src="{{ url_for('user_profile_image', user_id=uid) }}"
@@ -702,6 +788,7 @@
        onerror="this.remove()">
   {% endif %}
   <span class="user-avatar__letter">{{ row.avatar_letter or '?' }}</span>
+  {% if shame %}<span class="user-avatar__shame">{{ shame.emoji }}</span>{% endif %}
 </div>
 {% endmacro %}
 
@@ -1319,6 +1406,7 @@
     let selectedType = null;
     let prefillOpponent = null;
     let typeExtra = {};
+    let typeOpponentName = '';
 
     const CLASS_LABELS = {
       '250cc': '250 klassen',
@@ -1459,6 +1547,51 @@
       return `<img src="${brandLogoUrl(brand)}" alt="${esc(brand)}" class="brand-logo brand-logo--${size || 'xs'}" onerror="this.style.visibility='hidden'">`;
     }
 
+    // Compact custom dropdown for brands (logo + name). Returns { getValue, setExcluded }
+    function mountBrandDropdown(mountEl, options) {
+      options = options || {};
+      const allBrands = CHALLENGES_DATA.brand_options || [];
+      let selected = options.selected || null;
+      let excluded = options.excluded || null;
+      mountEl.innerHTML = `
+        <div class="brand-dd">
+          <button type="button" class="brand-dd__toggle"></button>
+          <div class="brand-dd__menu hidden"></div>
+        </div>
+      `;
+      const toggle = mountEl.querySelector('.brand-dd__toggle');
+      const menu = mountEl.querySelector('.brand-dd__menu');
+      function renderToggle() {
+        toggle.innerHTML = selected
+          ? `${brandLogoHtml(selected, 'xs')}<span class="brand-dd__label">${esc(selected)}</span><span class="brand-dd__caret">▾</span>`
+          : `<span class="brand-dd__label brand-dd__placeholder">${esc(options.placeholder || 'Välj märke…')}</span><span class="brand-dd__caret">▾</span>`;
+      }
+      function renderMenu() {
+        menu.innerHTML = allBrands.map(b => `
+          <button type="button" class="brand-dd__item ${b === selected ? 'is-selected' : ''}" data-brand="${esc(b)}" ${b === excluded ? 'disabled' : ''}>
+            ${brandLogoHtml(b, 'xs')}<span>${esc(b)}</span>
+          </button>
+        `).join('');
+        menu.querySelectorAll('.brand-dd__item').forEach(it => {
+          it.onclick = () => {
+            selected = it.dataset.brand;
+            close();
+            renderToggle();
+            if (options.onChange) options.onChange(selected);
+          };
+        });
+      }
+      function open() { menu.classList.remove('hidden'); renderMenu(); }
+      function close() { menu.classList.add('hidden'); }
+      toggle.onclick = () => { menu.classList.contains('hidden') ? open() : close(); };
+      document.addEventListener('click', (e) => { if (!mountEl.contains(e.target)) close(); });
+      renderToggle();
+      return {
+        getValue: () => selected,
+        setExcluded: (b) => { excluded = b; if (selected === b) { selected = null; renderToggle(); } },
+      };
+    }
+
     // Mounts a searchable rider list; returns { getSelected() }
     function mountRiderPicker(mountEl, className, options) {
       options = options || {};
@@ -1539,6 +1672,7 @@
     function renderTypeForm(ch) {
       setModalHeader({ ch, mode: 'type' });
       typeExtra = {};
+      typeOpponentName = (ch && ch.challenger && ch.challenger.name) ? ch.challenger.name : 'motståndaren';
       const meta = CHALLENGES_DATA.type_meta || {};
       const types = Object.entries(meta).map(([k, v]) => `
         <button type="button" class="duel-type-btn" data-type="${k}">
@@ -1591,7 +1725,10 @@
 
       if (selectedType === 'head_to_head') {
         extra.innerHTML = `
-          <p class="text-xs text-gray-400">Välj två förare som utmanaren ska tippa mellan.</p>
+          <div class="duel-explain">
+            <p><strong class="text-cyan-200">Så funkar Vem högre?</strong></p>
+            <p class="mt-1">Välj <strong>två förare</strong>. ${esc(typeOpponentName)} gissar sedan vem av dem som placerar sig bäst i racet — <strong>du håller automatiskt på den andra</strong>. Den vars förare kör om den andra vinner duellen.</p>
+          </div>
           <div>
             <span class="text-xs uppercase tracking-widest text-gray-500">Förare A</span>
             <div id="pickerA" class="mt-1"></div>
@@ -1600,66 +1737,88 @@
             <span class="text-xs uppercase tracking-widest text-gray-500">Förare B</span>
             <div id="pickerB" class="mt-1"></div>
           </div>
+          <div id="h2hSetupSummary" class="duel-setup-summary hidden"></div>
         `;
         extra.classList.remove('hidden');
         const pA = mountRiderPicker(document.getElementById('pickerA'), cls, {
           placeholder: 'Sök förare A…',
-          onChange: (r) => { typeExtra.riderA = r ? r.id : null; remountB(); refreshTypeSubmit(); },
+          onChange: (r) => { typeExtra.riderA = r ? r.id : null; remountB(); updateH2hSummary(); refreshTypeSubmit(); },
         });
         function remountB() {
           mountRiderPicker(document.getElementById('pickerB'), cls, {
             placeholder: 'Sök förare B…',
             excludeIds: typeExtra.riderA ? [typeExtra.riderA] : [],
             selectedId: typeExtra.riderB || null,
-            onChange: (r) => { typeExtra.riderB = r ? r.id : null; refreshTypeSubmit(); },
+            onChange: (r) => { typeExtra.riderB = r ? r.id : null; updateH2hSummary(); refreshTypeSubmit(); },
           });
         }
         remountB();
+        function updateH2hSummary() {
+          const el = document.getElementById('h2hSetupSummary');
+          if (!el) return;
+          const a = typeExtra.riderA ? findRider(typeExtra.riderA) : null;
+          const b = typeExtra.riderB ? findRider(typeExtra.riderB) : null;
+          if (!a || !b) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+          el.innerHTML = `
+            <span class="duel-setup-summary__label">Duellen blir</span>
+            <div class="duel-setup-summary__pair">
+              <span class="duel-chip">${riderAvatarHtml(a, 'sm')} ${esc(a.name)}</span>
+              <span class="duel-setup-summary__vs">vs</span>
+              <span class="duel-chip">${riderAvatarHtml(b, 'sm')} ${esc(b.name)}</span>
+            </div>
+            <span class="duel-setup-summary__note">${esc(typeOpponentName)} gissar en av dem — du håller på den andra.</span>
+          `;
+          el.classList.remove('hidden');
+        }
       } else if (selectedType === 'brand_battle') {
         typeExtra.brands = typeExtra.brands || [];
-        const brands = CHALLENGES_DATA.brand_options || [];
         extra.innerHTML = `
-          <p class="text-xs text-gray-400">Välj <strong>två märken</strong> som ska ställas mot varandra.</p>
-          <div class="brand-grid" id="brandGrid">
-            ${brands.map(b => `
-              <button type="button" class="brand-tile relative" data-brand="${esc(b)}">
-                ${brandLogoHtml(b, 'lg')}
-                <span class="brand-tile__name">${esc(b)}</span>
-              </button>
-            `).join('')}
+          <div class="duel-explain">
+            <p><strong class="text-cyan-200">Så funkar Brand battle?</strong></p>
+            <p class="mt-1">Välj <strong>två märken</strong>. Sen väljer ni varsitt märke — det märke vars bästa förare placerar sig högst vinner duellen.</p>
           </div>
+          <div>
+            <span class="text-xs uppercase tracking-widest text-gray-500">Märke A</span>
+            <div id="brandDropA" class="mt-1"></div>
+          </div>
+          <div>
+            <span class="text-xs uppercase tracking-widest text-gray-500">Märke B</span>
+            <div id="brandDropB" class="mt-1"></div>
+          </div>
+          <div id="brandSetupSummary" class="duel-setup-summary hidden"></div>
         `;
         extra.classList.remove('hidden');
-        extra.querySelectorAll('.brand-tile').forEach(tile => {
-          tile.onclick = () => {
-            const brand = tile.dataset.brand;
-            const idx = typeExtra.brands.indexOf(brand);
-            if (idx !== -1) {
-              typeExtra.brands.splice(idx, 1);
-            } else if (typeExtra.brands.length < 2) {
-              typeExtra.brands.push(brand);
-            }
-            paintBrandTiles();
-            refreshTypeSubmit();
-          };
+        function syncBrands() {
+          typeExtra.brands = [ddA.getValue(), ddB.getValue()].filter(Boolean);
+          updateBrandSummary();
+          refreshTypeSubmit();
+        }
+        const ddA = mountBrandDropdown(document.getElementById('brandDropA'), {
+          placeholder: 'Välj märke A…',
+          selected: typeExtra.brands[0] || null,
+          excluded: typeExtra.brands[1] || null,
+          onChange: (b) => { ddB.setExcluded(b); syncBrands(); },
         });
-        paintBrandTiles();
-        function paintBrandTiles() {
-          extra.querySelectorAll('.brand-tile').forEach(tile => {
-            const pos = typeExtra.brands.indexOf(tile.dataset.brand);
-            tile.classList.toggle('is-selected', pos !== -1);
-            let badge = tile.querySelector('.brand-tile__badge');
-            if (pos !== -1) {
-              if (!badge) {
-                badge = document.createElement('span');
-                badge.className = 'brand-tile__badge';
-                tile.appendChild(badge);
-              }
-              badge.textContent = pos === 0 ? 'A' : 'B';
-            } else if (badge) {
-              badge.remove();
-            }
-          });
+        const ddB = mountBrandDropdown(document.getElementById('brandDropB'), {
+          placeholder: 'Välj märke B…',
+          selected: typeExtra.brands[1] || null,
+          excluded: typeExtra.brands[0] || null,
+          onChange: (b) => { ddA.setExcluded(b); syncBrands(); },
+        });
+        function updateBrandSummary() {
+          const el = document.getElementById('brandSetupSummary');
+          if (!el) return;
+          const a = ddA.getValue(), b = ddB.getValue();
+          if (!a || !b) { el.classList.add('hidden'); el.innerHTML = ''; return; }
+          el.innerHTML = `
+            <span class="duel-setup-summary__label">Duellen blir</span>
+            <div class="duel-setup-summary__pair">
+              <span class="duel-chip">${brandLogoHtml(a, 'xs')} ${esc(a)}</span>
+              <span class="duel-setup-summary__vs">vs</span>
+              <span class="duel-chip">${brandLogoHtml(b, 'xs')} ${esc(b)}</span>
+            </div>
+          `;
+          el.classList.remove('hidden');
         }
       } else {
         extra.classList.add('hidden');

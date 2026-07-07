@@ -19,6 +19,7 @@ from flask import (
     flash,
     make_response,
     Response,
+    g,
 )
 import re
 import threading
@@ -3980,6 +3981,66 @@ def _challenge_badge_display(badge_key: str) -> tuple[str, str]:
     return "🏅", badge_key
 
 
+def _shame_figure(user_id: int, comp_id: int) -> tuple[str, str, str]:
+    """Stable-but-varied shame character per (user, race)."""
+    idx = (int(user_id) * 7 + int(comp_id) * 13) % len(CHALLENGE_SHAME_BADGES)
+    key, emoji, label = CHALLENGE_SHAME_BADGES[idx]
+    return emoji, label, key
+
+
+def _shame_source_competition() -> Competition | None:
+    """Race whose duel-losers are currently shamed: the most recent scored race,
+    shown until the next race's picks start (a newer upcoming race appears)."""
+    upcoming = _current_picks_competition()
+    scored = [
+        c
+        for c in Competition.query.filter(Competition.event_date.isnot(None))
+        .order_by(Competition.event_date.desc())
+        .all()
+        if CompetitionResult.query.filter_by(competition_id=c.id).first()
+    ]
+    if not scored:
+        return None
+    if upcoming and upcoming.event_date:
+        for c in scored:
+            if c.event_date and c.event_date < upcoming.event_date:
+                return c
+        return None
+    return scored[0]
+
+
+def _league_shame_map(league_id: int) -> dict[int, dict]:
+    """Users in a league with a negative duel saldo for the active shame race."""
+    comp = _shame_source_competition()
+    if not comp:
+        return {}
+    rows = UserLeagueChallengeBadge.query.filter_by(
+        league_id=league_id, competition_id=comp.id, kind="shame"
+    ).all()
+    result: dict[int, dict] = {}
+    for r in rows:
+        emoji, label, key = _shame_figure(r.user_id, comp.id)
+        result[int(r.user_id)] = {
+            "emoji": emoji,
+            "label": label,
+            "key": key,
+            "wins": r.wins,
+            "losses": r.losses,
+        }
+    return result
+
+
+@app.template_global()
+def shame_for(user_id):
+    """Look up the current shame overlay for a user (set per-request in g)."""
+    if not user_id:
+        return None
+    try:
+        return (getattr(g, "league_shame_map", None) or {}).get(int(user_id))
+    except Exception:
+        return None
+
+
 def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]]:
     """Riders available for challenge picks, keyed by class_name."""
     out_rows = db.session.query(CompetitionRiderStatus.rider_id).filter(
@@ -4154,6 +4215,18 @@ def _challenge_picks_summary(ch: LeagueChallenge) -> dict:
                     "label": "Gissning",
                     "value": guess,
                     "who_name": _challenge_user_label(ch.challenger_id),
+                })
+            other_id = (
+                ch.rider_b_id
+                if ch.challenger_guess_rider_id == ch.rider_a_id
+                else ch.rider_a_id
+            )
+            other = _challenge_rider_short(other_id)
+            if other:
+                items.append({
+                    "label": "Håller på",
+                    "value": other,
+                    "who_name": _challenge_user_label(ch.challenged_id),
                 })
 
     elif ch.challenge_type == "h2h" and is_locked:
@@ -4684,6 +4757,7 @@ def league_detail_page(league_id):
 
     uid = session["user_id"]
     _mark_challenge_notifications_read(uid, league_id)
+    g.league_shame_map = _league_shame_map(league_id)
     summary = _league_summary_for_user(league_id, uid)
     race_matrix = _league_race_matrix(league_id, race_limit=8)
     upcoming_races = _upcoming_competitions(limit=4)
