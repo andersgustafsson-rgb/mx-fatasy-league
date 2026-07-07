@@ -96,7 +96,7 @@
                     <h1 class="text-base sm:text-xl font-semibold text-gray-200">📖 Spelmanual</h1>
                 </div>
                 <div class="flex items-center space-x-2 sm:space-x-4">
-                    <a href="/" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
+                    <a href="/" id="manual-back-link" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
                 </div>
             </div>
         </div>
@@ -1009,6 +1009,26 @@
     </main>
 
     <script>
+        // Smart back button: return to where the user came from (e.g. a league page)
+        (function () {
+            var backLink = document.getElementById('manual-back-link');
+            if (!backLink) return;
+            var ref = document.referrer;
+            try {
+                if (ref) {
+                    var refUrl = new URL(ref);
+                    var here = new URL(window.location.href);
+                    // Only trust same-origin referrers that are not the manual itself
+                    if (refUrl.origin === here.origin && refUrl.pathname !== here.pathname) {
+                        backLink.setAttribute('href', ref);
+                        if (refUrl.pathname.indexOf('/leagues/') === 0) {
+                            backLink.textContent = '← Tillbaka till ligan';
+                        }
+                    }
+                }
+            } catch (e) { /* keep default href="/" */ }
+        })();
+
         // Smooth scrolling for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
