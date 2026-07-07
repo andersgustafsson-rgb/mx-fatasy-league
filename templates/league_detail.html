@@ -483,6 +483,27 @@
       padding: 0.75rem 0.9rem;
       margin-bottom: 0.25rem;
     }
+    .duel-manual-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-top: 0.5rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      background: rgba(120, 53, 15, 0.15);
+      color: #fde68a;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .duel-manual-link:hover {
+      border-color: rgba(251, 191, 36, 0.6);
+      background: rgba(120, 53, 15, 0.28);
+      color: #fff7ed;
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.15);
+    }
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -856,6 +877,11 @@
           <p class="text-sm text-gray-400 mt-0.5">
             {{ challenges.next_competition.short_label }} — utmana, svara och samla märken
           </p>
+          <a href="{{ url_for('manual_page') }}#liga-dueller" target="_blank" rel="noopener" class="duel-manual-link">
+            <span>📖</span>
+            <span>Vad är H2H, Vem högre & Brand battle?</span>
+            <span class="text-amber-400/70">→</span>
+          </a>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           {% if challenges.my_badge %}

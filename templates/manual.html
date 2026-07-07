@@ -54,6 +54,19 @@
             margin: 1rem 0;
             border-radius: 0.5rem;
         }
+
+        .duel-type-card {
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
+            border: 1px solid rgba(251, 191, 36, 0.28);
+            border-radius: 0.75rem;
+            padding: 1rem 1.1rem;
+        }
+
+        .duel-type-card h4 {
+            color: #fde68a;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
         
         /* Mobile optimizations */
         @media (max-width: 640px) {
@@ -113,6 +126,7 @@
                 <a href="#poangsystem" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">5. Poängsystem</a>
                 <a href="#season-team" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">6. Säsongsteam</a>
                 <a href="#ligor" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">7. Ligor</a>
+                <a href="#liga-dueller" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2 pl-4 border-l border-cyan-500/30">↳ Liga-dueller</a>
                 <a href="#spel" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">8. Spel & Highscores</a>
                 <a href="#tips" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">9. Tips & Strategier</a>
             </nav>
@@ -712,6 +726,123 @@
                             kan tävla rättvist mot varandra - <strong>det bästa laget vinner, oavsett antal medlemmar!</strong>
                         </p>
                     </div>
+                </div>
+
+                <div class="highlight-box">
+                    <p class="font-semibold text-amber-300 mb-2">⚔️ Liga-dueller</p>
+                    <p class="text-gray-300 mb-2">
+                        Utöver liga-poäng kan medlemmar köra <strong>1v1-dueller</strong> inför varje race — med motfrågor som
+                        H2H Prognos, Vem högre? och Brand battle. Läs mer i kapitlet
+                        <a href="#liga-dueller" class="text-cyan-400 hover:text-cyan-300 underline font-semibold">Liga-dueller</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7b: Liga-dueller -->
+        <div id="liga-dueller" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-amber-500/25">
+            <h2 class="text-3xl font-bold text-gray-200 mb-2 flex items-center gap-3">
+                <span>⚔️</span>
+                <span>Liga-dueller</span>
+            </h2>
+            <p class="text-amber-300/80 text-sm mb-6">1v1-utmaningar inom din liga — per race, innan picks stänger</p>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎯 Vad är en liga-duell?</h3>
+                    <p class="text-gray-300 mb-4">
+                        På ligasidan kan du utmana en medlem i en <strong>1v1-duell</strong> inför nästa race.
+                        Det är inte samma sak som liga-poäng eller leaderboard — det är en rolig sidospel mellan två spelare
+                        med egna motfrågor, märken och skrytpoäng.
+                    </p>
+                    <div class="highlight-box">
+                        <p class="font-semibold text-gray-200 mb-2">📌 Så går det till:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-gray-300 ml-2">
+                            <li>Du <strong>utmanar</strong> någon i ligan</li>
+                            <li>Motståndaren väljer <strong>motfråga</strong> och klass (250 eller 450)</li>
+                            <li>Båda låser sina <strong>svar innan picks stänger</strong></li>
+                            <li>Duellen <strong>avgörs efter racet</strong> när resultaten räknas</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏍️ De tre motfrågorna</h3>
+                    <p class="text-gray-300 mb-4">
+                        Den som blir utmanad väljer vilken typ av duell ni kör. Alla gäller en vald klass — t.ex.
+                        <strong>250 klassen</strong> eller <strong>450 klassen</strong>.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="duel-type-card">
+                            <h4>⚔️ H2H Prognos</h4>
+                            <p class="text-sm text-gray-300">
+                                Båda väljer en förare i klassen <em>och</em> gissar placering (1–20).
+                                Den som är <strong>närmast rätt</strong> vinner. Träffar du exakt rätt placering vinner du direkt!
+                            </p>
+                        </div>
+                        <div class="duel-type-card">
+                            <h4>🏁 Vem högre?</h4>
+                            <p class="text-sm text-gray-300">
+                                Utmanade väljer <strong>två förare</strong> i klassen. Utmanaren gissar vilken av dem
+                                som placerar sig bäst i racet. Rätt gissning = vinst.
+                            </p>
+                        </div>
+                        <div class="duel-type-card">
+                            <h4>🏍️ Brand battle</h4>
+                            <p class="text-sm text-gray-300">
+                                Utmanade väljer <strong>två märken</strong> (t.ex. Honda vs Yamaha). Båda väljer sedan
+                                vilket märke de tror på. Bästa förarplacering per märke i klassen avgör vinnaren.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">📏 Regler & gränser</h3>
+                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                        <li>Max <strong>2 dueller per spelare och race</strong> (som utmanare eller utmanad)</li>
+                        <li>Max <strong>1 utgående utmaning</strong> som väntar på svar åt gången</li>
+                        <li>Samma par kan bara ha <strong>1 aktiv duell</strong> per race</li>
+                        <li>Ofullständiga dueller (saknat svar) går ut när picks låses</li>
+                        <li><strong>Oavgjort</strong> om lika nära mål / samma placering — inget W eller L</li>
+                    </ul>
+                </div>
+
+                <div class="points-box">
+                    <h3 class="text-xl font-bold text-amber-300 mb-3">🏅 Märken & saldo (W − L)</h3>
+                    <p class="text-gray-300 mb-3">
+                        Efter varje race räknas ditt resultat i duellerna för den tävlingen. Du får ett
+                        <strong>netto-saldo</strong> = vinster minus förluster:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                        <div class="bg-green-900/30 border border-green-500/40 rounded-lg p-3 text-center">
+                            <div class="text-2xl mb-1">🔮</div>
+                            <div class="text-sm font-bold text-green-300">Plus-saldo</div>
+                            <div class="text-xs text-gray-400 mt-1">Glory-märke (Profeten, Prickskytten…)</div>
+                        </div>
+                        <div class="bg-gray-700/40 border border-gray-500/40 rounded-lg p-3 text-center">
+                            <div class="text-2xl mb-1">⚖️</div>
+                            <div class="text-sm font-bold text-gray-300">0 (t.ex. 1W–1L)</div>
+                            <div class="text-xs text-gray-400 mt-1">Inget märke</div>
+                        </div>
+                        <div class="bg-red-900/30 border border-red-500/40 rounded-lg p-3 text-center">
+                            <div class="text-2xl mb-1">🐫</div>
+                            <div class="text-sm font-bold text-red-300">Minus-saldo</div>
+                            <div class="text-xs text-gray-400 mt-1">Shame-märke (Kamelen, Löken…)</div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-300">
+                        Märket gäller för <strong>det racet</strong> och syns på ligasidan under Dina dueller
+                        (t.ex. <em>2W–1L</em>). Nästa race börjar om med nya dueller.
+                    </p>
+                </div>
+
+                <div class="warning-box">
+                    <p class="font-semibold text-orange-300 mb-2">🔔 Notiser</p>
+                    <p class="text-gray-300">
+                        Du får klock-notis när någon utmanar dig, svarar, låser sin duell eller när resultatet är klart.
+                        Klicka på notisen för att gå direkt till duellerna på ligasidan.
+                    </p>
                 </div>
             </div>
         </div>
