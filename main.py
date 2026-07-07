@@ -3964,6 +3964,11 @@ CHALLENGE_SHAME_BADGES = [
 ]
 
 _ACTIVE_CHALLENGE_STATUSES = ("pending_type", "pending_answers", "locked")
+# Duels the user has committed to: their own outgoing (any active stage) +
+# incoming invitations they have accepted (answered/locked). Pending incoming
+# invitations (pending_type where the user is challenged) do NOT count, so a
+# player can be invited to many duels but only lock in a limited number.
+_COMMITTED_INCOMING_STATUSES = ("pending_answers", "locked")
 _MAX_CHALLENGES_PER_USER_RACE = 2
 _MAX_PENDING_OUTGOING = 1
 
@@ -4055,6 +4060,30 @@ def _user_challenge_count_for_race(user_id: int, league_id: int, competition_id:
             db.or_(
                 LeagueChallenge.challenger_id == user_id,
                 LeagueChallenge.challenged_id == user_id,
+            ),
+        ).count()
+    )
+
+
+def _user_committed_challenge_count_for_race(user_id: int, league_id: int, competition_id: int) -> int:
+    """Duels the user is locked into: their own outgoing + accepted incoming.
+
+    Pending incoming invitations are excluded, so a player can receive many
+    challenges but only commit to _MAX_CHALLENGES_PER_USER_RACE of them.
+    """
+    return (
+        LeagueChallenge.query.filter(
+            LeagueChallenge.league_id == league_id,
+            LeagueChallenge.competition_id == competition_id,
+            db.or_(
+                db.and_(
+                    LeagueChallenge.challenger_id == user_id,
+                    LeagueChallenge.status.in_(_ACTIVE_CHALLENGE_STATUSES),
+                ),
+                db.and_(
+                    LeagueChallenge.challenged_id == user_id,
+                    LeagueChallenge.status.in_(_COMMITTED_INCOMING_STATUSES),
+                ),
             ),
         ).count()
     )
@@ -4368,10 +4397,10 @@ def _validate_challenge_create(
         return "Picks är låsta för detta race"
     if _active_challenge_between(league_id, competition_id, challenger_id, challenged_id):
         return "Ni har redan en aktiv utmaning detta race"
-    if _user_challenge_count_for_race(challenger_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
-        return f"Max {_MAX_CHALLENGES_PER_USER_RACE} utmaningar per race"
-    if _user_challenge_count_for_race(challenged_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
-        return "Motståndaren har redan max antal utmaningar detta race"
+    if _user_committed_challenge_count_for_race(challenger_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
+        return f"Du har redan {_MAX_CHALLENGES_PER_USER_RACE} aktiva dueller detta race"
+    if _user_committed_challenge_count_for_race(challenged_id, league_id, competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
+        return "Motståndaren har redan max antal aktiva dueller detta race"
     if _user_pending_outgoing_challenge(challenger_id, league_id):
         return "Du har redan en utmaning som väntar på svar"
     return None
@@ -4770,6 +4799,8 @@ def api_respond_league_challenge(league_id: int, challenge_id: int):
     comp = Competition.query.get(ch.competition_id)
     if not comp or is_picks_locked(comp):
         return jsonify({"error": "picks_locked"}), 400
+    if _user_committed_challenge_count_for_race(uid, league_id, ch.competition_id) >= _MAX_CHALLENGES_PER_USER_RACE:
+        return jsonify({"error": f"Du har redan {_MAX_CHALLENGES_PER_USER_RACE} aktiva dueller detta race"}), 400
     data = request.get_json(silent=True) or {}
     ctype = (data.get("challenge_type") or "").strip()
     if ctype not in CHALLENGE_TYPE_META:
