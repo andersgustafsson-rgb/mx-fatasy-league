@@ -504,6 +504,184 @@
       color: #fff7ed;
       box-shadow: 0 0 14px rgba(251, 191, 36, 0.15);
     }
+    /* Rider picker */
+    .rider-picker__search {
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      border-radius: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .rider-picker__search:focus {
+      outline: none;
+      border-color: rgba(34, 211, 238, 0.6);
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
+    }
+    .rider-picker__list {
+      max-height: 15rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding-right: 0.15rem;
+    }
+    .rider-picker__empty {
+      color: #64748b;
+      font-size: 0.82rem;
+      padding: 0.5rem 0.25rem;
+    }
+    .rider-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      text-align: left;
+      padding: 0.4rem 0.55rem;
+      border-radius: 0.6rem;
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      background: rgba(15, 23, 42, 0.6);
+      transition: all 0.12s ease;
+      cursor: pointer;
+    }
+    .rider-row:hover {
+      border-color: rgba(34, 211, 238, 0.45);
+      background: rgba(8, 145, 178, 0.1);
+    }
+    .rider-row.is-selected {
+      border-color: rgba(251, 191, 36, 0.7);
+      background: rgba(120, 53, 15, 0.22);
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.15);
+    }
+    .rider-row__num {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #22d3ee;
+      min-width: 2.2rem;
+    }
+    .rider-row__name {
+      flex: 1;
+      min-width: 0;
+      font-weight: 600;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rp-ring {
+      position: relative;
+      display: inline-block;
+      flex-shrink: 0;
+      border-radius: 9999px;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(6, 182, 212, 0.9));
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+    .rp-ring--sm { width: 2.1rem; height: 2.1rem; }
+    .rp-ring--lg { width: 3.5rem; height: 3.5rem; }
+    .rp-ring__img {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; border-radius: 9999px; z-index: 2;
+      background: #0b1220;
+    }
+    .rp-ring__ph {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; color: #f8fafc; text-transform: uppercase;
+    }
+    .rp-ring--sm .rp-ring__ph { font-size: 0.8rem; }
+    .rp-ring--lg .rp-ring__ph { font-size: 1.3rem; }
+    .brand-logo { object-fit: contain; flex-shrink: 0; }
+    .brand-logo--xs { width: 1.6rem; height: 1.6rem; }
+    .brand-logo--lg { width: 3.5rem; height: 3.5rem; }
+    /* Selected chip */
+    .duel-chip {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(251, 191, 36, 0.5);
+      background: rgba(120, 53, 15, 0.2);
+      color: #fde68a; font-weight: 600; font-size: 0.85rem;
+    }
+    /* VS choice cards (brands + riders) */
+    .vs-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+    .vs-card {
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+      padding: 1rem 0.75rem;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      background: rgba(15, 23, 42, 0.7);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+    .vs-card:hover {
+      border-color: rgba(34, 211, 238, 0.5);
+      background: rgba(8, 145, 178, 0.1);
+      transform: translateY(-2px);
+    }
+    .vs-card.is-selected {
+      border-color: rgba(251, 191, 36, 0.8);
+      background: rgba(120, 53, 15, 0.25);
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.2);
+    }
+    .vs-card__name {
+      font-weight: 700; color: #f1f5f9; font-size: 0.9rem;
+    }
+    .vs-card__sub { font-size: 0.72rem; color: #94a3b8; }
+    .vs-divider {
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Orbitron', monospace; font-weight: 900;
+      font-size: 1.1rem; color: #f87171;
+      text-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
+    }
+    /* Brand grid (pick two) */
+    .brand-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+      gap: 0.5rem;
+    }
+    .brand-tile {
+      display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+      padding: 0.6rem 0.4rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      background: rgba(15, 23, 42, 0.7);
+      cursor: pointer; transition: all 0.12s ease;
+    }
+    .brand-tile:hover { border-color: rgba(34, 211, 238, 0.45); }
+    .brand-tile.is-selected {
+      border-color: rgba(251, 191, 36, 0.8);
+      background: rgba(120, 53, 15, 0.22);
+      box-shadow: 0 0 14px rgba(251, 191, 36, 0.15);
+    }
+    .brand-tile__name { font-size: 0.7rem; color: #cbd5e1; font-weight: 600; }
+    .brand-tile__badge {
+      position: absolute; top: -0.4rem; right: -0.4rem;
+      width: 1.25rem; height: 1.25rem; border-radius: 9999px;
+      background: #f59e0b; color: #1e293b; font-weight: 800; font-size: 0.7rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .duel-pos-input {
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid rgba(71, 85, 105, 0.8);
+      border-radius: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      color: #e2e8f0;
+      font-size: 1.1rem;
+      font-family: 'Orbitron', monospace;
+      text-align: center;
+    }
   </style>
 </head>
 <body class="text-gray-100 min-h-screen">
@@ -1140,6 +1318,7 @@
     let activeChallengeId = null;
     let selectedType = null;
     let prefillOpponent = null;
+    let typeExtra = {};
 
     const CLASS_LABELS = {
       '250cc': '250 klassen',
@@ -1242,6 +1421,86 @@
       ).join('');
     }
 
+    const BRAND_LOGO_MAP = {
+      honda: 'honda', ktm: 'ktm', yamaha: 'yamaha', kawasaki: 'kawasaki',
+      suzuki: 'suzuki', husqvarna: 'husqvarna', gasgas: 'gasgas',
+      beta: 'beta', triumph: 'triumph', ducati: 'ducati',
+    };
+
+    function brandLogoUrl(brand) {
+      const key = (brand || '').toLowerCase().replace(/\s+/g, '');
+      return `/static/brand_logos/${BRAND_LOGO_MAP[key] || key}.png`;
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s == null ? '' : String(s);
+      return d.innerHTML;
+    }
+
+    function ridersForClass(className) {
+      return ((CHALLENGES_DATA.rider_options || {})[className] || []).filter(r => !r.is_out);
+    }
+
+    function findRider(riderId) {
+      return Object.values(CHALLENGES_DATA.rider_options || {}).flat().find(r => r.id === riderId);
+    }
+
+    function riderAvatarHtml(r, size) {
+      const sz = size || 'sm';
+      const initial = esc(((r && r.name) || '?').trim().charAt(0) || '?');
+      const img = r && r.image_url
+        ? `<img src="${esc(r.image_url)}" class="rp-ring__img" loading="lazy" onerror="this.remove()">`
+        : '';
+      return `<span class="rp-ring rp-ring--${sz}">${img}<span class="rp-ring__ph">${initial}</span></span>`;
+    }
+
+    function brandLogoHtml(brand, size) {
+      return `<img src="${brandLogoUrl(brand)}" alt="${esc(brand)}" class="brand-logo brand-logo--${size || 'xs'}" onerror="this.style.visibility='hidden'">`;
+    }
+
+    // Mounts a searchable rider list; returns { getSelected() }
+    function mountRiderPicker(mountEl, className, options) {
+      options = options || {};
+      const excludeIds = options.excludeIds || [];
+      const riders = ridersForClass(className).filter(r => excludeIds.indexOf(r.id) === -1);
+      let selectedId = options.selectedId || null;
+      mountEl.innerHTML = `
+        <input type="text" class="rider-picker__search" placeholder="${esc(options.placeholder || 'Sök namn eller nummer…')}">
+        <div class="rider-picker__list"></div>
+      `;
+      const search = mountEl.querySelector('.rider-picker__search');
+      const list = mountEl.querySelector('.rider-picker__list');
+      function render(filter) {
+        const f = (filter || '').toLowerCase().trim();
+        const rows = riders.filter(r =>
+          !f || r.name.toLowerCase().indexOf(f) !== -1 || String(r.rider_number).indexOf(f) !== -1
+        );
+        if (!rows.length) {
+          list.innerHTML = '<p class="rider-picker__empty">Ingen förare matchar</p>';
+          return;
+        }
+        list.innerHTML = rows.map(r => `
+          <button type="button" class="rider-row ${r.id === selectedId ? 'is-selected' : ''}" data-id="${r.id}">
+            ${riderAvatarHtml(r, 'sm')}
+            <span class="rider-row__num">#${esc(r.rider_number)}</span>
+            <span class="rider-row__name">${esc(r.name)}</span>
+            ${brandLogoHtml(r.bike_brand, 'xs')}
+          </button>
+        `).join('');
+        list.querySelectorAll('.rider-row').forEach(btn => {
+          btn.onclick = () => {
+            selectedId = parseInt(btn.dataset.id, 10);
+            render(search.value);
+            if (options.onChange) options.onChange(findRider(selectedId));
+          };
+        });
+      }
+      search.oninput = () => render(search.value);
+      render('');
+      return { getSelected: () => selectedId };
+    }
+
     function classOptions() {
       const groups = CHALLENGES_DATA.rider_options || {};
       const labels = CLASS_LABELS;
@@ -1279,6 +1538,7 @@
 
     function renderTypeForm(ch) {
       setModalHeader({ ch, mode: 'type' });
+      typeExtra = {};
       const meta = CHALLENGES_DATA.type_meta || {};
       const types = Object.entries(meta).map(([k, v]) => `
         <button type="button" class="duel-type-btn" data-type="${k}">
@@ -1293,55 +1553,130 @@
           <span class="text-xs uppercase tracking-widest text-gray-500">Vilken klass gäller duellen?</span>
           <select id="duelClass" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${classOptions()}</select>
         </label>
-        <div id="duelTypeExtra" class="hidden space-y-2"></div>
-        <button type="button" class="duel-btn w-full mt-2" id="duelSubmitType" disabled>Bekräfta motfråga</button>
+        <div id="duelTypeExtra" class="hidden space-y-3 mt-3"></div>
+        <button type="button" class="duel-btn w-full mt-3" id="duelSubmitType" disabled>Bekräfta motfråga</button>
       `;
       document.querySelectorAll('.duel-type-btn').forEach(btn => {
         btn.onclick = () => {
           document.querySelectorAll('.duel-type-btn').forEach(b => b.classList.remove('is-selected'));
           btn.classList.add('is-selected');
           selectedType = btn.dataset.type;
+          typeExtra = {};
           updateTypeExtra();
-          document.getElementById('duelSubmitType').disabled = false;
+          refreshTypeSubmit();
         };
       });
-      document.getElementById('duelClass').onchange = updateTypeExtra;
+      document.getElementById('duelClass').onchange = () => { typeExtra = {}; updateTypeExtra(); refreshTypeSubmit(); };
       document.getElementById('duelSubmitType').onclick = () => submitType(ch);
+    }
+
+    function refreshTypeSubmit() {
+      const btn = document.getElementById('duelSubmitType');
+      if (!btn) return;
+      let ready = false;
+      if (selectedType === 'h2h') {
+        ready = true;
+      } else if (selectedType === 'head_to_head') {
+        ready = !!(typeExtra.riderA && typeExtra.riderB && typeExtra.riderA !== typeExtra.riderB);
+      } else if (selectedType === 'brand_battle') {
+        ready = (typeExtra.brands || []).length === 2;
+      }
+      btn.disabled = !ready;
     }
 
     function updateTypeExtra() {
       const extra = document.getElementById('duelTypeExtra');
       const cls = document.getElementById('duelClass')?.value;
-      if (!selectedType || !cls) { extra.classList.add('hidden'); return; }
+      if (!selectedType || !cls) { extra.classList.add('hidden'); extra.innerHTML = ''; return; }
+
       if (selectedType === 'head_to_head') {
         extra.innerHTML = `
-          <label class="block"><span class="text-xs text-gray-500">Förare A</span>
-            <select id="duelRiderA" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
-          <label class="block"><span class="text-xs text-gray-500">Förare B</span>
-            <select id="duelRiderB" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
+          <p class="text-xs text-gray-400">Välj två förare som utmanaren ska tippa mellan.</p>
+          <div>
+            <span class="text-xs uppercase tracking-widest text-gray-500">Förare A</span>
+            <div id="pickerA" class="mt-1"></div>
+          </div>
+          <div>
+            <span class="text-xs uppercase tracking-widest text-gray-500">Förare B</span>
+            <div id="pickerB" class="mt-1"></div>
+          </div>
         `;
         extra.classList.remove('hidden');
+        const pA = mountRiderPicker(document.getElementById('pickerA'), cls, {
+          placeholder: 'Sök förare A…',
+          onChange: (r) => { typeExtra.riderA = r ? r.id : null; remountB(); refreshTypeSubmit(); },
+        });
+        function remountB() {
+          mountRiderPicker(document.getElementById('pickerB'), cls, {
+            placeholder: 'Sök förare B…',
+            excludeIds: typeExtra.riderA ? [typeExtra.riderA] : [],
+            selectedId: typeExtra.riderB || null,
+            onChange: (r) => { typeExtra.riderB = r ? r.id : null; refreshTypeSubmit(); },
+          });
+        }
+        remountB();
       } else if (selectedType === 'brand_battle') {
+        typeExtra.brands = typeExtra.brands || [];
+        const brands = CHALLENGES_DATA.brand_options || [];
         extra.innerHTML = `
-          <label class="block"><span class="text-xs text-gray-500">Märke A</span>
-            <select id="duelBrandA" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${brandOptionsHtml()}</select></label>
-          <label class="block"><span class="text-xs text-gray-500">Märke B</span>
-            <select id="duelBrandB" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${brandOptionsHtml()}</select></label>
+          <p class="text-xs text-gray-400">Välj <strong>två märken</strong> som ska ställas mot varandra.</p>
+          <div class="brand-grid" id="brandGrid">
+            ${brands.map(b => `
+              <button type="button" class="brand-tile relative" data-brand="${esc(b)}">
+                ${brandLogoHtml(b, 'lg')}
+                <span class="brand-tile__name">${esc(b)}</span>
+              </button>
+            `).join('')}
+          </div>
         `;
         extra.classList.remove('hidden');
+        extra.querySelectorAll('.brand-tile').forEach(tile => {
+          tile.onclick = () => {
+            const brand = tile.dataset.brand;
+            const idx = typeExtra.brands.indexOf(brand);
+            if (idx !== -1) {
+              typeExtra.brands.splice(idx, 1);
+            } else if (typeExtra.brands.length < 2) {
+              typeExtra.brands.push(brand);
+            }
+            paintBrandTiles();
+            refreshTypeSubmit();
+          };
+        });
+        paintBrandTiles();
+        function paintBrandTiles() {
+          extra.querySelectorAll('.brand-tile').forEach(tile => {
+            const pos = typeExtra.brands.indexOf(tile.dataset.brand);
+            tile.classList.toggle('is-selected', pos !== -1);
+            let badge = tile.querySelector('.brand-tile__badge');
+            if (pos !== -1) {
+              if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'brand-tile__badge';
+                tile.appendChild(badge);
+              }
+              badge.textContent = pos === 0 ? 'A' : 'B';
+            } else if (badge) {
+              badge.remove();
+            }
+          });
+        }
       } else {
         extra.classList.add('hidden');
+        extra.innerHTML = '';
       }
     }
 
     async function submitType(ch) {
       const payload = { challenge_type: selectedType, class_name: document.getElementById('duelClass').value };
       if (selectedType === 'head_to_head') {
-        payload.rider_a_id = parseInt(document.getElementById('duelRiderA').value, 10);
-        payload.rider_b_id = parseInt(document.getElementById('duelRiderB').value, 10);
+        if (!typeExtra.riderA || !typeExtra.riderB) { showError('Välj två förare'); return; }
+        payload.rider_a_id = typeExtra.riderA;
+        payload.rider_b_id = typeExtra.riderB;
       } else if (selectedType === 'brand_battle') {
-        payload.brand_a = document.getElementById('duelBrandA').value;
-        payload.brand_b = document.getElementById('duelBrandB').value;
+        if ((typeExtra.brands || []).length !== 2) { showError('Välj två märken'); return; }
+        payload.brand_a = typeExtra.brands[0];
+        payload.brand_b = typeExtra.brands[1];
       }
       try {
         await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/respond`, 'POST', payload);
@@ -1358,65 +1693,101 @@
         body.innerHTML = `
           ${banner}
           <p class="text-gray-300">Välj förare i <strong class="text-cyan-200">${clsLabel}</strong> och gissa placering (1–20).</p>
-          <label class="block"><span class="text-xs text-gray-500">Förare</span>
-            <select id="duelRider" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white">${riderOptionsHtml(cls)}</select></label>
-          <label class="block"><span class="text-xs text-gray-500">Placering</span>
-            <input type="number" id="duelPos" min="1" max="20" class="w-full mt-1 bg-slate-900 border border-gray-600 rounded-lg px-3 py-2 text-white" placeholder="1–20"></label>
-          <button type="button" class="duel-btn w-full mt-2" id="duelSubmitAnswer">Lås svar</button>
+          <div id="h2hPicker"></div>
+          <label class="block mt-2"><span class="text-xs uppercase tracking-widest text-gray-500">Placering (1–20)</span>
+            <input type="number" id="duelPos" min="1" max="20" class="duel-pos-input mt-1" placeholder="—"></label>
+          <button type="button" class="duel-btn w-full mt-3" id="duelSubmitAnswer" disabled>Lås svar</button>
         `;
-        document.getElementById('duelSubmitAnswer').onclick = async () => {
+        let chosenRider = null;
+        const posEl = document.getElementById('duelPos');
+        const submitBtn = document.getElementById('duelSubmitAnswer');
+        function refresh() {
+          const pos = parseInt(posEl.value, 10);
+          submitBtn.disabled = !(chosenRider && pos >= 1 && pos <= 20);
+        }
+        mountRiderPicker(document.getElementById('h2hPicker'), cls, {
+          onChange: (r) => { chosenRider = r ? r.id : null; refresh(); },
+        });
+        posEl.oninput = refresh;
+        submitBtn.onclick = async () => {
           try {
             await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', {
-              rider_id: parseInt(document.getElementById('duelRider').value, 10),
-              position: parseInt(document.getElementById('duelPos').value, 10),
+              rider_id: chosenRider,
+              position: parseInt(posEl.value, 10),
             });
             location.reload();
           } catch (e) { showError(e.message); }
         };
       } else if (ch.challenge_type === 'head_to_head') {
+        const rA = findRider(ch.rider_a_id);
+        const rB = findRider(ch.rider_b_id);
         body.innerHTML = `
           ${banner}
-          <p class="text-gray-300">Vem placerar sig bättre i <strong class="text-cyan-200">${clsLabel}</strong>?</p>
-          <div class="space-y-2" id="duelGuessBtns"></div>
+          <p class="text-gray-300">Vem placerar sig bättre i <strong class="text-cyan-200">${clsLabel}</strong>? Välj en.</p>
+          <div class="vs-wrap mt-2">
+            <button type="button" class="vs-card" data-rid="${ch.rider_a_id}">
+              ${riderAvatarHtml(rA, 'lg')}
+              <span class="vs-card__name">${rA ? esc(rA.name) : 'Förare A'}</span>
+              <span class="vs-card__sub">#${rA ? esc(rA.rider_number) : '?'} ${rA ? esc(rA.bike_brand) : ''}</span>
+            </button>
+            <div class="vs-divider">VS</div>
+            <button type="button" class="vs-card" data-rid="${ch.rider_b_id}">
+              ${riderAvatarHtml(rB, 'lg')}
+              <span class="vs-card__name">${rB ? esc(rB.name) : 'Förare B'}</span>
+              <span class="vs-card__sub">#${rB ? esc(rB.rider_number) : '?'} ${rB ? esc(rB.bike_brand) : ''}</span>
+            </button>
+          </div>
+          <button type="button" class="duel-btn w-full mt-3" id="duelSubmitAnswer" disabled>Lås gissning</button>
         `;
-        const container = document.getElementById('duelGuessBtns');
-        [ch.rider_a_id, ch.rider_b_id].forEach(rid => {
-          const all = Object.values(CHALLENGES_DATA.rider_options || {}).flat();
-          const r = all.find(x => x.id === rid);
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'duel-type-btn';
-          btn.textContent = r ? `#${r.rider_number} ${r.name}` : `Förare ${rid}`;
-          btn.onclick = async () => {
-            try {
-              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { guess_rider_id: rid });
-              location.reload();
-            } catch (e) { showError(e.message); }
+        let guess = null;
+        const submitBtn = document.getElementById('duelSubmitAnswer');
+        body.querySelectorAll('.vs-card').forEach(card => {
+          card.onclick = () => {
+            body.querySelectorAll('.vs-card').forEach(c => c.classList.remove('is-selected'));
+            card.classList.add('is-selected');
+            guess = parseInt(card.dataset.rid, 10);
+            submitBtn.disabled = false;
           };
-          container.appendChild(btn);
         });
+        submitBtn.onclick = async () => {
+          try {
+            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { guess_rider_id: guess });
+            location.reload();
+          } catch (e) { showError(e.message); }
+        };
       } else if (ch.challenge_type === 'brand_battle') {
-        const brands = [ch.brand_a, ch.brand_b].filter(Boolean);
         body.innerHTML = `
           ${banner}
           <p class="text-gray-300">Välj vilket märke du tror på i <strong class="text-cyan-200">${clsLabel}</strong>:</p>
-          <p class="text-sm text-amber-200 font-semibold">${brands.join(' vs ')}</p>
-          <div class="space-y-2" id="duelBrandBtns"></div>
+          <div class="vs-wrap mt-2">
+            <button type="button" class="vs-card" data-brand="${esc(ch.brand_a)}">
+              ${brandLogoHtml(ch.brand_a, 'lg')}
+              <span class="vs-card__name">${esc(ch.brand_a)}</span>
+            </button>
+            <div class="vs-divider">VS</div>
+            <button type="button" class="vs-card" data-brand="${esc(ch.brand_b)}">
+              ${brandLogoHtml(ch.brand_b, 'lg')}
+              <span class="vs-card__name">${esc(ch.brand_b)}</span>
+            </button>
+          </div>
+          <button type="button" class="duel-btn w-full mt-3" id="duelSubmitAnswer" disabled>Lås val</button>
         `;
-        const container = document.getElementById('duelBrandBtns');
-        brands.forEach(brand => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'duel-type-btn';
-          btn.textContent = brand;
-          btn.onclick = async () => {
-            try {
-              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { brand_pick: brand });
-              location.reload();
-            } catch (e) { showError(e.message); }
-            };
-          container.appendChild(btn);
+        let brandPick = null;
+        const submitBtn = document.getElementById('duelSubmitAnswer');
+        body.querySelectorAll('.vs-card').forEach(card => {
+          card.onclick = () => {
+            body.querySelectorAll('.vs-card').forEach(c => c.classList.remove('is-selected'));
+            card.classList.add('is-selected');
+            brandPick = card.dataset.brand;
+            submitBtn.disabled = false;
+          };
         });
+        submitBtn.onclick = async () => {
+          try {
+            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { brand_pick: brandPick });
+            location.reload();
+          } catch (e) { showError(e.message); }
+        };
       }
     }
 

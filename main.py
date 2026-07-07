@@ -4005,6 +4005,9 @@ def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]
         keys = ("450cc", "250cc")
 
     def _row(r: Rider) -> dict:
+        img = _resolve_rider_headshot_for_display(r)
+        if img and not img.startswith(("http://", "https://", "data:", "/")):
+            img = "/static/" + img
         return {
             "id": r.id,
             "name": r.name,
@@ -4012,6 +4015,7 @@ def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]
             "bike_brand": r.bike_brand or "",
             "class_name": r.class_name,
             "is_out": r.id in out_ids,
+            "image_url": img,
         }
 
     groups = [riders_450, riders_250]
