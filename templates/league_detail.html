@@ -826,10 +826,12 @@
         {% for duel in challenges.active %}
         <div class="duel-card rounded-xl p-4{% if duel.needs_type or duel.needs_answer %} duel-card--action{% endif %}" data-challenge-id="{{ duel.id }}">
           <div class="flex items-center justify-between gap-2 mb-2">
-            <span class="duel-status duel-status--{{ 'pending' if duel.status in ['pending_type','pending_answers'] else 'locked' }}">
-              {% if duel.needs_type %}Din tur — välj motfråga{% elif duel.needs_answer %}Din tur{% elif duel.status == 'locked' %}Låst{% else %}Väntar{% endif %}
+            <span class="duel-status duel-status--{{ 'locked' if duel.status == 'locked' or duel.waiting_for_opponent else 'pending' }}">
+              {% if duel.needs_type %}Din tur — välj motfråga{% elif duel.needs_answer %}Din tur — svara{% elif duel.status == 'locked' %}Låst{% elif duel.waiting_for_opponent %}Väntar på {{ duel.opponent_name.split(' ')[0] }}{% else %}Väntar{% endif %}
             </span>
-            <span class="text-xs text-gray-500">{{ duel.type_icon }} {{ duel.type_label or 'Väljer typ…' }}</span>
+            <span class="text-xs text-gray-500">
+              {{ duel.type_icon }} {{ duel.type_label or 'Väljer typ…' }}{% if duel.class_name %} · <span class="text-cyan-400/80 font-semibold">{{ duel.class_name }}</span>{% endif %}
+            </span>
           </div>
           <div class="flex items-center gap-2 text-sm mb-2">
             {{ user_avatar(duel.challenger, 'xs') }}
@@ -850,9 +852,13 @@
             {% endfor %}
           </div>
           {% endif %}
-          <div class="flex gap-2 flex-wrap mt-3">
+          <div class="flex gap-2 flex-wrap mt-3 items-center">
             {% if duel.needs_type or duel.needs_answer %}
-            <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">Svara</button>
+            <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">{% if duel.needs_type %}Välj motfråga{% else %}Svara{% endif %}</button>
+            {% elif duel.waiting_for_opponent %}
+            <span class="text-xs text-gray-400">✓ Ditt svar är inne — väntar på {{ duel.opponent_name.split(' ')[0] }}</span>
+            {% elif duel.status == 'locked' %}
+            <span class="text-xs text-gray-400">🔒 Låst — avgörs efter racet</span>
             {% endif %}
             {% if duel.can_decline %}
             <button type="button" class="duel-btn duel-btn--ghost text-sm js-duel-decline" data-id="{{ duel.id }}">Avböj</button>

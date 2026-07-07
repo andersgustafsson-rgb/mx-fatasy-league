@@ -4189,6 +4189,12 @@ def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
             if viewer_is_challenged and not ch.challenged_answered_at:
                 needs_answer = True
 
+    waiting_for_opponent = (
+        ch.status == "pending_answers"
+        and (viewer_is_challenger or viewer_is_challenged)
+        and not needs_answer
+    )
+
     badge_a = UserLeagueChallengeBadge.query.filter_by(
         user_id=ch.challenger_id, league_id=ch.league_id, competition_id=ch.competition_id
     ).first()
@@ -4225,6 +4231,12 @@ def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
         "viewer_is_challenged": viewer_is_challenged,
         "needs_type": needs_type,
         "needs_answer": needs_answer,
+        "waiting_for_opponent": waiting_for_opponent,
+        "opponent_name": (
+            (challenged.display_name or challenged.username) if viewer_is_challenger and challenged
+            else (challenger.display_name or challenger.username) if viewer_is_challenged and challenger
+            else ""
+        ),
         "can_decline": ch.status in ("pending_type", "pending_answers") and viewer_is_challenged,
         "rider_a_id": ch.rider_a_id,
         "rider_b_id": ch.rider_b_id,
