@@ -237,6 +237,57 @@ def send_direct_message(from_user_id: int, to_user_id: int, body: str) -> Messag
     return msg
 
 
+def add_inbox_notification(
+    user_id: int,
+    kind: str,
+    title: str,
+    preview: str | None = None,
+    link_url: str | None = None,
+    ref_type: str | None = None,
+    ref_id: int | None = None,
+    commit: bool = True,
+) -> None:
+    """Skapa en generisk klock-notis (visas i dropdown för kind != 'dm')."""
+    try:
+        db.session.add(
+            InboxNotification(
+                user_id=int(user_id),
+                kind=kind,
+                title=title[:200],
+                preview=(preview or "")[:500] or None,
+                link_url=link_url,
+                ref_type=ref_type,
+                ref_id=ref_id,
+            )
+        )
+        if commit:
+            db.session.commit()
+    except Exception as ex:
+        db.session.rollback()
+        print(f"add_inbox_notification error: {ex}")
+
+
+def mark_inbox_notifications_read(
+    user_id: int,
+    kind: str | None = None,
+    ref_type: str | None = None,
+    ref_id: int | None = None,
+) -> int:
+    """Markera notiser som lästa (filtrera på kind/ref om angivet)."""
+    q = InboxNotification.query.filter_by(user_id=int(user_id)).filter(
+        InboxNotification.read_at.is_(None)
+    )
+    if kind is not None:
+        q = q.filter(InboxNotification.kind == kind)
+    if ref_type is not None:
+        q = q.filter(InboxNotification.ref_type == ref_type)
+    if ref_id is not None:
+        q = q.filter(InboxNotification.ref_id == ref_id)
+    n = q.update({"read_at": datetime.utcnow()}, synchronize_session=False)
+    db.session.commit()
+    return int(n or 0)
+
+
 def mark_thread_read(thread_id: int, user_id: int) -> None:
     thread = MessageThread.query.get(thread_id)
     if not thread or user_id not in (thread.user_a_id, thread.user_b_id):

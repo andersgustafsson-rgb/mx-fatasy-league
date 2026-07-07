@@ -4529,6 +4529,63 @@ def _recompute_user_challenge_badge(user_id: int, league_id: int, competition_id
     badge.updated_at = datetime.utcnow()
 
 
+def _notify_challenge(user_id: int, title: str, preview: str, league_id: int) -> None:
+    """Klock-notis om en liga-duell."""
+    try:
+        import pit_lane_service as pls
+
+        pls.ensure_pit_lane_tables()
+        pls.add_inbox_notification(
+            user_id=int(user_id),
+            kind="challenge",
+            title=title,
+            preview=preview,
+            link_url=f"/leagues/{league_id}#duelsSection",
+            ref_type="league",
+            ref_id=int(league_id),
+        )
+    except Exception as ex:
+        print(f"challenge notify error: {ex}")
+
+
+def _mark_challenge_notifications_read(user_id: int, league_id: int) -> None:
+    try:
+        import pit_lane_service as pls
+
+        pls.mark_inbox_notifications_read(
+            user_id=int(user_id), kind="challenge", ref_type="league", ref_id=int(league_id)
+        )
+    except Exception as ex:
+        print(f"challenge notify read error: {ex}")
+
+
+def _notify_challenge_resolved(ch: LeagueChallenge) -> None:
+    """Notis till båda deltagare när en duell avgjorts."""
+    type_meta = CHALLENGE_TYPE_META.get(ch.challenge_type or "", {})
+    icon = type_meta.get("icon", "⚔️")
+    label = type_meta.get("label", "Duell")
+    summary = ch.result_summary or ""
+    if ch.status == "tie":
+        for uid in (ch.challenger_id, ch.challenged_id):
+            opp = ch.challenged_id if uid == ch.challenger_id else ch.challenger_id
+            _notify_challenge(
+                uid,
+                f"🤝 Oavgjord duell mot {_challenge_user_label(opp)}",
+                f"{icon} {label} — {summary}",
+                ch.league_id,
+            )
+        return
+    for uid in (ch.challenger_id, ch.challenged_id):
+        opp = ch.challenged_id if uid == ch.challenger_id else ch.challenger_id
+        if ch.winner_id == uid:
+            title = f"🏆 Du vann duellen mot {_challenge_user_label(opp)}!"
+        elif ch.winner_id:
+            title = f"💀 {_challenge_user_label(ch.winner_id)} vann er duell"
+        else:
+            title = f"⚔️ Duell mot {_challenge_user_label(opp)} avgjord"
+        _notify_challenge(uid, title, f"{icon} {label} — {summary}", ch.league_id)
+
+
 def resolve_league_challenges_for_competition(competition_id: int) -> int:
     """Resolve locked duels after race results exist."""
     expire_incomplete_challenges(competition_id)
@@ -4545,6 +4602,11 @@ def resolve_league_challenges_for_competition(competition_id: int) -> int:
     for uid, lid in touched_users:
         _recompute_user_challenge_badge(uid, lid, competition_id)
     db.session.commit()
+    for ch in locked:
+        try:
+            _notify_challenge_resolved(ch)
+        except Exception as ex:
+            print(f"challenge resolve notify error: {ex}")
     return len(locked)
 
 
@@ -4559,6 +4621,7 @@ def league_detail_page(league_id):
         return redirect(url_for("leagues_page"))
 
     uid = session["user_id"]
+    _mark_challenge_notifications_read(uid, league_id)
     summary = _league_summary_for_user(league_id, uid)
     race_matrix = _league_race_matrix(league_id, race_limit=8)
     upcoming_races = _upcoming_competitions(limit=4)
@@ -4655,6 +4718,13 @@ def api_create_league_challenge(league_id: int):
     )
     db.session.add(ch)
     db.session.commit()
+    comp_label = _short_competition_label(next_comp) if next_comp else "nästa race"
+    _notify_challenge(
+        ch.challenged_id,
+        f"⚔️ {_challenge_user_label(uid)} utmanar dig!",
+        f"{comp_label} — välj din motfråga innan picks stänger",
+        league_id,
+    )
     return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)}), 201
 
 
@@ -4704,6 +4774,13 @@ def api_respond_league_challenge(league_id: int, challenge_id: int):
     else:
         ch.status = "pending_answers"
     db.session.commit()
+    type_label = CHALLENGE_TYPE_META.get(ctype, {}).get("label", "motfråga")
+    _notify_challenge(
+        ch.challenger_id,
+        f"🎯 {_challenge_user_label(uid)} svarade på din utmaning",
+        f"{type_label} vald — lås ditt svar innan picks stänger",
+        league_id,
+    )
     return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)})
 
 
@@ -4789,6 +4866,21 @@ def api_answer_league_challenge(league_id: int, challenge_id: int):
 
     _lock_challenge_if_ready(ch)
     db.session.commit()
+    other_id = ch.challenged_id if uid == ch.challenger_id else ch.challenger_id
+    if ch.status == "locked":
+        _notify_challenge(
+            other_id,
+            f"🔒 Duellen mot {_challenge_user_label(uid)} är låst",
+            "Båda svaren inne — avgörs efter racet",
+            league_id,
+        )
+    else:
+        _notify_challenge(
+            other_id,
+            f"✍️ {_challenge_user_label(uid)} låste sitt svar",
+            "Din tur — lås ditt svar innan picks stänger",
+            league_id,
+        )
     return jsonify({"success": True, "challenge": _serialize_challenge(ch, uid)})
 
 
@@ -4804,6 +4896,12 @@ def api_decline_league_challenge(league_id: int, challenge_id: int):
         return jsonify({"error": "invalid_status"}), 400
     ch.status = "declined"
     db.session.commit()
+    _notify_challenge(
+        ch.challenger_id,
+        f"🚫 {_challenge_user_label(uid)} avböjde din utmaning",
+        "Utmaningen är avslutad",
+        league_id,
+    )
     return jsonify({"success": True})
 
 
