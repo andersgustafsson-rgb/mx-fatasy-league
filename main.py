@@ -30,7 +30,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -18182,6 +18182,61 @@ def admin_reset_all_league_points():
         error_trace = traceback.format_exc()
         print(f"ERROR in admin_reset_all_league_points: {e}")
         print(f"ERROR traceback: {error_trace}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _admin_reset_league_challenges(league_id: int | None = None) -> dict:
+    """Delete league duels, badges and related inbox notifications (admin test helper)."""
+    ch_q = LeagueChallenge.query
+    badge_q = UserLeagueChallengeBadge.query
+    notif_q = InboxNotification.query.filter_by(kind="challenge")
+    if league_id is not None:
+        ch_q = ch_q.filter_by(league_id=league_id)
+        badge_q = badge_q.filter_by(league_id=league_id)
+        notif_q = notif_q.filter_by(ref_type="league", ref_id=league_id)
+    deleted = {
+        "challenges": ch_q.delete(synchronize_session=False),
+        "badges": badge_q.delete(synchronize_session=False),
+        "notifications": notif_q.delete(synchronize_session=False),
+    }
+    db.session.commit()
+    return deleted
+
+
+@app.post("/admin/leagues/challenges/reset")
+def admin_reset_all_league_challenges():
+    """Reset all league duels — temporary admin test helper."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        deleted = _admin_reset_league_challenges()
+        msg = (
+            f"Raderade {deleted['challenges']} utmaningar, "
+            f"{deleted['badges']} märken och {deleted['notifications']} notiser"
+        )
+        print(f"⚔️ Admin reset all challenges: {deleted}")
+        return jsonify({"success": True, "message": msg, "deleted": deleted})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/leagues/<int:league_id>/challenges/reset")
+def admin_reset_league_challenges(league_id: int):
+    """Reset league duels for one league — temporary admin test helper."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        league = League.query.get_or_404(league_id)
+        deleted = _admin_reset_league_challenges(league_id)
+        msg = (
+            f"Raderade {deleted['challenges']} utmaningar i '{league.name}', "
+            f"{deleted['badges']} märken och {deleted['notifications']} notiser"
+        )
+        print(f"⚔️ Admin reset challenges for league {league_id}: {deleted}")
+        return jsonify({"success": True, "message": msg, "deleted": deleted})
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 

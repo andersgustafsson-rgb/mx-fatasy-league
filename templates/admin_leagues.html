@@ -122,11 +122,17 @@
                 class="cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm">
           🧮 Beräkna Alla Liga-Poäng
         </button>
+        <button onclick="resetAllChallenges()"
+                class="warning-button text-white font-bold py-2 px-4 rounded text-sm"
+                title="Tillfällig testfunktion">
+          ⚔️ Reset Alla Utmaningar
+        </button>
         <button onclick="showScoringInfo()"
                 class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
           ℹ️ Poäng-System Info
         </button>
       </div>
+      <p class="text-xs text-amber-300/80 mb-4">⚠️ Reset utmaningar är en tillfällig testfunktion — raderar alla dueller, märken och utmaningsnotiser.</p>
       <div class="grid grid-cols-1 sm:grid-cols-4 gap-6">
         <div class="text-center">
           <div class="text-3xl sm:text-4xl font-bold text-cyan-400 mb-2">{{ leagues|length }}</div>
@@ -248,8 +254,16 @@
                       
                       <!-- Reset Points -->
                       <button onclick="resetPoints({{ league.id }}, '{{ league.name }}')"
-                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all">
+                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all"
+                              title="Återställ poäng">
                         🔄
+                      </button>
+
+                      <!-- Reset Challenges (test) -->
+                      <button onclick="resetChallenges({{ league.id }}, '{{ league.name }}')"
+                              class="px-2 py-1 rounded text-xs font-bold warning-button text-white transition-all"
+                              title="Reset utmaningar (test)">
+                        ⚔️
                       </button>
                       
                       <!-- Delete -->
@@ -320,6 +334,38 @@
       document.getElementById('confirmButton').className = 'flex-1 warning-button text-white font-bold py-2 px-4 rounded text-sm';
       
       document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    function resetChallenges(leagueId, leagueName) {
+      currentLeagueId = leagueId;
+      currentAction = 'reset_challenges';
+      
+      document.getElementById('modalTitle').textContent = 'Reset Utmaningar (test)';
+      document.getElementById('modalMessage').textContent = `Radera alla dueller, märken och utmaningsnotiser i ligan "${leagueName}"?`;
+      document.getElementById('confirmButton').textContent = 'Reset utmaningar';
+      document.getElementById('confirmButton').className = 'flex-1 warning-button text-white font-bold py-2 px-4 rounded text-sm';
+      
+      document.getElementById('confirmModal').classList.remove('hidden');
+    }
+
+    async function resetAllChallenges() {
+      if (!confirm('Reset ALLA utmaningar i hela systemet? Detta raderar alla dueller, märken och utmaningsnotiser.')) {
+        return;
+      }
+      try {
+        const response = await fetch('/admin/leagues/challenges/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert('✅ ' + result.message);
+        } else {
+          alert('Fel: ' + (result.error || 'Okänt fel'));
+        }
+      } catch (error) {
+        alert('Fel vid reset av utmaningar: ' + error.message);
+      }
     }
 
     function deleteLeague(leagueId, leagueName) {
@@ -408,6 +454,9 @@
           break;
         case 'reset_points':
           url = `/admin/leagues/${currentLeagueId}/reset_points`;
+          break;
+        case 'reset_challenges':
+          url = `/admin/leagues/${currentLeagueId}/challenges/reset`;
           break;
         case 'calculate_points':
           url = `/admin/leagues/${currentLeagueId}/calculate_points`;
