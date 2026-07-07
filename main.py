@@ -4078,6 +4078,18 @@ def _challenge_user_label(user_id: int) -> str:
     return u.display_name or u.username
 
 
+def _challenge_class_label(class_name: str | None) -> str:
+    if not class_name:
+        return ""
+    labels = {
+        "250cc": "250 klassen",
+        "450cc": "450 klassen",
+        "wsx_sx1": "WSX SX1",
+        "wsx_sx2": "WSX SX2",
+    }
+    return labels.get(class_name, class_name)
+
+
 def _challenge_rider_short(rider_id: int | None) -> str | None:
     if not rider_id:
         return None
@@ -4128,10 +4140,14 @@ def _challenge_picks_summary(ch: LeagueChallenge) -> dict:
             })
 
     elif ch.challenge_type == "brand_battle":
+        cls = _challenge_class_label(ch.class_name)
         if ch.brand_a and ch.brand_b:
+            brand_val = f"{ch.brand_a} vs {ch.brand_b}"
+            if cls:
+                brand_val += f" · {cls}"
             items.append({
                 "label": "Märken",
-                "value": f"{ch.brand_a} vs {ch.brand_b}",
+                "value": brand_val,
                 "who_name": _challenge_user_label(ch.challenged_id),
             })
         if is_locked:
@@ -4222,6 +4238,7 @@ def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
         "type_label": type_meta.get("label", ch.challenge_type or ""),
         "type_icon": type_meta.get("icon", "⚔️"),
         "class_name": ch.class_name,
+        "class_label": _challenge_class_label(ch.class_name),
         "competition_id": ch.competition_id,
         "competition_name": comp.name if comp else "",
         "competition_short": _short_competition_label(comp) if comp else "",
