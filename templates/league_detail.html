@@ -841,7 +841,7 @@
           {% if duel.picks and duel.picks.show %}
           <div class="duel-picks">
             <div class="duel-picks__title">{% if duel.picks.is_locked %}Låsta val{% else %}Val{% endif %}</div>
-            {% for pick in duel.picks.items %}
+            {% for pick in duel.picks.rows %}
             <div class="duel-pick-row">
               <span class="duel-pick-who">{{ pick.who_name }}</span>
               <span class="text-gray-500 text-xs">{{ pick.label }}:</span>
@@ -881,7 +881,7 @@
             </div>
             {% if duel.picks and duel.picks.show %}
             <div class="duel-picks mt-2">
-              {% for pick in duel.picks.items %}
+              {% for pick in duel.picks.rows %}
               <div class="duel-pick-row">
                 <span class="duel-pick-who">{{ pick.who_name }}</span>
                 <span class="text-gray-500 text-xs">{{ pick.label }}:</span>

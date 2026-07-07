@@ -4151,7 +4151,7 @@ def _challenge_picks_summary(ch: LeagueChallenge) -> dict:
     return {
         "show": bool(items),
         "is_locked": is_locked,
-        "items": items,
+        "rows": items,
     }
 
 
