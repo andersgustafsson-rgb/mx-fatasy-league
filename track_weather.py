@@ -157,6 +157,29 @@ def fetch_race_day_forecast(
     }
 
 
+_LOW_PRECIP_THRESHOLD = 20
+
+
+def _adjust_for_low_precip(forecast: dict[str, Any]) -> dict[str, Any]:
+    """Don't show rain/snow/storm when precipitation chance is very low."""
+    precip = forecast.get("precipitation_probability")
+    if precip is None or precip >= _LOW_PRECIP_THRESHOLD:
+        return forecast
+    out = dict(forecast)
+    if out.get("icon") not in ("rain", "snow", "storm"):
+        return out
+    code = int(out.get("weather_code") or 0)
+    if code in (0, 1, 2):
+        out["icon"], out["label_sv"] = "partly", "Delvis molnigt"
+    elif code == 3:
+        out["icon"], out["label_sv"] = "cloud", "Mulet"
+    elif code in (45, 48):
+        out["icon"], out["label_sv"] = "fog", "Dimma"
+    else:
+        out["icon"], out["label_sv"] = "cloud", "Mulet"
+    return out
+
+
 def build_weather_payload(
     forecast: dict[str, Any],
     city: str,
@@ -174,8 +197,10 @@ def build_weather_payload(
         else:
             parts.append(f"{temp_max}°C")
     parts.append(label)
-    if precip is not None and precip > 0:
+    if precip is not None and precip >= _LOW_PRECIP_THRESHOLD:
         parts.append(f"{precip}% risk för nederbörd")
+    elif precip is not None and precip > 0:
+        parts.append(f"Låg risk för regn ({precip}%)")
     return {
         "available": True,
         "city": city,
@@ -217,6 +242,7 @@ def get_weather_for_competition(comp) -> dict[str, Any]:
         )
         if not forecast:
             return unavailable
+        forecast = _adjust_for_low_precip(forecast)
         payload = build_weather_payload(forecast, geo["city"], comp.event_date)
         _WEATHER_CACHE[cache_key] = (now + _CACHE_TTL_SEC, payload)
         return payload
