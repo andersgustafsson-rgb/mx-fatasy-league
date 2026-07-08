@@ -4435,6 +4435,21 @@ def _league_challenges_context(league_id: int, user_id: int) -> dict:
         rider_options = _challenge_riders_for_competition(next_comp)
         brand_options = _challenge_brands_for_competition(next_comp)
 
+    active_serialized = [_serialize_challenge(c, user_id) for c in active]
+    action_items = [
+        d for d in active_serialized if d.get("needs_type") or d.get("needs_answer")
+    ]
+    action_count = len(action_items)
+    alert_label = None
+    if action_count:
+        first = action_items[0]
+        if first.get("needs_type"):
+            alert_label = "Välj motfråga"
+        elif first.get("needs_answer"):
+            alert_label = "Svara på duell"
+        else:
+            alert_label = "Din tur"
+
     return {
         "next_competition": {
             "id": next_comp.id,
@@ -4444,9 +4459,21 @@ def _league_challenges_context(league_id: int, user_id: int) -> dict:
         }
         if next_comp
         else None,
-        "active": [_serialize_challenge(c, user_id) for c in active],
+        "active": active_serialized,
         "recent": [_serialize_challenge(c, user_id) for c in recent],
         "my_badge": my_badge,
+        "alert": {
+            "has_action": action_count > 0,
+            "count": action_count,
+            "label": alert_label,
+            "short_label": (
+                f"{action_count} duell väntar på dig"
+                if action_count == 1
+                else f"{action_count} dueller väntar på dig"
+                if action_count
+                else ""
+            ),
+        },
         "opponents": opponents,
         "rider_options": rider_options,
         "brand_options": brand_options,
