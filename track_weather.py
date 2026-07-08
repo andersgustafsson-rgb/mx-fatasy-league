@@ -215,6 +215,25 @@ def build_weather_payload(
     }
 
 
+def _resolve_weather_timezone(geo: dict[str, Any], comp) -> str:
+    """Track-local timezone for Open-Meteo daily grids (not user display timezone)."""
+    if geo.get("timezone"):
+        return str(geo["timezone"])
+    lon = float(geo.get("lon") or 0)
+    lat = float(geo.get("lat") or 0)
+    # Continental US — rough zones from longitude
+    if -125 <= lon <= -66 and 24 <= lat <= 50:
+        if lon >= -90:
+            return "America/New_York"
+        if lon >= -105:
+            return "America/Chicago"
+        return "America/Denver"
+    comp_tz = (getattr(comp, "timezone", None) or "").strip()
+    if comp_tz:
+        return comp_tz
+    return "America/New_York"
+
+
 def get_weather_for_competition(comp) -> dict[str, Any]:
     """Cached race-day weather for a Competition ORM object."""
     unavailable = {"available": False}
@@ -223,12 +242,8 @@ def get_weather_for_competition(comp) -> dict[str, Any]:
     geo = resolve_track_geo(getattr(comp, "name", "") or "")
     if not geo:
         return unavailable
-    tz = (
-        getattr(comp, "timezone", None)
-        or geo.get("timezone")
-        or "America/New_York"
-    )
-    cache_key = f"{comp.id}:{comp.event_date}"
+    tz = _resolve_weather_timezone(geo, comp)
+    cache_key = f"{comp.id}:{comp.event_date}:{tz}"
     now = time.time()
     cached = _WEATHER_CACHE.get(cache_key)
     if cached and now < cached[0]:
