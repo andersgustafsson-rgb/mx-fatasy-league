@@ -73,6 +73,25 @@
     .numInputWrapper span.arrowDown:after {
       border-top-color: #e2e8f0;
     }
+    .kundmail-body-editable {
+      min-height: 280px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .kundmail-body-editable:empty::before {
+      content: attr(data-placeholder);
+      color: #64748b;
+      pointer-events: none;
+    }
+    .kundmail-pasted-img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0.5rem 0;
+      border-radius: 0.375rem;
+      border: 1px solid #334155;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen">
@@ -235,10 +254,15 @@
 
         <div class="space-y-1 flex-1 flex flex-col min-h-0">
           <label for="bodyOut" class="block text-xs font-medium text-slate-400">Meddelande (kan redigeras)</label>
-          <textarea
+          <div
             id="bodyOut"
-            class="w-full flex-1 min-h-[280px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 leading-relaxed resize-y focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600/40"
-          ></textarea>
+            class="kundmail-body-editable w-full flex-1 min-h-[280px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 leading-relaxed focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600/40"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            data-placeholder="Skriv eller klistra in text och bilder (Ctrl+V)…"
+          ></div>
+          <p class="text-[11px] text-slate-500">Tips: klistra in skärmdumpar med Ctrl+V. Vid «Kopiera text» följer bilderna med om ditt mailprogram stödjer det.</p>
         </div>
 
         <p class="text-[11px] text-slate-500">«Generera om från mall» = ny text från mallen. «Översätt till danska» = översätter ämne och meddelande som de står (även efter egna ändringar).</p>
@@ -246,6 +270,6 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260618b"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260709"></script>
 </body>
 </html>

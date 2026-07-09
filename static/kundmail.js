@@ -335,6 +335,114 @@ function cleanStr(v) {
   return String(v ?? "").trim();
 }
 
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function getBodyPlain() {
+  if (!els.bodyOut) return "";
+  return (els.bodyOut.innerText || "").replace(/\u00a0/g, " ").trimEnd();
+}
+
+function setBodyPlain(text) {
+  if (!els.bodyOut) return;
+  const t = String(text ?? "");
+  els.bodyOut.innerHTML = escapeHtml(t).replace(/\n/g, "<br>");
+}
+
+function bodyHasImages() {
+  return !!els.bodyOut?.querySelector("img");
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Kunde inte läsa bilden"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function insertImageAtCursor(dataUrl) {
+  const el = els.bodyOut;
+  if (!el) return;
+  el.focus();
+  const img = document.createElement("img");
+  img.src = dataUrl;
+  img.className = "kundmail-pasted-img";
+  img.alt = "Klistrad bild";
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount && el.contains(sel.anchorNode)) {
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(img);
+    const after = document.createRange();
+    after.setStartAfter(img);
+    after.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(after);
+  } else {
+    if (el.innerHTML && !el.innerHTML.endsWith("<br>")) {
+      el.appendChild(document.createElement("br"));
+    }
+    el.appendChild(img);
+    el.appendChild(document.createElement("br"));
+  }
+}
+
+async function handleBodyPaste(e) {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (!item.type.startsWith("image/")) continue;
+    e.preventDefault();
+    const file = item.getAsFile();
+    if (!file) return;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      insertImageAtCursor(dataUrl);
+      markOutputEdited();
+    } catch (err) {
+      setTranslateStatus(err?.message || "Kunde inte klistra in bilden.", true);
+    }
+    return;
+  }
+}
+
+function wrapHtmlForClipboard(innerHtml) {
+  return `<!DOCTYPE html><html><body><!--StartFragment-->${innerHtml}<!--EndFragment--></body></html>`;
+}
+
+async function copyRichContent(plain, html, btn) {
+  const p = cleanStr(plain);
+  if (!p && !html?.includes("<img")) return;
+  try {
+    if (html && bodyHasImages() && navigator.clipboard?.write && window.ClipboardItem) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([wrapHtmlForClipboard(html)], { type: "text/html" }),
+          "text/plain": new Blob([p || "[bild]"], { type: "text/plain" }),
+        }),
+      ]);
+    } else {
+      await navigator.clipboard.writeText(p);
+    }
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = p;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  if (!btn) return;
+  const old = btn.textContent;
+  btn.textContent = UI.copied;
+  setTimeout(() => { btn.textContent = old; }, 1400);
+}
+
 function currentMailLang() {
   const v = cleanStr(els.language?.value) || cleanStr(loadSettings().language);
   return v === "da" ? "da" : "sv";
@@ -1175,7 +1283,7 @@ function generate(opts = {}) {
   if (err) {
     els.validation.textContent = err;
     els.subjectOut.value = "";
-    els.bodyOut.value = "";
+    setBodyPlain("");
     return;
   }
   els.validation.textContent = "";
@@ -1204,7 +1312,7 @@ function generate(opts = {}) {
   });
 
   els.subjectOut.value = mail.subject;
-  els.bodyOut.value = mail.body;
+  setBodyPlain(mail.body);
   markOutputPristine();
   rememberProduct(els.productName.value);
 }
@@ -1303,8 +1411,9 @@ function setTranslateStatus(msg, isError = false) {
 
 async function translateMailToDanish() {
   const subject = cleanStr(els.subjectOut?.value);
-  const body = cleanStr(els.bodyOut?.value);
-  if (!subject && !body) {
+  const body = getBodyPlain();
+  const hadImages = bodyHasImages();
+  if (!subject && !body && !hadImages) {
     setTranslateStatus("Skriv eller generera mail först.", true);
     return;
   }
@@ -1337,10 +1446,10 @@ async function translateMailToDanish() {
     }
 
     els.subjectOut.value = subjectDa;
-    els.bodyOut.value = bodyDa;
+    setBodyPlain(bodyDa);
     if (els.language) els.language.value = "da";
     markOutputPristine();
-    setTranslateStatus("Översatt till danska.");
+    setTranslateStatus(hadImages ? "Översatt till danska (inbäddade bilder togs bort)." : "Översatt till danska.");
     setTimeout(() => {
       if (els.validation?.textContent === "Översatt till danska.") setTranslateStatus("");
     }, 3000);
@@ -1446,11 +1555,15 @@ function init() {
   });
 
   $("copySubject")?.addEventListener("click", (e) => copyText(els.subjectOut.value, e.currentTarget));
-  $("copyBody")?.addEventListener("click", (e) => copyText(els.bodyOut.value, e.currentTarget));
+  $("copyBody")?.addEventListener("click", (e) => {
+    copyRichContent(getBodyPlain(), els.bodyOut?.innerHTML || "", e.currentTarget);
+  });
   $("copyAll")?.addEventListener("click", (e) => {
-    copyText(`${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${els.bodyOut.value}`, e.currentTarget);
+    const plain = `${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${getBodyPlain()}`;
+    copyRichContent(plain, `<p><strong>${escapeHtml(els.subjectOut.value)}</strong></p>${els.bodyOut?.innerHTML || ""}`, e.currentTarget);
   });
 
+  els.bodyOut?.addEventListener("paste", handleBodyPaste);
   els.subjectOut?.addEventListener("input", markOutputEdited);
   els.bodyOut?.addEventListener("input", markOutputEdited);
   els.regenerateMail?.addEventListener("click", forceGenerate);
