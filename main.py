@@ -3281,6 +3281,21 @@ def _static_rider_file_url(image_url: str | None) -> str | None:
     return None
 
 
+def _public_rider_asset_url(url: str | None) -> str | None:
+    """Gör riders/... till /static/riders/... för webbläsaren (samma som template_rider_image_src)."""
+    u = str(url or "").strip()
+    if not u:
+        return None
+    if u.startswith(("http://", "https://", "data:", "/")):
+        return u
+    static_u = _static_rider_file_url(u)
+    if static_u:
+        return static_u
+    if u.startswith(("riders/", "uploads/", "trackmaps/")):
+        return f"/static/{u}"
+    return f"/static/riders/{u}"
+
+
 def _riders_for_image_lookup(
     rider: Rider,
     *,
@@ -3403,7 +3418,7 @@ def _display_portrait_url_for_rider(
             if img_url:
                 break
     if img_url:
-        return img_url
+        return _public_rider_asset_url(img_url) or img_url
 
     portrait_url = template_rider_image_src(rider, riders_by_name=riders_by_name)
     return portrait_url or ""
@@ -7245,13 +7260,13 @@ def race_picks_page(competition_id):
         racerx_url = lookup_racerx_portrait_by_name(r.name) or ""
         portrait_url = _display_portrait_url_for_rider(r, riders_by_name=riders_by_name)
         img_url = _extract_rider_image_url(r) or racerx_url or None
+        if img_url:
+            img_url = _public_rider_asset_url(img_url) or img_url
         if (not portrait_url or "/static/brand_logos/" in str(portrait_url)) and (
             racerx_url or img_url
         ):
             portrait_url = racerx_url or img_url or portrait_url
-        has_portrait = bool(
-            portrait_url and str(portrait_url).startswith("/rider_portrait/")
-        )
+        has_portrait = r.id in ids_with_db_portrait
         return {
             "id": r.id,
             "name": r.name,
