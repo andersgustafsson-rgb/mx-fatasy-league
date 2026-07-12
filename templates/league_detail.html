@@ -1299,7 +1299,7 @@
               <span>
                 {{ duel.type_icon }}
                 {{ duel.challenger.name }} vs {{ duel.challenged.name }}
-                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% endif %}
+                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% elif duel.status == 'expired' %}— <span class="text-gray-500">gick ut (svar saknades)</span>{% elif duel.status == 'declined' %}— <span class="text-gray-500">nekad</span>{% endif %}
               </span>
               <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
             </div>

@@ -4271,13 +4271,14 @@ def _challenge_picks_summary(ch: LeagueChallenge) -> dict:
                 "value": brand_val,
                 "who_name": _challenge_user_label(ch.challenged_id),
             })
-        if is_locked:
+        if is_locked or ch.challenger_brand_pick:
             if ch.challenger_brand_pick:
                 items.append({
                     "label": "Val",
                     "value": ch.challenger_brand_pick,
                     "who_name": _challenge_user_label(ch.challenger_id),
                 })
+        if is_locked or ch.challenged_brand_pick:
             if ch.challenged_brand_pick:
                 items.append({
                     "label": "Val",
