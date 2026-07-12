@@ -4582,6 +4582,49 @@ def _rider_position(competition_id: int, rider_id: int) -> int | None:
     return row.position if row else None
 
 
+def _head_to_head_winner_rider(
+    competition_id: int, rider_a_id: int, rider_b_id: int
+) -> tuple[int | None, str | None]:
+    """Best rider in a Vem högre? match. Missing result = DNF/OUT — finisher wins."""
+    pos_a = _rider_position(competition_id, rider_a_id)
+    pos_b = _rider_position(competition_id, rider_b_id)
+    has_a = pos_a is not None
+    has_b = pos_b is not None
+    if not has_a and not has_b:
+        return None, "Saknade resultat — oavgjort"
+    if has_a and has_b:
+        if pos_a == pos_b:
+            return None, f"Lika placering (P{pos_a}) — rematch?"
+        return (rider_a_id if pos_a < pos_b else rider_b_id), None
+    return (rider_a_id if has_a else rider_b_id), None
+
+
+def _challenge_rider_name(rider_id: int | None) -> str:
+    if not rider_id:
+        return "föraren"
+    rider = Rider.query.get(rider_id)
+    return rider.name if rider else "föraren"
+
+
+def _unlock_stale_tied_challenges(competition_id: int) -> int:
+    """Re-open duels tied only because results were incomplete at first resolve."""
+    stale = LeagueChallenge.query.filter(
+        LeagueChallenge.competition_id == competition_id,
+        LeagueChallenge.status == "tie",
+        LeagueChallenge.result_summary.in_(
+            ("Saknade resultat — oavgjort", "Saknade märkesresultat — oavgjort")
+        ),
+    ).all()
+    for ch in stale:
+        ch.status = "locked"
+        ch.winner_id = None
+        ch.result_summary = None
+        ch.resolved_at = None
+    if stale:
+        db.session.flush()
+    return len(stale)
+
+
 def _resolve_single_challenge(ch: LeagueChallenge) -> None:
     if ch.status != "locked":
         return
@@ -4616,47 +4659,66 @@ def _resolve_single_challenge(ch: LeagueChallenge) -> None:
                 return
 
     elif ch.challenge_type == "head_to_head":
+        winner_rider, tie_reason = _head_to_head_winner_rider(
+            comp_id, ch.rider_a_id, ch.rider_b_id
+        )
+        if tie_reason:
+            ch.status = "tie"
+            ch.result_summary = tie_reason
+            ch.resolved_at = datetime.utcnow()
+            return
         pos_a = _rider_position(comp_id, ch.rider_a_id)
         pos_b = _rider_position(comp_id, ch.rider_b_id)
-        if not pos_a or not pos_b:
-            ch.status = "tie"
-            ch.result_summary = "Saknade resultat — oavgjort"
-            ch.resolved_at = datetime.utcnow()
-            return
-        if pos_a == pos_b:
-            ch.status = "tie"
-            ch.result_summary = f"Lika placering (P{pos_a}) — rematch?"
-            ch.resolved_at = datetime.utcnow()
-            return
-        winner_rider = ch.rider_a_id if pos_a < pos_b else ch.rider_b_id
+        dnf_id = None
+        if pos_a is None:
+            dnf_id = ch.rider_a_id
+        elif pos_b is None:
+            dnf_id = ch.rider_b_id
         if ch.challenger_guess_rider_id == winner_rider:
             winner_id = ch.challenger_id
-            rname = Rider.query.get(winner_rider)
-            summary = f"Rätt gissning — {(rname.name if rname else 'föraren')} P{min(pos_a, pos_b)}"
+            rname = _challenge_rider_name(winner_rider)
+            if dnf_id:
+                summary = (
+                    f"Rätt gissning — {rname} "
+                    f"({_challenge_rider_name(dnf_id)} körde ej)"
+                )
+            else:
+                summary = f"Rätt gissning — {rname} P{min(pos_a, pos_b)}"
         else:
             winner_id = ch.challenged_id
-            summary = "Fel gissning"
+            if dnf_id:
+                summary = f"Fel gissning — {_challenge_rider_name(dnf_id)} körde ej"
+            else:
+                summary = "Fel gissning"
 
     elif ch.challenge_type == "brand_battle":
         pos_a = _best_brand_position(comp_id, ch.class_name, ch.brand_a)
         pos_b = _best_brand_position(comp_id, ch.class_name, ch.brand_b)
-        if not pos_a or not pos_b:
+        if pos_a is None and pos_b is None:
             ch.status = "tie"
             ch.result_summary = "Saknade märkesresultat — oavgjort"
             ch.resolved_at = datetime.utcnow()
             return
-        if pos_a == pos_b:
+        if pos_a is None:
+            winning_brand = ch.brand_b
+            best_pos = pos_b
+        elif pos_b is None:
+            winning_brand = ch.brand_a
+            best_pos = pos_a
+        elif pos_a == pos_b:
             ch.status = "tie"
             ch.result_summary = f"Lika bäst per märke (P{pos_a}) — rematch?"
             ch.resolved_at = datetime.utcnow()
             return
-        winning_brand = ch.brand_a if pos_a < pos_b else ch.brand_b
+        else:
+            winning_brand = ch.brand_a if pos_a < pos_b else ch.brand_b
+            best_pos = min(pos_a, pos_b)
         win_norm = (winning_brand or "").strip().lower()
         if (ch.challenger_brand_pick or "").strip().lower() == win_norm:
             winner_id = ch.challenger_id
         elif (ch.challenged_brand_pick or "").strip().lower() == win_norm:
             winner_id = ch.challenged_id
-        summary = f"{winning_brand} bäst (P{min(pos_a, pos_b)})"
+        summary = f"{winning_brand} bäst (P{best_pos})"
 
     ch.status = "resolved"
     ch.winner_id = winner_id
@@ -4766,11 +4828,12 @@ def _notify_challenge_resolved(ch: LeagueChallenge) -> None:
 def resolve_league_challenges_for_competition(competition_id: int) -> int:
     """Resolve locked duels after race results exist."""
     expire_incomplete_challenges(competition_id)
+    unlocked = _unlock_stale_tied_challenges(competition_id)
     locked = LeagueChallenge.query.filter_by(
         competition_id=competition_id, status="locked"
     ).all()
     if not locked:
-        return 0
+        return unlocked
     touched_users: set[tuple[int, int]] = set()
     for ch in locked:
         _resolve_single_challenge(ch)
