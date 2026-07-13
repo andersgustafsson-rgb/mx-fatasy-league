@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>{{ league.name }} - MX Fantasy League</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+  <meta name="theme-color" content="#06b6d4" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -1218,6 +1220,12 @@
             <span>Vad är H2H, Vem högre & Brand battle?</span>
             <span class="text-amber-400/70">→</span>
           </a>
+          <div id="push-challenge-wrap" class="hidden mt-2">
+            <button type="button" id="btnPushChallengeEnable" class="text-xs text-amber-300 hover:text-amber-200 font-semibold underline-offset-2 hover:underline">
+              🔔 Slå på duell-notiser på mobilen
+            </button>
+            <p id="push-challenge-status" class="hidden text-xs text-green-400 mt-1 cursor-pointer" title="Klicka för att stänga av"></p>
+          </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           {% if challenges.my_badge %}
@@ -2083,5 +2091,13 @@
       if (el) el.classList.toggle('hidden');
     }
   </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+      });
+    }
+  </script>
+  <script src="{{ url_for('static', filename='push_challenges.js') }}?v=1"></script>
 </body>
 </html>

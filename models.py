@@ -505,3 +505,20 @@ class InboxNotification(db.Model):
     ref_id = db.Column(db.Integer, nullable=True)
     read_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class PushSubscription(db.Model):
+    """Web Push-prenumeration per användare (topic=challenge för duell-test)."""
+    __tablename__ = "push_subscriptions"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    endpoint = db.Column(db.Text, nullable=False)
+    p256dh = db.Column(db.Text, nullable=False)
+    auth_key = db.Column(db.Text, nullable=False)
+    topic = db.Column(db.String(32), nullable=False, default="challenge", index=True)
+    user_agent = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "endpoint", name="uq_push_user_endpoint"),
+    )

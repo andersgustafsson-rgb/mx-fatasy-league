@@ -1,5 +1,5 @@
-/* PWA service worker: cache static assets aggressively to cut Render egress. */
-const CACHE = "mx-fantasy-v61";
+/* PWA service worker: cache static assets + Web Push (duell-test). */
+const CACHE = "mx-fantasy-v62";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -91,4 +91,46 @@ self.addEventListener("fetch", (event) => {
   }
 
   // API, portraits, everything else: browser handles directly (no SW interception).
+});
+
+self.addEventListener("push", (event) => {
+  let data = { title: "MX Fantasy", body: "", url: "/" };
+  try {
+    if (event.data) {
+      data = Object.assign(data, event.data.json());
+    }
+  } catch (_) {
+    try {
+      if (event.data) data.body = event.data.text();
+    } catch (__) {}
+  }
+  const title = data.title || "MX Fantasy";
+  const options = {
+    body: data.body || "",
+    icon: "/static/icons/mx_fantasy_app_icon_192.png",
+    badge: "/static/icons/mx_fantasy_app_icon_192.png",
+    tag: data.tag || "mx-challenge",
+    renotify: true,
+    data: { url: data.url || "/" },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/";
+  const absolute = new URL(target, self.location.origin).href;
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url === absolute && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(absolute);
+      }
+      return undefined;
+    })
+  );
 });

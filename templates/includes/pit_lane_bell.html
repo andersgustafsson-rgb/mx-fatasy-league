@@ -24,7 +24,14 @@
     <div id="pit-lane-dropdown-list" class="max-h-64 overflow-y-auto">
       <p class="px-3 py-2 text-xs text-gray-500">Laddar…</p>
     </div>
+    <div id="push-challenge-wrap" class="hidden border-t border-gray-700 px-3 py-2">
+      <button type="button" id="btnPushChallengeEnable" class="w-full text-left text-xs text-amber-300 hover:text-amber-200 font-semibold py-1">
+        🔔 Slå på duell-notiser på mobilen
+      </button>
+      <p id="push-challenge-status" class="hidden text-xs text-green-400 py-1 cursor-pointer" title="Klicka för att stänga av"></p>
+    </div>
   </div>
 </div>
+<script src="{{ url_for('static', filename='push_challenges.js') }}?v=1"></script>
 <script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=7"></script>
 {% endif %}
