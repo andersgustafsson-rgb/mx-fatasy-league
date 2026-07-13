@@ -25,6 +25,7 @@
       <p class="px-3 py-2 text-xs text-gray-500">Laddar…</p>
     </div>
     <div id="push-challenge-wrap" class="hidden border-t border-gray-700 px-3 py-2">
+      <p data-push-ios-hint class="hidden text-xs text-amber-200/90 leading-snug mb-2"></p>
       <button type="button" id="btnPushChallengeEnable" class="w-full text-left text-xs text-amber-300 hover:text-amber-200 font-semibold py-1">
         🔔 Slå på Pit Lane-notiser (DM, dueller m.m.)
       </button>
@@ -32,6 +33,6 @@
     </div>
   </div>
 </div>
-<script src="{{ url_for('static', filename='push_challenges.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='push_challenges.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=7"></script>
 {% endif %}

@@ -3,6 +3,16 @@
   var API_SUBSCRIBE = '/api/push/subscribe';
   var API_UNSUBSCRIBE = '/api/push/unsubscribe';
 
+  var IOS_INSTALL_STEPS =
+    'Så får du push på iPhone:\n\n' +
+    '1. Öppna sajten i Safari (inte Chrome)\n' +
+    '2. Tryck Dela (fyrkant med pil uppåt)\n' +
+    '3. Välj "Lägg till på hemskärmen"\n' +
+    '4. Öppna MX Fantasy från hemskärmen — inte via Safari-fliken\n' +
+    '5. Gå till Pit Lane och tryck "Slå på Pit Lane-notiser"\n' +
+    '6. Tillåt notiser när iPhone frågar\n\n' +
+    'Kräver iOS 16.4 eller nyare.';
+
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -12,12 +22,34 @@
     return out;
   }
 
-  function supportsPush() {
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    return (
+      /iphone|ipad|ipod/i.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+  }
+
+  function isStandalone() {
+    return (
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      navigator.standalone === true
+    );
+  }
+
+  function hasPushApis() {
     return (
       'serviceWorker' in navigator &&
       'PushManager' in window &&
       'Notification' in window
     );
+  }
+
+  function getPushState() {
+    if (hasPushApis()) return 'ready';
+    if (isIOS() && !isStandalone()) return 'ios_install';
+    if (isIOS() && isStandalone()) return 'ios_old_or_blocked';
+    return 'unsupported';
   }
 
   function setStatus(el, text, on) {
@@ -28,6 +60,24 @@
       el.dataset.subscribed = '1';
     } else {
       delete el.dataset.subscribed;
+    }
+  }
+
+  function setIosHint(wrap, hintEl, state) {
+    if (!hintEl) {
+      hintEl = wrap && wrap.querySelector('[data-push-ios-hint]');
+    }
+    if (!hintEl) return;
+    if (state === 'ios_install') {
+      hintEl.textContent =
+        '📱 iPhone: lägg MX Fantasy på hemskärmen först (Safari → Dela → Lägg till på hemskärmen), öppna appen därifrån och slå på notiser här.';
+      hintEl.classList.remove('hidden');
+    } else if (state === 'ios_old_or_blocked') {
+      hintEl.textContent =
+        '📱 Notiser på iPhone kräver iOS 16.4+ och att appen öppnas från hemskärmen.';
+      hintEl.classList.remove('hidden');
+    } else {
+      hintEl.classList.add('hidden');
     }
   }
 
@@ -49,8 +99,15 @@
   }
 
   async function enablePush(btn, statusEl) {
-    if (!supportsPush()) {
-      alert('Din webbläsare stödjer inte push-notiser. Prova Chrome på Android eller lägg till sajten på hemskärmen (iPhone).');
+    var state = getPushState();
+    if (state === 'ios_install') {
+      alert(IOS_INSTALL_STEPS);
+      return;
+    }
+    if (state !== 'ready') {
+      alert(
+        'Din webbläsare stödjer inte push-notiser här. Prova Chrome på Android eller lägg till sajten på hemskärmen (iPhone).'
+      );
       return;
     }
     var cfg = await fetchConfig();
@@ -123,11 +180,7 @@
     var wrap = document.getElementById(opts.wrapId || 'push-challenge-wrap');
     if (!wrap && !btn) return;
 
-    if (!supportsPush()) {
-      if (wrap) wrap.classList.add('hidden');
-      return;
-    }
-
+    var pushState = getPushState();
     var status = await fetchStatus();
     var cfg = await fetchConfig();
     if (!cfg.enabled || !status.configured) {
@@ -136,11 +189,28 @@
     }
     if (wrap) wrap.classList.remove('hidden');
 
-    if (status.subscribed) {
+    setIosHint(wrap, opts.iosHintEl || null, pushState);
+
+    if (pushState === 'ios_install') {
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.textContent = '📱 Så får du notiser på iPhone';
+      }
+      if (statusEl) statusEl.classList.add('hidden');
+    } else if (pushState !== 'ready') {
+      if (btn) btn.classList.add('hidden');
+      if (statusEl && pushState === 'ios_old_or_blocked') {
+        statusEl.textContent = '⚠️ Uppdatera iOS eller öppna från hemskärmen';
+        statusEl.classList.remove('hidden');
+      }
+    } else if (status.subscribed) {
       if (btn) btn.classList.add('hidden');
       setStatus(statusEl, '✅ Pit Lane-notiser på', true);
     } else {
-      if (btn) btn.classList.remove('hidden');
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.textContent = '🔔 Slå på Pit Lane-notiser (DM, dueller m.m.)';
+      }
       if (statusEl) statusEl.classList.add('hidden');
     }
 
@@ -165,6 +235,9 @@
   window.MXPushNotify = {
     init: initBlock,
     enable: enablePush,
+    getState: getPushState,
+    isIOS: isIOS,
+    isStandalone: isStandalone,
   };
   window.MXPushChallenges = window.MXPushNotify;
 

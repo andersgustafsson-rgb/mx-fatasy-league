@@ -5,7 +5,10 @@
   <title>{{ league.name }} - MX Fantasy League</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <meta name="theme-color" content="#06b6d4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -1221,6 +1224,7 @@
             <span class="text-amber-400/70">→</span>
           </a>
           <div id="push-challenge-wrap" class="hidden mt-2">
+            <p data-push-ios-hint class="hidden text-xs text-amber-200/90 leading-snug mb-2"></p>
             <button type="button" id="btnPushChallengeEnable" class="text-xs text-amber-300 hover:text-amber-200 font-semibold underline-offset-2 hover:underline">
               🔔 Slå på Pit Lane-notiser
             </button>
@@ -2098,6 +2102,6 @@
       });
     }
   </script>
-  <script src="{{ url_for('static', filename='push_challenges.js') }}?v=3"></script>
+  <script src="{{ url_for('static', filename='push_challenges.js') }}?v=4"></script>
 </body>
 </html>
