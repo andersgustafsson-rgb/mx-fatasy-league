@@ -127,6 +127,11 @@
                 title="Tillfällig testfunktion">
           ⚔️ Reset Alla Utmaningar
         </button>
+        <button onclick="reResolveSouthwickDuels()"
+                class="cyberpunk-button text-white font-bold py-2 px-4 rounded text-sm"
+                title="Avgör om Southwick-dueller (t.ex. Ida-duellen) och sätter shame-märken">
+          🏁 Omräkna Southwick-dueller
+        </button>
         <button onclick="showScoringInfo()"
                 class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
           ℹ️ Poäng-System Info
@@ -365,6 +370,42 @@
         }
       } catch (error) {
         alert('Fel vid reset av utmaningar: ' + error.message);
+      }
+    }
+
+    async function reResolveSouthwickDuels() {
+      if (!confirm('Omräkna dueller för Southwick National?\n\nFixar t.ex. Ida-duellen (Shimoda DNF) och sätter shame-märken.')) {
+        return;
+      }
+      try {
+        const response = await fetch('/admin/leagues/challenges/re-resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'southwick' }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          alert('Fel: ' + (result.error || 'Okänt fel'));
+          return;
+        }
+        let msg = '✅ ' + result.message;
+        if (result.duels && result.duels.length) {
+          msg += '\n\nDueller:';
+          for (const d of result.duels) {
+            const w = d.winner ? ` → ${d.winner} vann` : (d.status === 'tie' ? ' → oavgjort' : '');
+            msg += `\n• ${d.challenger} vs ${d.challenged}${w}`;
+            if (d.result_summary) msg += ` (${d.result_summary})`;
+          }
+        }
+        if (result.badges && result.badges.length) {
+          msg += '\n\nMärken:';
+          for (const b of result.badges) {
+            msg += `\n• ${b.emoji} ${b.user} (${b.kind}, ${b.wins}V/${b.losses}F)`;
+          }
+        }
+        alert(msg);
+      } catch (error) {
+        alert('Fel vid omräkning: ' + error.message);
       }
     }
 

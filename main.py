@@ -4851,6 +4851,57 @@ def resolve_league_challenges_for_competition(competition_id: int) -> int:
     return len(locked)
 
 
+def _build_re_resolve_challenges_report(competition_id: int) -> dict:
+    """Run duel resolution and return a summary for admin UI."""
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        raise ValueError("competition not found")
+    before = {
+        ch.id: ch.status
+        for ch in LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+    }
+    resolved_count = resolve_league_challenges_for_competition(competition_id)
+    rows = LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+    duels = []
+    for ch in rows:
+        winner = User.query.get(ch.winner_id) if ch.winner_id else None
+        duels.append(
+            {
+                "id": ch.id,
+                "league_id": ch.league_id,
+                "status_before": before.get(ch.id),
+                "status": ch.status,
+                "type": ch.challenge_type,
+                "challenger": _challenge_user_label(ch.challenger_id),
+                "challenged": _challenge_user_label(ch.challenged_id),
+                "winner": (winner.display_name or winner.username) if winner else None,
+                "result_summary": ch.result_summary,
+            }
+        )
+    badges = []
+    for b in UserLeagueChallengeBadge.query.filter_by(competition_id=competition_id).all():
+        user = User.query.get(b.user_id)
+        emoji, label = _challenge_badge_display(b.badge_key)
+        badges.append(
+            {
+                "user": (user.display_name or user.username) if user else str(b.user_id),
+                "league_id": b.league_id,
+                "kind": b.kind,
+                "emoji": emoji,
+                "label": label,
+                "wins": b.wins,
+                "losses": b.losses,
+            }
+        )
+    return {
+        "competition_id": competition_id,
+        "competition_name": comp.name,
+        "resolved_count": resolved_count,
+        "duels": duels,
+        "badges": badges,
+    }
+
+
 @app.route("/leagues/<int:league_id>")
 def league_detail_page(league_id):
     if "user_id" not in session:
@@ -18455,6 +18506,41 @@ def admin_reset_league_challenges(league_id: int):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/admin/leagues/challenges/re-resolve", methods=["POST"])
+def admin_re_resolve_league_challenges_post():
+    """Re-resolve duels for a race (fixes stale ties, DNF, shame badges)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    data = request.get_json(silent=True) or {}
+    competition_id = data.get("competition_id")
+    name = (data.get("name") or "southwick").strip()
+    try:
+        if competition_id:
+            comp = Competition.query.get(int(competition_id))
+        else:
+            comp = (
+                Competition.query.filter(Competition.name.ilike(f"%{name}%"))
+                .order_by(Competition.event_date.desc().nullslast())
+                .first()
+            )
+        if not comp:
+            return jsonify({"error": f"Ingen tävling matchar '{name}'"}), 404
+        report = _build_re_resolve_challenges_report(comp.id)
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Dueller omräknade för {report['competition_name']}",
+                **report,
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 def calculate_league_points(league_id, competition_id):
     """Calculate fair league points based on member race pick performance.
     
@@ -21490,7 +21576,7 @@ def recalculate_san_diego():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.get("/admin/re-resolve-challenges")
+@app.route("/admin/re-resolve-challenges", methods=["GET"])
 def admin_re_resolve_challenges_by_name():
     """Re-resolve locked/stale-tied league duels for a race (admin). ?name=southwick"""
     if not is_admin_user():
@@ -21503,68 +21589,36 @@ def admin_re_resolve_challenges_by_name():
     )
     if not comp:
         return jsonify({"error": f"Ingen tävling matchar '{name}'"}), 404
-    return admin_re_resolve_league_challenges(comp.id)
+    try:
+        report = _build_re_resolve_challenges_report(comp.id)
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Dueller omräknade för {report['competition_name']}",
+                **report,
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
-@app.get("/admin/re-resolve-challenges/<int:competition_id>")
+@app.route("/admin/re-resolve-challenges/<int:competition_id>", methods=["GET"])
 def admin_re_resolve_league_challenges(competition_id: int):
     """Re-resolve league duels after results (fixes stale ties, DNF logic, badges/shame)."""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
-    comp = Competition.query.get(competition_id)
-    if not comp:
-        return jsonify({"error": "competition not found"}), 404
     try:
-        before = {
-            ch.id: ch.status
-            for ch in LeagueChallenge.query.filter_by(competition_id=competition_id).all()
-        }
-        resolved_count = resolve_league_challenges_for_competition(competition_id)
-        rows = LeagueChallenge.query.filter_by(competition_id=competition_id).all()
-        duels = []
-        for ch in rows:
-            challenger = User.query.get(ch.challenger_id)
-            challenged = User.query.get(ch.challenged_id)
-            winner = User.query.get(ch.winner_id) if ch.winner_id else None
-            duels.append(
-                {
-                    "id": ch.id,
-                    "league_id": ch.league_id,
-                    "status_before": before.get(ch.id),
-                    "status": ch.status,
-                    "type": ch.challenge_type,
-                    "challenger": _challenge_user_label(ch.challenger_id),
-                    "challenged": _challenge_user_label(ch.challenged_id),
-                    "winner": (winner.display_name or winner.username) if winner else None,
-                    "result_summary": ch.result_summary,
-                }
-            )
-        badges = []
-        for b in UserLeagueChallengeBadge.query.filter_by(competition_id=competition_id).all():
-            user = User.query.get(b.user_id)
-            emoji, label = _challenge_badge_display(b.badge_key)
-            badges.append(
-                {
-                    "user": (user.display_name or user.username) if user else str(b.user_id),
-                    "league_id": b.league_id,
-                    "kind": b.kind,
-                    "emoji": emoji,
-                    "label": label,
-                    "wins": b.wins,
-                    "losses": b.losses,
-                }
-            )
+        report = _build_re_resolve_challenges_report(competition_id)
         return jsonify(
             {
                 "success": True,
-                "message": f"Dueller omräknade för {comp.name}",
-                "competition_id": competition_id,
-                "competition_name": comp.name,
-                "resolved_count": resolved_count,
-                "duels": duels,
-                "badges": badges,
+                "message": f"Dueller omräknade för {report['competition_name']}",
+                **report,
             }
         )
+    except ValueError:
+        return jsonify({"error": "competition not found"}), 404
     except Exception as e:
         db.session.rollback()
         import traceback
