@@ -61,9 +61,13 @@
     }
     var reg = await getRegistration();
     await navigator.serviceWorker.ready;
-    var sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
+    var old = await reg.pushManager.getSubscription();
+    if (old) {
+      try {
+        await old.unsubscribe();
+      } catch (e) {}
+    }
+    var sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(cfg.publicKey),
       });
@@ -80,6 +84,7 @@
     }
     if (btn) btn.classList.add('hidden');
     setStatus(statusEl, '✅ Duell-notiser på — du får push vid utmaningar', true);
+    alert('Duell-notiser är på! Testa med en utmaning eller be admin köra test-push.');
   }
 
   async function disableChallengePush(statusEl) {

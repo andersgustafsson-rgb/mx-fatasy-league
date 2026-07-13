@@ -5054,15 +5054,59 @@ def admin_test_challenge_push():
     uid = session.get("user_id")
     if not uid:
         return jsonify({"error": "not_logged_in"}), 401
-    if not ps.user_has_challenge_push(uid):
-        return jsonify({"error": "subscribe_first"}), 400
-    ps.notify_challenge_push(
+    subs = ps.list_subscriptions_for_user(uid)
+    if not subs:
+        return jsonify(
+            {
+                "error": "subscribe_first",
+                "hint": "Öppna Pit Lane på samma mobil → Slå på duell-notiser",
+            }
+        ), 400
+    result = ps.send_challenge_push_sync(
         uid,
         "⚔️ Test — duell-notis",
         "Push funkar! Du får såna här vid utmaningar.",
         0,
     )
-    return jsonify({"success": True, "message": "Test-push skickad (kolla mobilen)"})
+    if result.get("ok"):
+        return jsonify(
+            {
+                "success": True,
+                "message": "Test-push skickad",
+                "subscriptions": len(subs),
+                "result": result,
+            }
+        )
+    return jsonify(
+        {
+            "error": result.get("error", "send_failed"),
+            "subscriptions": subs,
+            "result": result,
+        }
+    ), 500
+
+
+@app.get("/admin/push/diagnostics")
+def admin_push_diagnostics():
+    """Push-status för felsökning (admin)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    import push_service as ps
+
+    uid = session.get("user_id")
+    pem_ok = bool(ps._vapid_private_key())
+    pub = ps.get_vapid_public_key_b64()
+    return jsonify(
+        {
+            "configured": ps.push_configured(),
+            "private_key_present": pem_ok,
+            "public_key_derived": bool(pub),
+            "public_key_preview": (pub[:12] + "…" + pub[-8:]) if pub and len(pub) > 24 else pub,
+            "subject": ps._vapid_subject(),
+            "user_id": uid,
+            "subscriptions": ps.list_subscriptions_for_user(uid) if uid else [],
+        }
+    )
 
 
 @app.get("/api/leagues/<int:league_id>/challenges")
