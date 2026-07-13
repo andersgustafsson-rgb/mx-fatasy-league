@@ -21490,6 +21490,89 @@ def recalculate_san_diego():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.get("/admin/re-resolve-challenges")
+def admin_re_resolve_challenges_by_name():
+    """Re-resolve locked/stale-tied league duels for a race (admin). ?name=southwick"""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    name = (request.args.get("name") or "southwick").strip()
+    comp = (
+        Competition.query.filter(Competition.name.ilike(f"%{name}%"))
+        .order_by(Competition.event_date.desc().nullslast())
+        .first()
+    )
+    if not comp:
+        return jsonify({"error": f"Ingen tävling matchar '{name}'"}), 404
+    return admin_re_resolve_league_challenges(comp.id)
+
+
+@app.get("/admin/re-resolve-challenges/<int:competition_id>")
+def admin_re_resolve_league_challenges(competition_id: int):
+    """Re-resolve league duels after results (fixes stale ties, DNF logic, badges/shame)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    comp = Competition.query.get(competition_id)
+    if not comp:
+        return jsonify({"error": "competition not found"}), 404
+    try:
+        before = {
+            ch.id: ch.status
+            for ch in LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+        }
+        resolved_count = resolve_league_challenges_for_competition(competition_id)
+        rows = LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+        duels = []
+        for ch in rows:
+            challenger = User.query.get(ch.challenger_id)
+            challenged = User.query.get(ch.challenged_id)
+            winner = User.query.get(ch.winner_id) if ch.winner_id else None
+            duels.append(
+                {
+                    "id": ch.id,
+                    "league_id": ch.league_id,
+                    "status_before": before.get(ch.id),
+                    "status": ch.status,
+                    "type": ch.challenge_type,
+                    "challenger": _challenge_user_label(ch.challenger_id),
+                    "challenged": _challenge_user_label(ch.challenged_id),
+                    "winner": (winner.display_name or winner.username) if winner else None,
+                    "result_summary": ch.result_summary,
+                }
+            )
+        badges = []
+        for b in UserLeagueChallengeBadge.query.filter_by(competition_id=competition_id).all():
+            user = User.query.get(b.user_id)
+            emoji, label = _challenge_badge_display(b.badge_key)
+            badges.append(
+                {
+                    "user": (user.display_name or user.username) if user else str(b.user_id),
+                    "league_id": b.league_id,
+                    "kind": b.kind,
+                    "emoji": emoji,
+                    "label": label,
+                    "wins": b.wins,
+                    "losses": b.losses,
+                }
+            )
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Dueller omräknade för {comp.name}",
+                "competition_id": competition_id,
+                "competition_name": comp.name,
+                "resolved_count": resolved_count,
+                "duels": duels,
+                "badges": badges,
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.get("/recalculate_scores/<int:competition_id>")
 def recalculate_scores(competition_id):
     """Recalculate scores for a specific competition"""
@@ -21503,12 +21586,29 @@ def recalculate_scores(competition_id):
         
         # Count scores before
         scores_before = CompetitionScore.query.filter_by(competition_id=competition_id).count()
+        challenges_before = {
+            ch.id: ch.status
+            for ch in LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+        }
         
         # Call the calculate_scores function
         calculate_scores(competition_id)
         
         # Count scores after
         scores_after = CompetitionScore.query.filter_by(competition_id=competition_id).count()
+        challenge_rows = LeagueChallenge.query.filter_by(competition_id=competition_id).all()
+        challenge_updates = [
+            {
+                "id": ch.id,
+                "status_before": challenges_before.get(ch.id),
+                "status": ch.status,
+                "winner_id": ch.winner_id,
+                "result_summary": ch.result_summary,
+            }
+            for ch in challenge_rows
+            if challenges_before.get(ch.id) != ch.status
+            or ch.status in ("resolved", "tie")
+        ]
         
         return jsonify({
             "success": True,
@@ -21516,7 +21616,8 @@ def recalculate_scores(competition_id):
             "competition_id": competition_id,
             "competition_name": comp_name,
             "scores_before": scores_before,
-            "scores_after": scores_after
+            "scores_after": scores_after,
+            "challenge_updates": challenge_updates,
         })
         
     except Exception as e:
