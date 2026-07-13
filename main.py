@@ -18675,6 +18675,77 @@ def admin_re_resolve_league_challenges_post():
         return jsonify({"error": str(e)}), 500
 
 
+def _push_diagnostics_payload() -> dict:
+    import push_service as ps
+
+    uid = session.get("user_id")
+    pem_ok = bool(ps._vapid_private_key())
+    pub = ps.get_vapid_public_key_b64()
+    return {
+        "configured": ps.push_configured(),
+        "private_key_present": pem_ok,
+        "public_key_derived": bool(pub),
+        "public_key_preview": (pub[:12] + "…" + pub[-8:]) if pub and len(pub) > 24 else pub,
+        "subject": ps._vapid_subject(),
+        "user_id": uid,
+        "subscriptions": ps.list_subscriptions_for_user(uid) if uid else [],
+    }
+
+
+@app.route("/admin/leagues/push-diagnostics", methods=["GET"])
+def admin_leagues_push_diagnostics():
+    """Push-status (admin) — via liga-admin som redan fungerar på prod."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    return jsonify(_push_diagnostics_payload())
+
+
+@app.route("/admin/leagues/push-test", methods=["POST"])
+def admin_leagues_push_test():
+    """Skicka test-push till inloggad admin."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    import push_service as ps
+
+    if not ps.push_configured():
+        return jsonify({"error": "push_not_configured"}), 503
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "not_logged_in"}), 401
+    subs = ps.list_subscriptions_for_user(uid)
+    if not subs:
+        return jsonify(
+            {
+                "error": "subscribe_first",
+                "hint": "På mobilen: Pit Lane → Slå på duell-notiser",
+                "diagnostics": _push_diagnostics_payload(),
+            }
+        ), 400
+    result = ps.send_challenge_push_sync(
+        uid,
+        "⚔️ Test — duell-notis",
+        "Push funkar! Du får såna här vid utmaningar.",
+        0,
+    )
+    if result.get("ok"):
+        return jsonify(
+            {
+                "success": True,
+                "message": "Test-push skickad",
+                "subscriptions": len(subs),
+                "result": result,
+            }
+        )
+    return jsonify(
+        {
+            "error": result.get("error", "send_failed"),
+            "subscriptions": subs,
+            "result": result,
+            "diagnostics": _push_diagnostics_payload(),
+        }
+    ), 500
+
+
 def calculate_league_points(league_id, competition_id):
     """Calculate fair league points based on member race pick performance.
     

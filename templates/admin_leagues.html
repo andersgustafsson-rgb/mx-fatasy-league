@@ -132,6 +132,14 @@
                 title="Avgör om Southwick-dueller (t.ex. Ida-duellen) och sätter shame-märken">
           🏁 Omräkna Southwick-dueller
         </button>
+        <button onclick="checkPushDiagnostics()"
+                class="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-4 rounded text-sm">
+          🔔 Push-status
+        </button>
+        <button onclick="sendPushTest()"
+                class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded text-sm">
+          📲 Testa push-notis
+        </button>
         <button onclick="showScoringInfo()"
                 class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded text-sm transition-all">
           ℹ️ Poäng-System Info
@@ -406,6 +414,54 @@
         alert(msg);
       } catch (error) {
         alert('Fel vid omräkning: ' + error.message);
+      }
+    }
+
+    async function checkPushDiagnostics() {
+      try {
+        const response = await fetch('/admin/leagues/push-diagnostics');
+        const result = await response.json();
+        if (!response.ok) {
+          alert('Fel: ' + (result.error || response.status));
+          return;
+        }
+        let msg = 'Push-status:\n';
+        msg += '• Konfigurerad: ' + (result.configured ? 'ja' : 'nej') + '\n';
+        msg += '• Privat nyckel: ' + (result.private_key_present ? 'ja' : 'nej') + '\n';
+        msg += '• Publik nyckel: ' + (result.public_key_preview || 'saknas') + '\n';
+        msg += '• Prenumerationer: ' + (result.subscriptions ? result.subscriptions.length : 0);
+        if (result.subscriptions && result.subscriptions.length) {
+          for (const s of result.subscriptions) {
+            msg += '\n  - …' + (s.endpoint_tail || '');
+          }
+        } else {
+          msg += '\n\n→ Slå på duell-notiser på mobilen (Pit Lane) först!';
+        }
+        alert(msg);
+      } catch (error) {
+        alert('Fel: ' + error.message);
+      }
+    }
+
+    async function sendPushTest() {
+      try {
+        const response = await fetch('/admin/leagues/push-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert('✅ ' + (result.message || 'Test skickad') + '\nKolla mobilen!');
+          return;
+        }
+        let msg = 'Fel: ' + (result.error || 'okänt');
+        if (result.hint) msg += '\n\n' + result.hint;
+        if (result.result && result.result.errors) {
+          msg += '\n\n' + result.result.errors.join('\n');
+        }
+        alert(msg);
+      } catch (error) {
+        alert('Fel: ' + error.message);
       }
     }
 
