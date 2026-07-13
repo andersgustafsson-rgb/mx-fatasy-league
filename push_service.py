@@ -248,7 +248,9 @@ def send_push_sync(
             "body": (preview or "")[:240],
             "url": url,
             "tag": (tag or "pit-lane")[:64],
-            "icon": "/static/images/mx_fantasy_favicon.png",
+            "icon": "/static/icons/mx_notification_badge.png",
+            "badge": "/static/icons/mx_notification_badge.png",
+            "image": "/static/icons/mx_fantasy_app_icon_192.png",
         },
         ensure_ascii=False,
     )
