@@ -47,13 +47,10 @@ def _application_server_key_from_pem(pem: str) -> str | None:
     """Härled publik nyckel från PEM så den alltid matchar privat nyckel."""
     if not pem or "BEGIN PRIVATE KEY" not in pem:
         return None
-    path = ""
+    path = _write_pem_tempfile(pem)
+    if not path:
+        return None
     try:
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=".pem", delete=False, encoding="utf-8"
-        ) as f:
-            f.write(pem)
-            path = f.name
         out = subprocess.run(
             [
                 sys.executable,
@@ -76,12 +73,48 @@ def _application_server_key_from_pem(pem: str) -> str | None:
     except Exception as ex:
         print(f"VAPID key derive error: {ex}")
     finally:
-        if path:
-            try:
-                os.unlink(path)
-            except OSError:
-                pass
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
     return None
+
+
+def _write_pem_tempfile(pem: str) -> str | None:
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".pem", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(pem)
+            if not pem.endswith("\n"):
+                f.write("\n")
+            return f.name
+    except Exception as ex:
+        print(f"VAPID temp PEM error: {ex}")
+        return None
+
+
+def _webpush_send(
+    subscription_info: dict, payload: str, pem: str, subject: str
+) -> None:
+    """pywebpush kräver filsökväg till PEM — inte PEM-sträng."""
+    from pywebpush import webpush
+
+    path = _write_pem_tempfile(pem)
+    if not path:
+        raise ValueError("invalid_vapid_pem")
+    try:
+        webpush(
+            subscription_info=subscription_info,
+            data=payload,
+            vapid_private_key=path,
+            vapid_claims={"sub": subject},
+        )
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
 
 
 def get_vapid_public_key_b64() -> str | None:
@@ -184,8 +217,6 @@ def send_challenge_push_sync(
     if not subs:
         return {"ok": False, "error": "no_subscription", "hint": "Slå på duell-notiser i Pit Lane igen"}
 
-    from pywebpush import WebPushException, webpush
-
     pem = _vapid_private_key()
     base = _public_base_url()
     path = (
@@ -208,32 +239,35 @@ def send_challenge_push_sync(
     stale: list[PushSubscription] = []
     for sub in subs:
         try:
-            webpush(
+            _webpush_send(
                 subscription_info={
                     "endpoint": sub.endpoint,
                     "keys": {"p256dh": sub.p256dh, "auth": sub.auth_key},
                 },
-                data=payload,
-                vapid_private_key=pem,
-                vapid_claims={"sub": _vapid_subject()},
+                payload=payload,
+                pem=pem,
+                subject=_vapid_subject(),
             )
             sent += 1
             print(f"Web push OK user={user_id} sub={sub.id}")
-        except WebPushException as ex:
-            status = getattr(getattr(ex, "response", None), "status_code", None)
-            body = ""
-            try:
-                body = (ex.response.text or "")[:200] if ex.response else ""
-            except Exception:
-                pass
-            msg = f"HTTP {status}: {ex} {body}".strip()
-            errors.append(msg)
-            print(f"Web push failed user={user_id}: {msg}")
-            if status in (404, 410):
-                stale.append(sub)
         except Exception as ex:
-            errors.append(str(ex))
-            print(f"Web push failed user={user_id}: {ex}")
+            from pywebpush import WebPushException
+
+            if isinstance(ex, WebPushException):
+                status = getattr(getattr(ex, "response", None), "status_code", None)
+                body = ""
+                try:
+                    body = (ex.response.text or "")[:200] if ex.response else ""
+                except Exception:
+                    pass
+                msg = f"HTTP {status}: {ex} {body}".strip()
+                errors.append(msg)
+                print(f"Web push failed user={user_id}: {msg}")
+                if status in (404, 410):
+                    stale.append(sub)
+            else:
+                errors.append(str(ex))
+                print(f"Web push failed user={user_id}: {ex}")
     for sub in stale:
         db.session.delete(sub)
     if stale:
