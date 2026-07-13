@@ -21,6 +21,12 @@
       "purpose": "any"
     },
     {
+      "src": "/static/icons/mx_notification_badge.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "monochrome"
+    },
+    {
       "src": "/static/icons/mx_fantasy_app_icon_512.png",
       "sizes": "512x512",
       "type": "image/png",
