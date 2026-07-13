@@ -1,8 +1,9 @@
 /* PWA service worker: cache static assets + Web Push. */
-const CACHE = "mx-fantasy-v67";
+const CACHE = "mx-fantasy-v68";
 const OFFLINE_URL = "/static/offline.html";
 const NOTIFY_ICON = "/static/icons/mx_fantasy_app_icon_192.png";
-const NOTIFY_BADGE = "/static/icons/mx_notification_badge.png";
+const NOTIFY_BADGE_DATA =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAACzUlEQVR42u3dwW7jIBAAUFzt//8ye+iuZEXAYGKcGL93apVGcZMZGMbYSQkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+CKbt+BaOefc/EC2zWciAdYP+n2gR48jAZYI/G3btpxzbgV36TneyXl+vAVzg78UwHln//tIyYQE+OrgjwK4NeL//1kSSIAlRv6hGlUSSIArgrZVhswY+Wd0kK78XyXAoiP2WYlQq/3fDfCRYxP0ukBhsLaCY/94rbSptTLfDbpSCdRzDL2v/fQukxKoIxD2gdQaSbd/zu7glGapKAGjY9Re/fXHWxCfnHrt30ctyzPXAKOvG81ayiEJUC0dSsnwGkRRSXRWEkQjdSvga8es/LEG6E6E0ZGzNZuMHMPI6wp8CTAlEVr1dbTVYdaCPTpOQS8BTt+h+ckA6znhFnW2fPISYKh9Waqto9H/6HqgNaKXXqu3jSsJkjboaAl0dCH8zgmo0nNbxzJSsiEBigFTG1lfd2+2Zoorgq6UJEb6pA06IwlKo39P6TNrZmoFeul4JIE1wCWl0oyRv3aCS2Argb5y+8SMoNxvX6id6EICfDwJzg7O2qJW8CuBbnExTE87tXVibdaFNpgBpndnSjtES9ceRH8j8M0Ay9wCJR1oVZZ2gkoEM8Dt1gVR+7I2g2hlmgGWvMqs1MqM+voSQALc+jrjI3eCU/qw1EL4SBnUs7UBltlqPXJdL9x2JrjyHkBwmxlBwPPYJHDTqqQL5GSZLk9yIuzZG+gwAyzzRRjp4JdmuL2JGeCRC93eG+laI0iAZfv/0YhvzSABHpcQFszWAMsH95Ht0oLfDPCI4E/u5Q8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI/0FyVu+7VbBUzLAAAAAElFTkSuQmCC";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -13,7 +14,7 @@ self.addEventListener("install", (event) => {
           "/static/manifest.webmanifest",
           OFFLINE_URL,
           NOTIFY_ICON,
-          NOTIFY_BADGE,
+          "/static/icons/mx_notification_badge.png",
           "/static/images/mx_fantasy_favicon.png",
           "/static/icons/mx_fantasy_app_icon_512.png",
         ])
@@ -45,6 +46,7 @@ function absoluteAsset(path) {
 }
 
 async function ensureIconCached(iconUrl) {
+  if (!iconUrl || iconUrl.startsWith("data:")) return;
   try {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(iconUrl);
@@ -55,17 +57,15 @@ async function ensureIconCached(iconUrl) {
 }
 
 function buildNotificationOptions(data) {
-  const badgeUrl = absoluteAsset(data.badge || NOTIFY_BADGE);
   const imageUrl = absoluteAsset(data.image || data.icon || NOTIFY_ICON);
   return {
     body: data.body || "",
-    icon: badgeUrl,
-    badge: badgeUrl,
+    icon: imageUrl,
+    badge: NOTIFY_BADGE_DATA,
     image: imageUrl,
     tag: data.tag || "mx-notification",
     renotify: true,
     data: { url: data.url || "/" },
-    _badgeUrl: badgeUrl,
     _imageUrl: imageUrl,
   };
 }
@@ -135,15 +135,11 @@ self.addEventListener("push", (event) => {
   }
   const title = data.title || "MX Fantasy";
   const built = buildNotificationOptions(data);
-  const badgeUrl = built._badgeUrl;
   const imageUrl = built._imageUrl;
-  delete built._badgeUrl;
   delete built._imageUrl;
 
   event.waitUntil(
-    Promise.all([ensureIconCached(badgeUrl), ensureIconCached(imageUrl)]).then(() =>
-      self.registration.showNotification(title, built)
-    )
+    ensureIconCached(imageUrl).then(() => self.registration.showNotification(title, built))
   );
 });
 
