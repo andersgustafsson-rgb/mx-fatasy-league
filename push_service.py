@@ -248,6 +248,7 @@ def send_push_sync(
             "body": (preview or "")[:240],
             "url": url,
             "tag": (tag or "pit-lane")[:64],
+            "icon": "/static/images/mx_fantasy_favicon.png",
         },
         ensure_ascii=False,
     )
@@ -364,6 +365,27 @@ def notify_challenge_push(
     link = f"/leagues/{int(league_id)}#duelsSection"
     notify_inbox_push(
         user_id, title, preview, link, tag=f"challenge-{league_id}"
+    )
+
+
+def notify_pick_reminder_push(
+    user_id: int,
+    competition_name: str,
+    deadline_time: str,
+    competition_id: int,
+) -> dict:
+    """Push-påminnelse om picks (samma tillfälle som pick-reminder-mail)."""
+    if not user_has_push(user_id):
+        return {"ok": False, "error": "no_subscription"}
+    link = f"/race_picks/{int(competition_id)}"
+    title = f"⏰ Picks: {competition_name}"[:120]
+    preview = f"Deadline {deadline_time} — gör dina val innan tävlingen!"
+    return send_push_sync(
+        user_id,
+        title,
+        preview,
+        link,
+        tag=f"picks-{int(competition_id)}",
     )
 
 

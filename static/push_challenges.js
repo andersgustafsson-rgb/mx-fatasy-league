@@ -144,7 +144,7 @@
     }
     if (btn) btn.classList.add('hidden');
     setStatus(statusEl, '✅ Pit Lane-notiser på', true);
-    alert('Notiser på! Du får push vid DM, dueller och Race Control.');
+    alert('Notiser på! Du får push vid DM, dueller, picks-påminnelser och Race Control.');
   }
 
   async function disablePush(statusEl) {
@@ -209,7 +209,7 @@
     } else {
       if (btn) {
         btn.classList.remove('hidden');
-        btn.textContent = '🔔 Slå på Pit Lane-notiser (DM, dueller m.m.)';
+        btn.textContent = '🔔 Slå på Pit Lane-notiser (DM, dueller, picks m.m.)';
       }
       if (statusEl) statusEl.classList.add('hidden');
     }

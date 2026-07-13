@@ -11585,6 +11585,7 @@ def send_pick_reminders():
         
         sent = 0
         failed = 0
+        push_sent = 0
         no_email = 0
         no_picks = 0
         sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
@@ -11729,8 +11730,23 @@ def send_pick_reminders():
             
             if not has_complete_picks:
                 print(f"DEBUG: User {user.username} needs reminder - sending email")
-                # Send reminder
                 user_name = user.display_name or user.username
+
+                try:
+                    import push_service as ps
+
+                    push_result = ps.notify_pick_reminder_push(
+                        user.id,
+                        next_comp.name,
+                        deadline_time,
+                        next_comp.id,
+                    )
+                    if push_result.get("ok"):
+                        push_sent += 1
+                        print(f"DEBUG: ✅ Pick reminder push to {user.username}")
+                except Exception as push_ex:
+                    print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+
                 try:
                     success, error_msg = send_pick_reminder(
                         user.email, user_name, next_comp.name, deadline_time, competition_url,
@@ -11795,12 +11811,14 @@ def send_pick_reminders():
                 no_picks += 1
                 print(f"DEBUG: User {user.username} already has complete picks - skipping")
         
-        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}")
+        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}")
         
         # Build a more informative message
         message_parts = []
         if sent > 0:
-            message_parts.append(f"Skickat till: {sent} användare")
+            message_parts.append(f"E-post skickat till: {sent} användare")
+        if push_sent > 0:
+            message_parts.append(f"Push skickat till: {push_sent} användare")
         if failed > 0:
             message_parts.append(f"Misslyckades: {failed} användare")
         if no_email > 0:
@@ -11814,6 +11832,7 @@ def send_pick_reminders():
         return jsonify({
             "success": True,
             "sent": sent,
+            "push_sent": push_sent,
             "failed": failed,
             "no_email": no_email,
             "no_picks": no_picks,
