@@ -4161,7 +4161,12 @@
             const result = await response.json();
             
             if (result.success) {
-              // Login successful, redirect to homepage
+              try {
+                sessionStorage.setItem('mx_push_prompt_login', '1');
+              } catch (e) {}
+              if (window.MXPushNotify && window.MXPushNotify.markLoginForPrompt) {
+                window.MXPushNotify.markLoginForPrompt();
+              }
               window.location.href = '/';
             } else {
               // Show error message
