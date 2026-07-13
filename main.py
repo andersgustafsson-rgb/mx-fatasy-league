@@ -4786,12 +4786,6 @@ def _notify_challenge(user_id: int, title: str, preview: str, league_id: int) ->
         )
     except Exception as ex:
         print(f"challenge notify error: {ex}")
-    try:
-        import push_service as ps
-
-        ps.notify_challenge_push(int(user_id), title, preview, int(league_id))
-    except Exception as ex:
-        print(f"challenge push error: {ex}")
 
 
 def _mark_challenge_notifications_read(user_id: int, league_id: int) -> None:
@@ -4989,8 +4983,9 @@ def api_push_vapid_public_key():
     return jsonify({"enabled": bool(key), "publicKey": key})
 
 
+@app.get("/api/push/status")
 @app.get("/api/push/challenges/status")
-def api_push_challenge_status():
+def api_push_status():
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     import push_service as ps
@@ -4998,13 +4993,14 @@ def api_push_challenge_status():
     return jsonify(
         {
             "configured": ps.push_configured(),
-            "subscribed": ps.user_has_challenge_push(session["user_id"]),
+            "subscribed": ps.user_has_push(session["user_id"]),
         }
     )
 
 
+@app.post("/api/push/subscribe")
 @app.post("/api/push/challenges/subscribe")
-def api_push_challenge_subscribe():
+def api_push_subscribe():
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     import push_service as ps
@@ -5019,7 +5015,7 @@ def api_push_challenge_subscribe():
         ps.save_subscription(
             session["user_id"],
             sub,
-            topic="challenge",
+            topic=ps.PUSH_TOPIC,
             user_agent=(request.headers.get("User-Agent") or "")[:300],
         )
         return jsonify({"success": True, "subscribed": True})
@@ -5030,8 +5026,9 @@ def api_push_challenge_subscribe():
         return jsonify({"error": str(ex)}), 500
 
 
+@app.post("/api/push/unsubscribe")
 @app.post("/api/push/challenges/unsubscribe")
-def api_push_challenge_unsubscribe():
+def api_push_unsubscribe():
     if "user_id" not in session:
         return jsonify({"error": "not_logged_in"}), 401
     import push_service as ps
@@ -5059,14 +5056,15 @@ def admin_test_challenge_push():
         return jsonify(
             {
                 "error": "subscribe_first",
-                "hint": "Öppna Pit Lane på samma mobil → Slå på duell-notiser",
+                "hint": "Öppna Pit Lane på samma mobil → Slå på notiser",
             }
         ), 400
-    result = ps.send_challenge_push_sync(
+    result = ps.send_push_sync(
         uid,
-        "⚔️ Test — duell-notis",
-        "Push funkar! Du får såna här vid utmaningar.",
-        0,
+        "🔔 Test — Pit Lane-notis",
+        "Push funkar! Du får DM, dueller och Race Control.",
+        "/pit-lane",
+        tag="push-test",
     )
     if result.get("ok"):
         return jsonify(
@@ -18717,15 +18715,16 @@ def admin_leagues_push_test():
         return jsonify(
             {
                 "error": "subscribe_first",
-                "hint": "På mobilen: Pit Lane → Slå på duell-notiser",
+                "hint": "På mobilen: Pit Lane → Slå på notiser",
                 "diagnostics": _push_diagnostics_payload(),
             }
         ), 400
-    result = ps.send_challenge_push_sync(
+    result = ps.send_push_sync(
         uid,
-        "⚔️ Test — duell-notis",
-        "Push funkar! Du får såna här vid utmaningar.",
-        0,
+        "🔔 Test — Pit Lane-notis",
+        "Push funkar! Du får DM, dueller och Race Control.",
+        "/pit-lane",
+        tag="push-test",
     )
     if result.get("ok"):
         return jsonify(

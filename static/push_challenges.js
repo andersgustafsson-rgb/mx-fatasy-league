@@ -1,4 +1,8 @@
 (function () {
+  var API_STATUS = '/api/push/status';
+  var API_SUBSCRIBE = '/api/push/subscribe';
+  var API_UNSUBSCRIBE = '/api/push/unsubscribe';
+
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -38,13 +42,13 @@
   }
 
   async function fetchStatus() {
-    var res = await fetch('/api/push/challenges/status');
+    var res = await fetch(API_STATUS);
     if (res.status === 401) return { configured: false, subscribed: false };
     if (!res.ok) return { configured: false, subscribed: false };
     return res.json();
   }
 
-  async function enableChallengePush(btn, statusEl) {
+  async function enablePush(btn, statusEl) {
     if (!supportsPush()) {
       alert('Din webbläsare stödjer inte push-notiser. Prova Chrome på Android eller lägg till sajten på hemskärmen (iPhone).');
       return;
@@ -68,11 +72,10 @@
       } catch (e) {}
     }
     var sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(cfg.publicKey),
-      });
-    }
-    var res = await fetch('/api/push/challenges/subscribe', {
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(cfg.publicKey),
+    });
+    var res = await fetch(API_SUBSCRIBE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub.toJSON() }),
@@ -83,23 +86,23 @@
       return;
     }
     if (btn) btn.classList.add('hidden');
-    setStatus(statusEl, '✅ Duell-notiser på — du får push vid utmaningar', true);
-    alert('Duell-notiser är på! Testa med en utmaning eller be admin köra test-push.');
+    setStatus(statusEl, '✅ Pit Lane-notiser på', true);
+    alert('Notiser på! Du får push vid DM, dueller och Race Control.');
   }
 
-  async function disableChallengePush(statusEl) {
+  async function disablePush(statusEl) {
     try {
       var reg = await navigator.serviceWorker.ready;
       var sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch('/api/push/challenges/unsubscribe', {
+        await fetch(API_UNSUBSCRIBE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
         await sub.unsubscribe();
       } else {
-        await fetch('/api/push/challenges/unsubscribe', {
+        await fetch(API_UNSUBSCRIBE, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({}),
@@ -109,7 +112,7 @@
       console.warn('push unsubscribe', err);
     }
     if (statusEl) {
-      statusEl.textContent = 'Duell-notiser av';
+      statusEl.textContent = 'Notiser av';
       delete statusEl.dataset.subscribed;
     }
   }
@@ -135,7 +138,7 @@
 
     if (status.subscribed) {
       if (btn) btn.classList.add('hidden');
-      setStatus(statusEl, '✅ Duell-notiser på', true);
+      setStatus(statusEl, '✅ Pit Lane-notiser på', true);
     } else {
       if (btn) btn.classList.remove('hidden');
       if (statusEl) statusEl.classList.add('hidden');
@@ -144,14 +147,14 @@
     if (btn && !btn.dataset.bound) {
       btn.dataset.bound = '1';
       btn.addEventListener('click', function () {
-        enableChallengePush(btn, statusEl);
+        enablePush(btn, statusEl);
       });
     }
     if (statusEl && !statusEl.dataset.bound) {
       statusEl.dataset.bound = '1';
       statusEl.addEventListener('click', function () {
-        if (statusEl.dataset.subscribed === '1' && confirm('Stäng av duell-notiser?')) {
-          disableChallengePush(statusEl);
+        if (statusEl.dataset.subscribed === '1' && confirm('Stäng av Pit Lane-notiser?')) {
+          disablePush(statusEl);
           if (btn) btn.classList.remove('hidden');
           statusEl.classList.add('hidden');
         }
@@ -159,10 +162,11 @@
     }
   }
 
-  window.MXPushChallenges = {
+  window.MXPushNotify = {
     init: initBlock,
-    enable: enableChallengePush,
+    enable: enablePush,
   };
+  window.MXPushChallenges = window.MXPushNotify;
 
   document.addEventListener('DOMContentLoaded', function () {
     initBlock({});

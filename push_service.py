@@ -1,4 +1,4 @@
-"""Web Push — duell-notiser (test: endast topic=challenge)."""
+"""Web Push — Pit Lane (DM, dueller, Race Control m.m.)."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,8 @@ from datetime import datetime
 
 from models import PushSubscription, db
 
-
+PUSH_TOPIC = "inbox"
+PUSH_TOPICS_LEGACY = (PUSH_TOPIC, "challenge")
 _schema_ready = False
 
 
@@ -43,8 +44,21 @@ def _vapid_subject() -> str:
     )
 
 
+def _write_pem_tempfile(pem: str) -> str | None:
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".pem", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(pem)
+            if not pem.endswith("\n"):
+                f.write("\n")
+            return f.name
+    except Exception as ex:
+        print(f"VAPID temp PEM error: {ex}")
+        return None
+
+
 def _application_server_key_from_pem(pem: str) -> str | None:
-    """Härled publik nyckel från PEM så den alltid matchar privat nyckel."""
     if not pem or "BEGIN PRIVATE KEY" not in pem:
         return None
     path = _write_pem_tempfile(pem)
@@ -80,24 +94,9 @@ def _application_server_key_from_pem(pem: str) -> str | None:
     return None
 
 
-def _write_pem_tempfile(pem: str) -> str | None:
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=".pem", delete=False, encoding="utf-8"
-        ) as f:
-            f.write(pem)
-            if not pem.endswith("\n"):
-                f.write("\n")
-            return f.name
-    except Exception as ex:
-        print(f"VAPID temp PEM error: {ex}")
-        return None
-
-
 def _webpush_send(
     subscription_info: dict, payload: str, pem: str, subject: str
 ) -> None:
-    """pywebpush kräver filsökväg till PEM — inte PEM-sträng."""
     from pywebpush import webpush
 
     path = _write_pem_tempfile(pem)
@@ -118,14 +117,12 @@ def _webpush_send(
 
 
 def get_vapid_public_key_b64() -> str | None:
-    """Publik nyckel till webbläsaren — härleds från privat PEM om möjligt."""
     pem = _vapid_private_key()
     if pem:
         derived = _application_server_key_from_pem(pem)
         if derived:
             return derived
-    key = (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
-    return key or None
+    return (os.getenv("VAPID_PUBLIC_KEY") or "").strip() or None
 
 
 def push_configured() -> bool:
@@ -140,27 +137,45 @@ def _public_base_url() -> str:
     return ""
 
 
-def user_has_challenge_push(user_id: int) -> bool:
+def _absolute_url(link_url: str | None) -> str:
+    path = (link_url or "/pit-lane").strip() or "/pit-lane"
+    if path.startswith(("http://", "https://")):
+        return path
+    if not path.startswith("/"):
+        path = f"/{path}"
+    base = _public_base_url()
+    return f"{base}{path}" if base else path
+
+
+def _subs_for_user(user_id: int) -> list[PushSubscription]:
     ensure_push_tables()
     return (
-        PushSubscription.query.filter_by(user_id=int(user_id), topic="challenge").first()
-        is not None
+        PushSubscription.query.filter(
+            PushSubscription.user_id == int(user_id),
+            PushSubscription.topic.in_(PUSH_TOPICS_LEGACY),
+        ).all()
     )
 
 
+def user_has_push(user_id: int) -> bool:
+    return bool(_subs_for_user(user_id))
+
+
+def user_has_challenge_push(user_id: int) -> bool:
+    """Bakåtkompatibelt namn."""
+    return user_has_push(user_id)
+
+
 def list_subscriptions_for_user(user_id: int) -> list[dict]:
-    ensure_push_tables()
-    rows = PushSubscription.query.filter_by(
-        user_id=int(user_id), topic="challenge"
-    ).all()
     return [
         {
             "id": r.id,
+            "topic": r.topic,
             "endpoint_tail": (r.endpoint or "")[-48:],
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
             "user_agent": r.user_agent,
         }
-        for r in rows
+        for r in _subs_for_user(user_id)
     ]
 
 
@@ -168,7 +183,7 @@ def save_subscription(
     user_id: int,
     subscription: dict,
     *,
-    topic: str = "challenge",
+    topic: str = PUSH_TOPIC,
     user_agent: str | None = None,
 ) -> PushSubscription:
     ensure_push_tables()
@@ -196,7 +211,10 @@ def save_subscription(
 
 def remove_subscription(user_id: int, endpoint: str | None = None) -> int:
     ensure_push_tables()
-    q = PushSubscription.query.filter_by(user_id=int(user_id), topic="challenge")
+    q = PushSubscription.query.filter(
+        PushSubscription.user_id == int(user_id),
+        PushSubscription.topic.in_(PUSH_TOPICS_LEGACY),
+    )
     if endpoint:
         q = q.filter_by(endpoint=endpoint.strip())
     deleted = q.delete(synchronize_session=False)
@@ -204,33 +222,32 @@ def remove_subscription(user_id: int, endpoint: str | None = None) -> int:
     return deleted
 
 
-def send_challenge_push_sync(
-    user_id: int, title: str, preview: str, league_id: int
+def send_push_sync(
+    user_id: int,
+    title: str,
+    preview: str,
+    link_url: str | None = None,
+    *,
+    tag: str | None = None,
 ) -> dict:
-    """Skicka push direkt — returnerar resultat (för test/diagnostik)."""
     if not push_configured():
         return {"ok": False, "error": "push_not_configured"}
-    ensure_push_tables()
-    subs = PushSubscription.query.filter_by(
-        user_id=int(user_id), topic="challenge"
-    ).all()
+    subs = _subs_for_user(user_id)
     if not subs:
-        return {"ok": False, "error": "no_subscription", "hint": "Slå på duell-notiser i Pit Lane igen"}
+        return {
+            "ok": False,
+            "error": "no_subscription",
+            "hint": "Slå på Pit Lane-notiser i klockan (överst)",
+        }
 
     pem = _vapid_private_key()
-    base = _public_base_url()
-    path = (
-        f"/leagues/{int(league_id)}#duelsSection"
-        if int(league_id or 0) > 0
-        else "/"
-    )
-    url = f"{base}{path}" if base else path
+    url = _absolute_url(link_url)
     payload = json.dumps(
         {
             "title": (title or "MX Fantasy")[:120],
             "body": (preview or "")[:240],
             "url": url,
-            "tag": f"challenge-{league_id}",
+            "tag": (tag or "pit-lane")[:64],
         },
         ensure_ascii=False,
     )
@@ -277,7 +294,35 @@ def send_challenge_push_sync(
     return {"ok": False, "error": errors[0] if errors else "send_failed", "errors": errors}
 
 
-def _schedule(fn, *args, **kwargs) -> None:
+def send_challenge_push_sync(
+    user_id: int, title: str, preview: str, league_id: int
+) -> dict:
+    link = (
+        f"/leagues/{int(league_id)}#duelsSection"
+        if int(league_id or 0) > 0
+        else "/pit-lane"
+    )
+    return send_push_sync(
+        user_id,
+        title,
+        preview,
+        link,
+        tag=f"challenge-{league_id}" if league_id else "challenge-test",
+    )
+
+
+def _dispatch_push(fn, *args, **kwargs) -> None:
+    if not push_configured():
+        return
+    try:
+        from flask import has_app_context
+
+        if has_app_context():
+            fn(*args, **kwargs)
+            return
+    except Exception:
+        pass
+
     try:
         from flask import current_app
 
@@ -295,18 +340,48 @@ def _schedule(fn, *args, **kwargs) -> None:
     threading.Thread(target=job, daemon=True).start()
 
 
+def notify_inbox_push(
+    user_id: int,
+    title: str,
+    preview: str | None,
+    link_url: str | None = None,
+    *,
+    tag: str | None = None,
+) -> None:
+    _dispatch_push(
+        send_push_sync,
+        int(user_id),
+        title,
+        preview or "",
+        link_url,
+        tag=tag,
+    )
+
+
 def notify_challenge_push(
     user_id: int, title: str, preview: str, league_id: int
 ) -> None:
-    """Skicka mobilnotis för duell."""
+    link = f"/leagues/{int(league_id)}#duelsSection"
+    notify_inbox_push(
+        user_id, title, preview, link, tag=f"challenge-{league_id}"
+    )
+
+
+def notify_all_subscribers_push(
+    title: str,
+    preview: str | None,
+    link_url: str | None = None,
+    *,
+    tag: str = "broadcast",
+) -> None:
     if not push_configured():
         return
-    try:
-        from flask import has_app_context
-
-        if has_app_context():
-            send_challenge_push_sync(int(user_id), title, preview, int(league_id))
-            return
-    except Exception:
-        pass
-    _schedule(send_challenge_push_sync, int(user_id), title, preview, int(league_id))
+    ensure_push_tables()
+    rows = (
+        db.session.query(PushSubscription.user_id)
+        .filter(PushSubscription.topic.in_(PUSH_TOPICS_LEGACY))
+        .distinct()
+        .all()
+    )
+    for (uid,) in rows:
+        notify_inbox_push(int(uid), title, preview or "", link_url, tag=tag)

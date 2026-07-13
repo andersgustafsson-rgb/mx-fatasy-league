@@ -508,14 +508,14 @@ class InboxNotification(db.Model):
 
 
 class PushSubscription(db.Model):
-    """Web Push-prenumeration per användare (topic=challenge för duell-test)."""
+    """Web Push-prenumeration per användare (topic=inbox — alla Pit Lane-notiser)."""
     __tablename__ = "push_subscriptions"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     endpoint = db.Column(db.Text, nullable=False)
     p256dh = db.Column(db.Text, nullable=False)
     auth_key = db.Column(db.Text, nullable=False)
-    topic = db.Column(db.String(32), nullable=False, default="challenge", index=True)
+    topic = db.Column(db.String(32), nullable=False, default="inbox", index=True)
     user_agent = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

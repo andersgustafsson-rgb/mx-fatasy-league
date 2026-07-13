@@ -110,6 +110,23 @@ def publish_admin_announcement(
         pln.notify_race_control_published(body, ann.priority or "info")
     except Exception as ex:
         print(f"Pit Lane: kunde inte köa Race Control-e-post: {ex}")
+    try:
+        import push_service as ps
+
+        prio = (priority or "info").lower()
+        title = (
+            "📢 Viktigt — Race Control"
+            if prio == "important"
+            else "📢 Race Control"
+        )
+        ps.notify_all_subscribers_push(
+            title,
+            body[:240],
+            "/pit-lane?tab=race-control",
+            tag="race-control",
+        )
+    except Exception as ex:
+        print(f"Race Control push error: {ex}")
     return ann
 
 
@@ -234,6 +251,18 @@ def send_direct_message(from_user_id: int, to_user_id: int, body: str) -> Messag
         pln.notify_dm_received(to_user_id, from_user_id, body, thread.id)
     except Exception as ex:
         print(f"Pit Lane: kunde inte köa DM-e-post: {ex}")
+    try:
+        import push_service as ps
+
+        ps.notify_inbox_push(
+            int(to_user_id),
+            f"💬 {_display_name(sender)}",
+            preview,
+            f"/pit-lane?thread={thread.id}",
+            tag=f"dm-{thread.id}",
+        )
+    except Exception as ex:
+        print(f"DM push error: {ex}")
     return msg
 
 
@@ -265,6 +294,19 @@ def add_inbox_notification(
     except Exception as ex:
         db.session.rollback()
         print(f"add_inbox_notification error: {ex}")
+        return
+    try:
+        import push_service as ps
+
+        ps.notify_inbox_push(
+            int(user_id),
+            title,
+            preview,
+            link_url,
+            tag=kind or "inbox",
+        )
+    except Exception as ex:
+        print(f"inbox push error: {ex}")
 
 
 def mark_inbox_notifications_read(

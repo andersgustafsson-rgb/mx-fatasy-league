@@ -1,5 +1,5 @@
 /* PWA service worker: cache static assets + Web Push (duell-test). */
-const CACHE = "mx-fantasy-v63";
+const CACHE = "mx-fantasy-v64";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
