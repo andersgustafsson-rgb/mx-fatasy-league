@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from models import UserReminder, db
 
 _schema_ready = False
-_TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)$")
+_TIME_RE = re.compile(r"^([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$")
+_GRACE_MINUTES = 5
 _VALID_REPEAT = frozenset({"daily", "weekdays", "weekends", "custom"})
 
 
@@ -182,6 +183,44 @@ def _to_local(utc_aware: datetime, tz_name: str) -> datetime:
         return utc_aware.astimezone(timezone(timedelta(hours=hours)))
 
 
+def _is_due_now(local_now: datetime, hh: int, mm: int) -> bool:
+    """True om schemalagd tid infallit inom senaste GRACE_MINUTES (tål Render cold start)."""
+    scheduled = local_now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+    if local_now < scheduled:
+        return False
+    return local_now < scheduled + timedelta(minutes=_GRACE_MINUTES)
+
+
+def send_reminder_push(row: UserReminder, *, mark_sent: bool = True) -> dict:
+    import push_service as ps
+
+    if not ps.user_has_push(row.user_id):
+        return {"ok": False, "error": "no_subscription"}
+    preview = (row.body or row.title)[:240]
+    link = row.link_url or "/kundmail"
+    result = ps.send_push_sync(
+        row.user_id,
+        row.title[:120],
+        preview,
+        link,
+        tag=f"reminder-{row.id}",
+    )
+    if result.get("ok") and mark_sent:
+        local_now = _to_local(datetime.now(timezone.utc), row.timezone or "Europe/Stockholm")
+        row.last_sent_on = local_now.date()
+        db.session.commit()
+    return result
+
+
+def send_reminder_test(user_id: int, reminder_id: int) -> dict:
+    ensure_reminder_tables()
+    row = UserReminder.query.filter_by(id=int(reminder_id), user_id=int(user_id)).first()
+    if not row:
+        return {"ok": False, "error": "not_found"}
+    result = send_reminder_push(row, mark_sent=False)
+    return result
+
+
 def process_due_reminders(now_utc: datetime | None = None) -> dict:
     """Skicka push för påminnelser vars tid matchar (anropas varje minut via cron)."""
     ensure_reminder_tables()
@@ -200,6 +239,7 @@ def process_due_reminders(now_utc: datetime | None = None) -> dict:
     errors: list[str] = []
 
     rows = UserReminder.query.filter_by(enabled=True).all()
+    stockholm_now = _to_local(utc_aware, "Europe/Stockholm")
     for row in rows:
         local_now = _to_local(utc_aware, row.timezone or "Europe/Stockholm")
         if not _weekday_matches(row, local_now.weekday()):
@@ -211,7 +251,7 @@ def process_due_reminders(now_utc: datetime | None = None) -> dict:
             errors.append(f"reminder {row.id}: invalid time")
             continue
         hh, mm = parsed
-        if local_now.hour != hh or local_now.minute != mm:
+        if not _is_due_now(local_now, hh, mm):
             skipped += 1
             continue
 
@@ -220,35 +260,19 @@ def process_due_reminders(now_utc: datetime | None = None) -> dict:
             skipped += 1
             continue
 
-        if not ps.user_has_push(row.user_id):
-            errors.append(f"reminder {row.id}: user {row.user_id} no push subscription")
-            skipped += 1
-            continue
-
-        preview = (row.body or row.title)[:240]
-        link = row.link_url or "/kundmail"
-        result = ps.send_push_sync(
-            row.user_id,
-            row.title[:120],
-            preview,
-            link,
-            tag=f"reminder-{row.id}",
-        )
+        result = send_reminder_push(row, mark_sent=True)
         if result.get("ok"):
-            row.last_sent_on = today_local
             sent += 1
             print(f"Reminder push OK id={row.id} user={row.user_id}")
         else:
             err = result.get("error") or "send_failed"
             errors.append(f"reminder {row.id}: {err}")
 
-    if sent:
-        db.session.commit()
-
     return {
         "ok": True,
         "sent": sent,
         "skipped": skipped,
         "checked": len(rows),
+        "server_time_stockholm": stockholm_now.strftime("%Y-%m-%d %H:%M"),
         "errors": errors[:20],
     }

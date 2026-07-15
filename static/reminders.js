@@ -122,6 +122,9 @@
             : "") +
           "</div>" +
           '<div class="flex flex-wrap gap-1">' +
+          '<button type="button" class="reminder-test px-2 py-1 rounded text-xs border border-cyan-700/50 text-cyan-300 hover:bg-cyan-950/40" data-id="' +
+          r.id +
+          '">Testa nu</button>' +
           '<button type="button" class="reminder-toggle px-2 py-1 rounded text-xs border border-slate-600 hover:bg-slate-800" data-id="' +
           r.id +
           '" data-enabled="' +
@@ -173,6 +176,27 @@
     }
   }
 
+  async function testReminder(id) {
+    var msg = $("reminderFormMsg");
+    try {
+      var res = await fetch("/api/reminders/" + id + "/test", { method: "POST" });
+      var data = await res.json();
+      if (!res.ok) {
+        var hint =
+          data.error === "no_subscription"
+            ? "Slå på push-notiser på mobilen först."
+            : data.error || res.status;
+        throw new Error(hint);
+      }
+      if (msg) msg.textContent = "Test-push skickad — kolla mobilen!";
+      setTimeout(function () {
+        if (msg) msg.textContent = "";
+      }, 4000);
+    } catch (err) {
+      if (msg) msg.textContent = "Test misslyckades: " + err.message;
+    }
+  }
+
   async function toggleReminder(id, enabled) {
     await fetch("/api/reminders/" + id, {
       method: "PATCH",
@@ -200,6 +224,9 @@
         var t = ev.target.closest("button");
         if (!t) return;
         var id = parseInt(t.getAttribute("data-id"), 10);
+        if (t.classList.contains("reminder-test")) {
+          testReminder(id);
+        }
         if (t.classList.contains("reminder-toggle")) {
           toggleReminder(id, t.getAttribute("data-enabled") === "1");
         }

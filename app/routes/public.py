@@ -128,6 +128,21 @@ def api_reminders_delete(reminder_id: int):
 	return jsonify({"success": True})
 
 
+@bp.post("/api/reminders/<int:reminder_id>/test")
+def api_reminders_test(reminder_id: int):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	import reminder_service as rs
+
+	result = rs.send_reminder_test(uid, reminder_id)
+	if result.get("error") == "not_found":
+		return jsonify({"error": "not_found"}), 404
+	if not result.get("ok"):
+		return jsonify({"success": False, **result}), 400
+	return jsonify({"success": True, "message": "Test-push skickad"})
+
+
 @bp.post("/api/cron/reminders")
 def api_cron_reminders():
 	if not _cron_authorized():
