@@ -3,32 +3,47 @@ services:
     name: mx-fatasy-league
     env: python
     buildCommand: pip install -r requirements.txt
-    # 512MB RAM: 2 workers = två kopior av appen i minnet -> OOM/502.
-    # gunicorn.conf.py: 1 worker, 4 threads, worker recycle vid ~1500 req.
     startCommand: gunicorn -c gunicorn.conf.py main:app
     envVars:
       - key: SECRET_KEY
         value: my-super-secret-key-for-mx-fantasy-league-2025
       - key: FLASK_ENV
         value: production
-      # Lösenord så bara vår cron får anropa /api/cron/reminders (Render genererar värdet).
       - key: CRON_SECRET
         generateValue: true
 
-  # En lätt ping varje minut (~1 HTTP-anrop, oftast bara "ingen påminnelse nu").
+  # Kör påminnelser direkt mot DB — slipper HTTPS/curl mot web (SSL-problem på Render Cron).
   - type: cron
     name: push-reminders
     env: python
     schedule: "* * * * *"
-    buildCommand: "true"
-    startCommand: python scripts/cron_ping_reminders.py
-    # Alternativ om Python SSL strular på Render Cron (sätt som Command i dashboard):
-    # curl -sS -f -X POST "$REMINDER_CRON_URL" -H "Authorization: Bearer $CRON_SECRET"
+    buildCommand: pip install -r requirements-cron.txt
+    startCommand: python scripts/run_reminders_direct.py
     envVars:
-      - key: CRON_SECRET
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: DATABASE_URL
         fromService:
           type: web
           name: mx-fatasy-league
-          envVarKey: CRON_SECRET
-      - key: REMINDER_CRON_URL
-        value: https://mx-fatasy-league.eu.onrender.com/api/cron/reminders
+          envVarKey: DATABASE_URL
+      - key: VAPID_PRIVATE_KEY
+        fromService:
+          type: web
+          name: mx-fatasy-league
+          envVarKey: VAPID_PRIVATE_KEY
+      - key: VAPID_PUBLIC_KEY
+        fromService:
+          type: web
+          name: mx-fatasy-league
+          envVarKey: VAPID_PUBLIC_KEY
+      - key: VAPID_SUBJECT
+        fromService:
+          type: web
+          name: mx-fatasy-league
+          envVarKey: VAPID_SUBJECT
+      - key: PUBLIC_BASE_URL
+        fromService:
+          type: web
+          name: mx-fatasy-league
+          envVarKey: RENDER_EXTERNAL_URL
