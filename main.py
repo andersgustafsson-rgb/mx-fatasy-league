@@ -26115,6 +26115,13 @@ def api_cron_reminders():
 
 _start_homepage_cache_warm()
 
+try:
+    from reminder_scheduler import start_reminder_scheduler
+
+    start_reminder_scheduler(app)
+except Exception as _rem_sched_err:
+    print(f"Reminder scheduler not started: {_rem_sched_err}")
+
 
 if __name__ == "__main__":
     # Production vs Development configuration
