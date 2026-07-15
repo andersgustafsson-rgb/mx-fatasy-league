@@ -11,3 +11,22 @@ services:
         value: my-super-secret-key-for-mx-fantasy-league-2025
       - key: FLASK_ENV
         value: production
+      # Lösenord så bara vår cron får anropa /api/cron/reminders (Render genererar värdet).
+      - key: CRON_SECRET
+        generateValue: true
+
+  # En lätt ping varje minut (~1 HTTP-anrop, oftast bara "ingen påminnelse nu").
+  - type: cron
+    name: push-reminders
+    env: python
+    schedule: "* * * * *"
+    buildCommand: "true"
+    startCommand: python scripts/cron_ping_reminders.py
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: mx-fatasy-league
+          envVarKey: CRON_SECRET
+      - key: REMINDER_CRON_URL
+        value: https://mx-fatasy-league.eu.onrender.com/api/cron/reminders

@@ -185,6 +185,8 @@ def _to_local(utc_aware: datetime, tz_name: str) -> datetime:
 def process_due_reminders(now_utc: datetime | None = None) -> dict:
     """Skicka push för påminnelser vars tid matchar (anropas varje minut via cron)."""
     ensure_reminder_tables()
+    if not UserReminder.query.filter_by(enabled=True).limit(1).first():
+        return {"ok": True, "sent": 0, "skipped": 0, "checked": 0, "idle": True}
     import push_service as ps
 
     utc = now_utc or datetime.utcnow()
