@@ -522,3 +522,21 @@ class PushSubscription(db.Model):
     __table_args__ = (
         db.UniqueConstraint("user_id", "endpoint", name="uq_push_user_endpoint"),
     )
+
+
+class UserReminder(db.Model):
+    """Personlig schemalagd push-påminnelse (t.ex. från Kundmail-sidan)."""
+    __tablename__ = "user_reminders"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=False)
+    body = db.Column(db.String(300), nullable=True)
+    time_local = db.Column(db.String(5), nullable=False)  # HH:MM
+    repeat_mode = db.Column(db.String(16), nullable=False, default="weekdays")
+    days_mask = db.Column(db.String(7), nullable=True)  # mån–sön, 1/0 (custom)
+    timezone = db.Column(db.String(64), nullable=False, default="Europe/Stockholm")
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
+    last_sent_on = db.Column(db.Date, nullable=True)
+    link_url = db.Column(db.String(300), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

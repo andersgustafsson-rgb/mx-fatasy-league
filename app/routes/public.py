@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 bp = Blueprint('public', __name__)
@@ -54,3 +56,82 @@ def kundmail_translate():
 	except Exception as e:
 		print(f"kundmail translate error: {e}")
 		return jsonify({"error": "Översättning misslyckades"}), 500
+
+
+def _require_login():
+	if "user_id" not in session:
+		return None
+	return int(session["user_id"])
+
+
+def _cron_authorized() -> bool:
+	secret = (os.getenv("CRON_SECRET") or os.getenv("REMINDER_CRON_SECRET") or "").strip()
+	if not secret:
+		return False
+	token = (
+		request.headers.get("Authorization", "").replace("Bearer ", "").strip()
+		or request.headers.get("X-Cron-Secret", "").strip()
+		or (request.get_json(silent=True) or {}).get("secret", "")
+	)
+	return token == secret
+
+
+@bp.get("/api/reminders")
+def api_reminders_list():
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	import reminder_service as rs
+
+	return jsonify({"success": True, "reminders": rs.list_reminders(uid)})
+
+
+@bp.post("/api/reminders")
+def api_reminders_create():
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	import reminder_service as rs
+
+	data = request.get_json(silent=True) or {}
+	row, err = rs.create_reminder(uid, data)
+	if err:
+		return jsonify({"error": err}), 400
+	return jsonify({"success": True, "reminder": rs.reminder_to_dict(row)}), 201
+
+
+@bp.patch("/api/reminders/<int:reminder_id>")
+def api_reminders_update(reminder_id: int):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	import reminder_service as rs
+
+	data = request.get_json(silent=True) or {}
+	row, err = rs.update_reminder(uid, reminder_id, data)
+	if err == "not_found":
+		return jsonify({"error": err}), 404
+	if err:
+		return jsonify({"error": err}), 400
+	return jsonify({"success": True, "reminder": rs.reminder_to_dict(row)})
+
+
+@bp.delete("/api/reminders/<int:reminder_id>")
+def api_reminders_delete(reminder_id: int):
+	uid = _require_login()
+	if uid is None:
+		return jsonify({"error": "Unauthorized"}), 401
+	import reminder_service as rs
+
+	if not rs.delete_reminder(uid, reminder_id):
+		return jsonify({"error": "not_found"}), 404
+	return jsonify({"success": True})
+
+
+@bp.post("/api/cron/reminders")
+def api_cron_reminders():
+	if not _cron_authorized():
+		return jsonify({"error": "unauthorized"}), 401
+	import reminder_service as rs
+
+	return jsonify(rs.process_due_reminders())

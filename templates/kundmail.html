@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Kundmail — svarsmallar</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
+  <meta name="theme-color" content="#059669" />
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {});
+      });
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -268,8 +278,68 @@
         <p class="text-[11px] text-slate-500">«Generera om från mall» = ny text från mallen. «Översätt till danska» = översätter ämne och meddelande som de står (även efter egna ändringar).</p>
       </section>
     </div>
+
+    <section id="reminders-section" class="mt-8 rounded-xl border border-amber-700/35 bg-slate-900/70 p-4 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-amber-200">🔔 Mina push-påminnelser</h2>
+          <p class="text-xs text-slate-400 mt-1">Schemalagda notiser till mobilen — ingen e-post. T.ex. «Ring Schenker» kl 11:30 vardagar.</p>
+        </div>
+        <a href="{{ url_for('index') }}" class="text-xs text-slate-500 hover:text-slate-300">← MX Fantasy</a>
+      </div>
+
+      <div id="reminderPushStatus" class="text-xs"></div>
+      <button type="button" id="reminderEnablePush" class="hidden px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-gray-950 text-xs font-bold">
+        Slå på push-notiser på denna enhet
+      </button>
+
+      <div id="reminderList" class="space-y-2"></div>
+
+      <form id="reminderForm" class="rounded-lg border border-slate-700 bg-slate-950/50 p-4 space-y-3">
+        <h3 class="text-sm font-semibold text-slate-200">Ny påminnelse</h3>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="space-y-1 sm:col-span-2">
+            <label for="reminderTitle" class="block text-xs font-medium text-slate-400">Titel</label>
+            <input id="reminderTitle" required maxlength="120" placeholder="Ring Schenker" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+          </div>
+          <div class="space-y-1 sm:col-span-2">
+            <label for="reminderBody" class="block text-xs font-medium text-slate-400">Meddelande (valfritt)</label>
+            <input id="reminderBody" maxlength="300" placeholder="Dags att ringa frakt!" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+          </div>
+          <div class="space-y-1">
+            <label for="reminderTime" class="block text-xs font-medium text-slate-400">Tid (svensk tid)</label>
+            <input id="reminderTime" type="time" required value="11:30" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
+          </div>
+          <div class="space-y-1">
+            <label for="reminderRepeat" class="block text-xs font-medium text-slate-400">Upprepa</label>
+            <select id="reminderRepeat" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
+              <option value="weekdays" selected>Vardagar (mån–fre)</option>
+              <option value="daily">Varje dag</option>
+              <option value="weekends">Helger</option>
+              <option value="custom">Egna dagar</option>
+            </select>
+          </div>
+        </div>
+        <div id="reminderCustomDays" class="hidden flex flex-wrap gap-2 text-xs">
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="0" checked /> Mån</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="1" checked /> Tis</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="2" checked /> Ons</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="3" checked /> Tor</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="4" checked /> Fre</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="5" /> Lör</label>
+          <label class="inline-flex items-center gap-1"><input type="checkbox" class="reminder-day-cb rounded" data-dow="6" /> Sön</label>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-sm font-semibold">Spara påminnelse</button>
+          <p id="reminderFormMsg" class="text-xs text-emerald-400"></p>
+        </div>
+        <p class="text-[11px] text-slate-500">Kräver push-notiser på mobilen och att Render Cron pingar <code class="text-slate-400">/api/cron/reminders</code> varje minut (sätt CRON_SECRET).</p>
+      </form>
+    </section>
   </div>
 
+  <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
+  <script src="{{ url_for('static', filename='reminders.js') }}?v=1"></script>
   <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260709"></script>
 </body>
 </html>
