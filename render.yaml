@@ -22,6 +22,8 @@ services:
     schedule: "* * * * *"
     buildCommand: "true"
     startCommand: python scripts/cron_ping_reminders.py
+    # Alternativ om Python SSL strular på Render Cron (sätt som Command i dashboard):
+    # curl -sS -f -X POST "$REMINDER_CRON_URL" -H "Authorization: Bearer $CRON_SECRET"
     envVars:
       - key: CRON_SECRET
         fromService:
