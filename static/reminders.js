@@ -118,7 +118,7 @@
           "</div>" +
           (r.body ? '<div class="text-xs text-slate-400 mt-1">' + esc(r.body) + "</div>" : "") +
           (r.last_sent_on
-            ? '<div class="text-[11px] text-slate-600 mt-1">Senast skickad: ' + esc(r.last_sent_on) + "</div>"
+            ? '<div class="text-[11px] text-slate-600 mt-1">Senast skickad: ' + esc(r.last_sent_on) + " — ändra tiden om du vill testa igen samma dag</div>"
             : "") +
           "</div>" +
           '<div class="flex flex-wrap gap-1">' +

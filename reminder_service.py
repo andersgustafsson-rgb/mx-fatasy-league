@@ -118,6 +118,7 @@ def update_reminder(user_id: int, reminder_id: int, data: dict) -> tuple[UserRem
             return None, "invalid_time"
         hh, mm = parsed
         row.time_local = f"{hh:02d}:{mm:02d}"
+        row.last_sent_on = None
     if "repeat_mode" in data:
         repeat = (data.get("repeat_mode") or "").strip().lower()
         if repeat not in _VALID_REPEAT:
