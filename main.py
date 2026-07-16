@@ -840,6 +840,21 @@ def login_required(f):
     return decorated_function
 
 
+def _safe_next_url(raw: str | None, default: str = "/") -> str:
+    """Only allow same-site relative paths (open-redirect safe)."""
+    path = (raw or "").strip()
+    if not path.startswith("/") or path.startswith("//"):
+        return default
+    return path
+
+
+def _looks_like_email(value: str) -> bool:
+    v = (value or "").strip()
+    if "@" not in v or "." not in v.split("@")[-1]:
+        return False
+    return 5 <= len(v) <= 200
+
+
 def get_track_timezone(track_name):
     """Get timezone for a track based on its name"""
     timezone_map = {
@@ -960,6 +975,10 @@ def require_login(f):
     return decorated_function
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    next_url = _safe_next_url(
+        request.args.get("next") or request.form.get("next"),
+        default=url_for("index"),
+    )
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -970,7 +989,7 @@ def login():
                 return jsonify({"success": False, "error": "Användarnamn och lösenord krävs"})
             else:
                 flash("Användarnamn och lösenord krävs", "error")
-                return render_template("login.html")
+                return render_template("login.html", next_url=next_url)
         
         # Match username, or e-post (många skriver mail efter lösenordsåterställning)
         user = User.query.filter_by(username=username).first()
@@ -995,19 +1014,19 @@ def login():
             
             # Check if this is an AJAX request (from popup)
             if modal:
-                return jsonify({"success": True, "redirect": url_for("index")})
+                return jsonify({"success": True, "redirect": next_url})
             else:
-                return redirect(url_for("index"))
+                return redirect(next_url)
         
         # Login failed
         if modal:
             return jsonify({"success": False, "error": "Felaktigt användarnamn eller lösenord"})
         else:
             flash("Felaktigt användarnamn eller lösenord", "error")
-            return render_template("login.html")
+            return render_template("login.html", next_url=next_url)
     
     # Handle GET request (show login page)
-    return render_template("login.html")
+    return render_template("login.html", next_url=next_url)
 
 
 @app.route("/forgot_password", methods=["GET", "POST"])
@@ -1076,58 +1095,67 @@ def reset_password():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    next_url = _safe_next_url(
+        request.args.get("next") or request.form.get("next"),
+        default=url_for("index"),
+    )
     if "user_id" in session:
-        return redirect(url_for("index"))
+        return redirect(next_url)
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        email = request.form.get("email", "").strip()
-        
-        # Validate inputs
+        email = request.form.get("email", "").strip().lower()
+        wants_json = (
+            request.form.get("ajax") == "1"
+            or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            or (request.accept_mimetypes.best == "application/json")
+        )
+
+        def _fail(msg: str, status: int = 400):
+            if wants_json:
+                return jsonify({"success": False, "error": msg}), status
+            flash(msg, "error")
+            return render_template("register.html", next_url=next_url)
+
         if not username:
-            flash("Användarnamn krävs", "error")
-            return render_template("register.html")
+            return _fail("Användarnamn krävs")
+        if not email or not _looks_like_email(email):
+            return _fail("Giltig e-post krävs (för återställning av lösenord)")
         if not password:
-            flash("Lösenord krävs", "error")
-            return render_template("register.html")
+            return _fail("Lösenord krävs")
         if len(password) < 4:
-            flash("Lösenordet måste vara minst 4 tecken långt", "error")
-            return render_template("register.html")
-        
-        # Check if username is already taken
+            return _fail("Lösenordet måste vara minst 4 tecken långt")
+
         if User.query.filter_by(username=username).first():
-            flash("Användarnamnet är redan upptaget", "error")
-            return render_template("register.html")
-        # Check if email is already taken (if provided)
-        if email and User.query.filter_by(email=email).first():
-            flash("E-postadressen är redan registrerad", "error")
-            return render_template("register.html")
-        
+            return _fail("Användarnamnet är redan upptaget")
+        if User.query.filter(db.func.lower(User.email) == email).first():
+            return _fail("E-postadressen är redan registrerad")
+
         try:
             new_user = User(
                 username=username,
                 password_hash=generate_password_hash(password),
-                email=email if email else None,
+                email=email,
             )
             db.session.add(new_user)
             db.session.commit()
-            
-            # Automatically log in the new user
+
             session.clear()
             session["user_id"] = new_user.id
             session["username"] = new_user.username
             session["login_time"] = datetime.utcnow().isoformat()
             session.permanent = True
             session.modified = True
-            
+
+            if wants_json:
+                return jsonify({"success": True, "redirect": next_url})
             flash("Konto skapat! Du är nu inloggad.", "success")
-            return redirect(url_for("index"))
+            return redirect(next_url)
         except Exception as e:
             db.session.rollback()
-            flash(f"Ett fel uppstod vid registreringen: {str(e)}", "error")
-            return render_template("register.html")
-    
-    return render_template("register.html")
+            return _fail(f"Ett fel uppstod vid registreringen: {str(e)}", 500)
+
+    return render_template("register.html", next_url=next_url)
 
 @app.route("/logout")
 def logout():
@@ -7419,9 +7447,14 @@ def _build_pick_suggestions_for_user(
 
 
 @app.route("/race_picks/<int:competition_id>")
-@login_required
 def race_picks_page(competition_id):
+    """Race picks — gäster kan titta; Pit Pass krävs för att sätta/spara picks."""
     _ensure_rider_image_data_column()
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+    if is_logged_in and not check_session_timeout():
+        flash("Din session har gått ut. Logga in igen.", "error")
+        return redirect(url_for("login", next=request.path))
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
     comp = Competition.query.get_or_404(competition_id)
     
     
@@ -7577,24 +7610,31 @@ def race_picks_page(competition_id):
         ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
     ]
 
-    user_id = int(session["user_id"])
-    pick_suggestions = _build_pick_suggestions_for_user(user_id, comp, out_ids)
-
+    pick_suggestions = None
     initial_my_picks = None
     initial_picks_status = None
     initial_wizard_step = 1
-    try:
-        initial_my_picks = _my_picks_api_dict(user_id, comp)
-        initial_picks_status = _picks_status_summary(
-            initial_my_picks, is_wsx=is_wsx, picks_locked=picks_locked
-        )
-        initial_wizard_step = _initial_wizard_step(initial_my_picks, is_wsx=is_wsx)
-    except Exception:
-        app.logger.exception(
-            "race_picks initial_my_picks failed for competition_id=%s", competition_id
-        )
+    if is_logged_in:
+        user_id = int(session["user_id"])
+        pick_suggestions = _build_pick_suggestions_for_user(user_id, comp, out_ids)
+        try:
+            initial_my_picks = _my_picks_api_dict(user_id, comp)
+            initial_picks_status = _picks_status_summary(
+                initial_my_picks, is_wsx=is_wsx, picks_locked=picks_locked
+            )
+            initial_wizard_step = _initial_wizard_step(initial_my_picks, is_wsx=is_wsx)
+        except Exception:
+            app.logger.exception(
+                "race_picks initial_my_picks failed for competition_id=%s", competition_id
+            )
+    else:
+        initial_picks_status = {
+            "icon": "🎫",
+            "title": "Skapa konto för att sätta picks",
+            "message": "Registrera dig på ~20 sek — sedan topp 6, holeshot & wildcard",
+            "container_class": "mb-4 p-4 rounded-lg border-2 border-dashed border-amber-500/60 bg-amber-950/20",
+        }
 
-    # 6) Skicka out_ids till templaten för (OUT)/disabled
     return render_template(
         "race_picks.html",
         competition=comp,
@@ -7615,6 +7655,7 @@ def race_picks_page(competition_id):
         initial_my_picks=initial_my_picks,
         initial_picks_status=initial_picks_status,
         initial_wizard_step=initial_wizard_step,
+        is_logged_in=is_logged_in,
     )
 
 

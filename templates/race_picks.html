@@ -3314,5 +3314,188 @@ function setMainTrackmap(src, thumbEl) {
 </script>
 <script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=2"></script>
 
+{% if not is_logged_in %}
+<div id="pit-pass-modal" class="pit-pass-overlay" role="dialog" aria-modal="true" aria-labelledby="pit-pass-title">
+  <div class="pit-pass-card">
+    <div class="pit-pass-glow" aria-hidden="true"></div>
+    <p class="pit-pass-eyebrow">🎫 Pit Pass</p>
+    <h2 id="pit-pass-title" class="pit-pass-title">{{ competition.name }} väntar</h2>
+    <p class="pit-pass-lead">
+      Registrera dig på ~20 sek och sätt topp 6, holeshot &amp; wildcard innan deadline.
+    </p>
+    <ul class="pit-pass-bullets">
+      <li>⚡ Konto på 20 sekunder</li>
+      <li>🏁 Topp 6 + holeshot + wildcard</li>
+      <li>🔥 Jämför dig med ligan efter race</li>
+    </ul>
+    <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <input type="hidden" name="ajax" value="1">
+      <label class="pit-pass-label">
+        Användarnamn
+        <input name="username" required maxlength="40" autocomplete="username" class="pit-pass-input" placeholder="t.ex. RiderKing">
+      </label>
+      <label class="pit-pass-label">
+        E-post
+        <input type="email" name="email" required autocomplete="email" class="pit-pass-input" placeholder="din@email.com">
+        <span class="pit-pass-hint">Behövs för återställning av lösenord</span>
+      </label>
+      <label class="pit-pass-label">
+        Lösenord
+        <input type="password" name="password" required minlength="4" autocomplete="new-password" class="pit-pass-input" placeholder="Minst 4 tecken">
+      </label>
+      <p id="pit-pass-error" class="pit-pass-error hidden"></p>
+      <button type="submit" id="pit-pass-submit" class="pit-pass-cta">Kör igång →</button>
+    </form>
+    <p class="pit-pass-foot">
+      Har du konto?
+      <a href="{{ url_for('login', next=request.path) }}">Logga in</a>
+      · <button type="button" id="pit-pass-peek" class="pit-pass-peek">Titta runt först</button>
+    </p>
+  </div>
+</div>
+<style>
+  .pit-pass-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; align-items: flex-end; justify-content: center;
+    padding: 1rem; background: rgba(2, 8, 18, 0.72);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  @media (min-width: 640px) {
+    .pit-pass-overlay { align-items: center; }
+  }
+  .pit-pass-overlay.is-peek { display: none; }
+  .pit-pass-card {
+    position: relative; width: 100%; max-width: 26rem;
+    border-radius: 1.25rem; padding: 1.35rem 1.35rem 1.2rem;
+    background: linear-gradient(165deg, #0f172a 0%, #111827 55%, #0b1220 100%);
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(251, 191, 36, 0.08);
+    overflow: hidden;
+  }
+  .pit-pass-glow {
+    position: absolute; inset: -40% -20% auto; height: 60%;
+    background: radial-gradient(ellipse at center, rgba(34,211,238,0.22), transparent 65%);
+    pointer-events: none;
+  }
+  .pit-pass-eyebrow {
+    position: relative; margin: 0 0 0.35rem;
+    font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #fbbf24;
+  }
+  .pit-pass-title {
+    position: relative; margin: 0 0 0.5rem;
+    font-size: 1.45rem; line-height: 1.2; font-weight: 800; color: #ecfeff;
+  }
+  .pit-pass-lead {
+    position: relative; margin: 0 0 0.85rem;
+    font-size: 0.9rem; line-height: 1.45; color: #94a3b8;
+  }
+  .pit-pass-bullets {
+    position: relative; list-style: none; margin: 0 0 1rem; padding: 0;
+    display: grid; gap: 0.35rem; font-size: 0.82rem; color: #cbd5e1;
+  }
+  .pit-pass-form { position: relative; display: grid; gap: 0.65rem; }
+  .pit-pass-label { display: grid; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; color: #94a3b8; }
+  .pit-pass-input {
+    width: 100%; border-radius: 0.65rem; border: 1px solid #334155;
+    background: #020617; color: #f8fafc; padding: 0.65rem 0.75rem; font-size: 0.95rem;
+  }
+  .pit-pass-input:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 0 3px rgba(34,211,238,0.15); }
+  .pit-pass-hint { font-size: 0.7rem; font-weight: 400; color: #64748b; }
+  .pit-pass-error { margin: 0; font-size: 0.8rem; color: #fca5a5; }
+  .pit-pass-error.hidden { display: none; }
+  .pit-pass-cta {
+    margin-top: 0.25rem; width: 100%; border: 0; border-radius: 999px;
+    padding: 0.85rem 1rem; font-weight: 800; font-size: 0.95rem;
+    color: #041016; background: linear-gradient(135deg, #22d3ee, #34d399);
+    cursor: pointer; box-shadow: 0 10px 28px rgba(34,211,238,0.25);
+  }
+  .pit-pass-cta:disabled { opacity: 0.6; cursor: wait; }
+  .pit-pass-foot {
+    position: relative; margin: 0.9rem 0 0; text-align: center;
+    font-size: 0.78rem; color: #64748b;
+  }
+  .pit-pass-foot a { color: #67e8f9; text-decoration: underline; }
+  .pit-pass-peek {
+    background: none; border: 0; padding: 0; color: #94a3b8;
+    text-decoration: underline; cursor: pointer; font: inherit;
+  }
+</style>
+<script>
+(function () {
+  var overlay = document.getElementById('pit-pass-modal');
+  var form = document.getElementById('pit-pass-form');
+  var errEl = document.getElementById('pit-pass-error');
+  var peekBtn = document.getElementById('pit-pass-peek');
+  var submitBtn = document.getElementById('pit-pass-submit');
+  if (!overlay || !form) return;
+
+  function showPitPass() {
+    overlay.classList.remove('is-peek');
+  }
+  function peek() {
+    overlay.classList.add('is-peek');
+  }
+  window.MXShowPitPass = showPitPass;
+
+  if (peekBtn) peekBtn.addEventListener('click', peek);
+
+  document.addEventListener('click', function (e) {
+    if (!overlay.classList.contains('is-peek')) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#pit-pass-modal')) return;
+    if (
+      t.closest('.rider-option') ||
+      t.closest('.rider-selector') ||
+      t.closest('#save-picks-btn') ||
+      t.closest('#picks-wizard') ||
+      t.closest('button[onclick*="savePicks"]')
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      showPitPass();
+    }
+  }, true);
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (errEl) {
+      errEl.textContent = '';
+      errEl.classList.add('hidden');
+    }
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Skapar konto…';
+    }
+    try {
+      var fd = new FormData(form);
+      var res = await fetch('{{ url_for("register") }}', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+      });
+      var data = {};
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok || !data.success) {
+        throw new Error((data && data.error) || 'Kunde inte skapa konto');
+      }
+      window.location.href = data.redirect || '{{ request.path }}';
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'Något gick fel';
+        errEl.classList.remove('hidden');
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Kör igång →';
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
 </body>
 </html>
