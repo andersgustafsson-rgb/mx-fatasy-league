@@ -1,0 +1,159 @@
+.pit-pass-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(2, 8, 18, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+@media (min-width: 640px) {
+  .pit-pass-overlay {
+    align-items: center;
+  }
+}
+.pit-pass-overlay.is-peek {
+  display: none;
+}
+.pit-pass-card {
+  position: relative;
+  width: 100%;
+  max-width: 26rem;
+  border-radius: 1.25rem;
+  padding: 1.35rem 1.35rem 1.2rem;
+  background: linear-gradient(165deg, #0f172a 0%, #111827 55%, #0b1220 100%);
+  border: 1px solid rgba(34, 211, 238, 0.4);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(34, 211, 238, 0.08);
+  overflow: hidden;
+  animation: pit-pass-in 0.35s ease-out;
+}
+@keyframes pit-pass-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.pit-pass-glow {
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 60%;
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.25), transparent 65%);
+  pointer-events: none;
+}
+.pit-pass-eyebrow {
+  position: relative;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+.pit-pass-title {
+  position: relative;
+  margin: 0 0 0.5rem;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #ecfeff;
+}
+.pit-pass-lead {
+  position: relative;
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+.pit-pass-bullets {
+  position: relative;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+.pit-pass-form {
+  position: relative;
+  display: grid;
+  gap: 0.65rem;
+}
+.pit-pass-label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+.pit-pass-input {
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid #334155;
+  background: #020617;
+  color: #f8fafc;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.95rem;
+}
+.pit-pass-input:focus {
+  outline: none;
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+}
+.pit-pass-hint {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #64748b;
+}
+.pit-pass-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #fca5a5;
+}
+.pit-pass-error.hidden {
+  display: none;
+}
+.pit-pass-cta {
+  margin-top: 0.25rem;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1rem;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #041016;
+  background: linear-gradient(135deg, #22d3ee, #34d399);
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(34, 211, 238, 0.25);
+}
+.pit-pass-cta:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.pit-pass-foot {
+  position: relative;
+  margin: 0.9rem 0 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.pit-pass-foot a {
+  color: #67e8f9;
+  text-decoration: underline;
+}
+.pit-pass-peek {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #94a3b8;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}

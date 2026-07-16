@@ -1869,6 +1869,12 @@ def index():
     if upcoming_race:
         power_ranking_data = _peek_power_ranking_cache(int(upcoming_race.id))
 
+    pit_pass_race_name = "MX Fantasy League"
+    pit_pass_next_url = url_for("index")
+    if upcoming_race:
+        pit_pass_race_name = upcoming_race.name
+        pit_pass_next_url = url_for("race_picks_page", competition_id=upcoming_race.id)
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -1904,6 +1910,12 @@ def index():
         series_status_data=series_status_data,
         rider_spotlight_data=rider_spotlight_data,
         power_ranking_data=power_ranking_data,
+        pit_pass_race_name=pit_pass_race_name,
+        pit_pass_next_url=pit_pass_next_url,
+        pit_pass_peek_key="mx_pit_pass_peek_home",
+        pit_pass_auto_show=True,
+        pit_pass_start_hidden=False,
+        pit_pass_guard_selectors=[],
     )
 
 

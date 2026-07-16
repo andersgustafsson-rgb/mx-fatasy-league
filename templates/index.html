@@ -270,6 +270,8 @@
     
     /* Ensure login buttons, settings tab and manual link are always clickable */
     .readonly-mode button[onclick*="openLoginModal"],
+    .readonly-mode button[onclick*="openGuestSignup"],
+    .readonly-mode button[onclick*="MXShowPitPass"],
     .readonly-mode .tab-btn[data-tab="settings"],
     .readonly-mode a.tab-btn[href*="manual"] {
       opacity: 1 !important;
@@ -844,19 +846,17 @@
         <!-- Login Required Notice for Non-logged Users -->
         {% if not is_logged_in %}
         <div class="flex justify-center mb-4">
-          <button onclick="openLoginModal();" class="bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 border border-yellow-400 rounded-xl p-4 shadow-lg max-w-md w-full hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer text-left">
+          <button type="button" onclick="openGuestSignup();" class="bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 border border-yellow-400 rounded-xl p-4 shadow-lg max-w-md w-full hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer text-left">
             <div class="flex items-center space-x-3">
               <div class="flex-shrink-0">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
+                <span class="text-2xl" aria-hidden="true">🎫</span>
               </div>
               <div class="flex-1">
                 <p class="text-white font-bold text-sm">
-                  Logga in för att interagera med sidan
+                  Skaffa Pit Pass — gratis
                 </p>
                 <p class="text-yellow-100 text-xs">
-                  Klicka här för att logga in eller registrera dig
+                  Registrera dig på 20 sek och sätt picks till {{ pit_pass_race_name }}
                 </p>
               </div>
               <div class="flex-shrink-0">
@@ -1671,7 +1671,7 @@
                   <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
                   {% else %}
                   <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--block rp-btn--primary">Logga in</button>
-                  <a href="{{ url_for('register') }}" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</a>
+                  <button type="button" onclick="openGuestSignup();" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</button>
                   {% endif %}
                 </div>
               </div>
@@ -4112,6 +4112,14 @@
     }
 
     // Login Modal Functions
+    function openGuestSignup() {
+      if (typeof window.MXShowPitPass === 'function') {
+        window.MXShowPitPass();
+        return;
+      }
+      openLoginModal();
+    }
+
     function openLoginModal() {
       const modal = document.getElementById('loginModal');
       if (modal) {
@@ -4322,6 +4330,10 @@
     })();
   </script>
 
+  {% if not is_logged_in %}
+  {% include 'includes/pit_pass_modal.html' %}
+  {% endif %}
+
   <!-- Login Modal -->
   <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="handleModalClick(event)">
     <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl border dark:border-gray-700 max-w-md w-full mx-4 relative z-60" onclick="event.stopPropagation()">
@@ -4362,7 +4374,7 @@
       <div class="mt-4 text-center">
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Har du inget konto? 
-          <a href="{{ url_for('register') }}" class="text-blue-500 dark:text-blue-400 hover:underline">Registrera dig här</a>
+          <button type="button" onclick="closeLoginModal(); openGuestSignup();" class="text-blue-500 dark:text-blue-400 hover:underline">Registrera dig här</button>
         </p>
       </div>
     </div>

@@ -1,0 +1,53 @@
+{% if not is_logged_in %}
+<link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=1">
+<div id="pit-pass-modal" class="pit-pass-overlay{% if pit_pass_start_hidden %} is-peek{% endif %}" role="dialog" aria-modal="true" aria-labelledby="pit-pass-title">
+  <div class="pit-pass-card">
+    <div class="pit-pass-glow" aria-hidden="true"></div>
+    <p class="pit-pass-eyebrow">🎫 Pit Pass — gratis</p>
+    <h2 id="pit-pass-title" class="pit-pass-title">{{ pit_pass_race_name }} väntar</h2>
+    <p class="pit-pass-lead">
+      Registrera dig på ~20 sek och sätt topp 6, holeshot &amp; wildcard innan deadline.
+    </p>
+    <ul class="pit-pass-bullets">
+      <li>⚡ Konto på 20 sekunder</li>
+      <li>🏁 Topp 6 + holeshot + wildcard</li>
+      <li>🔥 Jämför dig med andra efter race</li>
+    </ul>
+    <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
+      <input type="hidden" name="next" value="{{ pit_pass_next_url }}">
+      <input type="hidden" name="ajax" value="1">
+      <label class="pit-pass-label">
+        Användarnamn
+        <input name="username" required maxlength="40" autocomplete="username" class="pit-pass-input" placeholder="t.ex. RiderKing">
+      </label>
+      <label class="pit-pass-label">
+        E-post
+        <input type="email" name="email" required autocomplete="email" class="pit-pass-input" placeholder="din@email.com">
+        <span class="pit-pass-hint">Behövs för återställning av lösenord</span>
+      </label>
+      <label class="pit-pass-label">
+        Lösenord
+        <input type="password" name="password" required minlength="4" autocomplete="new-password" class="pit-pass-input" placeholder="Minst 4 tecken">
+      </label>
+      <p id="pit-pass-error" class="pit-pass-error hidden"></p>
+      <button type="submit" id="pit-pass-submit" class="pit-pass-cta">Kör igång →</button>
+    </form>
+    <p class="pit-pass-foot">
+      Har du konto?
+      <a href="{{ url_for('login', next=pit_pass_next_url) }}">Logga in</a>
+      · <button type="button" id="pit-pass-peek" class="pit-pass-peek">Titta runt först</button>
+    </p>
+  </div>
+</div>
+<script>
+  window.MXPitPassConfig = {
+    registerUrl: {{ url_for('register') | tojson }},
+    nextUrl: {{ pit_pass_next_url | tojson }},
+    peekKey: {{ pit_pass_peek_key | default('mx_pit_pass_peek') | tojson }},
+    autoShow: {{ pit_pass_auto_show | default(true) | tojson }},
+    startHidden: {{ pit_pass_start_hidden | default(false) | tojson }},
+    guardSelectors: {{ pit_pass_guard_selectors | default([]) | tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='pit_pass.js') }}?v=1"></script>
+{% endif %}
