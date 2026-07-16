@@ -3,7 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if inviter_name %}{{ inviter_name }} utmanar dig{% else %}MX Fantasy League{% endif %}</title>
+  <title>{{ og_title }}</title>
+  <meta name="description" content="{{ og_description }}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MX Fantasy League">
+  <meta property="og:title" content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_description }}">
+  <meta property="og:url" content="{{ og_url }}">
+  <meta property="og:image" content="{{ og_image }}">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="{{ og_title }}">
+  <meta name="twitter:description" content="{{ og_description }}">
+  <meta name="twitter:image" content="{{ og_image }}">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <style>
@@ -22,9 +35,9 @@
     <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League" class="mx-auto h-20 w-20 mb-4">
     <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-400 mb-2">MX Fantasy League</p>
 
-    {% if inviter_name %}
+    {% if inviter_username %}
     <h1 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-2">
-      Slår du {{ inviter_name }}?
+      Slår du {{ inviter_username }}?
     </h1>
     <p class="text-slate-300 text-sm mb-6">
       Gratis fantasy motocross — skapa konto på ~20 sek och sätt dina picks.

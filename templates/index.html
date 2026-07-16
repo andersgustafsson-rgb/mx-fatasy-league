@@ -854,11 +854,11 @@
               <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-lg" aria-hidden="true">🎫</div>
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span class="text-sm font-extrabold text-white">Skaffa Pit Pass</span>
+                  <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
                   <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
                 </div>
                 <p class="mt-0.5 truncate text-xs text-slate-300">
-                  20 sek · sätt picks till {{ pit_pass_race_name }}
+                  Har du konto? Tryck Logga in ovan · annars 20 sek till picks
                 </p>
               </div>
               <svg class="h-5 w-5 flex-shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -4123,8 +4123,8 @@
     function _inviteSharePayload() {
       const base = window.MXInviteShare || {};
       const me = window._meLeaderboardRow || null;
-      let text = base.share_text || '';
-      if (me && base.invite_url) {
+      let body = base.share_body || '';
+      if (me) {
         const rank = me.rank;
         const pts = Number(me.total_points || 0);
         const lines = [
@@ -4139,10 +4139,15 @@
         if (base.race_name && base.race_name !== 'MX Fantasy League') {
           lines.push(`Nästa race: ${base.race_name} — sätt picks innan deadline.`);
         }
-        lines.push(base.invite_url);
-        text = lines.join('\n');
+        body = lines.join('\n');
       }
-      return { ...base, share_text: text };
+      const url = base.invite_url || '';
+      return {
+        ...base,
+        share_body: body,
+        // One URL only — never append url twice
+        share_text: body ? `${body}\n${url}` : url,
+      };
     }
 
     function openInviteShare() {
@@ -4155,6 +4160,8 @@
         linkEl.textContent = payload.invite_url || '';
         linkEl.href = payload.invite_url || '#';
       }
+      const status = document.getElementById('inviteShareStatus');
+      if (status) status.textContent = '';
       if (modal) {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -4189,9 +4196,10 @@
       const status = document.getElementById('inviteShareStatus');
       if (navigator.share) {
         try {
+          // Important: do NOT put the URL in both text and url — Snap/iMessage duplicates it.
           await navigator.share({
             title: 'MX Fantasy League',
-            text: payload.share_text || '',
+            text: payload.share_body || 'Slår du mig i MX Fantasy?',
             url: payload.invite_url || undefined,
           });
           if (status) status.textContent = 'Delat!';
