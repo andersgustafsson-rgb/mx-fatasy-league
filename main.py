@@ -1157,6 +1157,102 @@ def register():
 
     return render_template("register.html", next_url=next_url)
 
+
+def _invite_picks_target() -> tuple[str, str]:
+    """Return (race_name, next_url) for invite / Pit Pass flows."""
+    race = _current_picks_competition()
+    if race and not is_picks_locked(race):
+        return race.name, url_for("race_picks_page", competition_id=race.id)
+    return "MX Fantasy League", url_for("index")
+
+
+def _build_invite_share_payload(username: str) -> dict:
+    """Share text + URL for 'Bjud in en kompis' (no league required)."""
+    uname = (username or "").strip()
+    race_name, next_url = _invite_picks_target()
+    invite_url = (
+        url_for("start_invite", ref=uname, _external=True)
+        if uname
+        else url_for("start_invite", _external=True)
+    )
+    invite_path = url_for("start_invite", ref=uname) if uname else url_for("start_invite")
+    lines = [
+        f"🏁 Slår du mig i MX Fantasy?",
+        f"Jag kör som {uname}." if uname else "Prova MX Fantasy League.",
+    ]
+    if race_name and race_name != "MX Fantasy League":
+        lines.append(f"Nästa race: {race_name} — sätt picks innan deadline.")
+    lines.append(invite_url)
+    return {
+        "invite_url": invite_url,
+        "invite_path": invite_path,
+        "share_text": "\n".join(lines),
+        "race_name": race_name,
+        "next_url": next_url,
+        "username": uname,
+    }
+
+
+@app.get("/start")
+def start_invite():
+    """Invite landing: /start or /start?ref=username — register + picks, no league required."""
+    ref_raw = (request.args.get("ref") or "").strip()
+    inviter = None
+    if ref_raw:
+        inviter = User.query.filter(db.func.lower(User.username) == ref_raw.lower()).first()
+        if inviter:
+            session["invite_ref"] = inviter.username
+        else:
+            session.pop("invite_ref", None)
+    else:
+        session.pop("invite_ref", None)
+
+    race_name, next_url = _invite_picks_target()
+    is_logged_in = "user_id" in session and bool(session.get("user_id"))
+    if is_logged_in:
+        return redirect(next_url)
+
+    display_race = race_name if race_name != "MX Fantasy League" else "Nästa race"
+
+    return render_template(
+        "start.html",
+        inviter=inviter,
+        inviter_name=(inviter.display_name or inviter.username) if inviter else None,
+        pit_pass_race_name=display_race,
+        pit_pass_next_url=next_url,
+        pit_pass_peek_key="mx_pit_pass_peek_start",
+        pit_pass_auto_show=True,
+        pit_pass_start_hidden=False,
+        pit_pass_guard_selectors=[],
+        is_logged_in=False,
+        race_name=race_name,
+        next_url=next_url,
+    )
+
+
+@app.get("/api/invite_share")
+def api_invite_share():
+    """JSON share payload for logged-in users (Web Share / copy)."""
+    if "user_id" not in session or not session.get("user_id"):
+        return jsonify({"error": "Login required"}), 401
+    username = session.get("username") or ""
+    payload = _build_invite_share_payload(username)
+    # Optional trash-talk from query (rank/points from homepage leaderboard)
+    rank = request.args.get("rank", type=int)
+    points = request.args.get("points", type=float)
+    if rank or points is not None:
+        lines = [f"🏁 Slår du mig i MX Fantasy?", f"Jag kör som {username}."]
+        if rank:
+            lines.append(f"Just nu #{rank}" + (f" med {int(points)}p." if points is not None else "."))
+        elif points is not None:
+            lines.append(f"Jag ligger på {int(points)}p.")
+        if payload.get("race_name") and payload["race_name"] != "MX Fantasy League":
+            lines.append(f"Nästa race: {payload['race_name']} — sätt picks innan deadline.")
+        lines.append(payload["invite_url"])
+        payload["share_text"] = "\n".join(lines)
+    return jsonify({"ok": True, **payload})
+
+
 @app.route("/logout")
 def logout():
     # Complete session destruction
@@ -1875,6 +1971,10 @@ def index():
         pit_pass_race_name = upcoming_race.name
         pit_pass_next_url = url_for("race_picks_page", competition_id=upcoming_race.id)
 
+    invite_share = None
+    if is_logged_in:
+        invite_share = _build_invite_share_payload(session.get("username") or "")
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -1916,6 +2016,7 @@ def index():
         pit_pass_auto_show=True,
         pit_pass_start_hidden=False,
         pit_pass_guard_selectors=[],
+        invite_share=invite_share,
     )
 
 

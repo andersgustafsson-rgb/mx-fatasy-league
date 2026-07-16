@@ -794,6 +794,9 @@
                 </div>
                 {% if is_logged_in %}
                   <div id="welcome-chips" class="mt-1 flex flex-wrap items-center gap-2 text-xs"></div>
+                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/10 px-2.5 py-1 text-xs font-extrabold text-amber-100 hover:bg-amber-500/20 hover:border-amber-300/50 transition">
+                    <span aria-hidden="true">🏁</span> Bjud in en kompis
+                  </button>
                 {% endif %}
               </div>
             </div>
@@ -843,31 +846,28 @@
           </div>
         </div>
         
-        <!-- Login Required Notice for Non-logged Users -->
+        <!-- Guest Pit Pass CTA -->
         {% if not is_logged_in %}
         <div class="flex justify-center mb-4">
-          <button type="button" onclick="openGuestSignup();" class="bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 border border-yellow-400 rounded-xl p-4 shadow-lg max-w-md w-full hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer text-left">
-            <div class="flex items-center space-x-3">
-              <div class="flex-shrink-0">
-                <span class="text-2xl" aria-hidden="true">🎫</span>
-              </div>
-              <div class="flex-1">
-                <p class="text-white font-bold text-sm">
-                  Skaffa Pit Pass — gratis
+          <button type="button" onclick="openGuestSignup();" class="group w-full max-w-md rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950 px-3.5 py-3 text-left shadow-lg shadow-cyan-950/40 transition hover:border-cyan-300/70 hover:shadow-cyan-500/20">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-lg" aria-hidden="true">🎫</div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="text-sm font-extrabold text-white">Skaffa Pit Pass</span>
+                  <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-slate-300">
+                  20 sek · sätt picks till {{ pit_pass_race_name }}
                 </p>
-                <p class="text-yellow-100 text-xs">
-                  Registrera dig på 20 sek och sätt picks till {{ pit_pass_race_name }}
-                </p>
               </div>
-              <div class="flex-shrink-0">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </div>
+              <svg class="h-5 w-5 flex-shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
             </div>
           </button>
         </div>
-          {% endif %}
+        {% endif %}
           
           <!-- Bulletin Board Notification -->
           {% if new_bulletin_posts > 0 %}
@@ -4120,6 +4120,89 @@
       openLoginModal();
     }
 
+    function _inviteSharePayload() {
+      const base = window.MXInviteShare || {};
+      const me = window._meLeaderboardRow || null;
+      let text = base.share_text || '';
+      if (me && base.invite_url) {
+        const rank = me.rank;
+        const pts = Number(me.total_points || 0);
+        const lines = [
+          '🏁 Slår du mig i MX Fantasy?',
+          `Jag kör som ${base.username || window.currentUsername || ''}.`,
+        ];
+        if (rank) {
+          lines.push(`Just nu #${rank}` + (pts ? ` med ${pts}p.` : '.'));
+        } else if (pts) {
+          lines.push(`Jag ligger på ${pts}p.`);
+        }
+        if (base.race_name && base.race_name !== 'MX Fantasy League') {
+          lines.push(`Nästa race: ${base.race_name} — sätt picks innan deadline.`);
+        }
+        lines.push(base.invite_url);
+        text = lines.join('\n');
+      }
+      return { ...base, share_text: text };
+    }
+
+    function openInviteShare() {
+      const modal = document.getElementById('inviteShareModal');
+      const payload = _inviteSharePayload();
+      const ta = document.getElementById('inviteShareText');
+      const linkEl = document.getElementById('inviteShareLink');
+      if (ta) ta.value = payload.share_text || '';
+      if (linkEl) {
+        linkEl.textContent = payload.invite_url || '';
+        linkEl.href = payload.invite_url || '#';
+      }
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeInviteShare() {
+      const modal = document.getElementById('inviteShareModal');
+      if (modal) modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    async function copyInviteShare() {
+      const payload = _inviteSharePayload();
+      const text = payload.share_text || payload.invite_url || '';
+      const status = document.getElementById('inviteShareStatus');
+      try {
+        await navigator.clipboard.writeText(text);
+        if (status) status.textContent = 'Kopierat! Klistra in i Messenger/Snap/WhatsApp.';
+      } catch (e) {
+        const ta = document.getElementById('inviteShareText');
+        if (ta) {
+          ta.focus();
+          ta.select();
+        }
+        if (status) status.textContent = 'Markera texten och kopiera manuellt.';
+      }
+    }
+
+    async function nativeInviteShare() {
+      const payload = _inviteSharePayload();
+      const status = document.getElementById('inviteShareStatus');
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'MX Fantasy League',
+            text: payload.share_text || '',
+            url: payload.invite_url || undefined,
+          });
+          if (status) status.textContent = 'Delat!';
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+      await copyInviteShare();
+    }
+
     function openLoginModal() {
       const modal = document.getElementById('loginModal');
       if (modal) {
@@ -4146,6 +4229,7 @@
     document.addEventListener('keydown', function(event) {
       if (event.key === 'Escape') {
         closeLoginModal();
+        if (typeof closeInviteShare === 'function') closeInviteShare();
       }
     });
 
@@ -4332,6 +4416,31 @@
 
   {% if not is_logged_in %}
   {% include 'includes/pit_pass_modal.html' %}
+  {% endif %}
+
+  {% if is_logged_in and invite_share %}
+  <script>
+    window.MXInviteShare = {{ invite_share | tojson }};
+  </script>
+  <div id="inviteShareModal" class="hidden fixed inset-0 z-[99998] flex items-end sm:items-center justify-center bg-black/70 p-4" onclick="if (event.target === this) closeInviteShare();">
+    <div class="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-slate-900 p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Dela spelet</p>
+          <h2 id="inviteShareTitle" class="text-lg font-extrabold text-white">Bjud in en kompis</h2>
+        </div>
+        <button type="button" onclick="closeInviteShare();" class="text-slate-400 hover:text-white text-xl leading-none" aria-label="Stäng">×</button>
+      </div>
+      <p class="text-xs text-slate-400 mb-3">Ingen liga krävs — de skapar konto och sätter picks. Sen kan ni grilla varandra.</p>
+      <textarea id="inviteShareText" readonly rows="5" class="w-full rounded-xl border border-slate-600 bg-slate-950 text-slate-100 text-sm p-3 mb-2 resize-none"></textarea>
+      <a id="inviteShareLink" href="#" class="block text-xs text-cyan-300 truncate mb-3 underline"></a>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button type="button" onclick="nativeInviteShare();" class="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-2.5 px-3">Dela</button>
+        <button type="button" onclick="copyInviteShare();" class="flex-1 rounded-xl border border-slate-500 bg-slate-800 text-white font-bold py-2.5 px-3">Kopiera text</button>
+      </div>
+      <p id="inviteShareStatus" class="mt-2 text-xs text-emerald-300 min-h-[1.25rem]"></p>
+    </div>
+  </div>
   {% endif %}
 
   <!-- Login Modal -->

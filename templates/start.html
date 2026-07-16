@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="sv" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if inviter_name %}{{ inviter_name }} utmanar dig{% else %}MX Fantasy League{% endif %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <style>
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 20% 0%, rgba(34, 211, 238, 0.18), transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(251, 191, 36, 0.12), transparent 45%),
+        #020617;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center px-4 py-10">
+  <div class="w-full max-w-md text-center">
+    <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League" class="mx-auto h-20 w-20 mb-4">
+    <p class="text-xs font-extrabold uppercase tracking-[0.2em] text-amber-400 mb-2">MX Fantasy League</p>
+
+    {% if inviter_name %}
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-2">
+      Slår du {{ inviter_name }}?
+    </h1>
+    <p class="text-slate-300 text-sm mb-6">
+      Gratis fantasy motocross — skapa konto på ~20 sek och sätt dina picks.
+    </p>
+    {% else %}
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight mb-2">
+      Prova MX Fantasy
+    </h1>
+    <p class="text-slate-300 text-sm mb-6">
+      Tippa topp 6, holeshot &amp; wildcard. Gratis — klart på ett par minuter.
+    </p>
+    {% endif %}
+
+    {% if race_name and race_name != 'MX Fantasy League' %}
+    <div class="mb-6 rounded-xl border border-cyan-400/30 bg-slate-900/70 px-4 py-3 text-left">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-cyan-300/80">Nästa race</div>
+      <div class="text-base font-extrabold text-white">{{ race_name }}</div>
+      <div class="text-xs text-slate-400 mt-0.5">Sätt picks innan deadline</div>
+    </div>
+    {% endif %}
+
+    <ul class="text-left text-sm text-slate-300 space-y-2 mb-8 mx-auto max-w-xs">
+      <li>⚡ Konto på 20 sekunder</li>
+      <li>🏁 Topp 6 + holeshot + wildcard</li>
+      <li>🔥 Jämför dig med andra efter race</li>
+    </ul>
+
+    <button type="button" onclick="if (window.MXShowPitPass) MXShowPitPass();" class="w-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-3.5 px-4 shadow-lg shadow-cyan-500/20 mb-3">
+      Kör igång →
+    </button>
+    <p class="text-xs text-slate-500">
+      Har du konto?
+      <a href="{{ url_for('login', next=next_url) }}" class="text-cyan-300 underline">Logga in</a>
+      ·
+      <a href="{{ url_for('index') }}" class="text-slate-400 underline">Titta runt först</a>
+    </p>
+  </div>
+
+  {% include 'includes/pit_pass_modal.html' %}
+</body>
+</html>
