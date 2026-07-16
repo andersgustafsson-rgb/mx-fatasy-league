@@ -737,8 +737,11 @@
             </div>
           </div>
         {% endif %}
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
-          <header class="text-center sm:text-left">
+        {# Desktop: logo | countdown side-by-side. Mobile: logo → Pit Pass → countdown.
+           Pit Pass must never sit BETWEEN logo and countdown on desktop (that shifted the race box). #}
+        <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-start lg:justify-between gap-4 relative z-30">
+          <div class="order-1 flex w-full items-start justify-between gap-3 lg:w-auto lg:max-w-md lg:flex-1">
+          <header class="text-center sm:text-left min-w-0">
             <h1 class="mx-brand" aria-label="MX Fantasy League">
               <span class="mx-brand__skew">
                 <span class="mx-brand__mx">MX</span>
@@ -802,8 +805,8 @@
             </div>
         </header>
         {% if is_logged_in %}
-        <div class="flex-shrink-0 self-start sm:self-center flex items-center gap-2">
-          <a href="{{ url_for('logout') }}" class="sm:hidden rp-btn rp-btn--danger rp-btn--sm" title="Logga ut" aria-label="Logga ut">
+        <div class="flex-shrink-0 self-start flex items-center gap-2">
+          <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm lg:hidden" title="Logga ut" aria-label="Logga ut">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
@@ -811,17 +814,81 @@
           {% include 'includes/pit_lane_bell.html' %}
         </div>
         {% else %}
-        <div class="flex-shrink-0 self-start sm:self-center">
-          <button type="button" onclick="openLoginModal();" class="sm:hidden rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
+        <div class="flex-shrink-0 self-start lg:hidden">
+          <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
             </svg>
           </button>
         </div>
         {% endif %}
+          </div>
+
+        <!-- Guest Pit Pass: mobile under welcome; desktop full-width under logo|countdown -->
+        {% if not is_logged_in %}
+        <div class="order-2 w-full lg:order-3">
+          <button type="button" onclick="openGuestSignup();" class="group w-full max-w-xl lg:max-w-none rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950 px-3.5 py-3 text-left shadow-lg shadow-cyan-950/40 transition hover:border-cyan-300/70 hover:shadow-cyan-500/20">
+            <div class="flex items-center gap-3">
+              <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-lg" aria-hidden="true">🎫</div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
+                  <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-slate-300">
+                  Har du konto? Tryck Logga in · annars 20 sek till picks
+                </p>
+              </div>
+              <svg class="h-5 w-5 flex-shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          </button>
+        </div>
+        {% endif %}
+
+          <!-- Race countdown: mobile order-3; desktop order-2 (right of logo) -->
+          <div class="order-3 w-full min-w-0 lg:order-2 lg:w-[min(100%,36rem)] lg:flex-shrink-0">
+            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
+              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
+              <div class="absolute top-2 right-2 z-20">
+                <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold bg-black/60 border border-cyan-400/40 text-cyan-200 px-2.5 py-1 rounded-full backdrop-blur">
+                  Aktiva nu: <span id="active-now-count">–</span>
+                </div>
+              </div>
+              <div class="relative z-10">
+              <div class="text-center">
+                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-1" id="real-countdown-race-name">Laddar...</h3>
+                <p id="real-race-schedule-label" class="text-cyan-100/80 text-xs sm:text-sm mb-2 hidden"></p>
+                <div id="race-day-weather" class="hidden mb-3 flex justify-center">
+                  <div class="inline-flex items-center gap-2 bg-black/50 border border-cyan-400/30 rounded-full px-3 py-1.5 backdrop-blur-sm max-w-full">
+                    <span id="race-weather-icon" class="text-xl sm:text-2xl leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
+                    <span id="race-weather-text" class="text-cyan-100 text-xs sm:text-sm text-left truncate">Race day väder</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
+                  <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-red-700">
+                    <div class="text-red-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">🏁 Race Start</div>
+                    <div id="real-race-countdown" class="text-red-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
+                  </div>
+                  <div class="bg-orange-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-orange-700">
+                    <div class="text-orange-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">⏰ Pick Deadline</div>
+                    <div id="real-deadline-countdown" class="text-orange-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
+                  </div>
+                </div>
+                <div id="real-picks-status" class="mt-3 text-xs sm:text-sm">
+                  <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
+                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden rp-btn rp-btn--primary rp-btn--sm">
+                    {% if picks_status == 'has_picks' %}✅ Picks klara (Visa){% else %}✅ Picks öppna (Gå till){% endif %}
+                  </a>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Full-width banners + race countdown (below welcome — not in header flex row) -->
+        <!-- Secondary banners -->
         <div class="mt-4 space-y-4">
         <!-- PWA Install banner (mobile) -->
         <div id="pwa-install-banner" class="hidden max-w-md mx-auto w-full">
@@ -848,29 +915,6 @@
             </div>
           </div>
         </div>
-        
-        <!-- Guest Pit Pass CTA -->
-        {% if not is_logged_in %}
-        <div class="flex justify-center">
-          <button type="button" onclick="openGuestSignup();" class="group w-full max-w-lg rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950 px-3.5 py-3 text-left shadow-lg shadow-cyan-950/40 transition hover:border-cyan-300/70 hover:shadow-cyan-500/20">
-            <div class="flex items-center gap-3">
-              <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-lg" aria-hidden="true">🎫</div>
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
-                  <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
-                </div>
-                <p class="mt-0.5 truncate text-xs text-slate-300">
-                  Har du konto? Tryck Logga in · annars 20 sek till picks
-                </p>
-              </div>
-              <svg class="h-5 w-5 flex-shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-              </svg>
-            </div>
-          </button>
-        </div>
-        {% endif %}
           
           <!-- Bulletin Board Notification -->
           {% if new_bulletin_posts > 0 %}
@@ -965,50 +1009,6 @@
             </a>
           </div>
           {% endif %}
-          
-          <!-- Countdown Widgets Container -->
-          <div class="w-full max-w-3xl mx-auto">
-            
-            <!-- Real Time Countdown Widget -->
-            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
-              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
-              <div class="absolute top-2 right-2 z-20">
-                <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold bg-black/60 border border-cyan-400/40 text-cyan-200 px-2.5 py-1 rounded-full backdrop-blur">
-                  Aktiva nu: <span id="active-now-count">–</span>
-                </div>
-              </div>
-              <div class="relative z-10">
-              <div class="text-center">
-                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-1" id="real-countdown-race-name">Laddar...</h3>
-                <p id="real-race-schedule-label" class="text-cyan-100/80 text-xs sm:text-sm mb-2 hidden"></p>
-                <div id="race-day-weather" class="hidden mb-3 flex justify-center">
-                  <div class="inline-flex items-center gap-2 bg-black/50 border border-cyan-400/30 rounded-full px-3 py-1.5 backdrop-blur-sm max-w-full">
-                    <span id="race-weather-icon" class="text-xl sm:text-2xl leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
-                    <span id="race-weather-text" class="text-cyan-100 text-xs sm:text-sm text-left truncate">Race day väder</span>
-                  </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
-                  <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-red-700">
-                    <div class="text-red-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">🏁 Race Start</div>
-                    <div id="real-race-countdown" class="text-red-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
-                  </div>
-                  <div class="bg-orange-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-orange-700">
-                    <div class="text-orange-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">⏰ Pick Deadline</div>
-                    <div id="real-deadline-countdown" class="text-orange-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
-                  </div>
-                </div>
-                <div id="real-picks-status" class="mt-3 text-xs sm:text-sm">
-                  <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
-                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden rp-btn rp-btn--primary rp-btn--sm">
-                    {% if picks_status == 'has_picks' %}✅ Picks klara (Visa){% else %}✅ Picks öppna (Gå till){% endif %}
-                  </a>
-                </div>
-              </div>
-              </div>
-            </div>
-            
-            <!-- Test Countdown Widget removed -->
-          </div>
         </div>
         </div>
 
