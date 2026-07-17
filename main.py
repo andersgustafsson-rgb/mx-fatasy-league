@@ -2115,6 +2115,16 @@ def index():
     if is_logged_in:
         invite_share = _build_invite_share_payload(session.get("username") or "")
 
+    picks_cta_race_label = None
+    if upcoming_race and upcoming_race.name:
+        picks_cta_race_label = (upcoming_race.name or "").strip()
+        for suffix in (" National", " Supercross", " Motocross", " SX", " MX", " WSX"):
+            if picks_cta_race_label.endswith(suffix) and len(picks_cta_race_label) > len(suffix) + 2:
+                picks_cta_race_label = picks_cta_race_label[: -len(suffix)].strip()
+                break
+        if len(picks_cta_race_label) > 28:
+            picks_cta_race_label = picks_cta_race_label[:27] + "…"
+
     return render_template(
         "index.html",
         username=session.get("username", "Gäst"),
@@ -2157,6 +2167,7 @@ def index():
         pit_pass_start_hidden=True,
         pit_pass_guard_selectors=[],
         invite_share=invite_share,
+        picks_cta_race_label=picks_cta_race_label,
     )
 
 

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=picks-cta-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
@@ -835,11 +835,24 @@
                     <div id="real-deadline-countdown" class="text-orange-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
                   </div>
                 </div>
-                <div id="real-picks-status" class="mt-3 text-xs sm:text-sm">
+                <div id="real-picks-status" class="mt-3 text-xs sm:text-sm flex justify-center">
                   <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
-                  <a id="real-picks-open-status" href="/race_picks_active" class="hidden rp-btn rp-btn--primary rp-btn--sm">
-                    {% if picks_status == 'has_picks' %}✅ Picks klara (Visa){% else %}✅ Picks öppna (Gå till){% endif %}
-                  </a>
+                  {% set _cta_race = picks_cta_race_label or (upcoming_race.name if upcoming_race else 'racet') %}
+                  {% if picks_status == 'has_picks' %}
+                    {% set _cta_text = '✅ Alla picks för ' ~ _cta_race ~ ' är klara — redigera val?' %}
+                    {% set _cta_class = 'mx-picks-cta mx-picks-cta--done' %}
+                  {% elif picks_status == 'partial_picks' %}
+                    {% set _cta_text = '⚠️ Komplettera dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
+                  {% else %}
+                    {% set _cta_text = '🏁 Sätt dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
+                  {% endif %}
+                  <a id="real-picks-open-status"
+                     href="{% if upcoming_race %}{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}{% else %}/race_picks_active{% endif %}"
+                     class="hidden {{ _cta_class }}"
+                     data-picks-status="{{ picks_status }}"
+                     data-race-label="{{ _cta_race }}">{{ _cta_text }}</a>
                 </div>
               </div>
               </div>
@@ -2600,6 +2613,24 @@
     
     // updateTestCountdowns removed
     
+    function applyHeroPicksCta(state) {
+      const openStatus = document.getElementById('real-picks-open-status');
+      if (!openStatus) return;
+      const race = openStatus.dataset.raceLabel || 'racet';
+      const picksStatus = state || openStatus.dataset.picksStatus || 'no_picks';
+      openStatus.dataset.picksStatus = picksStatus;
+      if (picksStatus === 'has_picks') {
+        openStatus.textContent = `✅ Alla picks för ${race} är klara — redigera val?`;
+        openStatus.className = 'mx-picks-cta mx-picks-cta--done';
+      } else if (picksStatus === 'partial_picks') {
+        openStatus.textContent = `⚠️ Komplettera dina picks till ${race} →`;
+        openStatus.className = 'mx-picks-cta mx-picks-cta--need';
+      } else {
+        openStatus.textContent = `🏁 Sätt dina picks till ${race} →`;
+        openStatus.className = 'mx-picks-cta mx-picks-cta--need';
+      }
+    }
+
     function updateRealPicksStatus(data) {
       const lockedStatus = document.getElementById('real-picks-locked-status');
       const openStatus = document.getElementById('real-picks-open-status');
@@ -2626,9 +2657,9 @@
         if (lockedStatus) lockedStatus.classList.add('hidden');
         if (openStatus) {
           openStatus.classList.remove('hidden');
-          openStatus.textContent = '🏁 Race färdigt';
+          openStatus.textContent = '🏁 Race färdigt — se resultat';
           openStatus.href = '/race_results';
-          openStatus.className = 'inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold';
+          openStatus.className = 'mx-picks-cta mx-picks-cta--done-race';
         }
         
         // Show "Se Andras Picks" button when race is completed
@@ -2691,15 +2722,16 @@
           maybeLoadCrowdTeaser();
         }
       } else {
-        // Picks are still open
+        // Picks are still open — keep CTA wording/colors from server status
         if (lockedStatus) lockedStatus.classList.add('hidden');
         if (openStatus) {
           openStatus.classList.remove('hidden');
-          // Restore original link and text based on picks_status from server
-          openStatus.href = '/race_picks_active';
-          openStatus.className = 'inline-block bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-semibold';
+          if (!openStatus.dataset.picksHref) {
+            openStatus.dataset.picksHref = openStatus.getAttribute('href') || '/race_picks_active';
+          }
+          openStatus.href = openStatus.dataset.picksHref;
+          applyHeroPicksCta(openStatus.dataset.picksStatus || 'no_picks');
         }
-        // Text is set from server-side template, so we don't change it here
         
         // Hide "Se Andras Picks" until deadline — show disabled placeholder
         if (seAndrasPicksBtn) {
