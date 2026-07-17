@@ -788,6 +788,9 @@
                 </div>
                 {% if is_logged_in %}
                   <div id="welcome-chips" class="mt-1 flex flex-col items-start gap-1 text-xs"></div>
+                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 hover:border-amber-300/55 transition shadow-sm shadow-amber-900/20">
+                    <span aria-hidden="true">🏁</span> Bjud in en kompis
+                  </button>
                 {% endif %}
               </div>
             </div>
@@ -1578,7 +1581,6 @@
                   {% if is_logged_in %}
                   <a href="{{ url_for('profile_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Min Profil</a>
                   <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
-                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="rp-btn rp-btn--block rp-btn--secondary">🏁 Bjud in en kompis</button>
                   {% else %}
                   <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--block rp-btn--primary">Logga in</button>
                   <button type="button" onclick="openGuestSignup();" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</button>
