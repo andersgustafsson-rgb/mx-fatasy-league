@@ -7730,6 +7730,7 @@ def race_picks_page(competition_id):
     # 5) Track maps: DB (SX) eller static/trackmaps/pro_motocross (MX)
     trackmap_images = []
     picks_good_to_know: list[str] = []
+    picks_weather: dict | None = None
     is_mx_race = False
     try:
         from trackmap_utils import (
@@ -7755,6 +7756,23 @@ def race_picks_page(competition_id):
                 "250 kör som en gemensam klass under Pro Motocross.",
                 "Deadline är 2 timmar före start.",
             ]
+
+    try:
+        from track_weather import build_picks_weather_tips, get_weather_for_competition
+
+        picks_weather = get_weather_for_competition(comp)
+        weather_tips = build_picks_weather_tips(
+            picks_weather, series=getattr(comp, "series", None)
+        )
+        if weather_tips:
+            # Weather first in «Bra att veta», then keep a few generic tips
+            generic = [t for t in picks_good_to_know if t not in weather_tips]
+            picks_good_to_know = weather_tips + generic[:3]
+    except Exception:
+        app.logger.exception(
+            "race_picks weather tips failed for competition_id=%s", competition_id
+        )
+        picks_weather = None
 
     trackmap_urls = [
         ci.image_url for ci in trackmap_images if getattr(ci, "image_url", None)
@@ -7797,6 +7815,7 @@ def race_picks_page(competition_id):
         trackmap_images=trackmap_images,
         trackmap_urls=trackmap_urls,
         picks_good_to_know=picks_good_to_know,
+        picks_weather=picks_weather,
         is_mx_race=is_mx_race,
         picks_locked=picks_locked,
         static_rider_images=not _on_render,

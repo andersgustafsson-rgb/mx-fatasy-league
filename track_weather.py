@@ -215,6 +215,113 @@ def build_weather_payload(
     }
 
 
+_ICON_EMOJI = {
+    "sun": "☀️",
+    "partly": "⛅",
+    "cloud": "☁️",
+    "fog": "🌫️",
+    "rain": "🌧️",
+    "snow": "❄️",
+    "storm": "⛈️",
+}
+
+
+def weather_icon_emoji(icon: str | None) -> str:
+    return _ICON_EMOJI.get(icon or "", "🌤️")
+
+
+def build_picks_weather_tips(
+    weather: dict[str, Any] | None,
+    *,
+    series: str | None = None,
+) -> list[str]:
+    """Fantasy-oriented tips from race-day weather (strongest for outdoor MX)."""
+    if not weather or not weather.get("available"):
+        return []
+
+    series_u = (series or "").upper()
+    is_outdoor = series_u in ("MX", "WSX") or series_u == ""
+    # SX is stadium — weather barely changes track; still show mild context for MX focus
+    if series_u == "SX":
+        return []
+
+    tips: list[str] = []
+    precip = weather.get("precipitation_probability")
+    precip_i = int(precip) if precip is not None else None
+    temp_max = weather.get("temp_max_c")
+    temp_min = weather.get("temp_min_c")
+    wind = weather.get("wind_kmh")
+    icon = (weather.get("icon") or "").lower()
+    label = weather.get("label_sv") or ""
+
+    # --- Rain / mud ---
+    if icon in ("rain", "storm") or (precip_i is not None and precip_i >= 55):
+        tips.append(
+            "Mud-/fukt-läge: prioritera förare som brukar klara slemmigt underlag — ren toppspeed väger mindre."
+        )
+        tips.append(
+            "Start & holeshot blir ännu viktigare när sikt och grepp försämras."
+        )
+        tips.append(
+            "Favoriter kan tappa — en wildcard på en ‘dirt rider’ kan skilja dig från fältet."
+        )
+    elif precip_i is not None and precip_i >= _LOW_PRECIP_THRESHOLD:
+        tips.append(
+            f"Regnrisk ~{precip_i}%: banan kan bli fuktig — ha en plan B om underlaget blir slemmigt."
+        )
+        tips.append(
+            "Kolla vilka som gått bra i blött tidigare; form på torrt sand/hårdpack säger mindre."
+        )
+
+    # --- Heat / hard pack ---
+    if temp_max is not None and temp_max >= 30 and (precip_i is None or precip_i < 30):
+        tips.append(
+            "Hett & torrt → ofta hårdare underlag: startrit och holeshot väger tungt."
+        )
+        tips.append(
+            "Uthållighet i värme kan avgöra senare moto — undvik rena ‘sprinters’ i wildcard om racet är långt."
+        )
+
+    # --- Cold ---
+    if temp_max is not None and temp_max <= 12:
+        tips.append(
+            "Kallt underlag: grepp och tidiga varv kan överraska — kolla vem som startar bra i kyla."
+        )
+
+    # --- Wind / dust ---
+    if wind is not None and wind >= 40:
+        tips.append(
+            f"Blåsigt (~{wind} km/h): damm/sikt kan störa — stabila, konsekventa förare framför högrisk-outsiders."
+        )
+    elif wind is not None and wind >= 28 and icon in ("sun", "partly", "cloud"):
+        tips.append(
+            "Lite blåsigt: damm kan öka på torra banor — tidig position i fältet hjälper."
+        )
+
+    # --- Fog ---
+    if icon == "fog":
+        tips.append(
+            "Dimma/sikt: tidig placering och lugn körning tidigt i race kan belönas mer än vanligt."
+        )
+
+    # --- Classic clear outdoor ---
+    if (
+        not tips
+        and is_outdoor
+        and icon in ("sun", "partly", "cloud")
+        and (precip_i is None or precip_i < _LOW_PRECIP_THRESHOLD)
+    ):
+        tips.append(
+            "Klassiskt outdoor-väder: banpreferens (sand/lera/hårdpack) och senaste form väger tungt."
+        )
+        tips.append(
+            "Ingen extremväder-joker — lita mer på seriesform och banhistorik än på väderkaos."
+        )
+
+    # Cap to 3 tips so Bra att veta stays scannable
+    return tips[:3]
+
+
 def _resolve_weather_timezone(geo: dict[str, Any], comp) -> str:
     """Track-local timezone for Open-Meteo daily grids (not user display timezone)."""
     if geo.get("timezone"):

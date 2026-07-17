@@ -582,9 +582,24 @@
             </div>
           </details>
 
-          <details class="race-prep-details">
+          <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
             <summary>📌 Bra att veta</summary>
             <div class="race-prep-details__body">
+              {% if picks_weather and picks_weather.get('available') %}
+              <div class="race-prep-weather-chip mb-2 inline-flex flex-wrap items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-950/40 px-3 py-1.5 text-xs text-cyan-100">
+                <span class="text-base leading-none" aria-hidden="true">
+                  {% if picks_weather.icon == 'sun' %}☀️
+                  {% elif picks_weather.icon == 'partly' %}⛅
+                  {% elif picks_weather.icon == 'cloud' %}☁️
+                  {% elif picks_weather.icon == 'fog' %}🌫️
+                  {% elif picks_weather.icon == 'rain' %}🌧️
+                  {% elif picks_weather.icon == 'snow' %}❄️
+                  {% elif picks_weather.icon == 'storm' %}⛈️
+                  {% else %}🌤️{% endif %}
+                </span>
+                <span class="font-semibold">{{ picks_weather.summary_sv }}</span>
+              </div>
+              {% endif %}
               {% if _good_to_know %}
                 {% for tip in _good_to_know %}
                 <div class="race-prep-tip">{{ tip }}</div>
