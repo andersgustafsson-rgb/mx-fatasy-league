@@ -94,17 +94,35 @@
   window.shareInviteAsImage = async function shareInviteAsImage() {
     const p = payload();
     const status = document.getElementById('inviteShareStatus');
+    const inviteUrl = (p.invite_url || '').trim();
+    // Image itself is never clickable — attach the link in text/url so chat apps keep it.
+    const caption = [p.share_body || '', inviteUrl].filter(Boolean).join('\n');
     try {
       const blob = await blobFromCardUrl();
       const file = new File([blob], 'mx-fantasy-race.png', { type: 'image/png' });
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
+      if (navigator.share && navigator.canShare) {
+        const withLink = {
           title: p.share_title || 'MX Fantasy League',
-          text: p.share_body || '',
+          text: caption,
+          url: inviteUrl || undefined,
           files: [file],
-        });
-        if (status) status.textContent = 'Delat!';
-        return;
+        };
+        const filesOnly = {
+          title: p.share_title || 'MX Fantasy League',
+          text: caption,
+          files: [file],
+        };
+        // Prefer share that includes a clickable URL; fall back if the browser rejects it.
+        if (navigator.canShare(withLink)) {
+          await navigator.share(withLink);
+          if (status) status.textContent = 'Delat med bild + länk!';
+          return;
+        }
+        if (navigator.canShare(filesOnly)) {
+          await navigator.share(filesOnly);
+          if (status) status.textContent = 'Delat! (länken ligger i texten)';
+          return;
+        }
       }
     } catch (e) {
       if (e && e.name === 'AbortError') return;
@@ -116,7 +134,10 @@
       a.download = 'mx-fantasy-race.png';
       a.click();
       URL.revokeObjectURL(a.href);
-      if (status) status.textContent = 'Bilden sparades — lägg upp i Snap/Stories.';
+      if (status) status.textContent = 'Bilden sparades — länken är kopierad om möjligt. Klistra in under Story.';
+      try {
+        if (inviteUrl) await navigator.clipboard.writeText(caption || inviteUrl);
+      } catch (_) {}
     } catch (e) {
       if (status) status.textContent = 'Kunde inte dela bilden just nu.';
     }
