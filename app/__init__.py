@@ -112,4 +112,15 @@ def create_app() -> Flask:
 		resp.headers["Service-Worker-Allowed"] = "/"
 		return resp
 
+	@app.get("/google59180a241028d7ad.html")
+	def google_site_verification():
+		"""Google Search Console ownership verification."""
+		from flask import send_from_directory, make_response
+
+		resp = make_response(
+			send_from_directory(app.static_folder, "google59180a241028d7ad.html")
+		)
+		resp.headers["Content-Type"] = "text/html; charset=utf-8"
+		return resp
+
 	return app
