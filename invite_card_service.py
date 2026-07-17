@@ -94,6 +94,29 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
     if inviter_username:
         host_line += f"?ref={inviter_username}"
 
+    top5: list[dict[str, Any]] = []
+    try:
+        from main import calculate_leaderboard_deltas
+
+        for i, row in enumerate(calculate_leaderboard_deltas()[:5], 1):
+            name = (row.get("display_name") or row.get("username") or "?").strip()
+            username = (row.get("username") or "").strip()
+            top5.append(
+                {
+                    "rank": int(row.get("rank") or i),
+                    "name": name,
+                    "username": username,
+                    "points": int(row.get("total_points") or 0),
+                    "is_me": bool(
+                        inviter_username
+                        and username
+                        and username.lower() == inviter_username.lower()
+                    ),
+                }
+            )
+    except Exception:
+        top5 = []
+
     return {
         "race_name": race_name,
         "series": series,
@@ -107,6 +130,7 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
         "inviter_username": inviter_username,
         "host_line": host_line,
         "has_race": comp is not None,
+        "top5": top5,
     }
 
 
@@ -233,7 +257,7 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
             _draw_styled_text(draw, (W_STORY // 2, py), line, tip_f, MUTED, anchor="mt")
             py += 34
 
-    y = panel_y2 + 48
+    y = panel_y2 + 40
 
     inviter = data.get("inviter_name") or data.get("inviter_username")
     hook_f = _load_font_px(32, bold=True)
@@ -246,7 +270,7 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
     _draw_styled_text(draw, (W_STORY // 2, y), hook, hook_f, WHITE, anchor="mt")
     y += 44
     _draw_styled_text(draw, (W_STORY // 2, y), sub, _load_font_px(28), CYAN, anchor="mt")
-    y += 56
+    y += 48
 
     btn_w = W_STORY - margin * 2
     btn_h = 72
@@ -257,7 +281,11 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
     _draw_styled_text(
         draw, (W_STORY // 2, y + btn_h // 2), "SÄTT DINA PICKS", btn_f, (8, 15, 35), anchor="mm"
     )
-    y += btn_h + 24
+    y += btn_h + 36
+
+    top5 = data.get("top5") or []
+    if top5:
+        y = _draw_top5_panel(draw, y, top5, margin=margin)
 
     url_f = _load_font_px(22)
     host = _plain_draw_text(data.get("host_line") or "")
@@ -268,6 +296,71 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
+
+
+def _draw_top5_panel(draw, y: int, top5: list[dict[str, Any]], *, margin: int = 56) -> int:
+    """Draw season top 5 leaderboard into the story card empty space."""
+    from social_recap_service import (
+        BRONZE,
+        CYAN,
+        GOLD,
+        MUTED,
+        PANEL,
+        PANEL_EDGE,
+        SILVER,
+        WHITE,
+        _draw_styled_text,
+        _load_display_font,
+        _load_font_px,
+        _plain_draw_text,
+    )
+
+    row_h = 58
+    header_h = 44
+    pad = 20
+    panel_h = pad + header_h + row_h * len(top5[:5]) + pad
+    x1, x2 = margin, W_STORY - margin
+    draw.rounded_rectangle(
+        [x1, y, x2, y + panel_h], radius=20, fill=PANEL, outline=PANEL_EDGE, width=2
+    )
+
+    title_f = _load_display_font(26, bold=True)
+    _draw_styled_text(
+        draw, (W_STORY // 2, y + pad + 8), "TOPPLISTA · TOP 5", title_f, GOLD, anchor="mt"
+    )
+
+    name_f = _load_font_px(26, bold=True)
+    pts_f = _load_font_px(24, bold=True)
+    rank_f = _load_font_px(26, bold=True)
+    medals = {1: GOLD, 2: SILVER, 3: BRONZE}
+
+    ry = y + pad + header_h
+    for row in top5[:5]:
+        rank = int(row.get("rank") or 0)
+        name = _plain_draw_text(str(row.get("name") or "?"))
+        if len(name) > 22:
+            name = name[:21] + "…"
+        pts = int(row.get("points") or 0)
+        is_me = bool(row.get("is_me"))
+        medal = medals.get(rank, MUTED)
+
+        if is_me:
+            draw.rounded_rectangle(
+                [x1 + 12, ry, x2 - 12, ry + row_h - 6],
+                radius=12,
+                fill=(14, 116, 144),
+                outline=CYAN,
+                width=2,
+            )
+
+        _draw_styled_text(draw, (x1 + 44, ry + row_h // 2 - 3), f"#{rank}", rank_f, medal, anchor="lm")
+        _draw_styled_text(draw, (x1 + 110, ry + row_h // 2 - 3), name, name_f, WHITE, anchor="lm")
+        _draw_styled_text(
+            draw, (x2 - 36, ry + row_h // 2 - 3), f"{pts}p", pts_f, CYAN if is_me else MUTED, anchor="rm"
+        )
+        ry += row_h
+
+    return y + panel_h + 16
 
 
 def _render_og_card(data: dict[str, Any]) -> bytes:
