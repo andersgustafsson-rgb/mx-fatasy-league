@@ -4685,6 +4685,7 @@ def _serialize_challenge(ch: LeagueChallenge, viewer_id: int) -> dict:
             else ""
         ),
         "can_decline": ch.status in ("pending_type", "pending_answers") and viewer_is_challenged,
+        "can_cancel": ch.status in ("pending_type", "pending_answers") and viewer_is_challenger,
         "rider_a_id": ch.rider_a_id,
         "rider_b_id": ch.rider_b_id,
         "brand_a": ch.brand_a,
@@ -5635,6 +5636,28 @@ def api_decline_league_challenge(league_id: int, challenge_id: int):
         ch.challenger_id,
         f"🚫 {_challenge_user_label(uid)} avböjde din utmaning",
         "Utmaningen är avslutad",
+        league_id,
+    )
+    return jsonify({"success": True})
+
+
+@app.post("/api/leagues/<int:league_id>/challenges/<int:challenge_id>/cancel")
+def api_cancel_league_challenge(league_id: int, challenge_id: int):
+    """Challenger withdraws a pending invitation / unfinished duel."""
+    if "user_id" not in session:
+        return jsonify({"error": "not_logged_in"}), 401
+    uid = session["user_id"]
+    ch = LeagueChallenge.query.filter_by(id=challenge_id, league_id=league_id).first_or_404()
+    if ch.challenger_id != uid:
+        return jsonify({"error": "not_challenger"}), 403
+    if ch.status not in ("pending_type", "pending_answers"):
+        return jsonify({"error": "invalid_status"}), 400
+    ch.status = "cancelled"
+    db.session.commit()
+    _notify_challenge(
+        ch.challenged_id,
+        f"↩️ {_challenge_user_label(uid)} avbröt utmaningen",
+        "Inbjudan är indragen",
         league_id,
     )
     return jsonify({"success": True})

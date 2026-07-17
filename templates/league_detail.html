@@ -1260,7 +1260,7 @@
           </div>
           <div class="flex items-center justify-between gap-2 mb-2">
             <span class="duel-status duel-status--{{ 'locked' if duel.status == 'locked' or duel.waiting_for_opponent else 'pending' }}">
-              {% if duel.needs_type %}Din tur — välj motfråga{% elif duel.needs_answer %}Din tur — svara{% elif duel.status == 'locked' %}Låst{% elif duel.waiting_for_opponent %}Väntar på {{ duel.opponent_name.split(' ')[0] }}{% else %}Väntar{% endif %}
+              {% if duel.needs_type %}Din tur — välj motfråga{% elif duel.needs_answer %}Din tur — svara{% elif duel.status == 'locked' %}Låst{% elif duel.waiting_for_opponent %}Väntar på {{ duel.opponent_name.split(' ')[0] }}{% elif duel.status == 'pending_type' and duel.viewer_is_challenger %}Väntar på {{ duel.opponent_name.split(' ')[0] }}{% else %}Väntar{% endif %}
             </span>
           </div>
           <div class="flex items-center gap-2 text-sm mb-2">
@@ -1289,9 +1289,14 @@
             <span class="text-xs text-gray-400">✓ Ditt svar är inne — väntar på {{ duel.opponent_name.split(' ')[0] }}</span>
             {% elif duel.status == 'locked' %}
             <span class="text-xs text-gray-400">🔒 Låst — avgörs efter racet</span>
+            {% elif duel.status == 'pending_type' and duel.viewer_is_challenger %}
+            <span class="text-xs text-gray-400">Väntar på att {{ duel.opponent_name.split(' ')[0] }} ska välja motfråga</span>
             {% endif %}
             {% if duel.can_decline %}
             <button type="button" class="duel-btn duel-btn--ghost text-sm js-duel-decline" data-id="{{ duel.id }}">Avböj</button>
+            {% endif %}
+            {% if duel.can_cancel %}
+            <button type="button" class="duel-btn duel-btn--ghost text-sm js-duel-cancel" data-id="{{ duel.id }}">Avbryt inbjudan</button>
             {% endif %}
           </div>
         </div>
@@ -1311,7 +1316,7 @@
               <span>
                 {{ duel.type_icon }}
                 {{ duel.challenger.name }} vs {{ duel.challenged.name }}
-                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% elif duel.status == 'expired' %}— <span class="text-gray-500">gick ut (svar saknades)</span>{% elif duel.status == 'declined' %}— <span class="text-gray-500">nekad</span>{% endif %}
+                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% elif duel.status == 'expired' %}— <span class="text-gray-500">gick ut (svar saknades)</span>{% elif duel.status == 'declined' %}— <span class="text-gray-500">nekad</span>{% elif duel.status == 'cancelled' %}— <span class="text-gray-500">avbruten</span>{% endif %}
               </span>
               <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
             </div>
@@ -2067,6 +2072,15 @@
         if (!confirm('Avböj utmaningen?')) return;
         try {
           await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/decline`, 'POST', {});
+          location.reload();
+        } catch (e) { alert(e.message); }
+      });
+    });
+    document.querySelectorAll('.js-duel-cancel').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Avbryt inbjudan? Motståndaren får en notis.')) return;
+        try {
+          await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/cancel`, 'POST', {});
           location.reload();
         } catch (e) { alert(e.message); }
       });
