@@ -4034,97 +4034,6 @@
       openLoginModal();
     }
 
-    function _inviteSharePayload() {
-      const base = window.MXInviteShare || {};
-      const me = window._meLeaderboardRow || null;
-      let body = base.share_body || '';
-      if (me) {
-        const rank = me.rank;
-        const pts = Number(me.total_points || 0);
-        const lines = [
-          '🏁 Slår du mig i MX Fantasy?',
-          `Jag kör som ${base.username || window.currentUsername || ''}.`,
-        ];
-        if (rank) {
-          lines.push(`Just nu #${rank}` + (pts ? ` med ${pts}p.` : '.'));
-        } else if (pts) {
-          lines.push(`Jag ligger på ${pts}p.`);
-        }
-        if (base.race_name && base.race_name !== 'MX Fantasy League') {
-          lines.push(`Nästa race: ${base.race_name} — sätt picks innan deadline.`);
-        }
-        body = lines.join('\n');
-      }
-      const url = base.invite_url || '';
-      return {
-        ...base,
-        share_body: body,
-        // One URL only — never append url twice
-        share_text: body ? `${body}\n${url}` : url,
-      };
-    }
-
-    function openInviteShare() {
-      const modal = document.getElementById('inviteShareModal');
-      const payload = _inviteSharePayload();
-      const ta = document.getElementById('inviteShareText');
-      const linkEl = document.getElementById('inviteShareLink');
-      if (ta) ta.value = payload.share_text || '';
-      if (linkEl) {
-        linkEl.textContent = payload.invite_url || '';
-        linkEl.href = payload.invite_url || '#';
-      }
-      const status = document.getElementById('inviteShareStatus');
-      if (status) status.textContent = '';
-      if (modal) {
-        modal.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-      }
-    }
-
-    function closeInviteShare() {
-      const modal = document.getElementById('inviteShareModal');
-      if (modal) modal.classList.add('hidden');
-      document.body.style.overflow = '';
-    }
-
-    async function copyInviteShare() {
-      const payload = _inviteSharePayload();
-      const text = payload.share_text || payload.invite_url || '';
-      const status = document.getElementById('inviteShareStatus');
-      try {
-        await navigator.clipboard.writeText(text);
-        if (status) status.textContent = 'Kopierat! Klistra in i Messenger/Snap/WhatsApp.';
-      } catch (e) {
-        const ta = document.getElementById('inviteShareText');
-        if (ta) {
-          ta.focus();
-          ta.select();
-        }
-        if (status) status.textContent = 'Markera texten och kopiera manuellt.';
-      }
-    }
-
-    async function nativeInviteShare() {
-      const payload = _inviteSharePayload();
-      const status = document.getElementById('inviteShareStatus');
-      if (navigator.share) {
-        try {
-          // Important: do NOT put the URL in both text and url — Snap/iMessage duplicates it.
-          await navigator.share({
-            title: 'MX Fantasy League',
-            text: payload.share_body || 'Slår du mig i MX Fantasy?',
-            url: payload.invite_url || undefined,
-          });
-          if (status) status.textContent = 'Delat!';
-          return;
-        } catch (e) {
-          if (e && e.name === 'AbortError') return;
-        }
-      }
-      await copyInviteShare();
-    }
-
     function openLoginModal() {
       const modal = document.getElementById('loginModal');
       if (modal) {
@@ -4341,28 +4250,7 @@
   {% endif %}
 
   {% if is_logged_in and invite_share %}
-  <script>
-    window.MXInviteShare = {{ invite_share | tojson }};
-  </script>
-  <div id="inviteShareModal" class="hidden fixed inset-0 z-[99998] flex items-end sm:items-center justify-center bg-black/70 p-4" onclick="if (event.target === this) closeInviteShare();">
-    <div class="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-slate-900 p-5 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <p class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Dela spelet</p>
-          <h2 id="inviteShareTitle" class="text-lg font-extrabold text-white">Bjud in en kompis</h2>
-        </div>
-        <button type="button" onclick="closeInviteShare();" class="text-slate-400 hover:text-white text-xl leading-none" aria-label="Stäng">×</button>
-      </div>
-      <p class="text-xs text-slate-400 mb-3">Ingen liga krävs — de skapar konto och sätter picks. Sen kan ni grilla varandra.</p>
-      <textarea id="inviteShareText" readonly rows="5" class="w-full rounded-xl border border-slate-600 bg-slate-950 text-slate-100 text-sm p-3 mb-2 resize-none"></textarea>
-      <a id="inviteShareLink" href="#" class="block text-xs text-cyan-300 truncate mb-3 underline"></a>
-      <div class="flex flex-col sm:flex-row gap-2">
-        <button type="button" onclick="nativeInviteShare();" class="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-2.5 px-3">Dela</button>
-        <button type="button" onclick="copyInviteShare();" class="flex-1 rounded-xl border border-slate-500 bg-slate-800 text-white font-bold py-2.5 px-3">Kopiera text</button>
-      </div>
-      <p id="inviteShareStatus" class="mt-2 text-xs text-emerald-300 min-h-[1.25rem]"></p>
-    </div>
-  </div>
+  {% include 'includes/invite_share_modal.html' %}
   {% endif %}
 
   <!-- Login Modal -->

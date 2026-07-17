@@ -3024,9 +3024,12 @@ function onPickChange(cls, pos, riderId = null) {
       const data = await resp.json();
       
       if (resp.ok && !data.error) {
-        // Mark picks as saved and hide save button
         markPicksAsSaved();
-        alert(data.message || "Dina val har sparats!");
+        if (typeof openInviteShare === 'function') {
+          openInviteShare({ afterPicks: true });
+        } else {
+          alert(data.message || "Dina val har sparats!");
+        }
       } else {
         alert(data.error || "Ett fel uppstod vid sparning.");
       }
@@ -3376,6 +3379,10 @@ function setMainTrackmap(src, thumbEl) {
   'button[onclick*="savePicks"]'
 ] %}
 {% include 'includes/pit_pass_modal.html' %}
+{% endif %}
+
+{% if is_logged_in and invite_share %}
+{% include 'includes/invite_share_modal.html' %}
 {% endif %}
 
 </body>

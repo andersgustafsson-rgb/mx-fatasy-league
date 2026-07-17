@@ -1247,23 +1247,32 @@ def _build_invite_share_payload(username: str) -> dict:
         else _absolute_url("start_invite")
     )
     invite_path = url_for("start_invite", ref=uname) if uname else url_for("start_invite")
-    body_lines = [
-        "🏁 Slår du mig i MX Fantasy?",
-        f"Jag kör som {uname}." if uname else "Prova MX Fantasy League.",
-    ]
+    card_ref = uname or None
+    card_image_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="story")
+    card_og_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="og")
+
     if race_name and race_name != "MX Fantasy League":
-        body_lines.append(f"Nästa race: {race_name} — sätt picks innan deadline.")
-    share_body = "\n".join(body_lines)
-    # share_text = body + URL once (for copy). Web Share uses body + url separately.
+        share_body = (
+            f"🏁 {race_name} i helgen — har du satt picks?\n"
+            + (f"Jag är redo. Kör som {uname}." if uname else "Gratis fantasy motocross — klart på några minuter.")
+        )
+    else:
+        share_body = (
+            f"🏁 MX Fantasy League — har du satt picks?\n"
+            + (f"Jag kör som {uname}." if uname else "Gratis fantasy motocross.")
+        )
     share_text = f"{share_body}\n{invite_url}"
     return {
         "invite_url": invite_url,
         "invite_path": invite_path,
         "share_body": share_body,
         "share_text": share_text,
+        "share_title": f"{race_name} i helgen — MX Fantasy" if race_name != "MX Fantasy League" else "MX Fantasy League",
         "race_name": race_name,
         "next_url": next_url,
         "username": uname,
+        "card_image_url": card_image_url,
+        "card_og_url": card_og_url,
     }
 
 
@@ -1288,17 +1297,32 @@ def start_invite():
 
     display_race = race_name if race_name != "MX Fantasy League" else "Nästa race"
     og_title = (
-        f"Slår du {inviter.username} i MX Fantasy?"
+        f"{display_race} i helgen — slår du {inviter.username}?"
         if inviter
-        else "MX Fantasy League — gratis fantasy motocross"
+        else (
+            f"{display_race} i helgen — MX Fantasy"
+            if race_name != "MX Fantasy League"
+            else "MX Fantasy League — gratis fantasy motocross"
+        )
     )
     og_desc = (
-        f"Utmanad av {inviter.username}. Skapa konto på 20 sek och sätt picks"
-        + (f" till {race_name}." if race_name != "MX Fantasy League" else ".")
-        if inviter
-        else "Tippa topp 6, holeshot & wildcard. Gratis — klart på ett par minuter."
+        f"{inviter.username} har satt picks inför {race_name}. Skapa konto på 20 sek och häng med."
+        if inviter and race_name != "MX Fantasy League"
+        else (
+            f"Utmanad av {inviter.username}. Skapa konto på 20 sek och sätt picks."
+            if inviter
+            else (
+                f"Tippa {race_name} — topp 6, holeshot & wildcard. Gratis, klart på några minuter."
+                if race_name != "MX Fantasy League"
+                else "Tippa topp 6, holeshot & wildcard. Gratis — klart på ett par minuter."
+            )
+        )
     )
-    og_image = _absolute_url("static", filename="icons/mx_fantasy_app_icon_512.png")
+    og_image = _absolute_url(
+        "api_invite_card_png",
+        ref=inviter.username if inviter else None,
+        layout="og",
+    )
 
     return render_template(
         "start.html",
@@ -1319,6 +1343,28 @@ def start_invite():
         og_image=og_image,
         og_url=_absolute_url("start_invite", ref=inviter.username) if inviter else _absolute_url("start_invite"),
     )
+
+
+@app.get("/api/invite-card.png")
+def api_invite_card_png():
+    """Race-hype invite card PNG for Stories and og:image previews."""
+    from flask import Response
+
+    ref = (request.args.get("ref") or "").strip() or None
+    layout = (request.args.get("layout") or "story").lower()
+    if layout not in ("story", "og"):
+        layout = "story"
+    try:
+        from invite_card_service import build_invite_card_data, render_invite_card_png
+
+        data = build_invite_card_data(ref)
+        png_bytes = render_invite_card_png(data, layout=layout)
+        resp = Response(png_bytes, mimetype="image/png")
+        resp.headers["Cache-Control"] = "public, max-age=300"
+        return resp
+    except Exception as e:
+        print(f"invite_card_png failed: {e}")
+        return Response(status=500)
 
 
 @app.get("/api/invite_share")
@@ -7882,6 +7928,11 @@ def race_picks_page(competition_id):
         initial_picks_status=initial_picks_status,
         initial_wizard_step=initial_wizard_step,
         is_logged_in=is_logged_in,
+        invite_share=(
+            _build_invite_share_payload(session.get("username") or "")
+            if is_logged_in
+            else None
+        ),
     )
 
 

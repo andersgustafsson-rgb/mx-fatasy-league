@@ -1,0 +1,32 @@
+<script>
+  window.MXInviteShare = {{ invite_share | tojson }};
+</script>
+<script src="{{ url_for('static', filename='invite_share.js') }}"></script>
+<div id="inviteShareModal" class="hidden fixed inset-0 z-[99998] flex items-end sm:items-center justify-center bg-black/70 p-4" onclick="if (event.target === this) closeInviteShare();">
+  <div class="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-slate-900 p-5 shadow-2xl max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div>
+        <p class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Race-hype</p>
+        <h2 id="inviteShareTitle" class="text-lg font-extrabold text-white">Bjud in en kompis</h2>
+        <p id="inviteShareSubtitle" class="text-xs text-slate-400 mt-1">Dela race-hype-kortet till Snap/Stories eller skicka länken.</p>
+      </div>
+      <button type="button" onclick="closeInviteShare();" class="text-slate-400 hover:text-white text-xl leading-none shrink-0" aria-label="Stäng">×</button>
+    </div>
+
+    <div class="rounded-xl overflow-hidden border border-slate-600/80 bg-slate-950 mb-3 shadow-inner">
+      <img id="inviteSharePreview" src="{{ invite_share.card_image_url }}" alt="Race-hype kort för delning" class="w-full h-auto block">
+    </div>
+
+    <textarea id="inviteShareText" readonly rows="3" class="w-full rounded-xl border border-slate-600 bg-slate-950 text-slate-100 text-sm p-3 mb-2 resize-none hidden sm:block"></textarea>
+    <a id="inviteShareLink" href="{{ invite_share.invite_url }}" class="block text-xs text-cyan-300 truncate mb-3 underline">{{ invite_share.invite_url }}</a>
+
+    <div class="flex flex-col gap-2">
+      <button type="button" onclick="shareInviteAsImage();" class="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold py-2.5 px-3">Dela som bild (Snap/Stories)</button>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button type="button" onclick="nativeInviteShare();" class="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-2.5 px-3">Dela länk</button>
+        <button type="button" onclick="copyInviteShare();" class="flex-1 rounded-xl border border-slate-500 bg-slate-800 text-white font-bold py-2.5 px-3">Kopiera text</button>
+      </div>
+    </div>
+    <p id="inviteShareStatus" class="mt-2 text-xs text-emerald-300 min-h-[1.25rem]"></p>
+  </div>
+</div>
