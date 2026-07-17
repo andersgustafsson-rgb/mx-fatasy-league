@@ -738,8 +738,8 @@
           </div>
         {% endif %}
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 relative z-30">
-          <header class="text-center sm:text-left flex-shrink-0">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 relative z-30">
+          <header class="text-center sm:text-left flex-shrink-0 sm:max-w-[280px] lg:max-w-[320px]">
             <h1 class="mx-brand" aria-label="MX Fantasy League">
               <span class="mx-brand__skew">
                 <span class="mx-brand__mx">MX</span>
@@ -787,24 +787,15 @@
                   {% endif %}
                 </div>
                 {% if is_logged_in %}
-                  <div id="welcome-chips" class="mt-1 flex flex-wrap items-center gap-2 text-xs"></div>
+                  <div id="welcome-chips" class="mt-1 flex flex-col items-start gap-1 text-xs"></div>
                 {% endif %}
               </div>
             </div>
           </header>
 
-          {% if is_logged_in %}
-          <div class="flex-shrink-0 self-start sm:self-center flex items-center gap-2">
-            <a href="{{ url_for('logout') }}" class="sm:hidden rp-btn rp-btn--danger rp-btn--sm" title="Logga ut" aria-label="Logga ut">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-              </svg>
-            </a>
-            {% include 'includes/pit_lane_bell.html' %}
-          </div>
-          {% else %}
-          <div class="flex-shrink-0 self-start sm:self-center">
-            <button type="button" onclick="openLoginModal();" class="sm:hidden rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
+          {% if not is_logged_in %}
+          <div class="flex-shrink-0 self-start sm:self-center sm:hidden">
+            <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
               </svg>
@@ -812,9 +803,9 @@
           </div>
           {% endif %}
 
-          <!-- Countdown: original sizing (large on desktop) -->
-          <div class="flex flex-col lg:flex-row gap-4 min-w-[280px] sm:min-w-[400px] lg:min-w-[1000px] w-full sm:w-auto sm:flex-1">
-            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 flex-1 relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
+          <!-- Countdown stays inside container (no min-w-[1000px] overflow) -->
+          <div class="w-full min-w-0 sm:flex-1">
+            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 w-full relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
               <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
               <div class="absolute top-2 right-2 z-20">
                 <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold bg-black/60 border border-cyan-400/40 text-cyan-200 px-2.5 py-1 rounded-full backdrop-blur">
@@ -929,17 +920,18 @@
         <!-- Tab Navigation -->
         <div class="mb-6 relative z-10">
           <div class="relative flex items-stretch sm:items-center bg-black bg-opacity-40 rounded-lg p-1.5 sm:p-1">
-            <!-- Desktop: Login/Logout Button (hidden on mobile, icon in header) -->
-            <div class="hidden sm:flex items-center gap-1 flex-shrink-0">
+            <!-- Desktop + mobile: Login/Logout + Pit Lane bell -->
+            <div class="flex items-center gap-1 flex-shrink-0">
             {% if is_logged_in %}
               <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                 </svg>
-                <span>Logga ut</span>
+                <span class="hidden sm:inline">Logga ut</span>
               </a>
+              {% include 'includes/pit_lane_bell.html' %}
           {% else %}
-              <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
+              <button type="button" onclick="openLoginModal();" class="hidden sm:inline-flex rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                 </svg>
@@ -1879,8 +1871,10 @@
                 if (chips) {
                   const total = Number(me.total_points || 0);
                   chips.innerHTML = `
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
-                    <a id="welcome-latest-chip" href="/my_scores" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold hover:bg-gray-500/15 hover:border-gray-400/40 transition-colors">Senast: —</a>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
+                      <a id="welcome-latest-chip" href="/my_scores" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold hover:bg-gray-500/15 hover:border-gray-400/40 transition-colors">Senast: —</a>
+                    </div>
                     <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 Nivå: —</span>
                   `;
 
