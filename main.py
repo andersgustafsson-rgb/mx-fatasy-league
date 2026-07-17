@@ -560,6 +560,51 @@ def google_site_verification():
     return resp
 
 
+@app.get("/robots.txt")
+def robots_txt():
+    """Tell search engines which pages to crawl."""
+    from flask import make_response
+
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Sitemap: https://mx-fatasy-league-eu.onrender.com/sitemap.xml\n"
+    )
+    resp = make_response(body)
+    resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+    return resp
+
+
+@app.get("/sitemap.xml")
+def sitemap_xml():
+    """Sitemap with public pages for Google."""
+    from flask import make_response
+
+    body = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/start</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>"""
+    resp = make_response(body)
+    resp.headers["Content-Type"] = "application/xml; charset=utf-8"
+    return resp
+
+
 # -------------------------------------------------
 # Lightweight "active now" counter (in-memory)
 # -------------------------------------------------
