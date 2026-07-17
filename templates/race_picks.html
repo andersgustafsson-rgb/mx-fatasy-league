@@ -368,6 +368,50 @@
     font-size: 0.82rem;
     color: #94a3b8;
   }
+  .race-prep-summary-label {
+    margin-right: auto;
+    flex-shrink: 0;
+  }
+  .race-prep-weather-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    max-width: min(20rem, 58%);
+    margin-right: 0.15rem;
+    border-radius: 999px;
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    background: rgba(8, 47, 73, 0.45);
+    padding: 0.25rem 0.65rem 0.25rem 0.4rem;
+    color: #ecfeff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.2;
+    min-width: 0;
+  }
+  .race-prep-weather-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .race-prep-weather-icon--cloud,
+  .race-prep-weather-icon--partly {
+    font-size: 1.85rem;
+  }
+  .race-prep-weather-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  @media (max-width: 640px) {
+    .race-prep-weather-chip {
+      max-width: 48%;
+      padding-right: 0.5rem;
+    }
+    .race-prep-weather-text {
+      font-size: 0.62rem;
+    }
+  }
 
   .race-picks-out-details {
     border: 1px solid rgba(248, 113, 113, 0.22);
@@ -583,11 +627,11 @@
           </details>
 
           <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
-            <summary>📌 Bra att veta</summary>
-            <div class="race-prep-details__body">
+            <summary>
+              <span class="race-prep-summary-label">📌 Bra att veta</span>
               {% if picks_weather and picks_weather.get('available') %}
-              <div class="race-prep-weather-chip mb-2 inline-flex flex-wrap items-center gap-2 rounded-full border border-cyan-400/35 bg-cyan-950/40 px-3 py-1.5 text-xs text-cyan-100">
-                <span class="text-base leading-none" aria-hidden="true">
+              <span class="race-prep-weather-chip" title="{{ picks_weather.summary_sv }}">
+                <span class="race-prep-weather-icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather-icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
                   {% if picks_weather.icon == 'sun' %}☀️
                   {% elif picks_weather.icon == 'partly' %}⛅
                   {% elif picks_weather.icon == 'cloud' %}☁️
@@ -597,9 +641,11 @@
                   {% elif picks_weather.icon == 'storm' %}⛈️
                   {% else %}🌤️{% endif %}
                 </span>
-                <span class="font-semibold">{{ picks_weather.summary_sv }}</span>
-              </div>
+                <span class="race-prep-weather-text">{{ picks_weather.summary_sv }}</span>
+              </span>
               {% endif %}
+            </summary>
+            <div class="race-prep-details__body">
               {% if _good_to_know %}
                 {% for tip in _good_to_know %}
                 <div class="race-prep-tip">{{ tip }}</div>
