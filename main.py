@@ -441,6 +441,7 @@ def inject_facebook_social():
         "facebook_page_url": url,
         "facebook_show_timeline_embed": bool(iframe_src),
         "facebook_timeline_iframe_src": iframe_src,
+        "current_year": date.today().year,
     }
 
 
@@ -598,6 +599,21 @@ def sitemap_xml():
     <loc>https://mx-fatasy-league-eu.onrender.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/contact</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>"""
     resp = make_response(body)
@@ -23489,6 +23505,58 @@ def manual_page():
     is_logged_in = "user_id" in session
     username = session.get("username", "Gäst") if is_logged_in else "Gäst"
     return render_template("manual.html", is_logged_in=is_logged_in, username=username)
+
+
+def _render_legal_page(template: str, *, active: str, title: str, eyebrow: str, heading: str, description: str):
+    return render_template(
+        template,
+        active_legal=active,
+        page_title=title,
+        page_eyebrow=eyebrow,
+        page_heading=heading,
+        page_description=description,
+        updated_label="17 juli 2026",
+    )
+
+
+@app.get("/privacy")
+def privacy_page():
+    """Integritetspolicy (GDPR-info)."""
+    return _render_legal_page(
+        "privacy.html",
+        active="privacy",
+        title="Integritetspolicy",
+        eyebrow="Integritet",
+        heading="Integritetspolicy",
+        description="Hur MX Fantasy League hanterar personuppgifter och cookies.",
+    )
+
+
+@app.get("/terms")
+def terms_page():
+    """Användarvillkor."""
+    return _render_legal_page(
+        "terms.html",
+        active="terms",
+        title="Villkor",
+        eyebrow="Villkor",
+        heading="Användarvillkor",
+        description="Villkor för att använda MX Fantasy League.",
+    )
+
+
+@app.get("/contact")
+def contact_page():
+    """Kontaktsida."""
+    return _render_legal_page(
+        "contact.html",
+        active="contact",
+        title="Kontakt",
+        eyebrow="Kontakt",
+        heading="Hör av dig",
+        description="Kontakta MX Fantasy League via e-post.",
+    )
+
 
 @app.route("/admin/users")
 def admin_users():

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="sv" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — MX Fantasy League</title>
+  <meta name="description" content="{{ page_description }}">
+  <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <style>
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(34, 211, 238, 0.14), transparent 45%),
+        radial-gradient(ellipse at 85% 10%, rgba(251, 191, 36, 0.1), transparent 40%),
+        #020617;
+      color: #e2e8f0;
+    }
+    .legal-prose h2 {
+      margin-top: 1.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #67e8f9;
+      letter-spacing: 0.02em;
+    }
+    .legal-prose p, .legal-prose li {
+      color: #cbd5e1;
+      font-size: 0.925rem;
+      line-height: 1.65;
+    }
+    .legal-prose ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+      margin: 0.5rem 0 1rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+    .legal-prose a {
+      color: #67e8f9;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+  </style>
+</head>
+<body class="px-4 py-8 sm:py-12">
+  <div class="mx-auto w-full max-w-2xl">
+    <header class="mb-8 text-center sm:text-left">
+      <a href="{{ url_for('index') }}" class="inline-flex items-center gap-3 group">
+        <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MX Fantasy League" class="h-12 w-12">
+        <div>
+          <p class="text-[10px] font-extrabold uppercase tracking-[0.2em] text-amber-400">MX Fantasy League</p>
+          <p class="text-sm text-slate-400 group-hover:text-cyan-300 transition">← Tillbaka till startsidan</p>
+        </div>
+      </a>
+    </header>
+
+    <nav class="mb-6 flex flex-wrap gap-2 text-xs font-bold">
+      <a href="{{ url_for('privacy_page') }}" class="rounded-full px-3 py-1.5 border {% if active_legal == 'privacy' %}border-cyan-400/50 bg-cyan-500/15 text-cyan-100{% else %}border-slate-600 text-slate-400 hover:border-slate-400{% endif %}">Integritet</a>
+      <a href="{{ url_for('terms_page') }}" class="rounded-full px-3 py-1.5 border {% if active_legal == 'terms' %}border-cyan-400/50 bg-cyan-500/15 text-cyan-100{% else %}border-slate-600 text-slate-400 hover:border-slate-400{% endif %}">Villkor</a>
+      <a href="{{ url_for('contact_page') }}" class="rounded-full px-3 py-1.5 border {% if active_legal == 'contact' %}border-cyan-400/50 bg-cyan-500/15 text-cyan-100{% else %}border-slate-600 text-slate-400 hover:border-slate-400{% endif %}">Kontakt</a>
+    </nav>
+
+    <article class="rounded-2xl border border-cyan-400/20 bg-slate-900/70 p-5 sm:p-8 shadow-xl shadow-black/30 backdrop-blur">
+      <p class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-amber-400 mb-2">{{ page_eyebrow }}</p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">{{ page_heading }}</h1>
+      <p class="text-sm text-slate-400 mb-6">Senast uppdaterad: {{ updated_label }}</p>
+      <div class="legal-prose">
+        {% block legal_body %}{% endblock %}
+      </div>
+    </article>
+
+    {% include 'includes/site_legal_footer.html' %}
+  </div>
+</body>
+</html>

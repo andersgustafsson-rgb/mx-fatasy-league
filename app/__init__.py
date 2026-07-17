@@ -161,6 +161,21 @@ def create_app() -> Flask:
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/terms</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://mx-fatasy-league-eu.onrender.com/contact</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
 </urlset>"""
 		resp = make_response(body)
 		resp.headers["Content-Type"] = "application/xml; charset=utf-8"
