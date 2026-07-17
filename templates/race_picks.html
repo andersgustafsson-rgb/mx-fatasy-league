@@ -368,49 +368,38 @@
     font-size: 0.82rem;
     color: #94a3b8;
   }
-  .race-prep-summary-label {
-    margin-right: auto;
-    flex-shrink: 0;
-  }
-  .race-prep-weather-chip {
-    display: inline-flex;
+  .race-prep-weather {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.45rem;
-    max-width: min(20rem, 58%);
-    margin-right: 0.15rem;
-    border-radius: 999px;
-    border: 1px solid rgba(34, 211, 238, 0.35);
-    background: rgba(8, 47, 73, 0.45);
-    padding: 0.25rem 0.65rem 0.25rem 0.4rem;
-    color: #ecfeff;
-    font-size: 0.7rem;
+    text-align: center;
+    gap: 0.35rem;
+    margin: 0.15rem 0 0.85rem;
+    padding: 0.75rem 0.85rem 0.9rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(34, 211, 238, 0.28);
+    background: linear-gradient(165deg, rgba(8, 47, 73, 0.55), rgba(15, 23, 42, 0.65));
+  }
+  .race-prep-weather__summary {
+    font-size: 0.78rem;
     font-weight: 600;
-    line-height: 1.2;
-    min-width: 0;
+    color: #e0f2fe;
+    line-height: 1.35;
   }
-  .race-prep-weather-icon {
-    font-size: 1.35rem;
+  .race-prep-weather__icon {
+    font-size: 3.4rem;
     line-height: 1;
-    flex-shrink: 0;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
   }
-  .race-prep-weather-icon--cloud,
-  .race-prep-weather-icon--partly {
-    font-size: 1.85rem;
+  .race-prep-weather__icon--cloud,
+  .race-prep-weather__icon--partly {
+    font-size: 4rem;
   }
-  .race-prep-weather-text {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  @media (max-width: 640px) {
-    .race-prep-weather-chip {
-      max-width: 48%;
-      padding-right: 0.5rem;
-    }
-    .race-prep-weather-text {
-      font-size: 0.62rem;
-    }
+  .race-prep-weather__label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #67e8f9;
+    letter-spacing: 0.02em;
   }
 
   .race-picks-out-details {
@@ -627,11 +616,12 @@
           </details>
 
           <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
-            <summary>
-              <span class="race-prep-summary-label">📌 Bra att veta</span>
+            <summary>📌 Bra att veta</summary>
+            <div class="race-prep-details__body">
               {% if picks_weather and picks_weather.get('available') %}
-              <span class="race-prep-weather-chip" title="{{ picks_weather.summary_sv }}">
-                <span class="race-prep-weather-icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather-icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
+              <div class="race-prep-weather">
+                <div class="race-prep-weather__summary">{{ picks_weather.summary_sv }}</div>
+                <div class="race-prep-weather__icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather__icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
                   {% if picks_weather.icon == 'sun' %}☀️
                   {% elif picks_weather.icon == 'partly' %}⛅
                   {% elif picks_weather.icon == 'cloud' %}☁️
@@ -640,12 +630,12 @@
                   {% elif picks_weather.icon == 'snow' %}❄️
                   {% elif picks_weather.icon == 'storm' %}⛈️
                   {% else %}🌤️{% endif %}
-                </span>
-                <span class="race-prep-weather-text">{{ picks_weather.summary_sv }}</span>
-              </span>
+                </div>
+                {% if picks_weather.label_sv %}
+                <div class="race-prep-weather__label">{{ picks_weather.label_sv }}</div>
+                {% endif %}
+              </div>
               {% endif %}
-            </summary>
-            <div class="race-prep-details__body">
               {% if _good_to_know %}
                 {% for tip in _good_to_know %}
                 <div class="race-prep-tip">{{ tip }}</div>
