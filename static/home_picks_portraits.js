@@ -28,12 +28,9 @@
           return;
         }
         const photo = photoUrl(r);
-        img.loading = 'lazy';
+        img.loading = 'eager';
         img.decoding = 'async';
-        img.style.visibility = 'hidden';
-        img.onload = function () {
-          img.style.visibility = 'visible';
-        };
+        img.onload = null;
         img.onerror = function onPortraitError() {
           const fallback = brandSrc(r);
           if (photo && this.getAttribute('src') !== fallback && !this.dataset.brandTried) {
@@ -42,12 +39,11 @@
             return;
           }
           this.removeAttribute('src');
-          this.style.visibility = 'hidden';
         };
         if (photo) {
           img.src = photo;
         } else {
-          img.removeAttribute('src');
+          img.src = brandSrc(r);
         }
       });
   }

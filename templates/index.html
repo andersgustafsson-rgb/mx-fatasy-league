@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=picks-cta-2">
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
@@ -773,7 +773,7 @@
                   <span class="text-yellow-400 text-sm font-bold">{{ username[0].upper() }}</span>
                 </div>
               {% endif %}
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <p class="text-base md:text-lg text-gray-200 truncate">
                   {% if is_logged_in %}
@@ -788,23 +788,28 @@
                 </div>
                 {% if is_logged_in %}
                   <div id="welcome-chips" class="mt-1 flex flex-col items-start gap-1 text-xs"></div>
-                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 hover:border-amber-300/55 transition shadow-sm shadow-amber-900/20">
+                {% endif %}
+                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                  {% if is_logged_in %}
+                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 hover:border-amber-300/55 transition shadow-sm shadow-amber-900/20">
                     <span aria-hidden="true">🏁</span> Bjud in en kompis
                   </button>
-                {% endif %}
+                  {% include 'includes/pit_lane_bell.html' %}
+                  <a href="{{ url_for('logout') }}" class="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 bg-red-600/90 px-2.5 py-1.5 text-xs font-extrabold text-white hover:bg-red-500 transition">
+                    Logga ut
+                  </a>
+                  {% else %}
+                  <button type="button" onclick="openLoginModal();" class="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3 py-1.5 text-xs font-extrabold text-slate-950 hover:bg-cyan-400 transition">
+                    Logga in
+                  </button>
+                  <button type="button" onclick="openGuestSignup();" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 transition">
+                    Skapa konto
+                  </button>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </header>
-
-          {% if not is_logged_in %}
-          <div class="flex-shrink-0 self-start sm:self-center sm:hidden">
-            <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--primary rp-btn--sm" title="Logga in" aria-label="Logga in">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-              </svg>
-            </button>
-          </div>
-          {% endif %}
 
           <!-- Countdown stays inside container (no min-w-[1000px] overflow) -->
           <div class="w-full min-w-0 sm:flex-1">
@@ -891,7 +896,7 @@
                     <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
                     <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
                   </div>
-                  <p class="mt-0.5 truncate text-xs text-slate-300">Har du konto? Tryck Logga in · annars 20 sek till picks</p>
+                  <p class="mt-0.5 truncate text-xs text-slate-300">Eller tryck Logga in uppe till vänster om du redan har konto</p>
                 </div>
                 <svg class="h-5 w-5 flex-shrink-0 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </div>
@@ -935,29 +940,8 @@
 
         <!-- Tab Navigation -->
         <div class="mb-6 relative z-10">
-          <div class="relative flex items-stretch sm:items-center bg-black bg-opacity-40 rounded-lg p-1.5 sm:p-1">
-            <!-- Desktop + mobile: Login/Logout + Pit Lane bell -->
-            <div class="flex items-center gap-1 flex-shrink-0">
-            {% if is_logged_in %}
-              <a href="{{ url_for('logout') }}" class="rp-btn rp-btn--danger rp-btn--sm" title="Logga ut">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                </svg>
-                <span class="hidden sm:inline">Logga ut</span>
-              </a>
-              {% include 'includes/pit_lane_bell.html' %}
-          {% else %}
-              <button type="button" onclick="openLoginModal();" class="hidden sm:inline-flex rp-btn rp-btn--primary rp-btn--sm" title="Logga in">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                </svg>
-                <span>Logga in</span>
-              </button>
-          {% endif %}
-            </div>
-            
-            <!-- Tab grid on mobile, wrapped row on desktop -->
-            <div id="tab-scroll-container" class="w-full min-w-0 sm:flex sm:flex-1 sm:flex-wrap sm:justify-center sm:gap-1">
+          <div class="relative bg-black bg-opacity-40 rounded-lg p-1.5 sm:p-1">
+                        <div id="tab-scroll-container" class="w-full min-w-0 sm:flex sm:flex-1 sm:flex-wrap sm:justify-center sm:gap-1">
                 <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden">Toppl.</span><span class="hidden sm:inline">Leaderboard</span></button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
@@ -1150,7 +1134,7 @@
                     {% include 'partials/picks_summary_board.html' %}
                     {% if home_pick_portraits %}
                     <script>window.HOME_PICK_PORTRAITS = {{ home_pick_portraits | tojson }};</script>
-                    <script src="{{ url_for('static', filename='home_picks_portraits.js') }}" defer></script>
+                    <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=2" defer></script>
                     {% endif %}
                     <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
                       {% if picks_status == 'has_picks' %}

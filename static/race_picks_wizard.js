@@ -599,7 +599,7 @@
 
   function portraitHtml(rider) {
     if (!rider) return '<div class="wizard-summary-portrait"></div>';
-    return `<img class="wizard-summary-portrait" alt="" loading="lazy" data-rider-id="${rider.id}">`;
+    return `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${rider.id}">`;
   }
 
   function hydrateSummaryPortraits(root) {

@@ -455,7 +455,6 @@
 
 .picks-summary--on-home {
   margin-top: 0.25rem;
-  backdrop-filter: blur(6px);
 }
 
 .picks-summary--on-home .wizard-summary-body {
@@ -478,16 +477,24 @@
 .wizard-picks-summary {
   margin-bottom: 1.25rem;
   border-radius: 1rem;
-  overflow: hidden;
   border: 1px solid rgba(34, 211, 238, 0.25);
   background: linear-gradient(160deg, rgba(15, 23, 42, 0.98), rgba(8, 47, 73, 0.55));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  /* Avoid overflow:hidden + animated shadows — iOS Safari blanks text while scrolling */
+  isolation: isolate;
 }
 
 .wizard-picks-summary.is-complete {
   border-color: rgba(52, 211, 153, 0.45);
   box-shadow: 0 0 28px rgba(52, 211, 153, 0.15), 0 8px 32px rgba(0, 0, 0, 0.35);
-  animation: summaryGlow 2.5s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @media (min-width: 768px) {
+    .wizard-picks-summary.is-complete {
+      animation: summaryGlow 2.5s ease-in-out infinite alternate;
+    }
+  }
 }
 
 @keyframes summaryGlow {
@@ -641,6 +648,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Keep text painted during iOS scroll (compositor glitch) */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.wizard-summary-rider,
+.wizard-summary-extra__name,
+.wizard-summary-num {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .wizard-summary-empty {
