@@ -5960,37 +5960,44 @@ def debug_weekly_stats():
         import traceback
         return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
+
+def _leaderboard_sort_key(row: dict, points_field: str) -> tuple[int, int]:
+    """Stable sort: högst poäng först, vid lika poäng lägst user_id (samma ordning varje gång)."""
+    return (-int(row.get(points_field) or 0), int(row.get("id") or 0))
+
+
+def _build_rank_map(rows: list[dict], points_field: str) -> dict[str, int]:
+    ranked = sorted(rows, key=lambda r: _leaderboard_sort_key(r, points_field))
+    return {str(int(row["id"])): i for i, row in enumerate(ranked, 1)}
+
+
+def _load_unified_leaderboard_history_baseline() -> dict[str, int]:
+    """Senaste kompletta snapshot (samma created_at för alla), inte per-user max(id)."""
+    try:
+        from sqlalchemy import func
+
+        latest_ts = db.session.query(func.max(LeaderboardHistory.created_at)).scalar()
+        if not latest_ts:
+            return {}
+        rows = LeaderboardHistory.query.filter(LeaderboardHistory.created_at == latest_ts).all()
+        if not rows:
+            return {}
+        return {
+            str(int(r.user_id)): int(r.ranking)
+            for r in rows
+            if r.user_id is not None and r.ranking is not None
+        }
+    except Exception:
+        return {}
+
+
 def calculate_leaderboard_deltas():
     """Shared function to calculate leaderboard deltas - ensures consistency between get_weekly_fun_stats and get_season_leaderboard"""
     from datetime import datetime, timedelta
 
     db.session.rollback()
 
-    # Baslinje för pilar: senaste sparade snapshot i LeaderboardHistory.
-    # Det gör pilar stabila och gör att manuella poängkorrigeringar faktiskt syns (jämfört med
-    # en tidigare sparad rank), istället för att baslinjen räknas om från samma data.
-    baseline_from_history: dict[str, int] = {}
-    try:
-        from sqlalchemy import func
-
-        subq = (
-            db.session.query(
-                LeaderboardHistory.user_id.label("user_id"),
-                func.max(LeaderboardHistory.id).label("max_id"),
-            )
-            .group_by(LeaderboardHistory.user_id)
-            .subquery()
-        )
-        latest_rows = (
-            db.session.query(LeaderboardHistory.user_id, LeaderboardHistory.ranking)
-            .join(subq, LeaderboardHistory.id == subq.c.max_id)
-            .all()
-        )
-        baseline_from_history = {
-            str(int(uid)): int(rank) for uid, rank in latest_rows if uid is not None and rank is not None
-        }
-    except Exception:
-        baseline_from_history = {}
+    baseline_from_history = _load_unified_leaderboard_history_baseline()
 
     # Samma 7-dagsfönster som get_weekly_fun_stats (event_date, icke-WSX, ej framtida)
     week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
@@ -6089,7 +6096,9 @@ def calculate_leaderboard_deltas():
             by_uid[uid] = row
     user_scores_list = list(by_uid.values())
 
-    current_leaderboard = sorted(user_scores_list, key=lambda x: x["total_points"], reverse=True)
+    current_leaderboard = sorted(
+        user_scores_list, key=lambda x: _leaderboard_sort_key(x, "total_points")
+    )
 
     # Finns avklarade race i fönstret men ingen har fått veckopoäng i CompetitionScore ännu
     # (t.ex. perfekt gissning räknas från picks — då är baseline_total == total för alla och
@@ -6099,14 +6108,11 @@ def calculate_leaderboard_deltas():
     )
 
     baseline_ranking: dict[str, int] = {}
-    if baseline_from_history:
+    if use_recent_window_baseline:
+        # Veckans prestationer: jämför mot rank *före* denna veckas race (samma poängkälla som leaderboard).
+        baseline_ranking = _build_rank_map(user_scores_list, "baseline_total")
+    elif baseline_from_history:
         baseline_ranking = dict(baseline_from_history)
-    elif use_recent_window_baseline:
-        baseline_leaderboard = sorted(
-            user_scores_list, key=lambda x: x["baseline_total"], reverse=True
-        )
-        for i, user in enumerate(baseline_leaderboard, 1):
-            baseline_ranking[str(int(user["id"]))] = i
     else:
         # Inga avklarade race i veckofönstret → jämför mot rank med bara äldre tävlingar (Raket/Ankare dör inte)
         previous_competitions = (
@@ -6140,9 +6146,7 @@ def calculate_leaderboard_deltas():
                         scores_by_comp[comp_id] = score
                 previous_points = sum(s.total_points or 0 for s in scores_by_comp.values())
             previous_rows.append({"id": user_id, "total_points": previous_points})
-        previous_rows.sort(key=lambda x: x["total_points"], reverse=True)
-        for i, row in enumerate(previous_rows, 1):
-            baseline_ranking[str(int(row["id"]))] = i
+        baseline_ranking = _build_rank_map(previous_rows, "total_points")
 
     leaderboard_data = []
     for i, user_row in enumerate(current_leaderboard, 1):

@@ -2167,7 +2167,9 @@
       }
       if (w && w.delta != null) {
         const d = Number(w.delta);
-        if (Number.isFinite(d) && d !== 0) {
+        const pr = w.previous_rank != null ? Number(w.previous_rank) : null;
+        const cr = w.current_rank != null ? Number(w.current_rank) : null;
+        if (Number.isFinite(d) && d !== 0 && pr !== cr) {
           lines.push((verb === 'up' ? 'Klättrade ' : 'Sjönk ') + Math.abs(d) + ' platser');
         }
       }

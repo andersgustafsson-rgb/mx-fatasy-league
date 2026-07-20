@@ -531,6 +531,74 @@
     .duel-pick-row + .duel-pick-row { border-top: 1px solid rgba(51, 65, 85, 0.55); margin-top: 0.2rem; padding-top: 0.45rem; }
     .duel-pick-who { color: #94a3b8; font-size: 0.75rem; min-width: 4.5rem; }
     .duel-pick-val { color: #f1f5f9; font-weight: 600; }
+    .duel-recent-section {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .duel-recent-section > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      user-select: none;
+    }
+    .duel-recent-section > summary::-webkit-details-marker { display: none; }
+    .duel-recent-section > summary::after {
+      content: '▸';
+      font-size: 0.85rem;
+      color: #64748b;
+      transition: transform 0.15s ease;
+    }
+    .duel-recent-section[open] > summary::after { transform: rotate(90deg); }
+    .duel-recent-section > summary:hover { color: #cbd5e1; }
+    .duel-recent-list {
+      margin-top: 0.65rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .duel-recent-item {
+      border-radius: 0.65rem;
+      border: 1px solid rgba(51, 65, 85, 0.55);
+      background: rgba(15, 23, 42, 0.45);
+      overflow: hidden;
+    }
+    .duel-recent-item > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 0.55rem 0.65rem;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      user-select: none;
+    }
+    .duel-recent-item > summary::-webkit-details-marker { display: none; }
+    .duel-recent-item > summary::after {
+      content: '+';
+      float: right;
+      font-weight: 700;
+      color: #64748b;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+    .duel-recent-item[open] > summary::after { content: '−'; color: #94a3b8; }
+    .duel-recent-item > summary:hover { background: rgba(30, 41, 59, 0.35); }
+    .duel-recent-item__race {
+      font-size: 0.68rem;
+      color: #64748b;
+      margin-left: 0.35rem;
+    }
+    .duel-recent-item__body {
+      padding: 0 0.65rem 0.65rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.45);
+    }
     .duel-headline {
       font-family: 'Orbitron', monospace;
       font-size: 0.95rem;
@@ -1307,37 +1375,41 @@
       {% endif %}
 
       {% if challenges.recent %}
-      <div class="pt-3 border-t border-gray-700/60">
-        <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">Senaste</p>
-        <div class="space-y-2">
+      <details class="duel-recent-section"{% if challenges.recent|length <= 3 %} open{% endif %}>
+        <summary>Senaste <span class="text-gray-600 normal-case tracking-normal font-semibold">({{ challenges.recent|length }})</span></summary>
+        <div class="duel-recent-list">
           {% for duel in challenges.recent %}
-          <div class="text-sm text-gray-300">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                {{ duel.type_icon }}
-                {{ duel.challenger.name }} vs {{ duel.challenged.name }}
-                {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% elif duel.status == 'expired' %}— <span class="text-gray-500">gick ut (svar saknades)</span>{% elif duel.status == 'declined' %}— <span class="text-gray-500">nekad</span>{% elif duel.status == 'cancelled' %}— <span class="text-gray-500">avbruten</span>{% endif %}
-              </span>
-              <span class="text-xs text-gray-500">{{ duel.competition_short }}</span>
-            </div>
+          <details class="duel-recent-item"{% if loop.first %} open{% endif %}>
+            <summary>
+              {{ duel.type_icon }}
+              {{ duel.challenger.name }} vs {{ duel.challenged.name }}
+              {% if duel.winner_name %}— <span class="text-amber-300">{{ duel.winner_name }}</span> vann{% elif duel.status == 'tie' %}— oavgjort{% elif duel.status == 'expired' %}— <span class="text-gray-500">gick ut (svar saknades)</span>{% elif duel.status == 'declined' %}— <span class="text-gray-500">nekad</span>{% elif duel.status == 'cancelled' %}— <span class="text-gray-500">avbruten</span>{% endif %}
+              {% if duel.competition_short %}<span class="duel-recent-item__race">· {{ duel.competition_short }}</span>{% endif %}
+            </summary>
             {% if duel.picks and duel.picks.show %}
-            <div class="duel-picks mt-2">
-              {% for pick in duel.picks.rows %}
-              <div class="duel-pick-row">
-                <span class="duel-pick-who">{{ pick.who_name }}</span>
-                <span class="text-gray-500 text-xs">{{ pick.label }}:</span>
-                <span class="duel-pick-val">{{ pick.value }}</span>
+            <div class="duel-recent-item__body">
+              <div class="duel-picks mt-1">
+                {% for pick in duel.picks.rows %}
+                <div class="duel-pick-row">
+                  <span class="duel-pick-who">{{ pick.who_name }}</span>
+                  <span class="text-gray-500 text-xs">{{ pick.label }}:</span>
+                  <span class="duel-pick-val">{{ pick.value }}</span>
+                </div>
+                {% endfor %}
+                {% if duel.result_summary %}
+                <p class="text-xs text-gray-500 mt-2">{{ duel.result_summary }}</p>
+                {% endif %}
               </div>
-              {% endfor %}
-              {% if duel.result_summary %}
-              <p class="text-xs text-gray-500 mt-2">{{ duel.result_summary }}</p>
-              {% endif %}
+            </div>
+            {% elif duel.result_summary %}
+            <div class="duel-recent-item__body">
+              <p class="text-xs text-gray-500">{{ duel.result_summary }}</p>
             </div>
             {% endif %}
-          </div>
+          </details>
           {% endfor %}
         </div>
-      </div>
+      </details>
       {% endif %}
     </div>
     {% if challenges.alert and challenges.alert.has_action %}
