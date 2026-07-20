@@ -531,7 +531,15 @@ except Exception:
 
 @app.get("/favicon.ico")
 def favicon():
-    return redirect(url_for("static", filename="images/mx_fantasy_favicon.png"))
+    """Serve favicon at root without redirect — Google prefers a direct 200."""
+    from flask import send_from_directory, make_response
+
+    resp = make_response(
+        send_from_directory(app.static_folder, "images/mx_fantasy_favicon.png")
+    )
+    resp.headers["Content-Type"] = "image/png"
+    resp.headers["Cache-Control"] = "public, max-age=604800"
+    return resp
 
 
 @app.get("/sw.js")
@@ -4917,7 +4925,7 @@ def _challenge_rider_name(rider_id: int | None) -> str:
 
 
 def _unlock_stale_tied_challenges(competition_id: int) -> int:
-    """Re-open duels tied only because results were incomplete at first resolve."""
+    """Re-open duels tied/resolved only because results were incomplete or bogus."""
     stale = LeagueChallenge.query.filter(
         LeagueChallenge.competition_id == competition_id,
         LeagueChallenge.status == "tie",
@@ -4925,14 +4933,28 @@ def _unlock_stale_tied_challenges(competition_id: int) -> int:
             ("Saknade resultat — oavgjort", "Saknade märkesresultat — oavgjort")
         ),
     ).all()
-    for ch in stale:
+    # Old h2h bug: missing results used fake P99 → "89 vs 92 poäng från mål" etc.
+    bogus_h2h = LeagueChallenge.query.filter(
+        LeagueChallenge.competition_id == competition_id,
+        LeagueChallenge.challenge_type == "h2h",
+        LeagueChallenge.status.in_(("resolved", "tie")),
+        LeagueChallenge.result_summary.isnot(None),
+        db.or_(
+            LeagueChallenge.result_summary.ilike("%poäng från mål%"),
+            LeagueChallenge.result_summary == "Saknade resultat — oavgjort",
+        ),
+    ).all()
+    reopen = {ch.id: ch for ch in stale}
+    for ch in bogus_h2h:
+        reopen[ch.id] = ch
+    for ch in reopen.values():
         ch.status = "locked"
         ch.winner_id = None
         ch.result_summary = None
         ch.resolved_at = None
-    if stale:
+    if reopen:
         db.session.flush()
-    return len(stale)
+    return len(reopen)
 
 
 def _resolve_single_challenge(ch: LeagueChallenge) -> None:
@@ -4945,26 +4967,46 @@ def _resolve_single_challenge(ch: LeagueChallenge) -> None:
     if ch.challenge_type == "h2h":
         pos_c = _rider_position(comp_id, ch.challenger_rider_id)
         pos_d = _rider_position(comp_id, ch.challenged_rider_id)
-        actual_c = pos_c if pos_c else 99
-        actual_d = pos_d if pos_d else 99
-        if ch.challenger_position == actual_c and ch.challenged_position != actual_d:
+        # Never invent P99 — that made "P7 vs P10" resolve as 92 vs 89 when results were missing.
+        if pos_c is None or pos_d is None:
+            ch.status = "tie"
+            ch.result_summary = "Saknade resultat — oavgjort"
+            ch.resolved_at = datetime.utcnow()
+            return
+        guess_c = ch.challenger_position
+        guess_d = ch.challenged_position
+        if guess_c is None or guess_d is None:
+            ch.status = "tie"
+            ch.result_summary = "Saknade gissning — oavgjort"
+            ch.resolved_at = datetime.utcnow()
+            return
+        if guess_c == pos_c and guess_d != pos_d:
             winner_id = ch.challenger_id
-            summary = f"Exakt träff! {_challenge_user_label(ch.challenger_id)} gissade P{actual_c}"
-        elif ch.challenged_position == actual_d and ch.challenger_position != actual_c:
+            summary = f"Exakt träff! {_challenge_user_label(ch.challenger_id)} gissade P{pos_c}"
+        elif guess_d == pos_d and guess_c != pos_c:
             winner_id = ch.challenged_id
-            summary = f"Exakt träff! {_challenge_user_label(ch.challenged_id)} gissade P{actual_d}"
+            summary = f"Exakt träff! {_challenge_user_label(ch.challenged_id)} gissade P{pos_d}"
         else:
-            dist_c = abs((ch.challenger_position or 99) - actual_c)
-            dist_d = abs((ch.challenged_position or 99) - actual_d)
+            dist_c = abs(guess_c - pos_c)
+            dist_d = abs(guess_d - pos_d)
             if dist_c < dist_d:
                 winner_id = ch.challenger_id
-                summary = f"Närmast vinner ({dist_c} vs {dist_d} poäng från mål)"
+                summary = (
+                    f"Närmast vinner ({dist_c} vs {dist_d} platser fel) "
+                    f"— P{guess_c}→P{pos_c} vs P{guess_d}→P{pos_d}"
+                )
             elif dist_d < dist_c:
                 winner_id = ch.challenged_id
-                summary = f"Närmast vinner ({dist_d} vs {dist_c} poäng från mål)"
+                summary = (
+                    f"Närmast vinner ({dist_d} vs {dist_c} platser fel) "
+                    f"— P{guess_d}→P{pos_d} vs P{guess_c}→P{pos_c}"
+                )
             else:
                 ch.status = "tie"
-                ch.result_summary = f"Lika nära målet ({dist_c} poäng) — rematch?"
+                ch.result_summary = (
+                    f"Lika nära ({dist_c} platser fel) — rematch? "
+                    f"P{guess_c}→P{pos_c} vs P{guess_d}→P{pos_d}"
+                )
                 ch.resolved_at = datetime.utcnow()
                 return
 

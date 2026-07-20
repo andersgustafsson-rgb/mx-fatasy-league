@@ -95,8 +95,15 @@ def create_app() -> Flask:
 
 	@app.get("/favicon.ico")
 	def favicon():
-		# Browsers request /favicon.ico by default; point at site logo (SVG).
-		return redirect(url_for("static", filename="images/mx_fantasy_favicon.png"))
+		"""Serve favicon at root without redirect — Google prefers a direct 200."""
+		from flask import send_from_directory, make_response
+
+		resp = make_response(
+			send_from_directory(app.static_folder, "images/mx_fantasy_favicon.png")
+		)
+		resp.headers["Content-Type"] = "image/png"
+		resp.headers["Cache-Control"] = "public, max-age=604800"
+		return resp
 
 	@app.get("/sw.js")
 	def service_worker():
