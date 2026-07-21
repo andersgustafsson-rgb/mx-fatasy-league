@@ -811,7 +811,7 @@
     {% if competition.series != 'WSX' %}
     <div class="wildcard-panel mt-4 sm:mt-5">
       <h3 class="wildcard-panel__title">Wildcard</h3>
-      <p class="wildcard-panel__hint">Slumpa plats 10–20, välj sedan en 450-förare.</p>
+      <p class="wildcard-panel__hint">Slumpa plats 10–20, välj sedan en 450-förare (inte OUT, inte redan i topp 6).</p>
       <div class="wildcard-roll">
         <div id="wildcard-wheel" class="wildcard-wheel" aria-hidden="true">
           <div id="wildcard-wheel-hub" class="wildcard-wheel__hub">?</div>
@@ -943,6 +943,49 @@
     return OUT_IDS.some((x) => Number(x) === Number(rid));
   }
 
+  function getSelectedTop6Ids(dataClass) {
+    return Array.from(document.querySelectorAll(`.rider-selector[data-class="${dataClass}"]`))
+      .map((sel) => {
+        const fromDs = sel.dataset.selectedRiderId;
+        if (fromDs) return String(fromDs);
+        const span = sel.querySelector('.selected-rider');
+        const txt = (span?.textContent || '').trim();
+        if (!txt || txt.startsWith('-- välj')) return null;
+        const opt = sel.querySelector(`.rider-option[data-rider-name="${txt}"]`);
+        return opt?.dataset?.riderId ? String(opt.dataset.riderId) : null;
+      })
+      .filter(Boolean);
+  }
+
+  function getWildcardBlockedIds() {
+    // Wildcard är 450cc — får inte vara OUT eller redan vald i topp 6 450
+    const top6Class = isWSXSeries ? 'wsx_sx1' : '450cc';
+    return new Set(getSelectedTop6Ids(top6Class).map(String));
+  }
+
+  function clearWildcardPickUi() {
+    const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+    const hiddenSelect = document.getElementById('wildcard-pick');
+    if (hiddenSelect) hiddenSelect.value = '';
+    if (selector) {
+      delete selector.dataset.selectedRiderId;
+      const span = selector.querySelector('.selected-rider');
+      if (span) span.textContent = '-- välj 450cc förare --';
+    }
+  }
+
+  function clearWildcardIfInvalid() {
+    if (isWSXSeries) return;
+    const hiddenSelect = document.getElementById('wildcard-pick');
+    const rid = hiddenSelect?.value;
+    if (!rid) return;
+    if (isOutRiderId(rid) || getWildcardBlockedIds().has(String(rid))) {
+      clearWildcardPickUi();
+      savePicksToStorage();
+      if (window.PicksWizard && window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
+    }
+  }
+
   function riderOptionLabel(r) {
     const brand = r.bike_brand || '';
     return `#${r.rider_number} ${r.name} (${brand})`;
@@ -1042,6 +1085,8 @@
       const posRaw = selector.dataset.position;
       const pos = posRaw !== undefined && posRaw !== '' ? Number(posRaw) : 0;
       riders.forEach((rider) => {
+        // Wildcard: visa aldrig OUT-förare i listan
+        if (dataClass === 'wildcard-pick' && isOutRiderId(rider.id)) return;
         list.appendChild(createRiderOptionEl(rider, dataClass, pos));
       });
       list.dataset.populated = '1';
@@ -1072,7 +1117,11 @@
     }
     fillSelectFromRiders(document.getElementById('holeshot-450'), l450, '-- välj förare --');
     fillSelectFromRiders(document.getElementById('holeshot-250'), l250, '-- välj förare --');
-    fillSelectFromRiders(document.getElementById('wildcard-pick'), l450, '-- välj 450cc förare --');
+    fillSelectFromRiders(
+      document.getElementById('wildcard-pick'),
+      l450.filter((r) => !isOutRiderId(r.id)),
+      '-- välj 450cc förare --'
+    );
   }
 
   // Dropdowns built on DOMContentLoaded (deferred when overview loads first)
@@ -1248,6 +1297,7 @@
           selector.dataset.selectedRiderId = String(pick.riderId);
         }
       }
+      clearWildcardIfInvalid();
 
       // Load wildcard position (only for non-WSX series)
       if (!isWSXSeries && picks.wildcardPosition) {
@@ -1354,9 +1404,11 @@
       dropdown.style.display = 'block';
       selector.classList.add('open');
       
-      // Update rider selectors to hide already selected riders
+      // Update rider selectors to hide already selected / OUT riders
       if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
         updateRiderSelectors(riderClass);
+      } else if (riderClass === 'wildcard-pick' || riderClass === 'holeshot-450' || riderClass === 'holeshot-250') {
+        filterRiders(riderClass, 0, '');
       }
       
       // Dropdown-lista: porträtt bara lokalt (prod = placeholder, porträtt vid val)
@@ -1505,6 +1557,12 @@
     
     // Update rider selectors to hide selected riders
     updateRiderSelectors(riderClass);
+
+    // Om topp 6 450 ändras: rensa ogiltig wildcard och uppdatera listan
+    if (!isWSXSeries && (riderClass === '450cc' || riderClass === 'wsx_sx1')) {
+      clearWildcardIfInvalid();
+      filterRiders('wildcard-pick', 0, '');
+    }
     
     // Save picks to localStorage
     savePicksToStorage();
@@ -1524,10 +1582,9 @@
       return;
     }
     const riderOptions = selector.querySelectorAll('.rider-option');
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = (searchTerm || '').toLowerCase();
     
-    // Get currently selected riders in this class (excluding current position)
-    // For wildcard and holeshot, we don't need to check for duplicates since they're independent
+    // Get currently selected riders to hide (topp 6 duplicates; wildcard får inte återanvända topp 6 450)
     let chosenRiderIds = [];
     if (riderClass === '450cc' || riderClass === '250cc' || riderClass === 'wsx_sx1' || riderClass === 'wsx_sx2') {
       const selectors = document.querySelectorAll(`.rider-selector[data-class="${riderClass}"]`);
@@ -1545,6 +1602,8 @@
         const riderOption = sel.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
         return riderOption ? riderOption.dataset.riderId : null;
       }).filter(Boolean);
+    } else if (riderClass === 'wildcard-pick') {
+      chosenRiderIds = Array.from(getWildcardBlockedIds());
     }
     
     riderOptions.forEach(option => {
@@ -1557,8 +1616,8 @@
                            riderNumber.includes(searchLower) || 
                            riderBrand.includes(searchLower);
       
-      const isAlreadySelected = chosenRiderIds.includes(riderId);
-      const isOut = option.dataset.out === 'true';
+      const isAlreadySelected = chosenRiderIds.includes(riderId) || chosenRiderIds.includes(String(riderId));
+      const isOut = option.dataset.out === 'true' || isOutRiderId(riderId);
       
       // Check coast for 250cc / WSX SX2 race picks (not holeshot)
       let isWrongCoast = false;
@@ -1588,6 +1647,15 @@
 
   // Handle wildcard rider selection
   function selectWildcardRider(riderId, riderName) {
+    if (isOutRiderId(riderId)) {
+      alert('Den föraren är OUT för detta race.');
+      return;
+    }
+    if (getWildcardBlockedIds().has(String(riderId))) {
+      alert('Du kan inte välja samma förare i wildcard som i topp 6 (450).');
+      return;
+    }
+
     const selector = document.querySelector(`.rider-selector[data-class="wildcard-pick"]`);
     const selectedRiderSpan = selector.querySelector('.selected-rider');
     
@@ -1679,6 +1747,10 @@
     
     // Update rider selectors to show all options again
     updateRiderSelectors(riderClass);
+    if (!isWSXSeries && (riderClass === '450cc' || riderClass === 'wsx_sx1')) {
+      clearWildcardIfInvalid();
+      filterRiders('wildcard-pick', 0, '');
+    }
     
     // Save picks to localStorage
     savePicksToStorage();
@@ -2546,9 +2618,8 @@ function onPickChange(cls, pos, riderId = null) {
     if (hs250Sel && hs250Sel.value && OUT_IDS.includes(Number(hs250Sel.value))) {
       hs250Sel.value = "";
     }
-    const wcSel = document.getElementById("wildcard-pick");
-    if (wcSel && wcSel.value && OUT_IDS.includes(Number(wcSel.value))) {
-      wcSel.value = "";
+    if (document.getElementById("wildcard-pick")?.value) {
+      clearWildcardIfInvalid();
     }
 
     document.querySelectorAll(".pick-select").forEach((sel) => {
@@ -2955,6 +3026,18 @@ function onPickChange(cls, pos, riderId = null) {
     for (const p of picks) {
       if (OUT_IDS.includes(Number(p.rider_id))) {
         alert("En vald förare är OUT. Välj en annan.");
+        return;
+      }
+    }
+
+    if (!isWSXSeries) {
+      const wildcardPick = document.getElementById("wildcard-pick")?.value;
+      if (wildcardPick && isOutRiderId(wildcardPick)) {
+        alert("Wildcard-föraren är OUT. Välj en annan.");
+        return;
+      }
+      if (wildcardPick && getWildcardBlockedIds().has(String(wildcardPick))) {
+        alert("Du kan inte välja samma förare i wildcard som i topp 6 (450).");
         return;
       }
     }
