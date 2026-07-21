@@ -1207,18 +1207,29 @@
       gap: 0;
       width: 100%;
       margin-top: auto;
-      padding: 0.75rem 1.25rem;
+      padding: 0.75rem 0.65rem;
       background: #152033;
       border-top: 1px solid #2a3548;
     }
+    @media (min-width: 640px) {
+      .home-race-hero__timers {
+        padding: 0.85rem 1.25rem;
+      }
+    }
     .home-race-timer {
       position: relative;
-      padding: 0.15rem 0.85rem 0.1rem 0.95rem;
+      min-width: 0;
+      padding: 0.15rem 0.45rem 0.1rem 0.7rem;
       background: transparent;
       border: none;
       border-radius: 0;
       overflow: visible;
       box-shadow: none;
+    }
+    @media (min-width: 640px) {
+      .home-race-timer {
+        padding: 0.15rem 0.85rem 0.1rem 0.95rem;
+      }
     }
     .home-race-timer + .home-race-timer {
       border-left: 1px solid #334155;
@@ -1243,47 +1254,56 @@
     .home-race-timer--deadline::before { background: rgba(251, 191, 36, 0.85); }
     .home-race-timer__label {
       margin-bottom: 0.35rem;
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #64748b;
+    }
+    @media (min-width: 640px) {
+      .home-race-timer__label {
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+      }
     }
     .home-race-timer--start .home-race-timer__label { color: #fca5a5; }
     .home-race-timer--deadline .home-race-timer__label { color: #fcd34d; }
     .home-race-timer__value {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: baseline;
-      column-gap: 0.3rem;
-      row-gap: 0.1rem;
+      gap: 0.22rem;
+      white-space: nowrap;
+      overflow: hidden;
       font-family: 'Rajdhani', system-ui, sans-serif;
       line-height: 1;
     }
     .home-race-timer__seg {
       display: inline-flex;
       align-items: baseline;
-      gap: 0.08rem;
-      margin-right: 0.4rem;
-    }
-    .home-race-timer__seg:last-child {
-      margin-right: 0;
+      flex-shrink: 0;
+      gap: 0.05rem;
     }
     .home-race-timer__num {
-      font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+      font-size: clamp(1.45rem, 4.2vw, 2rem);
       font-weight: 700;
       color: #f8fafc;
       font-variant-numeric: tabular-nums;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
     }
     .home-race-timer__unit {
-      font-size: 0.68rem;
+      font-size: 0.62rem;
       font-weight: 600;
       color: #64748b;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.03em;
+    }
+    @media (min-width: 640px) {
+      .home-race-timer__unit {
+        font-size: 0.72rem;
+      }
     }
     .home-race-timer__now {
-      font-size: 1rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: #86efac;
     }
