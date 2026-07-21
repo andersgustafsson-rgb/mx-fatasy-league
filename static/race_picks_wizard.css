@@ -329,7 +329,8 @@
   background: rgba(120, 53, 15, 0.55);
 }
 
-.wizard-picks-summary.is-editing {
+.wizard-picks-summary.is-editing,
+.wizard-picks-summary.is-bonus-focus {
   display: none;
 }
 

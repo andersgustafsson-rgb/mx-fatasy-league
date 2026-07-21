@@ -16,15 +16,29 @@
   white-space: nowrap;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s, opacity 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s, filter 0.12s, opacity 0.15s;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .rp-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   transform: none !important;
+}
+
+.rp-btn:active:not(:disabled),
+.rp-btn.is-pressed:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  filter: brightness(0.9);
+}
+
+.rp-btn.is-busy {
+  opacity: 0.75;
+  pointer-events: none;
+  filter: brightness(0.92);
+  cursor: wait;
 }
 
 .rp-btn--sm {

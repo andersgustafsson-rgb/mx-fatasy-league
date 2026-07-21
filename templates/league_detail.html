@@ -440,12 +440,27 @@
       font-size: 0.8rem;
       padding: 0.35rem 0.85rem;
       border-radius: 0.5rem;
-      transition: all 0.2s ease;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
       box-shadow: 0 0 12px rgba(251, 191, 36, 0.25);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      cursor: pointer;
     }
     .duel-btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 0 18px rgba(251, 191, 36, 0.4);
+    }
+    /* Mobil: tydlig press (hover syns sällan på touch) */
+    .duel-btn:active,
+    .duel-btn.is-pressed {
+      transform: scale(0.96) translateY(1px);
+      filter: brightness(0.88);
+      box-shadow: 0 0 6px rgba(251, 191, 36, 0.2);
+    }
+    .duel-btn.is-busy {
+      opacity: 0.72;
+      pointer-events: none;
+      filter: brightness(0.9);
     }
     .duel-btn--ghost {
       background: transparent;
@@ -454,6 +469,11 @@
       box-shadow: none;
     }
     .duel-btn--ghost:hover { border-color: rgba(34, 211, 238, 0.5); color: #e2e8f0; }
+    .duel-btn--ghost:active,
+    .duel-btn--ghost.is-pressed {
+      filter: brightness(1.15);
+      background: rgba(148, 163, 184, 0.12);
+    }
     .duel-type-btn {
       border: 1px solid rgba(55, 65, 81, 0.8);
       background: rgba(15, 23, 42, 0.8);
@@ -468,6 +488,10 @@
       border-color: rgba(34, 211, 238, 0.55);
       background: rgba(8, 145, 178, 0.12);
       box-shadow: 0 0 16px rgba(34, 211, 238, 0.1);
+    }
+    .duel-type-btn:active {
+      transform: scale(0.985);
+      filter: brightness(1.08);
     }
     .duel-modal-backdrop {
       position: fixed;
@@ -709,6 +733,10 @@
       border-color: rgba(34, 211, 238, 0.45);
       background: rgba(8, 145, 178, 0.1);
     }
+    .rider-row:active {
+      transform: scale(0.985);
+      filter: brightness(1.08);
+    }
     .rider-row.is-selected {
       border-color: rgba(251, 191, 36, 0.7);
       background: rgba(120, 53, 15, 0.22);
@@ -787,6 +815,10 @@
       border-color: rgba(34, 211, 238, 0.5);
       background: rgba(8, 145, 178, 0.1);
       transform: translateY(-2px);
+    }
+    .vs-card:active {
+      transform: scale(0.98);
+      filter: brightness(1.08);
     }
     .vs-card.is-selected {
       border-color: rgba(251, 191, 36, 0.8);
@@ -1560,6 +1592,7 @@
     const LEAGUE_ID = {{ league.id }};
     const CHALLENGES_DATA = {{ challenges|tojson if challenges else 'null' }};
   </script>
+  <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   {% if challenges and challenges.next_competition %}
   <script>
   (function() {
@@ -1828,11 +1861,14 @@
         <button type="button" class="duel-btn w-full mt-2" id="duelSubmitCreate">Skicka utmaning</button>
       `;
       document.getElementById('duelSubmitCreate').onclick = async () => {
-        try {
-          const challenged_id = parseInt(document.getElementById('duelOpponent').value, 10);
-          await api(`/api/leagues/${LEAGUE_ID}/challenges`, 'POST', { challenged_id });
-          location.reload();
-        } catch (e) { showError(e.message); }
+        const btn = document.getElementById('duelSubmitCreate');
+        await withBusyButton(btn, async () => {
+          try {
+            const challenged_id = parseInt(document.getElementById('duelOpponent').value, 10);
+            await api(`/api/leagues/${LEAGUE_ID}/challenges`, 'POST', { challenged_id });
+            location.reload();
+          } catch (e) { showError(e.message); }
+        }, { busyText: 'Skickar…' });
       };
     }
 
@@ -2004,10 +2040,13 @@
         payload.brand_a = typeExtra.brands[0];
         payload.brand_b = typeExtra.brands[1];
       }
-      try {
-        await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/respond`, 'POST', payload);
-        location.reload();
-      } catch (e) { showError(e.message); }
+      const btn = document.getElementById('duelSubmitType');
+      await withBusyButton(btn, async () => {
+        try {
+          await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/respond`, 'POST', payload);
+          location.reload();
+        } catch (e) { showError(e.message); }
+      }, { busyText: 'Bekräftar…' });
     }
 
     function renderAnswerForm(ch) {
@@ -2036,13 +2075,15 @@
         });
         posEl.oninput = refresh;
         submitBtn.onclick = async () => {
-          try {
-            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', {
-              rider_id: chosenRider,
-              position: parseInt(posEl.value, 10),
-            });
-            location.reload();
-          } catch (e) { showError(e.message); }
+          await withBusyButton(submitBtn, async () => {
+            try {
+              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', {
+                rider_id: chosenRider,
+                position: parseInt(posEl.value, 10),
+              });
+              location.reload();
+            } catch (e) { showError(e.message); }
+          }, { busyText: 'Låser…' });
         };
       } else if (ch.challenge_type === 'head_to_head') {
         const rA = findRider(ch.rider_a_id);
@@ -2076,10 +2117,12 @@
           };
         });
         submitBtn.onclick = async () => {
-          try {
-            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { guess_rider_id: guess });
-            location.reload();
-          } catch (e) { showError(e.message); }
+          await withBusyButton(submitBtn, async () => {
+            try {
+              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { guess_rider_id: guess });
+              location.reload();
+            } catch (e) { showError(e.message); }
+          }, { busyText: 'Låser…' });
         };
       } else if (ch.challenge_type === 'brand_battle') {
         body.innerHTML = `
@@ -2109,10 +2152,12 @@
           };
         });
         submitBtn.onclick = async () => {
-          try {
-            await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { brand_pick: brandPick });
-            location.reload();
-          } catch (e) { showError(e.message); }
+          await withBusyButton(submitBtn, async () => {
+            try {
+              await api(`/api/leagues/${LEAGUE_ID}/challenges/${ch.id}/answer`, 'POST', { brand_pick: brandPick });
+              location.reload();
+            } catch (e) { showError(e.message); }
+          }, { busyText: 'Låser…' });
         };
       }
     }
@@ -2142,19 +2187,23 @@
     document.querySelectorAll('.js-duel-decline').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Avböj utmaningen?')) return;
-        try {
-          await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/decline`, 'POST', {});
-          location.reload();
-        } catch (e) { alert(e.message); }
+        await withBusyButton(btn, async () => {
+          try {
+            await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/decline`, 'POST', {});
+            location.reload();
+          } catch (e) { alert(e.message); }
+        }, { busyText: 'Avböjer…' });
       });
     });
     document.querySelectorAll('.js-duel-cancel').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Avbryt inbjudan? Motståndaren får en notis.')) return;
-        try {
-          await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/cancel`, 'POST', {});
-          location.reload();
-        } catch (e) { alert(e.message); }
+        await withBusyButton(btn, async () => {
+          try {
+            await api(`/api/leagues/${LEAGUE_ID}/challenges/${btn.dataset.id}/cancel`, 'POST', {});
+            location.reload();
+          } catch (e) { alert(e.message); }
+        }, { busyText: 'Avbryter…' });
       });
     });
 

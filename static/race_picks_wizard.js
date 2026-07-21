@@ -511,6 +511,10 @@
         showStep3Overview();
         return;
       }
+      if (currentStep === 2) {
+        // Steg 3: fokusera holeshot/wildcard — visa inte topp 6-översikt ovanför
+        step3ShowingSummary = false;
+      }
       showStep(currentStep + 1);
     });
 
@@ -702,12 +706,13 @@
       </div>`;
     }
 
+    const showFullSummary = complete && step3ShowingSummary;
     el.className =
       'wizard-picks-summary' +
       (complete ? ' is-complete' : '') +
-      (complete && step3ShowingSummary ? ' is-overview' : '') +
-      (complete && !step3ShowingSummary ? ' is-editing' : '');
-    el.innerHTML = `
+      (showFullSummary ? ' is-overview' : ' is-bonus-focus');
+    el.innerHTML = showFullSummary
+      ? `
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
         <div class="wizard-summary-grid">
@@ -720,22 +725,25 @@
           <button type="button" class="wizard-summary-edit__btn" data-goto-step="2">✏️ Ändra ${escapeHtml(cfg.label250)}</button>
           <button type="button" class="wizard-summary-edit__btn wizard-summary-edit__btn--bonus" data-open-bonus-adjust>✏️ Holeshot${cfg.isWSX ? '' : ' & wildcard'}</button>
         </div>
-      </div>`;
+      </div>`
+      : '';
 
-    el.querySelectorAll('[data-goto-step]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        step3ShowingSummary = false;
-        showStep(Number(btn.dataset.gotoStep));
+    if (showFullSummary) {
+      el.querySelectorAll('[data-goto-step]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          step3ShowingSummary = false;
+          showStep(Number(btn.dataset.gotoStep));
+        });
       });
-    });
 
-    el.querySelectorAll('[data-open-bonus-adjust]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        openBonusAdjust();
+      el.querySelectorAll('[data-open-bonus-adjust]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          openBonusAdjust();
+        });
       });
-    });
 
-    hydrateSummaryPortraits(el);
+      hydrateSummaryPortraits(el);
+    }
 
     if (step3) {
       step3.classList.toggle('wizard-step--complete', complete);
@@ -816,6 +824,8 @@
     }
     if (step === 3 && isPicksFullyComplete()) {
       step3ShowingSummary = true;
+    } else if (step === 3) {
+      step3ShowingSummary = false;
     }
     showStep(step, { skipSave: true });
   }
@@ -824,6 +834,8 @@
     const step = resolveStartStep();
     if (step === 3 && isPicksFullyComplete()) {
       step3ShowingSummary = true;
+    } else if (step === 3) {
+      step3ShowingSummary = false;
     }
     showStep(step, { skipSave: true });
     syncWildcardRollLockedState();

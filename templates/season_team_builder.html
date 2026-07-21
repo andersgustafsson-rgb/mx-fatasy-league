@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Säsongsteam – bygg lag</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <style>
     .rider-card {
       transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -1231,7 +1232,9 @@
         team: myTeam.map((r) => ({ id: r.id })),
       };
 
+      const saveBtn = document.getElementById("save-team-btn");
       try {
+        await withBusyButton(saveBtn, async () => {
         const resp = await fetch("/save_season_team", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1253,6 +1256,7 @@
         }
         showToast(data.message || "Team sparat!", true);
         setTimeout(() => (window.location.href = "/season_team"), 600);
+        }, { busyText: 'Sparar…' });
       } catch (e) {
         console.error("Error saving team:", e);
         showToast("Nätverksfel vid sparning: " + e.message, false);

@@ -513,7 +513,8 @@
   }
 </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
+  <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=step3-focus-1">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
@@ -848,7 +849,7 @@
         <button type="button" onclick="showOtherUsersPicks()" class="rp-btn rp-btn--accent">Visa andras picks</button>
         {% else %}
         <button type="button" id="wizard-btn-edit-picks" class="rp-btn wizard-btn-edit-picks" hidden>✏️ Redigera mina val</button>
-        <button type="button" onclick="clearMyPicks()" class="rp-btn rp-btn--danger">Rensa alla val</button>
+        <button type="button" id="clear-picks-btn" onclick="clearMyPicks()" class="rp-btn rp-btn--danger">Rensa alla val</button>
         {% endif %}
       </div>
     </div>
@@ -1095,6 +1096,7 @@
 
   function fillSelectFromRiders(sel, riders, emptyText) {
     if (!sel) return;
+    const prev = sel.value ? String(sel.value) : '';
     sel.innerHTML = '';
     const o0 = document.createElement('option');
     o0.value = '';
@@ -1106,7 +1108,64 @@
       o.textContent = riderOptionLabel(r);
       sel.appendChild(o);
     });
+    if (prev && [...sel.options].some((o) => o.value === prev)) {
+      sel.value = prev;
+    }
   }
+
+  function ensureSelectValue(sel, value, label) {
+    if (!sel || value == null || value === '') return;
+    const v = String(value);
+    if (![...sel.options].some((o) => o.value === v)) {
+      const o = document.createElement('option');
+      o.value = v;
+      o.textContent = label || v;
+      sel.appendChild(o);
+    }
+    sel.value = v;
+  }
+
+  /** Synka dolda selects mot det som syns i UI (dataset / label). */
+  function syncHiddenSelectsFromUi() {
+    const mapHidden = (dataClass, hiddenId) => {
+      const selector = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+      const hidden = document.getElementById(hiddenId);
+      if (!selector || !hidden) return;
+      let rid = selector.dataset.selectedRiderId;
+      if (!rid && typeof getRiderIdFromSelector === 'function') {
+        const id = getRiderIdFromSelector(selector);
+        if (id) rid = String(id);
+      }
+      if (!rid) return;
+      const label = (selector.querySelector('.selected-rider')?.textContent || '').trim();
+      ensureSelectValue(hidden, rid, label);
+      selector.dataset.selectedRiderId = String(rid);
+    };
+    mapHidden('holeshot-450', 'holeshot-450');
+    mapHidden('holeshot-250', 'holeshot-250');
+    mapHidden('wildcard-pick', 'wildcard-pick');
+
+    const topClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    topClasses.forEach((cls) => {
+      for (let i = 1; i <= 6; i++) {
+        const selector = document.querySelector(`.rider-selector[data-class="${cls}"][data-position="${i}"]`);
+        if (!selector) continue;
+        let rid = selector.dataset.selectedRiderId;
+        if (!rid && typeof getRiderIdFromSelector === 'function') {
+          const id = getRiderIdFromSelector(selector);
+          if (id) rid = String(id);
+        }
+        if (!rid) continue;
+        const hp = hiddenPickSelectName(cls, i);
+        if (!hp) continue;
+        const hidden = document.querySelector(`select[name="${hp}"]`);
+        const label = (selector.querySelector('.selected-rider')?.textContent || '').trim();
+        ensureSelectValue(hidden, rid, label);
+        selector.dataset.selectedRiderId = String(rid);
+      }
+    });
+  }
+  window.syncHiddenSelectsFromUi = syncHiddenSelectsFromUi;
 
   function populateHiddenSelectsFromJson() {
     const l450 = pickColumn450List();
@@ -1122,6 +1181,7 @@
       l450.filter((r) => !isOutRiderId(r.id)),
       '-- välj 450cc förare --'
     );
+    syncHiddenSelectsFromUi();
   }
 
   // Dropdowns built on DOMContentLoaded (deferred when overview loads first)
@@ -1567,6 +1627,8 @@
     // Save picks to localStorage
     savePicksToStorage();
     if (window.PicksWizard && window.PicksWizard.refresh) window.PicksWizard.refresh();
+    window._picksDirtySinceLoad = true;
+    if (typeof window.updateSaveButtonVisibility === 'function') window.updateSaveButtonVisibility();
   }
 
   function filterRiders(riderClass, position, searchTerm) {
@@ -1676,14 +1738,14 @@
     
     // Update the hidden select element for form submission
     const hiddenSelect = document.getElementById('wildcard-pick');
-    if (hiddenSelect) {
-      hiddenSelect.value = riderId;
-    }
+    ensureSelectValue(hiddenSelect, riderId, riderName);
     if (selector) selector.dataset.selectedRiderId = String(riderId);
     
     // Save picks to localStorage
     savePicksToStorage();
     if (window.PicksWizard && window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
+    window._picksDirtySinceLoad = true;
+    if (typeof window.updateSaveButtonVisibility === 'function') window.updateSaveButtonVisibility();
   }
 
   // Handle holeshot rider selection
@@ -1708,14 +1770,14 @@
     
     // Update the hidden select element for form submission
     const hiddenSelect = document.getElementById(`holeshot-${classType}`);
-    if (hiddenSelect) {
-      hiddenSelect.value = riderId;
-    }
+    ensureSelectValue(hiddenSelect, riderId, riderName);
     if (selector) selector.dataset.selectedRiderId = String(riderId);
     
     // Save picks to localStorage
     savePicksToStorage();
     if (window.PicksWizard && window.PicksWizard.renderSummary) window.PicksWizard.renderSummary();
+    window._picksDirtySinceLoad = true;
+    if (typeof window.updateSaveButtonVisibility === 'function') window.updateSaveButtonVisibility();
   }
 
   // Clear rider selection
@@ -1755,6 +1817,8 @@
     // Save picks to localStorage
     savePicksToStorage();
     if (window.PicksWizard && window.PicksWizard.refresh) window.PicksWizard.refresh();
+    window._picksDirtySinceLoad = true;
+    if (typeof window.updateSaveButtonVisibility === 'function') window.updateSaveButtonVisibility();
   }
 
   // Update rider selector options (replaces updateDropdowns for new system)
@@ -2236,6 +2300,7 @@ function ensureWizardDropdownsReady() {
   riderClasses.forEach((cls) => updateRiderSelectors(cls));
   updateHoleshotDropdowns();
   initializePreviewImages();
+  if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
   window._wizardDropdownsReady = true;
 }
 window.ensureWizardDropdownsReady = ensureWizardDropdownsReady;
@@ -2508,7 +2573,7 @@ function onPickChange(cls, pos, riderId = null) {
 
       const hiddenSelectClass = (p.class === 'wsx_sx1' || p.class === '450cc') ? '450' : '250';
       const hiddenSelect = document.querySelector(`select[name="pick_${hiddenSelectClass}_${p.predicted_position}"]`);
-      if (hiddenSelect) hiddenSelect.value = p.rider_id;
+      ensureSelectValue(hiddenSelect, p.rider_id, riderText);
       selector.dataset.selectedRiderId = String(p.rider_id);
 
       if (loadPortraits) {
@@ -2530,48 +2595,51 @@ function onPickChange(cls, pos, riderId = null) {
     const holeshot250Id = myPicks.holeshot_picks?.["250cc"] || myPicks.holeshot_picks?.["wsx_sx2"];
 
     if (holeshot450Id) {
-      document.getElementById("holeshot-450").value = holeshot450Id;
       const selector = document.querySelector('.rider-selector[data-class="holeshot-450"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
+      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(holeshot450Id);
+      ensureSelectValue(document.getElementById("holeshot-450"), holeshot450Id, label);
       if (selector) {
-        const rider = allRiders.find(r => Number(r.id) === Number(holeshot450Id));
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
-          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          selectedRiderSpan.textContent = label;
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
-          selector.dataset.selectedRiderId = String(holeshot450Id);
         }
+        selector.dataset.selectedRiderId = String(holeshot450Id);
       }
     }
 
     if (holeshot250Id) {
-      document.getElementById("holeshot-250").value = holeshot250Id;
       const selector = document.querySelector('.rider-selector[data-class="holeshot-250"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
+      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(holeshot250Id);
+      ensureSelectValue(document.getElementById("holeshot-250"), holeshot250Id, label);
       if (selector) {
-        const rider = allRiders.find(r => Number(r.id) === Number(holeshot250Id));
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
-          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          selectedRiderSpan.textContent = label;
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
-          selector.dataset.selectedRiderId = String(holeshot250Id);
         }
+        selector.dataset.selectedRiderId = String(holeshot250Id);
       }
     }
 
     if (myPicks.wildcard_pick) {
       const riderId = myPicks.wildcard_pick;
-      document.getElementById("wildcard-pick").value = riderId;
       const selector = document.querySelector('.rider-selector[data-class="wildcard-pick"]');
+      const rider = allRiders.find(r => Number(r.id) === Number(riderId));
+      const label = rider ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand})` : String(riderId);
+      ensureSelectValue(document.getElementById("wildcard-pick"), riderId, label);
       if (selector) {
-        const rider = allRiders.find(r => Number(r.id) === Number(riderId));
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
-          selectedRiderSpan.textContent = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
+          selectedRiderSpan.textContent = label;
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
-          selector.dataset.selectedRiderId = String(riderId);
         }
+        selector.dataset.selectedRiderId = String(riderId);
       }
     }
 
@@ -2929,7 +2997,9 @@ function onPickChange(cls, pos, riderId = null) {
   window.getRiderIdFromSelector = getRiderIdFromSelector;
 
   async function savePicks() {
-    
+    // Se till att dolda fält matchar det som syns (t.ex. efter snabböversikt / Ändra holeshot)
+    if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
+
     // Get race picks from rider-selector elements
     const picks = [];
     
@@ -3049,32 +3119,35 @@ function onPickChange(cls, pos, riderId = null) {
       holeshot_250: document.getElementById("holeshot-250")?.value,
       wildcard_pick: isWSXSeries ? null : (document.getElementById("wildcard-pick")?.value || null),
       wildcard_pos: isWSXSeries ? null : (document.getElementById("wildcard-position")?.value || null),
-    };
+      };
 
 
     try {
-      const resp = await fetch("/save_picks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await resp.json();
-      
-      if (resp.ok && !data.error) {
-        markPicksAsSaved();
-        if (typeof openInviteShare === 'function') {
-          openInviteShare({ afterPicks: true });
+      const saveBtn = document.getElementById('save-picks-btn');
+      await withBusyButton(saveBtn, async () => {
+        const resp = await fetch("/save_picks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        
+        if (resp.ok && !data.error) {
+          markPicksAsSaved();
+          if (typeof openInviteShare === 'function') {
+            openInviteShare({ afterPicks: true });
+          } else {
+            alert(data.message || "Dina val har sparats!");
+          }
         } else {
-          alert(data.message || "Dina val har sparats!");
+          alert(data.error || "Ett fel uppstod vid sparning.");
         }
-      } else {
-        alert(data.error || "Ett fel uppstod vid sparning.");
-      }
-      
-      // Clear localStorage since picks are now saved to server
-      localStorage.removeItem(`race_picks_${competitionId}`);
-      
-      // Picks are already displayed correctly in UI, no need to reload from server
+        
+        // Clear localStorage since picks are now saved to server
+        localStorage.removeItem(`race_picks_${competitionId}`);
+        
+        // Picks are already displayed correctly in UI, no need to reload from server
+      }, { busyText: 'Sparar…' });
     } catch (e) {
       alert("Ett fel uppstod vid sparning.");
     }
@@ -3092,7 +3165,9 @@ function onPickChange(cls, pos, riderId = null) {
     const savedWcPos = wcPosEl ? wcPosEl.value : "";
     const savedWcLabel = wcLabelEl ? wcLabelEl.textContent : "";
 
+    const clearBtnEl = document.getElementById('clear-picks-btn');
     try {
+      await withBusyButton(clearBtnEl, async () => {
       const resp = await fetch(`/clear_my_picks/${competitionId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
@@ -3167,6 +3242,7 @@ function onPickChange(cls, pos, riderId = null) {
       }
 
       alert(data.message || "Alla dina val har rensats.");
+      }, { busyText: 'Rensar…' });
     } catch (e) {
       alert("Ett fel uppstod när dina val skulle rensas.");
     }
@@ -3284,16 +3360,21 @@ function onPickChange(cls, pos, riderId = null) {
         saveBtn.style.display = "flex";
         saveBtn.disabled = false;
         saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        // Visa spar-ytan om man är på steg 3 (t.ex. efter Ändra holeshot)
+        const saveWrap = document.getElementById('wizard-step-save');
+        if (saveWrap) saveWrap.style.display = '';
       } else {
         saveBtn.style.display = "none";
       }
     }
+    window.updateSaveButtonVisibility = updateSaveButtonVisibility;
     
     // Function to mark picks as saved
     function markPicksAsSaved() {
       savedPicksState = getCurrentPicksState();
       updateSaveButtonVisibility();
     }
+    window.markPicksAsSaved = markPicksAsSaved;
     
     document.addEventListener("DOMContentLoaded", () => {
       const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
@@ -3359,9 +3440,11 @@ function onPickChange(cls, pos, riderId = null) {
       // Background refresh (status already shown from server on first paint)
       void fetchAndDisplayMyPicks();
       
-      // Mark picks as saved after loading
+      // Mark picks as saved after loading — skip if user already edited (undvik att "spara" knappen blinkar bort)
       setTimeout(() => {
-        markPicksAsSaved();
+        if (!window._picksDirtySinceLoad) {
+          markPicksAsSaved();
+        }
         if (window._wizardDropdownsReady) {
           riderClassesForInit.forEach(cls => updateRiderSelectors(cls));
           removeWrongCoastSelections();
@@ -3371,7 +3454,8 @@ function onPickChange(cls, pos, riderId = null) {
       // Listen for changes in picks
       document.addEventListener("click", (e) => {
         if (e.target.closest(".rider-selector") || e.target.closest(".rider-option")) {
-          setTimeout(updateSaveButtonVisibility, 100);
+          window._picksDirtySinceLoad = true;
+          setTimeout(updateSaveButtonVisibility, 0);
         }
       });
       
@@ -3403,7 +3487,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=step3-focus-1"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}

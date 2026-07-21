@@ -69,7 +69,17 @@ echo   Stopp:  Ctrl+C i detta fonster
 echo.
 
 timeout /t 2 /nobreak >nul
-start "" "http://127.0.0.1:%PORT%/"
+REM Oppna Chrome explicit — undvik AVG Secure Browser som ofta kaper start "" http://...
+set "LOCAL_URL=http://127.0.0.1:%PORT%/"
+if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
+  start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
+) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
+  start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
+) else if exist "%LocalAppData%\Google\Chrome\Application\chrome.exe" (
+  start "" "%LocalAppData%\Google\Chrome\Application\chrome.exe" "%LOCAL_URL%"
+) else (
+  echo Kunde inte hitta Chrome — oppna manuellt: %LOCAL_URL%
+)
 
 "%PY%" main.py
 if errorlevel 1 (

@@ -2,31 +2,94 @@
   window.MXInviteShare = {{ invite_share | tojson }};
 </script>
 <script src="{{ url_for('static', filename='invite_share.js') }}"></script>
-<div id="inviteShareModal" class="hidden fixed inset-0 z-[99998] flex items-end sm:items-center justify-center bg-black/70 p-4" onclick="if (event.target === this) closeInviteShare();">
-  <div class="w-full max-w-md rounded-2xl border border-cyan-400/30 bg-slate-900 p-5 shadow-2xl max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
-    <div class="flex items-start justify-between gap-3 mb-3">
-      <div>
+<style>
+  /* Share-modal: måste få plats i smal viewport (max-width får aldrig bli bredare än skärmen) */
+  #inviteShareModal {
+    padding: 0.75rem;
+    box-sizing: border-box;
+  }
+  #inviteShareModal .invite-share-sheet {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: min(28rem, 100%);
+    min-width: 0;
+    max-height: min(88dvh, 92vh);
+    padding: 0.85rem 0.85rem 0.9rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    background: #0f172a;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+  }
+  #inviteShareModal .invite-share-preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    margin-bottom: 0.65rem;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid rgba(71, 85, 105, 0.8);
+    background: #020617;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #inviteShareModal .invite-share-preview img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: min(38dvh, 260px);
+    height: auto;
+    object-fit: contain;
+  }
+  #inviteShareModal .invite-share-actions {
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  #inviteShareModal .invite-share-actions button {
+    min-width: 0;
+  }
+  @media (min-width: 640px) {
+    #inviteShareModal {
+      padding: 1rem;
+    }
+    #inviteShareModal .invite-share-sheet {
+      padding: 1.25rem;
+      max-height: min(90vh, 920px);
+    }
+    #inviteShareModal .invite-share-preview img {
+      width: 100%;
+      max-height: min(52vh, 420px);
+    }
+  }
+</style>
+<div id="inviteShareModal" class="hidden fixed inset-0 z-[99998] flex items-end sm:items-center justify-center bg-black/70" onclick="if (event.target === this) closeInviteShare();">
+  <div class="invite-share-sheet" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
+    <div class="flex items-start justify-between gap-2 mb-2 shrink-0">
+      <div class="min-w-0">
         <p class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Race-hype</p>
-        <h2 id="inviteShareTitle" class="text-lg font-extrabold text-white">Bjud in en kompis</h2>
-        <p id="inviteShareSubtitle" class="text-xs text-slate-400 mt-1">Dela race-hype-kortet till Snap/Stories eller skicka länken.</p>
+        <h2 id="inviteShareTitle" class="text-base sm:text-lg font-extrabold text-white leading-tight">Bjud in en kompis</h2>
+        <p id="inviteShareSubtitle" class="text-[11px] sm:text-xs text-slate-400 mt-0.5 leading-snug">Dela race-hype-kortet till Snap/Stories eller skicka länken.</p>
       </div>
-      <button type="button" onclick="closeInviteShare();" class="text-slate-400 hover:text-white text-xl leading-none shrink-0" aria-label="Stäng">×</button>
+      <button type="button" onclick="closeInviteShare();" class="text-slate-400 hover:text-white text-2xl leading-none shrink-0 w-8 h-8 flex items-center justify-center" aria-label="Stäng">×</button>
     </div>
 
-    <div class="rounded-xl overflow-hidden border border-slate-600/80 bg-slate-950 mb-3 shadow-inner">
-      <img id="inviteSharePreview" src="{{ invite_share.card_image_url }}" alt="Race-hype kort för delning" class="w-full h-auto block">
+    <div class="invite-share-preview">
+      <img id="inviteSharePreview" src="{{ invite_share.card_image_url }}" alt="Race-hype kort för delning">
     </div>
 
-    <textarea id="inviteShareText" readonly rows="3" class="w-full rounded-xl border border-slate-600 bg-slate-950 text-slate-100 text-sm p-3 mb-2 resize-none hidden sm:block"></textarea>
-    <a id="inviteShareLink" href="{{ invite_share.invite_url }}" class="block text-xs text-cyan-300 truncate mb-3 underline">{{ invite_share.invite_url }}</a>
+    <textarea id="inviteShareText" readonly rows="3" class="w-full rounded-xl border border-slate-600 bg-slate-950 text-slate-100 text-sm p-3 mb-2 resize-none hidden sm:block shrink-0"></textarea>
+    <a id="inviteShareLink" href="{{ invite_share.invite_url }}" class="block text-[11px] sm:text-xs text-cyan-300 truncate mb-2 underline shrink-0">{{ invite_share.invite_url }}</a>
 
-    <div class="flex flex-col gap-2">
-      <button type="button" onclick="shareInviteAsImage();" class="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold py-2.5 px-3">Dela som bild (Snap/Stories)</button>
-      <div class="flex flex-col sm:flex-row gap-2">
-        <button type="button" onclick="nativeInviteShare();" class="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-2.5 px-3">Dela länk</button>
-        <button type="button" onclick="copyInviteShare();" class="flex-1 rounded-xl border border-slate-500 bg-slate-800 text-white font-bold py-2.5 px-3">Kopiera text</button>
+    <div class="invite-share-actions flex flex-col gap-2">
+      <button type="button" onclick="shareInviteAsImage();" class="w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-extrabold py-2.5 px-3 text-sm">Dela som bild (Snap/Stories)</button>
+      <div class="flex flex-row gap-2">
+        <button type="button" onclick="nativeInviteShare();" class="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-2.5 px-3 text-sm">Dela länk</button>
+        <button type="button" onclick="copyInviteShare();" class="flex-1 rounded-xl border border-slate-500 bg-slate-800 text-white font-bold py-2.5 px-3 text-sm">Kopiera</button>
       </div>
     </div>
-    <p id="inviteShareStatus" class="mt-2 text-xs text-emerald-300 min-h-[1.25rem]"></p>
+    <p id="inviteShareStatus" class="mt-1.5 text-xs text-emerald-300 min-h-[1.1rem] shrink-0"></p>
   </div>
 </div>
