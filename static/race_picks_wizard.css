@@ -304,7 +304,7 @@
 
 .wizard-nav__btn {
   flex: 1 1 0;
-  min-width: 7rem;
+  min-width: 0;
   max-width: 12rem;
   padding: 0.65rem 0.9rem;
   font-size: 0.82rem;
@@ -312,16 +312,28 @@
 
 .wizard-nav__btn--back {
   flex: 0 1 auto;
-  min-width: 6.5rem;
+  min-width: 0;
 }
 
 .wizard-nav__btn--edit {
   flex: 1 1 auto;
-  min-width: 9rem;
+  min-width: 0;
   max-width: 14rem;
   border-color: rgba(251, 191, 36, 0.45);
   color: #fde68a;
   background: rgba(120, 53, 15, 0.35);
+}
+
+@media (min-width: 480px) {
+  .wizard-nav__btn {
+    min-width: 7rem;
+  }
+  .wizard-nav__btn--back {
+    min-width: 6.5rem;
+  }
+  .wizard-nav__btn--edit {
+    min-width: 9rem;
+  }
 }
 
 .wizard-nav__btn--edit:hover:not(:disabled) {
