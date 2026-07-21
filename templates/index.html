@@ -752,6 +752,33 @@
         align-self: flex-start;
       }
     }
+    /* Mobil: logo högst upp, flikar under, sedan profil/nav + hero */
+    @media (max-width: 639px) {
+      .home-header-stack {
+        display: flex;
+        flex-direction: column;
+      }
+      .home-header-stack > .home-page-shell,
+      .home-header-stack .home-sidebar {
+        display: contents;
+      }
+      .home-header-stack .mx-brand {
+        order: 1;
+        margin: 0 0 0.65rem;
+        text-align: left;
+      }
+      .home-header-stack .home-tabs {
+        order: 2;
+        margin-bottom: 0.75rem;
+      }
+      .home-header-stack .home-sidebar-body {
+        order: 3;
+        margin-bottom: 0.75rem;
+      }
+      .home-header-stack .home-main {
+        order: 4;
+      }
+    }
     .home-sidebar {
       flex-shrink: 0;
       width: 100%;
@@ -1561,7 +1588,8 @@
           </div>
         {% endif %}
 
-        <!-- Tab Navigation -->
+        <!-- Tab Navigation + sidebar/hero (mobil: logo → flikar → resten) -->
+        <div class="home-header-stack">
         <div class="home-tabs relative z-10">
           <div id="tab-scroll-container" class="home-tabs__inner">
                 <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
@@ -1598,6 +1626,7 @@
               </span>
             </h1>
 
+            <div class="home-sidebar-body">
             {% if is_logged_in %}
             <div class="home-sidebar-card">
               <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
@@ -1669,6 +1698,7 @@
               </div>
             </div>
             {% endif %}
+            </div><!-- /.home-sidebar-body -->
           </aside>
 
           <!-- Countdown hero + tab-innehåll (höger kolumn) -->
@@ -2450,6 +2480,7 @@
         </div>
           </div><!-- /.home-main -->
         </div><!-- /.home-page-shell -->
+        </div><!-- /.home-header-stack -->
       </div><!-- /.mb-6 -->
 
         {% if not is_logged_in %}
