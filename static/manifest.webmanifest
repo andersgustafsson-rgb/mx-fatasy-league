@@ -1,7 +1,7 @@
 {
   "name": "MX Fantasy League",
   "short_name": "MX Fantasy",
-  "description": "MX Fantasy League – Motocross Fantasy Sports",
+  "description": "Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i SX, MX, SMX och WSX.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

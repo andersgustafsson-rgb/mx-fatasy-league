@@ -574,12 +574,13 @@ def robots_txt():
     """Tell search engines which pages to crawl."""
     from flask import make_response
 
+    base = get_public_base_url()
     body = (
         "User-agent: *\n"
         "Allow: /\n"
         "Disallow: /admin\n"
         "Disallow: /api/\n"
-        "Sitemap: https://mx-fatasy-league-eu.onrender.com/sitemap.xml\n"
+        f"Sitemap: {base}/sitemap.xml\n"
     )
     resp = make_response(body)
     resp.headers["Content-Type"] = "text/plain; charset=utf-8"
@@ -590,43 +591,42 @@ def robots_txt():
 def sitemap_xml():
     """Sitemap with public pages for Google."""
     from flask import make_response
+    from datetime import date as _date
 
-    body = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/start</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/privacy</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/terms</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://mx-fatasy-league-eu.onrender.com/contact</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-</urlset>"""
-    resp = make_response(body)
+    base = get_public_base_url()
+    today = _date.today().isoformat()
+    urls = [
+        ("/", "weekly", "1.0"),
+        ("/om", "weekly", "0.95"),
+        ("/start", "weekly", "0.9"),
+        ("/manual", "monthly", "0.85"),
+        ("/register", "monthly", "0.7"),
+        ("/login", "monthly", "0.5"),
+        ("/privacy", "yearly", "0.3"),
+        ("/terms", "yearly", "0.3"),
+        ("/contact", "yearly", "0.4"),
+    ]
+    parts = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for path, freq, prio in urls:
+        parts.append("  <url>")
+        parts.append(f"    <loc>{base}{path}</loc>")
+        parts.append(f"    <lastmod>{today}</lastmod>")
+        parts.append(f"    <changefreq>{freq}</changefreq>")
+        parts.append(f"    <priority>{prio}</priority>")
+        parts.append("  </url>")
+    parts.append("</urlset>")
+    resp = make_response("\n".join(parts) + "\n")
     resp.headers["Content-Type"] = "application/xml; charset=utf-8"
     return resp
+
+
+@app.get("/om")
+def about_game_page():
+    """SEO landing: vad spelet är, hur det funkar, FAQ (svenska)."""
+    return render_template("om_spelet.html")
 
 
 # -------------------------------------------------

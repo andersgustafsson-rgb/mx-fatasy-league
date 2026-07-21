@@ -1,0 +1,23 @@
+{# SEO meta + Open Graph. Expects optional: seo_title, seo_description, seo_path, seo_image #}
+{% set _title = seo_title|default('MX Fantasy League — gratis fantasy motocross-spel i Sverige', true) %}
+{% set _desc = seo_description|default('Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Skapa lag, spela i ligor och följ leaderboard — helt gratis.', true) %}
+{% set _path = seo_path|default('/', true) %}
+{% set _base = request.url_root.rstrip('/') %}
+{% set _url = _base ~ _path %}
+{% set _img = seo_image|default(_base ~ url_for('static', filename='images/mx_fantasy_logo.png'), true) %}
+<title>{{ _title }}</title>
+<meta name="description" content="{{ _desc }}">
+<meta name="keywords" content="fantasy motocross, fantasy mx, mx spel, supercross fantasy, motocross tippa, SMX fantasy, gratis fantasy sport, MX Fantasy League, Sverige">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="{{ _url }}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="sv_SE">
+<meta property="og:site_name" content="MX Fantasy League">
+<meta property="og:title" content="{{ _title }}">
+<meta property="og:description" content="{{ _desc }}">
+<meta property="og:url" content="{{ _url }}">
+<meta property="og:image" content="{{ _img }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ _title }}">
+<meta name="twitter:description" content="{{ _desc }}">
+<meta name="twitter:image" content="{{ _img }}">

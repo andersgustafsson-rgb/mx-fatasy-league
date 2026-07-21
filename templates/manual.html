@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spelmanual - MX Fantasy League</title>
+    {% set seo_title = 'Spelmanual — MX Fantasy League | fantasy motocross regler' %}
+    {% set seo_description = 'Spelmanual för MX Fantasy League: hur du tippar topp 6, holeshot och wildcard, poängsystem, ligor och serier (SX, MX, SMX, WSX).' %}
+    {% set seo_path = '/manual' %}
+    {% include 'includes/seo_head.html' %}
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
     <style>

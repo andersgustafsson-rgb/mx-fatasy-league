@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MX Fantasy League - Motocross Fantasy Sports</title>
+  {% set seo_title = 'MX Fantasy League — gratis fantasy motocross-spel i Sverige' %}
+  {% set seo_description = 'Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Skapa lag, spela i ligor — helt gratis.' %}
+  {% set seo_path = '/' %}
+  {% include 'includes/seo_head.html' %}
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,6 +21,27 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "MX Fantasy League",
+    "alternateName": "MX Fantasy",
+    "url": "{{ request.url_root.rstrip('/') }}/",
+    "applicationCategory": "GameApplication",
+    "genre": "Fantasy Motocross",
+    "operatingSystem": "Web",
+    "inLanguage": "sv-SE",
+    "description": "Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i SX, MX, SMX och WSX.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "SEK" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "MX Fantasy League",
+      "url": "{{ request.url_root.rstrip('/') }}/",
+      "sameAs": ["{{ facebook_page_url|default('https://www.facebook.com/profile.php?id=61586769893903', true) }}"]
+    }
+  }
+  </script>
   <script>
     // iOS PWA: show an in-app splash overlay on cold start (iOS doesn't reliably show a native splash).
     // Must run early to avoid a blank flash.
@@ -2407,6 +2431,23 @@
           </div><!-- /.home-main -->
         </div><!-- /.home-page-shell -->
       </div><!-- /.mb-6 -->
+
+        {% if not is_logged_in %}
+        <section class="relative z-20 mb-8 rounded-xl border border-slate-600/50 bg-slate-900/40 p-5 sm:p-6" aria-label="Om MX Fantasy League">
+          <h2 class="text-lg sm:text-xl font-bold text-cyan-300 mb-2">Gratis fantasy motocross-spel i Sverige</h2>
+          <p class="text-sm text-slate-300 leading-relaxed mb-3">
+            Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX.
+            Skapa lag, spela i ligor och följ leaderboard — helt gratis.
+          </p>
+          <p class="text-sm text-slate-400">
+            <a href="{{ url_for('about_game_page') }}" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Läs mer om spelet</a>
+            ·
+            <a href="{{ url_for('manual_page') }}" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Spelmanual</a>
+            ·
+            <a href="{{ url_for('register') }}" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Skapa konto</a>
+          </p>
+        </section>
+        {% endif %}
 
         {% include 'includes/site_legal_footer.html' %}
       </div>
