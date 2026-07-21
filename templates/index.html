@@ -755,6 +755,7 @@
     }
     .home-main .tab-content {
       margin-top: 0;
+      scroll-margin-top: 0.75rem;
     }
     .home-sidebar-card {
       margin-top: 0.75rem;
@@ -1575,7 +1576,7 @@
               </a>
               <div class="home-sidebar-points">
                 <div class="home-sidebar-points__labels">
-                  <span>Säsongspoäng</span>
+                  <span>SMX poäng</span>
                   <span><span id="welcome-points-val" class="tabular-nums">{{ user_total_points or 0 }}</span><span class="home-sidebar-points__sep"> / </span><span id="welcome-points-leader" class="home-sidebar-points__muted tabular-nums">—</span></span>
                 </div>
                 <div class="home-sidebar-points__track" aria-hidden="true">
@@ -3655,6 +3656,14 @@
           if (targetPanel) {
             targetPanel.classList.remove('hidden');
             targetPanel.classList.add('active');
+
+            // Mobil: scrolla till innehållet så flikbytet syns (hero/sidebar täcker annars vyn)
+            if (window.matchMedia('(max-width: 767px)').matches) {
+              const scrollTarget = document.querySelector('.tab-content') || targetPanel;
+              requestAnimationFrame(() => {
+                scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              });
+            }
           }
           
           // Load leaderboard data when leaderboard tab is clicked
