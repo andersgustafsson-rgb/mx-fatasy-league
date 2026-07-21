@@ -2013,6 +2013,7 @@
           </p>
                 
                 <!-- Picks Status -->
+                <div id="home-sidebar-picks-status">
                 {% if picks_status in ('has_picks', 'partial_picks') %}
                   <div class="mb-3">
                     {% set class_450_label = 'SX1' if upcoming_race.series == 'WSX' else '450cc' %}
@@ -2056,6 +2057,7 @@
                     </div>
                   </div>
                 {% endif %}
+                </div>
             {% else %}
                 <p class="text-gray-300">Inga races planerade just nu.</p>
             {% endif %}
@@ -3541,6 +3543,37 @@
       }
     }
 
+    function applySidebarPicksStatus(status) {
+      const panel = document.getElementById('home-sidebar-picks-status');
+      if (!panel || !status) return;
+      // Om SSR redan visar lineup (has/partial) rör vi inte boarden — bara CTA-texten räcker.
+      // Om SSR sa "inga val" men servern nu säger klart/ofullständigt: byt till tydlig live-status.
+      const hadBoard = panel.querySelector('.picks-summary-board, [data-picks-board]');
+      if (hadBoard) return;
+      const openHref = document.getElementById('real-picks-open-status')?.getAttribute('href') || '/race_picks_active';
+      if (status === 'has_picks') {
+        panel.innerHTML = `
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-emerald-300 text-lg">✅</span>
+              <span class="text-emerald-200 font-semibold">Alla val klara</span>
+            </div>
+            <p class="text-sm text-gray-200 mb-2">Inlämnat till tävlingen.</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Visa / redigera picks →</a>
+          </div>`;
+      } else if (status === 'partial_picks') {
+        panel.innerHTML = `
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-orange-300 text-lg">⚠️</span>
+              <span class="text-orange-200 font-semibold">Ofullständiga picks</span>
+            </div>
+            <p class="text-sm text-gray-200 mb-2">Du har påbörjat val — komplettera innan deadline.</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Komplettera här →</a>
+          </div>`;
+      }
+    }
+
     function updateRealPicksStatus(data) {
       const lockedStatus = document.getElementById('real-picks-locked-status');
       const openStatus = document.getElementById('real-picks-open-status');
@@ -3632,7 +3665,7 @@
           maybeLoadCrowdTeaser();
         }
       } else {
-        // Picks are still open — keep CTA wording/colors from server status
+        // Picks are still open — keep CTA wording/colors from live status (API > SSR)
         if (lockedStatus) lockedStatus.classList.add('hidden');
         if (openStatus) {
           openStatus.classList.remove('hidden');
@@ -3640,7 +3673,9 @@
             openStatus.dataset.picksHref = openStatus.getAttribute('href') || '/race_picks_active';
           }
           openStatus.href = openStatus.dataset.picksHref;
-          applyHeroPicksCta(openStatus.dataset.picksStatus || 'no_picks');
+          const liveStatus = data.picks_status || openStatus.dataset.picksStatus || 'no_picks';
+          applyHeroPicksCta(liveStatus);
+          applySidebarPicksStatus(liveStatus);
         }
         
         // Hide "Se Andras Picks" until deadline — show disabled placeholder
@@ -3689,6 +3724,13 @@
         if (document.hidden) return;
         fetchRealCountdownData();
       }, 60000); // 60s instead of 1s
+
+      // 4) Tillbaka från race picks / bfcache: hämta färsk picks-status
+      window.addEventListener('pageshow', function (e) {
+        if (e.persisted || document.visibilityState === 'visible') {
+          fetchRealCountdownData();
+        }
+      });
       
       // test countdown updates removed
     }

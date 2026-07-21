@@ -14549,6 +14549,32 @@ def _initial_wizard_step(my_picks: dict, *, is_wsx: bool) -> int:
     return 3
 
 
+def _user_picks_status_code(user_id: int | None, comp: Competition | None) -> str:
+    """Homepage / countdown: no_picks | partial_picks | has_picks."""
+    if not user_id or not comp:
+        return "no_picks"
+    try:
+        is_wsx = (getattr(comp, "series", None) or "") == "WSX"
+        my = _my_picks_api_dict(int(user_id), comp)
+        top6 = my.get("top6_picks") or []
+        n450 = sum(1 for p in top6 if (p.get("class") or "") in ("450cc", "wsx_sx1"))
+        n250 = sum(1 for p in top6 if (p.get("class") or "") in ("250cc", "wsx_sx2"))
+        hs = my.get("holeshot_picks") or {}
+        hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1"))
+        hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2"))
+        wc_ok = True
+        if not is_wsx:
+            wc_ok = bool(my.get("wildcard_pick")) and my.get("wildcard_pos") is not None
+        if n450 == 6 and n250 == 6 and hs450 and hs250 and wc_ok:
+            return "has_picks"
+        if n450 or n250 or hs450 or hs250 or (not is_wsx and my.get("wildcard_pick")):
+            return "partial_picks"
+        return "no_picks"
+    except Exception as e:
+        print(f"_user_picks_status_code: {e}")
+        return "no_picks"
+
+
 def _picks_status_summary(my_picks: dict, *, is_wsx: bool, picks_locked: bool) -> dict:
     """UI strings for picks status banner (mirrors updatePicksStatus in race_picks.html)."""
     top6 = my_picks.get("top6_picks") or []
@@ -24549,6 +24575,13 @@ def race_countdown():
             "weather": weather,
         }
 
+        # User-specific picks status (homepage CTA / sidebar) — never cache publicly
+        uid = session.get("user_id")
+        status_comp = upcoming_race or next_race_obj
+        if uid and status_comp is not None:
+            payload["picks_status"] = _user_picks_status_code(int(uid), status_comp)
+            payload["picks_competition_id"] = int(status_comp.id)
+
         # Auto-freeze picks when deadline passes (homepage syncs ~every 60s).
         if picks_locked:
             snap_comp = upcoming_race or next_race_obj
@@ -24561,13 +24594,17 @@ def race_countdown():
         from flask import make_response
         from datetime import datetime as _dt
         minute_tag = _dt.utcnow().strftime("%Y%m%d%H%M")
-        etag = f"\"racecd:{mode}:{minute_tag}\""
+        user_tag = f"u{uid}" if uid else "anon"
+        etag = f"\"racecd:{mode}:{minute_tag}:{user_tag}\""
         if request.headers.get("If-None-Match") == etag:
             resp = make_response("", 304)
         else:
             resp = make_response(jsonify(payload))
         resp.headers["ETag"] = etag
-        resp.headers["Cache-Control"] = "public, max-age=60"
+        if uid:
+            resp.headers["Cache-Control"] = "private, max-age=15"
+        else:
+            resp.headers["Cache-Control"] = "public, max-age=60"
         return resp
         
     except Exception as e:
