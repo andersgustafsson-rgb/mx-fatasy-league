@@ -476,6 +476,41 @@
     color: #64748b;
     flex-shrink: 0;
   }
+
+  /* Desktop: Inför racet (vänster) bredvid wizard-stegen (höger) */
+  .race-picks-bonus-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 1024px) {
+    .race-picks-bonus-layout {
+      display: grid;
+      /* Gul markering ≈ ~42% bredd; röd zon = platsen bredvid gissa-stegen */
+      grid-template-columns: minmax(300px, 42%) minmax(0, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    .race-picks-bonus-layout__prep {
+      position: sticky;
+      top: 0.75rem;
+      max-height: calc(100vh - 1.5rem);
+      overflow-y: auto;
+    }
+    .race-picks-bonus-layout__prep .race-prep-panel {
+      margin-bottom: 0;
+    }
+    .race-picks-bonus-layout__prep .race-prep-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+    .race-picks-bonus-layout__prep .race-prep-body > div {
+      border-bottom: none;
+      padding: 0;
+    }
+  }
 </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
@@ -570,95 +605,7 @@
     </div>
     {% endif %}
 
-    <!-- Trackmap + Bra att veta (MX alltid synlig; SX om bild i DB) -->
-    {% if _trackmap_urls|length > 0 or _is_mx or _good_to_know %}
-    <div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
-      <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
-        <h2>{% if _show_layout_images %}🗺️ Banlayout &amp; inför racet{% else %}📌 Inför racet{% endif %}</h2>
-        <p class="race-prep-teaser">
-          {{ competition.name }}
-          {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
-          · {{ riders_450_json|length + riders_250_json|length }} aktiva förare
-        </p>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-4 lg:p-4">
-        {% if _show_layout_images %}
-        <div class="lg:col-span-2 p-4 lg:p-0 border-b lg:border-b-0 border-gray-700/50">
-          <img id="main-trackmap"
-               src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
-               alt="Banlayout {{ competition.name }}"
-               class="w-full max-h-56 lg:max-h-80 object-contain rounded bg-gray-800/80">
-          {% if _trackmap_urls|length > 1 %}
-          <div class="flex flex-wrap gap-2 justify-center mt-3">
-            {% for turl in _trackmap_urls[:5] %}
-              <img src="{{ url_for('static', filename=turl) }}"
-                   class="thumb w-14 h-10 object-cover rounded cursor-pointer opacity-80 hover:opacity-100 {% if loop.first %}ring-2 ring-cyan-500/50{% endif %}"
-                   onclick="setMainTrackmap(this.src, this)">
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
-        {% endif %}
-
-        <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} race-prep-accordions">
-          <details class="race-prep-details" open>
-            <summary>🏁 Race Info</summary>
-            <div class="race-prep-details__body">
-              <div class="race-prep-kv"><span>Bana</span><span>{{ competition.name }}</span></div>
-              <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
-              {% if _is_mx %}
-              <div class="race-prep-kv"><span>Serie</span><span>Pro Motocross</span></div>
-              {% elif competition.coast_250 %}
-              <div class="race-prep-kv"><span>250SX</span><span>{{ competition.coast_250|capitalize }}</span></div>
-              {% endif %}
-            </div>
-          </details>
-
-          <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
-            <summary>📌 Bra att veta</summary>
-            <div class="race-prep-details__body">
-              {% if picks_weather and picks_weather.get('available') %}
-              <div class="race-prep-weather">
-                <div class="race-prep-weather__summary">{{ picks_weather.summary_sv }}</div>
-                <div class="race-prep-weather__icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather__icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
-                  {% if picks_weather.icon == 'sun' %}☀️
-                  {% elif picks_weather.icon == 'partly' %}⛅
-                  {% elif picks_weather.icon == 'cloud' %}☁️
-                  {% elif picks_weather.icon == 'fog' %}🌫️
-                  {% elif picks_weather.icon == 'rain' %}🌧️
-                  {% elif picks_weather.icon == 'snow' %}❄️
-                  {% elif picks_weather.icon == 'storm' %}⛈️
-                  {% else %}🌤️{% endif %}
-                </div>
-                {% if picks_weather.label_sv %}
-                <div class="race-prep-weather__label">{{ picks_weather.label_sv }}</div>
-                {% endif %}
-              </div>
-              {% endif %}
-              {% if _good_to_know %}
-                {% for tip in _good_to_know %}
-                <div class="race-prep-tip">{{ tip }}</div>
-                {% endfor %}
-              {% else %}
-                <div class="race-prep-tip">Kolla förares form från senaste racen</div>
-                <div class="race-prep-tip">Holeshot är ofta avgörande</div>
-              {% endif %}
-            </div>
-          </details>
-
-          <details class="race-prep-details">
-            <summary>📊 Statistik</summary>
-            <div class="race-prep-details__body">
-              <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
-              <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
-              <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
-            </div>
-          </details>
-        </div>
-      </div>
-    </div>
-    {% endif %}
+    {% set _show_prep = (_trackmap_urls|length > 0) or _is_mx or _good_to_know %}
 
     {% if not actual_results %}
     {% set outset = out_ids | default([]) %}
@@ -669,7 +616,7 @@
     {% set class_250_data = 'wsx_sx2' if is_wsx else '250cc' %}
     {% set initial_wiz_step = initial_wizard_step | default(1) %}
     
-    <!-- Picks Status Indicator -->
+    <!-- Picks Status Indicator (full bredd ovanför) -->
     <div id="picks-status" class="{{ initial_picks_status.container_class if initial_picks_status else 'mb-4 p-4 rounded-lg border-2 border-dashed border-cyan-500 bg-gray-800' }}">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -709,6 +656,8 @@
     {% endif %}
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+
+    {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep">{% include 'includes/race_prep_panel.html' %}</aside><div class="race-picks-bonus-layout__forms">{% endif %}
 
 <div id="picks-wizard-shell" class="picks-wizard-shell is-loading">
   <div id="picks-wizard-loader" class="picks-wizard-loader" role="status" aria-live="polite" aria-busy="true">
@@ -914,6 +863,8 @@
 </div>
 </div><!-- /picks-wizard-shell -->
 
+{% if _show_prep %}</div></div><!-- /.race-picks-bonus-layout -->{% endif %}
+
 <!-- Hidden select elements for form submission -->
 {% for i in range(1, 7) %}
   <select name="pick_450_{{ i }}" style="display: none;">
@@ -925,6 +876,9 @@
 {% endfor %}
 
     {% else %}
+    {% if _show_prep %}
+      {% include 'includes/race_prep_panel.html' %}
+    {% endif %}
     {% set is_wsx = competition.series == 'WSX' %}
     {% set class_450_label = 'SX1' if is_wsx else '450cc' %}
     {% set class_250_label = 'SX2' if is_wsx else '250cc' %}

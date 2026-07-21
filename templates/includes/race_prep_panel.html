@@ -1,0 +1,94 @@
+{# Shared "Inför racet" panel for race_picks.html #}
+{% set _is_wsx_hdr = competition.series == 'WSX' %}
+{% set _class_450_hdr = 'SX1' if _is_wsx_hdr else '450cc' %}
+{% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
+{% set _trackmap_urls = trackmap_urls | default([]) %}
+{% set _good_to_know = picks_good_to_know | default([]) %}
+{% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
+{% set _show_layout_images = (not _is_mx) and (_trackmap_urls|length > 0) %}
+<div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
+  <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
+    <h2>{% if _show_layout_images %}🗺️ Banlayout &amp; inför racet{% else %}📌 Inför racet{% endif %}</h2>
+    <p class="race-prep-teaser">
+      {{ competition.name }}
+      {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
+      · {{ riders_450_json|length + riders_250_json|length }} aktiva förare
+    </p>
+  </div>
+
+  <div class="race-prep-body grid grid-cols-1 lg:grid-cols-4 gap-0 lg:gap-4 lg:p-4">
+    {% if _show_layout_images %}
+    <div class="lg:col-span-2 p-4 lg:p-0 border-b lg:border-b-0 border-gray-700/50">
+      <img id="main-trackmap"
+           src="{{ url_for('static', filename=_trackmap_urls[0]) }}"
+           alt="Banlayout {{ competition.name }}"
+           class="w-full max-h-56 lg:max-h-80 object-contain rounded bg-gray-800/80">
+      {% if _trackmap_urls|length > 1 %}
+      <div class="flex flex-wrap gap-2 justify-center mt-3">
+        {% for turl in _trackmap_urls[:5] %}
+          <img src="{{ url_for('static', filename=turl) }}"
+               class="thumb w-14 h-10 object-cover rounded cursor-pointer opacity-80 hover:opacity-100 {% if loop.first %}ring-2 ring-cyan-500/50{% endif %}"
+               onclick="setMainTrackmap(this.src, this)">
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} race-prep-accordions">
+      <details class="race-prep-details" open>
+        <summary>🏁 Race Info</summary>
+        <div class="race-prep-details__body">
+          <div class="race-prep-kv"><span>Bana</span><span>{{ competition.name }}</span></div>
+          <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
+          {% if _is_mx %}
+          <div class="race-prep-kv"><span>Serie</span><span>Pro Motocross</span></div>
+          {% elif competition.coast_250 %}
+          <div class="race-prep-kv"><span>250SX</span><span>{{ competition.coast_250|capitalize }}</span></div>
+          {% endif %}
+        </div>
+      </details>
+
+      <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
+        <summary>📌 Bra att veta</summary>
+        <div class="race-prep-details__body">
+          {% if picks_weather and picks_weather.get('available') %}
+          <div class="race-prep-weather">
+            <div class="race-prep-weather__summary">{{ picks_weather.summary_sv }}</div>
+            <div class="race-prep-weather__icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather__icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
+              {% if picks_weather.icon == 'sun' %}☀️
+              {% elif picks_weather.icon == 'partly' %}⛅
+              {% elif picks_weather.icon == 'cloud' %}☁️
+              {% elif picks_weather.icon == 'fog' %}🌫️
+              {% elif picks_weather.icon == 'rain' %}🌧️
+              {% elif picks_weather.icon == 'snow' %}❄️
+              {% elif picks_weather.icon == 'storm' %}⛈️
+              {% else %}🌤️{% endif %}
+            </div>
+            {% if picks_weather.label_sv %}
+            <div class="race-prep-weather__label">{{ picks_weather.label_sv }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% if _good_to_know %}
+            {% for tip in _good_to_know %}
+            <div class="race-prep-tip">{{ tip }}</div>
+            {% endfor %}
+          {% else %}
+            <div class="race-prep-tip">Kolla förares form från senaste racen</div>
+            <div class="race-prep-tip">Holeshot är ofta avgörande</div>
+          {% endif %}
+        </div>
+      </details>
+
+      <details class="race-prep-details">
+        <summary>📊 Statistik</summary>
+        <div class="race-prep-details__body">
+          <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
+          <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
+          <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
