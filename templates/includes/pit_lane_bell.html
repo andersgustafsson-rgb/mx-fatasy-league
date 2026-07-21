@@ -3,14 +3,17 @@
   <button
     type="button"
     id="pit-lane-bell-btn"
-    class="relative p-2 rounded-lg bg-gray-800 border border-gray-600 hover:bg-gray-700 text-lg leading-none cursor-pointer"
+    class="pit-lane-bell-btn relative inline-flex items-center justify-center leading-none cursor-pointer"
     title="Pit Lane — meddelanden"
     aria-label="Meddelanden"
   >
-    🔔
+    <svg class="pit-lane-bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
     <span
       id="pit-lane-badge"
-      class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center pointer-events-none"
+      class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center pointer-events-none"
     >0</span>
   </button>
   <div
@@ -27,5 +30,5 @@
   </div>
 </div>
 <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
-<script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='pit_lane_bell.js') }}?v=8"></script>
 {% endif %}

@@ -24225,6 +24225,50 @@ def _competition_race_schedule(comp) -> dict:
     }
 
 
+def _race_hero_meta(comp, schedule: dict) -> dict:
+    """Structured labels for homepage race hero (date, time, location, flag)."""
+    import re
+
+    try:
+        from track_weather import resolve_track_geo
+
+        geo = resolve_track_geo(getattr(comp, "name", "") or "") or {}
+    except Exception:
+        geo = {}
+
+    event_date = getattr(comp, "event_date", None)
+    date_label = ""
+    if event_date:
+        m = _SV_MONTHS[event_date.month]
+        date_label = f"{event_date.day} {m.upper()} {event_date.year}"
+
+    time_label = ""
+    rsd = schedule.get("race_start_display") or ""
+    m_time = re.search(r"kl (\d{1,2}:\d{2}) \(([^)]+)\)", rsd)
+    if m_time:
+        time_label = f"{m_time.group(1)} ({m_time.group(2)})"
+
+    tz = schedule.get("timezone") or ""
+    flag = "🇺🇸"
+    if "Argentina" in tz:
+        flag = "🇦🇷"
+    elif "Australia" in tz or "Brisbane" in tz:
+        flag = "🇦🇺"
+    elif "Stockholm" in tz:
+        flag = "🇸🇪"
+    elif "Africa" in tz:
+        flag = "🇿🇦"
+    elif "Toronto" in tz or "Canada" in tz or "Vancouver" in (geo.get("city") or ""):
+        flag = "🇨🇦"
+
+    return {
+        "date_label": date_label,
+        "time_label": time_label,
+        "location": geo.get("city") or "",
+        "flag": flag,
+    }
+
+
 @app.route("/race_countdown")
 def race_countdown():
     """Countdown for main page - supports both real and test modes"""
@@ -24360,6 +24404,7 @@ def race_countdown():
             schedule = _competition_race_schedule(next_race_obj)
             race_datetime = schedule["race_utc"]
             deadline_datetime = schedule["deadline_utc"]
+            hero_meta = _race_hero_meta(next_race_obj, schedule)
             
             next_race = {
                 "id": next_race_obj.id,
@@ -24369,6 +24414,10 @@ def race_countdown():
                 "pick_deadline_display": schedule["pick_deadline_display"],
                 "stockholm_display": schedule.get("stockholm_display"),
                 "timezone": schedule["timezone"],
+                "date_label": hero_meta.get("date_label"),
+                "time_label": hero_meta.get("time_label"),
+                "location": hero_meta.get("location"),
+                "flag": hero_meta.get("flag"),
             }
         
         now = datetime.utcnow()

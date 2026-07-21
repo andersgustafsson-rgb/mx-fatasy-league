@@ -8,7 +8,7 @@
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=picks-cta-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
@@ -138,28 +138,116 @@
       box-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
     }
 
-    /* Snabba åtgärder / veckans prestationer — samma shell som I rampljuset */
+    /* Enhetligt panel-tema — solid som countdown-timern */
+    .home-ui-panel,
+    .home-series-panel {
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      background: #0a101c;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .home-ui-panel--photo {
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      background-color: #070d18;
+    }
+    .home-ui-panel__scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(5, 10, 20, 0.55) 0%, rgba(7, 13, 24, 0.92) 40%, #070d18 100%);
+      pointer-events: none;
+    }
+    .home-ui-panel__head,
+    .home-series-panel__head {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #1e293b;
+      background: #0a101c;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+    .home-ui-panel--photo .home-ui-panel__head {
+      background: transparent;
+    }
+    .home-ui-panel__head h2,
+    .home-series-panel__head h2 {
+      margin: 0;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: center;
+      color: #e2e8f0;
+      text-shadow: none;
+    }
+    .home-ui-panel__body,
+    .home-series-panel__body {
+      padding: 1rem;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: #0a101c;
+    }
+    .home-ui-panel--photo .home-ui-panel__body {
+      background: #070d18;
+    }
+    .home-ui-panel__sub {
+      margin: 0 0 0.75rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-align: center;
+    }
+    @media (min-width: 640px) {
+      .home-ui-panel__sub--left { text-align: left; }
+      .home-ui-panel__head h2--left { text-align: left; }
+    }
+    .home-ui-link-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      background: #0a101c;
+      color: #a5f3fc;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .home-ui-link-btn:hover {
+      border-color: #475569;
+      background: #0d1524;
+      color: #cffafe;
+    }
+    .home-ui-link-btn + .home-ui-link-btn {
+      margin-left: 0.5rem;
+    }
+
+    /* Snabba åtgärder / veckans prestationer */
     .home-panel {
       background-size: cover;
       background-position: center;
-      display: flex;
-      flex-direction: column;
-      min-height: 100%;
     }
     .home-panel__body {
       flex: 1;
       display: flex;
       flex-direction: column;
+      padding: 0;
     }
     .home-panel__tiles {
       flex: 1;
       width: 100%;
       grid-auto-rows: 1fr;
     }
-    .home-panel--cyan { border-color: rgb(6 182 212); }
-    .home-panel--amber { border-color: rgb(245 158 11); }
-    .home-panel__title--cyan { text-shadow: 0 0 10px rgba(34, 211, 238, 0.75); }
-    .home-panel__title--amber { text-shadow: 0 0 10px rgba(251, 191, 36, 0.8); }
 
     .home-inner-tile {
       position: relative;
@@ -173,37 +261,23 @@
       min-height: 6.5rem;
       height: 100%;
       padding: 1rem 0.75rem;
-      border-radius: 0.5rem;
-      border: 1px solid rgb(34 211 238);
+      border-radius: 0.45rem;
+      border: none;
       color: #f8fafc;
       text-decoration: none;
-      background:
-        linear-gradient(135deg, rgba(15, 23, 42, 0.94) 0%, rgba(30, 41, 59, 0.9) 50%, rgba(15, 23, 42, 0.94) 100%);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      background: #0d1524;
+      transition: background 0.15s ease;
     }
     .home-inner-tile::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.35;
-      background-image:
-        linear-gradient(45deg, rgba(255,255,255,.03) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(255,255,255,.03) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(255,255,255,.03) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.03) 75%);
-      background-size: 12px 12px;
+      display: none;
     }
     .home-inner-tile:hover {
-      border-color: rgb(103 232 249);
-      box-shadow: 0 0 14px rgba(34, 211, 238, 0.18);
-      transform: translateY(-1px);
+      background: #111827;
     }
     .home-inner-tile--muted {
       opacity: 0.55;
       cursor: not-allowed;
       pointer-events: none;
-      border-color: rgba(148, 163, 184, 0.45);
     }
     .home-inner-tile__icon,
     .home-inner-tile__label,
@@ -232,7 +306,7 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
-      color: rgba(165, 243, 252, 0.75);
+      color: rgba(148, 163, 184, 0.95);
     }
     .home-inner-tile__name {
       font-size: 0.82rem;
@@ -246,10 +320,24 @@
     .home-inner-tile__meta { font-size: 0.68rem; color: rgba(203, 213, 225, 0.88); margin-top: 0.1rem; }
     .home-inner-tile__link {
       font-size: 0.65rem;
-      color: rgb(103 232 249);
+      color: #94a3b8;
       margin-top: 0.3rem;
     }
-    .home-inner-tile__link:hover { text-decoration: underline; }
+    .home-inner-tile__link:hover { color: #a5f3fc; text-decoration: underline; }
+
+    .rider-spotlight-card {
+      display: block;
+      border-radius: 0.45rem;
+      border: none;
+      background: #0d1524;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.15s;
+    }
+    .rider-spotlight-card:hover {
+      background: #111827;
+    }
     
     /* Glömt lösenord-länken ska alltid vara klickbar i modalen */
     .readonly-mode a[href*="forgot_password"] {
@@ -399,33 +487,24 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      border-radius: 0.5rem;
-      border: 1px solid rgba(55, 65, 81, 0.7);
-      background: rgba(3, 7, 18, 0.5);
+      border-radius: 0.45rem;
+      border: none;
+      background: #0d1524;
       padding: 0.5rem 0.75rem;
-      transition: border-color 0.15s ease;
+      transition: background 0.15s ease;
     }
     .home-lb-row:hover {
-      border-color: rgba(75, 85, 99, 0.85);
+      background: #111827;
     }
-    .home-lb-panel {
-      border-radius: 0.75rem;
-      border: 1px solid rgba(34, 211, 238, 0.35);
-      background: rgba(34, 211, 238, 0.05);
-      padding: 0.75rem;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
-    }
-    .home-lb-panel--green {
-      border-color: rgba(74, 222, 128, 0.35);
-      background: rgba(34, 197, 94, 0.05);
-    }
-    .home-lb-panel--violet {
-      border-color: rgba(167, 139, 250, 0.35);
-      background: rgba(139, 92, 246, 0.05);
-    }
+    .home-lb-panel,
+    .home-lb-panel--green,
+    .home-lb-panel--violet,
     .home-lb-panel--gold {
-      border-color: rgba(251, 191, 36, 0.35);
-      background: rgba(245, 158, 11, 0.05);
+      border-radius: 0.45rem;
+      border: none;
+      background: transparent;
+      padding: 0;
+      box-shadow: none;
     }
     .league-home-card {
       border-radius: 0.75rem;
@@ -629,6 +708,704 @@
       letter-spacing: 0.22em;
       color: #f8fafc;
     }
+
+    /* Sidebar + main (sidebar vänster, hero + innehåll höger) */
+    .home-page-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+    }
+    @media (min-width: 640px) {
+      .home-page-shell {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 1.25rem;
+      }
+      .home-sidebar {
+        position: sticky;
+        top: 0.75rem;
+        align-self: flex-start;
+      }
+    }
+    .home-sidebar {
+      flex-shrink: 0;
+      width: 100%;
+      max-width: none;
+      text-align: left;
+    }
+    @media (min-width: 640px) {
+      .home-sidebar {
+        width: 300px;
+        max-width: 300px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .home-sidebar {
+        width: 340px;
+        max-width: 340px;
+      }
+    }
+    .home-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .home-main .tab-content {
+      margin-top: 0;
+    }
+    .home-sidebar-card {
+      margin-top: 0.75rem;
+      padding: 1rem 1.05rem;
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      background: #0a101c;
+    }
+    .home-sidebar-card--guest {
+      text-align: center;
+    }
+    .home-sidebar-profile {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      text-decoration: none;
+      color: inherit;
+    }
+    .home-sidebar-profile:hover .home-sidebar-profile__name strong {
+      color: #f8fafc;
+    }
+    .home-sidebar-avatar-ring {
+      padding: 2px;
+      border-radius: 9999px;
+      background: linear-gradient(140deg, rgba(34, 211, 238, 0.65), rgba(34, 211, 238, 0.1));
+      flex-shrink: 0;
+    }
+    .home-sidebar-avatar,
+    .home-sidebar-avatar-fallback {
+      display: block;
+      width: 4.25rem;
+      height: 4.25rem;
+      border-radius: 9999px;
+      object-fit: cover;
+      border: 2px solid rgba(8, 15, 30, 0.95);
+    }
+    .home-sidebar-avatar-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(30, 41, 59, 0.95);
+      color: #94a3b8;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+    .home-sidebar-profile__name {
+      font-size: 1.05rem;
+      line-height: 1.2;
+      color: #f1f5f9;
+    }
+    .home-sidebar-profile__name strong {
+      font-weight: 700;
+      transition: color 0.15s ease;
+    }
+    .home-sidebar-profile__rank {
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #64748b;
+      font-variant-numeric: tabular-nums;
+    }
+    .home-sidebar-profile__rank:not(.hidden)::before {
+      content: ' · ';
+      color: #475569;
+    }
+    .home-sidebar-tier {
+      display: inline-block;
+      margin-top: 0.3rem;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #b45309;
+    }
+    .home-sidebar-tier--silver { color: #94a3b8; }
+    .home-sidebar-tier--gold { color: #fbbf24; }
+    .home-sidebar-points {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.45);
+    }
+    .home-sidebar-points__labels {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .home-sidebar-points__labels span:last-child {
+      font-size: 0.78rem;
+      letter-spacing: 0;
+      text-transform: none;
+      color: #e2e8f0;
+      font-variant-numeric: tabular-nums;
+    }
+    .home-sidebar-points__sep,
+    .home-sidebar-points__muted {
+      color: #475569;
+      font-weight: 500;
+    }
+    .home-sidebar-points__track {
+      margin-top: 0.45rem;
+      height: 4px;
+      border-radius: 9999px;
+      background: rgba(30, 41, 59, 0.9);
+      overflow: hidden;
+    }
+    .home-sidebar-points__fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.5), rgba(34, 211, 238, 0.95));
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+      transition: width 0.5s ease;
+    }
+    .home-sidebar-points__delta {
+      margin: 0.4rem 0 0;
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+    .home-sidebar-points__delta--gain {
+      color: #86efac;
+    }
+    .home-sidebar-nav {
+      margin-top: 0.75rem;
+      padding: 0.3rem;
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      background: #0a101c;
+      display: flex;
+      flex-direction: column;
+      gap: 0.08rem;
+    }
+    .home-sidebar-nav__link {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      border: none;
+      border-radius: 0.55rem;
+      background: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #94a3b8;
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.15s ease, background 0.15s ease;
+      text-align: left;
+    }
+    .home-sidebar-nav__link:hover {
+      color: #e2e8f0;
+      background: rgba(30, 41, 59, 0.55);
+    }
+    .home-sidebar-nav__link svg,
+    .home-sidebar-nav .pit-lane-bell-icon {
+      width: 1.05rem;
+      height: 1.05rem;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+    .home-sidebar-nav__notif {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.55rem 0.65rem;
+      border: none;
+      border-radius: 0.55rem;
+      background: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.15s ease, background 0.15s ease;
+      text-align: left;
+    }
+    .home-sidebar-nav__notif:hover {
+      color: #e2e8f0;
+      background: rgba(30, 41, 59, 0.55);
+    }
+    .home-sidebar-nav__notif-icon-slot {
+      position: relative;
+      width: 1.05rem;
+      height: 1.05rem;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .home-sidebar-nav__notif-label {
+      flex: 1;
+      font-size: inherit;
+      font-weight: inherit;
+      color: inherit;
+    }
+    .home-sidebar-nav #pit-lane-bell-wrap {
+      display: inline-flex;
+      line-height: 0;
+    }
+    .home-sidebar-nav #pit-lane-bell-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      color: inherit;
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+    .home-sidebar-nav #pit-lane-bell-btn:hover {
+      background: none;
+      color: inherit;
+    }
+    .home-sidebar-nav #pit-lane-badge {
+      top: -5px;
+      right: -6px;
+      min-width: 14px;
+      height: 14px;
+      font-size: 9px;
+    }
+    .home-sidebar-nav__notif:has(#pit-lane-bell-wrap.pit-lane-bell-wrap--unread) {
+      color: #a5f3fc;
+    }
+    .home-sidebar-nav__notif:has(#pit-lane-bell-wrap.pit-lane-bell-wrap--unread) .pit-lane-bell-icon {
+      color: #22d3ee;
+      opacity: 1;
+      filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.65));
+    }
+    .home-sidebar-foot {
+      margin-top: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .home-sidebar-foot__btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid #1e293b;
+      background: #0a101c;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      text-decoration: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+    .home-sidebar-foot__btn:hover {
+      border-color: rgba(100, 116, 139, 0.55);
+      background: rgba(30, 41, 59, 0.65);
+      color: #f8fafc;
+    }
+    .home-sidebar-foot__btn--primary {
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.12);
+      color: #a5f3fc;
+    }
+    .home-sidebar-foot__btn--primary:hover {
+      border-color: rgba(34, 211, 238, 0.55);
+      background: rgba(34, 211, 238, 0.2);
+      color: #ecfeff;
+    }
+    .home-sidebar-foot__btn--out {
+      border-color: rgba(127, 29, 29, 0.45);
+      color: #fca5a5;
+    }
+    .home-sidebar-foot__btn--out:hover {
+      border-color: rgba(185, 28, 28, 0.55);
+      background: rgba(127, 29, 29, 0.25);
+      color: #fecaca;
+    }
+    .home-sidebar-guest-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .home-sidebar-guest-sub {
+      margin: 0.35rem 0 0.85rem;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: #64748b;
+    }
+    .home-sidebar-guest-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .home-sidebar .mx-brand__mx {
+      font-size: clamp(2.35rem, 7vw, 3.75rem);
+    }
+    .home-sidebar .mx-brand__fantasy {
+      font-size: clamp(1rem, 3vw, 1.45rem);
+    }
+    .home-sidebar .mx-brand__league {
+      font-size: clamp(0.78rem, 2.2vw, 1rem);
+    }
+
+    /* Race hero — kompakt, solid kant */
+    .home-race-hero {
+      position: relative;
+      width: 100%;
+      min-height: 13.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      overflow: hidden;
+      background-color: #070d18;
+      background-size: cover;
+      background-position: center;
+    }
+    .home-race-hero__overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(5, 10, 20, 0.55) 0%, rgba(5, 10, 20, 0.88) 55%, rgba(5, 10, 20, 0.98) 100%);
+      pointer-events: none;
+    }
+    .home-race-hero__body {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      min-height: 13.5rem;
+      padding: 1.15rem 0 0;
+      text-align: left;
+    }
+    .home-race-hero__head,
+    .home-race-hero__weather,
+    .home-race-hero__cta-wrap {
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+    .home-race-hero__cta-wrap {
+      padding-bottom: 1rem;
+    }
+    .home-race-hero__head {
+      padding-right: 4.5rem;
+    }
+    .home-race-hero__kicker-row {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-bottom: 0.35rem;
+    }
+    .home-race-hero__flag {
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .home-race-hero__kicker {
+      margin: 0;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #f1f5f9;
+    }
+    .home-race-hero__title {
+      margin: 0;
+      font-family: 'Bebas Neue', 'Rajdhani', system-ui, sans-serif;
+      font-size: clamp(1.85rem, 4.8vw, 2.85rem);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #ffffff;
+      line-height: 0.95;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+    }
+    .home-race-hero__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem 1rem;
+      margin-top: 0.55rem;
+    }
+    .home-race-hero__meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      letter-spacing: 0.02em;
+    }
+    .home-race-hero__meta-item svg {
+      width: 0.95rem;
+      height: 0.95rem;
+      flex-shrink: 0;
+      color: #94a3b8;
+    }
+    .home-race-hero__schedule {
+      display: none;
+    }
+    .home-race-hero__weather {
+      margin-top: 0.75rem;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding-bottom: 0.75rem;
+    }
+    .home-race-hero__weather-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      max-width: 100%;
+      padding: 0.55rem 1rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(8, 14, 26, 0.88);
+    }
+    .home-race-hero__weather-pill span:last-child {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+    .home-race-hero__timers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      width: 100%;
+      margin-top: auto;
+      padding: 0.75rem 1.25rem;
+      background: #070d18;
+      border-top: 1px solid #1e293b;
+    }
+    .home-race-timer {
+      position: relative;
+      padding: 0.15rem 0.85rem 0.1rem 0.95rem;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      overflow: visible;
+      box-shadow: none;
+    }
+    .home-race-timer + .home-race-timer {
+      border-left: 1px solid #334155;
+    }
+    .home-race-timer::after {
+      display: none;
+    }
+    .home-race-timer::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      z-index: 1;
+    }
+    .home-race-timer > * {
+      position: relative;
+      z-index: 2;
+    }
+    .home-race-timer--start::before { background: rgba(248, 113, 113, 0.85); }
+    .home-race-timer--deadline::before { background: rgba(251, 191, 36, 0.85); }
+    .home-race-timer__label {
+      margin-bottom: 0.35rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .home-race-timer--start .home-race-timer__label { color: #fca5a5; }
+    .home-race-timer--deadline .home-race-timer__label { color: #fcd34d; }
+    .home-race-timer__value {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: 0.3rem;
+      row-gap: 0.1rem;
+      font-family: 'Rajdhani', system-ui, sans-serif;
+      line-height: 1;
+    }
+    .home-race-timer__seg {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.08rem;
+      margin-right: 0.4rem;
+    }
+    .home-race-timer__seg:last-child {
+      margin-right: 0;
+    }
+    .home-race-timer__num {
+      font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+      font-weight: 700;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+    }
+    .home-race-timer__unit {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #64748b;
+      letter-spacing: 0.04em;
+    }
+    .home-race-timer__now {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #86efac;
+    }
+    .home-race-hero__cta-wrap {
+      width: 100%;
+      margin-top: 0.85rem;
+      display: flex;
+      justify-content: center;
+    }
+    @keyframes home-picks-glow {
+      0%, 100% {
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.12);
+        border-color: rgba(34, 211, 238, 0.32);
+      }
+      50% {
+        box-shadow: 0 0 22px rgba(34, 211, 238, 0.28);
+        border-color: rgba(34, 211, 238, 0.5);
+      }
+    }
+    .home-race-hero .mx-picks-cta {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 0.55rem;
+      padding: 0.6rem 1.1rem;
+      min-height: auto;
+      animation: none;
+      border: 1px solid transparent;
+    }
+    .home-race-hero .mx-picks-cta--need {
+      color: #a5f3fc;
+      background: rgba(8, 14, 26, 0.92);
+      border-color: rgba(34, 211, 238, 0.38);
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.1);
+      animation: home-picks-glow 2.4s ease-in-out infinite;
+    }
+    .home-race-hero .mx-picks-cta--need:hover {
+      background: rgba(15, 23, 42, 0.96);
+      color: #cffafe;
+      border-color: rgba(34, 211, 238, 0.55);
+    }
+    .home-race-hero .mx-picks-cta--done,
+    .home-race-hero .mx-picks-cta--done-race {
+      background: rgba(8, 14, 26, 0.88);
+      color: #86efac;
+      border-color: rgba(52, 211, 153, 0.3);
+      box-shadow: none;
+      animation: none;
+    }
+    .home-race-hero .mx-picks-cta--done-race {
+      color: #93c5fd;
+      border-color: rgba(96, 165, 250, 0.3);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .home-race-hero .mx-picks-cta--need {
+        animation: none;
+        box-shadow: 0 0 12px rgba(34, 211, 238, 0.18);
+      }
+    }
+
+    /* Välj Serie — subtil panel som resten av UI */
+    .home-series-card {
+      border: none;
+      border-radius: 0.45rem;
+      padding: 1rem;
+      position: relative;
+      overflow: hidden;
+      background-color: #0a101c;
+      transition: background 0.15s;
+    }
+    .home-series-card--clickable {
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .home-series-card--clickable:hover {
+      background-color: #0d1524;
+    }
+    .home-series-card__title {
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.5rem;
+    }
+    .home-race-hero #active-now-badge {
+      border: 1px solid #334155;
+      background: #0a101c;
+      color: #94a3b8;
+    }
+
+    /* Flikar — överst, full bredd */
+    .home-tabs {
+      margin-bottom: 1rem;
+    }
+    .home-tabs__inner {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      justify-content: stretch;
+    }
+    @media (min-width: 1024px) {
+      .home-tabs__inner {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 0.35rem;
+      }
+    }
+    .home-tabs .tab-btn.rp-tab-btn {
+      background: #0a101c;
+      border: 1px solid #1e293b;
+      color: #94a3b8;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      border-radius: 0.5rem;
+      box-shadow: none;
+    }
+    .home-tabs .tab-btn.rp-tab-btn:hover:not(:disabled):not(.active) {
+      background: #0d1524;
+      border-color: #334155;
+      color: #cbd5e1;
+    }
+    .home-tabs .tab-btn.rp-tab-btn.active {
+      background: #0a101c;
+      color: #a5f3fc;
+      border-color: #334155;
+      box-shadow: none;
+    }
+    @media (max-width: 639px) {
+      .home-tabs__inner {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.35rem;
+      }
+      .home-tabs .tab-btn.rp-tab-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 0.45rem 0.2rem;
+        font-size: 0.62rem;
+        white-space: normal;
+        line-height: 1.15;
+        min-height: 2.55rem;
+      }
+      .home-race-hero__head { padding-right: 0; }
+      .home-race-hero__cta-wrap { justify-content: center; }
+      .home-race-hero .mx-picks-cta { width: auto; max-width: 100%; }
+    }
     
     /* Countdown Widget Animations */
     #countdown-widget {
@@ -739,8 +1516,28 @@
           </div>
         {% endif %}
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 relative z-30">
-          <header class="text-center sm:text-left flex-shrink-0 sm:max-w-[280px] lg:max-w-[320px]">
+        <!-- Tab Navigation -->
+        <div class="home-tabs relative z-10">
+          <div id="tab-scroll-container" class="home-tabs__inner">
+                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden">Toppl.</span><span class="hidden sm:inline">Leaderboard</span></button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
+                <button type="button"
+                  {% if upcoming_race and upcoming_race.series == 'WSX' %}
+                  class="tab-btn rp-tab-btn" disabled title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
+                  {% else %}
+                  class="tab-btn rp-tab-btn" data-tab="season-team"
+                  {% endif %}
+                >Team</button>
+                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden">Inst.</span><span class="hidden sm:inline">Settings</span></button>
+                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
+          </div>
+        </div>
+
+        <div class="home-page-shell relative z-30">
+          <aside class="home-sidebar">
             <h1 class="mx-brand" aria-label="MX Fantasy League">
               <span class="mx-brand__skew">
                 <span class="mx-brand__mx">MX</span>
@@ -755,103 +1552,139 @@
                 </span>
               </span>
             </h1>
-            <div class="flex items-center gap-3 mt-2">
-              {% if user_profile_picture %}
-                {% if user_profile_picture.startswith('data:') %}
-                  <img src="{{ user_profile_picture }}" alt="Profilbild" class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400">
-                {% elif user_profile_picture.startswith('uploaded_') %}
-                  <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center border-2 border-yellow-400">
-                    <span class="text-yellow-400 text-xs">📷</span>
-                  </div>
-                {% else %}
-                  <img src="{{ url_for('static', filename=user_profile_picture) }}" alt="Profilbild" class="w-8 h-8 rounded-full object-cover border-2 border-yellow-400" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                  <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400" style="display:none;">
-                    <span class="text-yellow-400 text-xs">📷</span>
-                  </div>
-                {% endif %}
-              {% else %}
-                <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center border-2 border-yellow-400">
-                  <span class="text-yellow-400 text-sm font-bold">{{ username[0].upper() }}</span>
-                </div>
-              {% endif %}
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="text-base md:text-lg text-gray-200 truncate">
-                  {% if is_logged_in %}
-                    Välkommen, <strong id="welcome-username">{{ username }}</strong>!
+
+            {% if is_logged_in %}
+            <div class="home-sidebar-card">
+              <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
+                <div class="home-sidebar-avatar-ring">
+                  {% if user_profile_picture and user_profile_picture.startswith('data:') %}
+                    <img src="{{ user_profile_picture }}" alt="" class="home-sidebar-avatar">
+                  {% elif user_profile_picture and not user_profile_picture.startswith('uploaded_') %}
+                    <img src="{{ url_for('static', filename=user_profile_picture) }}" alt="" class="home-sidebar-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="home-sidebar-avatar-fallback" style="display:none;">{{ username[0].upper() }}</span>
                   {% else %}
-                    Välkommen, <strong>Gäst</strong>!
-                  {% endif %}
-                  </p>
-                  {% if is_logged_in %}
-                    <span id="welcome-rank-chip" class="hidden inline-flex items-center px-2 py-0.5 rounded-full text-xs font-extrabold border border-cyan-400/40 bg-cyan-500/10 text-cyan-200">#—</span>
+                    <span class="home-sidebar-avatar-fallback">{{ username[0].upper() }}</span>
                   {% endif %}
                 </div>
-                {% if is_logged_in %}
-                  <div id="welcome-chips" class="mt-1 flex flex-col items-start gap-1 text-xs"></div>
-                {% endif %}
-                <div class="mt-2.5 flex flex-wrap items-center gap-2">
-                  {% if is_logged_in %}
-                  <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 hover:border-amber-300/55 transition shadow-sm shadow-amber-900/20">
-                    <span aria-hidden="true">🏁</span> Bjud in en kompis
-                  </button>
-                  {% include 'includes/pit_lane_bell.html' %}
-                  <a href="{{ url_for('logout') }}" class="inline-flex items-center gap-1.5 rounded-lg border border-red-400/40 bg-red-600/90 px-2.5 py-1.5 text-xs font-extrabold text-white hover:bg-red-500 transition">
-                    Logga ut
-                  </a>
-                  {% else %}
-                  <button type="button" onclick="openLoginModal();" class="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/40 bg-cyan-500 px-3 py-1.5 text-xs font-extrabold text-slate-950 hover:bg-cyan-400 transition">
-                    Logga in
-                  </button>
-                  <button type="button" onclick="openGuestSignup();" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2.5 py-1.5 text-xs font-extrabold text-amber-100 hover:bg-amber-500/25 transition">
-                    Skapa konto
-                  </button>
-                  {% endif %}
+                <div class="home-sidebar-profile__text">
+                  <div class="home-sidebar-profile__name">
+                    <strong id="welcome-username">{{ username }}</strong><span id="welcome-rank-chip" class="home-sidebar-profile__rank hidden">#—</span>
+                  </div>
+                  <span id="welcome-tier-badge" class="home-sidebar-tier hidden">—</span>
                 </div>
+              </a>
+              <div class="home-sidebar-points">
+                <div class="home-sidebar-points__labels">
+                  <span>Säsongspoäng</span>
+                  <span><span id="welcome-points-val" class="tabular-nums">{{ user_total_points or 0 }}</span><span class="home-sidebar-points__sep"> / </span><span id="welcome-points-leader" class="home-sidebar-points__muted tabular-nums">—</span></span>
+                </div>
+                <div class="home-sidebar-points__track" aria-hidden="true">
+                  <div id="welcome-points-fill" class="home-sidebar-points__fill"></div>
+                </div>
+                <p id="welcome-latest-line" class="home-sidebar-points__delta">—</p>
               </div>
             </div>
-          </header>
 
-          <!-- Countdown stays inside container (no min-w-[1000px] overflow) -->
-          <div class="w-full min-w-0 sm:flex-1">
-            <div id="real-countdown-widget" class="bg-black bg-opacity-60 rounded-lg p-4 border border-yellow-400 w-full relative overflow-hidden" style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}'); background-size: cover; background-position: center;">
-              <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg"></div>
-              <div class="absolute top-2 right-2 z-20">
-                <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold bg-black/60 border border-cyan-400/40 text-cyan-200 px-2.5 py-1 rounded-full backdrop-blur">
+            <nav class="home-sidebar-nav" aria-label="Snabbnavigering">
+              <a href="{{ url_for('leagues_page') }}" class="home-sidebar-nav__link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10l1 7H6l1-7zM9 11v3M15 11v3"/></svg>
+                Liga
+              </a>
+              <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="home-sidebar-nav__link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                Bjud in vänner
+              </button>
+              <div
+                class="home-sidebar-nav__notif"
+                role="button"
+                tabindex="0"
+                onclick="document.getElementById('pit-lane-bell-btn')?.click();"
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('pit-lane-bell-btn')?.click();}"
+              >
+                <span class="home-sidebar-nav__notif-icon-slot">
+                  {% include 'includes/pit_lane_bell.html' %}
+                </span>
+                <span class="home-sidebar-nav__notif-label">Notiser</span>
+              </div>
+            </nav>
+
+            <div class="home-sidebar-foot">
+              <button type="button" onclick="document.querySelector(&quot;.tab-btn[data-tab='settings']&quot;)?.click(); document.getElementById('tab-scroll-container')?.scrollIntoView({behavior:'smooth', block:'nearest'});" class="home-sidebar-foot__btn">
+                Inställningar
+              </button>
+              <a href="{{ url_for('logout') }}" class="home-sidebar-foot__btn home-sidebar-foot__btn--out">Logga ut</a>
+            </div>
+            {% else %}
+            <div class="home-sidebar-card home-sidebar-card--guest">
+              <p class="home-sidebar-guest-title">Välkommen</p>
+              <p class="home-sidebar-guest-sub">Skapa konto och utmana vänner i MX Fantasy.</p>
+              <div class="home-sidebar-guest-actions">
+                <button type="button" onclick="openLoginModal();" class="home-sidebar-foot__btn home-sidebar-foot__btn--primary">Logga in</button>
+                <button type="button" onclick="openGuestSignup();" class="home-sidebar-foot__btn">Skapa konto</button>
+              </div>
+            </div>
+            {% endif %}
+          </aside>
+
+          <!-- Countdown hero + tab-innehåll (höger kolumn) -->
+          <div class="home-main">
+            <div id="real-countdown-widget" class="home-race-hero" style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
+              <div class="home-race-hero__overlay"></div>
+              <div class="absolute top-3 right-3 z-20">
+                <div id="active-now-badge" class="hidden text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md backdrop-blur-sm">
                   Aktiva nu: <span id="active-now-count">–</span>
                 </div>
               </div>
-              <div class="relative z-10">
-              <div class="text-center">
-                <h3 class="text-yellow-400 font-bold text-lg sm:text-xl lg:text-2xl mb-1" id="real-countdown-race-name">Laddar...</h3>
-                <p id="real-race-schedule-label" class="text-cyan-100/80 text-xs sm:text-sm mb-2 hidden"></p>
-                <div id="race-day-weather" class="hidden mb-3 flex justify-center">
-                  <div class="inline-flex items-center gap-2 bg-black/50 border border-cyan-400/30 rounded-full px-3 py-1.5 backdrop-blur-sm max-w-full">
-                    <span id="race-weather-icon" class="text-xl sm:text-2xl leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
-                    <span id="race-weather-text" class="text-cyan-100 text-xs sm:text-sm text-left truncate">Race day väder</span>
+              <div class="home-race-hero__body">
+                <div class="home-race-hero__head">
+                  <div class="home-race-hero__kicker-row">
+                    <span id="real-race-flag" class="home-race-hero__flag hidden" aria-hidden="true"></span>
+                    <p class="home-race-hero__kicker">Nästa race</p>
+                  </div>
+                  <h3 class="home-race-hero__title" id="real-countdown-race-name">Laddar...</h3>
+                  <div id="real-race-meta" class="home-race-hero__meta hidden">
+                    <span class="home-race-hero__meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                      <span id="real-race-date">—</span>
+                    </span>
+                    <span class="home-race-hero__meta-item">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                      <span id="real-race-time">—</span>
+                    </span>
+                    <span id="real-race-location-wrap" class="home-race-hero__meta-item hidden">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                      <span id="real-race-location">—</span>
+                    </span>
+                  </div>
+                  <p id="real-race-schedule-label" class="home-race-hero__schedule hidden"></p>
+                </div>
+                <div id="race-day-weather" class="home-race-hero__weather hidden">
+                  <div class="home-race-hero__weather-pill">
+                    <span id="race-weather-icon" class="text-base leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
+                    <span id="race-weather-text" class="truncate">Race day väder</span>
                   </div>
                 </div>
-                <div class="grid grid-cols-2 gap-3 sm:gap-4 text-sm sm:text-base lg:text-lg">
-                  <div class="bg-red-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-red-700">
-                    <div class="text-red-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">🏁 Race Start</div>
-                    <div id="real-race-countdown" class="text-red-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
+                <div class="home-race-hero__timers">
+                  <div class="home-race-timer home-race-timer--start">
+                    <div class="home-race-timer__label">Race Start</div>
+                    <div id="real-race-countdown" class="home-race-timer__value">--:--:--</div>
                   </div>
-                  <div class="bg-orange-900 bg-opacity-50 rounded-lg p-3 sm:p-4 border border-orange-700">
-                    <div class="text-orange-300 font-semibold text-xs sm:text-sm lg:text-base mb-1">⏰ Pick Deadline</div>
-                    <div id="real-deadline-countdown" class="text-orange-200 font-mono text-lg sm:text-xl lg:text-2xl font-bold">--:--:--</div>
+                  <div class="home-race-timer home-race-timer--deadline">
+                    <div class="home-race-timer__label">Pick Deadline</div>
+                    <div id="real-deadline-countdown" class="home-race-timer__value">--:--:--</div>
                   </div>
                 </div>
-                <div id="real-picks-status" class="mt-3 text-xs sm:text-sm flex justify-center">
-                  <span id="real-picks-locked-status" class="hidden bg-red-600 text-white px-3 py-2 rounded-lg font-semibold">🔒 Picks låsta</span>
+                <div id="real-picks-status" class="home-race-hero__cta-wrap">
+                  <span id="real-picks-locked-status" class="hidden bg-red-950/80 border border-red-800/50 text-red-200 px-3 py-2 rounded-md text-xs font-semibold">Picks låsta</span>
                   {% set _cta_race = picks_cta_race_label or (upcoming_race.name if upcoming_race else 'racet') %}
                   {% if picks_status == 'has_picks' %}
-                    {% set _cta_text = '✅ Alla picks för ' ~ _cta_race ~ ' är klara — redigera val?' %}
+                    {% set _cta_text = 'Alla picks klara — redigera?' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--done' %}
                   {% elif picks_status == 'partial_picks' %}
-                    {% set _cta_text = '⚠️ Komplettera dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_text = 'Komplettera picks till ' ~ _cta_race ~ ' →' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
                   {% else %}
-                    {% set _cta_text = '🏁 Sätt dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_text = 'Sätt dina picks till ' ~ _cta_race ~ ' →' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
                   {% endif %}
                   <a id="real-picks-open-status"
@@ -861,13 +1694,10 @@
                      data-race-label="{{ _cta_race }}">{{ _cta_text }}</a>
                 </div>
               </div>
-              </div>
             </div>
-          </div>
-        </div>
 
         <!-- Banners BELOW hero so they never shrink/shift the countdown -->
-        <div class="mt-4 space-y-3">
+        <div class="space-y-3">
           <div id="pwa-install-banner" class="hidden max-w-md mx-auto w-full">
             <div class="relative rounded-xl border border-cyan-400/30 bg-gray-900/60 backdrop-blur-sm shadow-lg p-4">
               <button id="pwa-install-close" class="absolute top-2 right-2 text-gray-300 hover:text-white text-lg leading-none" aria-label="Stäng">×</button>
@@ -897,7 +1727,7 @@
                     <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
                     <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
                   </div>
-                  <p class="mt-0.5 truncate text-xs text-slate-300">Eller tryck Logga in uppe till vänster om du redan har konto</p>
+                  <p class="mt-0.5 truncate text-xs text-slate-300">Har du konto? Logga in uppe vid logotypen</p>
                 </div>
                 <svg class="h-5 w-5 flex-shrink-0 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </div>
@@ -937,29 +1767,6 @@
           </div>
           {% endif %}
         </div>
-      </div>
-
-        <!-- Tab Navigation -->
-        <div class="mb-6 relative z-10">
-          <div class="relative bg-black bg-opacity-40 rounded-lg p-1.5 sm:p-1">
-                        <div id="tab-scroll-container" class="w-full min-w-0 sm:flex sm:flex-1 sm:flex-wrap sm:justify-center sm:gap-1">
-                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden">Toppl.</span><span class="hidden sm:inline">Leaderboard</span></button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
-                <button type="button"
-                  {% if upcoming_race and upcoming_race.series == 'WSX' %}
-                  class="tab-btn rp-tab-btn" disabled title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
-                  {% else %}
-                  class="tab-btn rp-tab-btn" data-tab="season-team"
-                  {% endif %}
-                >Team</button>
-                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden">Inst.</span><span class="hidden sm:inline">Settings</span></button>
-                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
-            </div>
-          </div>
-        </div>
 
         <!-- Tab Content -->
         <div class="tab-content">
@@ -967,31 +1774,35 @@
           <div id="race-info" class="tab-panel active">
             {% if upcoming_race %}
             <!-- Fältets favoriter: full bredd högst upp (syns bara när picksen är låsta / race klart; döljs när picksen öppnas via JS) -->
-            <div id="crowd-picks-teaser-wrap" class="hidden mb-6 rounded-2xl border-2 border-emerald-400/50 bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-emerald-950/40 backdrop-blur-md p-4 sm:p-5 shadow-xl shadow-emerald-900/20 ring-1 ring-white/10">
+            <div id="crowd-picks-teaser-wrap" class="home-ui-panel hidden mb-6">
+              <div class="home-ui-panel__head">
+                <h2>🔮 Fältets favoriter</h2>
+              </div>
+              <div class="home-ui-panel__body">
               <div class="flex items-start justify-between gap-2 mb-1">
                 <div>
-                  <p class="text-emerald-300 font-bold text-sm sm:text-base uppercase tracking-wide">🔮 Fältets favoriter</p>
-                  <p id="crowd-teaser-race" class="text-white/85 text-xs sm:text-sm mt-1 font-medium"></p>
+                  <p id="crowd-teaser-race" class="text-white/85 text-xs sm:text-sm font-medium"></p>
                 </div>
-                <span id="crowd-teaser-n" class="text-[10px] sm:text-xs font-semibold text-emerald-100 whitespace-nowrap bg-emerald-800/50 px-2.5 py-1 rounded-lg border border-emerald-400/40"></span>
+                <span id="crowd-teaser-n" class="text-[10px] sm:text-xs font-semibold text-slate-300 whitespace-nowrap bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-600/40"></span>
               </div>
               <p class="text-white/55 text-[10px] sm:text-xs mb-3 leading-snug max-w-3xl">Så här röstar ligan per plats (andel av alla som lagt top 6) — inte bookmakers.</p>
               <div id="crowd-teaser-body" class="space-y-2 text-xs sm:text-sm"></div>
-              <button type="button" id="crowd-teaser-open-modal" class="mt-4 w-full sm:w-auto min-w-[200px] py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-lg active:scale-[0.99] transition-transform border border-white/10">
+              <button type="button" id="crowd-teaser-open-modal" class="home-ui-link-btn mt-4 w-full sm:w-auto">
                 Se alla lineups & jämför →
               </button>
+              </div>
             </div>
             {% endif %}
             <!-- Series Selection -->
             <div class="mb-6">
-              <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                  <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 Välj Serie</h2>
+              <div class="home-series-panel home-ui-panel">
+                <div class="home-series-panel__head">
+                  <h2>🏁 Välj Serie</h2>
                 </div>
-                <div class="p-4 bg-gray-900">
+                <div class="home-series-panel__body">
                   <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="text-center text-gray-400 py-8">
-                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-2"></div>
+                    <div class="text-center text-gray-400 py-8 col-span-full">
+                      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mx-auto mb-2"></div>
                       Laddar serier...
                     </div>
                   </div>
@@ -1000,8 +1811,8 @@
             </div>
 
             {% if sx_season_wrap %}
-            <a href="{{ sx_season_wrap.recap_url }}" class="sx-season-hero-link sx-season-hero sx-season-hero-animate mb-6 rounded-2xl overflow-hidden border-2 border-amber-400/70 relative block no-underline text-inherit hover:border-amber-300 transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-950">
-              <div class="absolute inset-0 bg-gradient-to-br from-red-950/85 via-slate-900/92 to-emerald-950/80 pointer-events-none"></div>
+            <a href="{{ sx_season_wrap.recap_url }}" class="home-ui-panel home-ui-panel--photo sx-season-hero-link sx-season-hero sx-season-hero-animate mb-6 relative block no-underline text-inherit hover:border-slate-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-gray-950" style="background-image: url('{{ url_for("static", filename=upcoming_race_bg_url) if upcoming_race_bg_url else url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}');">
+              <div class="home-ui-panel__scrim"></div>
               <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
               <div class="relative z-10 p-4 sm:p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
@@ -1019,8 +1830,8 @@
                     </p>
                   </div>
                   <div class="flex flex-col items-stretch lg:items-end gap-3 w-full lg:w-auto lg:min-w-[260px]">
-                    <div class="rounded-xl bg-black/50 border border-emerald-500/30 px-4 py-3 backdrop-blur-sm w-full lg:text-right">
-                      <p class="text-emerald-300 text-[10px] font-bold uppercase tracking-wide">Nästa: Pro Motocross</p>
+                    <div class="rounded-xl bg-black/50 border border-slate-600/35 px-4 py-3 backdrop-blur-sm w-full lg:text-right">
+                      <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wide">Nästa: Pro Motocross</p>
                       <p class="text-white font-bold text-lg sm:text-xl">{{ sx_season_wrap.next_mx_name }}</p>
                       <p class="text-white/70 text-sm">
                         {{ sx_season_wrap.next_mx_date.strftime('%Y-%m-%d') if sx_season_wrap.next_mx_date else '' }}
@@ -1038,12 +1849,13 @@
             {% set home_panel_bg = url_for("static", filename=upcoming_race_bg_url) if upcoming_race_bg_url else url_for("static", filename="trackmaps/compressed/anaheim1.jpg") %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8 lg:items-stretch">
               <!-- Quick Actions -->
-              <div class="home-panel home-panel--cyan bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
+              <div class="home-panel home-ui-panel home-ui-panel--photo"
                    style="background-image: url('{{ home_panel_bg }}');">
-                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10 home-panel__body">
-                <h2 class="home-panel__title--cyan text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center shrink-0">🚀 Snabba Åtgärder</h2>
-
+                <div class="home-ui-panel__scrim"></div>
+                <div class="home-ui-panel__head">
+                  <h2>🚀 Snabba Åtgärder</h2>
+                </div>
+                <div class="home-ui-panel__body home-panel__body">
                 <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                   {% if not upcoming_race or upcoming_race.series != 'WSX' %}
                   <a href="{{ url_for('season_team_page') }}" class="home-inner-tile">
@@ -1082,24 +1894,28 @@
                 </div>
               </div>
               <!-- Weekly Fun Stats -->
-              <div class="home-panel home-panel--amber bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2"
+              <div class="home-panel home-ui-panel home-ui-panel--photo"
                    style="background-image: url('{{ home_panel_bg }}');">
-                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10 home-panel__body">
-                  <h2 class="home-panel__title--amber text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center shrink-0">🎉 Veckans Prestationer</h2>
+                <div class="home-ui-panel__scrim"></div>
+                <div class="home-ui-panel__head">
+                  <h2>🎉 Veckans Prestationer</h2>
+                </div>
+                <div class="home-ui-panel__body home-panel__body">
                   <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     <p class="text-slate-300 text-center col-span-full text-sm">Laddar...</p>
                   </div>
                 </div>
               </div>
               <!-- I rampljuset -->
-              <div id="rider-spotlight-section" class="hidden lg:col-span-2 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden border-2 border-amber-500"
-                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10">
-                  <h2 class="text-xl sm:text-2xl font-bold text-white mb-3 sm:mb-4 text-center" style="text-shadow: 0 0 10px rgba(251, 191, 36, 0.8);">✨ I rampljuset</h2>
+              <div id="rider-spotlight-section" class="home-ui-panel home-ui-panel--photo hidden lg:col-span-2"
+                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
+                <div class="home-ui-panel__scrim"></div>
+                <div class="home-ui-panel__head">
+                  <h2>✨ I rampljuset</h2>
+                </div>
+                <div class="home-ui-panel__body">
                   <div id="rider-spotlight-tabs" class="flex flex-wrap justify-center gap-2 mb-3 px-1 overflow-x-auto"></div>
-                  <p id="rider-spotlight-headline" class="text-center text-amber-100/90 text-sm font-medium mb-3 hidden"></p>
+                  <p id="rider-spotlight-headline" class="text-center text-slate-300 text-sm font-medium mb-3 hidden"></p>
                   <div id="rider-spotlight-cards" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
                 </div>
               </div>
@@ -1108,14 +1924,16 @@
             <!-- Race Info + Facebook (50/50 som Snabba åtgärder / Veckans prestationer) -->
             {% set fb_embed = facebook_show_timeline_embed and facebook_timeline_iframe_src %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8 lg:items-stretch">
-              <div class="rounded-lg shadow-lg relative overflow-hidden border-2 {% if upcoming_race and upcoming_race.series == 'MX' %}border-emerald-500{% else %}border-cyan-500{% endif %} min-w-0 flex flex-col h-full p-4 sm:p-6 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 {% if not fb_embed %}lg:col-span-2{% endif %}"
-                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/" + (upcoming_race.name.lower().replace(" ", "") if upcoming_race else "anaheim1") + ".jpg") }}{% endif %}'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10 flex flex-col flex-1 min-h-0">
+              <div class="home-ui-panel home-ui-panel--photo min-w-0 flex flex-col h-full {% if not fb_embed %}lg:col-span-2{% endif %}"
+                   style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/" + (upcoming_race.name.lower().replace(" ", "") if upcoming_race else "anaheim1") + ".jpg") }}{% endif %}');">
+                <div class="home-ui-panel__scrim"></div>
+                <div class="home-ui-panel__head">
+                  <h2>Aktuellt Race</h2>
+                </div>
+                <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
           {% if upcoming_race %}
-                <h2 class="text-xl sm:text-2xl font-bold text-white mb-2 text-center sm:text-left" style="text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);">Aktuellt Race</h2>
-                <p class="text-base sm:text-lg font-semibold break-words text-white">{{ upcoming_race.name }}</p>
-                <p class="text-sm sm:text-base text-gray-200 mb-4">
+                <p class="text-base sm:text-lg font-semibold break-words text-white mb-1">{{ upcoming_race.name }}</p>
+                <p class="text-sm sm:text-base text-gray-300 mb-4">
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
                 
@@ -1164,22 +1982,21 @@
                   </div>
                 {% endif %}
             {% else %}
-                <h2 class="text-xl sm:text-2xl font-bold text-white mb-2 text-center sm:text-left" style="text-shadow: 0 0 10px rgba(59, 130, 246, 0.8);">Inget kommande race</h2>
-                <p class="text-gray-200">Inga races planerade just nu.</p>
+                <p class="text-gray-300">Inga races planerade just nu.</p>
             {% endif %}
                 </div>
               </div>
 
               {% if fb_embed %}
-              <aside class="rounded-lg shadow-lg relative overflow-hidden border-2 border-yellow-500 min-w-0 flex flex-col h-full p-4 sm:p-5 bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90"
-                     style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-black bg-opacity-30"></div>
-                <div class="relative z-10 flex flex-col flex-1 min-h-0">
-                <h2 class="text-lg sm:text-xl font-bold text-white mb-1 text-center sm:text-left flex flex-wrap items-center justify-center sm:justify-start gap-2" style="text-shadow: 0 0 10px rgba(250, 204, 21, 0.8);">
-                  <span aria-hidden="true">📣</span> Nyheter &amp; påminnelser
-                </h2>
-                <p class="text-xs text-yellow-100/90 mb-3 text-center sm:text-left">Senaste inlägg från vår Facebook-sida.</p>
-                <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden overflow-hidden rounded-xl border border-yellow-500/40 bg-black/50 shadow-inner">
+              <aside class="home-ui-panel home-ui-panel--photo min-w-0 flex flex-col h-full"
+                     style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
+                <div class="home-ui-panel__scrim"></div>
+                <div class="home-ui-panel__head">
+                  <h2>📣 Nyheter &amp; påminnelser</h2>
+                </div>
+                <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
+                <p class="home-ui-panel__sub home-ui-panel__sub--left">Senaste inlägg från vår Facebook-sida.</p>
+                <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden overflow-hidden rounded-lg bg-[#0a101c]">
                   <script type="application/json" id="fb-plugin-base-url">{{ facebook_timeline_iframe_src | tojson }}</script>
                   <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" class="h-[420px] w-full max-w-full bg-[#f5f6f7]"></iframe>
                 </div>
@@ -1249,8 +2066,8 @@
                   });
                 })();
                 </script>
-                <p class="mt-2 text-[10px] leading-snug text-yellow-100/70 text-center sm:text-left">Syns inte inlägg? Prova utloggat eller privat fönster — begränsningar hos Facebook.</p>
-                <a href="{{ facebook_page_url }}" target="_blank" rel="noopener noreferrer" class="mt-auto pt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-yellow-400/50 bg-yellow-500/15 px-3 py-2 text-sm font-semibold text-yellow-100 transition hover:bg-yellow-500/25">
+                <p class="mt-2 text-[10px] leading-snug text-slate-400 text-center sm:text-left">Syns inte inlägg? Prova utloggat eller privat fönster — begränsningar hos Facebook.</p>
+                <a href="{{ facebook_page_url }}" target="_blank" rel="noopener noreferrer" class="home-ui-link-btn mt-auto pt-3 w-full">
                   <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   Öppna på Facebook
                 </a>
@@ -1261,126 +2078,114 @@
 
             <!-- Nya power rankings (informationsvy — ej betting) — längst ner på Race Info -->
             <div id="power-ranking-wrap" class="mt-6 mb-2 hidden">
-              <div class="rounded-xl border-2 border-cyan-500/50 bg-gray-900/90 p-4 sm:p-5 shadow-xl" style="box-shadow: 0 0 18px rgba(34, 211, 238, 0.2);">
-                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                  <h3 class="text-lg sm:text-xl font-bold text-cyan-300" style="text-shadow: 0 0 12px rgba(34, 211, 238, 0.35);">Nya power rankings</h3>
-                  <p id="power-ranking-sub" class="text-xs text-gray-400 sm:text-right max-w-md"></p>
+              <div class="home-ui-panel">
+                <div class="home-ui-panel__head">
+                  <h2>Nya power rankings</h2>
                 </div>
+                <div class="home-ui-panel__body">
+                <p id="power-ranking-sub" class="text-xs text-gray-400 mb-2"></p>
                 <p class="text-[11px] text-gray-500 mb-3 leading-relaxed">
                   Jämförelsetal utifrån <strong class="text-gray-400">senaste resultat</strong> och <strong class="text-gray-400">spelarnas picks</strong> till aktuell tävling — inte odds eller spel.
                 </p>
                 <div id="power-ranking-body" class="text-sm text-gray-100 space-y-4"></div>
+                </div>
               </div>
             </div>
           </div>
 
               <!-- MotoAction.se Banner -->
               <div class="mb-6">
-                <a href="https://motoaction.se" target="_blank" class="block group">
-                  <div class="bg-black border-2 border-cyan-400 rounded-lg p-4 hover:border-cyan-300 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-400/20">
-                    <div class="flex items-center justify-center gap-4">
-                      <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MotoAction.se" class="h-12 w-auto filter brightness-110 group-hover:brightness-125 transition-all duration-300">
-                      <div class="text-center">
-                        <p class="text-cyan-300 text-sm font-medium">Powered by</p>
-                        <p class="text-white text-lg font-bold group-hover:text-cyan-200 transition-colors duration-300">MotoAction.se</p>
+                <a href="https://motoaction.se" target="_blank" class="block group home-ui-panel p-4 hover:border-slate-500/50 transition-colors">
+                  <div class="flex items-center justify-center gap-4">
+                    <img src="{{ url_for('static', filename='images/min_logga.svg') }}" alt="MotoAction.se" class="h-12 w-auto opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div class="text-center">
+                      <p class="text-slate-400 text-sm font-medium">Powered by</p>
+                      <p class="text-white text-lg font-bold group-hover:text-slate-200 transition-colors">MotoAction.se</p>
       </div>
     </div>
-                  </div>
                 </a>
               </div>
 
 
           <!-- Leaderboard Tab -->
           <div id="leaderboard" class="tab-panel hidden">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-              <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
+            <div class="home-ui-panel mb-6">
+              <div class="home-ui-panel__head">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2 class="text-xl sm:text-2xl font-bold text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 SMX Leaderboard</h2>
-        </div>
-      </div>
-              <div class="p-4 sm:p-6 bg-gray-900">
+                  <h2>🏆 SMX Leaderboard</h2>
+                </div>
+              </div>
+              <div class="home-ui-panel__body">
                 <div id="season-leaderboard-list">
-                  <div class="text-center text-cyan-400 py-4">
-                    <div class="animate-spin inline-block w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full"></div>
+                  <div class="text-center text-slate-400 py-4">
+                    <div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
                     <span class="ml-2 text-xs">Laddar...</span>
                   </div>
                 </div>
                 <div class="mt-4 text-center">
-                  <a href="{{ url_for('my_scores') }}" class="inline-block bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);">
-                    Visa alla poäng
-                  </a>
-                  <a href="{{ url_for('finished_series_page') }}" class="inline-block bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200 ml-2" style="box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);">
-                    Färdiga Serier
-                  </a>
+                  <a href="{{ url_for('my_scores') }}" class="home-ui-link-btn">Visa alla poäng</a>
+                  <a href="{{ url_for('finished_series_page') }}" class="home-ui-link-btn">Färdiga Serier</a>
       </div>
     </div>
     </div>
     
-    <!-- Season Team Leaderboard Section -->
-    <div class="bg-gradient-to-r from-green-900 to-emerald-900 rounded-lg shadow-2xl border-2 border-green-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);">
-      <div class="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);">
-        <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">👥 Säsongsteam Leaderboard</h2>
+    <div class="home-ui-panel mb-6">
+      <div class="home-ui-panel__head">
+        <h2>👥 Säsongsteam Leaderboard</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-gray-900">
+      <div class="home-ui-panel__body">
         <div id="season-team-leaderboard-list">
-          <div class="text-center text-green-400 py-4">
-            <div class="animate-spin inline-block w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full"></div>
+          <div class="text-center text-slate-400 py-4">
+            <div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
             <span class="ml-2 text-xs">Laddar...</span>
           </div>
         </div>
         <div class="mt-4 text-center">
-          <a href="{{ url_for('season_team_page') }}" class="inline-block bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">
-            Visa mitt säsongsteam
-          </a>
+          <a href="{{ url_for('season_team_page') }}" class="home-ui-link-btn">Visa mitt säsongsteam</a>
         </div>
       </div>
     </div>
 
-    <!-- Liga Leaderboard Section -->
-    <div class="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg shadow-2xl border-2 border-purple-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);">
-      <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);">
-        <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 Liga Leaderboard</h2>
+    <div class="home-ui-panel mb-6">
+      <div class="home-ui-panel__head">
+        <h2>🏁 Liga Leaderboard</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-gray-900">
+      <div class="home-ui-panel__body">
         <div id="league-leaderboard-list">
-          <div class="text-center text-purple-300 py-4">
-            <div class="animate-spin inline-block w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full"></div>
+          <div class="text-center text-slate-400 py-4">
+            <div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div>
             <span class="ml-2 text-xs">Laddar...</span>
           </div>
         </div>
         <div class="mt-4 text-center">
-          <a href="{{ url_for('leagues_leaderboard') }}" class="inline-block bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold py-2 px-4 rounded text-sm transition-all duration-200" style="box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);">
-            Visa fullständig liga leaderboard
-          </a>
+          <a href="{{ url_for('leagues_leaderboard') }}" class="home-ui-link-btn">Visa fullständig liga leaderboard</a>
         </div>
       </div>
     </div>
 
-    <!-- Series Leaders & SMX Qualification Widget -->
-    <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-      <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-        <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 Series Leaders & SMX</h2>
+    <div class="home-ui-panel mb-6">
+      <div class="home-ui-panel__head">
+        <h2>🏆 Series Leaders & SMX</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-gray-900">
+      <div class="home-ui-panel__body">
         <div id="series-leaders-container" class="space-y-2">
-          <div class="text-center text-cyan-400">
-            <div class="animate-spin inline-block w-3 h-3 border-2 border-cyan-400 border-t-transparent rounded-full"></div>
+          <div class="text-center text-slate-400">
+            <div class="animate-spin inline-block w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full"></div>
             <span class="ml-1 text-xs">Laddar...</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- WSX Leaders Widget -->
-    <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-orange-400 overflow-hidden mb-6" style="box-shadow: 0 0 20px rgba(251, 146, 60, 0.3);">
-      <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-3" style="box-shadow: 0 0 15px rgba(251, 146, 60, 0.5);">
-        <h2 class="text-xl sm:text-2xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏆 WSX Series Leaders</h2>
+    <div class="home-ui-panel mb-6">
+      <div class="home-ui-panel__head">
+        <h2>🏆 WSX Series Leaders</h2>
       </div>
-      <div class="p-4 sm:p-6 bg-gray-900">
+      <div class="home-ui-panel__body">
         <div id="wsx-leaders-container" class="space-y-2">
-          <div class="text-center text-orange-400">
-            <div class="animate-spin inline-block w-3 h-3 border-2 border-orange-400 border-t-transparent rounded-full"></div>
+          <div class="text-center text-slate-400">
+            <div class="animate-spin inline-block w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full"></div>
             <span class="ml-1 text-xs">Laddar...</span>
           </div>
         </div>
@@ -1598,6 +2403,9 @@
             </div>
           </div>
         </div>
+          </div><!-- /.home-main -->
+        </div><!-- /.home-page-shell -->
+      </div><!-- /.mb-6 -->
 
         {% include 'includes/site_legal_footer.html' %}
       </div>
@@ -1677,19 +2485,12 @@
       points: (i) => (i === 0 ? 'text-yellow-200' : i === 1 ? 'text-cyan-200' : i === 2 ? 'text-green-200' : 'text-gray-200'),
     };
 
-    function homeLbLoading(accent) {
-      const colors = {
-        cyan: 'text-cyan-400 border-cyan-400',
-        green: 'text-green-400 border-green-400',
-        violet: 'text-purple-300 border-purple-400',
-      };
-      const cls = colors[accent] || colors.cyan;
-      return `<div class="text-center py-4 ${cls.split(' ')[0]}"><div class="animate-spin inline-block w-4 h-4 border-2 ${cls.split(' ')[1]} border-t-transparent rounded-full"></div><span class="ml-2 text-xs">Laddar...</span></div>`;
+    function homeLbLoading() {
+      return `<div class="text-center py-4 text-slate-400"><div class="animate-spin inline-block w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full"></div><span class="ml-2 text-xs">Laddar...</span></div>`;
     }
 
-    function homeLbEmpty(msg, accent = 'cyan') {
-      const text = accent === 'green' ? 'text-green-300' : accent === 'violet' ? 'text-purple-300' : 'text-cyan-300';
-      return `<p class="${text} text-center text-sm py-3">${msg}</p>`;
+    function homeLbEmpty(msg) {
+      return `<p class="text-slate-400 text-center text-sm py-3">${msg}</p>`;
     }
 
     function homeLbRow(rank, nameHtml, points, opts = {}) {
@@ -1859,59 +2660,63 @@
                   chip.textContent = `#${me.rank || '—'}`;
                   chip.classList.remove('hidden');
                 }
-                const chips = document.getElementById('welcome-chips');
-                if (chips) {
-                  const total = Number(me.total_points || 0);
-                  chips.innerHTML = `
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-200 font-bold tabular-nums">${total}p</span>
-                      <a id="welcome-latest-chip" href="/my_scores" class="inline-flex items-center px-2 py-0.5 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-200 font-bold hover:bg-gray-500/15 hover:border-gray-400/40 transition-colors">Senast: —</a>
-                    </div>
-                    <span id="welcome-medal-chip" class="inline-flex items-center px-2 py-0.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 font-extrabold">🏅 Nivå: —</span>
-                  `;
 
-                  // Latest completed race points
-                  try {
-                    const r2 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/latest_points`);
-                    const d2 = await r2.json();
-                    const latestChip = document.getElementById('welcome-latest-chip');
-                    if (latestChip && r2.ok && d2 && d2.ok && d2.latest) {
-                      const pts = Number(d2.latest.points || 0);
-                      const name = (d2.latest.name || '').toString();
-                      const cid = Number(d2.latest.competition_id || 0);
-                      latestChip.textContent = `Senast: +${pts}p (${name})`;
-                      latestChip.className = `inline-flex items-center px-2 py-0.5 rounded-full border ${pts > 0 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-gray-500/30 bg-gray-500/10 text-gray-200'} font-bold hover:opacity-90 transition-opacity`;
-                      if (cid) latestChip.href = `/my_scores?focus=${encodeURIComponent(cid)}`;
-                    } else if (latestChip) {
-                      latestChip.textContent = `Senast: —`;
-                    }
-                  } catch (e) {}
-
-                  // Medal based on best tier in achievements
-                  try {
-                    const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
-                    const d3 = await r3.json();
-                    const medalChip = document.getElementById('welcome-medal-chip');
-                    if (medalChip && r3.ok && d3 && d3.ok && Array.isArray(d3.badges)) {
-                      const tierOrder = {'Brons': 1, 'Silver': 2, 'Guld': 3};
-                      let best = null;
-                      for (const b of d3.badges) {
-                        const t = b && b.tier ? String(b.tier) : '';
-                        if (!t) continue;
-                        const v = tierOrder[t] || 0;
-                        if (!best || v > best.v) best = {t, v, title: b.title || ''};
-                      }
-                      if (best) {
-                        const medal = best.t === 'Guld' ? '🥇' : (best.t === 'Silver' ? '🥈' : '🥉');
-                        medalChip.textContent = `🏅 Nivå: ${best.t} ${medal}`;
-                        medalChip.title = `Din högsta achievement-nivå just nu.${best.title ? `\nHögsta badge: ${best.title}` : ''}`;
-                      } else {
-                        medalChip.textContent = `🏅 Nivå: —`;
-                        medalChip.title = `Din högsta achievement-nivå just nu.`;
-                      }
-                    }
-                  } catch (e) {}
+                const leader = leaderboard[0];
+                const leaderPts = Number(leader?.total_points || 0);
+                const myPts = Number(me.total_points || 0);
+                const ptsVal = document.getElementById('welcome-points-val');
+                const ptsLeader = document.getElementById('welcome-points-leader');
+                const ptsFill = document.getElementById('welcome-points-fill');
+                if (ptsVal) ptsVal.textContent = myPts.toLocaleString('sv-SE');
+                if (ptsLeader) ptsLeader.textContent = leaderPts > 0 ? leaderPts.toLocaleString('sv-SE') : '—';
+                if (ptsFill) {
+                  ptsFill.style.width = leaderPts > 0 ? Math.min(100, Math.round((myPts / leaderPts) * 100)) + '%' : '0%';
                 }
+
+                // Latest completed race points
+                try {
+                  const r2 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/latest_points`);
+                  const d2 = await r2.json();
+                  const latestLine = document.getElementById('welcome-latest-line');
+                  if (latestLine && r2.ok && d2 && d2.ok && d2.latest) {
+                    const pts = Number(d2.latest.points || 0);
+                    const name = (d2.latest.name || '').toString();
+                    latestLine.textContent = pts > 0 ? `+${pts.toLocaleString('sv-SE')}p senaste race` : `0p senaste race`;
+                    latestLine.className = 'home-sidebar-points__delta' + (pts > 0 ? ' home-sidebar-points__delta--gain' : '');
+                    if (pts > 0 && name) latestLine.textContent += ` · ${name}`;
+                  } else if (latestLine) {
+                    latestLine.textContent = '—';
+                    latestLine.className = 'home-sidebar-points__delta';
+                  }
+                } catch (e) {}
+
+                // Tier badge from achievements
+                try {
+                  const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
+                  const d3 = await r3.json();
+                  const tierBadge = document.getElementById('welcome-tier-badge');
+                  if (tierBadge && r3.ok && d3 && d3.ok && Array.isArray(d3.badges)) {
+                    const tierOrder = {'Brons': 1, 'Silver': 2, 'Guld': 3};
+                    let best = null;
+                    for (const b of d3.badges) {
+                      const t = b && b.tier ? String(b.tier) : '';
+                      if (!t) continue;
+                      const v = tierOrder[t] || 0;
+                      if (!best || v > best.v) best = {t, v, title: b.title || ''};
+                    }
+                    tierBadge.classList.remove('home-sidebar-tier--silver', 'home-sidebar-tier--gold');
+                    if (best) {
+                      tierBadge.textContent = best.t.toUpperCase();
+                      tierBadge.classList.remove('hidden');
+                      if (best.t === 'Silver') tierBadge.classList.add('home-sidebar-tier--silver');
+                      if (best.t === 'Guld') tierBadge.classList.add('home-sidebar-tier--gold');
+                      tierBadge.title = `Din högsta achievement-nivå.${best.title ? ` Högsta badge: ${best.title}` : ''}`;
+                    } else {
+                      tierBadge.textContent = '—';
+                      tierBadge.classList.add('hidden');
+                    }
+                  }
+                } catch (e) {}
               }
             }
           } catch (e) {
@@ -2267,6 +3072,7 @@
           document.getElementById('real-countdown-race-name').textContent = 'Inga races';
           document.getElementById('real-race-countdown').textContent = '--:--:--';
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+          updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
           return;
         }
@@ -2274,26 +3080,7 @@
         // Update race name
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
 
-        const schedEl = document.getElementById('real-race-schedule-label');
-        if (schedEl && data.next_race) {
-          const nr = data.next_race;
-          let sched = '';
-          if (nr.race_start_display) {
-            sched = `Start ${nr.race_start_display}`;
-            if (nr.pick_deadline_display) {
-              sched += ` · Picks till ${nr.pick_deadline_display}`;
-            }
-          }
-          if (nr.stockholm_display && nr.timezone !== 'Europe/Stockholm') {
-            sched += ` · ${nr.stockholm_display}`;
-          }
-          if (sched) {
-            schedEl.textContent = sched;
-            schedEl.classList.remove('hidden');
-          } else {
-            schedEl.classList.add('hidden');
-          }
-        }
+        updateRaceHeroMeta(data.next_race);
         updateNextMxDaysLabel(data);
         updateRaceDayWeather(data.weather);
         
@@ -2313,6 +3100,7 @@
         document.getElementById('real-countdown-race-name').textContent = 'Fel vid laddning';
         document.getElementById('real-race-countdown').textContent = '--:--:--';
         document.getElementById('real-deadline-countdown').textContent = '--:--:--';
+        updateRaceHeroMeta(null);
         updateRaceDayWeather(null);
       }
     }
@@ -2351,32 +3139,31 @@
       const emoji = rider.badge_emoji || '🏁';
       const portrait = rider.portrait_url || '';
       return `
-        <a href="${_escapeHtml(href)}" class="rider-spotlight-card group block rounded-xl border border-amber-400/30 overflow-hidden transition-transform duration-300 hover:scale-[1.01] hover:border-amber-300/50">
+        <a href="${_escapeHtml(href)}" class="rider-spotlight-card group">
           <div class="relative rider-spotlight-checkered">
             <div class="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-black/40 pointer-events-none"></div>
             <div class="relative flex flex-col sm:flex-row items-stretch min-h-[8rem]">
               <div class="sm:w-32 shrink-0 flex items-end justify-center p-3 sm:py-4 sm:pr-0">
-                <div class="relative">
-                  <div class="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400/40 to-orange-600/20 blur-md opacity-70 group-hover:opacity-100 transition-opacity"></div>
-                  <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden ring-2 ring-amber-400/50 bg-slate-800 shadow-xl">
+                <div class="relative rider-spotlight-portrait-wrap">
+                  <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden rider-spotlight-portrait bg-slate-800">
                     <img src="${_escapeHtml(portrait)}" alt="" class="w-full h-full object-cover object-top" loading="lazy" onerror="this.onerror=null;this.src='/static/brand_logos/${_escapeHtml((rider.brand || 'honda').toLowerCase())}.png';">
                   </div>
-                  <div class="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-sm shadow-lg ring-2 ring-slate-900">${emoji}</div>
+                  <div class="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm">${emoji}</div>
                 </div>
               </div>
               <div class="flex-1 p-3 sm:py-4 sm:pl-2 sm:pr-4 flex flex-col justify-center min-w-0">
                 <div class="flex flex-wrap items-center gap-2 mb-0.5">
-                  <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-200/90">${_escapeHtml(rider.class_label || rider.brand || '')}</span>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">${_escapeHtml(rider.class_label || rider.brand || '')}</span>
                   ${badge}
                 </div>
                 <h3 class="text-lg sm:text-xl font-extrabold text-white tracking-tight leading-tight">
-                  <span class="text-amber-300/90">${_escapeHtml(num)}</span>${_escapeHtml(rider.name)}
+                  <span class="text-slate-300">${_escapeHtml(num)}</span>${_escapeHtml(rider.name)}
                 </h3>
-                <p class="text-amber-100/90 text-sm font-medium">${_escapeHtml(rider.reason || '')}</p>
+                <p class="text-slate-300 text-sm font-medium">${_escapeHtml(rider.reason || '')}</p>
                 ${subtitle}
                 ${hook}
                 ${stats}
-                <span class="mt-2 inline-flex items-center gap-1 text-cyan-300 text-xs font-semibold group-hover:text-cyan-200">
+                <span class="mt-2 inline-flex items-center gap-1 text-slate-400 text-xs font-semibold group-hover:text-cyan-300">
                   Läs profil <span class="transition-transform group-hover:translate-x-0.5">→</span>
                 </span>
               </div>
@@ -2525,6 +3312,53 @@
       fog: '🌫️',
     };
 
+    function updateRaceHeroMeta(nextRace) {
+      const metaEl = document.getElementById('real-race-meta');
+      const flagEl = document.getElementById('real-race-flag');
+      const dateEl = document.getElementById('real-race-date');
+      const timeEl = document.getElementById('real-race-time');
+      const locWrap = document.getElementById('real-race-location-wrap');
+      const locEl = document.getElementById('real-race-location');
+      if (!metaEl) return;
+
+      if (!nextRace) {
+        metaEl.classList.add('hidden');
+        flagEl?.classList.add('hidden');
+        locWrap?.classList.add('hidden');
+        return;
+      }
+
+      let hasMeta = false;
+      if (flagEl && nextRace.flag) {
+        flagEl.textContent = nextRace.flag;
+        flagEl.classList.remove('hidden');
+      } else {
+        flagEl?.classList.add('hidden');
+      }
+
+      if (dateEl && nextRace.date_label) {
+        dateEl.textContent = nextRace.date_label;
+        hasMeta = true;
+      }
+      if (timeEl && nextRace.time_label) {
+        timeEl.textContent = nextRace.time_label;
+        hasMeta = true;
+      }
+      if (locWrap && locEl && nextRace.location) {
+        locEl.textContent = nextRace.location;
+        locWrap.classList.remove('hidden');
+        hasMeta = true;
+      } else {
+        locWrap?.classList.add('hidden');
+      }
+
+      if (hasMeta) {
+        metaEl.classList.remove('hidden');
+      } else {
+        metaEl.classList.add('hidden');
+      }
+    }
+
     function updateRaceDayWeather(weather) {
       const container = document.getElementById('race-day-weather');
       const iconEl = document.getElementById('race-weather-icon');
@@ -2532,14 +3366,12 @@
       if (!container || !iconEl || !textEl) return;
       if (!weather || !weather.available) {
         container.classList.add('hidden');
-        container.classList.remove('flex');
         return;
       }
       iconEl.textContent = RACE_WEATHER_ICONS[weather.icon] || '🌤️';
       textEl.textContent = weather.summary_sv || weather.label_sv || 'Race day';
       textEl.title = weather.summary_sv || '';
       container.classList.remove('hidden');
-      container.classList.add('flex');
     }
 
     function updateNextMxDaysLabel(data) {
@@ -2565,29 +3397,35 @@
     function renderRealCountdownsFromSeconds() {
       const raceTotal = Number(_realCountdownSeconds.race || 0);
       const deadlineTotal = Number(_realCountdownSeconds.deadline || 0);
-      
-      // Format time display
-      function formatTimeFromTotal(totalSeconds) {
+
+      function formatCountdownHtml(totalSeconds) {
         const ts = Math.max(0, Math.floor(Number(totalSeconds || 0)));
         if (ts <= 0) {
-          return 'Nu';
+          return '<span class="home-race-timer__now">Nu</span>';
         }
-        
+
         const days = Math.floor(ts / 86400);
         const hours = Math.floor((ts % 86400) / 3600);
         const minutes = Math.floor((ts % 3600) / 60);
         const seconds = ts % 60;
-        
-        const parts = [];
-        if (days > 0) parts.push(`${days} d`);
-        if (days > 0 || hours > 0) parts.push(`${hours} h`);
-        parts.push(`${minutes} min`);
-        parts.push(`${String(seconds).padStart(2, '0')} s`);
-        return parts.join(' ');
+
+        const segments = [];
+        if (days > 0) {
+          segments.push([String(days), 'D']);
+        }
+        segments.push([String(hours).padStart(2, '0'), 'H']);
+        segments.push([String(minutes).padStart(2, '0'), 'M']);
+        segments.push([String(seconds).padStart(2, '0'), 'S']);
+
+        return segments.map(([num, unit]) =>
+          `<span class="home-race-timer__seg"><span class="home-race-timer__num">${num}</span><span class="home-race-timer__unit">${unit}</span></span>`
+        ).join('');
       }
-      
-      document.getElementById('real-race-countdown').textContent = formatTimeFromTotal(raceTotal);
-      document.getElementById('real-deadline-countdown').textContent = formatTimeFromTotal(deadlineTotal);
+
+      const raceEl = document.getElementById('real-race-countdown');
+      const deadlineEl = document.getElementById('real-deadline-countdown');
+      if (raceEl) raceEl.innerHTML = formatCountdownHtml(raceTotal);
+      if (deadlineEl) deadlineEl.innerHTML = formatCountdownHtml(deadlineTotal);
     }
     
     // updateTestCountdowns removed
@@ -2599,13 +3437,13 @@
       const picksStatus = state || openStatus.dataset.picksStatus || 'no_picks';
       openStatus.dataset.picksStatus = picksStatus;
       if (picksStatus === 'has_picks') {
-        openStatus.textContent = `✅ Alla picks för ${race} är klara — redigera val?`;
+        openStatus.textContent = `Alla picks klara — redigera?`;
         openStatus.className = 'mx-picks-cta mx-picks-cta--done';
       } else if (picksStatus === 'partial_picks') {
-        openStatus.textContent = `⚠️ Komplettera dina picks till ${race} →`;
+        openStatus.textContent = `Komplettera picks till ${race} →`;
         openStatus.className = 'mx-picks-cta mx-picks-cta--need';
       } else {
-        openStatus.textContent = `🏁 Sätt dina picks till ${race} →`;
+        openStatus.textContent = `Sätt dina picks till ${race} →`;
         openStatus.className = 'mx-picks-cta mx-picks-cta--need';
       }
     }
@@ -2944,21 +3782,19 @@
         
         container.innerHTML = highscores.slice(0, 3).map((score, index) => {
           const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-          const neonColor = index === 0 ? 'border-yellow-400' : index === 1 ? 'border-cyan-400' : 'border-orange-400';
-          const glowColor = index === 0 ? 'rgba(250, 204, 21, 0.3)' : index === 1 ? 'rgba(34, 211, 238, 0.3)' : 'rgba(251, 146, 60, 0.3)';
-          const textColor = index === 0 ? 'text-yellow-300' : index === 1 ? 'text-cyan-300' : 'text-orange-300';
+          const textColor = index === 0 ? 'text-yellow-200' : index === 1 ? 'text-slate-200' : 'text-slate-300';
           
           return `
-            <div class="flex items-center justify-between p-2 rounded border-2 ${neonColor} bg-gray-800 shadow-lg" style="box-shadow: 0 0 15px ${glowColor};">
+            <div class="flex items-center justify-between p-2 rounded bg-[#0d1524]">
               <div class="flex items-center gap-2">
                 <span class="text-lg">${medal}</span>
                 <div>
-                  <div class="font-bold text-white text-sm" style="text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);">${score.name}</div>
+                  <div class="font-bold text-white text-sm">${score.name}</div>
                   <div class="text-xs text-gray-400">${new Date(score.created_at).toLocaleDateString('sv-SE')}</div>
                 </div>
               </div>
               <div class="text-right">
-                <div class="text-lg font-bold ${textColor}" style="text-shadow: 0 0 8px ${glowColor};">${score.score}</div>
+                <div class="text-lg font-bold ${textColor}">${score.score}</div>
                 <div class="text-xs text-gray-400">p</div>
               </div>
             </div>
@@ -2996,10 +3832,10 @@
               { key: '250cc_west', label: '250 West', accent: 'blue', button: 'Visa 250W Top 5' }
             ];
             const accentClasses = {
-              yellow: { border: 'border-yellow-400/60', title: 'text-yellow-300', points: 'text-yellow-200', bg: 'bg-yellow-500/10' },
-              green: { border: 'border-green-400/60', title: 'text-green-300', points: 'text-green-200', bg: 'bg-green-500/10' },
-              blue: { border: 'border-blue-400/60', title: 'text-blue-300', points: 'text-blue-200', bg: 'bg-blue-500/10' },
-              cyan: { border: 'border-cyan-400/60', title: 'text-cyan-300', points: 'text-cyan-200', bg: 'bg-cyan-500/10' }
+              yellow: { border: 'border-slate-600/40', title: 'text-slate-200', points: 'text-yellow-200/90', bg: 'bg-slate-900/40' },
+              green: { border: 'border-slate-600/40', title: 'text-slate-200', points: 'text-slate-200', bg: 'bg-slate-900/40' },
+              blue: { border: 'border-slate-600/40', title: 'text-slate-200', points: 'text-slate-200', bg: 'bg-slate-900/40' },
+              cyan: { border: 'border-slate-600/40', title: 'text-slate-200', points: 'text-slate-200', bg: 'bg-slate-900/40' }
             };
 
             function podiumRows(rows, accent, includeBreakdown = false) {
@@ -3015,7 +3851,7 @@
                   : '';
                 const points = rider.points ?? rider.total_points ?? 0;
                 return `
-                  <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-950/50 border border-gray-700/70 px-3 py-2">
+                  <div class="flex items-center justify-between gap-3 rounded bg-[#0d1524] px-3 py-2">
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
                         <span class="${colors.title} font-black tabular-nums w-5">${rank}.</span>
@@ -3033,8 +3869,8 @@
               const openAttr = collapsed ? '' : ' open';
               const hint = collapsed ? '▸ visa' : '▾ dölj';
               return `
-                <details class="series-leaders-details mb-5 rounded-lg border border-gray-700/40 bg-gray-950/20"${openAttr}>
-                  <summary class="cursor-pointer select-none px-2 py-2 flex items-center justify-between gap-2 text-sm font-black text-cyan-300 uppercase tracking-wide hover:text-cyan-200">
+                <details class="series-leaders-details mb-5 rounded bg-[#0a101c]"${openAttr}>
+                  <summary class="cursor-pointer select-none px-2 py-2 flex items-center justify-between gap-2 text-sm font-bold text-slate-300 uppercase tracking-wide hover:text-slate-200">
                     <span>${title}</span>
                     <span class="text-gray-500 text-[10px] font-normal normal-case shrink-0">${hint}</span>
                   </summary>
@@ -3051,7 +3887,7 @@
               const leader = seriesData && seriesData.leader ? seriesData.leader : null;
               const top5 = seriesData && seriesData.top_5 ? seriesData.top_5 : [];
               sxBody += `
-                <div class="rounded-xl border ${colors.border} ${colors.bg} p-3 shadow-lg">
+                <div class="rounded bg-[#0d1524] p-3">
                   <div class="flex items-center justify-between mb-2">
                     <h5 class="${colors.title} font-black text-sm">${card.label}</h5>
                     ${leader ? `<span class="${colors.points} text-xs font-bold">${leader.points}p</span>` : ''}
@@ -3083,7 +3919,7 @@
               const leader = seriesData && seriesData.leader ? seriesData.leader : null;
               const top5 = seriesData && seriesData.top_5 ? seriesData.top_5 : [];
               html += `
-                <div class="rounded-xl border ${colors.border} ${colors.bg} p-3 shadow-lg">
+                <div class="rounded bg-[#0d1524] p-3">
                   <div class="flex items-center justify-between mb-2">
                     <h5 class="${colors.title} font-black text-sm">${card.label}</h5>
                     ${leader ? `<span class="${colors.points} text-xs font-bold">${leader.points}p</span>` : ''}
@@ -3437,9 +4273,9 @@
           
           // Backgrounds handled by CSS classes. No inline background-image to avoid overrides.
           
-          const cardClass = isClickable 
-            ? `border border-cyan-400 rounded-lg p-4 cursor-pointer hover:border-cyan-300 hover:shadow-lg transition-all duration-300 relative overflow-hidden` 
-            : `border border-cyan-400 rounded-lg p-4 relative overflow-hidden`;
+          const cardClass = isClickable
+            ? 'home-series-card home-series-card--clickable'
+            : 'home-series-card';
           
           // Add background class based on series
           let backgroundClass = '';
@@ -3467,9 +4303,9 @@
           
           
           const cardContent = `
-            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="absolute inset-0 bg-[#070d18]/90"></div>
             <div class="relative z-10 text-center">
-              <h3 class="font-bold text-cyan-300 mb-2">${serie.name}</h3>
+              <h3 class="home-series-card__title">${serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-400 mt-2">${buttonText}</div>
@@ -3477,8 +4313,8 @@
           `;
           
           
-          return isClickable 
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg} cursor: pointer; text-decoration: none;">${cardContent}</a>`
+          return isClickable
+            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg}">${cardContent}</a>`
             : `<div class="${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`;
         }).join('');
         

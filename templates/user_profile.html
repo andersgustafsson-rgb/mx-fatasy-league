@@ -11,6 +11,26 @@
       console.warn = function() {}; // Suppress console warnings in production
     }
   </script>
+  <style>
+    .pit-lane-bell-toolbar .pit-lane-bell-btn {
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      background: rgb(31 41 55);
+      border: 1px solid rgb(75 85 99);
+      color: #e2e8f0;
+    }
+    .pit-lane-bell-toolbar .pit-lane-bell-btn:hover {
+      background: rgb(55 65 81);
+    }
+    .pit-lane-bell-toolbar .pit-lane-bell-icon {
+      width: 1.15rem;
+      height: 1.15rem;
+    }
+    .pit-lane-bell-toolbar #pit-lane-bell-wrap.pit-lane-bell-wrap--unread .pit-lane-bell-icon {
+      color: #22d3ee;
+      filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.55));
+    }
+  </style>
 </head>
 <body class="relative font-sans min-h-screen text-gray-200">
   <!-- Bakgrund -->
@@ -36,7 +56,9 @@
           <!-- Navigation -->
           <div class="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4 items-center">
             {% set is_logged_in = true %}
-            {% include 'includes/pit_lane_bell.html' %}
+            <div class="pit-lane-bell-toolbar">
+              {% include 'includes/pit_lane_bell.html' %}
+            </div>
             <a
               href="{{ url_for('pit_lane.pit_lane_page') }}?to={{ target_user.id }}&tab=messages"
               class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"

@@ -75,6 +75,8 @@
         var n = data.unread_count || 0;
         badge.textContent = n > 99 ? '99+' : String(n);
         badge.classList.toggle('hidden', n === 0);
+        var wrap = document.getElementById('pit-lane-bell-wrap');
+        if (wrap) wrap.classList.toggle('pit-lane-bell-wrap--unread', n > 0);
         if (!list) return;
         var items = data.recent || [];
         if (!items.length) {
