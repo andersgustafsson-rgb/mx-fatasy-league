@@ -3868,6 +3868,15 @@
           }
         });
       });
+
+      // Deep-link: /#games, /#leagues, /#season-team, etc.
+      const hashTab = (location.hash || '').replace(/^#/, '');
+      if (hashTab) {
+        const hashBtn = document.querySelector(`.tab-btn[data-tab="${hashTab}"]`);
+        if (hashBtn && !hashBtn.disabled) {
+          hashBtn.click();
+        }
+      }
     }
 
     // Game Highscores Functions

@@ -1,1051 +1,674 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% set seo_title = 'Spelmanual — MX Fantasy League | fantasy motocross regler' %}
-    {% set seo_description = 'Spelmanual för MX Fantasy League: hur du tippar topp 6, holeshot och wildcard, poängsystem, ligor och serier (SX, MX, SMX, WSX).' %}
-    {% set seo_path = '/manual' %}
-    {% include 'includes/seo_head.html' %}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
-    <style>
-        /* Dark background for mobile and desktop */
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
-            background-attachment: fixed !important;
-            min-height: 100vh !important;
-            color: #e5e7eb !important;
-        }
-        
-        .manual-section {
-            scroll-margin-top: 2rem;
-        }
-        
-        .emoji-large {
-            font-size: 2.5rem;
-            display: block;
-            margin: 0 auto 1rem;
-        }
-        
-        @media (min-width: 640px) {
-            .emoji-large {
-                font-size: 3rem;
-            }
-        }
-        
-        .highlight-box {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
-            border-left: 4px solid #60a5fa;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 0.5rem;
-        }
-        
-        .points-box {
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(251, 191, 36, 0.15) 100%);
-            border-left: 4px solid #4ade80;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 0.5rem;
-        }
-        
-        .warning-box {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(251, 146, 60, 0.15) 100%);
-            border-left: 4px solid #f87171;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 0.5rem;
-        }
-
-        .duel-type-card {
-            background: linear-gradient(160deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%);
-            border: 1px solid rgba(251, 191, 36, 0.28);
-            border-radius: 0.75rem;
-            padding: 1rem 1.1rem;
-        }
-
-        .duel-type-card h4 {
-            color: #fde68a;
-            font-weight: 700;
-            margin-bottom: 0.35rem;
-        }
-        
-        /* Mobile optimizations */
-        @media (max-width: 640px) {
-            .manual-section {
-                padding: 1rem !important;
-                margin-bottom: 1rem !important;
-            }
-            
-            h2 {
-                font-size: 1.5rem !important;
-            }
-            
-            h3 {
-                font-size: 1.25rem !important;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set seo_title = 'Spelmanual — MX Fantasy League | fantasy motocross regler' %}
+  {% set seo_description = 'Spelmanual för MX Fantasy League: topp 6, holeshot, wildcard, säsongsteam, ligor, dueller, Pit Lane och poängsystem (SX, MX, SMX, WSX).' %}
+  {% set seo_path = '/manual' %}
+  {% include 'includes/seo_head.html' %}
+  {% from 'includes/mx_icon.html' import mx_icon %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
+  <style>
+    body {
+      background:
+        radial-gradient(ellipse 80% 50% at 70% 0%, rgba(34, 211, 238, 0.12), transparent 55%),
+        radial-gradient(ellipse 50% 40% at 10% 90%, rgba(251, 191, 36, 0.07), transparent 50%),
+        #141c2c;
+      min-height: 100vh;
+      color: #e2e8f0;
+    }
+    .manual-shell {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 1rem 0.85rem 2.5rem;
+    }
+    @media (min-width: 640px) {
+      .manual-shell { padding: 1.5rem 1.25rem 3rem; }
+    }
+    .manual-card {
+      background: linear-gradient(180deg, #1c273a 0%, #1a2436 100%);
+      border: 1px solid #2f3f56;
+      border-radius: 0.65rem;
+      padding: 1.15rem 1.1rem;
+      margin-bottom: 1rem;
+      scroll-margin-top: 4.5rem;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    }
+    @media (min-width: 640px) {
+      .manual-card { padding: 1.5rem 1.6rem; margin-bottom: 1.25rem; }
+    }
+    .manual-card--hero {
+      border-color: rgba(34, 211, 238, 0.35);
+      background:
+        linear-gradient(135deg, rgba(8, 145, 178, 0.18), rgba(37, 99, 235, 0.12)),
+        #1a2436;
+    }
+    .manual-card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .manual-card-head h2 {
+      margin: 0;
+    }
+    .manual-card h2 {
+      margin: 0 0 1rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.02em;
+    }
+    .manual-card h2 .mx-icon {
+      color: #67e8f9;
+    }
+    @media (min-width: 640px) {
+      .manual-card h2 { font-size: 1.45rem; }
+    }
+    .manual-card h3 {
+      margin: 1.25rem 0 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #a5f3fc;
+    }
+    .manual-card p,
+    .manual-card li {
+      color: #cbd5e1;
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+    .manual-card ul,
+    .manual-card ol {
+      margin: 0.5rem 0 0.75rem 1.1rem;
+    }
+    .manual-card li { margin: 0.25rem 0; }
+    .manual-card strong { color: #f8fafc; }
+    .manual-goto {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.45rem;
+      border: 1px solid rgba(34, 211, 238, 0.4);
+      background: rgba(8, 145, 178, 0.18);
+      color: #a5f3fc;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .manual-goto:hover {
+      background: rgba(8, 145, 178, 0.32);
+      border-color: rgba(103, 232, 249, 0.55);
+      color: #ecfeff;
+    }
+    .manual-goto-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 1rem;
+    }
+    .manual-toc a {
+      display: block;
+      padding: 0.5rem 0.7rem;
+      border-radius: 0.45rem;
+      color: #cbd5e1;
+      text-decoration: none;
+      border: 1px solid #2a3548;
+      background: #152033;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .manual-toc a:hover {
+      background: rgba(8, 145, 178, 0.15);
+      border-color: rgba(34, 211, 238, 0.4);
+      color: #ecfeff;
+    }
+    .manual-note,
+    .manual-warn,
+    .manual-ok {
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      margin: 0.85rem 0;
+    }
+    .manual-note {
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: rgba(8, 145, 178, 0.12);
+    }
+    .manual-warn {
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      background: rgba(180, 83, 9, 0.14);
+    }
+    .manual-ok {
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      background: rgba(6, 95, 70, 0.18);
+    }
+    .manual-note strong,
+    .manual-warn strong,
+    .manual-ok strong { color: #f1f5f9; }
+    .manual-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    .manual-table th,
+    .manual-table td {
+      border: 1px solid #2a3548;
+      padding: 0.55rem 0.65rem;
+      text-align: left;
+    }
+    .manual-table th {
+      background: rgba(8, 145, 178, 0.16);
+      color: #e2e8f0;
+      font-weight: 700;
+    }
+    .manual-table td { color: #cbd5e1; }
+    .manual-table .c { text-align: center; white-space: nowrap; }
+    .pts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    @media (min-width: 640px) {
+      .pts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .pts-cell {
+      background: #152033;
+      border: 1px solid #2a3548;
+      border-radius: 0.45rem;
+      padding: 0.75rem;
+      text-align: center;
+    }
+    .pts-cell .lbl { font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
+    .pts-cell .val { font-size: 1.35rem; font-weight: 800; color: #67e8f9; margin-top: 0.2rem; }
+    .series-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+    @media (min-width: 640px) {
+      .series-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .series-tile {
+      background: #152033;
+      border: 1px solid #2a3548;
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      border-top: 2px solid rgba(34, 211, 238, 0.45);
+    }
+    .series-tile h4 {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .series-tile p { margin: 0 0 0.5rem; font-size: 0.8rem; color: #94a3b8; }
+    .series-tile ul { margin: 0; padding-left: 1rem; font-size: 0.85rem; }
+    .duel-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+    @media (min-width: 768px) {
+      .duel-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .duel-tile {
+      background: #152033;
+      border: 1px solid #2a3548;
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      border-top: 2px solid rgba(251, 191, 36, 0.4);
+    }
+    .duel-tile h4 {
+      margin: 0 0 0.4rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fde68a;
+    }
+    .manual-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(26, 36, 54, 0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #2a3548;
+    }
+    .manual-header-inner {
+      max-width: 56rem;
+      margin: 0 auto;
+      padding: 0.75rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .manual-brand {
+      font-weight: 800;
+      color: #67e8f9;
+      text-decoration: none;
+      font-size: 1rem;
+    }
+    .manual-brand:hover { color: #a5f3fc; }
+    .manual-title {
+      color: #94a3b8;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .manual-feature-list a {
+      color: #67e8f9;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .manual-feature-list a:hover {
+      color: #a5f3fc;
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="bg-gray-800/90 backdrop-blur-sm shadow-lg border-b border-gray-700/50 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
-            <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center space-x-2 sm:space-x-4">
-                    <a href="/" class="text-lg sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
-                    <span class="text-gray-500 hidden sm:inline">|</span>
-                    <h1 class="text-base sm:text-xl font-semibold text-gray-200">📖 Spelmanual</h1>
-                </div>
-                <div class="flex items-center space-x-2 sm:space-x-4">
-                    <a href="/" id="manual-back-link" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
-                </div>
-            </div>
+  <header class="manual-header">
+    <div class="manual-header-inner">
+      <div class="flex items-center gap-2 min-w-0">
+        <a href="{{ url_for('index') }}" class="manual-brand truncate">MX Fantasy</a>
+        <span class="text-slate-600 hidden sm:inline">|</span>
+        <span class="manual-title hidden sm:inline">Spelmanual</span>
+      </div>
+      <a href="{{ url_for('index') }}" id="manual-back-link" class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← Tillbaka</a>
+    </div>
+  </header>
+
+  <main class="manual-shell">
+    <section class="manual-card manual-card--hero text-center">
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">Spelmanual</h1>
+      <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base">
+        Kort guide till picks, poäng, säsongsteam, ligor och resten av MX Fantasy League.
+        Varje kapitel har en länk direkt till rätt ställe i appen.
+      </p>
+    </section>
+
+    <section class="manual-card">
+      <h2>Innehåll</h2>
+      <nav class="manual-toc grid grid-cols-1 sm:grid-cols-2 gap-1">
+        <a href="#grunderna">1. Grunderna</a>
+        <a href="#serier">2. Serier</a>
+        <a href="#race-picks">3. Race picks</a>
+        <a href="#holeshot">4. Holeshot &amp; wildcard</a>
+        <a href="#poangsystem">5. Poängsystem</a>
+        <a href="#season-team">6. Säsongsteam</a>
+        <a href="#ligor">7. Ligor</a>
+        <a href="#liga-dueller">8. Liga-dueller</a>
+        <a href="#mer">9. Mer i appen</a>
+        <a href="#spel">10. Spel</a>
+        <a href="#tips">11. Tips</a>
+      </nav>
+    </section>
+
+    <section id="grunderna" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('info') }}<span>Grunderna</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}">Öppna startsidan →</a>
+      </div>
+      <p>
+        MX Fantasy League är ett gratis fantasy-motocross-spel. Inför varje race tippar du topp&nbsp;6,
+        holeshot och (i de flesta serier) wildcard. Du får poäng utifrån hur nära du är rätt resultat.
+      </p>
+      <h3>Klasser</h3>
+      <ul>
+        <li><strong>450cc / SX1</strong> — huvudklassen</li>
+        <li><strong>250cc / SX2</strong> — utvecklingsklassen</li>
+      </ul>
+      <p>I WSX heter klasserna SX1 och SX2, men picks fungerar likadant (topp&nbsp;6 + holeshot).</p>
+    </section>
+
+    <section id="serier" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Serier</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}">Byt serie på startsidan →</a>
+      </div>
+      <div class="series-grid mb-4">
+        <div class="series-tile">
+          <h4>Supercross (SX)</h4>
+          <p>Vintersäsong</p>
+          <ul>
+            <li>Topp 6 + holeshot + wildcard</li>
+            <li>Säsongsteam</li>
+          </ul>
         </div>
-    </header>
-
-    <!-- Main Content -->
-    <main class="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        <!-- Introduction -->
-        <div class="bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <div class="text-center mb-6">
-                <span class="emoji-large">🏍️</span>
-                <h2 class="text-3xl font-bold text-gray-200 mb-4">Välkommen till MX Fantasy League!</h2>
-                <p class="text-lg text-gray-300 max-w-3xl mx-auto">
-                    Detta är din kompletta guide till hur du spelar och vinner. Läs igenom för att lära dig alla funktioner och strategier!
-                </p>
-            </div>
+        <div class="series-tile">
+          <h4>Pro Motocross (MX)</h4>
+          <p>Utomhussäsong</p>
+          <ul>
+            <li>Topp 6 + holeshot + wildcard</li>
+            <li>Säsongsteam</li>
+          </ul>
         </div>
-
-        <!-- Table of Contents -->
-        <div class="bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-6 mb-4 sm:mb-8 border border-gray-700/50">
-            <h3 class="text-2xl font-bold text-gray-200 mb-4">📑 Innehållsförteckning</h3>
-            <nav class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <a href="#grunderna" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">1. Grunderna</a>
-                <a href="#serier" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">2. Serier & Skillnader</a>
-                <a href="#race-picks" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">3. Race Picks</a>
-                <a href="#holeshot" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">4. Holeshot & Wildcard</a>
-                <a href="#poangsystem" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">5. Poängsystem</a>
-                <a href="#season-team" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">6. Säsongsteam</a>
-                <a href="#ligor" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">7. Ligor</a>
-                <a href="#liga-dueller" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2 pl-4 border-l border-cyan-500/30">↳ Liga-dueller</a>
-                <a href="#spel" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">8. Spel & Highscores</a>
-                <a href="#tips" class="text-cyan-400 hover:text-cyan-300 hover:underline py-2">9. Tips & Strategier</a>
-            </nav>
+        <div class="series-tile">
+          <h4>SMX Finals</h4>
+          <p>Efter MX</p>
+          <ul>
+            <li>Topp 6 + holeshot + wildcard</li>
+            <li>Säsongsteam (+ top-6-bonus)</li>
+          </ul>
         </div>
-
-        <!-- Section 1: Grunderna -->
-        <div id="grunderna" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>1️⃣</span>
-                <span>Grunderna</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎯 Vad är MX Fantasy League?</h3>
-                    <p class="text-gray-300 mb-4">
-                        MX Fantasy League är ett fantasy-sportspel där du förutsäger resultat från motocross-tävlingar. 
-                        Varje race kan du välja vilka förare du tror kommer att ta de bästa positionerna, och tjäna poäng baserat på hur nära du gissar!
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏁 Serierna</h3>
-                    <p class="text-gray-300 mb-4">
-                        Spelet täcker fyra olika serier med olika regler:
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div class="bg-blue-900/30 p-4 rounded-lg border-2 border-blue-400">
-                            <h4 class="font-bold text-blue-300 mb-2 text-lg">Supercross (SX)</h4>
-                            <p class="text-sm text-gray-300 mb-2">Vinter/säsong 2025-2026</p>
-                            <ul class="text-xs text-gray-300 space-y-1">
-                                <li>✅ Race Picks (topp 6)</li>
-                                <li>✅ Holeshot</li>
-                                <li>✅ Wildcard</li>
-                                <li>✅ Säsongsteam</li>
-                            </ul>
-                        </div>
-                        <div class="bg-green-900/30 p-4 rounded-lg border-2 border-green-400">
-                            <h4 class="font-bold text-green-300 mb-2 text-lg">Motocross (MX)</h4>
-                            <p class="text-sm text-gray-300 mb-2">Sommar/säsong 2026</p>
-                            <ul class="text-xs text-gray-300 space-y-1">
-                                <li>✅ Race Picks (topp 6)</li>
-                                <li>✅ Holeshot</li>
-                                <li>✅ Wildcard</li>
-                                <li>✅ Säsongsteam</li>
-                            </ul>
-                        </div>
-                        <div class="bg-purple-900/30 p-4 rounded-lg border-2 border-purple-400">
-                            <h4 class="font-bold text-purple-300 mb-2 text-lg">SMX Finals</h4>
-                            <p class="text-sm text-gray-300 mb-2">Efter MX-serien</p>
-                            <ul class="text-xs text-gray-300 space-y-1">
-                                <li>✅ Race Picks (topp 6)</li>
-                                <li>✅ Holeshot</li>
-                                <li>✅ Wildcard</li>
-                                <li>✅ Säsongsteam</li>
-                            </ul>
-                        </div>
-                        <div class="bg-orange-900/30 p-4 rounded-lg border-2 border-orange-400">
-                            <h4 class="font-bold text-orange-300 mb-2 text-lg">WSX</h4>
-                            <p class="text-sm text-gray-300 mb-2">World Supercross</p>
-                            <ul class="text-xs text-gray-300 space-y-1">
-                                <li>✅ Race Picks (topp 6)</li>
-                                <li>✅ Holeshot</li>
-                                <li>❌ Ingen Wildcard</li>
-                                <li>❌ Ingen Säsongsteam</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="warning-box">
-                        <p class="font-semibold text-orange-300 mb-2">⚠️ Viktiga skillnader:</p>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300 ml-2">
-                            <li><strong>SX, MX & SMX:</strong> Full funktionalitet - välj topp 6 förare, wildcard och säsongsteam</li>
-                            <li><strong>WSX:</strong> Förenklad version - välj bara topp 6 förare och holeshot. <strong>Ingen wildcard och ingen säsongsteam.</strong></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">👤 Klasser</h3>
-                    <p class="text-gray-300 mb-4">
-                        Varje serie har två klasser:
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-blue-900/30 p-4 rounded-lg">
-                            <h4 class="font-bold text-blue-300 mb-2">450cc / SX1</h4>
-                            <p class="text-sm text-gray-300">De större motorerna - huvudklassen med de bästa förare</p>
-                        </div>
-                        <div class="bg-green-900/30 p-4 rounded-lg">
-                            <h4 class="font-bold text-green-300 mb-2">250cc / SX2</h4>
-                            <p class="text-sm text-gray-300">Uppkomlingar och unga talanger</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="series-tile">
+          <h4>WSX</h4>
+          <p>World Supercross</p>
+          <ul>
+            <li>Topp 6 + holeshot</li>
+            <li>Ingen wildcard, inget säsongsteam</li>
+          </ul>
         </div>
+      </div>
 
-        <!-- Section 2: Serier & Skillnader -->
-        <div id="serier" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>2️⃣</span>
-                <span>Serier & Skillnader</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <p class="text-lg text-gray-300 mb-6">
-                    Olika serier har olika regler och funktioner. Här är en tydlig översikt:
-                </p>
+      <div class="overflow-x-auto">
+        <table class="manual-table">
+          <thead>
+            <tr>
+              <th>Funktion</th>
+              <th class="c">SX</th>
+              <th class="c">MX</th>
+              <th class="c">SMX</th>
+              <th class="c">WSX</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Race picks (topp 6)</td>
+              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td>
+            </tr>
+            <tr>
+              <td>Holeshot</td>
+              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td>
+            </tr>
+            <tr>
+              <td>Wildcard</td>
+              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+            </tr>
+            <tr>
+              <td>Säsongsteam</td>
+              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+            </tr>
+            <tr>
+              <td>Räknas till ligapoäng</td>
+              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-                <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-                    <div class="min-w-full">
-                        <table class="w-full border-collapse border-2 border-gray-600 text-sm sm:text-base">
-                            <thead>
-                                <tr class="bg-gray-700/80">
-                                    <th class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold text-gray-200 whitespace-nowrap">Funktion</th>
-                                    <th class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-blue-300 whitespace-nowrap">SX</th>
-                                    <th class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-green-300 whitespace-nowrap">MX</th>
-                                    <th class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-purple-300 whitespace-nowrap">SMX</th>
-                                    <th class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold text-orange-300 whitespace-nowrap">WSX</th>
-                                </tr>
-                            </thead>
-                            <tbody class="text-gray-300">
-                            <tr class="hover:bg-gray-700/60">
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 font-medium whitespace-nowrap">Race Picks</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Topp 6</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Topp 6</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Topp 6</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Topp 6</td>
-                            </tr>
-                            <tr class="hover:bg-gray-700/60">
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 font-medium whitespace-nowrap">Holeshot</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                            </tr>
-                            <tr class="hover:bg-gray-700/60">
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 font-medium whitespace-nowrap">Wildcard</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">❌ Nej</td>
-                            </tr>
-                            <tr class="hover:bg-gray-700/60">
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 font-medium whitespace-nowrap">Säsongsteam</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">✅ Ja</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center">❌ Nej</td>
-                            </tr>
-                            <tr class="hover:bg-gray-700/60">
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 font-medium whitespace-nowrap">Klasser</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm whitespace-nowrap">450cc / 250cc</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm whitespace-nowrap">450cc / 250cc</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm whitespace-nowrap">450cc / 250cc</td>
-                                <td class="border-2 border-gray-600 px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm whitespace-nowrap">SX1 / SX2</td>
-                            </tr>
-                        </tbody>
-                        </table>
-                    </div>
-                </div>
+    <section id="race-picks" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('clipboard') }}<span>Race picks</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Gör race picks →</a>
+      </div>
+      <p>
+        Inför varje race går du igenom en wizard i tre steg: <strong>450/SX1 topp&nbsp;6</strong>,
+        <strong>250/SX2 topp&nbsp;6</strong>, sedan <strong>holeshot</strong>
+        (plus wildcard i SX/MX/SMX).
+      </p>
+      <div class="manual-note">
+        <strong>Regler</strong>
+        <ul>
+          <li>Exakt <strong>6 förare</strong> per klass, en plats vardera (1–6)</li>
+          <li>Samma förare kan inte väljas två gånger</li>
+          <li><strong>OUT-förare</strong> syns inte i listorna och kan inte väljas</li>
+          <li>Picks låses <strong>2 timmar</strong> före race</li>
+          <li>Utkast sparas lokalt — lämna in för att registrera hos tävlingen</li>
+        </ul>
+      </div>
+      <h3>Se andras picks</h3>
+      <p>
+        När picksen är låsta (eller racet är klart) kan du öppna <strong>Se andras picks</strong>
+        från startsidan eller race picks-sidan.
+      </p>
+    </section>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div class="bg-green-900/30 p-6 rounded-lg border-2 border-green-400">
-                        <h3 class="text-xl font-bold text-green-300 mb-3">✅ SX, MX & SMX</h3>
-                        <p class="text-gray-300 mb-3">
-                            Dessa serier har <strong>full funktionalitet</strong>:
-                        </p>
-                        <ul class="list-disc list-inside space-y-1 text-gray-300 text-sm">
-                            <li>Välj <strong>topp 6 förare</strong> i varje klass</li>
-                            <li>Välj <strong>holeshot-vinnare</strong> för båda klasser</li>
-                            <li>Välj en <strong>wildcard-förare</strong> (15 poäng!)</li>
-                            <li>Skapa ett <strong>säsongsteam</strong> för långsiktig poäng</li>
-                        </ul>
-                    </div>
+    <section id="holeshot" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('zap') }}<span>Holeshot &amp; wildcard</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Välj i race picks →</a>
+      </div>
+      <h3>Holeshot</h3>
+      <p>
+        Välj vem som tar starten (först till första kurvan) i <strong>båda klasserna</strong>.
+      </p>
+      <ul>
+        <li>Rätt holeshot = <strong>+10p</strong> per klass</li>
+        <li>Båda rätt = <strong>25p totalt</strong> (inkl. 5p bonus)</li>
+      </ul>
 
-                    <div class="bg-orange-900/30 p-6 rounded-lg border-2 border-orange-400">
-                        <h3 class="text-xl font-bold text-orange-300 mb-3">⚠️ WSX</h3>
-                        <p class="text-gray-300 mb-3">
-                            WSX-serien är <strong>förenklad</strong>:
-                        </p>
-                        <ul class="list-disc list-inside space-y-1 text-gray-300 text-sm">
-                            <li>Välj endast <strong>topp 6 förare</strong> per klass</li>
-                            <li>Välj <strong>holeshot-vinnare</strong> för båda klasser</li>
-                            <li><strong>INGEN wildcard</strong> - denna funktion finns inte</li>
-                            <li><strong>INGET säsongsteam</strong> - endast race-picks</li>
-                        </ul>
-                        <p class="text-xs text-orange-300 mt-3 italic">
-                            WSX är fokuserad på enklare, snabbare picks per race.
-                        </p>
-                    </div>
-                </div>
-            </div>
+      <h3>Wildcard (SX / MX / SMX)</h3>
+      <p>
+        Du slumpar en plats mellan <strong>10 och 20</strong> och väljer en <strong>450-förare</strong>
+        som du tror hamnar där.
+      </p>
+      <ul>
+        <li>Rätt förare + rätt plats = <strong>+15p</strong></li>
+        <li>Wildcard-föraren får <strong>inte</strong> redan finnas i din topp&nbsp;6</li>
+        <li>OUT-förare kan inte väljas</li>
+        <li><strong>Finns inte i WSX</strong></li>
+      </ul>
+    </section>
+
+    <section id="poangsystem" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('chart') }}<span>Poängsystem (race picks)</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('my_scores') }}">Mina poäng →</a>
+      </div>
+      <p>Poäng utifrån hur nära din tippade plats är den verkliga:</p>
+      <div class="pts-grid my-3">
+        <div class="pts-cell"><div class="lbl">Exakt rätt</div><div class="val">25</div></div>
+        <div class="pts-cell"><div class="lbl">1 plats fel</div><div class="val">18</div></div>
+        <div class="pts-cell"><div class="lbl">2 platser fel</div><div class="val">13</div></div>
+        <div class="pts-cell"><div class="lbl">3 platser fel</div><div class="val">9</div></div>
+        <div class="pts-cell"><div class="lbl">4 platser fel</div><div class="val">6</div></div>
+        <div class="pts-cell"><div class="lbl">5+ platser fel</div><div class="val">3</div></div>
+      </div>
+      <div class="manual-ok">
+        <strong>Bonusar:</strong> holeshot 10p (25p om båda), wildcard 15p.
+        Max per race blir högt om du träffar nära på många platser.
+      </div>
+    </section>
+
+    <section id="season-team" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span>Säsongsteam</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('season_team_page') }}">Öppna säsongsteam →</a>
+      </div>
+      <div class="manual-warn">
+        Finns för <strong>SX, MX och SMX</strong> — inte för WSX.
+      </div>
+      <p>
+        Du bygger ett lag som får poäng varje race utifrån förarnas placering.
+        Säsongsteam har en <strong>egen leaderboard</strong>, separat från race picks.
+      </p>
+      <h3>Laguppställning &amp; budget</h3>
+      <ul>
+        <li><strong>2 × 450cc</strong> och <strong>2 × 250cc</strong></li>
+        <li>Budget: <strong>1&nbsp;500&nbsp;000</strong></li>
+      </ul>
+      <h3>Placeringspoäng (per race)</h3>
+      <ul>
+        <li>1:a 25 · 2:a 20 · 3:e 15 · 4:e 12 · 5:e 10 · 6:e 8</li>
+        <li>7–10:e 5 · 11–15:e 3 · 16–20:e 1 · 21+ 0</li>
+      </ul>
+      <h3>Top-6-bonus (SMX)</h3>
+      <p>
+        Under <strong>SMX Finals</strong>: om <strong>båda</strong> dina förare i samma klass
+        hamnar i topp&nbsp;6 i samma race får du <strong>+50p</strong> för den klassen
+        (upp till +100p om båda klasserna träffar).
+      </p>
+      <h3>Byten</h3>
+      <ul>
+        <li>Byte kostar <strong>50p per förare</strong> (dras från race-pick-poäng)</li>
+        <li>Du måste ha tillräckligt med poäng för bytet</li>
+        <li>Namnbyte utan förarbyten kostar inget</li>
+        <li>Gratis <strong>250→450-klassbyte</strong> kan erbjudas när officiella byten sker inför MX
+            (då slipper du straff för just den promoten)</li>
+      </ul>
+    </section>
+
+    <section id="ligor" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Ligor</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('leagues_page') }}">Öppna ligor →</a>
+      </div>
+      <p>
+        Skapa eller gå med i ligor under <strong>Ligor</strong>. Privata ligor använder inbjudningskod;
+        publika kan du utforska och ansöka till.
+      </p>
+      <h3>Inom ligan</h3>
+      <p>Ranking efter medlemmarnas totala säsongspoäng från race picks.</p>
+      <h3>Mellan ligor</h3>
+      <p>Rättvist snitt per race beroende på ligastorlek:</p>
+      <ul>
+        <li>1 medlem: den personens poäng</li>
+        <li>2: snitt av båda</li>
+        <li>3–4: snitt av top&nbsp;2</li>
+        <li>5–6: snitt av top&nbsp;3</li>
+        <li>7+: snitt av bästa 50&nbsp;%</li>
+      </ul>
+      <div class="manual-note">
+        <strong>WSX</strong> ger race-pick-poäng till dig personligen, men räknas
+        <strong>inte</strong> in i liga-poängen mellan ligor.
+      </div>
+    </section>
+
+    <section id="liga-dueller" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('swords') }}<span>Liga-dueller</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('leagues_page') }}">Dueller via ligor →</a>
+      </div>
+      <p>
+        1v1-utmaningar inom ligan inför ett race. Separat från liga-leaderboarden —
+        mer skryt och märken än säsongspoäng.
+      </p>
+      <ol>
+        <li>Du utmanar en medlem</li>
+        <li>Motståndaren väljer motfråga + klass</li>
+        <li>Båda låser svar innan picks stänger</li>
+        <li>Avgörs efter racet</li>
+      </ol>
+      <div class="duel-grid my-3">
+        <div class="duel-tile">
+          <h4>H2H Prognos</h4>
+          <p class="text-sm text-slate-400 m-0">Välj förare + tippa plats 1–20. Närmast rätt vinner (exakt träff vinner direkt).</p>
         </div>
-
-        <!-- Section 3: Race Picks -->
-        <div id="race-picks" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>3️⃣</span>
-                <span>Race Picks</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎲 Hur det fungerar</h3>
-                    <p class="text-gray-300 mb-4">
-                        För varje race väljer du förare i både 450cc/SX1 och 250cc/SX2 klasser. 
-                        Antalet förare du väljer beror på vilken serie du spelar:
-                    </p>
-                    <p class="text-gray-300 mb-4">
-                        För <strong>alla serier</strong> väljer du <strong>topp 6 förare</strong> per klass.
-                    </p>
-                    <p class="text-gray-300 mb-4">
-                        Du förutsäger också exakt position för varje förare (1:a, 2:a, 3:e, osv).
-                    </p>
-                    
-                    <div class="highlight-box">
-                        <p class="font-semibold text-gray-200 mb-2">📌 Viktigt:</p>
-                        <ul class="list-disc list-inside space-y-1 text-gray-300 ml-2">
-                            <li>För <strong>alla serier</strong>: Välj exakt <strong>6 förare</strong> per klass</li>
-                            <li>Varje förare kan bara väljas <strong>en gång</strong></li>
-                            <li>Picks låses <strong>2 timmar</strong> före race start</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="warning-box">
-                        <p class="font-semibold text-orange-300 mb-2">⚠️ WSX - Förenklad version:</p>
-                        <p class="text-gray-300 mb-2">
-                            <strong>WSX-serien</strong> skiljer sig från de andra serierna:
-                        </p>
-                        <ul class="list-disc list-inside space-y-1 text-gray-300 ml-2">
-                            <li><strong>Topp 6 förare</strong> per klass (samma som alla andra serier)</li>
-                            <li><strong>Ingen wildcard</strong> - denna funktion finns inte</li>
-                            <li><strong>Inget säsongsteam</strong> - endast race-picks per tävling</li>
-                            <li>Holeshot fungerar som vanligt för båda klasser</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">⏰ När ska du göra dina picks?</h3>
-                    <p class="text-gray-300 mb-4">
-                        Du kan göra och ändra dina picks när som helst fram till <strong>2 timmar före race start</strong>. 
-                        Efter det låses alla picks och du kan inte längre ändra dem.
-                    </p>
-                    <div class="warning-box">
-                        <p class="font-semibold text-red-300">⚠️ OBS:</p>
-                        <p class="text-gray-300">
-                            När picksen är låsta kan du se andra användares picks, men inte ändra dina egna!
-                        </p>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">👀 Se andra användares picks</h3>
-                    <p class="text-gray-300 mb-4">
-                        När picksen är låsta eller efter att resultaten är satta kan du klicka på <strong>"Se Andras Picks"</strong> 
-                        för att se vad alla andra har valt. Perfekt för att analysera konkurrensen!
-                    </p>
-                </div>
-            </div>
+        <div class="duel-tile">
+          <h4>Vem högre?</h4>
+          <p class="text-sm text-slate-400 m-0">Utmanade väljer två förare; utmanaren tippar vem som placerar sig bäst.</p>
         </div>
-
-        <!-- Section 4: Holeshot & Wildcard -->
-        <div id="holeshot" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>4️⃣</span>
-                <span>Holeshot & Wildcard</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div class="bg-green-900/30 p-6 rounded-lg">
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🚀 Holeshot</h3>
-                    <p class="text-gray-300 mb-4">
-                        Holeshot är den förare som tar starten bäst - den som först når första kurvan. 
-                        Du väljer en holeshot-vinnare för <strong>både 450cc/SX1 och 250cc/SX2</strong>.
-                    </p>
-                    <div class="points-box">
-                        <p class="font-semibold text-green-300">💚 Holeshot = <strong>10 poäng</strong> om du gissar rätt! 🎯 Bonus: Om du gissar båda holeshots korrekt (450cc och 250cc) får du <strong>25 poäng totalt</strong> (5 poäng bonus)!</p>
-                    </div>
-                </div>
-
-                <div class="bg-yellow-900/30 p-6 rounded-lg">
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">⭐ Wildcard</h3>
-                    <p class="text-gray-300 mb-4">
-                        Wildcard är en extra chans att tjäna poäng! Du <strong>slumpar fram en plats</strong> mellan position 
-                        <strong>10 och 20</strong>, och sedan väljer du en förare i <strong>450cc klassen</strong> som du tror 
-                        kommer att hamna på den positionen.
-                    </p>
-                    <div class="warning-box">
-                        <p class="font-semibold text-orange-300">ℹ️ OBS:</p>
-                        <p class="text-gray-300 mb-2">
-                            Wildcard finns <strong>INTE</strong> för WSX-serien. Där väljer du bara topp 6 och holeshot.
-                        </p>
-                    </div>
-                    <div class="points-box">
-                        <p class="font-semibold text-green-300">💛 Wildcard = <strong>15 poäng</strong> om både förare och position stämmer!</p>
-                    </div>
-                </div>
-            </div>
+        <div class="duel-tile">
+          <h4>Brand battle</h4>
+          <p class="text-sm text-slate-400 m-0">Två märken ställs mot varandra; bästa placering per märke i klassen avgör.</p>
         </div>
+      </div>
+      <ul>
+        <li>Max <strong>2 aktiva</strong> dueller per race (egna + accepterade)</li>
+        <li>Max <strong>1 väntande</strong> egen utmaning</li>
+        <li>Samma par: max 1 aktiv duell per race</li>
+        <li>Oavgjort ger varken W eller L</li>
+        <li>Saldo W−L ger glory-/shame-märke för det racet</li>
+      </ul>
+    </section>
 
-        <!-- Section 5: Poängsystem -->
-        <div id="poangsystem" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>5️⃣</span>
-                <span>Poängsystem</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <p class="text-lg text-gray-300 mb-6">
-                    Här är hur du tjänar poäng för varje race:
-                </p>
+    <section id="mer" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span>Mer i appen</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('pit_lane.pit_lane_page') }}">Öppna Pit Lane →</a>
+      </div>
+      <ul class="manual-feature-list">
+        <li><a href="{{ url_for('pit_lane.pit_lane_page') }}">Pit Lane</a> — notiser, Race Control och meddelanden (klockikonen)</li>
+        <li><a href="{{ url_for('bulletin_board') }}">Trash Talk Brädan</a> — diskussioner och reaktioner</li>
+        <li><a href="{{ url_for('my_scores') }}">Mina Poäng</a> — dina resultat per race</li>
+        <li><a href="{{ url_for('race_results_page') }}">Race Resultat</a> — officiella resultat och jämförelse</li>
+        <li><a href="{{ url_for('finished_series_page') }}">Färdiga Serier</a> — avslutade säsonger och slutställningar</li>
+        <li><a href="{{ url_for('trackmaps_page') }}">Track Maps</a> — banlayouter där de finns</li>
+        <li><a href="{{ url_for('riders_directory') }}">Förarguide</a> — förare och info</li>
+        <li><strong>Pit Pass</strong> — snabbregistrering för gäster (e-post/konto)</li>
+      </ul>
+      <p class="text-slate-400 text-sm mt-3 mb-0">
+        Påminnelser: slå gärna på push-notiser i Pit Lane eller via prompts i appen så du inte missar deadline.
+      </p>
+    </section>
 
-                <div class="points-box mb-6">
-                    <h3 class="text-xl font-bold text-green-300 mb-4">🏁 Race Picks Poängsystem</h3>
-                    <p class="text-gray-300 mb-4">
-                        Du får poäng baserat på hur nära du gissar rätt position. Ju närmare du är, desto mer poäng får du!
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div class="bg-gradient-to-br from-yellow-900/40 to-yellow-800/40 p-4 rounded-lg border-2 border-yellow-500/50">
-                            <div class="text-2xl font-bold text-yellow-300 text-center mb-2">Rätt plats</div>
-                            <div class="text-3xl font-bold text-yellow-200 text-center">+25 poäng</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-orange-900/40 to-orange-800/40 p-4 rounded-lg border-2 border-orange-500/50">
-                            <div class="text-2xl font-bold text-orange-300 text-center mb-2">1 plats fel</div>
-                            <div class="text-3xl font-bold text-orange-200 text-center">+18 poäng</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-red-900/40 to-red-800/40 p-4 rounded-lg border-2 border-red-500/50">
-                            <div class="text-2xl font-bold text-red-300 text-center mb-2">2 platser fel</div>
-                            <div class="text-3xl font-bold text-red-200 text-center">+13 poäng</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-pink-900/40 to-pink-800/40 p-4 rounded-lg border-2 border-pink-500/50">
-                            <div class="text-2xl font-bold text-pink-300 text-center mb-2">3 platser fel</div>
-                            <div class="text-3xl font-bold text-pink-200 text-center">+9 poäng</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/40 p-4 rounded-lg border-2 border-purple-500/50">
-                            <div class="text-2xl font-bold text-purple-300 text-center mb-2">4 platser fel</div>
-                            <div class="text-3xl font-bold text-purple-200 text-center">+6 poäng</div>
-                        </div>
-                        <div class="bg-gradient-to-br from-gray-700/40 to-gray-600/40 p-4 rounded-lg border-2 border-gray-500/50">
-                            <div class="text-2xl font-bold text-gray-300 text-center mb-2">5+ platser fel</div>
-                            <div class="text-3xl font-bold text-gray-200 text-center">+3 poäng</div>
-                        </div>
-                    </div>
-                </div>
+    <section id="spel" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('gamepad') }}<span>Spel</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}#games">Spel på startsidan →</a>
+      </div>
+      <ul class="manual-feature-list">
+        <li><a href="{{ url_for('cross_jump_modern') }}">Cross Jump Modern</a> — hoppspel (finns även klassisk variant)</li>
+        <li><a href="{{ url_for('motocross_quiz') }}">Motocross Quiz</a> — kunskapstest</li>
+      </ul>
+      <div class="manual-goto-row">
+        <a class="manual-goto" href="{{ url_for('cross_jump_modern') }}">Spela Cross Jump →</a>
+        <a class="manual-goto" href="{{ url_for('motocross_quiz') }}">Starta quiz →</a>
+      </div>
+      <p class="mt-3 mb-0 text-slate-400 text-sm">Highscores syns under fliken <strong>Spel</strong> på startsidan.</p>
+    </section>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <section id="tips" class="manual-card">
+      <div class="manual-card-head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('target') }}<span>Tips</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Till race picks →</a>
+      </div>
+      <ul>
+        <li>Lämna in picks i god tid — deadline är 2&nbsp;h före start</li>
+        <li>Kolla OUT-listan innan du tippar</li>
+        <li>Närhet belönas: en plats fel ger fortfarande bra poäng</li>
+        <li>Säsongsteam: prioritera stabila topplaceringar framför enstaka vinster</li>
+        <li>I ligor: jämn form i laget väger tyngre än en ensam stjärna</li>
+      </ul>
+    </section>
 
-                    <div class="bg-gradient-to-br from-green-900/40 to-green-800/40 p-6 rounded-lg border-2 border-green-500/50 shadow-lg">
-                        <h3 class="text-xl font-bold text-green-200 mb-3 flex items-center gap-2">
-                            <span>🚀</span>
-                            <span>Holeshot</span>
-                        </h3>
-                        <p class="text-green-100 font-medium mb-3">
-                            Om du gissar rätt holeshot-vinnare
-                        </p>
-                        <div class="text-4xl font-bold text-green-300 text-center drop-shadow-lg">
-                            +10 poäng
-                        </div>
-                        <p class="text-sm text-green-100 text-center mt-2 font-medium">
-                            Bonus: Båda holeshots rätt = 25 poäng totalt
-                        </p>
-                    </div>
+    <section class="manual-card text-center">
+      <h2 class="!mb-2">Lycka till</h2>
+      <p class="text-slate-400 mb-4">Ha kul, följ sporten — och lämna in innan deadline.</p>
+      {% if not is_logged_in %}
+      <div class="flex flex-col sm:flex-row gap-2 justify-center">
+        <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Registrera dig</a>
+        <a href="{{ url_for('login') }}" class="rp-btn rp-btn--secondary">Logga in</a>
+      </div>
+      {% else %}
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--primary">Till startsidan</a>
+      {% endif %}
+    </section>
+  </main>
 
-                    <div class="bg-gradient-to-br from-purple-900/40 to-purple-800/40 p-6 rounded-lg border-2 border-purple-500/50 shadow-lg">
-                        <h3 class="text-xl font-bold text-purple-200 mb-3 flex items-center gap-2">
-                            <span>⭐</span>
-                            <span>Wildcard</span>
-                        </h3>
-                        <p class="text-purple-100 font-medium mb-3">
-                            Om både förare och position stämmer
-                        </p>
-                        <div class="text-4xl font-bold text-purple-300 text-center drop-shadow-lg">
-                            +15 poäng
-                        </div>
-                    </div>
-                </div>
+  <script>
+    (function () {
+      var backLink = document.getElementById('manual-back-link');
+      if (!backLink) return;
+      var ref = document.referrer;
+      try {
+        if (ref) {
+          var refUrl = new URL(ref);
+          var here = new URL(window.location.href);
+          if (refUrl.origin === here.origin && refUrl.pathname !== here.pathname) {
+            backLink.setAttribute('href', ref);
+            if (refUrl.pathname.indexOf('/leagues/') === 0) {
+              backLink.textContent = '← Tillbaka till ligan';
+            }
+          }
+        }
+      } catch (e) {}
+    })();
 
-                <div class="highlight-box mt-6">
-                    <h3 class="text-xl font-semibold text-gray-200 mb-3">📊 Exempel på poängberäkning</h3>
-                    <div class="space-y-3 text-gray-300">
-                        <p><strong>Scenario:</strong> Du gissade att Förare A skulle bli 1:a, Förare B skulle bli 3:e, och Förare C skulle bli 2:a.</p>
-                        <ul class="list-disc list-inside space-y-1 ml-4">
-                            <li>Förare A blev <strong>1:a</strong> = <strong>25 poäng</strong> (perfekt träff!)</li>
-                            <li>Förare B blev <strong>4:e</strong> = <strong>9 poäng</strong> (3 platser fel)</li>
-                            <li>Förare C blev <strong>3:e</strong> = <strong>18 poäng</strong> (1 plats fel)</li>
-                            <li>Du gissade rätt holeshot (en) = <strong>10 poäng</strong></li>
-                            <li>Eller båda holeshots rätt = <strong>25 poäng totalt</strong> (bonus!)</li>
-                            <li>Din wildcard blev rätt = <strong>15 poäng</strong></li>
-                        </ul>
-                        <p class="mt-3 font-bold text-lg">
-                            <strong>Totalt för detta race: 77 poäng (en holeshot rätt) eller 92 poäng (båda holeshots rätt)!</strong>
-                        </p>
-                        <p class="mt-2 text-sm text-gray-400">
-                            <strong>Tips:</strong> Med det nya systemet belönas du mer för närhet - även om du inte gissar exakt rätt kan du fortfarande tjäna bra poäng!
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 6: Season Team -->
-        <div id="season-team" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>6️⃣</span>
-                <span>Säsongsteam</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div class="warning-box">
-                    <p class="font-semibold text-orange-300">ℹ️ Viktigt:</p>
-                    <p class="text-gray-300">
-                        Säsongsteam är endast tillgängligt för <strong>SX, MX och SMX-serierna</strong>. 
-                        WSX-serien har inte säsongsteam-funktion.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏆 Vad är Säsongsteam?</h3>
-                    <p class="text-gray-300 mb-4">
-                        Förutom att gissa för varje enskilt race, väljer du också ett <strong>säsongsteam</strong> - 
-                        förare som du tror kommer att prestera bra genom hela säsongen. Dessa förare ger dig poäng baserat på 
-                        deras resultat i <strong>alla</strong> race under säsongen!
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">👥 Välja ditt team</h3>
-                    <p class="text-gray-300 mb-4">
-                        Du väljer förare från både 450cc och 250cc klasser. 
-                        Dessa förare ger dig poäng varje race baserat på deras placering:
-                    </p>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                        <div class="bg-yellow-900/50 border-2 border-yellow-500/50 p-3 rounded text-center shadow-lg">
-                            <div class="text-2xl font-bold text-yellow-300">1:a</div>
-                            <div class="text-sm text-yellow-200 font-semibold">25p</div>
-                        </div>
-                        <div class="bg-gray-700/70 border-2 border-gray-600/50 p-3 rounded text-center shadow-lg">
-                            <div class="text-2xl font-bold text-gray-300">2:a</div>
-                            <div class="text-sm text-gray-200 font-semibold">20p</div>
-                        </div>
-                        <div class="bg-orange-900/50 border-2 border-orange-500/50 p-3 rounded text-center shadow-lg">
-                            <div class="text-2xl font-bold text-orange-300">3:e</div>
-                            <div class="text-sm text-orange-200 font-semibold">15p</div>
-                        </div>
-                        <div class="bg-blue-900/50 border-2 border-blue-500/50 p-3 rounded text-center shadow-lg">
-                            <div class="text-2xl font-bold text-blue-300">4:e</div>
-                            <div class="text-sm text-blue-200 font-semibold">12p</div>
-                        </div>
-                        <div class="bg-green-900/50 border-2 border-green-500/50 p-3 rounded text-center shadow-lg">
-                            <div class="text-2xl font-bold text-green-300">5:e</div>
-                            <div class="text-sm text-green-200 font-semibold">10p</div>
-                        </div>
-                    </div>
-                    <div class="bg-gray-700/50 p-4 rounded-lg mb-4">
-                        <p class="text-sm text-gray-300 mb-2"><strong>Övriga placeringar:</strong></p>
-                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
-                            <li>6:e = 8p</li>
-                            <li>7-10:e = 5p</li>
-                            <li>11-15:e = 3p</li>
-                            <li>16-20:e = 1p</li>
-                            <li>21+ = 0p</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-2 border-purple-400 p-6 rounded-lg shadow-lg">
-                    <p class="font-semibold text-purple-300 mb-3 text-xl">🎉 Bonuspoäng!</p>
-                    <p class="text-gray-300 mb-3">
-                        Om <strong>alla</strong> dina förare i samma klass (450cc eller 250cc) hamnar i <strong>top 6</strong> i samma tävling, 
-                        får du <strong>50 bonuspoäng</strong> per klass!
-                    </p>
-                    <div class="bg-gray-800/50 p-4 rounded mt-3">
-                        <p class="text-sm text-gray-300 mb-2"><strong>Exempel:</strong></p>
-                        <ul class="text-sm text-gray-300 space-y-1 ml-4">
-                            <li>Båda dina 450cc-förare i top 6 = <strong>+50p bonus</strong></li>
-                            <li>Båda dina 250cc-förare i top 6 = <strong>+50p bonus</strong></li>
-                            <li>Båda klasserna i top 6 = <strong>+100p bonus</strong> (50p × 2)</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="bg-green-900/30 p-6 rounded-lg border-2 border-green-400 mt-4">
-                    <p class="font-semibold text-green-300 mb-3">🏆 Egen Leaderboard</p>
-                    <p class="text-gray-300">
-                        Dina säsongsteam-poäng har en <strong>egen leaderboard</strong> som är separat från tävlingsval-poängen. 
-                        Du kan se både din tävlingsval-poäng och din säsongsteam-poäng på leaderboard-sidan. 
-                        Detta gör att du kan tävla på två olika sätt - både genom tävlingsval och genom ditt säsongsteam!
-                    </p>
-                </div>
-
-                <div class="highlight-box">
-                    <p class="font-semibold text-gray-200 mb-2">💡 Strategi:</p>
-                    <p class="text-gray-300 mb-3">
-                        Välj förare som är konsistenta och kommer att prestera bra hela säsongen, inte bara i ett race. 
-                        En stabil förare som alltid hamnar i topp 5 kan ge mer poäng totalt än en förare som vinner en gång men kraschar ofta!
-                    </p>
-                    <p class="text-gray-300">
-                        <strong>Bonus-tips:</strong> Försök välja förare som ofta hamnar i top 6, så att du har chans att få bonuspoäng när båda dina förare i samma klass presterar bra samtidigt!
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🔄 Ändra ditt Säsongsteam</h3>
-                    <p class="text-gray-300 mb-4">
-                        Du kan när som helst ändra ditt säsongsteam! Om en förare blir skadad, presterar dåligt eller om du bara vill testa något nytt, 
-                        kan du <strong>sälja en eller flera förare</strong> och ersätta dem med nya.
-                    </p>
-                    
-                    <div class="bg-orange-900/30 p-6 rounded-lg border-2 border-orange-400">
-                        <p class="font-semibold text-orange-300 mb-3">⚠️ Poängavdrag vid byte:</p>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300 ml-2">
-                            <li><strong>50 poäng per förare</strong> som du byter ut</li>
-                            <li>Du måste ha tillräckligt med poäng för att kunna göra ändringarna</li>
-                            <li>Poängen dras av från dina totala tävlingspoäng (race picks, holeshot, wildcard)</li>
-                            <li>Du kan byta <strong>en eller flera förare</strong> åt gången</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-blue-900/30 p-6 rounded-lg border-2 border-blue-400 mt-4">
-                        <p class="font-semibold text-blue-300 mb-3">📝 Exempel:</p>
-                        <p class="text-gray-300 mb-2">
-                            Om du byter ut <strong>2 förare</strong> i ditt säsongsteam kostar det <strong>100 poäng</strong> (2 × 50 poäng).
-                            Du måste ha minst 100 poäng från dina tävlingsval för att kunna göra detta byte.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 7: Ligor -->
-        <div id="ligor" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>7️⃣</span>
-                <span>Ligor</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">👥 Vad är Ligor?</h3>
-                    <p class="text-gray-300 mb-4">
-                        Ligor är privata grupper där du tävlar mot vänner, familj eller kollegor. 
-                        Skapa din egen liga och bjud in andra spelare för att se vem som är bäst!
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏗️ Skapa en liga</h3>
-                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
-                        <li>Gå till <strong>Ligor</strong>-tabben</li>
-                        <li>Klicka på <strong>"Skapa Ny Liga"</strong></li>
-                        <li>Ge din liga ett namn och beskrivning</li>
-                        <li>Välj om den ska vara <strong>publik</strong> (alla kan hitta den) eller <strong>privat</strong></li>
-                        <li>Du får en <strong>inbjudningskod</strong> som du kan dela med andra</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎫 Gå med i en liga</h3>
-                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
-                        <li>Använd en <strong>inbjudningskod</strong> för att gå med direkt</li>
-                        <li>Eller bläddra genom <strong>publika ligor</strong> och ansök om medlemskap</li>
-                        <li>Vänta på att liga-ägaren godkänner din ansökan</li>
-                    </ul>
-                </div>
-
-                <div class="points-box">
-                    <p class="font-semibold text-gray-200 mb-3">🏆 Ligapoängsystem:</p>
-                    
-                    <div class="mb-4">
-                        <h4 class="font-semibold text-gray-200 mb-2">📊 Inom ligan:</h4>
-                        <p class="text-gray-300 mb-2">
-                            Medlemmarna i din liga tävlar mot varandra med sina <strong>totala säsongspoäng</strong> 
-                            (summan av alla race-poäng från alla tävlingar). Till exempel: om du fick 240p för Anaheim 
-                            och 200p för San Diego, så har du totalt <strong>440p</strong>. Den som har högst totala 
-                            poäng leder ligan! Du kan se ligans leaderboard i <strong>Ligor</strong>-tabben.
-                        </p>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h4 class="font-semibold text-gray-200 mb-2">⚔️ Mellan ligor:</h4>
-                        <p class="text-gray-300 mb-2">
-                            Ligorna tävlar också mot varandra i en global liga-ranking. För att systemet ska vara 
-                            <strong>rättvist oavsett ligastorlek</strong> använder vi ett smart poängsystem per tävling:
-                        </p>
-                        <ul class="list-disc list-inside space-y-1 text-gray-300 ml-4 mb-2">
-                            <li><strong>1 medlem:</strong> Använder den personens poäng direkt</li>
-                            <li><strong>2 medlemmar:</strong> Genomsnittet av båda medlemmarnas poäng</li>
-                            <li><strong>3-4 medlemmar:</strong> Genomsnittet av de 2 bästa poängen</li>
-                            <li><strong>5-6 medlemmar:</strong> Genomsnittet av de 3 bästa poängen</li>
-                            <li><strong>7+ medlemmar:</strong> Genomsnittet av de bästa 50% (avrundat uppåt)</li>
-                        </ul>
-                        <p class="text-gray-300">
-                            Ligan summerar sedan poäng från alla tävlingar för att få sin totala liga-poäng. 
-                            Detta gör att både små ligor (2-3 medlemmar) och stora ligor (10-25 medlemmar) 
-                            kan tävla rättvist mot varandra - <strong>det bästa laget vinner, oavsett antal medlemmar!</strong>
-                        </p>
-                    </div>
-                </div>
-
-                <div class="highlight-box">
-                    <p class="font-semibold text-amber-300 mb-2">⚔️ Liga-dueller</p>
-                    <p class="text-gray-300 mb-2">
-                        Utöver liga-poäng kan medlemmar köra <strong>1v1-dueller</strong> inför varje race — med motfrågor som
-                        H2H Prognos, Vem högre? och Brand battle. Läs mer i kapitlet
-                        <a href="#liga-dueller" class="text-cyan-400 hover:text-cyan-300 underline font-semibold">Liga-dueller</a>.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 7b: Liga-dueller -->
-        <div id="liga-dueller" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-amber-500/25">
-            <h2 class="text-3xl font-bold text-gray-200 mb-2 flex items-center gap-3">
-                <span>⚔️</span>
-                <span>Liga-dueller</span>
-            </h2>
-            <p class="text-amber-300/80 text-sm mb-6">1v1-utmaningar inom din liga — per race, innan picks stänger</p>
-
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎯 Vad är en liga-duell?</h3>
-                    <p class="text-gray-300 mb-4">
-                        På ligasidan kan du utmana en medlem i en <strong>1v1-duell</strong> inför nästa race.
-                        Det är inte samma sak som liga-poäng eller leaderboard — det är en rolig sidospel mellan två spelare
-                        med egna motfrågor, märken och skrytpoäng.
-                    </p>
-                    <div class="highlight-box">
-                        <p class="font-semibold text-gray-200 mb-2">📌 Så går det till:</p>
-                        <ol class="list-decimal list-inside space-y-1 text-gray-300 ml-2">
-                            <li>Du <strong>utmanar</strong> någon i ligan</li>
-                            <li>Motståndaren väljer <strong>motfråga</strong> och klass (250 eller 450)</li>
-                            <li>Båda låser sina <strong>svar innan picks stänger</strong></li>
-                            <li>Duellen <strong>avgörs efter racet</strong> när resultaten räknas</li>
-                        </ol>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏍️ De tre motfrågorna</h3>
-                    <p class="text-gray-300 mb-4">
-                        Den som blir utmanad väljer vilken typ av duell ni kör. Alla gäller en vald klass — t.ex.
-                        <strong>250 klassen</strong> eller <strong>450 klassen</strong>.
-                    </p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="duel-type-card">
-                            <h4>⚔️ H2H Prognos</h4>
-                            <p class="text-sm text-gray-300">
-                                Båda väljer en förare i klassen <em>och</em> gissar placering (1–20).
-                                Den som är <strong>närmast rätt</strong> vinner. Träffar du exakt rätt placering vinner du direkt!
-                            </p>
-                        </div>
-                        <div class="duel-type-card">
-                            <h4>🏁 Vem högre?</h4>
-                            <p class="text-sm text-gray-300">
-                                Utmanade väljer <strong>två förare</strong> i klassen. Utmanaren gissar vilken av dem
-                                som placerar sig bäst i racet. Rätt gissning = vinst.
-                            </p>
-                        </div>
-                        <div class="duel-type-card">
-                            <h4>🏍️ Brand battle</h4>
-                            <p class="text-sm text-gray-300">
-                                Utmanade väljer <strong>två märken</strong> (t.ex. Honda vs Yamaha). Båda väljer sedan
-                                vilket märke de tror på. Bästa förarplacering per märke i klassen avgör vinnaren.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">📏 Regler & gränser</h3>
-                    <ul class="list-disc list-inside space-y-2 text-gray-300 ml-4">
-                        <li>Du kan bli <strong>inbjuden till hur många dueller som helst</strong> — men bara ha <strong>2 aktiva samtidigt</strong> per race (egna utmaningar + accepterade)</li>
-                        <li>Max <strong>1 egen utmaning</strong> som väntar på svar åt gången</li>
-                        <li>Samma par kan bara ha <strong>1 aktiv duell</strong> per race</li>
-                        <li>Ofullständiga dueller (saknat svar) går ut när picks låses</li>
-                        <li><strong>Oavgjort</strong> om lika nära mål / samma placering — inget W eller L</li>
-                    </ul>
-                </div>
-
-                <div class="points-box">
-                    <h3 class="text-xl font-bold text-amber-300 mb-3">🏅 Märken & saldo (W − L)</h3>
-                    <p class="text-gray-300 mb-3">
-                        Efter varje race räknas ditt resultat i duellerna för den tävlingen. Du får ett
-                        <strong>netto-saldo</strong> = vinster minus förluster:
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                        <div class="bg-green-900/30 border border-green-500/40 rounded-lg p-3 text-center">
-                            <div class="text-2xl mb-1">🔮</div>
-                            <div class="text-sm font-bold text-green-300">Plus-saldo</div>
-                            <div class="text-xs text-gray-400 mt-1">Glory-märke (Profeten, Prickskytten…)</div>
-                        </div>
-                        <div class="bg-gray-700/40 border border-gray-500/40 rounded-lg p-3 text-center">
-                            <div class="text-2xl mb-1">⚖️</div>
-                            <div class="text-sm font-bold text-gray-300">0 (t.ex. 1W–1L)</div>
-                            <div class="text-xs text-gray-400 mt-1">Inget märke</div>
-                        </div>
-                        <div class="bg-red-900/30 border border-red-500/40 rounded-lg p-3 text-center">
-                            <div class="text-2xl mb-1">🐫</div>
-                            <div class="text-sm font-bold text-red-300">Minus-saldo</div>
-                            <div class="text-xs text-gray-400 mt-1">Shame-märke (Kamelen, Löken…)</div>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-300">
-                        Märket gäller för <strong>det racet</strong> och syns på ligasidan under Dina dueller
-                        (t.ex. <em>2W–1L</em>). Nästa race börjar om med nya dueller.
-                    </p>
-                </div>
-
-                <div class="warning-box">
-                    <p class="font-semibold text-orange-300 mb-2">🔔 Notiser</p>
-                    <p class="text-gray-300">
-                        Du får klock-notis när någon utmanar dig, svarar, låser sin duell eller när resultatet är klart.
-                        Klicka på notisen för att gå direkt till duellerna på ligasidan.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 8: Spel & Highscores -->
-        <div id="spel" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>8️⃣</span>
-                <span>Spel & Highscores</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🎮 Cross Jump</h3>
-                    <p class="text-gray-300 mb-4">
-                        Ett roligt hopp-spel där du styr en motorcykel över hinder. 
-                        Se hur långt du kan komma och tävla om högsta poäng!
-                    </p>
-                    <p class="text-sm text-gray-400">
-                        <strong>Kontroller:</strong> Använd piltangenter eller spacebar för att hoppa.
-                    </p>
-                </div>
-
-                <div>
-                    <h3 class="text-2xl font-semibold text-gray-200 mb-3">🏁 Motocross Quiz</h3>
-                    <p class="text-gray-300 mb-4">
-                        Testa dina kunskaper om motocross! Svara på frågor om förare, lag, historia och mer. 
-                        Varje rätt svar ger poäng - se hur bra du kan!
-                    </p>
-                </div>
-
-                <div class="highlight-box">
-                    <p class="font-semibold text-gray-200 mb-2">📊 Highscores:</p>
-                    <p class="text-gray-300">
-                        Dina bästa resultat sparas och visas i <strong>Spel</strong>-tabben. 
-                        Tävla mot andra spelare för att toppa highscore-listan!
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 9: Tips & Strategier -->
-        <div id="tips" class="manual-section bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-lg p-4 sm:p-8 mb-4 sm:mb-8 border border-gray-700/50">
-            <h2 class="text-3xl font-bold text-gray-200 mb-6 flex items-center gap-3">
-                <span>9️⃣</span>
-                <span>Tips & Strategier</span>
-            </h2>
-            
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-blue-900/30 p-6 rounded-lg">
-                        <h3 class="text-xl font-semibold text-blue-300 mb-3">💡 Race Picks</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300">
-                            <li>Följ förares form och skadestatus</li>
-                            <li>Kolla banans karaktär (vem passar bäst?)</li>
-                            <li>Analysera kvalresultat om tillgängligt</li>
-                            <li>Sprea riskerna - inte alla favoriter!</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-green-900/30 p-6 rounded-lg">
-                        <h3 class="text-xl font-semibold text-green-300 mb-3">🎯 Holeshot</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300">
-                            <li>Kolla vilka som startar bäst just nu</li>
-                            <li>Överväg gate-positionen</li>
-                            <li>Vissa förare är bättre på start</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-purple-900/30 p-6 rounded-lg">
-                        <h3 class="text-xl font-semibold text-purple-300 mb-3">⭐ Wildcard</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300">
-                            <li>Chans att tjäna stora poäng (15p!)</li>
-                            <li>Välj någon som kan överraska</li>
-                            <li>Kolla form och motivation</li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-orange-900/30 p-6 rounded-lg">
-                        <h3 class="text-xl font-semibold text-orange-300 mb-3">🏆 Säsongsteam</h3>
-                        <ul class="list-disc list-inside space-y-2 text-gray-300">
-                            <li>Välj konsistenta förare</li>
-                            <li>Balansera mellan säkra kort och överraskningar</li>
-                            <li>Kolla förares skadehistorik</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="warning-box">
-                    <p class="font-semibold text-orange-300 mb-2">⚠️ Viktiga påminnelser:</p>
-                    <ul class="list-disc list-inside space-y-1 text-gray-300 ml-2">
-                        <li>Gör dina picks <strong>innan</strong> de låses (2 timmar före race)</li>
-                        <li>Kolla att inga förare är skadade eller OUT</li>
-                        <li>Varje förare kan bara väljas <strong>en gång</strong> per race</li>
-                        <li>Följ tävlingarna live för att lära dig mer!</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg shadow-lg p-8 text-white text-center mb-8">
-            <h2 class="text-3xl font-bold mb-4">🏁 Lycka till!</h2>
-            <p class="text-lg mb-4">
-                Nu är du redo att börja tävla! Kom ihåg att det viktigaste är att ha kul och följa sporten du älskar.
-            </p>
-            <p class="text-blue-100">
-                Om du har frågor eller behöver hjälp, kontakta en administratör eller kolla i Settings-tabben.
-            </p>
-        </div>
-
-        <!-- Call to Action Section - Bottom of page -->
-        {% if not is_logged_in %}
-        <div class="bg-gradient-to-br from-cyan-600/80 via-blue-600/80 to-purple-600/80 backdrop-blur-sm rounded-xl shadow-2xl p-6 sm:p-8 mb-4 sm:mb-8 border-2 border-cyan-400/50 relative overflow-hidden">
-            <!-- Animated background effect -->
-            <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-purple-500/20 animate-pulse"></div>
-            <div class="relative z-10 text-center">
-                <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 drop-shadow-lg">
-                    🏁 Redo att tävla?
-                </h2>
-                <p class="text-lg sm:text-xl text-cyan-100 mb-6 max-w-2xl mx-auto">
-                    Nu när du vet hur allt fungerar är det dags att göra dina picks, tävla mot vänner och bli den stora vinnaren!
-                </p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <a href="{{ url_for('register') }}" class="group relative bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 hover:from-green-400 hover:via-green-500 hover:to-emerald-500 text-white font-bold py-4 px-8 rounded-xl shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 transition-all duration-300 text-center block overflow-hidden min-w-[200px]">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <span class="relative z-10 flex items-center justify-center gap-2">
-                            <span class="text-xl">✨</span>
-                            <span>Registrera dig</span>
-                        </span>
-                    </a>
-                    <a href="{{ url_for('login') }}" class="group relative bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-400 hover:via-blue-500 hover:to-indigo-500 text-white font-bold py-4 px-8 rounded-xl shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300 text-center block overflow-hidden min-w-[200px] border-2 border-blue-400/50">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                        <span class="relative z-10 flex items-center justify-center gap-2">
-                            <span class="text-xl">🔐</span>
-                            <span>Logga in</span>
-                        </span>
-                    </a>
-                </div>
-            </div>
-        </div>
-        {% else %}
-        <div class="bg-gradient-to-br from-green-600/80 via-emerald-600/80 to-teal-600/80 backdrop-blur-sm rounded-xl shadow-2xl p-6 sm:p-8 mb-4 sm:mb-8 border-2 border-green-400/50 relative overflow-hidden">
-            <!-- Animated background effect -->
-            <div class="absolute inset-0 bg-gradient-to-r from-green-500/20 via-transparent to-teal-500/20 animate-pulse"></div>
-            <div class="relative z-10 text-center">
-                <h2 class="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 drop-shadow-lg">
-                    🏍️ Hej {{ username }}!
-                </h2>
-                <p class="text-lg sm:text-xl text-green-100 mb-6 max-w-2xl mx-auto">
-                    Nu när du vet hur allt fungerar, är det dags att göra dina picks och tävla!
-                </p>
-                <a href="/" class="group relative inline-block bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 hover:from-yellow-400 hover:via-orange-400 hover:to-red-400 text-white font-bold py-4 px-8 rounded-xl shadow-2xl hover:shadow-orange-500/50 transform hover:scale-105 transition-all duration-300 text-center block overflow-hidden min-w-[250px]">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                    <span class="relative z-10 flex items-center justify-center gap-2">
-                        <span class="text-xl">🏁</span>
-                        <span>Tillbaka till tävlingarna</span>
-                        <span class="text-xl">→</span>
-                    </span>
-                </a>
-            </div>
-        </div>
-        {% endif %}
-    </main>
-
-    <script>
-        // Smart back button: return to where the user came from (e.g. a league page)
-        (function () {
-            var backLink = document.getElementById('manual-back-link');
-            if (!backLink) return;
-            var ref = document.referrer;
-            try {
-                if (ref) {
-                    var refUrl = new URL(ref);
-                    var here = new URL(window.location.href);
-                    // Only trust same-origin referrers that are not the manual itself
-                    if (refUrl.origin === here.origin && refUrl.pathname !== here.pathname) {
-                        backLink.setAttribute('href', ref);
-                        if (refUrl.pathname.indexOf('/leagues/') === 0) {
-                            backLink.textContent = '← Tillbaka till ligan';
-                        }
-                    }
-                }
-            } catch (e) { /* keep default href="/" */ }
-        })();
-
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-    </script>
+    document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        var target = document.querySelector(this.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  </script>
 </body>
 </html>
-
