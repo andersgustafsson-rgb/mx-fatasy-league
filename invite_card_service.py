@@ -90,7 +90,13 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
         inviter_username = inviter.username
         inviter_name = (inviter.display_name or inviter.username or "").strip()
 
-    host_line = "mx-fatasy-league.eu.onrender.com/start"
+    try:
+        from public_url import get_public_base_url
+
+        base_host = get_public_base_url().replace("https://", "").replace("http://", "").rstrip("/")
+    except Exception:
+        base_host = "mx-fantasy.se"
+    host_line = f"{base_host}/start"
     if inviter_username:
         host_line += f"?ref={inviter_username}"
 

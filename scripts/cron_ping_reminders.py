@@ -58,9 +58,13 @@ def main() -> int:
 
     url = (os.getenv("REMINDER_CRON_URL") or "").strip()
     if not url:
-        base = (os.getenv("RENDER_EXTERNAL_URL") or os.getenv("PUBLIC_BASE_URL") or "").strip().rstrip("/")
+        base = (
+            os.getenv("PUBLIC_BASE_URL")
+            or os.getenv("RENDER_EXTERNAL_URL")
+            or "https://mx-fantasy.se"
+        ).strip().rstrip("/")
         if not base:
-            print("REMINDER_CRON_URL eller RENDER_EXTERNAL_URL saknas", file=sys.stderr)
+            print("REMINDER_CRON_URL eller PUBLIC_BASE_URL saknas", file=sys.stderr)
             return 1
         url = f"{base}/api/cron/reminders"
 

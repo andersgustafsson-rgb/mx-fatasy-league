@@ -3371,30 +3371,21 @@ def _render_recap_stats_from_template(data: dict[str, Any]) -> bytes:
     return buf.getvalue()
 
 
-RECAP_FOOTER_HOST = "mx-fatasy-league.eu.onrender.com"
-
-
-def _normalize_recap_host(host: str) -> str:
-    """Rätta vanliga Render-felskrivningar (bindestreck istället för punkt före eu)."""
-    h = (host or "").strip()
-    if not h:
-        return RECAP_FOOTER_HOST
-    # t.ex. mx-fatasy-league-eu.onrender.com → mx-fatasy-league.eu.onrender.com
-    if re.search(r"-eu\.onrender\.com$", h, re.I):
-        h = re.sub(r"-eu\.onrender\.com$", ".eu.onrender.com", h, flags=re.I)
-    return h
+RECAP_FOOTER_HOST = "mx-fantasy.se"
 
 
 def _recap_footer_label() -> str:
-    """Webbadress i recap-footer — EU Render (eu.onrender.com)."""
-    host = ""
-    for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
-        v = (os.getenv(key) or "").strip().rstrip("/")
-        if v:
-            host = urlparse(v).netloc or v.split("://", 1)[-1].split("/")[0]
-            break
-    host = _normalize_recap_host(host)
-    if not host or host.lower() == "mx-fatasy-league.onrender.com":
+    """Webbadress i recap-footer (kanonisk sajt)."""
+    host = RECAP_FOOTER_HOST
+    try:
+        from public_url import get_public_base_url
+
+        v = get_public_base_url()
+        parsed = urlparse(v)
+        host = (parsed.netloc or v.split("://", 1)[-1].split("/")[0] or RECAP_FOOTER_HOST).strip()
+    except Exception:
+        pass
+    if not host or "onrender.com" in host.lower():
         host = RECAP_FOOTER_HOST
     return f"{host} · Spela med oss"
 

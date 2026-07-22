@@ -18,11 +18,12 @@ def _notify_enabled() -> bool:
 
 
 def _public_base_url() -> str:
-    for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
-        v = (os.getenv(key) or "").strip().rstrip("/")
-        if v:
-            return v
-    return ""
+    try:
+        from public_url import get_public_base_url
+
+        return get_public_base_url()
+    except Exception:
+        return (os.getenv("PUBLIC_BASE_URL") or "https://mx-fantasy.se").strip().rstrip("/")
 
 
 def _valid_email(email: str | None) -> bool:

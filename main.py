@@ -481,17 +481,21 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 
-def get_public_base_url() -> str:
-    """
-    Canonical public site URL (https, correct host) for links in emails.
-    On Render, request.host_url can be http or wrong without proxy headers;
-    set PUBLIC_BASE_URL or rely on RENDER_EXTERNAL_URL.
-    """
-    for key in ("PUBLIC_BASE_URL", "RENDER_EXTERNAL_URL"):
-        v = (os.getenv(key) or "").strip().rstrip("/")
-        if v:
-            return v
-    return request.host_url.rstrip("/")
+from public_url import (  # noqa: E402
+    get_public_base_url,
+    is_legacy_render_host,
+    legacy_redirect_url,
+)
+
+
+@app.before_request
+def _redirect_legacy_render_host():
+    """Send old *.onrender.com traffic to mx-fantasy.se (keep path + query)."""
+    # Keep health checks on the Render hostname (status probes).
+    if request.path in ("/health", "/healthz"):
+        return None
+    if is_legacy_render_host(request.host):
+        return redirect(legacy_redirect_url(request.full_path), code=301)
 
 
 # Database is initialized in models.py and bound here via db.init_app(app)
@@ -1248,17 +1252,9 @@ def _invite_picks_target() -> tuple[str, str]:
 
 
 def _absolute_url(endpoint: str, **values) -> str:
-    """Build absolute URL; prefer https on Render / behind proxies."""
-    url = url_for(endpoint, _external=True, **values)
-    forwarded = (request.headers.get("X-Forwarded-Proto") or "").split(",")[0].strip().lower()
-    want_https = (
-        forwarded == "https"
-        or request.is_secure
-        or str(os.environ.get("RENDER", "")).lower() in ("1", "true", "yes")
-    )
-    if want_https and url.startswith("http://"):
-        url = "https://" + url[len("http://") :]
-    return url
+    """Build absolute URL using the canonical public host (mx-fantasy.se)."""
+    path = url_for(endpoint, _external=False, **values)
+    return f"{get_public_base_url()}{path}"
 
 
 def _build_invite_share_payload(username: str) -> dict:
