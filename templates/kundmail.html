@@ -129,6 +129,7 @@
               <select id="language" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm">
                 <option value="sv">Svenska</option>
                 <option value="da">Danska</option>
+                <option value="en">Engelska</option>
               </select>
             </div>
             <div class="space-y-1">
@@ -249,6 +250,9 @@
             <button id="translateToDanish" type="button" class="px-3 py-1.5 rounded-lg bg-sky-900/60 hover:bg-sky-800/80 text-xs border border-sky-700 text-sky-100">
               Översätt till danska
             </button>
+            <button id="translateToEnglish" type="button" class="px-3 py-1.5 rounded-lg bg-indigo-900/60 hover:bg-indigo-800/80 text-xs border border-indigo-700 text-indigo-100">
+              Översätt till engelska
+            </button>
             <button id="copySubject" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera ämne</button>
             <button id="copyBody" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera text</button>
             <button id="copyAll" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold">Kopiera allt</button>
@@ -257,7 +261,7 @@
 
         <p id="validation" class="text-xs text-amber-400"></p>
 
-        <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten. «Generera om från mall» byter till mall på valt språk. «Översätt till danska» översätter det du skrivit.</p>
+        <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten. «Generera om från mall» byter till mall på valt språk. «Översätt till …» översätter det du skrivit.</p>
 
         <div class="space-y-1">
           <label for="subjectOut" class="block text-xs font-medium text-slate-400">Ämne (kan redigeras)</label>
@@ -277,7 +281,7 @@
           <p class="text-[11px] text-slate-500">Tips: klistra in skärmdumpar med Ctrl+V. Vid «Kopiera text» följer bilderna med om ditt mailprogram stödjer det.</p>
         </div>
 
-        <p class="text-[11px] text-slate-500">«Generera om från mall» = ny text från mallen. «Översätt till danska» = översätter ämne och meddelande som de står (även efter egna ändringar).</p>
+        <p class="text-[11px] text-slate-500">«Generera om från mall» = ny text från mallen. «Översätt till danska/engelska» = översätter ämne och meddelande som de står (även efter egna ändringar).</p>
       </section>
     </div>
 

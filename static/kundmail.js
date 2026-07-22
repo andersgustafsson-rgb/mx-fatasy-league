@@ -276,6 +276,42 @@ const MAIL_I18N = {
       default: "Angående din bestilling",
     },
   },
+  en: {
+    locale: "en-GB",
+    currency: "SEK",
+    mail: {
+      greetingNamed: (name, tone) => (tone === "informal" ? `Hi ${name}!` : `Hi ${name},`),
+      greetingFormal: (tone) => (tone === "informal" ? "Hi!" : "Hello,"),
+      greetingInformal: "Hi!",
+      signatureEmpty: "Kind regards",
+      signature: (parts) => `Kind regards\n${parts.join("\n")}`,
+      orderLine: (o) => ` regarding order ${o}`,
+      orderRef: (o) => (o ? `your order ${o}` : "your order"),
+      productFallback: "the product",
+      soon: "shortly",
+      replyThanks: (ord) => `Thank you for your message${ord}.`,
+      sympathy: (tone) => (tone === "informal"
+        ? "We're sorry if this causes any hassle for you."
+        : "We apologise for any inconvenience this may cause."),
+      helpOffer: (tone) => (tone === "informal"
+        ? "Just reply if you have any questions — happy to help."
+        : "Please get in touch if you have any questions — we are happy to help."),
+    },
+    subjectOrder: "Regarding order",
+    subjectStatus: {
+      slut: "Out of stock",
+      inkommer: "Back in stock soon",
+      utgatt: "Product discontinued",
+      forsening: "Delivery delayed",
+      alternativ: "Alternative product",
+      avbokad: "Order cancelled",
+      prisandring: "Price change",
+      retur: "Return",
+      outlost: "Returned parcel received",
+      produktlank: "Product link",
+      default: "Regarding your order",
+    },
+  },
 };
 
 const els = {};
@@ -445,7 +481,8 @@ async function copyRichContent(plain, html, btn) {
 
 function currentMailLang() {
   const v = cleanStr(els.language?.value) || cleanStr(loadSettings().language);
-  return v === "da" ? "da" : "sv";
+  if (v === "da" || v === "en") return v;
+  return "sv";
 }
 
 function mailPack() {
@@ -1100,6 +1137,194 @@ ${sig}`;
   return body;
 }
 
+function buildMailEn(ctx) {
+  const { templateId, prod, sig, extras, lang } = ctx;
+  const intro = mailIntro(ctx);
+  const outro = mailOutro(ctx);
+  const whenSoon = lang.mail.soon;
+  const orderNo = orderNum(ctx.orderNumber);
+  const orderRef = lang.mail.orderRef(orderNo);
+  let body = "";
+
+  switch (templateId) {
+    case "slut":
+      body = `${intro}We regret to inform you that ${prod} is currently out of stock.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+If you have other items in the same order, we unfortunately cannot split the shipment. Would you like to wait until the full order can be sent when ${prod} is back in stock, or should we remove ${prod} and send the remaining items?`;
+        if (extras.waitOption) {
+          body += ` You may also choose to cancel the entire order.`;
+        }
+        body += ` Please reply to this email and we will arrange what suits you best.`;
+      } else if (extras.waitOption) {
+        body += `
+
+Would you like to wait until the product is back in stock, or would you prefer that we cancel the order? Please reply to this email and we will arrange what suits you best.`;
+      } else {
+        body += `
+
+Please let us know if you would like us to cancel the order, or if you have any questions.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    case "inkommer": {
+      const when = formatLocaleDate(extras.expectedDate);
+      body = `${intro}We regret to inform you that ${prod} is currently out of stock.`;
+      body += ` We expect it to be available again${when ? ` around ${when}` : ` ${whenSoon}`}.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+If you have other items in the same order, we unfortunately cannot split the shipment. Would you like to wait until the full order can be sent when ${prod} is back in stock, or should we remove ${prod} and send the remaining items?`;
+        if (extras.waitOption) {
+          body += ` You may also choose to cancel the entire order.`;
+        }
+        body += ` Please let us know what works best for you.`;
+      } else if (extras.waitOption) {
+        body += `
+
+Would you like to wait for delivery once the product is back, or would you prefer that we cancel the order? Please let us know what works best for you.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    }
+    case "utgatt":
+      body = `${intro}We regret to inform you that ${prod} has been discontinued and will not return to stock.`;
+      if (extras.shipRestOfOrder) {
+        body += `
+
+If you have other items in the same order, we unfortunately cannot split the shipment. Would you like us to remove ${prod} and send the remaining items, or cancel the entire order?`;
+        if (cleanStr(extras.alternativeProduct)) {
+          body += ` As an alternative we can recommend ${cleanStr(extras.alternativeProduct)} if you would like to swap the item.`;
+        }
+        body += ` Please let us know what works best for you.`;
+      } else if (cleanStr(extras.alternativeProduct)) {
+        body += `
+
+As an alternative we can recommend ${cleanStr(extras.alternativeProduct)}. Let us know if you would like help with a replacement or if we should cancel the order.`;
+      } else {
+        body += `
+
+Please get in touch if you would like to cancel the order or if we can help you find an alternative.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    case "forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const reason = cleanStr(extras.delayReason);
+      body = `${intro}We regret to inform you that the delivery of ${prod} has been delayed`;
+      body += when ? ` and is expected around ${when}` : "";
+      body += ".";
+      if (reason) body += ` The reason is ${reason}.`;
+      body += `
+
+We are doing our best to deliver as soon as possible.
+
+${outro}`;
+      break;
+    }
+    case "alternativ": {
+      const alt = cleanStr(extras.alternativeProduct);
+      const link = cleanStr(extras.productLink);
+      body = `${intro}Unfortunately ${prod} is not available right now. We can instead offer ${alt} as a similar alternative.`;
+      if (link) body += `\n\nYou can find the product here: ${link}`;
+      body += `
+
+Would you like to switch to the alternative, wait for the original item, or cancel the order? Please reply to this email.
+
+${outro}`;
+      break;
+    }
+    case "avbokad":
+      body = `${intro}We regret to inform you that ${prod} is out of stock. We have therefore had to cancel ${orderRef}.`;
+      if (extras.refundNote === "auto") {
+        body += `
+
+Any payment will be refunded automatically to the same payment method within a few banking days.`;
+      } else if (extras.refundNote === "manual") {
+        body += `
+
+We will refund the order amount manually and get back to you once the refund has been completed.`;
+      }
+      body += `\n\n${outro}`;
+      break;
+    case "prisandring": {
+      const oldP = cleanStr(extras.oldPrice);
+      const newP = cleanStr(extras.newPrice);
+      const cur = lang.currency;
+      body = `${intro}We need to inform you that the price of ${prod} has changed`;
+      body += oldP && newP ? ` from ${oldP} ${cur} to ${newP} ${cur}` : newP ? ` to ${newP} ${cur}` : "";
+      body += ` before delivery.
+
+Would you like to keep the order at the new price, or cancel it? Please reply to this email and we will help you.
+
+${outro}`;
+      break;
+    }
+    case "produktlank": {
+      const link = cleanStr(extras.productLink);
+      const phoneThanks = extras.phoneCall
+        ? "Thank you for calling us. "
+        : "";
+      body = `${intro}${phoneThanks}Here is the link to ${prod} on our website:
+
+${link}
+
+${mailOutro(ctx, { skipSympathy: true })}`;
+      break;
+    }
+    case "retur": {
+      const deadline = formatLocaleDate(extras.returnDeadline);
+      body = `${intro}Here is how to return ${prod}:
+
+1. Pack the item carefully in the original packaging if possible.
+2. Include the return slip or order confirmation in the parcel.
+3. Send it to our return address (see the enclosed return slip or our website).`;
+      if (deadline) body += `\n\nThe return needs to reach us by ${deadline} at the latest.`;
+      body += `
+
+Once we have received and checked the return, we will refund according to our return policy.
+
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
+
+${sig}`;
+      break;
+    }
+    case "outlost": {
+      const resendFee = cleanStr(extras.resendFee) || "99";
+      const unclaimedFee = cleanStr(extras.unclaimedFee) || "300";
+      const responseDays = cleanStr(extras.responseDays) || "7";
+      const partner = cleanStr(extras.paymentPartner) || "Walley";
+      body = `${intro}We are writing to let you know that we have received your parcel back. This is usually because the parcel was not collected from the pick-up point within the time limit.
+
+You now have two options for how we proceed:
+
+Option 1: Resend the parcel
+If you still want to receive your order, please reply to this email and confirm that you would like the parcel sent again.
+
+Once we have received your reply, we will create a payment for the new shipping fee of ${resendFee} SEK. A payment link will then be sent to you by SMS from our payment partner ${partner}.
+
+As soon as payment is completed, we will send your parcel again and provide the new tracking number.
+
+Option 2: Cancel the order (unclaimed parcel)
+If you no longer want the parcel, we will cancel your order. In accordance with our terms of purchase we will in this case charge an unclaimed parcel fee of ${unclaimedFee} SEK.
+
+The fee covers our shipping and administration costs. If the value of your order exceeds ${unclaimedFee} SEK, we will refund the difference to the same payment method you used. If the total purchase amount is below ${unclaimedFee} SEK, the original amount is charged.
+
+Please let us know your choice within ${responseDays} days
+We need your decision within ${responseDays} days from the date this email was sent. If we do not hear from you within this time, we will automatically handle your order according to Option 2.
+
+Please do not hesitate to contact us if you have any questions.
+
+${sig}`;
+      break;
+    }
+    default:
+      body = `${intro}${outro}`;
+  }
+  return body;
+}
+
 function buildMail(ctx) {
   const lang = MAIL_I18N[ctx.lang] || MAIL_I18N.sv;
   const g = greeting(ctx.customerName, ctx.settings.tone, lang);
@@ -1118,7 +1343,10 @@ function buildMail(ctx) {
     orderNumber: ctx.orderNumber,
     settings: ctx.settings,
   };
-  const body = ctx.lang === "da" ? buildMailDa(mailCtx) : buildMailSv(mailCtx);
+  let body;
+  if (ctx.lang === "da") body = buildMailDa(mailCtx);
+  else if (ctx.lang === "en") body = buildMailEn(mailCtx);
+  else body = buildMailSv(mailCtx);
   return {
     subject: buildSubject({ ...ctx, templateId: ctx.templateId }),
     body,
@@ -1409,7 +1637,9 @@ function setTranslateStatus(msg, isError = false) {
   els.validation.classList.toggle("text-rose-400", isError);
 }
 
-async function translateMailToDanish() {
+async function translateMailTo(targetLang) {
+  const labels = { da: "danska", en: "engelska" };
+  const label = labels[targetLang] || targetLang;
   const subject = cleanStr(els.subjectOut?.value);
   const body = getBodyPlain();
   const hadImages = bodyHasImages();
@@ -1418,49 +1648,67 @@ async function translateMailToDanish() {
     return;
   }
 
-  const btn = els.translateToDanish;
+  const btn = targetLang === "en" ? els.translateToEnglish : els.translateToDanish;
   const oldLabel = btn?.textContent;
   if (btn) {
     btn.disabled = true;
     btn.textContent = "Översätter…";
   }
-  setTranslateStatus("Översätter…");
+  if (els.translateToDanish) els.translateToDanish.disabled = true;
+  if (els.translateToEnglish) els.translateToEnglish.disabled = true;
+  setTranslateStatus(`Översätter till ${label}…`);
 
+  const source = "auto";
   try {
-    let subjectDa = "";
-    let bodyDa = "";
+    let subjectOut = "";
+    let bodyOut = "";
     try {
-      [subjectDa, bodyDa] = await Promise.all([
-        subject ? translateTextGtx(subject, "sv", "da") : Promise.resolve(""),
-        body ? translateTextGtx(body, "sv", "da") : Promise.resolve(""),
+      [subjectOut, bodyOut] = await Promise.all([
+        subject ? translateTextGtx(subject, source, targetLang) : Promise.resolve(""),
+        body ? translateTextGtx(body, source, targetLang) : Promise.resolve(""),
       ]);
     } catch (clientErr) {
       console.warn("kundmail: client translate failed, trying server", clientErr);
-      const serverResult = await translateViaServer(subject, body, "sv", "da");
-      subjectDa = serverResult.subject;
-      bodyDa = serverResult.body;
+      const serverResult = await translateViaServer(subject, body, source, targetLang);
+      subjectOut = serverResult.subject;
+      bodyOut = serverResult.body;
     }
 
-    if (!subjectDa && !bodyDa) {
+    if (!subjectOut && !bodyOut) {
       throw new Error("Översättningen blev tom — försök igen.");
     }
 
-    els.subjectOut.value = subjectDa;
-    setBodyPlain(bodyDa);
-    if (els.language) els.language.value = "da";
+    els.subjectOut.value = subjectOut;
+    setBodyPlain(bodyOut);
+    if (els.language) els.language.value = targetLang;
     markOutputPristine();
-    setTranslateStatus(hadImages ? "Översatt till danska (inbäddade bilder togs bort)." : "Översatt till danska.");
+    const doneMsg = hadImages
+      ? `Översatt till ${label} (inbäddade bilder togs bort).`
+      : `Översatt till ${label}.`;
+    setTranslateStatus(doneMsg);
     setTimeout(() => {
-      if (els.validation?.textContent === "Översatt till danska.") setTranslateStatus("");
+      if (els.validation?.textContent === doneMsg) setTranslateStatus("");
     }, 3000);
   } catch (err) {
     setTranslateStatus(err?.message || "Översättning misslyckades.", true);
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = oldLabel || "Översätt till danska";
+    if (els.translateToDanish) {
+      els.translateToDanish.disabled = false;
+      if (targetLang === "da") els.translateToDanish.textContent = oldLabel || "Översätt till danska";
+    }
+    if (els.translateToEnglish) {
+      els.translateToEnglish.disabled = false;
+      if (targetLang === "en") els.translateToEnglish.textContent = oldLabel || "Översätt till engelska";
     }
   }
+}
+
+function translateMailToDanish() {
+  return translateMailTo("da");
+}
+
+function translateMailToEnglish() {
+  return translateMailTo("en");
 }
 
 function applyReplyDefault() {
@@ -1497,6 +1745,7 @@ function init() {
   els.outputEditHint = $("outputEditHint");
   els.regenerateMail = $("regenerateMail");
   els.translateToDanish = $("translateToDanish");
+  els.translateToEnglish = $("translateToEnglish");
   els.validation = $("validation");
 
   const settings = loadSettings();
@@ -1568,6 +1817,7 @@ function init() {
   els.bodyOut?.addEventListener("input", markOutputEdited);
   els.regenerateMail?.addEventListener("click", forceGenerate);
   els.translateToDanish?.addEventListener("click", translateMailToDanish);
+  els.translateToEnglish?.addEventListener("click", translateMailToEnglish);
 
   generate();
 }

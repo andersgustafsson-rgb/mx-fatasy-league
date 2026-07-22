@@ -1258,14 +1258,61 @@
       gap: 0.4rem;
     }
 
+    .home-sidebar .mx-brand {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+    }
+    .home-sidebar .mx-brand__skew {
+      display: flex;
+      width: 100%;
+      align-items: flex-end;
+      gap: 0.15rem;
+    }
+    .home-sidebar .mx-brand__aside {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-left: 0.2rem;
+    }
+    .home-sidebar .mx-brand__frame {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.32rem 0.55rem 0.45rem 0.5rem;
+    }
     .home-sidebar .mx-brand__mx {
-      font-size: clamp(2.35rem, 7vw, 3.75rem);
+      font-size: clamp(2.85rem, 8.5vw, 4.5rem);
+      flex: 0 0 auto;
     }
     .home-sidebar .mx-brand__fantasy {
-      font-size: clamp(1rem, 3vw, 1.45rem);
+      font-size: clamp(1.2rem, 3.4vw, 1.75rem);
+      letter-spacing: 0.1em;
     }
     .home-sidebar .mx-brand__league {
-      font-size: clamp(0.78rem, 2.2vw, 1rem);
+      font-size: clamp(0.88rem, 2.5vw, 1.2rem);
+      letter-spacing: 0.16em;
+    }
+    @media (min-width: 640px) {
+      .home-sidebar .mx-brand__mx {
+        font-size: 3.85rem;
+      }
+      .home-sidebar .mx-brand__fantasy {
+        font-size: 1.55rem;
+      }
+      .home-sidebar .mx-brand__league {
+        font-size: 1.05rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .home-sidebar .mx-brand__mx {
+        font-size: 4.35rem;
+      }
+      .home-sidebar .mx-brand__fantasy {
+        font-size: 1.75rem;
+      }
+      .home-sidebar .mx-brand__league {
+        font-size: 1.15rem;
+      }
     }
 
     /* Race hero — kompakt, solid kant */
