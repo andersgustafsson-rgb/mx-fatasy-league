@@ -3546,10 +3546,9 @@
     function applySidebarPicksStatus(status) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel || !status) return;
-      // Om SSR redan visar lineup (has/partial) rör vi inte boarden — bara CTA-texten räcker.
-      // Om SSR sa "inga val" men servern nu säger klart/ofullständigt: byt till tydlig live-status.
-      const hadBoard = panel.querySelector('.picks-summary-board, [data-picks-board]');
-      if (hadBoard) return;
+      // Rör aldrig SSR-boarden (wizard-picks-summary) — den är den riktiga översikten.
+      if (panel.querySelector('.wizard-picks-summary, .picks-summary--on-home')) return;
+      // Bara om sidan renderades som "inga val" men API säger något annat:
       const openHref = document.getElementById('real-picks-open-status')?.getAttribute('href') || '/race_picks_active';
       if (status === 'has_picks') {
         panel.innerHTML = `
@@ -3560,6 +3559,7 @@
             </div>
             <p class="text-sm text-gray-200 mb-2">Inlämnat till tävlingen.</p>
             <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Visa / redigera picks →</a>
+            <p class="text-[11px] text-slate-500 mt-2">Ladda om sidan för att se lineup-översikten här.</p>
           </div>`;
       } else if (status === 'partial_picks') {
         panel.innerHTML = `
