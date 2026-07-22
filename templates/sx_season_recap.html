@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Supercross {{ year }} — Säsong klar | MX Fantasy</title>
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -217,7 +218,7 @@
     {% if first %}
     <div class="podium-slot podium-slot--1">
       <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ rider_face(first, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
-      <div class="text-2xl leading-none mt-1 drop-shadow-lg" aria-hidden="true">🏆</div>
+      <div class="text-2xl leading-none mt-1 drop-shadow-lg" aria-hidden="true">{{ mx_icon('trophy') }} </div>
       <div class="medal-badge text-amber-100">P1 · CHAMP</div>
       <div class="text-xs sm:text-sm font-extrabold text-white text-center mt-0.5 px-0.5 leading-tight">{{ first.rider_name }}</div>
       <div class="pedestal pedestal--gold mt-2 w-full">
@@ -262,7 +263,7 @@
     <div class="podium-slot podium-slot--1">
       {{ user_name_bubble(f1.display_name) }}
       <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ user_face(f1, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
-      <div class="text-2xl mt-1" aria-hidden="true">🎮</div>
+      <div class="text-2xl mt-1" aria-hidden="true">{{ mx_icon('gamepad') }} </div>
       <div class="medal-badge text-cyan-200">1 · ELITE</div>
       {% if is_logged_in and f1.user_id == current_user_id %}
       <span class="text-[10px] text-amber-300 font-bold mt-0.5">Det är du!</span>

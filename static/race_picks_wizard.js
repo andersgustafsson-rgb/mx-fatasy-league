@@ -656,7 +656,7 @@
     const rider = getHoleshotRider(classType);
     const empty = !rider;
     return `<div class="wizard-summary-extra wizard-summary-extra--holeshot${empty ? ' wizard-summary-extra--empty' : ''}">
-      <span class="wizard-summary-extra__icon">⚡</span>
+      <span class="wizard-summary-extra__icon">${mxIcon('zap')}</span>
       ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
       <div class="wizard-summary-extra__body">
         <div class="wizard-summary-extra__label">Holeshot ${escapeHtml(label)}</div>
@@ -686,8 +686,8 @@
     const complete = isPicksFullyComplete();
     const bannerCls = complete ? 'wizard-summary-banner' : 'wizard-summary-banner is-pending';
     const bannerText = complete
-      ? '🏁 Alla val klara!'
-      : '📋 Din lineup hittills — fyll i holeshot' + (cfg.isWSX ? '' : ' & wildcard') + ' nedan';
+      ? `${mxIcon('check-circle', { className: 'mx-icon--ok' })} Alla val klara!`
+      : `${mxIcon('clipboard')} Din lineup hittills — fyll i holeshot` + (cfg.isWSX ? '' : ' & wildcard') + ' nedan';
 
     let extras = extraHoleshotHtml('450', cfg.label450);
     extras += extraHoleshotHtml('250', cfg.label250);
@@ -696,7 +696,7 @@
       const wcRider = getWildcardRider();
       const wcPos = $('wildcard-position')?.value || '';
       extras += `<div class="wizard-summary-extra wizard-summary-extra--wildcard${!wcRider && !wcPos ? ' wizard-summary-extra--empty' : ''}">
-        <span class="wizard-summary-extra__icon">🎲</span>
+        <span class="wizard-summary-extra__icon">${mxIcon('target')}</span>
         ${wcPos ? `<span class="wizard-summary-wc-pos">${escapeHtml(wcPos)}</span>` : '<span class="wizard-summary-wc-pos">?</span>'}
         ${wcRider ? portraitHtml(wcRider) : '<div class="wizard-summary-portrait"></div>'}
         <div class="wizard-summary-extra__body">
@@ -720,28 +720,10 @@
           ${columnHtml('250', cfg.class250, cfg.label250, '250')}
         </div>
         <div class="wizard-summary-extras">${extras}</div>
-        <div class="wizard-summary-edit">
-          <button type="button" class="wizard-summary-edit__btn" data-goto-step="1">✏️ Ändra ${escapeHtml(cfg.label450)}</button>
-          <button type="button" class="wizard-summary-edit__btn" data-goto-step="2">✏️ Ändra ${escapeHtml(cfg.label250)}</button>
-          <button type="button" class="wizard-summary-edit__btn wizard-summary-edit__btn--bonus" data-open-bonus-adjust>✏️ Holeshot${cfg.isWSX ? '' : ' & wildcard'}</button>
-        </div>
       </div>`
       : '';
 
     if (showFullSummary) {
-      el.querySelectorAll('[data-goto-step]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          step3ShowingSummary = false;
-          showStep(Number(btn.dataset.gotoStep));
-        });
-      });
-
-      el.querySelectorAll('[data-open-bonus-adjust]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          openBonusAdjust();
-        });
-      });
-
       hydrateSummaryPortraits(el);
     }
 

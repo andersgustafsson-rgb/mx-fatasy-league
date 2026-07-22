@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ series.name }} {{ series.year }} — Färdig serie | MX Fantasy</title>
@@ -230,7 +231,7 @@
     {% if first %}
     <div class="podium-slot podium-slot--1">
       <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ rider_face(first, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
-      <div class="text-2xl leading-none mt-1 drop-shadow-lg" aria-hidden="true">🏆</div>
+      <div class="text-2xl leading-none mt-1 drop-shadow-lg" aria-hidden="true">{{ mx_icon('trophy') }} </div>
       <div class="medal-badge text-amber-100">P1 · CHAMP</div>
       <div class="text-xs sm:text-sm font-extrabold text-white text-center mt-0.5 px-0.5 leading-tight">{{ first.rider_name }}</div>
       <div class="pedestal pedestal--gold mt-2 w-full">
@@ -275,7 +276,7 @@
     <div class="podium-slot podium-slot--1">
       {{ user_name_bubble(f1.display_name) }}
       <div class="-mb-3 relative z-20 scale-105 sm:scale-110">{{ user_face(f1, 'w-[4.25rem] h-[4.25rem] sm:w-[5.25rem] sm:h-[5.25rem]') }}</div>
-      <div class="text-2xl mt-1" aria-hidden="true">🏆</div>
+      <div class="text-2xl mt-1" aria-hidden="true">{{ mx_icon('trophy') }} </div>
       <div class="medal-badge text-amber-100">1 · MÄSTARE</div>
       {% if is_logged_in and f1.user_id == current_user_id %}
       <span class="text-[10px] text-amber-300 font-bold mt-0.5">Det är du!</span>
@@ -352,7 +353,7 @@
       {% if competitions %}
       <section class="mb-12">
         <h2 class="text-xl md:text-2xl font-black text-cyan-300 font-orbit mb-4 flex items-center gap-2">
-          <span class="text-amber-400" aria-hidden="true">📅</span> Tävlingar
+          <span class="text-amber-400" aria-hidden="true">{{ mx_icon('calendar') }} </span> Tävlingar
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {% for comp in competitions %}
@@ -405,7 +406,7 @@
       {% if leaderboard %}
       <section class="mb-12">
         <h2 class="text-xl md:text-2xl font-black text-amber-200 font-orbit mb-6 text-center flex items-center justify-center gap-2">
-          <span aria-hidden="true">🏁</span> Fantasy — slutlig leaderboard
+          <span aria-hidden="true">{{ mx_icon('flag') }} </span> Fantasy — slutlig leaderboard
         </h2>
         {% set top3 = leaderboard[:3] %}
         <div class="glass-panel rounded-2xl p-6 sm:p-8 mb-10 max-w-xl mx-auto border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-slate-900/40">

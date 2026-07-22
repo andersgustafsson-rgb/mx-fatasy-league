@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Förarguide - MX Fantasy</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
   <style>
     .checkered {
       background-image:
@@ -39,7 +40,7 @@
       <div class="relative p-5 sm:p-7">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div class="flex items-center gap-3">
-            <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
+            <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">{{ mx_icon('flag') }}  MX Fantasy</a>
             <button type="button" onclick="history.back()" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</button>
           </div>
         </div>
@@ -58,7 +59,7 @@
 
     <div class="flex flex-col sm:flex-row gap-3 mb-5">
       <input id="searchInput" type="search" inputmode="search" autocomplete="off"
-        placeholder="🔍  Sök #38 eller Deegan…"
+        placeholder="{{ mx_icon('eye') }}   Sök #38 eller Deegan…"
         class="flex-1 px-4 py-3 rounded-xl bg-gray-900/80 border border-cyan-500/30 text-white placeholder-gray-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none" />
       <select id="seriesFilter"
         class="px-4 py-3 rounded-xl bg-gray-900/80 border border-gray-600 text-white sm:min-w-[11rem]">

@@ -1,3 +1,4 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -11,6 +12,8 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
   <style>
     body {
       font-family: 'Rajdhani', sans-serif;
@@ -990,7 +993,7 @@
         </form>
         {% else %}
         <button onclick="toggleEditForm()" class="text-sm px-4 py-2 rounded-lg border border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10 transition">
-          ✏️ Redigera
+          {{ mx_icon('edit') }} Redigera
         </button>
         <form action="{{ url_for('delete_league', league_id=league.id) }}" method="POST"
               onsubmit="return confirm('Vill du ta bort denna liga permanent?');" class="inline">
@@ -1014,7 +1017,7 @@
 
   {% if is_creator and pending_requests %}
     <div class="gold-card rounded-xl p-5 mb-6 border-yellow-500/40">
-      <h3 class="text-lg font-bold text-yellow-400 mb-4">📝 Väntande ansökningar ({{ pending_requests|length }})</h3>
+      <h3 class="text-lg font-bold text-yellow-400 mb-4">{{ mx_icon('clipboard') }} Väntande ansökningar ({{ pending_requests|length }})</h3>
       <div class="space-y-3">
         {% for request in pending_requests %}
         <div class="rounded-lg border border-gray-600/70 bg-gray-900/50 p-4">
@@ -1072,9 +1075,9 @@
           {% if league.image_url %}
           <img src="{{ url_for('league_image', league_id=league.id) }}" alt="{{ league.name }}"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-          <div class="hidden absolute inset-0 items-center justify-center text-6xl opacity-40">🏆</div>
+          <div class="hidden absolute inset-0 items-center justify-center opacity-40">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
           {% else %}
-          <div class="flex items-center justify-center w-full min-h-[10rem] text-7xl opacity-30">🏆</div>
+          <div class="flex items-center justify-center w-full min-h-[10rem] opacity-30">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
           {% endif %}
         </div>
         <div class="lg:col-span-3 p-5 sm:p-6 flex flex-col justify-center gap-4">
@@ -1093,7 +1096,7 @@
           </div>
           <div class="text-sm leading-relaxed">
             {% if my_rank == 1 %}
-            <span class="text-amber-300 font-semibold">👑 Du leder ligan!</span>
+            <span class="text-amber-300 font-semibold">{{ mx_icon('trophy') }} Du leder ligan!</span>
             {% if summary.gap_below %}
             <span class="text-gray-400"> · {{ summary.gap_below }} p före {{ summary.standings[1].display_name if summary.standings|length > 1 else 'nästa' }}</span>
             {% endif %}
@@ -1115,7 +1118,7 @@
     <div class="pulse-card rounded-2xl p-5 mb-6">
       <div class="flex flex-wrap items-start justify-between gap-4 mb-4">
         <div>
-          <h2 class="cyberpunk-header text-lg font-bold text-cyan-300">⏱️ Nästa race — picks-läge</h2>
+          <h2 class="cyberpunk-header text-lg font-bold text-cyan-300">{{ mx_icon('clock') }} Nästa race — picks-läge</h2>
           <p class="text-white font-semibold mt-1">{{ picks_pulse.name }}</p>
           <p class="text-sm text-gray-400 mt-0.5">
             <span class="text-cyan-400 font-bold">{{ picks_pulse.complete_count }}/{{ picks_pulse.member_count }}</span> har klara picks
@@ -1134,7 +1137,7 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <p class="text-xs uppercase tracking-widest text-green-400/80 mb-2">✅ Klara ({{ picks_pulse.complete_count }})</p>
+          <p class="text-xs uppercase tracking-widest text-green-400/80 mb-2">{{ mx_icon('check-circle') }} Klara ({{ picks_pulse.complete_count }})</p>
           <div class="flex flex-wrap gap-1.5">
             {% for m in picks_pulse.complete %}
             <span class="pick-chip pick-chip--complete{% if m.is_me %} pick-chip--me{% endif %}">
@@ -1148,7 +1151,7 @@
         </div>
         {% if picks_pulse.partial %}
         <div>
-          <p class="text-xs uppercase tracking-widest text-amber-400/80 mb-2">📝 Påbörjade ({{ picks_pulse.partial_count }})</p>
+          <p class="text-xs uppercase tracking-widest text-amber-400/80 mb-2">{{ mx_icon('note') }} Påbörjade ({{ picks_pulse.partial_count }})</p>
           <div class="flex flex-wrap gap-1.5">
             {% for m in picks_pulse.partial %}
             <span class="pick-chip pick-chip--partial{% if m.is_me %} pick-chip--me{% endif %}">
@@ -1161,7 +1164,7 @@
         {% endif %}
         {% if picks_pulse.waiting %}
         <div>
-          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2">⏳ Väntar ({{ picks_pulse.waiting_count }})</p>
+          <p class="text-xs uppercase tracking-widest text-gray-500 mb-2"><span class="mx-heading-icon">{{ mx_icon('hourglass') }}</span> Väntar ({{ picks_pulse.waiting_count }})</p>
           <div class="flex flex-wrap gap-1.5">
             {% for m in picks_pulse.waiting %}
             <span class="pick-chip pick-chip--waiting{% if m.is_me %} pick-chip--me{% endif %}">
@@ -1182,7 +1185,7 @@
       <div class="digest-card rounded-2xl p-5">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
-            <h2 class="cyberpunk-header text-lg font-bold text-amber-300">🏁 Senaste race</h2>
+            <h2 class="cyberpunk-header text-lg font-bold text-amber-300">{{ mx_icon('flag') }} Senaste race</h2>
             <a href="{{ last_race_digest.trackmap_url }}" class="text-white font-semibold hover:text-amber-200 transition">
               {{ last_race_digest.name }}
             </a>
@@ -1216,7 +1219,7 @@
       {% if rival_card %}
       <div class="rival-card rounded-2xl p-5">
         <h2 class="cyberpunk-header text-lg font-bold text-red-300 mb-1">
-          {% if rival_card.role == 'rival' %}🎯 Din rival{% else %}👀 Jagar dig{% endif %}
+          {% if rival_card.role == 'rival' %}{{ mx_icon('target') }} Din rival{% else %}{{ mx_icon('eye') }} Jagar dig{% endif %}
         </h2>
         <div class="flex items-center gap-3 mt-2 mb-1">
           {{ user_avatar(rival_card.opp_avatar, 'lg') }}
@@ -1255,7 +1258,7 @@
           </div>
           {% set diff = rival_card.last_race.point_diff %}
           {% if diff > 0 %}
-          <p class="text-xs text-green-400 mt-2">Du +{{ diff }}p detta race ✓</p>
+          <p class="text-xs text-green-400 mt-2">Du +{{ diff }}p detta race {{ mx_icon('check') }}</p>
           {% elif diff < 0 %}
           <p class="text-xs text-red-400 mt-2">{{ rival_card.opp_name.split(' ')[0] }} +{{-diff}}p detta race</p>
           {% else %}
@@ -1296,7 +1299,7 @@
                   class="duel-btn w-full text-center"
                   id="btnChallengeRival"
                   data-opponent-id="{{ rival_card.opp_user_id }}">
-            ⚔️ Utmana {{ rival_card.opp_name.split(' ')[0] }}
+            {{ mx_icon('swords') }} Utmana {{ rival_card.opp_name.split(' ')[0] }}
           </button>
         </div>
         {% endif %}
@@ -1310,7 +1313,7 @@
       <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 class="cyberpunk-header text-lg font-bold text-amber-300">
-            ⚔️ Dina dueller
+            {{ mx_icon('swords') }} Dina dueller
             {% if challenges.alert and challenges.alert.has_action %}
             <span class="duels-alert-pill" title="{{ challenges.alert.short_label }}">{{ challenges.alert.count }}</span>
             {% endif %}
@@ -1319,14 +1322,14 @@
             {{ challenges.next_competition.short_label }} — utmana, svara och samla märken
           </p>
           <a href="{{ url_for('manual_page') }}#liga-dueller" target="_blank" rel="noopener" class="duel-manual-link">
-            <span>📖</span>
+            <span>{{ mx_icon('note') }}</span>
             <span>Vad är H2H, Vem högre & Brand battle?</span>
             <span class="text-amber-400/70">→</span>
           </a>
           <div id="push-challenge-wrap" class="hidden mt-2">
             <p data-push-ios-hint class="hidden text-xs text-amber-200/90 leading-snug mb-2"></p>
             <button type="button" id="btnPushChallengeEnable" class="text-xs text-amber-300 hover:text-amber-200 font-semibold underline-offset-2 hover:underline">
-              🔔 Slå på Pit Lane-notiser
+              {{ mx_icon('bell') }} Slå på Pit Lane-notiser
             </button>
             <p id="push-challenge-status" class="hidden text-xs text-green-400 mt-1 cursor-pointer" title="Klicka för att stänga av"></p>
           </div>
@@ -1386,9 +1389,9 @@
             {% if duel.needs_type or duel.needs_answer %}
             <button type="button" class="duel-btn text-sm js-duel-action" data-id="{{ duel.id }}">{% if duel.needs_type %}Välj motfråga{% else %}Svara{% endif %}</button>
             {% elif duel.waiting_for_opponent %}
-            <span class="text-xs text-gray-400">✓ Ditt svar är inne — väntar på {{ duel.opponent_name.split(' ')[0] }}</span>
+            <span class="text-xs text-gray-400">{{ mx_icon('check') }} Ditt svar är inne — väntar på {{ duel.opponent_name.split(' ')[0] }}</span>
             {% elif duel.status == 'locked' %}
-            <span class="text-xs text-gray-400">🔒 Låst — avgörs efter racet</span>
+            <span class="text-xs text-gray-400">{{ mx_icon('lock') }} Låst — avgörs efter racet</span>
             {% elif duel.status == 'pending_type' and duel.viewer_is_challenger %}
             <span class="text-xs text-gray-400">Väntar på att {{ duel.opponent_name.split(' ')[0] }} ska välja motfråga</span>
             {% endif %}
@@ -1446,7 +1449,7 @@
     </div>
     {% if challenges.alert and challenges.alert.has_action %}
     <button type="button" class="duels-jump-bar" id="duelsJumpBar" aria-label="Gå till dina dueller">
-      <span class="duels-jump-bar__icon">⚔️</span>
+      <span class="duels-jump-bar__icon">{{ mx_icon('swords') }}</span>
       <span class="duels-jump-bar__text">{{ challenges.alert.short_label }} — {{ challenges.alert.label }}</span>
       <span class="duels-jump-bar__arrow">↓</span>
     </button>
@@ -1457,7 +1460,7 @@
 
       <!-- Leaderboard -->
       <div class="lg:col-span-2 cyberpunk-card rounded-xl p-5">
-        <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">🏁 Leaderboard</h2>
+        <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">{{ mx_icon('flag') }} Leaderboard</h2>
         {% if season_leaderboard %}
         <div class="space-y-1.5">
           {% for team in season_leaderboard %}
@@ -1499,7 +1502,7 @@
         {% if race_matrix.races %}
         <div class="cyberpunk-card rounded-xl p-5">
           <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
-            <h2 class="cyberpunk-header text-lg font-bold text-cyan-400">📊 Senaste tävlingar</h2>
+            <h2 class="cyberpunk-header text-lg font-bold text-cyan-400">{{ mx_icon('chart') }} Senaste tävlingar</h2>
             <span class="text-xs text-gray-500">Guld = bäst i ligan den tävlingen</span>
           </div>
           <div class="matrix-wrap">
@@ -1545,7 +1548,7 @@
 
         {% if upcoming_races %}
         <div class="cyberpunk-card rounded-xl p-5">
-          <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">📅 Kommande</h2>
+          <h2 class="cyberpunk-header text-lg font-bold text-cyan-400 mb-4">{{ mx_icon('calendar') }} Kommande</h2>
           <div class="flex flex-wrap gap-3">
             {% for race in upcoming_races %}
             <a href="{{ url_for('trackmaps_competition_page', competition_id=race.id) }}?league_id={{ league.id }}"
@@ -1554,7 +1557,7 @@
               <span class="text-sm font-semibold text-white leading-tight line-clamp-2">{{ race.name }}</span>
               <div class="flex flex-wrap gap-1 mt-0.5">
                 {% if race.series %}<span class="series-badge">{{ race.series }}</span>{% endif %}
-                {% if race.is_triple_crown %}<span class="series-badge" style="background:rgba(250,204,21,0.15);color:#fde68a;border-color:rgba(250,204,21,0.3)">👑 TC</span>{% endif %}
+                {% if race.is_triple_crown %}<span class="series-badge" style="background:rgba(250,204,21,0.15);color:#fde68a;border-color:rgba(250,204,21,0.3)">{{ mx_icon('trophy') }} TC</span>{% endif %}
                 {% if race.coast_250 in ['east', 'west'] %}
                 <span class="series-badge" style="background:rgba(59,130,246,0.15);color:#93c5fd;border-color:rgba(59,130,246,0.3)">250 {{ race.coast_250 }}</span>
                 {% elif race.coast_250 == 'both' %}
@@ -1577,7 +1580,7 @@
       <div class="flex items-start justify-between gap-2 mb-2">
         <div>
           <div class="duel-modal-kicker" id="duelModalKicker">Liga-duell</div>
-          <h3 id="duelModalTitle" class="cyberpunk-header text-lg font-bold text-amber-300 leading-tight">⚔️ Svara på utmaning</h3>
+          <h3 id="duelModalTitle" class="cyberpunk-header text-lg font-bold text-amber-300 leading-tight">{{ mx_icon('swords') }} Svara på utmaning</h3>
           <p id="duelModalSub" class="duel-modal-sub hidden"></p>
         </div>
         <button type="button" class="text-gray-400 hover:text-white text-xl leading-none shrink-0" id="duelModalClose" aria-label="Stäng">&times;</button>
@@ -1623,12 +1626,13 @@
       const { ch, mode } = opts;
       const cls = ch?.class_label || classLabel(ch?.class_name);
       const typeLabel = ch?.type_label || '';
-      const typeIcon = ch?.type_icon || '⚔️';
+      const typeIcon = (ch?.type_icon && typeof mxIconFromEmoji === 'function' && mxIconFromEmoji(ch.type_icon))
+        || (typeof mxIcon === 'function' ? mxIcon('swords') : '');
       const race = ch?.competition_short || CHALLENGES_DATA?.next_competition?.short_label || '';
 
       if (mode === 'create') {
         modalKicker.textContent = 'Ny utmaning';
-        modalTitle.textContent = race ? `⚔️ Liga-duell · ${race}` : '⚔️ Liga-duell';
+        modalTitle.innerHTML = race ? `${mxIcon('swords')} Liga-duell · ${race}` : `${mxIcon('swords')} Liga-duell`;
         modalSub.textContent = 'Välj motståndare — de får sedan välja motfråga och klass.';
         modalSub.classList.remove('hidden');
         return;
@@ -1636,15 +1640,15 @@
 
       modalKicker.textContent = cls ? `Liga-duell · ${cls}` : 'Liga-duell';
       if (mode === 'type') {
-        modalTitle.textContent = '⚔️ Välj motfråga';
+        modalTitle.innerHTML = `${mxIcon('swords')} Välj motfråga`;
         modalSub.textContent = `${ch.challenger.name} utmanade dig${race ? ` inför ${race}` : ''}. Välj klass och motfråga.`;
       } else if (mode === 'answer') {
-        modalTitle.textContent = typeLabel ? `${typeIcon} ${typeLabel}` : '⚔️ Ditt svar';
+        modalTitle.innerHTML = typeLabel ? `${typeIcon} ${typeLabel}` : `${mxIcon('swords')} Ditt svar`;
         modalSub.textContent = cls
           ? `Duellen gäller ${cls}${race ? ` · ${race}` : ''}.`
           : (race ? `Gäller ${race}.` : '');
       } else {
-        modalTitle.textContent = '⚔️ Liga-duell';
+        modalTitle.innerHTML = `${mxIcon('swords')} Liga-duell`;
         modalSub.textContent = '';
       }
       modalSub.classList.toggle('hidden', !modalSub.textContent);
@@ -1653,7 +1657,8 @@
     function duelContextBanner(ch) {
       const cls = ch?.class_label || classLabel(ch?.class_name);
       const typeLabel = ch?.type_label || '';
-      const typeIcon = ch?.type_icon || '⚔️';
+      const typeIcon = (ch?.type_icon && typeof mxIconFromEmoji === 'function' && mxIconFromEmoji(ch.type_icon))
+        || (typeof mxIcon === 'function' ? mxIcon('swords') : '');
       const race = ch?.competition_short || '';
       if (!cls && !typeLabel && !race) return '';
       return `

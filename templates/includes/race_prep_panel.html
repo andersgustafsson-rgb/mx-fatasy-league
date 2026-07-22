@@ -1,4 +1,5 @@
 {# Shared "Inför racet" panel for race_picks.html #}
+{% from 'includes/mx_icon.html' import mx_icon %}
 {% set _is_wsx_hdr = competition.series == 'WSX' %}
 {% set _class_450_hdr = 'SX1' if _is_wsx_hdr else '450cc' %}
 {% set _class_250_hdr = 'SX2' if _is_wsx_hdr else '250cc' %}
@@ -8,7 +9,7 @@
 {% set _show_layout_images = (not _is_mx) and (_trackmap_urls|length > 0) %}
 <div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
   <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
-    <h2>{% if _show_layout_images %}🗺️ Banlayout &amp; inför racet{% else %}📌 Inför racet{% endif %}</h2>
+    <h2>{% if _show_layout_images %}{{ mx_icon('map-pin') }} Banlayout &amp; inför racet{% else %}{{ mx_icon('map-pin') }} Inför racet{% endif %}</h2>
     <p class="race-prep-teaser">
       {{ competition.name }}
       {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
@@ -37,7 +38,7 @@
 
     <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} race-prep-accordions">
       <details class="race-prep-details" open>
-        <summary>🏁 Race Info</summary>
+        <summary>{{ mx_icon('flag') }} Race Info</summary>
         <div class="race-prep-details__body">
           <div class="race-prep-kv"><span>Bana</span><span>{{ competition.name }}</span></div>
           <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
@@ -50,20 +51,20 @@
       </details>
 
       <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
-        <summary>📌 Bra att veta</summary>
+        <summary>{{ mx_icon('note') }} Bra att veta</summary>
         <div class="race-prep-details__body">
           {% if picks_weather and picks_weather.get('available') %}
           <div class="race-prep-weather">
             <div class="race-prep-weather__summary">{{ picks_weather.summary_sv }}</div>
             <div class="race-prep-weather__icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather__icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
-              {% if picks_weather.icon == 'sun' %}☀️
-              {% elif picks_weather.icon == 'partly' %}⛅
-              {% elif picks_weather.icon == 'cloud' %}☁️
-              {% elif picks_weather.icon == 'fog' %}🌫️
-              {% elif picks_weather.icon == 'rain' %}🌧️
-              {% elif picks_weather.icon == 'snow' %}❄️
-              {% elif picks_weather.icon == 'storm' %}⛈️
-              {% else %}🌤️{% endif %}
+              {% if picks_weather.icon == 'sun' %}{{ mx_icon('sun') }}
+              {% elif picks_weather.icon == 'partly' %}{{ mx_icon('cloud-sun') }}
+              {% elif picks_weather.icon == 'cloud' %}{{ mx_icon('cloud') }}
+              {% elif picks_weather.icon == 'fog' %}{{ mx_icon('fog') }}
+              {% elif picks_weather.icon == 'rain' %}{{ mx_icon('rain') }}
+              {% elif picks_weather.icon == 'snow' %}{{ mx_icon('snow') }}
+              {% elif picks_weather.icon == 'storm' %}{{ mx_icon('storm') }}
+              {% else %}{{ mx_icon('cloud-sun') }}{% endif %}
             </div>
             {% if picks_weather.label_sv %}
             <div class="race-prep-weather__label">{{ picks_weather.label_sv }}</div>
@@ -82,7 +83,7 @@
       </details>
 
       <details class="race-prep-details">
-        <summary>📊 Statistik</summary>
+        <summary>{{ mx_icon('chart') }} Statistik</summary>
         <div class="race-prep-details__body">
           <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
           <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>

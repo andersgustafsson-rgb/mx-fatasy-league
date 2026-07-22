@@ -515,6 +515,14 @@
   to { box-shadow: 0 0 36px rgba(52, 211, 153, 0.28), 0 8px 32px rgba(0, 0, 0, 0.35); }
 }
 
+.wizard-summary-banner .mx-icon {
+  width: 1rem;
+  height: 1rem;
+  max-width: 1rem;
+  max-height: 1rem;
+  margin-right: 0.35rem;
+  vertical-align: -0.1em;
+}
 .wizard-summary-banner {
   padding: 0.65rem 1rem;
   text-align: center;
@@ -525,6 +533,10 @@
   color: #a7f3d0;
   background: linear-gradient(90deg, rgba(6, 78, 59, 0.7), rgba(8, 47, 73, 0.5));
   border-bottom: 1px solid rgba(52, 211, 153, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .wizard-summary-banner.is-pending {
@@ -716,6 +728,14 @@
 .wizard-summary-extra__icon {
   font-size: 1.1rem;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+.wizard-summary-extra__icon .mx-icon {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .wizard-summary-extra__body {

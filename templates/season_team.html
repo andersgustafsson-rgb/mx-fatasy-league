@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% if is_own_team %}{{ team.team_name if team else 'Mitt Säsongsteam' }}{% else %}{{ team.team_name if team else 'Säsongsteam' }} — {{ viewing_user.display_name or viewing_user.username }}{% endif %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-3 sm:p-4 md:p-6">
@@ -18,15 +21,13 @@
         <a
           href="{{ url_for('profile_page') }}"
           class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
-        >
-          👤 Profil
+        ><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil
         </a>
         {% else %}
         <a
           href="{{ url_for('view_user_profile', user_id=season_team_user_id) }}"
           class="bg-pink-600 hover:bg-pink-700 px-3 sm:px-4 py-2 rounded text-white font-bold text-sm sm:text-base"
-        >
-          👤 Profil
+        ><span class="mx-heading-icon">{{ mx_icon('user') }}</span> Profil
         </a>
         {% endif %}
         <a
@@ -123,7 +124,7 @@
           <div class="bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded-lg p-3 mb-4">
             <p class="text-sm text-blue-800 dark:text-blue-200">
               💡 <strong>Tips:</strong> Klicka på en tävling för detaljerad <strong>säsongsteam</strong>-poängfördelning per förare.<br>
-              <span class="text-xs mt-1 block">⚠️ OBS: Inte race picks — poäng från lagets 4 säsongsteam-förare.</span>
+              <span class="text-xs mt-1 block"><span class="mx-heading-icon">{{ mx_icon('alert') }}</span> OBS: Inte race picks — poäng från lagets 4 säsongsteam-förare.</span>
             </p>
           </div>
           <div id="season-team-competitions" class="overflow-x-auto">
@@ -208,8 +209,8 @@
           const canClick = hasResults && comp.rider_breakdown && comp.rider_breakdown.length > 0;
           const onClick = canClick ? `onclick="showSeasonTeamDetails(${comp.competition_id})"` : '';
           const statusBadge = hasResults
-            ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">✅ Kört</span>'
-            : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">⏳ Väntar</span>';
+            ? '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">' + (typeof mxIcon==='function'?mxIcon('check-circle'):'') + ' Kört</span>'
+            : '<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">' + (typeof mxIcon==='function'?mxIcon('hourglass'):'') + ' Väntar</span>';
 
           let ptsClass = 'text-gray-400';
           if (hasResults && comp.total_points > 0) ptsClass = 'text-green-500';
@@ -245,8 +246,8 @@
                 <div class="text-xs text-gray-500 dark:text-gray-400">${showingText}</div>
                 <div class="flex flex-wrap gap-2">
                   <button data-status="all" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='all' ? 'bg-blue-600 text-white border-blue-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">Alla</button>
-                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">✅ Kört</button>
-                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">⏳ Väntar</button>
+                  <button data-status="done" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='done' ? 'bg-green-600 text-white border-green-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">${typeof mxIcon==='function'?mxIcon('check-circle'):''} Kört</button>
+                  <button data-status="waiting" class="filter-status px-3 py-1.5 rounded-full text-xs font-bold border ${state.status==='waiting' ? 'bg-yellow-600 text-white border-yellow-500' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}">${typeof mxIcon==='function'?mxIcon('hourglass'):''} Väntar</button>
                 </div>
               </div>
 
@@ -356,7 +357,7 @@
         
         if (data.bonus_points > 0) {
           html += '<div class="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900 rounded-lg">';
-          html += '<h5 class="font-bold text-sm mb-2">🎯 Bonus Poäng:</h5>';
+          html += '<h5 class="font-bold text-sm mb-2 mx-btn-icon">' + (typeof mxIcon==='function'?mxIcon('target'):'') + ' Bonus Poäng:</h5>';
           data.bonus_details.forEach(detail => {
             html += `<p class="text-sm">${detail}</p>`;
           });

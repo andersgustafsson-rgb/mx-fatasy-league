@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="sv" {% if not is_logged_in %}class="readonly-mode"{% endif %}>
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Liga Leaderboard - MX Fantasy League</title>
@@ -46,23 +47,24 @@
     .pts-n { color: #e5e7eb; }
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
 </head>
 <body class="text-gray-100 min-h-screen">
   <div class="container mx-auto p-4 md:p-8 max-w-3xl">
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
       <header class="text-center sm:text-left">
-        <h1 class="cyberpunk-header text-3xl md:text-4xl font-bold text-cyan-400">🏁 Liga Leaderboard</h1>
+        <h1 class="cyberpunk-header text-3xl md:text-4xl font-bold text-cyan-400">Liga Leaderboard</h1>
         <p class="text-cyan-300/80 text-sm mt-1">Liga-poäng beräknas automatiskt efter varje race</p>
       </header>
       <div class="flex gap-3 justify-center">
         <a href="{{ url_for('leagues_page') }}" class="text-sm font-bold py-2 px-4 rounded-lg border border-cyan-500/40 bg-gray-900/80 text-cyan-200 hover:bg-gray-800">⬅ Tillbaka</a>
-        <a href="{{ url_for('index') }}" class="text-sm font-bold py-2 px-4 rounded-lg border border-cyan-500/40 bg-cyan-600/80 text-white hover:bg-cyan-500">🏠 Startsidan</a>
+        <a href="{{ url_for('index') }}" class="text-sm font-bold py-2 px-4 rounded-lg border border-cyan-500/40 bg-cyan-600/80 text-white hover:bg-cyan-500">{{ mx_icon('flag') }}  Startsidan</a>
       </div>
     </div>
 
     <div class="lb-shell rounded-xl overflow-hidden">
       <div class="lb-shell-header px-4 py-3">
-        <h2 class="text-lg sm:text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255,255,255,0.6);">🏆 Toppligor</h2>
+        <h2 class="text-lg sm:text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255,255,255,0.6);"><span class="mx-heading-icon">{{ mx_icon('trophy') }}</span> Toppligor</h2>
       </div>
       <div class="p-4 sm:p-6 bg-gray-900">
         <div class="lb-panel">

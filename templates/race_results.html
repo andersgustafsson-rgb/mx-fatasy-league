@@ -1,3 +1,4 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -5,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Race Results – AMA Supercross 2026</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
   <script>
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       console.log('Using Tailwind CSS CDN in production - consider installing locally for better performance');
@@ -135,6 +137,7 @@
     .standings-tab.ring-active-smx { box-shadow: 0 0 0 2px rgb(167 139 250 / 0.55); }
     .standings-tab.ring-active-wsx { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.55); }
   </style>
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="page-bg text-slate-100">
   {# Samma logik som race picks: data-URL, eller /static/ + riders/… #}
@@ -201,11 +204,11 @@
       {% set p3 = rows[2] if rows|length > 2 else none %}
       <div class="rounded-xl border border-slate-600/60 bg-slate-800/40 backdrop-blur-sm overflow-hidden mb-5">
         <div class="px-3 py-2 bg-slate-900/50 border-b border-slate-600/40 text-sm font-semibold text-cyan-300 flex items-center gap-2">
-          <span>🏆</span> Topp 3 – {{ class_label }}
+          <span>{{ mx_icon('trophy') }}</span> Topp 3 – {{ class_label }}
         </div>
         <div class="podium-stage">
           <div class="podium-col second order-1">
-            <span class="podium-medal">🥈</span>
+            <span class="podium-medal text-slate-300">{{ mx_icon('medal') }}</span>
             {% if p2 and p2.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p2.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p2, '') }}
             {% if p2 and p2.rider_id %}</a>{% endif %}
@@ -214,7 +217,7 @@
             {% if p2 %}<div class="podium-meta">#{{ p2.rider_number }} · {{ p2.points or 0 }} pt{% if p2.bike_brand %} · {{ p2.bike_brand }}{% endif %}</div>{% endif %}
           </div>
           <div class="podium-col first order-2">
-            <span class="podium-medal">🥇</span>
+            <span class="podium-medal text-yellow-300">{{ mx_icon('medal') }}</span>
             {% if p1 and p1.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p1.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p1, '') }}
             {% if p1 and p1.rider_id %}</a>{% endif %}
@@ -223,7 +226,7 @@
             <div class="podium-meta">#{{ p1.rider_number }} · {{ p1.points or 0 }} pt{% if p1.bike_brand %} · {{ p1.bike_brand }}{% endif %}</div>
           </div>
           <div class="podium-col third order-3">
-            <span class="podium-medal">🥉</span>
+            <span class="podium-medal text-orange-300">{{ mx_icon('medal') }}</span>
             {% if p3 and p3.rider_id %}<a href="{{ url_for('rider_profile', rider_id=p3.rider_id) }}" class="block hover:opacity-90 transition-opacity">{% endif %}
             {{ rider_avatar(p3, '') }}
             {% if p3 and p3.rider_id %}</a>{% endif %}
@@ -671,12 +674,12 @@
 
             {% if results.holeshots %}
               <div class="mb-2">
-                <h3 class="text-base font-bold mb-3 text-slate-200">🏁 Holeshot</h3>
+                <h3 class="text-base font-bold mb-3 text-slate-200">{{ mx_icon('flag') }} Holeshot</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {% for holeshot in results.holeshots %}
                     {% set display_class = 'SX1' if (comp.series == 'WSX' and holeshot.class_name == '450cc') else ('SX2' if (comp.series == 'WSX' and holeshot.class_name == '250cc') else holeshot.class_name) %}
                     <div class="rounded-xl bg-gradient-to-br from-amber-900/40 to-slate-900/60 p-4 border border-amber-600/30 flex items-center gap-3">
-                      <div class="shrink-0 w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center text-lg shadow-lg">🏁</div>
+                      <div class="shrink-0 w-11 h-11 rounded-full bg-amber-500 flex items-center justify-center text-lg shadow-lg text-slate-900">{{ mx_icon('flag', 'mx-icon--lg') }}</div>
                       <div class="shrink-0">
                         {% set hs_src = rider_image_src(holeshot) %}
                         {% if hs_src %}

@@ -7,12 +7,15 @@
   {% set seo_description = 'Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Skapa lag, spela i ligor — helt gratis.' %}
   {% set seo_path = '/' %}
   {% include 'includes/seo_head.html' %}
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:ital,wght@0,400;0,600;0,700;1,600;1,700;1,800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=picks-cta-2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
@@ -197,6 +200,15 @@
     .home-ui-panel--photo .home-ui-panel__head {
       background: transparent;
     }
+
+    .home-ui-panel__head h2 .mx-heading-icon,
+    .home-series-panel__head h2 .mx-heading-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
     .home-ui-panel__head h2,
     .home-series-panel__head h2 {
       margin: 0;
@@ -237,20 +249,22 @@
       align-items: center;
       justify-content: center;
       gap: 0.35rem;
-      padding: 0.5rem 1rem;
+      padding: 0.55rem 1.05rem;
       border-radius: 0.5rem;
       border: 1px solid #3d4f66;
-      background: #1a2436;
-      color: #a5f3fc;
+      background: #243044;
+      color: #e2e8f0;
       font-size: 0.8125rem;
       font-weight: 600;
       text-decoration: none;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
+      box-shadow: none;
     }
     .home-ui-link-btn:hover {
-      border-color: #54657d;
-      background: #1f2b40;
-      color: #cffafe;
+      border-color: #64748b;
+      background: #334155;
+      color: #fff;
+      transform: translateY(-1px);
     }
     .home-ui-link-btn + .home-ui-link-btn {
       margin-left: 0.5rem;
@@ -312,8 +326,28 @@
       position: relative;
       z-index: 1;
     }
-    .home-inner-tile__icon { font-size: 1.75rem; line-height: 1; }
-    .home-inner-tile__label { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; }
+    .home-inner-tile__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.25rem;
+      height: 2.25rem;
+      color: #94a3b8;
+      line-height: 1;
+    }
+    .home-inner-tile__icon svg {
+      width: 1.35rem;
+      height: 1.35rem;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .home-inner-tile:hover .home-inner-tile__icon {
+      color: #67e8f9;
+    }
+    .home-inner-tile__label { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; color: #e2e8f0; }
     button.home-inner-tile {
       font: inherit;
       width: 100%;
@@ -1539,7 +1573,7 @@
     <div class="bg-gray-800 border-2 rounded-lg p-6 max-w-md w-11/12 mx-4 shadow-2xl {% if admin_message_priority == 'important' %}border-red-500{% else %}border-blue-500{% endif %}">
       <div class="flex items-start gap-4 mb-4">
         <div class="text-4xl {% if admin_message_priority == 'important' %}text-red-400{% else %}text-blue-400{% endif %}">
-          {% if admin_message_priority == 'important' %}⚠️{% else %}ℹ️{% endif %}
+          {% if admin_message_priority == 'important' %}{{ mx_icon('alert', 'mx-icon--2xl mx-icon--danger') }}{% else %}{{ mx_icon('info', 'mx-icon--2xl mx-icon--info') }}{% endif %}
         </div>
         <div class="flex-1">
           <h3 class="text-2xl font-bold {% if admin_message_priority == 'important' %}text-red-400{% else %}text-blue-400{% endif %} mb-3">
@@ -1735,7 +1769,7 @@
                 </div>
                 <div id="race-day-weather" class="home-race-hero__weather hidden">
                   <div class="home-race-hero__weather-pill">
-                    <span id="race-weather-icon" class="text-base leading-none flex-shrink-0" aria-hidden="true">🌤️</span>
+                    <span id="race-weather-icon" class="inline-flex items-center mx-icon--muted flex-shrink-0" aria-hidden="true">{{ mx_icon('cloud-sun', 'mx-icon--lg') }}</span>
                     <span id="race-weather-text" class="truncate">Race day väder</span>
                   </div>
                 </div>
@@ -1778,7 +1812,7 @@
               <button id="pwa-install-close" class="absolute top-2 right-2 text-gray-300 hover:text-white text-lg leading-none" aria-label="Stäng">×</button>
               <div class="flex items-start gap-3">
                 <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-400/25 flex items-center justify-center">
-                  <span class="text-xl">📲</span>
+                  {{ mx_icon('smartphone', 'mx-icon--lg mx-icon--accent') }}
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm font-extrabold text-white">Installera MX Fantasy</div>
@@ -1796,7 +1830,7 @@
           <div class="flex justify-center">
             <button type="button" onclick="openGuestSignup();" class="group w-full max-w-md rounded-xl border border-cyan-400/40 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950 px-3.5 py-3 text-left shadow-lg shadow-cyan-950/40 transition hover:border-cyan-300/70">
               <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-lg" aria-hidden="true">🎫</div>
+                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-500/15 text-amber-200" aria-hidden="true">{{ mx_icon('ticket', 'mx-icon--lg') }}</div>
                 <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
@@ -1814,7 +1848,7 @@
           <div class="flex justify-center">
             <a href="{{ url_for('bulletin_board') }}" class="group block relative bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 border border-indigo-400 rounded-xl p-3 shadow-lg max-w-md w-full">
               <div class="relative z-10 flex items-center gap-3">
-                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"><span class="text-white text-lg">📢</span></div>
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white">{{ mx_icon('megaphone', 'mx-icon--lg') }}</div>
                 <div class="flex-1 min-w-0">
                   <p class="text-white font-bold text-xs leading-tight">
                     {% if new_bulletin_posts == 1 %}Nytt inlägg på Trash Talk Brädan!{% else %}{{ new_bulletin_posts }} nya inlägg på Trash Talk Brädan!{% endif %}
@@ -1830,7 +1864,7 @@
           <div class="flex justify-center">
             <a href="{{ url_for('leagues_page') }}" class="group block relative bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 border border-green-400 rounded-xl p-3 shadow-lg max-w-md w-full">
               <div class="relative z-10 flex items-center space-x-3">
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><span class="text-white text-lg">🏆</span></div>
+                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white">{{ mx_icon('trophy', 'mx-icon--lg') }}</div>
                 <div class="flex-1 min-w-0">
                   <p class="text-white font-bold text-xs leading-tight">
                     {% if league_requests_count == 1 %}Ny ansökan till din liga!{% else %}{{ league_requests_count }} nya ansökningar till dina ligor!{% endif %}
@@ -1851,7 +1885,7 @@
             <!-- Fältets favoriter: full bredd högst upp (syns bara när picksen är låsta / race klart; döljs när picksen öppnas via JS) -->
             <div id="crowd-picks-teaser-wrap" class="home-ui-panel hidden mb-6">
               <div class="home-ui-panel__head">
-                <h2>🔮 Fältets favoriter</h2>
+                <h2><span class="mx-heading-icon">{{ mx_icon('crystal') }}<span>Fältets favoriter</span></span></h2>
               </div>
               <div class="home-ui-panel__body">
               <div class="flex items-start justify-between gap-2 mb-1">
@@ -1872,7 +1906,7 @@
             <div class="mb-6">
               <div class="home-series-panel home-ui-panel">
                 <div class="home-series-panel__head">
-                  <h2>🏁 Välj Serie</h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Välj Serie</span></span></h2>
                 </div>
                 <div class="home-series-panel__body">
                   <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1888,7 +1922,7 @@
             {% if sx_season_wrap %}
             <a href="{{ sx_season_wrap.recap_url }}" class="home-ui-panel home-ui-panel--photo sx-season-hero-link sx-season-hero sx-season-hero-animate mb-6 relative block no-underline text-inherit hover:border-slate-500/50 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-gray-950" style="background-image: url('{{ url_for("static", filename=upcoming_race_bg_url) if upcoming_race_bg_url else url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}');">
               <div class="home-ui-panel__scrim"></div>
-              <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
+              <div class="absolute top-2 right-3 opacity-80 pointer-events-none select-none text-amber-300" aria-hidden="true">{{ mx_icon('trophy', 'mx-icon--xl') }}</div>
               <div class="relative z-10 p-4 sm:p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
                   <div class="max-w-xl">
@@ -1928,40 +1962,52 @@
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>🚀 Snabba Åtgärder</h2>
+                  <h2>Snabba åtgärder</h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
                 <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                   {% if not upcoming_race or upcoming_race.series != 'WSX' %}
                   <a href="{{ url_for('season_team_page') }}" class="home-inner-tile">
-                    <span class="home-inner-tile__icon" aria-hidden="true">👥</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Säsongsteam</span>
                   </a>
                   {% endif %}
 
                   <a href="{{ url_for('race_results_page') }}" class="home-inner-tile">
-                    <span class="home-inner-tile__icon" aria-hidden="true">📊</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Race Resultat</span>
                   </a>
 
                   <a href="{{ url_for('my_scores') }}" class="home-inner-tile">
-                    <span class="home-inner-tile__icon" aria-hidden="true">🏆</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 4H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Mina Poäng</span>
                   </a>
 
                   <a href="{{ url_for('finished_series_page') }}" class="home-inner-tile">
-                    <span class="home-inner-tile__icon" aria-hidden="true">📜</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Färdiga Serier</span>
                   </a>
 
                   {% if view_picks_race %}
                   <button type="button" id="se-andras-picks-btn" onclick="showOtherUsersPicksFromMain()"
                           class="home-inner-tile{% if not can_view_other_picks %} hidden{% endif %}">
-                    <span class="home-inner-tile__icon" aria-hidden="true">👀</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Se Andras Picks</span>
                   </button>
                   <div id="picks-locked-disabled-btn" class="home-inner-tile home-inner-tile--muted{% if can_view_other_picks %} hidden{% endif %}">
-                    <span class="home-inner-tile__icon" aria-hidden="true">🔒</span>
+                    <span class="home-inner-tile__icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                    </span>
                     <span class="home-inner-tile__label">Picks Låsta</span>
                   </div>
                   {% endif %}
@@ -1973,7 +2019,7 @@
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>🎉 Veckans Prestationer</h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('party') }}<span>Veckans Prestationer</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
                   <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -1986,7 +2032,7 @@
                    style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>✨ I rampljuset</h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span>I rampljuset</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body">
                   <div id="rider-spotlight-tabs" class="flex flex-wrap justify-center gap-2 mb-3 px-1 overflow-x-auto"></div>
@@ -2033,16 +2079,16 @@
                     {% endif %}
                     <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
                       {% if picks_status == 'has_picks' %}
-                        ✅ Inlämnat till tävlingen.
+                        {{ mx_icon("check-circle", "mx-icon--ok") }} Inlämnat till tävlingen.
                       {% else %}
-                        ⚠️ Ofullständigt — <a href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}" class="text-cyan-300 underline">komplettera här</a>
+                        {{ mx_icon("alert", "mx-icon--warn") }} Ofullständigt — <a href="{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}" class="text-cyan-300 underline">komplettera här</a>
                       {% endif %}
                     </p>
                   </div>
                 {% elif picks_status == "no_picks" %}
                   <div class="mb-4">
                     <div class="flex items-center gap-2 mb-3">
-                      <span class="text-orange-300 text-lg">⚠️</span>
+                      <span class="text-orange-300">{{ mx_icon("alert", "mx-icon--lg") }}</span>
                       <span class="text-orange-200 font-semibold">Inga val gjorda än</span>
                     </div>
                     <p class="text-sm text-gray-200 mb-3">
@@ -2052,7 +2098,7 @@
                 {% else %}
                   <div class="mb-4">
                     <div class="flex items-center gap-2 mb-3">
-                      <span class="text-cyan-300 text-lg">ℹ️</span>
+                      <span class="text-cyan-300">{{ mx_icon("info", "mx-icon--lg") }}</span>
                       <span class="text-cyan-200 font-semibold">Laddar picks-status...</span>
                     </div>
                   </div>
@@ -2069,7 +2115,7 @@
                      style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>📣 Nyheter &amp; påminnelser</h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('megaphone') }}<span>Nyheter &amp; påminnelser</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
                 <p class="home-ui-panel__sub home-ui-panel__sub--left">Senaste inlägg från vår Facebook-sida.</p>
@@ -2190,7 +2236,7 @@
               <div class="home-ui-panel__head">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2>🏆 SMX Leaderboard</h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Leaderboard</span></span></h2>
                 </div>
               </div>
               <div class="home-ui-panel__body">
@@ -2209,7 +2255,7 @@
     
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2>👥 Säsongsteam Leaderboard</h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span>Säsongsteam Leaderboard</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="season-team-leaderboard-list">
@@ -2226,7 +2272,7 @@
 
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2>🏁 Liga Leaderboard</h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Liga Leaderboard</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="league-leaderboard-list">
@@ -2243,7 +2289,7 @@
 
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2>🏆 Series Leaders & SMX</h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Series Leaders & SMX</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="series-leaders-container" class="space-y-2">
@@ -2257,7 +2303,7 @@
 
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2>🏆 WSX Series Leaders</h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>WSX Series Leaders</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="wsx-leaders-container" class="space-y-2">
@@ -2277,7 +2323,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <!-- Personal Points Card -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-green-500 mb-4">🏆 Mina Poäng</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Mina Poäng</span></span></h2>
                 <div class="space-y-4">
                   <div class="bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 p-4 rounded-lg border border-green-200 dark:border-green-700">
                     <div class="flex justify-between items-center mb-2">
@@ -2299,14 +2345,14 @@
               
               <!-- Rider Bio Card -->
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-purple-500 mb-4">🧑‍✈️ Förare & Biografier</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>Förare & Biografier</span></span></h2>
                 <div class="space-y-4">
                   <div class="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 p-4 rounded-lg border border-purple-200 dark:border-purple-700">
                     <p class="text-gray-700 dark:text-gray-300 mb-3">
                       Utforska detaljerade biografier och statistik för alla förare.
                     </p>
                     <div class="text-sm text-gray-600 dark:text-gray-400">
-                      📈 Se prestationer, statistik och bakgrundshistorier
+                      <span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Se prestationer, statistik och bakgrundshistorier</span></span>
                     </div>
                   </div>
                   <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--block rp-btn--accent">Förarguide</a>
@@ -2319,22 +2365,22 @@
           <div id="games" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-purple-500 mb-4">🎮 Spel & Underhållning</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('gamepad') }}<span>Spel & Underhållning</span></span></h2>
                 <div class="rp-btn-stack">
                   <a href="{{ url_for('cross_jump_modern') }}" class="rp-btn rp-btn--block rp-btn--accent">Cross Jump Modern</a>
-                  <a href="{{ url_for('dino_game') }}" class="rp-btn rp-btn--block rp-btn--secondary">Cross Jump (klassisk)</a>
-                  <a href="{{ url_for('trackmaps_page') }}" class="rp-btn rp-btn--block rp-btn--secondary">Track Maps</a>
-                  <a href="{{ url_for('motocross_quiz') }}" class="rp-btn rp-btn--block rp-btn--warm">Motocross Quiz</a>
-                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
+                  <a href="{{ url_for('dino_game') }}" class="rp-btn rp-btn--block rp-btn--accent">Cross Jump (klassisk)</a>
+                  <a href="{{ url_for('trackmaps_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Track Maps</a>
+                  <a href="{{ url_for('motocross_quiz') }}" class="rp-btn rp-btn--block rp-btn--accent">Motocross Quiz</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent">Trash Talk Brädan</a>
                 </div>
               </div>
               
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-yellow-500 mb-4">🏆 Game Highscores</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Game Highscores</span></span></h2>
                 
                 <!-- Cross Jump Highscores -->
                 <div class="mb-6">
-                  <h3 class="text-lg font-semibold text-yellow-400 mb-3">🏍️ Cross Jump</h3>
+                  <h3 class="text-lg font-semibold text-slate-200 mb-3"><span class="mx-heading-icon">{{ mx_icon('bike') }}<span>Cross Jump</span></span></h3>
                   <div id="cross-jump-highscores" class="space-y-2">
                     <div class="text-gray-400 text-sm">Laddar highscores...</div>
                   </div>
@@ -2342,7 +2388,7 @@
                 
                 <!-- Motocross Quiz Highscores -->
                 <div class="mb-6">
-                  <h3 class="text-lg font-semibold text-orange-400 mb-3">🏁 Motocross Quiz</h3>
+                  <h3 class="text-lg font-semibold text-slate-200 mb-3"><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Motocross Quiz</span></span></h3>
                   <div id="quiz-highscores" class="space-y-2">
                     <div class="text-gray-400 text-sm">Laddar highscores...</div>
                   </div>
@@ -2356,7 +2402,7 @@
           <div id="leagues" class="tab-panel hidden">
             <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg mb-6 md:mb-8">
               <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <h2 class="text-xl sm:text-2xl font-bold text-yellow-400">🏆 Mina ligor</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Mina ligor</span></span></h2>
                 <div class="flex flex-wrap gap-2">
                   <a href="{{ url_for('leagues_page') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Hantera ligor</a>
                   <a href="{{ url_for('leagues_page', tab='explore') }}" class="rp-btn rp-btn--sm rp-btn--secondary">Utforska</a>
@@ -2365,7 +2411,7 @@
               </div>
               <div id="my-leagues-container" class="space-y-4">
                 <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-                  <p class="text-gray-600 dark:text-gray-300 text-center">📈 Laddar dina ligor...</p>
+                  <p class="text-gray-600 dark:text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar dina ligor...</span></span></p>
                 </div>
               </div>
             </div>
@@ -2375,21 +2421,21 @@
           <div id="season-team" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-green-500 mb-4">👤 Säsongsteam</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>Säsongsteam</span></span></h2>
                 {% if is_logged_in and my_team %}
                   <div class="rounded-xl border border-green-300/50 dark:border-green-700/50 bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-gray-900 dark:via-gray-800 dark:to-emerald-900/20 p-4 sm:p-5 shadow-inner">
                     <div class="flex items-start justify-between gap-3 mb-4">
                       <div class="min-w-0">
-                        <div class="text-xs font-semibold tracking-wide text-green-700 dark:text-green-300 uppercase">Ditt team</div>
+                        <div class="text-xs font-semibold tracking-wide text-slate-400 uppercase">Ditt team</div>
                         <div class="text-lg sm:text-xl font-extrabold text-gray-900 dark:text-white truncate">
                           {{ my_team.team_name }}
                         </div>
                         <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                          Totalt: <span class="font-bold text-green-700 dark:text-green-300">{{ my_team.total_points or 0 }}</span> p
+                          Totalt: <span class="font-bold text-slate-200">{{ my_team.total_points or 0 }}</span> p
                         </div>
                       </div>
                       <a href="{{ url_for('season_team_page') }}"
-                         class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold shadow transition">
+                         class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-bold border border-slate-500/60 transition">
                         <span>Öppna</span>
                         <span aria-hidden="true">→</span>
                       </a>
@@ -2442,10 +2488,10 @@
               </div>
               
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-orange-500 mb-4">📊 Säsongsteam Statistik</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('chart') }}<span>Säsongsteam Statistik</span></span></h2>
                 <div id="season-team-stats-container" class="space-y-4">
                   <div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg">
-                    <p class="text-gray-600 dark:text-gray-300 text-center">📈 Laddar statistik...</p>
+                    <p class="text-gray-600 dark:text-gray-300 text-center"><span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Laddar statistik...</span></span></p>
                   </div>
                 </div>
               </div>
@@ -2456,11 +2502,11 @@
           <div id="settings" class="tab-panel hidden">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8">
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">👤 Profil & Inställningar</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('user') }}<span>Profil & Inställningar</span></span></h2>
                 <div class="rp-btn-stack">
                   {% if is_logged_in %}
                   <a href="{{ url_for('profile_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Min Profil</a>
-                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--warm">Trash Talk Brädan</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent">Trash Talk Brädan</a>
                   {% else %}
                   <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--block rp-btn--primary">Logga in</button>
                   <button type="button" onclick="openGuestSignup();" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</button>
@@ -2470,7 +2516,7 @@
               
 
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-blue-500 mb-4">🔧 Admin & System</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4">Admin & System</h2>
                 <div class="rp-btn-stack">
                   {% if is_admin %}
                   <a href="{{ url_for('admin_page') }}" class="rp-btn rp-btn--block rp-btn--gold">Admin Panel</a>
@@ -2641,7 +2687,7 @@
     async function loadMyLeagues() {
       const container = document.getElementById('my-leagues-container');
       if (!container) return;
-      container.innerHTML = '<div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg"><p class="text-gray-600 dark:text-gray-300 text-center">📈 Laddar dina ligor...</p></div>';
+      container.innerHTML = '<div class="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 p-4 rounded-lg"><p class="text-gray-600 dark:text-gray-300 text-center mx-btn-icon">' + (typeof mxIcon === 'function' ? mxIcon('chart-up') : '') + ' Laddar dina ligor...</p></div>';
 
       try {
         const res = await fetch('/api/leagues/stats');
@@ -2651,7 +2697,7 @@
         const data = await res.json();
 
         if (data.error) {
-          container.innerHTML = `<div class="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-lg"><p class="text-red-600 dark:text-red-300 text-center">❌ ${data.error}</p></div>`;
+          container.innerHTML = `<div class="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-lg"><p class="text-red-600 dark:text-red-300 text-center">${typeof mxIcon==='function'?mxIcon('x-circle'):''} ${data.error}</p></div>`;
           return;
         }
 
@@ -2701,7 +2747,7 @@
         container.innerHTML = html;
       } catch (e) {
         console.error('League load error:', e);
-        container.innerHTML = `<div class="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-lg"><p class="text-red-600 dark:text-red-300 text-center">❌ Kunde inte hämta ligor: ${e.message}</p></div>`;
+        container.innerHTML = `<div class="bg-gradient-to-r from-red-100 to-red-200 dark:from-red-900 dark:to-red-800 p-4 rounded-lg"><p class="text-red-600 dark:text-red-300 text-center">${typeof mxIcon==='function'?mxIcon('x-circle'):''} Kunde inte hämta ligor: ${e.message}</p></div>`;
       }
     }
 
@@ -2844,7 +2890,7 @@
               <button id="expand-leaderboard-btn"
                       onclick="toggleSeasonLeaderboard()"
                       class="w-full text-xs text-cyan-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                📋 Visa fler (${remainingCount} till)
+                ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa fler (${remainingCount} till)
               </button>
             `;
             c.appendChild(expandBtn);
@@ -2868,7 +2914,7 @@
       if (!seasonLeaderboardExpanded) {
         // Show all entries
         entries.forEach(entry => entry.classList.remove('hidden'));
-        btn.textContent = `📋 Visa färre (visar alla ${totalCount})`;
+        btn.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa färre (visar alla ${totalCount})`;
         seasonLeaderboardExpanded = true;
       } else {
         // Show only first 15
@@ -2877,7 +2923,7 @@
             entry.classList.add('hidden');
           }
         });
-        btn.textContent = `📋 Visa fler (${hiddenCount} till)`;
+        btn.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa fler (${hiddenCount} till)`;
         seasonLeaderboardExpanded = false;
       }
     }
@@ -2956,7 +3002,7 @@
 
         let html = '<div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">';
         html += statCard({
-          icon: '🏁',
+          icon: (typeof mxIcon==='function'?mxIcon('flag'):''),
           grad: 'from-emerald-50 to-green-100 dark:from-emerald-950/60 dark:to-green-900/40',
           muted: 'text-emerald-700/80 dark:text-emerald-300/80',
           valClass: 'text-emerald-800 dark:text-emerald-200',
@@ -2966,7 +3012,7 @@
           hintClass: 'text-emerald-800/70 dark:text-emerald-200/70',
         });
         html += statCard({
-          icon: '📅',
+          icon: (typeof mxIcon==='function'?mxIcon('calendar'):''),
           grad: 'from-sky-50 to-blue-100 dark:from-sky-950/50 dark:to-blue-900/40',
           muted: 'text-sky-700/80 dark:text-sky-300/80',
           valClass: 'text-sky-900 dark:text-sky-100',
@@ -2976,7 +3022,7 @@
           hintClass: 'text-sky-900/70 dark:text-sky-100/70',
         });
         html += statCard({
-          icon: '📈',
+          icon: (typeof mxIcon==='function'?mxIcon('chart-up'):''),
           grad: 'from-violet-50 to-fuchsia-100 dark:from-violet-950/50 dark:to-fuchsia-900/35',
           muted: 'text-violet-700/80 dark:text-violet-300/80',
           valClass: 'text-violet-900 dark:text-violet-100',
@@ -2986,7 +3032,7 @@
           hintClass: 'text-violet-900/70 dark:text-violet-100/70',
         });
         html += statCard({
-          icon: '🏆',
+          icon: (typeof mxIcon==='function'?mxIcon('trophy'):''),
           grad: 'from-amber-50 to-orange-100 dark:from-amber-950/45 dark:to-orange-900/35',
           muted: 'text-amber-800/80 dark:text-amber-300/80',
           valClass: 'text-amber-900 dark:text-amber-100',
@@ -3097,11 +3143,16 @@
           return;
         }
 
+        const svgRocket = '<svg viewBox="0 0 24 24"><path d="M5 15l4-1 7-7a3.5 3.5 0 0 1 5 5l-7 7-1 4"/><path d="M12 8l4 4"/><path d="M3 21l3-1 1-3"/></svg>';
+        const svgAnchor = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v12"/><path d="M5 13a7 7 0 0 0 14 0"/><path d="M8 12H4M20 12h-4"/></svg>';
+        const svgTarget = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
+        const svgZap = '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/></svg>';
+
         let html = '';
-        html += weeklyStatTile('🚀', 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id);
-        html += weeklyStatTile('⚓', 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id);
+        html += weeklyStatTile(svgRocket, 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id);
+        html += weeklyStatTile(svgAnchor, 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id);
         html += weeklyStatTile(
-          '🎯', 'Perfekt Gissning', data.perfect_picks,
+          svgTarget, 'Perfekt Gissning', data.perfect_picks,
           data.perfect_picks ? [
             data.perfect_picks.perfect_count + ' perfekta picks',
             data.perfect_picks.total_perfect_points + 'p totalt'
@@ -3109,7 +3160,7 @@
           data.perfect_picks && data.perfect_picks.user_id
         );
         html += weeklyStatTile(
-          '⚡', 'Holeshot-Mästare', data.holeshot_master,
+          svgZap, 'Holeshot-Mästare', data.holeshot_master,
           data.holeshot_master ? [
             data.holeshot_master.total_holeshot_points + 'p holeshot',
             'Denna vecka'
@@ -3386,7 +3437,7 @@
           legacy: {
             available: true,
             label: spotlight.title || 'I rampljuset',
-            icon: '✨',
+            icon: (typeof mxIcon==='function'?mxIcon('sparkles'):''),
             headline: spotlight.reason || '',
             riders: [spotlight],
           },
@@ -3398,13 +3449,13 @@
     }
 
     const RACE_WEATHER_ICONS = {
-      sun: '☀️',
-      partly: '🌤️',
-      cloud: '☁️',
-      rain: '🌧️',
-      storm: '⛈️',
-      snow: '❄️',
-      fog: '🌫️',
+      sun: 'sun',
+      partly: 'cloud-sun',
+      cloud: 'cloud',
+      rain: 'rain',
+      storm: 'storm',
+      snow: 'snow',
+      fog: 'fog',
     };
 
     function updateRaceHeroMeta(nextRace) {
@@ -3463,7 +3514,8 @@
         container.classList.add('hidden');
         return;
       }
-      iconEl.textContent = RACE_WEATHER_ICONS[weather.icon] || '🌤️';
+      const wName = RACE_WEATHER_ICONS[weather.icon] || 'cloud-sun';
+      iconEl.innerHTML = typeof mxIcon === 'function' ? mxIcon(wName, { className: 'mx-icon--lg' }) : '';
       textEl.textContent = weather.summary_sv || weather.label_sv || 'Race day';
       textEl.title = weather.summary_sv || '';
       container.classList.remove('hidden');
@@ -3554,7 +3606,7 @@
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-emerald-300 text-lg">✅</span>
+              ${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--lg mx-icon--ok' }) : ''}
               <span class="text-emerald-200 font-semibold">Alla val klara</span>
             </div>
             <p class="text-sm text-gray-200 mb-2">Inlämnat till tävlingen.</p>
@@ -3565,7 +3617,7 @@
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
-              <span class="text-orange-300 text-lg">⚠️</span>
+              <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
               <span class="text-orange-200 font-semibold">Ofullständiga picks</span>
             </div>
             <p class="text-sm text-gray-200 mb-2">Du har påbörjat val — komplettera innan deadline.</p>
@@ -3600,7 +3652,7 @@
         if (lockedStatus) lockedStatus.classList.add('hidden');
         if (openStatus) {
           openStatus.classList.remove('hidden');
-          openStatus.textContent = '🏁 Race färdigt — se resultat';
+          openStatus.innerHTML = (typeof mxIcon==='function'?mxIcon('flag'):'')+' Race färdigt — se resultat';
           openStatus.href = '/race_results';
           openStatus.className = 'mx-picks-cta mx-picks-cta--done-race';
         }
@@ -3619,12 +3671,12 @@
         
         // Enable Race Results button
         if (raceResultsButton) {
-          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
+          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block mx-btn-icon">'+(typeof mxIcon==='function'?mxIcon('chart'):'')+' Race Resultat</a>';
         }
         
         // Update picks deadline status
         if (picksDeadlineStatus) {
-          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300">🏁 <strong>Race färdigt.</strong> Resultat är nu tillgängliga!</p>';
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-blue-700 dark:text-blue-300 mx-btn-icon">'+(typeof mxIcon==='function'?mxIcon('flag'):'')+' <strong>Race färdigt.</strong> Resultat är nu tillgängliga!</p>';
           picksDeadlineStatus.className = 'mt-3 p-2 bg-blue-100 dark:bg-blue-900 rounded-lg';
         }
         if (canViewOthers) {
@@ -3653,12 +3705,12 @@
         
         // Disable Race Results button
         if (raceResultsButton) {
-          raceResultsButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed">🔒 Race Resultat (Låsta)</span>';
+          raceResultsButton.innerHTML = '<span class="bg-gray-400 text-white font-bold py-3 px-4 rounded shadow text-center text-sm cursor-not-allowed mx-btn-icon">'+(typeof mxIcon==='function'?mxIcon('lock'):'')+' Race Resultat (Låsta)</span>';
         }
         
         // Update picks deadline status
         if (picksDeadlineStatus) {
-          picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300">🔒 <strong>Picks låsta.</strong> Du kan inte längre ändra dina val.</p>';
+          picksDeadlineStatus.innerHTML = '<p class="text-sm text-red-700 dark:text-red-300 mx-btn-icon">'+(typeof mxIcon==='function'?mxIcon('lock'):'')+' <strong>Picks låsta.</strong> Du kan inte längre ändra dina val.</p>';
           picksDeadlineStatus.className = 'mt-3 p-2 bg-red-100 dark:bg-red-900 rounded-lg';
         }
         if (canViewOthers) {
@@ -3689,7 +3741,7 @@
         
         // Enable Race Results button
         if (raceResultsButton) {
-          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block">📊 Race Resultat</a>';
+          raceResultsButton.innerHTML = '<a href="/race_results" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow text-center text-sm block mx-btn-icon">'+(typeof mxIcon==='function'?mxIcon('chart'):'')+' Race Resultat</a>';
         }
         
         // Update picks deadline status
@@ -3839,7 +3891,7 @@
       
       let html = '';
       crossJumpScores.slice(0, 5).forEach((score, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+        const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':index===1?'mx-icon--muted':index===2?'mx-icon--muted':'mx-icon--muted' }) : '';
         html += `
           <div class="flex justify-between items-center bg-gray-700 p-2 rounded text-sm">
             <span class="text-lg">${medal}</span>
@@ -3872,7 +3924,7 @@
       
       let html = '';
       quizScores.slice(0, 5).forEach((score, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+        const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':index===1?'mx-icon--muted':index===2?'mx-icon--muted':'mx-icon--muted' }) : '';
         const difficulty = score.difficulty === 'easy' ? 'Lätt' : score.difficulty === 'medium' ? 'Medium' : 'Svår';
         html += `
           <div class="flex justify-between items-center bg-gray-700 p-2 rounded text-sm">
@@ -3916,7 +3968,7 @@
         if (highscores.length === 0) {
           container.innerHTML = `
             <div class="text-center text-cyan-400 py-2">
-              <div class="text-2xl mb-1" style="text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);">🏍️</div>
+              <div class="mb-1 text-cyan-300">${typeof mxIcon==='function'?mxIcon('bike',{className:'mx-icon--xl'}):''}</div>
               <p class="text-xs" style="text-shadow: 0 0 5px rgba(34, 211, 238, 0.3);">Inga highscores än!</p>
             </div>
           `;
@@ -3924,7 +3976,7 @@
         }
         
         container.innerHTML = highscores.slice(0, 3).map((score, index) => {
-          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+          const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':'mx-icon--muted' }) : '';
           const textColor = index === 0 ? 'text-yellow-200' : index === 1 ? 'text-slate-200' : 'text-slate-300';
           
           return `
@@ -3950,7 +4002,7 @@
         if (container) {
           container.innerHTML = `
             <div class="text-center text-red-400 py-4">
-              <div class="text-4xl mb-2" style="text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);">❌</div>
+              <div class="mb-2 text-red-400">${typeof mxIcon==='function'?mxIcon('x-circle',{className:'mx-icon--2xl'}):''}</div>
               <p class="text-sm" style="text-shadow: 0 0 5px rgba(248, 113, 113, 0.3);">Kunde inte ladda highscores</p>
             </div>
           `;
@@ -4042,8 +4094,8 @@
             });
             sxBody += '</div>';
             const sxTitle = sxCollapsed
-              ? '📊 Supercross-serieledare <span class="text-[10px] font-normal normal-case text-gray-500">(säsong klar)</span>'
-              : '📊 Supercross-serieledare';
+              ? (typeof mxIcon==='function'?mxIcon('chart'):'')+' Supercross-serieledare <span class="text-[10px] font-normal normal-case text-gray-500">(säsong klar)</span>'
+              : (typeof mxIcon==='function'?mxIcon('chart'):'')+' Supercross-serieledare';
             const sxSectionHtml = leadersCollapsibleSection(sxTitle, sxCollapsed, sxBody);
 
             const mxSeriesCards = [
@@ -4053,7 +4105,7 @@
             const mxLeaders = data.mx_leaders || {};
             html += `
               <div class="mb-5">
-                <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3">🏁 Motocross-serieledare</h4>
+                <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3 mx-heading-icon">${typeof mxIcon==='function'?mxIcon('flag'):''}<span>Motocross-serieledare</span></h4>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
             `;
             mxSeriesCards.forEach(card => {
@@ -4081,7 +4133,7 @@
             const smx250 = data.smx_overview['250cc_top_5'] || [];
             html += `
               <div class="mb-5">
-                <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3">🏆 SMX-kval (SX + MX)</h4>
+                <h4 class="text-sm font-black text-cyan-300 uppercase tracking-wide mb-3 mx-heading-icon">${typeof mxIcon==='function'?mxIcon('trophy'):''}<span>SMX-kval (SX + MX)</span></h4>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div class="rounded-xl border border-yellow-400/60 bg-yellow-500/10 p-3">
                     <div class="flex items-center justify-between mb-3">
@@ -4090,7 +4142,7 @@
                     </div>
                     <div class="space-y-1">${podiumRows(smx450, 'yellow', true)}</div>
                     <button onclick="toggleSMXExpansion('450cc')" class="mt-3 w-full text-xs text-yellow-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                      📋 Visa alla 450cc SMX (Top 20)
+                      ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa alla 450cc SMX (Top 20)
                     </button>
                     <div id="smx-450cc-full-list" class="hidden mt-2 space-y-1"></div>
                   </div>
@@ -4101,7 +4153,7 @@
                     </div>
                     <div class="space-y-1">${podiumRows(smx250, 'green', true)}</div>
                     <button onclick="toggleSMXExpansion('250cc')" class="mt-3 w-full text-xs text-green-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                      📋 Visa alla 250cc SMX (Top 20)
+                      ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa alla 250cc SMX (Top 20)
                     </button>
                     <div id="smx-250cc-full-list" class="hidden mt-2 space-y-1"></div>
                   </div>
@@ -4164,14 +4216,14 @@
             html += `
               <div class="mt-2 space-y-1">
                 <button onclick="toggleWSXExpansion('wsx_sx1')" class="w-full text-xs text-yellow-400 hover:text-yellow-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
-                  📋 Visa SX1 Top 5
+                  ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa SX1 Top 5
                 </button>
                 <div id="wsx_sx1-full-list" class="hidden mt-1 space-y-1">
                   <!-- WSX SX1 top 5 will be loaded here -->
                 </div>
                 
                 <button onclick="toggleWSXExpansion('wsx_sx2')" class="w-full text-xs text-blue-400 hover:text-blue-300 transition-colors bg-gray-800 bg-opacity-50 rounded px-2 py-1">
-                  📋 Visa SX2 Top 5
+                  ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa SX2 Top 5
                 </button>
                 <div id="wsx_sx2-full-list" class="hidden mt-1 space-y-1">
                   <!-- WSX SX2 top 5 will be loaded here -->
@@ -4212,7 +4264,7 @@
             let html = '';
             
             seriesData.top_5.forEach((rider, index) => {
-              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+              const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':index===1?'mx-icon--muted':index===2?'mx-icon--muted':'mx-icon--muted' }) : '';
               const color = series === 'wsx_sx1' ? 'text-yellow-400' : 'text-blue-400';
               
               html += `
@@ -4227,7 +4279,7 @@
             fullListDiv.innerHTML = html;
             fullListDiv.classList.remove('hidden');
             const seriesName = series === 'wsx_sx1' ? 'SX1' : 'SX2';
-            button.textContent = `📋 Dölj ${seriesName} Top 5`;
+            button.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Dölj ${seriesName} Top 5`;
           }
         } catch (error) {
           console.error(`Error loading ${series} top 5:`, error);
@@ -4236,7 +4288,7 @@
         // Hide full list
         fullListDiv.classList.add('hidden');
         const seriesName = series === 'wsx_sx1' ? 'SX1' : 'SX2';
-        button.textContent = `📋 Visa ${seriesName} Top 5`;
+        button.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa ${seriesName} Top 5`;
       }
     }
 
@@ -4254,7 +4306,7 @@
           if (result.success) {
             let html = '';
             result.qualification.forEach((rider, index) => {
-              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+              const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':index===1?'mx-icon--muted':index===2?'mx-icon--muted':'mx-icon--muted' }) : '';
               const coast = rider.coast_250 ? ` (${rider.coast_250.toUpperCase()})` : '';
               const bgColor = rider.qualified ? 'bg-green-900 bg-opacity-30' : 'bg-gray-800 bg-opacity-30';
               const textColor = rider.qualified ? 'text-green-300' : 'text-gray-400';
@@ -4274,7 +4326,7 @@
             
             fullListDiv.innerHTML = html;
             fullListDiv.classList.remove('hidden');
-            button.textContent = `📋 Dölj ${classType} SMX lista`;
+            button.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Dölj ${classType} SMX lista`;
           }
         } catch (error) {
           console.error(`Error loading full ${classType} SMX list:`, error);
@@ -4282,7 +4334,7 @@
       } else {
         // Hide full list
         fullListDiv.classList.add('hidden');
-        button.textContent = `📋 Visa alla ${classType} SMX (Top 20)`;
+        button.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa alla ${classType} SMX (Top 20)`;
       }
     }
 
@@ -4301,7 +4353,7 @@
             let html = '';
             
             seriesData.top_5.forEach((rider, index) => {
-              const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+              const medal = typeof mxIcon==='function' ? mxIcon('medal', { className: index===0?'mx-icon--warn':index===1?'mx-icon--muted':index===2?'mx-icon--muted':'mx-icon--muted' }) : '';
               const color = series === '450cc' ? 'text-yellow-400' : 
                           series === '250cc_east' ? 'text-green-400' : 'text-blue-400';
               
@@ -4316,7 +4368,7 @@
             
             fullListDiv.innerHTML = html;
             fullListDiv.classList.remove('hidden');
-            button.textContent = `📋 Dölj ${series} Top 5`;
+            button.innerHTML = `${typeof mxIcon === 'function' ? mxIcon('clipboard') : ''} Dölj ${series} Top 5`;
           }
         } catch (error) {
           console.error(`Error loading ${series} top 5:`, error);
@@ -4326,7 +4378,7 @@
         fullListDiv.classList.add('hidden');
         const seriesName = series === '450cc' ? '450cc' : 
                           series === '250cc_east' ? '250E' : '250W';
-        button.textContent = `📋 Visa ${seriesName} Top 5`;
+        button.innerHTML = `${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa ${seriesName} Top 5`;
       }
     }
     
@@ -4539,7 +4591,7 @@
       if (!rows || rows.length === 0) {
         return `<p class="text-xs text-gray-500">${label}: ingen data ännu.</p>`;
       }
-      const medals = ['🥇', '🥈', '🥉'];
+      const medals = [mxIcon('medal',{className:'mx-icon--warn'}), mxIcon('medal',{className:'mx-icon--muted'}), mxIcon('medal',{className:'mx-icon--muted'})];
       let h = `<div class="text-xs font-bold text-yellow-400/90 mb-2 uppercase tracking-wide">${label}</div><div class="space-y-2">`;
       rows.forEach((r, i) => {
         const m = medals[i] || `${r.rank}.`;
@@ -4835,7 +4887,7 @@
       }
       return `<div class="mb-5 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/40 to-gray-900/80 p-4">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <h4 class="text-emerald-200 font-bold text-sm">🔮 Fältets “odds”</h4>
+          <h4 class="text-emerald-200 font-bold text-sm mx-heading-icon">${typeof mxIcon==='function'?mxIcon('crystal'):''}<span>Fältets “odds”</span></h4>
           ${n ? `<span class="text-[10px] text-emerald-100/80 bg-black/30 px-2 py-0.5 rounded-full border border-emerald-500/20">${n} spelare i underlaget</span>` : ''}
         </div>
         <p class="text-white/45 text-[10px] mb-3">Andelar per plats bland alla som låst lineups — jämför med dina val nedan.</p>
@@ -4962,7 +5014,7 @@
                 </div>
               ` : usersPicks.map(user => `
                 <div class="bg-gray-800/90 rounded-xl p-4 border border-white/5 hover:border-emerald-500/20 transition-colors">
-                  <h4 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-full bg-emerald-600/30 items-center justify-center text-sm">👤</span>${user.display_name || user.username}</h4>
+                  <h4 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span class="inline-flex w-8 h-8 rounded-full bg-emerald-600/30 items-center justify-center">${typeof mxIcon==='function'?mxIcon('user'):''}</span>${user.display_name || user.username}</h4>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="rounded-lg bg-black/20 p-3 border border-yellow-500/15">
                       <h5 class="text-xs font-bold text-yellow-300 uppercase tracking-wide mb-2">${classLabel450}</h5>
@@ -5130,7 +5182,7 @@
       btn.addEventListener('click', () => {
         const showing = input.type === 'text';
         input.type = showing ? 'password' : 'text';
-        if (icon) icon.textContent = showing ? '👁️' : '🙈';
+        if (icon) icon.innerHTML = typeof mxIcon==='function' ? mxIcon(showing ? 'eye' : 'eye-off') : (showing ? '' : '');
         btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
       });
     })();
@@ -5269,7 +5321,7 @@
           <div class="relative">
             <input type="password" id="modal_password" name="password" class="w-full p-3 pr-12 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             <button type="button" id="toggleModalPassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white" aria-label="Visa lösenord">
-              <span id="toggleModalPasswordIcon">👁️</span>
+              <span id="toggleModalPasswordIcon">{{ mx_icon("eye") }}</span>
             </button>
           </div>
         </div>

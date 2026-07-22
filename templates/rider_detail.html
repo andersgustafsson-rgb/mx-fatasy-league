@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ rider.name }} — Förarprofil</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
   <style>
     .page-bg {
       background:
@@ -78,7 +79,7 @@
   <div class="container mx-auto p-4 sm:p-6 max-w-5xl">
     <!-- Top bar -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-      <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">🏁 MX Fantasy</a>
+      <a href="/" class="text-xl sm:text-2xl font-bold text-cyan-400 hover:text-cyan-300">{{ mx_icon('flag') }}  MX Fantasy</a>
       <div class="rp-btn-row">
         <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--secondary rp-btn--sm">Förarguide</a>
         <button type="button" onclick="history.back()" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</button>
@@ -129,7 +130,7 @@
             <div class="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-sm text-slate-300 justify-center sm:justify-start">
               {% if rider.hometown %}<span>📍 {{ rider.hometown }}</span>{% endif %}
               {% if rider.team %}<span>🏢 {{ rider.team }}</span>{% endif %}
-              {% if rider.turned_pro %}<span>⭐ Pro {{ rider.turned_pro }}</span>{% endif %}
+              {% if rider.turned_pro %}<span>{{ mx_icon('star') }}  Pro {{ rider.turned_pro }}</span>{% endif %}
             </div>
           </div>
         </div>

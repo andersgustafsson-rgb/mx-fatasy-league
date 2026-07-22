@@ -1,17 +1,19 @@
 {% if not is_logged_in %}
+{% from 'includes/mx_icon.html' import mx_icon %}
 <link rel="stylesheet" href="{{ url_for('static', filename='pit_pass.css') }}?v=1">
+<link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
 <div id="pit-pass-modal" class="pit-pass-overlay{% if pit_pass_start_hidden %} is-peek{% endif %}" role="dialog" aria-modal="true" aria-labelledby="pit-pass-title">
   <div class="pit-pass-card">
     <div class="pit-pass-glow" aria-hidden="true"></div>
-    <p class="pit-pass-eyebrow">🎫 Pit Pass — gratis</p>
+    <p class="pit-pass-eyebrow">{{ mx_icon('ticket') }} Pit Pass — gratis</p>
     <h2 id="pit-pass-title" class="pit-pass-title">{{ pit_pass_race_name }} väntar</h2>
     <p class="pit-pass-lead">
       Registrera dig på ~20 sek och sätt topp 6, holeshot &amp; wildcard innan deadline.
     </p>
     <ul class="pit-pass-bullets">
-      <li>⚡ Konto på 20 sekunder</li>
-      <li>🏁 Topp 6 + holeshot + wildcard</li>
-      <li>🔥 Jämför dig med andra efter race</li>
+      <li>{{ mx_icon('zap') }} Konto på 20 sekunder</li>
+      <li>{{ mx_icon('flag') }} Topp 6 + holeshot + wildcard</li>
+      <li>{{ mx_icon('chart-up') }} Jämför dig med andra efter race</li>
     </ul>
     <form id="pit-pass-form" class="pit-pass-form" autocomplete="off">
       <input type="hidden" name="next" value="{{ pit_pass_next_url }}">

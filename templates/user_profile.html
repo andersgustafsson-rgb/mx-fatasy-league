@@ -1,3 +1,4 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -5,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{ target_user.username }}'s Profil - MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
   <script>
     // Suppress Tailwind CDN warning in production
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -63,7 +66,7 @@
               href="{{ url_for('pit_lane.pit_lane_page') }}?to={{ target_user.id }}&tab=messages"
               class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-3 sm:px-4 rounded shadow text-sm sm:text-base"
             >
-              ✉️ Skicka meddelande
+              {{ mx_icon('mail') }} Skicka meddelande
             </a>
             <a
               href="{{ url_for('index') }}"
@@ -281,7 +284,7 @@
             </div>
           {% else %}
             <div class="text-center py-8">
-              <div class="text-4xl mb-4">🔒</div>
+              <div class="mb-4 text-amber-300 flex justify-center">{{ mx_icon('lock', 'mx-icon--2xl') }}</div>
               <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Picks dolda</h3>
               <p class="text-gray-600 dark:text-gray-400">
                 Picks visas efter deadline för att förhindra tjuvkikning.
@@ -293,13 +296,13 @@
           {% if picks_locked %}
             <div class="mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg">
               <p class="text-sm text-red-700 dark:text-red-300">
-                🔒 <strong>Picks låsta!</strong> Andra användares picks visas nu.
+                {{ mx_icon('lock') }} <strong>Picks låsta!</strong> Andra användares picks visas nu.
               </p>
             </div>
           {% else %}
             <div class="mt-4 p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
               <p class="text-sm text-blue-700 dark:text-blue-300">
-                ⏰ <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.
+                {{ mx_icon('clock') }} <strong>Picks öppna.</strong> Andra användares picks är dolda tills deadline.
               </p>
             </div>
           {% endif %}
@@ -312,7 +315,7 @@
       <div class="mt-6">
         <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-6 rounded-lg shadow-lg">
           <div class="flex items-center justify-between gap-3 mb-4">
-            <h2 class="text-2xl font-bold text-yellow-500">🏅 Achievements</h2>
+            <h2 class="text-2xl font-bold text-yellow-500">{{ mx_icon('medal') }} Achievements</h2>
             <span id="achievements-meta" class="text-xs text-gray-600 dark:text-gray-400"></span>
           </div>
           <div id="achievements-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -329,12 +332,12 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-2xl font-bold text-gray-800 dark:text-white flex items-center">
-              🏁 Race Resultat
+              {{ mx_icon('flag') }} Race Resultat
               <span class="ml-2 text-lg text-gray-600 dark:text-gray-400">({{ total_points }} poäng totalt)</span>
             </h2>
             <a href="{{ url_for('user_scores_page', username=target_user.username) }}" 
                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow">
-              📊 Detaljerad poänghistorik
+              {{ mx_icon('chart') }} Detaljerad poänghistorik
             </a>
           </div>
           
@@ -360,11 +363,11 @@
                 <div class="text-right">
                   {% if result.has_results %}
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                      ✅ Kört
+                      {{ mx_icon('check-circle') }} Kört
                     </span>
                   {% else %}
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                      ⏳ Väntar
+                      {{ mx_icon('hourglass') }} Väntar
                     </span>
                   {% endif %}
                 </div>
@@ -407,14 +410,14 @@
             <button id="expand-race-results-btn" 
                     onclick="toggleRaceResults()"
                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition-colors">
-              📋 Visa fler ({{ race_results|length - 15 }} till)
+              {{ mx_icon('clipboard') }} Visa fler ({{ race_results|length - 15 }} till)
             </button>
           </div>
           {% endif %}
           
           <!-- Sammanfattning -->
           <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-            <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">📊 Sammanfattning</h3>
+            <h3 class="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">{{ mx_icon('chart') }} Sammanfattning</h3>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div class="text-center">
                 <p class="text-blue-600 dark:text-blue-400">Tävlingar</p>
@@ -510,7 +513,7 @@
             const isBronze = t.includes('brons');
             const isSilver = t.includes('silver');
             const isGold = t.includes('guld');
-            const medal = isGold ? '🥇' : (isSilver ? '🥈' : '🥉');
+            const medal = mxIcon('medal');
             const chipClass = isGold
               ? 'bg-amber-200 text-amber-950 border-amber-300 dark:bg-amber-500/20 dark:text-amber-200 dark:border-amber-500/40'
               : isSilver
@@ -521,7 +524,7 @@
           return `
             <div class="rounded-lg p-4 border ${done ? 'border-emerald-300 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700'}">
               <div class="flex items-center gap-2">
-                <div class="text-xl">${b.emoji || '🏅'}</div>
+                <div class="text-xl">${b.emoji || mxIcon('medal')}</div>
                 <div class="min-w-0">
                   <div class="text-sm font-bold text-gray-900 dark:text-white truncate">${b.title || ''}</div>
                   <div class="text-xs text-gray-700 dark:text-gray-200">${prog} / ${nextGoal}${tierText}</div>
@@ -547,7 +550,7 @@
 
     function renderPickRow(row) {
       const status = row.status || "miss";
-      const icon = status === "perfect" ? "✅" : status === "close" ? "▲" : "❌";
+      const icon = status === "perfect" ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : status === "close" ? "▲" : mxIcon('x-circle', { className: 'mx-icon--danger' });
       const bg = status === "perfect" ? "bg-emerald-950/25 border-emerald-800/40" : status === "close" ? "bg-amber-950/20 border-amber-800/35" : "bg-rose-950/15 border-rose-900/30";
       const actualCls = status === "perfect" ? "bg-emerald-400 text-emerald-950" : status === "close" ? "bg-amber-400 text-amber-950" : "bg-rose-400 text-rose-950";
       const pts = Number(row.points || 0);
@@ -572,13 +575,13 @@
 
     function renderSimpleRow(row) {
       if (row.kind === "bonus") {
-        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">🎯 ${row.text || row.hint}</div>`;
+        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">${mxIcon('target')} ${row.text || row.hint}</div>`;
       }
       if (row.kind === "note") {
         return `<div class="py-2 px-3 rounded-lg border border-rose-800/30 bg-rose-950/15 text-rose-200 text-xs">${row.text}</div>`;
       }
       const ok = row.status === "correct";
-      const icon = ok ? "✅" : "❌";
+      const icon = ok ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : mxIcon('x-circle', { className: 'mx-icon--danger' });
       const pts = Number(row.points || 0);
       const ptsTxt = pts > 0 ? `+${pts}p` : "0p";
       if (row.kind === "wildcard") {
@@ -739,7 +742,7 @@
       if (!raceResultsExpanded) {
         // Show all
         items.forEach(item => item.classList.remove('hidden'));
-        btn.textContent = `📋 Visa färre (visar alla ${items.length})`;
+        btn.innerHTML = `${mxIcon('clipboard')} Visa färre (visar alla ${items.length})`;
         raceResultsExpanded = true;
       } else {
         // Show only first 15
@@ -748,7 +751,7 @@
             item.classList.add('hidden');
           }
         });
-        btn.textContent = `📋 Visa fler (${totalHidden} till)`;
+        btn.innerHTML = `${mxIcon('clipboard')} Visa fler (${totalHidden} till)`;
         raceResultsExpanded = false;
       }
     }

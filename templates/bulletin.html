@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cyberpunk Trash Talk Brädan - MX Fantasy League</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
     <script>
         // Suppress Tailwind CDN warning in production
         if (window.location.hostname !== 'localhost') {
@@ -454,6 +455,7 @@
             }
         }
     </style>
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="min-h-screen">
     <!-- Vintage Bulletin Board -->
@@ -462,9 +464,9 @@
         <header class="vintage-header p-6 text-center">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors cyberpunk-glow">🏁 MX Fantasy</a>
+                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors cyberpunk-glow"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> MX Fantasy</a>
                     <span class="text-cyan-400">|</span>
-                    <h1 class="handwritten-title text-2xl">📋 Trash Talk Brädan</h1>
+                    <h1 class="handwritten-title text-2xl"><span class="mx-heading-icon">{{ mx_icon('clipboard') }}</span> Trash Talk Brädan</h1>
                 </div>
                 <div class="flex items-center space-x-4">
                     <a href="/" class="rp-btn rp-btn--secondary rp-btn--sm">← Tillbaka</a>
@@ -574,7 +576,7 @@
                         <!-- Reactions -->
                         <div class="flex items-center space-x-2 mb-3">
                             <div class="flex items-center space-x-1">
-                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="🚀" title="Klicka för att reagera">🚀</button>
+                                <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="🚀" title="Klicka för att reagera"><span class="mx-heading-icon">{{ mx_icon('rocket') }}</span> </button>
                                 <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="😂" title="Klicka för att reagera">😂</button>
                                 <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="👍" title="Klicka för att reagera">👍</button>
                                 <button class="reaction-btn" data-post-id="{{ post.id }}" data-emoji="❤️" title="Klicka för att reagera">❤️</button>
@@ -656,7 +658,7 @@
                         {% endfor %}
                     {% else %}
                         <div class="text-center py-8 handwritten">
-                            <div class="text-4xl mb-2">📝</div>
+                            <div class="mb-2 text-cyan-300 flex justify-center">{{ mx_icon('note', 'mx-icon--2xl') }}</div>
                             <p>Inga meddelanden än. Bli den första att skriva något!</p>
                         </div>
                     {% endif %}
@@ -668,7 +670,7 @@
     <!-- Toast Notification -->
     <div id="toast" class="fixed top-4 right-4 left-4 sm:left-auto bg-green-500 text-white px-4 sm:px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 max-w-md sm:max-w-none mx-auto sm:mx-0">
         <div class="flex items-center space-x-2">
-            <span>✅</span>
+            <span><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> </span>
             <span id="toast-message">Meddelande skickat!</span>
         </div>
     </div>

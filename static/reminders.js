@@ -62,12 +62,14 @@
       return;
     }
     if (st.subscribed) {
-      el.innerHTML = '<span class="text-emerald-400">✅ Push-notiser på — påminnelser kan skickas till mobilen.</span>';
+      var okIcon = window.mxIcon ? window.mxIcon("check-circle", { className: "mx-icon--ok" }) : "";
+      el.innerHTML = '<span class="text-emerald-400">' + okIcon + " Push-notiser på — påminnelser kan skickas till mobilen.</span>";
       if (btn) btn.classList.add("hidden");
       return;
     }
+    var warnIcon = window.mxIcon ? window.mxIcon("alert", { className: "mx-icon--warn" }) : "";
     el.innerHTML =
-      '<span class="text-amber-400">⚠️ Slå på push-notiser på denna enhet, annars kommer inga påminnelser.</span>';
+      '<span class="text-amber-400">' + warnIcon + " Slå på push-notiser på denna enhet, annars kommer inga påminnelser.</span>";
     if (btn) btn.classList.remove("hidden");
   }
 

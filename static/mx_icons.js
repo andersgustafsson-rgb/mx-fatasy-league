@@ -1,0 +1,101 @@
+/**
+ * Shared monochrome SVG icons for MX Fantasy (JS-injected HTML).
+ * Usage: mxIcon('trophy') or mxIcon('lock', { className: 'mx-icon--lg mx-icon--warn' })
+ */
+(function (global) {
+  'use strict';
+
+  var PATHS = {
+    trophy: '<path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 4H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+    flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+    chart: '<path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/>',
+    'chart-up': '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    'eye-off': '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-6.5 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>',
+    lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.3-2.3"/>',
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    'check-circle': '<circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/>',
+    alert: '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    'map-pin': '<path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+    sparkles: '<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/>',
+    megaphone: '<path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.2-2.8"/>',
+    ticket: '<path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V9z"/><path d="M13 5v2M13 17v2M13 11v2"/>',
+    smartphone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+    gamepad: '<rect x="2" y="7" width="20" height="12" rx="3"/><path d="M8 12h2M9 11v2M15.5 11.5h.01M17.5 13.5h.01"/>',
+    zap: '<path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    rocket: '<path d="M5 15l4-1 7-7a3.5 3.5 0 0 1 5 5l-7 7-1 4"/><path d="M12 8l4 4"/><path d="M3 21l3-1 1-3"/>',
+    anchor: '<circle cx="12" cy="5" r="2"/><path d="M12 7v12"/><path d="M5 13a7 7 0 0 0 14 0"/><path d="M8 12H4M20 12h-4"/>',
+    swords: '<path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M9.5 6.5L21 18v3h-3L6.5 9.5"/><path d="M11 5L5 11"/><path d="M8 8L4 4"/>',
+    mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    star: '<path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 21l1.1-6.5L2.6 9.8l6.5-.9L12 3z"/>',
+    medal: '<circle cx="12" cy="9" r="5"/><path d="M8.5 13.5L6 21l6-3 6 3-2.5-7.5"/>',
+    x: '<path d="M18 6L6 18M6 6l12 12"/>',
+    'x-circle': '<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>',
+    bike: '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M12 17.5l-3-7h5l3 4"/><path d="M9 10.5h3.5"/>',
+    party: '<path d="M5.8 11.3L2 22l10.7-3.8"/><path d="M10 8l-2 2"/><path d="M14 4l-1 3"/><path d="M18 8l-3 1"/><path d="M8.5 14.5l7-7a3 3 0 0 1 4.2 4.2l-7 7"/>',
+    crystal: '<path d="M6 3h12l4 7-10 11L2 10l4-7z"/><path d="M6 3l6 7 6-7M2 10h20M12 10v11"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.7 1.7 0 0 0 3.4 0"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    'cloud-sun': '<path d="M12 2v2M4.2 6.2l1.4 1.4M2 14h2"/><circle cx="10" cy="8" r="3.5"/><path d="M16 18a4 4 0 1 0-1.5-7.7A5 5 0 1 0 8 18h8z"/>',
+    cloud: '<path d="M17.5 19a4.5 4.5 0 1 0-.2-9 6 6 0 1 0-11.6 2A3.5 3.5 0 0 0 6.5 19z"/>',
+    rain: '<path d="M17.5 15a4.5 4.5 0 1 0-.2-9 6 6 0 1 0-11.6 2A3.5 3.5 0 0 0 6.5 15z"/><path d="M8 18v2M12 17v2M16 18v2"/>',
+    storm: '<path d="M17.5 14a4.5 4.5 0 1 0-.2-9 6 6 0 1 0-11.6 2A3.5 3.5 0 0 0 6.5 14z"/><path d="M13 12l-3 5h4l-3 5"/>',
+    snow: '<path d="M17.5 15a4.5 4.5 0 1 0-.2-9 6 6 0 1 0-11.6 2A3.5 3.5 0 0 0 6.5 15z"/><path d="M8 18h.01M12 17h.01M16 18h.01"/>',
+    fog: '<path d="M4 15h16M5 19h14M6 11h12"/><path d="M17.5 9a4.5 4.5 0 1 0-.2-9"/>',
+    hourglass: '<path d="M6 2h12M6 22h12"/><path d="M8 2v3a4 4 0 0 0 2.5 3.7L12 10l1.5-1.3A4 4 0 0 0 16 5V2"/><path d="M8 22v-3a4 4 0 0 1 2.5-3.7L12 14l1.5 1.3A4 4 0 0 1 16 19v3"/>',
+    note: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>'
+  };
+
+  var EMOJI_TO_ICON = {
+    '🏆': 'trophy', '👥': 'users', '👤': 'user', '📊': 'chart', '📈': 'chart-up',
+    '📋': 'clipboard', '📜': 'list', '👀': 'eye', '👁️': 'eye', '🙈': 'eye-off',
+    '🔒': 'lock', '✅': 'check-circle', '⚠️': 'alert', 'ℹ️': 'info', '❌': 'x-circle',
+    '📅': 'calendar', '⏰': 'clock', '⏱️': 'clock', '⏳': 'hourglass',
+    '✏️': 'edit', '📝': 'note', '✨': 'sparkles', '🎉': 'party', '🔮': 'crystal',
+    '📢': 'megaphone', '📣': 'megaphone', '🎫': 'ticket', '📲': 'smartphone',
+    '🎮': 'gamepad', '⚡': 'zap', '🎯': 'target', '🚀': 'rocket', '⚓': 'anchor',
+    '⚔️': 'swords', '✉️': 'mail', '🏁': 'flag', '🏅': 'medal', '🥇': 'medal',
+    '🥈': 'medal', '🥉': 'medal', '🏍️': 'bike', '🧑‍✈️': 'user', '🔧': 'settings',
+    '☀️': 'sun', '🌤️': 'cloud-sun', '⛅': 'cloud-sun', '☁️': 'cloud',
+    '🌧️': 'rain', '⛈️': 'storm', '❄️': 'snow', '🌫️': 'fog', '📌': 'map-pin', '🗺️': 'map-pin'
+  };
+
+  function mxIcon(name, opts) {
+    opts = opts || {};
+    var paths = PATHS[name];
+    if (!paths) return '';
+    var cls = 'mx-icon' + (opts.className ? ' ' + opts.className : '');
+    // width/height on SVG = hard size lock if CSS missing (never fill the page)
+    return '<span class="' + cls + '" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" width="20" height="20" style="width:20px;height:20px;max-width:20px;max-height:20px" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' +
+      paths + '</svg></span>';
+  }
+
+  function mxIconFromEmoji(emoji, opts) {
+    var name = EMOJI_TO_ICON[emoji];
+    return name ? mxIcon(name, opts) : (emoji || '');
+  }
+
+  function mxLabel(iconName, text, opts) {
+    opts = opts || {};
+    return '<span class="mx-btn-icon">' + mxIcon(iconName, opts) + '<span>' + text + '</span></span>';
+  }
+
+  global.MXIcons = PATHS;
+  global.MX_EMOJI_ICON = EMOJI_TO_ICON;
+  global.mxIcon = mxIcon;
+  global.mxIconFromEmoji = mxIconFromEmoji;
+  global.mxLabel = mxLabel;
+})(typeof window !== 'undefined' ? window : this);

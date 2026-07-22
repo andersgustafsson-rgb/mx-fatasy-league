@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8">
   <title>Min Profil - MX Fantasy League</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-200 font-sans">
   <div class="container mx-auto p-4 md:p-8">
@@ -71,7 +73,7 @@
               {% endif %}
               <div class="w-32 h-32 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center border-4 border-blue-500 {% if user.profile_picture_url %}hidden{% endif %}">
                 <div class="text-center text-gray-500 dark:text-gray-400">
-                  <div class="text-4xl mb-2">👤</div>
+                  <div class="mb-2 text-slate-400 flex justify-center">{{ mx_icon('user', 'mx-icon--2xl') }}</div>
                   <div class="text-sm font-semibold">Ingen bild</div>
                 </div>
               </div>

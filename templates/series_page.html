@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ series.name }} - MX Fantasy League</title>
@@ -27,6 +28,8 @@
             background-repeat: no-repeat;
         }
     </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
     <!-- Header -->
@@ -34,7 +37,7 @@
         <div class="container mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors neon-text">🏁 MX Fantasy</a>
+                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors neon-text"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> MX Fantasy</a>
                     <span class="text-cyan-400">|</span>
                     <h1 class="text-2xl font-bold text-cyan-400 neon-text">{{ series.name }} {{ series.year }}</h1>
                 </div>
@@ -51,7 +54,7 @@
         <div class="mb-6">
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                 <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">🏁 {{ series.name }} Status</h2>
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">{{ series.name }} Status</h2>
                 </div>
                 <div class="p-4 bg-gray-900">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -132,8 +135,7 @@
             {% endif %}
                 <div class="absolute inset-0 bg-black bg-opacity-40"></div>
                 <div class="relative z-10">
-                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-4">
-                        🏁 {{ next_race.name }}
+                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-4">{{ next_race.name }}
                         {% if next_race.id == 9999 %}
                         <span class="text-yellow-400 text-sm ml-2">🧪 TEST MODE</span>
                         {% endif %}
@@ -141,26 +143,26 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div class="bg-black bg-opacity-50 rounded-lg p-4">
-                            <h3 class="text-white font-semibold mb-2">📅 Race Datum</h3>
+                            <h3 class="text-white font-semibold mb-2"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Race Datum</h3>
                             <p class="text-cyan-300 text-lg">{{ next_race.event_date.strftime('%d %B %Y') }}</p>
                         </div>
                         <div class="bg-black bg-opacity-50 rounded-lg p-4">
-                            <h3 class="text-white font-semibold mb-2">⏰ Picks Status</h3>
+                            <h3 class="text-white font-semibold mb-2"><span class="mx-heading-icon">{{ mx_icon('clock') }}</span> Picks Status</h3>
                             {% set user_has_picks = user_picks_status.get(next_race.id, {}).get('has_picks', False) %}
                             {% if picks_open %}
                                 {% if user_has_picks %}
-                                    <p class="text-cyan-400 text-lg font-bold">✅ Picks Klara</p>
+                                    <p class="text-cyan-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</p>
                                     <p class="text-sm text-gray-300">Du har gjort dina picks</p>
                                 {% else %}
-                                    <p class="text-green-400 text-lg font-bold">✅ Picks Öppna</p>
+                                    <p class="text-green-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Öppna</p>
                                     <p class="text-sm text-gray-300">Gör dina picks nu</p>
                                 {% endif %}
                             {% else %}
                                 {% if user_has_picks %}
-                                    <p class="text-cyan-400 text-lg font-bold">✅ Picks Klara</p>
+                                    <p class="text-cyan-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</p>
                                     <p class="text-sm text-gray-300">Du har gjort dina picks</p>
                                 {% else %}
-                                    <p class="text-red-400 text-lg font-bold">🔒 Picks Stängda</p>
+                                    <p class="text-red-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks Stängda</p>
                                     <p class="text-sm text-gray-300">Du har inte gjort picks</p>
                                 {% endif %}
                             {% endif %}
@@ -178,7 +180,7 @@
                         <!-- Real Race or Selected Competition from Admin -->
                         <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}" 
                            class="inline-block {% if user_has_picks %}bg-cyan-600 hover:bg-cyan-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
-                            {% if user_has_picks %}🏁 Visa Mina Picks{% else %}🏁 Make Your Picks{% endif %}
+                            {% if user_has_picks %}{{ mx_icon('flag') }}  Visa Mina Picks{% else %}{{ mx_icon('flag') }}  Make Your Picks{% endif %}
                         </a>
                         {% endif %}
                     {% else %}
@@ -186,19 +188,18 @@
                             {% set days_until_start = (series.start_date - current_date).days %}
                             {% if days_until_start > 7 %}
                                 <div class="bg-yellow-600 bg-opacity-80 rounded-lg p-4">
-                                    <p class="text-white font-semibold">
-                                        📅 Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
+                                    <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
                                     </p>
                                     <p class="text-sm text-yellow-100">(En vecka före säsongstart {{ series.start_date.strftime('%d %B %Y') }})</p>
                                 </div>
                             {% else %}
                                 <div class="bg-red-600 bg-opacity-80 rounded-lg p-4">
-                                    <p class="text-white font-semibold">🔒 Picks är låsta för detta race</p>
+                                    <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks är låsta för detta race</p>
                                 </div>
                             {% endif %}
                         {% else %}
                             <div class="bg-gray-600 bg-opacity-80 rounded-lg p-4">
-                                <p class="text-white font-semibold">📅 Säsongstartdatum saknas</p>
+                                <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Säsongstartdatum saknas</p>
                             </div>
                         {% endif %}
                     {% endif %}
@@ -209,7 +210,7 @@
         <div class="mb-6">
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                 <div class="p-6 text-center">
-                    <h2 class="text-xl font-bold text-cyan-400 mb-2">🏁 Säsong Avslutad</h2>
+                    <h2 class="text-xl font-bold text-cyan-400 mb-2"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Säsong Avslutad</h2>
                     <p class="text-gray-300">Alla races i {{ series.name }} {{ series.year }} är avslutade.</p>
                 </div>
             </div>
@@ -220,7 +221,7 @@
         <div class="mb-6">
             <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
                 <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">📅 Race Schema</h2>
+                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Race Schema</h2>
                 </div>
                 <div class="p-4 bg-gray-900">
                     <div class="overflow-x-auto">
@@ -256,20 +257,18 @@
                                         
                                         {% if user_has_picks and not has_results %}
                                             <div class="mt-1">
-                                                <span class="px-2 py-1 rounded text-xs font-semibold bg-cyan-600 text-white">✅ Picks Klara</span>
+                                                <span class="px-2 py-1 rounded text-xs font-semibold bg-cyan-600 text-white"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</span>
                                             </div>
                                         {% endif %}
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         {% if active_race_id and comp.id == active_race_id %}
                                             {% if picks_locked_status[comp.id] %}
-                                                <span class="bg-red-600 text-white px-3 py-1 rounded text-xs">
-                                                    🔒 Picks Låsta
+                                                <span class="bg-red-600 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks Låsta
                                                 </span>
                                             {% else %}
                                                 <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
-                                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs">
-                                                    🏁 Picks (Aktivt)
+                                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Picks (Aktivt)
                                                 </a>
                                             {% endif %}
                                         {% elif comp.id == next_race.id and picks_open %}
@@ -280,8 +279,7 @@
                                             </a>
                                             {% else %}
                                             <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
-                                               class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs">
-                                                🏁 Picks
+                                               class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Picks
                                             </a>
                                             {% endif %}
                                         {% elif comp.event_date >= current_date %}
@@ -311,7 +309,7 @@
         {% if series.name and 'SMX' in series.name %}
         <!-- SMX Qualification Standings -->
         <div class="bg-gray-800 border border-cyan-400 rounded-lg p-6 mb-6">
-            <h3 class="text-xl font-bold text-cyan-400 mb-4">🏆 SMX Finals Kvalificering</h3>
+            <h3 class="text-xl font-bold text-cyan-400 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}</span> SMX Finals Kvalificering</h3>
             <div class="mb-4">
                 <button onclick="loadSMXQualification()" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
                     🔄 Uppdatera Kvalificering
@@ -326,15 +324,13 @@
         <!-- Quick Actions -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <a href="/" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
-                🏠 Tillbaka till Huvudsida
+                {{ mx_icon('flag') }}  Tillbaka till Huvudsida
             </a>
             {% if series.name and 'WSX' not in series.name %}
-            <a href="/season_team_page" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
-                👥 Säsongsteam
+            <a href="/season_team_page" class="cyberpunk-button px-4 py-3 rounded-lg text-center"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam
             </a>
             {% endif %}
-            <a href="/my_scores" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
-                📊 Mina Poäng
+            <a href="/my_scores" class="cyberpunk-button px-4 py-3 rounded-lg text-center"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina Poäng
             </a>
         </div>
     </div>
@@ -361,7 +357,7 @@
             if (!container) return;
             
             let html = '<div class="bg-gray-900 border border-cyan-400 rounded-lg p-4">';
-            html += '<h4 class="text-lg font-bold text-cyan-400 mb-3">🏆 SMX Finals Kvalificering (Top 20)</h4>';
+            html += '<h4 class="text-lg font-bold text-cyan-400 mb-3 mx-heading-icon">' + (typeof mxIcon==='function'?mxIcon('trophy'):'') + '<span>SMX Finals Kvalificering (Top 20)</span></h4>';
             
             if (qualification.length === 0) {
                 html += '<p class="text-gray-400">Inga resultat ännu. Lägg in race resultat för att se kvalificering.</p>';

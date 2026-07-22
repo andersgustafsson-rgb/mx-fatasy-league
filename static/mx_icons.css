@@ -1,0 +1,75 @@
+/* Shared monochrome stroke icons — MX Fantasy
+   Hard size locks: Tailwind preflight sets svg{max-width:100%;display:block}
+   which blows icons up inside wide/absolute containers. Never use % sizes. */
+.mx-icon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0 !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  max-width: 1.25rem !important;
+  max-height: 1.25rem !important;
+  vertical-align: -0.2em;
+  color: currentColor;
+  line-height: 1;
+  overflow: hidden;
+}
+.mx-icon svg {
+  display: block !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  max-width: 1.25rem !important;
+  max-height: 1.25rem !important;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mx-icon--lg,
+.mx-icon--lg svg {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  max-width: 1.5rem !important;
+  max-height: 1.5rem !important;
+}
+.mx-icon--xl,
+.mx-icon--xl svg {
+  width: 2rem !important;
+  height: 2rem !important;
+  max-width: 2rem !important;
+  max-height: 2rem !important;
+}
+.mx-icon--2xl,
+.mx-icon--2xl svg {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  max-width: 2.5rem !important;
+  max-height: 2.5rem !important;
+}
+.mx-icon--block {
+  display: flex !important;
+}
+.mx-heading-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+}
+.mx-heading-icon .mx-icon {
+  opacity: 0.95;
+}
+.mx-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+}
+.mx-icon--muted { color: #94a3b8; }
+.mx-icon--ok { color: #34d399; }
+.mx-icon--warn { color: #fbbf24; }
+.mx-icon--danger { color: #f87171; }
+.mx-icon--info { color: #67e8f9; }
+.mx-icon--accent { color: #67e8f9; }

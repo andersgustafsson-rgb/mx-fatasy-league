@@ -1,3 +1,4 @@
+{% from 'includes/mx_icon.html' import mx_icon %}
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -5,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mina Ligor - MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="/static/rp-buttons.css" rel="stylesheet">
+  <link href="/static/rp-buttons.css?v=btn-clean-1" rel="stylesheet">
+  <link href="/static/mx_icons.css?v=size-lock-2" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -163,18 +165,19 @@
     .pts-3 { color: #bbf7d0; }
     .pts-n { color: #e5e7eb; }
   </style>
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
 </head>
 <body class="text-gray-100 min-h-screen">
   <div class="container mx-auto p-3 sm:p-4 md:p-8 max-w-5xl">
 
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
       <header>
-        <h1 class="cyberpunk-header text-3xl sm:text-4xl md:text-5xl font-bold text-cyan-400 mb-1">🏆 MINA LIGOR</h1>
+        <h1 class="cyberpunk-header text-3xl sm:text-4xl md:text-5xl font-bold text-cyan-400 mb-1">MINA LIGOR</h1>
         <p class="text-cyan-300/90 text-sm sm:text-base">Inloggad som <span class="text-cyan-400 font-bold">{{ username }}</span></p>
       </header>
       <a href="{{ url_for('index') }}"
          class="cyberpunk-button text-white font-bold py-2.5 px-5 rounded-lg text-sm self-start shrink-0">
-        ⚡ Tillbaka
+        {{ mx_icon('zap') }} Tillbaka
       </a>
     </div>
 
@@ -189,11 +192,11 @@
     {% endwith %}
 
     <div class="league-tab-bar" role="tablist">
-      <button type="button" class="league-tab-btn{% if initial_tab == 'mine' %} active{% endif %}" data-tab="mine" role="tab">👑 Mina ligor</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'create' %} active{% endif %}" data-tab="create" role="tab">🚀 Skapa</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'join' %} active{% endif %}" data-tab="join" role="tab">🔗 Anslut</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'explore' %} active{% endif %}" data-tab="explore" role="tab">🌟 Utforska</button>
-      <button type="button" class="league-tab-btn{% if initial_tab == 'leaderboard' %} active{% endif %}" data-tab="leaderboard" role="tab">🏁 Leaderboard</button>
+      <button type="button" class="league-tab-btn{% if initial_tab == 'mine' %} active{% endif %}" data-tab="mine" role="tab">{{ mx_icon('trophy') }} Mina ligor</button>
+      <button type="button" class="league-tab-btn{% if initial_tab == 'create' %} active{% endif %}" data-tab="create" role="tab">{{ mx_icon('rocket') }} Skapa</button>
+      <button type="button" class="league-tab-btn{% if initial_tab == 'join' %} active{% endif %}" data-tab="join" role="tab">{{ mx_icon('user-plus') }} Anslut</button>
+      <button type="button" class="league-tab-btn{% if initial_tab == 'explore' %} active{% endif %}" data-tab="explore" role="tab">{{ mx_icon('sparkles') }} Utforska</button>
+      <button type="button" class="league-tab-btn{% if initial_tab == 'leaderboard' %} active{% endif %}" data-tab="leaderboard" role="tab">{{ mx_icon('flag') }} Leaderboard</button>
     </div>
 
     <!-- Mina ligor -->
@@ -210,8 +213,8 @@
                   <img src="{{ url_for('league_image', league_id=league.id) }}" alt=""
                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                 {% endif %}
-                <div class="{% if league.image_url %}hidden {% endif %}absolute inset-0 flex flex-col items-center justify-center text-cyan-400/80">
-                  <span class="text-3xl">🏆</span>
+                <div class="{% if league.image_url %}hidden {% endif %}absolute inset-0 flex flex-col items-center justify-center text-cyan-400/80 pointer-events-none">
+                  {{ mx_icon('trophy', 'mx-icon--2xl') }}
                 </div>
                 {% if rank and total %}
                   <span class="league-card__rank {% if rank == 1 %}league-card__rank--1{% elif rank == 2 %}league-card__rank--2{% elif rank == 3 %}league-card__rank--3{% else %}league-card__rank--n{% endif %}">
@@ -291,12 +294,12 @@
         </div>
       {% else %}
         <div class="cyberpunk-card p-10 rounded-xl text-center">
-          <div class="text-5xl mb-3">🏆</div>
+          <div class="mb-3 text-cyan-400 flex justify-center">{{ mx_icon('trophy', 'mx-icon--2xl') }}</div>
           <p class="text-xl text-cyan-300 font-medium mb-2">Du är inte med i någon liga än</p>
           <p class="text-cyan-400/80 mb-5 text-sm">Skapa en egen eller anslut med inbjudningskod.</p>
           <div class="flex flex-wrap justify-center gap-2">
-            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="create">🚀 Skapa liga</button>
-            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="join">🔗 Anslut</button>
+            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="create">{{ mx_icon('rocket') }} Skapa liga</button>
+            <button type="button" class="cyberpunk-button text-white font-bold py-2 px-4 rounded-lg text-sm" data-switch-tab="join">{{ mx_icon('user-plus') }} Anslut</button>
           </div>
         </div>
       {% endif %}
@@ -305,7 +308,7 @@
     <!-- Skapa -->
     <div id="tab-create" class="league-tab-panel{% if initial_tab == 'create' %} active{% endif %}" role="tabpanel">
       <div class="cyberpunk-card p-6 sm:p-8 rounded-xl max-w-lg mx-auto">
-        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">🚀 Skapa en ny liga</h2>
+        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">{{ mx_icon('rocket') }} Skapa en ny liga</h2>
         <form action="{{ url_for('create_league') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
           <div>
             <label for="league_name" class="block mb-2 text-sm font-semibold text-cyan-300">Namn på ligan</label>
@@ -328,7 +331,7 @@
     <!-- Anslut -->
     <div id="tab-join" class="league-tab-panel{% if initial_tab == 'join' %} active{% endif %}" role="tabpanel">
       <div class="cyberpunk-card p-6 sm:p-8 rounded-xl max-w-lg mx-auto">
-        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">🔗 Anslut till en liga</h2>
+        <h2 class="text-2xl font-bold text-cyan-400 neon-text mb-6">{{ mx_icon('user-plus') }} Anslut till en liga</h2>
         <form action="{{ url_for('join_league') }}" method="POST" class="space-y-5">
           <div>
             <label for="invite_code" class="block mb-2 text-sm font-semibold text-cyan-300">Inbjudningskod</label>
@@ -361,9 +364,9 @@
               </div>
               <div class="flex gap-2">
                 {% if league.id in user_league_ids %}
-                  <span class="flex-1 text-center bg-green-800/40 text-green-300 font-semibold py-2 px-3 rounded text-sm">✅ Medlem</span>
+                  <span class="flex-1 text-center bg-green-800/40 text-green-300 font-semibold py-2 px-3 rounded text-sm">{{ mx_icon('check-circle') }} Medlem</span>
                 {% elif league.id in pending_league_ids %}
-                  <span class="flex-1 text-center bg-yellow-800/40 text-yellow-300 font-semibold py-2 px-3 rounded text-sm">⏳ Väntar</span>
+                  <span class="flex-1 text-center bg-yellow-800/40 text-yellow-300 font-semibold py-2 px-3 rounded text-sm">{{ mx_icon('hourglass') }} Väntar</span>
                 {% else %}
                   <button type="button" onclick="requestJoinLeague({{ league.id }}, {{ league.name|tojson }})"
                           class="flex-1 cyberpunk-button text-white font-bold py-2 px-3 rounded text-sm">

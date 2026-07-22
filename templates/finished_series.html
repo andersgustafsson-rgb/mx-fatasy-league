@@ -7,6 +7,7 @@
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
@@ -113,6 +114,7 @@
     }
   </style>
 </head>
+{% from 'includes/mx_icon.html' import mx_icon %}
 <body class="text-gray-200">
 {% macro card_user_face(row, box) %}
 <div class="relative inline-block {{ box }} shrink-0">
@@ -128,7 +130,7 @@
 
   <div class="container mx-auto px-4 py-8">
     <div class="text-center mb-8">
-      <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">🏆 FÄRDIGA SERIER</h1>
+      <h1 class="cyberpunk-header text-4xl font-bold text-cyan-400 mb-2">FÄRDIGA SERIER</h1>
       <p class="text-gray-300 text-lg">Historik och resultat från avslutade serier</p>
       <div class="mt-4">
         <a href="{{ url_for('index') }}" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2 px-6 rounded-lg inline-block">
@@ -140,7 +142,7 @@
     {% if sx_season_wrap %}
     <a href="{{ sx_season_wrap.recap_url }}" class="sx-season-hero-animate mb-8 rounded-2xl overflow-hidden border-2 border-amber-400/70 relative block no-underline text-inherit hover:border-amber-300 transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-900">
       <div class="absolute inset-0 bg-gradient-to-br from-red-950/85 via-slate-900/92 to-emerald-950/80 pointer-events-none"></div>
-      <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">🏆✨</div>
+      <div class="absolute top-2 right-3 text-2xl sm:text-3xl opacity-90 pointer-events-none select-none" aria-hidden="true">{{ mx_icon('trophy', 'mx-icon--xl') }} {{ mx_icon('sparkles', 'mx-icon--lg') }}</div>
       <div class="relative z-10 p-4 sm:p-6">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
           <div class="max-w-xl">

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="sv" class="dark">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
@@ -20,7 +21,7 @@
   <meta name="twitter:description" content="{{ og_description }}">
   <meta name="twitter:image" content="{{ og_image }}">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
   <style>
     body {
       min-height: 100vh;
@@ -62,9 +63,9 @@
     {% endif %}
 
     <ul class="text-left text-sm text-slate-300 space-y-2 mb-8 mx-auto max-w-xs">
-      <li>⚡ Konto på 20 sekunder</li>
-      <li>🏁 Topp 6 + holeshot + wildcard</li>
-      <li>🔥 Jämför dig med andra efter race</li>
+      <li>{{ mx_icon('zap') }}  Konto på 20 sekunder</li>
+      <li>{{ mx_icon('flag') }}  Topp 6 + holeshot + wildcard</li>
+      <li>{{ mx_icon('zap') }}  Jämför dig med andra efter race</li>
     </ul>
 
     <button type="button" onclick="if (window.MXShowPitPass) MXShowPitPass();" class="w-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-extrabold py-3.5 px-4 shadow-lg shadow-cyan-500/20 mb-3">

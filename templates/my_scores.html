@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+  {% from 'includes/mx_icon.html' import mx_icon %}
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mina Poäng - MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
+<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 font-sans">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
@@ -281,7 +283,11 @@
 
     function renderPickRow(row) {
       const status = row.status || "miss";
-      const icon = status === "perfect" ? "✅" : status === "close" ? "▲" : "❌";
+      const icon = status === "perfect"
+        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
+        : status === "close"
+          ? "▲"
+          : (typeof mxIcon === 'function' ? mxIcon('x-circle', { className: 'mx-icon--danger' }) : '');
       const bg = status === "perfect" ? "bg-emerald-950/25 border-emerald-800/40" : status === "close" ? "bg-amber-950/20 border-amber-800/35" : "bg-rose-950/15 border-rose-900/30";
       const actualCls = status === "perfect" ? "bg-emerald-400 text-emerald-950" : status === "close" ? "bg-amber-400 text-amber-950" : "bg-rose-400 text-rose-950";
       const pts = Number(row.points || 0);
@@ -306,13 +312,15 @@
 
     function renderSimpleRow(row) {
       if (row.kind === "bonus") {
-        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">🎯 ${row.text || row.hint}</div>`;
+        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold mx-btn-icon">${typeof mxIcon==='function'?mxIcon('target'):''} ${row.text || row.hint}</div>`;
       }
       if (row.kind === "note") {
         return `<div class="py-2 px-3 rounded-lg border border-rose-800/30 bg-rose-950/15 text-rose-200 text-xs">${row.text}</div>`;
       }
       const ok = row.status === "correct";
-      const icon = ok ? "✅" : "❌";
+      const icon = ok
+        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
+        : (typeof mxIcon === 'function' ? mxIcon('x-circle', { className: 'mx-icon--danger' }) : '');
       const pts = Number(row.points || 0);
       const ptsTxt = pts > 0 ? `+${pts}p` : "0p";
       const label = row.label ? `<span class="text-slate-500 text-[10px] uppercase">${row.label}</span>` : "";

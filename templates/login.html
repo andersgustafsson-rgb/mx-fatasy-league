@@ -7,7 +7,10 @@
     {% set seo_description = 'Logga in på MX Fantasy League — gratis fantasy motocross-spel. Tippa race, följ poäng och spela i ligor.' %}
     {% set seo_path = '/login' %}
     {% include 'includes/seo_head.html' %}
+  {% from 'includes/mx_icon.html' import mx_icon %}
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
+    <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
     <style>
         /* Fallback dark mode styles */
         @media (prefers-color-scheme: dark) {
@@ -103,7 +106,7 @@
                 <div class="relative">
                     <input type="password" id="password" name="password" class="w-full p-2 pr-11 border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 login-input" required>
                     <button type="button" id="togglePassword" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white" aria-label="Visa lösenord">
-                        <span id="togglePasswordIcon">👁️</span>
+                        <span id="togglePasswordIcon">{{ mx_icon('eye') }}</span>
                     </button>
                 </div>
             </div>
@@ -127,10 +130,14 @@
     const btn = document.getElementById('togglePassword');
     const icon = document.getElementById('togglePasswordIcon');
     if (!input || !btn) return;
+    function renderIcon(showing) {
+      if (icon) icon.innerHTML = showing ? window.mxIcon('eye-off') : window.mxIcon('eye');
+    }
+    renderIcon(false);
     btn.addEventListener('click', () => {
       const showing = input.type === 'text';
       input.type = showing ? 'password' : 'text';
-      if (icon) icon.textContent = showing ? '👁️' : '🙈';
+      renderIcon(!showing);
       btn.setAttribute('aria-label', showing ? 'Visa lösenord' : 'Dölj lösenord');
     });
   })();
