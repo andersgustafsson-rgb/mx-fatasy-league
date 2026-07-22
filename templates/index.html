@@ -300,22 +300,31 @@
       height: 100%;
       padding: 1rem 0.75rem;
       border-radius: 0.45rem;
-      border: none;
+      border: 1px solid #334155;
       color: #f8fafc;
       text-decoration: none;
-      background: #222e42;
-      transition: background 0.15s ease;
+      background: linear-gradient(180deg, #243247 0%, #1c283a 100%);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     }
     .home-inner-tile::before {
       display: none;
     }
     .home-inner-tile:hover {
-      background: #2a3850;
+      background: linear-gradient(180deg, #2a3a52 0%, #203044 100%);
+      border-color: #475569;
+      transform: translateY(-1px);
     }
     .home-inner-tile--muted {
       opacity: 0.55;
       cursor: not-allowed;
       pointer-events: none;
+      box-shadow: none;
+    }
+    .home-inner-tile--muted:hover {
+      transform: none;
+      background: linear-gradient(180deg, #243247 0%, #1c283a 100%);
+      border-color: #334155;
     }
     .home-inner-tile__icon,
     .home-inner-tile__label,
@@ -330,35 +339,141 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 2.25rem;
-      height: 2.25rem;
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 9999px;
       color: #94a3b8;
       line-height: 1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(148, 163, 184, 0.1);
     }
     .home-inner-tile__icon svg {
-      width: 1.35rem;
-      height: 1.35rem;
+      width: 1.25rem;
+      height: 1.25rem;
       stroke: currentColor;
       fill: none;
       stroke-width: 1.75;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-    .home-inner-tile:hover .home-inner-tile__icon {
-      color: #67e8f9;
+    .home-inner-tile__label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #e2e8f0;
     }
-    .home-inner-tile__label { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; color: #e2e8f0; }
     button.home-inner-tile {
       font: inherit;
       width: 100%;
       cursor: pointer;
       appearance: none;
     }
+
+    /* Snabba åtgärder — accent per knapp */
+    .home-action-tile--team { border-top: 2px solid #67e8f9; }
+    .home-action-tile--team .home-inner-tile__icon {
+      color: #67e8f9;
+      background: rgba(34, 211, 238, 0.12);
+      border-color: rgba(34, 211, 238, 0.35);
+    }
+    .home-action-tile--results { border-top: 2px solid #fbbf24; }
+    .home-action-tile--results .home-inner-tile__icon {
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+    .home-action-tile--scores { border-top: 2px solid #34d399; }
+    .home-action-tile--scores .home-inner-tile__icon {
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+    .home-action-tile--finished { border-top: 2px solid #94a3b8; }
+    .home-action-tile--finished .home-inner-tile__icon {
+      color: #cbd5e1;
+      background: rgba(148, 163, 184, 0.12);
+      border-color: rgba(148, 163, 184, 0.35);
+    }
+    .home-action-tile--others { border-top: 2px solid #818cf8; }
+    .home-action-tile--others .home-inner-tile__icon {
+      color: #a5b4fc;
+      background: rgba(129, 140, 248, 0.12);
+      border-color: rgba(129, 140, 248, 0.35);
+    }
+    .home-action-tile--locked { border-top: 2px solid #64748b; }
+    .home-action-tile--locked .home-inner-tile__icon {
+      color: #94a3b8;
+      background: rgba(100, 116, 139, 0.12);
+      border-color: rgba(100, 116, 139, 0.35);
+    }
     .home-weekly-tile {
       min-height: auto;
-      padding: 0.8rem 0.65rem;
+      padding: 0.9rem 0.7rem 0.85rem;
+      gap: 0.28rem;
+      background: linear-gradient(180deg, #243247 0%, #1c283a 100%);
+      border: 1px solid #334155;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     }
-    .home-weekly-tile--empty { opacity: 0.5; }
+    .home-weekly-tile:hover {
+      background: linear-gradient(180deg, #2a3a52 0%, #203044 100%);
+      border-color: #475569;
+      transform: translateY(-1px);
+    }
+    .home-weekly-tile--empty {
+      opacity: 0.55;
+      box-shadow: none;
+    }
+    .home-weekly-tile--empty:hover {
+      transform: none;
+    }
+    .home-weekly-tile .home-inner-tile__icon {
+      width: 2.6rem;
+      height: 2.6rem;
+      border-radius: 9999px;
+      margin-bottom: 0.15rem;
+      border: 1px solid transparent;
+    }
+    .home-weekly-tile .home-inner-tile__icon svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .home-weekly-tile--rocket {
+      border-top: 2px solid #fbbf24;
+    }
+    .home-weekly-tile--rocket .home-inner-tile__icon {
+      color: #fbbf24;
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.35);
+    }
+    .home-weekly-tile--rocket .home-inner-tile__title { color: #fcd34d; }
+    .home-weekly-tile--anchor {
+      border-top: 2px solid #94a3b8;
+    }
+    .home-weekly-tile--anchor .home-inner-tile__icon {
+      color: #cbd5e1;
+      background: rgba(148, 163, 184, 0.12);
+      border-color: rgba(148, 163, 184, 0.35);
+    }
+    .home-weekly-tile--anchor .home-inner-tile__title { color: #cbd5e1; }
+    .home-weekly-tile--perfect {
+      border-top: 2px solid #34d399;
+    }
+    .home-weekly-tile--perfect .home-inner-tile__icon {
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.12);
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+    .home-weekly-tile--perfect .home-inner-tile__title { color: #6ee7b7; }
+    .home-weekly-tile--holeshot {
+      border-top: 2px solid #67e8f9;
+    }
+    .home-weekly-tile--holeshot .home-inner-tile__icon {
+      color: #67e8f9;
+      background: rgba(34, 211, 238, 0.12);
+      border-color: rgba(34, 211, 238, 0.35);
+    }
+    .home-weekly-tile--holeshot .home-inner-tile__title { color: #a5f3fc; }
     .home-inner-tile__title {
       font-size: 0.65rem;
       font-weight: 700;
@@ -367,21 +482,28 @@
       color: rgba(148, 163, 184, 0.95);
     }
     .home-inner-tile__name {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #f1f5f9;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #f8fafc;
       max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .home-inner-tile__meta { font-size: 0.68rem; color: rgba(203, 213, 225, 0.88); margin-top: 0.1rem; }
-    .home-inner-tile__link {
-      font-size: 0.65rem;
+    .home-inner-tile__meta {
+      font-size: 0.7rem;
       color: #94a3b8;
-      margin-top: 0.3rem;
+      margin-top: 0.05rem;
+      line-height: 1.35;
     }
-    .home-inner-tile__link:hover { color: #a5f3fc; text-decoration: underline; }
+    .home-inner-tile__link {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: #67e8f9;
+      margin-top: 0.4rem;
+      opacity: 0.9;
+    }
+    .home-inner-tile__link:hover { color: #a5f3fc; text-decoration: underline; opacity: 1; }
 
     .rider-spotlight-card {
       display: block;
@@ -1965,9 +2087,9 @@
                   <h2>Snabba åtgärder</h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
-                <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
                   {% if not upcoming_race or upcoming_race.series != 'WSX' %}
-                  <a href="{{ url_for('season_team_page') }}" class="home-inner-tile">
+                  <a href="{{ url_for('season_team_page') }}" class="home-inner-tile home-action-tile--team">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
@@ -1975,21 +2097,21 @@
                   </a>
                   {% endif %}
 
-                  <a href="{{ url_for('race_results_page') }}" class="home-inner-tile">
+                  <a href="{{ url_for('race_results_page') }}" class="home-inner-tile home-action-tile--results">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
                     </span>
                     <span class="home-inner-tile__label">Race Resultat</span>
                   </a>
 
-                  <a href="{{ url_for('my_scores') }}" class="home-inner-tile">
+                  <a href="{{ url_for('my_scores') }}" class="home-inner-tile home-action-tile--scores">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 4H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/></svg>
                     </span>
                     <span class="home-inner-tile__label">Mina Poäng</span>
                   </a>
 
-                  <a href="{{ url_for('finished_series_page') }}" class="home-inner-tile">
+                  <a href="{{ url_for('finished_series_page') }}" class="home-inner-tile home-action-tile--finished">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
                     </span>
@@ -1998,13 +2120,13 @@
 
                   {% if view_picks_race %}
                   <button type="button" id="se-andras-picks-btn" onclick="showOtherUsersPicksFromMain()"
-                          class="home-inner-tile{% if not can_view_other_picks %} hidden{% endif %}">
+                          class="home-inner-tile home-action-tile--others{% if not can_view_other_picks %} hidden{% endif %}">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                     </span>
                     <span class="home-inner-tile__label">Se Andras Picks</span>
                   </button>
-                  <div id="picks-locked-disabled-btn" class="home-inner-tile home-inner-tile--muted{% if can_view_other_picks %} hidden{% endif %}">
+                  <div id="picks-locked-disabled-btn" class="home-inner-tile home-inner-tile--muted home-action-tile--locked{% if can_view_other_picks %} hidden{% endif %}">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
                     </span>
@@ -2022,7 +2144,7 @@
                   <h2><span class="mx-heading-icon">{{ mx_icon('party') }}<span>Veckans Prestationer</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
-                  <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5">
                     <p class="text-slate-300 text-center col-span-full text-sm">Laddar...</p>
                   </div>
                 </div>
@@ -3088,7 +3210,7 @@
       }
     }
 
-    function weeklyStatTile(icon, title, winner, metaLines, profileId) {
+    function weeklyStatTile(icon, title, winner, metaLines, profileId, variant) {
       const empty = !winner;
       const name = empty ? 'Ingen data ännu' : (winner.display_name || winner.username || '');
       const meta = (metaLines || []).filter(Boolean).map((line) =>
@@ -3097,8 +3219,9 @@
       const link = (!empty && profileId)
         ? '<a href="/profile/' + profileId + '" class="home-inner-tile__link">Visa profil →</a>'
         : '';
+      const variantClass = variant ? ' home-weekly-tile--' + variant : '';
       return `
-        <div class="home-inner-tile home-weekly-tile${empty ? ' home-weekly-tile--empty' : ''}">
+        <div class="home-inner-tile home-weekly-tile${variantClass}${empty ? ' home-weekly-tile--empty' : ''}">
           <div class="home-inner-tile__icon" aria-hidden="true">${icon}</div>
           <div class="home-inner-tile__title">${title}</div>
           <div class="home-inner-tile__name">${name}</div>
@@ -3149,15 +3272,16 @@
         const svgZap = '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/></svg>';
 
         let html = '';
-        html += weeklyStatTile(svgRocket, 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id);
-        html += weeklyStatTile(svgAnchor, 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id);
+        html += weeklyStatTile(svgRocket, 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id, 'rocket');
+        html += weeklyStatTile(svgAnchor, 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id, 'anchor');
         html += weeklyStatTile(
           svgTarget, 'Perfekt Gissning', data.perfect_picks,
           data.perfect_picks ? [
             data.perfect_picks.perfect_count + ' perfekta picks',
             data.perfect_picks.total_perfect_points + 'p totalt'
           ] : [],
-          data.perfect_picks && data.perfect_picks.user_id
+          data.perfect_picks && data.perfect_picks.user_id,
+          'perfect'
         );
         html += weeklyStatTile(
           svgZap, 'Holeshot-Mästare', data.holeshot_master,
@@ -3165,7 +3289,8 @@
             data.holeshot_master.total_holeshot_points + 'p holeshot',
             'Denna vecka'
           ] : [],
-          data.holeshot_master && data.holeshot_master.user_id
+          data.holeshot_master && data.holeshot_master.user_id,
+          'holeshot'
         );
         
         container.innerHTML = html;
