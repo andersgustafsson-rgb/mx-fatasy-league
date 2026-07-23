@@ -403,6 +403,38 @@
       </section>
       {% endif %}
 
+      {% if is_sx and sx_rider_podiums %}
+      <section class="mb-16">
+        <div class="text-center mb-10">
+          <h2 class="text-2xl md:text-3xl font-black text-amber-200 font-orbit inline-flex items-center gap-2">
+            <span class="text-red-500" aria-hidden="true">◆</span> AMA Supercross — förartoppen
+          </h2>
+          <p class="text-gray-500 text-sm mt-2 max-w-2xl mx-auto">
+            450 · 250 East · 250 West — summerade AMA-poäng över SX-omgångarna {{ series.year }}.
+          </p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8">
+          {% set sx_blocks = [
+            ('450cc', '450', 'from-yellow-500/25 to-amber-900/20 border-yellow-500/25'),
+            ('250 West', '250_west', 'from-sky-500/20 to-slate-900/30 border-sky-400/25'),
+            ('250 East', '250_east', 'from-emerald-500/20 to-slate-900/30 border-emerald-400/25')
+          ] %}
+          {% for title, key, grad in sx_blocks %}
+          {% set rrows = sx_rider_podiums.get(key) or [] %}
+          <div class="glass-panel rounded-2xl p-5 bg-gradient-to-b {{ grad }} border border-white/10">
+            <h3 class="text-center font-orbit font-black text-lg mb-1 tracking-wide text-white drop-shadow">{{ title }}</h3>
+            <div class="h-0.5 w-16 mx-auto rounded-full bg-white/20 mb-6"></div>
+            {% if rrows|length == 0 %}
+              <p class="text-gray-500 text-center text-sm py-8">Ingen förardata för klassen.</p>
+            {% else %}
+              {{ rider_podium_three(rrows) }}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
       {% if leaderboard %}
       <section class="mb-12">
         <h2 class="text-xl md:text-2xl font-black text-amber-200 font-orbit mb-6 text-center flex items-center justify-center gap-2">

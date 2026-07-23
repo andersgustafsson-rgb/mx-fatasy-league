@@ -7373,10 +7373,15 @@ def finished_series_detail_page(series_id):
 
         uid = session.get("user_id")
         is_logged_in = uid is not None
-        is_wsx = (series.name or "").strip().upper() == "WSX"
+        series_name = (series.name or "").strip()
+        is_wsx = series_name.upper() == "WSX"
+        is_sx = series_name in ("Supercross", "SX") or series_name.upper() == "SX"
         wsx_rider_podiums = (
             compute_wsx_rider_podiums_for_series(series_id) if is_wsx else None
         )
+        sx_rider_podiums = None
+        if is_sx and series.year:
+            sx_rider_podiums = compute_sx_rider_podiums_for_year(int(series.year))
 
         return render_template(
             "finished_series_detail.html",
@@ -7388,7 +7393,9 @@ def finished_series_detail_page(series_id):
             is_logged_in=is_logged_in,
             current_user_id=uid,
             is_wsx=is_wsx,
+            is_sx=is_sx,
             wsx_rider_podiums=wsx_rider_podiums,
+            sx_rider_podiums=sx_rider_podiums,
         )
         
     except Exception as e:
@@ -9639,21 +9646,28 @@ def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
         badge = group_labels[grp]
         common_pos = data.get("common_position")
         common_pct = data.get("common_position_pct")
-        sub_parts = [f'{data["picked_pct"]}% har honom i laget']
+
+        def _pct_label(v: float | int | None) -> str:
+            if v is None:
+                return "0"
+            n = float(v)
+            return f"{n:.0f}" if abs(n - round(n)) < 0.05 else f"{n:.1f}"
+
+        stat_chips: list[str] = [f'{_pct_label(data["picked_pct"])}% i lag']
         if data.get("p1_pct"):
-            sub_parts.append(f'{data["p1_pct"]}% som P1')
+            stat_chips.append(f'{_pct_label(data["p1_pct"])}% P1')
         if common_pos and common_pct:
-            sub_parts.append(f'vanligast P{common_pos} ({common_pct}%)')
+            stat_chips.append(f'oftast P{common_pos}')
         cards.append(
             _spotlight_rider_card(
                 rider,
                 comp=comp,
-                reason=f'Folkets favorit — {badge}',
-                subtitle=" · ".join(sub_parts),
+                reason=f"Folkets favorit — {badge}",
+                subtitle="",
                 badge=badge,
                 badge_emoji="🔥",
                 season_year=year,
-                extra_stats=[],
+                extra_stats=stat_chips,
                 include_championship=False,
             )
         )
@@ -9887,6 +9901,8 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
         mode_data = cached[1]
         if mode_key == "rocket" and int(mode_data.get("_calc_v") or 0) < 3:
             pass
+        elif mode_key == "crowd_pick" and int(mode_data.get("_calc_v") or 0) < 2:
+            pass
         elif not _spotlight_mode_needs_portrait_refresh(mode_data):
             return mode_data
 
@@ -9905,6 +9921,8 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
     _patch_spotlight_portraits({mode_key: mode_data}, riders)
     if mode_key == "rocket":
         mode_data["_calc_v"] = 3
+    if mode_key == "crowd_pick":
+        mode_data["_calc_v"] = 2
     _RIDER_SPOTLIGHT_MODE_CACHE[mode_key] = (now + _HOMEPAGE_CACHE_TTL, mode_data)
     return mode_data
 
