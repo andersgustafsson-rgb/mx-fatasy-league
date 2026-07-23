@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page_title }} — MX Fantasy League</title>
   <meta name="description" content="{{ page_description }}">
-  <link rel="canonical" href="{{ request.url_root.rstrip('/') }}{{ request.path }}">
+  <link rel="canonical" href="{{ public_base_url }}{{ request.path }}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="MX Fantasy League">
   <meta property="og:title" content="{{ page_title }} — MX Fantasy League">
   <meta property="og:description" content="{{ page_description }}">
-  <meta property="og:url" content="{{ request.url_root.rstrip('/') }}{{ request.path }}">
+  <meta property="og:url" content="{{ public_base_url }}{{ request.path }}">
   <meta property="og:locale" content="sv_SE">
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512">

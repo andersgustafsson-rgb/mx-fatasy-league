@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-2">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
@@ -30,7 +30,7 @@
     "@type": "WebApplication",
     "name": "MX Fantasy League",
     "alternateName": "MX Fantasy",
-    "url": "{{ request.url_root.rstrip('/') }}/",
+    "url": "{{ public_base_url }}/",
     "applicationCategory": "GameApplication",
     "genre": "Fantasy Motocross",
     "operatingSystem": "Web",
@@ -40,7 +40,7 @@
     "publisher": {
       "@type": "Organization",
       "name": "MX Fantasy League",
-      "url": "{{ request.url_root.rstrip('/') }}/",
+      "url": "{{ public_base_url }}/",
       "sameAs": ["{{ facebook_page_url|default('https://www.facebook.com/profile.php?id=61586769893903', true) }}"]
     }
   }
@@ -93,11 +93,12 @@
     html.ios-pwa-standalone:not(.ios-splash-done) body { overflow: hidden; }
     html.ios-pwa-standalone:not(.ios-splash-done) #app-shell { visibility: hidden; }
 
-    /* Mobile Scroll Fix */
+    /* Mobile Scroll Fix — avoid smooth scroll + keep horizontal clip without
+       creating a containing block that breaks fixed/sticky on some browsers. */
     html, body {
       -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-      overflow-x: hidden; /* Prevent horizontal scroll */
+      scroll-behavior: auto;
+      overflow-x: clip;
     }
     
     /* Readonly mode for non-logged users */
@@ -666,14 +667,7 @@
     #loginModal .dark\\:bg-gray-800 {
       pointer-events: auto !important;
     }
-    
-    /* Prevent scroll jumping on mobile
-       NOTE: Don't apply transforms to html/body on iOS; it breaks position:fixed (PWA splash). */
-    *:not(html):not(body):not(#ios-splash):not(#ios-splash *) {
-      -webkit-transform: translateZ(0);
-      transform: translateZ(0);
-    }
-    
+
     /* Better responsive container */
     .container {
       max-width: 100vw;
@@ -709,7 +703,7 @@
       }
     }
     
-    /* Optimize animations for mobile */
+    /* Optimize animations for mobile — infinite shadows/transforms blank text while scrolling */
     @media (max-width: 768px) {
       .racing-logo {
         animation-duration: 6s; /* Slower animation on mobile */
@@ -720,11 +714,17 @@
       }
       
       #countdown-widget {
-        animation-duration: 4s; /* Slower pulse on mobile */
+        animation: none;
       }
       
       #race-countdown, #deadline-countdown {
-        animation-duration: 2s; /* Slower countdown pulse on mobile */
+        animation: none;
+      }
+
+      .rider-spotlight-card,
+      .sx-season-hero-animate,
+      .home-race-hero .mx-picks-cta--need {
+        animation: none !important;
       }
       
       /* Disable problematic animations on mobile */

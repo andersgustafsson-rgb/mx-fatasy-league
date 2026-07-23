@@ -34,12 +34,15 @@ def get_public_base_url() -> str:
             host = (request.host or "").split(":")[0].lower()
             if is_legacy_render_host(host):
                 return CANONICAL_PUBLIC_BASE_URL
+            # Custom domain behind TLS-terminating proxy often reports http:// —
+            # always emit the canonical https origin for SEO/share links.
+            if host in ("mx-fantasy.se", "www.mx-fantasy.se"):
+                return CANONICAL_PUBLIC_BASE_URL
             return request.host_url.rstrip("/")
     except Exception:
         pass
 
     return CANONICAL_PUBLIC_BASE_URL
-
 
 def is_legacy_render_host(host: str | None) -> bool:
     h = (host or "").split(":")[0].lower()

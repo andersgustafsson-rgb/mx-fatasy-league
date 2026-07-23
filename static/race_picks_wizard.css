@@ -673,17 +673,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* Keep text painted during iOS scroll (compositor glitch) */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-.wizard-summary-rider,
-.wizard-summary-extra__name,
-.wizard-summary-num {
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
 }
 
 .wizard-summary-empty {

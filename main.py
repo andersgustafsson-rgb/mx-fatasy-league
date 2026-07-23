@@ -488,6 +488,12 @@ from public_url import (  # noqa: E402
 )
 
 
+@app.context_processor
+def inject_public_base_url():
+    """Canonical https origin for SEO tags (avoids http:// behind Render proxy)."""
+    return {"public_base_url": get_public_base_url()}
+
+
 @app.before_request
 def _redirect_legacy_render_host():
     """Send old *.onrender.com traffic to mx-fantasy.se (keep path + query)."""

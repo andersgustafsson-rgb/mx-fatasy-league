@@ -2,7 +2,7 @@
 {% set _title = seo_title|default('MX Fantasy League — gratis fantasy motocross-spel i Sverige', true) %}
 {% set _desc = seo_description|default('Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Skapa lag, spela i ligor och följ leaderboard — helt gratis.', true) %}
 {% set _path = seo_path|default('/', true) %}
-{% set _base = request.url_root.rstrip('/') %}
+{% set _base = public_base_url|default(request.url_root.rstrip('/'), true) %}
 {% set _url = _base ~ _path %}
 {% set _img = seo_image|default(_base ~ url_for('static', filename='images/mx_fantasy_logo.png'), true) %}
 <title>{{ _title }}</title>
