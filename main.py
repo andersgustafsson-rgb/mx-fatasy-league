@@ -1635,100 +1635,126 @@ def index():
     today = get_today()
 
     # Ensure database is initialized (only once per worker).
+    # Retry once on stale Postgres connections (common after idle → intermittent 500).
     global _INDEX_SCHEMA_CHECKED
     if not _INDEX_SCHEMA_CHECKED:
-        try:
-            # Check if tables exist, if not initialize
-            from sqlalchemy import inspect
+        from sqlalchemy.exc import OperationalError, DBAPIError
 
-            if not inspect(db.engine).has_table("competitions"):
-                print("Tables missing, reinitializing database...")
-                init_database()
-
-            # Add classes column if missing
+        for _attempt in range(2):
             try:
-                exists = db.session.execute(
-                    db.text(
-                        """
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name='riders' AND column_name='classes'
-                        """
-                    )
-                ).fetchone()
-                if not exists:
-                    print("Adding classes column to riders table...")
-                    db.session.execute(
-                        db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)")
-                    )
-                    db.session.commit()
-                    print("Classes column added successfully")
-            except Exception as e:
-                print(f"Error adding classes column: {e}")
-                db.session.rollback()
+                # Check if tables exist, if not initialize
+                from sqlalchemy import inspect
 
-            # Add admin announcement columns to global_simulation if missing
-            try:
-                exists = db.session.execute(
-                    db.text(
-                        """
-                        SELECT column_name FROM information_schema.columns 
-                        WHERE table_name='global_simulation' AND column_name='admin_message'
-                        """
-                    )
-                ).fetchone()
-                if not exists:
-                    print("Adding admin announcement columns to global_simulation table...")
-                    db.session.execute(
-                        db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT")
-                    )
-                    db.session.execute(
-                        db.text(
-                            "ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"
-                        )
-                    )
-                    db.session.execute(
-                        db.text(
-                            "ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"
-                        )
-                    )
-                    db.session.commit()
-                    print("Admin announcement columns added successfully")
-            except Exception as e:
-                print(f"Error adding admin announcement columns: {e}")
-                db.session.rollback()
+                if not inspect(db.engine).has_table("competitions"):
+                    print("Tables missing, reinitializing database...")
+                    init_database()
 
-            # Check if league_requests table exists
-            if not inspect(db.engine).has_table("league_requests"):
-                print("Creating league_requests table...")
+                # Add classes column if missing
+                try:
+                    exists = db.session.execute(
+                        db.text(
+                            """
+                            SELECT column_name FROM information_schema.columns 
+                            WHERE table_name='riders' AND column_name='classes'
+                            """
+                        )
+                    ).fetchone()
+                    if not exists:
+                        print("Adding classes column to riders table...")
+                        db.session.execute(
+                            db.text("ALTER TABLE riders ADD COLUMN classes VARCHAR(50)")
+                        )
+                        db.session.commit()
+                        print("Classes column added successfully")
+                except Exception as e:
+                    print(f"Error adding classes column: {e}")
+                    db.session.rollback()
+
+                # Add admin announcement columns to global_simulation if missing
+                try:
+                    exists = db.session.execute(
+                        db.text(
+                            """
+                            SELECT column_name FROM information_schema.columns 
+                            WHERE table_name='global_simulation' AND column_name='admin_message'
+                            """
+                        )
+                    ).fetchone()
+                    if not exists:
+                        print("Adding admin announcement columns to global_simulation table...")
+                        db.session.execute(
+                            db.text("ALTER TABLE global_simulation ADD COLUMN admin_message TEXT")
+                        )
+                        db.session.execute(
+                            db.text(
+                                "ALTER TABLE global_simulation ADD COLUMN admin_message_priority VARCHAR(20) DEFAULT 'info'"
+                            )
+                        )
+                        db.session.execute(
+                            db.text(
+                                "ALTER TABLE global_simulation ADD COLUMN admin_message_active BOOLEAN DEFAULT FALSE"
+                            )
+                        )
+                        db.session.commit()
+                        print("Admin announcement columns added successfully")
+                except Exception as e:
+                    print(f"Error adding admin announcement columns: {e}")
+                    db.session.rollback()
+
+                # Check if league_requests table exists
+                if not inspect(db.engine).has_table("league_requests"):
+                    print("Creating league_requests table...")
+                    try:
+                        db.session.rollback()
+                        db.session.execute(
+                            db.text(
+                                """
+                                CREATE TABLE league_requests (
+                                    id SERIAL PRIMARY KEY,
+                                    league_id INTEGER NOT NULL REFERENCES leagues(id),
+                                    user_id INTEGER NOT NULL REFERENCES users(id),
+                                    message VARCHAR(500),
+                                    status VARCHAR(20) DEFAULT 'pending',
+                                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                    processed_at TIMESTAMP,
+                                    UNIQUE(league_id, user_id)
+                                )
+                                """
+                            )
+                        )
+                        db.session.commit()
+                        print("league_requests table created successfully")
+                    except Exception as e:
+                        print(f"Error creating league_requests table: {e}")
+                        db.session.rollback()
+
+                _INDEX_SCHEMA_CHECKED = True
+                break
+            except (OperationalError, DBAPIError) as e:
+                print(f"Database check connection error (attempt {_attempt + 1}): {e}")
                 try:
                     db.session.rollback()
-                    db.session.execute(
-                        db.text(
-                            """
-                            CREATE TABLE league_requests (
-                                id SERIAL PRIMARY KEY,
-                                league_id INTEGER NOT NULL REFERENCES leagues(id),
-                                user_id INTEGER NOT NULL REFERENCES users(id),
-                                message VARCHAR(500),
-                                status VARCHAR(20) DEFAULT 'pending',
-                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                processed_at TIMESTAMP,
-                                UNIQUE(league_id, user_id)
-                            )
-                            """
-                        )
-                    )
-                    db.session.commit()
-                    print("league_requests table created successfully")
-                except Exception as e:
-                    print(f"Error creating league_requests table: {e}")
-                    db.session.rollback()
-
-            _INDEX_SCHEMA_CHECKED = True
-        except Exception as e:
-            print(f"Database check error: {e}")
-            init_database()
-            _INDEX_SCHEMA_CHECKED = True
+                except Exception:
+                    pass
+                try:
+                    db.engine.dispose()
+                except Exception:
+                    pass
+                if _attempt == 1:
+                    print(f"Database check error: {e}")
+                    try:
+                        init_database()
+                    except Exception as init_err:
+                        print(f"init_database after reconnect failed: {init_err}")
+                    _INDEX_SCHEMA_CHECKED = True
+            except Exception as e:
+                print(f"Database check error: {e}")
+                try:
+                    init_database()
+                except Exception as init_err:
+                    print(f"init_database failed: {init_err}")
+                _INDEX_SCHEMA_CHECKED = True
+                break
 
     _ensure_competition_result_moto_columns()
 
@@ -1737,8 +1763,13 @@ def index():
         competitions = Competition.query.order_by(Competition.event_date).all()
     except Exception as e:
         print(f"Error getting competitions: {e}")
-        competitions = []
-    
+        try:
+            db.session.rollback()
+            db.engine.dispose()
+            competitions = Competition.query.order_by(Competition.event_date).all()
+        except Exception as e2:
+            print(f"Error getting competitions (retry): {e2}")
+            competitions = []    
     # Aktuellt race = nästa utan resultat (inkl. låst Hangtown). Öppna picks kan vara ett senare race.
     upcoming_race = _current_picks_competition()
     view_picks_race = upcoming_race
@@ -20873,14 +20904,29 @@ def force_create_users_route():
         return f"<h1>Error:</h1><p>{str(e)}</p>"
 
 @app.get("/health")
+@app.get("/healthz")
 def health_check():
-    """Health check endpoint for Render"""
+    """
+    Liveness for Render / keep-alive. Always prefer 200 so probes and cron pings
+    wake the instance even if Postgres is briefly reconnecting.
+    """
+    db_ok = False
     try:
-        # Test database connection
         db.session.execute(db.text("SELECT 1"))
-        return jsonify({"status": "healthy", "database": "connected"})
+        db_ok = True
     except Exception as e:
-        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        print(f"health db check: {e}")
+    payload = {
+        "status": "ok" if db_ok else "degraded",
+        "database": "connected" if db_ok else "unavailable",
+    }
+    # 200 even when degraded — a 500 here can make cold starts worse under probes.
+    return jsonify(payload), 200
+
 
 @app.get("/fix_database")
 def fix_database_route():

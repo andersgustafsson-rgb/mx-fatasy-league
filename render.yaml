@@ -4,8 +4,25 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -c gunicorn.conf.py main:app
+    healthCheckPath: /health
     envVars:
       - key: SECRET_KEY
         value: my-super-secret-key-for-mx-fantasy-league-2025
       - key: FLASK_ENV
         value: production
+      - key: PUBLIC_BASE_URL
+        value: https://mx-fantasy.se
+
+  # Pingar webben så den inte somnar (första besök efter idle → 500).
+  # Kräver att Cron Jobs är aktiverat på Render-planen.
+  - type: cron
+    name: mx-keepalive
+    env: python
+    schedule: "*/5 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/cron_keepalive.py
+    envVars:
+      - key: KEEPALIVE_URL
+        value: https://mx-fantasy.se/health
+      - key: PUBLIC_BASE_URL
+        value: https://mx-fantasy.se

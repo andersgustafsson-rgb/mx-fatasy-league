@@ -8,7 +8,9 @@ bp = Blueprint('public', __name__)
 
 
 @bp.get('/health')
+@bp.get('/healthz')
 def health():
+	"""Liveness — keep-alive / Render probes (never fail the wake-up ping)."""
 	return jsonify(status='ok')
 
 

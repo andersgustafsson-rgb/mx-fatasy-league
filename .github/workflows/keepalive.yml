@@ -1,0 +1,26 @@
+# Håller mx-fantasy.se vaken så första besöket efter idle inte får 500/timeout.
+name: Keepalive
+
+on:
+  schedule:
+    # GitHub kan dröja några minuter; 10 min räcker oftast mot Render sleep.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          set -e
+          for i in 1 2 3; do
+            if curl -fsS -L --max-time 45 -A "mx-fantasy-keepalive/github" \
+              "https://mx-fantasy.se/health"; then
+              echo
+              exit 0
+            fi
+            echo "attempt $i failed, retrying..."
+            sleep 5
+          done
+          exit 1
