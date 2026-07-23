@@ -412,6 +412,13 @@
     .duels-jump-bar__icon { font-size: 1.1rem; flex-shrink: 0; }
     .duels-jump-bar__text { flex: 1; min-width: 0; text-align: left; }
     .duels-jump-bar__arrow { color: #fbbf24; font-weight: 800; flex-shrink: 0; }
+    @media (max-width: 767px) {
+      .duels-section--alert,
+      .duels-alert-pill,
+      .duels-jump-bar {
+        animation: none !important;
+      }
+    }
     @media (min-width: 768px) {
       .duels-jump-bar { display: none; }
     }

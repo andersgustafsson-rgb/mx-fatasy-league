@@ -8,7 +8,7 @@
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png" />
   <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -57,6 +57,14 @@
     }
     @keyframes smx-shine {
       to { background-position: 200% center; }
+    }
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+      }
+      .smx-wordmark {
+        animation: none !important;
+      }
     }
     .podium-row {
       display: flex;

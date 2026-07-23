@@ -76,6 +76,16 @@
       0%, 100% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
       50% { box-shadow: 0 0 30px rgba(34, 211, 238, 0.6); }
     }
+
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+      }
+      .floating-animation,
+      .pulse-glow {
+        animation: none !important;
+      }
+    }
   </style>
 <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>

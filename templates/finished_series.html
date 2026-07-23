@@ -37,6 +37,14 @@
     .sx-season-hero-animate {
       animation: sx-hero-glow 5s ease-in-out infinite;
     }
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+      }
+      .sx-season-hero-animate {
+        animation: none !important;
+      }
+    }
     .font-orbit { font-family: 'Orbitron', monospace; }
     .card-podium-row {
       display: flex;

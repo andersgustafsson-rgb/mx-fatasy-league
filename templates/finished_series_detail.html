@@ -64,6 +64,15 @@
     @keyframes wordmark-shine {
       to { background-position: 200% center; }
     }
+    @media (max-width: 768px) {
+      body {
+        background-attachment: scroll;
+      }
+      .series-wordmark,
+      .series-wordmark--generic {
+        animation: none !important;
+      }
+    }
     .podium-row {
       display: flex;
       flex-direction: row;
