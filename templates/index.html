@@ -20,10 +20,20 @@
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
-  <meta name="theme-color" content="#06b6d4" />
+  <meta name="theme-color" content="#141c2c" />
+  <meta name="color-scheme" content="dark" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  {# Paint dark ASAP — before Tailwind CDN — so http→https / first paint doesn't flash white #}
+  <style>
+    html { background-color: #141c2c; color-scheme: dark; }
+    html, body {
+      background-color: #141c2c;
+      color: #e2e8f0;
+      margin: 0;
+    }
+  </style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -1831,7 +1841,7 @@
     /* Tab buttons use rp-tab-btn in rp-buttons.css */
   </style>
 </head>
-<body class="relative font-sans min-h-screen text-gray-200">
+<body class="relative font-sans min-h-screen text-gray-200" style="background-color:#141c2c;color:#e2e8f0">
   <!-- iOS PWA splash overlay -->
   <div id="ios-splash" class="fixed inset-0 z-[999999] items-center justify-center" style="background: radial-gradient(1200px 600px at 50% 30%, rgba(6,182,212,0.18), rgba(0,0,0,0.92));">
     <div class="flex flex-col items-center gap-4 px-6">
