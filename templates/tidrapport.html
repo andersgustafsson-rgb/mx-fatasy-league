@@ -588,7 +588,7 @@
               <div>
                 <h2 class="text-lg font-semibold text-rose-50 tracking-tight">Sjuktimmar — manuell beräkning</h2>
                 <p class="text-xs text-slate-400 mt-1 max-w-md">
-                  Mata in namn och antal arbetsdagar/frånvarodagar, eller klistra kundens Excel-lista med färdiga sjuktimmar.
+                  Klistra frånvaro för korta fall. Vid långtidssjuk / månadsbryt: räkna rätt timmar själv och skriv in dem i fältet «Sjuktimmar (färdiga)» — eller ändra siffran i tabellen.
                 </p>
               </div>
               <button type="button" id="btnSickManualClear" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600">
@@ -596,14 +596,18 @@
               </button>
             </div>
 
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs text-slate-300 mb-1" for="sickManualName">Namn</label>
                 <input id="sickManualName" type="text" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Ex: Norin, Angelika" autocomplete="off" />
               </div>
               <div>
-                <label class="block text-xs text-slate-300 mb-1" for="sickManualDays">Antal arbetsdagar / sjukdagar</label>
-                <input id="sickManualDays" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Klistra siffra här, t.ex. 22" autocomplete="off" />
+                <label class="block text-xs text-slate-300 mb-1" for="sickManualHours">Sjuktimmar (färdiga)</label>
+                <input id="sickManualHours" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border-2 border-rose-800/60 px-3 py-2 text-sm" placeholder="T.ex. 72,5 — det du räknat fram" autocomplete="off" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-300 mb-1" for="sickManualDays">Eller: antal arbetsdagar</label>
+                <input id="sickManualDays" type="text" inputmode="decimal" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" placeholder="Bara om du inte har färdiga timmar" autocomplete="off" />
               </div>
             </div>
 
@@ -661,7 +665,8 @@
                   </button>
                 </div>
                 <p class="text-[11px] text-slate-500 mt-2">
-                  Excel-lista med timkolumn använder färdiga sjuktimmar direkt. Saknas timkolumn räknas frånvarorader från datum och «Omf» som sjukgrad.
+                  Frånvarorader utan timkolumn räknas från hela datumspannet (blir fel vid långtidssjuk / månadsbryt).
+                  Då: ta bort fel rad i tabellen, skriv in rätt timmar i «Sjuktimmar (färdiga)» och lägg till — eller ändra timmarna direkt i tabellen.
                 </p>
               </div>
             </details>
@@ -683,7 +688,7 @@
                     <th class="text-right px-3 py-2">Dagar</th>
                     <th class="text-right px-3 py-2">Syss %</th>
                     <th class="text-right px-3 py-2">Sjuk %</th>
-                    <th class="text-right px-3 py-2">Sjuktimmar</th>
+                    <th class="text-right px-3 py-2">Sjuktimmar <span class="font-normal text-slate-500">(redigerbar)</span></th>
                   </tr>
                 </thead>
                 <tbody id="sickManualTableBody"></tbody>

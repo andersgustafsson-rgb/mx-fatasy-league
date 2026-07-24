@@ -1,6 +1,8 @@
 """
 Email utilities for sending emails via Gmail SMTP
 """
+import hashlib
+import hmac
 import html
 import os
 import smtplib
@@ -9,12 +11,46 @@ from email.mime.multipart import MIMEMultipart
 from typing import List, Optional
 
 
+def _email_token_secret() -> bytes:
+    key = os.getenv("SECRET_KEY") or "dev-secret-change-me"
+    return key.encode("utf-8")
+
+
+def make_email_unsub_token(user_id: int) -> str:
+    """Signed token so unsubscribe links cannot be forged for other users."""
+    payload = str(int(user_id)).encode("utf-8")
+    sig = hmac.new(_email_token_secret(), payload, hashlib.sha256).hexdigest()[:32]
+    return f"{int(user_id)}.{sig}"
+
+
+def verify_email_unsub_token(token: str) -> Optional[int]:
+    """Return user_id if token is valid, else None."""
+    if not token or "." not in token:
+        return None
+    try:
+        uid_str, sig = token.rsplit(".", 1)
+        user_id = int(uid_str)
+    except (TypeError, ValueError):
+        return None
+    expected = make_email_unsub_token(user_id).rsplit(".", 1)[1]
+    if not hmac.compare_digest(sig, expected):
+        return None
+    return user_id
+
+
+def build_unsubscribe_url(base_url: str, user_id: int) -> str:
+    base = (base_url or "").rstrip("/")
+    token = make_email_unsub_token(user_id)
+    return f"{base}/unsubscribe?token={token}"
+
+
 def send_email(
     to_email: str,
     subject: str,
     html_content: str,
     from_email: Optional[str] = None,
-    from_name: Optional[str] = None
+    from_name: Optional[str] = None,
+    list_unsubscribe_url: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
     """
     Send an email via Gmail SMTP
@@ -25,6 +61,7 @@ def send_email(
         html_content: HTML content of the email
         from_email: Sender email (defaults to GMAIL_USER env var)
         from_name: Sender name (defaults to GMAIL_FROM_NAME env var)
+        list_unsubscribe_url: Optional HTTPS unsubscribe URL (List-Unsubscribe header)
     
     Returns:
         Tuple of (success: bool, error_message: Optional[str])
@@ -47,6 +84,9 @@ def send_email(
         msg['Subject'] = subject
         msg['From'] = f"{from_name} <{from_email}>"
         msg['To'] = to_email
+        if list_unsubscribe_url:
+            msg['List-Unsubscribe'] = f"<{list_unsubscribe_url}>"
+            msg['List-Unsubscribe-Post'] = "List-Unsubscribe=One-Click"
         
         # Add HTML content
         html_part = MIMEText(html_content, 'html', 'utf-8')
@@ -103,6 +143,7 @@ def send_pick_reminder(
     base_url: Optional[str] = None,
     trackmap_url: Optional[str] = None,
     invite_url: Optional[str] = None,
+    unsubscribe_url: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
     """Send inviting picks-reminder email (dark gaming card style)."""
     html_content = build_pick_reminder_html(
@@ -113,9 +154,15 @@ def send_pick_reminder(
         base_url=base_url,
         trackmap_url=trackmap_url,
         invite_url=invite_url,
+        unsubscribe_url=unsubscribe_url,
     )
     subject = f"🏁 {competition_name} — dags att sätta picks"
-    return send_email(user_email, subject, html_content)
+    return send_email(
+        user_email,
+        subject,
+        html_content,
+        list_unsubscribe_url=unsubscribe_url,
+    )
 
 
 def build_pick_reminder_html(
@@ -127,6 +174,7 @@ def build_pick_reminder_html(
     base_url: Optional[str] = None,
     trackmap_url: Optional[str] = None,
     invite_url: Optional[str] = None,
+    unsubscribe_url: Optional[str] = None,
 ) -> str:
     """HTML for picks-reminder email / admin preview (table layout for clients)."""
     safe_name = html.escape(user_name or "du")
@@ -134,6 +182,7 @@ def build_pick_reminder_html(
     safe_deadline = html.escape(deadline_time or "")
     safe_picks_url = html.escape(competition_url or "", quote=True)
     safe_invite = html.escape(invite_url or "", quote=True) if invite_url else ""
+    safe_unsub = html.escape(unsubscribe_url or "", quote=True) if unsubscribe_url else ""
     logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else ""
     safe_logo = html.escape(logo_url, quote=True) if logo_url else ""
 
@@ -191,6 +240,16 @@ def build_pick_reminder_html(
         if safe_logo
         else ""
     )
+
+    unsub_block = ""
+    if safe_unsub:
+        unsub_block = f"""
+              <p style="margin:14px 0 0;font-size:11px;line-height:1.5;color:#64748b;">
+                <a href="{safe_unsub}" style="color:#94a3b8;text-decoration:underline;">
+                  Avregistrera dig från picks-påminnelser
+                </a>
+              </p>
+        """
 
     return f"""<!DOCTYPE html>
 <html lang="sv">
@@ -283,11 +342,12 @@ def build_pick_reminder_html(
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:8px 24px 24px;border-top:1px solid #1e293b;">
+            <td align="center" style="padding:8px 24px 18px;border-top:1px solid #1e293b;">
               {footer_logo}
               <span style="display:inline-block;vertical-align:middle;font-size:12px;color:#64748b;">
                 Hälsning från oss på MX Fantasy teamet
               </span>
+              {unsub_block}
             </td>
           </tr>
         </table>
@@ -305,6 +365,7 @@ def send_admin_announcement(
     subject: str,
     message: str,
     base_url: Optional[str] = None,
+    unsubscribe_url: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
     """
     Send an admin announcement/update to a user.
@@ -315,9 +376,19 @@ def send_admin_announcement(
         subject: Email subject
         message: HTML message content
         base_url: Site base URL for logo image (e.g. https://example.com)
+        unsubscribe_url: Optional link to stop reminder/announcement emails
     """
     logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
     logo_html = f'<img src="{logo_url}" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />' if logo_url else '<div class="logo">🏁</div>'
+    safe_name = html.escape(user_name or "")
+    unsub_html = ""
+    if unsubscribe_url:
+        safe_unsub = html.escape(unsubscribe_url, quote=True)
+        unsub_html = (
+            f'<p style="margin:16px 0 0;font-size:12px;">'
+            f'<a href="{safe_unsub}" style="color:#94a3b8;text-decoration:underline;">'
+            f'Avregistrera dig från den här typen av mail</a></p>'
+        )
 
     html_content = f"""
     <!DOCTYPE html>
@@ -348,7 +419,7 @@ def send_admin_announcement(
                     <h1>MX Fantasy League</h1>
                 </div>
                 <div class="content">
-                    <h2>Hej {user_name}!</h2>
+                    <h2>Hej {safe_name}!</h2>
                     <div class="message">
                         {message}
                     </div>
@@ -359,6 +430,7 @@ def send_admin_announcement(
                 </div>
                 <div class="footer">
                     <p>Hälsning från oss på MX Fantasy teamet</p>
+                    {unsub_html}
                 </div>
             </div>
         </div>
@@ -366,7 +438,12 @@ def send_admin_announcement(
     </html>
     """
 
-    return send_email(user_email, subject, html_content)
+    return send_email(
+        user_email,
+        subject,
+        html_content,
+        list_unsubscribe_url=unsubscribe_url,
+    )
 
 
 def send_password_reset_email(

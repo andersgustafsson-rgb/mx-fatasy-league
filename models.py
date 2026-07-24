@@ -18,6 +18,8 @@ class User(db.Model):
     favorite_team = db.Column(db.String(100), nullable=True)  # Favoritlag
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # När kontot skapades
     is_admin = db.Column(db.Boolean, default=False)  # Admin-flagga
+    # True = vill inte ha picks-påminnelser / nyhetsmail (avregistrerad via unsubscribe-länk)
+    email_opt_out = db.Column(db.Boolean, default=False, nullable=False)
     season_team = db.relationship(
         "SeasonTeam", backref="user", uselist=False, cascade="all, delete-orphan"
     )

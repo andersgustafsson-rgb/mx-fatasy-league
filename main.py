@@ -1184,6 +1184,71 @@ def reset_password():
     return render_template("reset_password.html", token=token)
 
 
+def _user_email_opted_out(user) -> bool:
+    """Safe check for email_opt_out (False if column missing / unset)."""
+    try:
+        return bool(getattr(user, "email_opt_out", False))
+    except Exception:
+        return False
+
+
+@app.route("/unsubscribe", methods=["GET", "POST"])
+def unsubscribe_email():
+    """One-click / link unsubscribe from picks reminders & announcement emails."""
+    from email_utils import verify_email_unsub_token
+
+    token = (request.values.get("token") or "").strip()
+    # Gmail one-click sends POST with List-Unsubscribe=One-Click
+    user_id = verify_email_unsub_token(token)
+    if not user_id:
+        if request.method == "POST":
+            return ("Invalid token", 400)
+        return render_template("unsubscribe.html", status="invalid"), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        if request.method == "POST":
+            return ("Not found", 404)
+        return render_template("unsubscribe.html", status="invalid"), 404
+
+    already = _user_email_opted_out(user)
+    if not already:
+        user.email_opt_out = True
+        db.session.commit()
+        print(f"DEBUG: email_opt_out set for user_id={user.id} ({user.email})")
+
+    if request.method == "POST":
+        return ("OK", 200)
+
+    return render_template(
+        "unsubscribe.html",
+        status="already" if already else "ok",
+    )
+
+
+@app.post("/admin/email_opt_out")
+def admin_email_opt_out():
+    """Manually opt out a user by email (support / reply-to-mail cases)."""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    opt_out = data.get("opt_out", True)
+    if not email:
+        return jsonify({"error": "email required"}), 400
+    user = User.query.filter(User.email.ilike(email)).first()
+    if not user:
+        return jsonify({"error": "user not found", "email": email}), 404
+    user.email_opt_out = bool(opt_out)
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "username": user.username,
+        "email": user.email,
+        "email_opt_out": bool(user.email_opt_out),
+    })
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     next_url = _safe_next_url(
@@ -11799,9 +11864,21 @@ def send_bulk_email():
         email_limit_detected_bulk = False
         
         for user in users_to_send:
+            if _user_email_opted_out(user):
+                print(f"DEBUG: Skipping opted-out user {user.username} ({user.email})")
+                continue
             user_name = user.display_name or user.username
             print(f"DEBUG: Attempting to send email to {user.email} ({user_name})")
-            success, error_msg = send_admin_announcement(user.email, user_name, subject, message, base_url=base_url)
+            from email_utils import build_unsubscribe_url
+            unsub_url = build_unsubscribe_url(base_url, user.id)
+            success, error_msg = send_admin_announcement(
+                user.email,
+                user_name,
+                subject,
+                message,
+                base_url=base_url,
+                unsubscribe_url=unsub_url,
+            )
             if success:
                 sent += 1
                 print(f"DEBUG: ✅ Successfully sent to {user.email}")
@@ -12053,6 +12130,7 @@ def send_pick_reminders():
         push_sent = 0
         no_email = 0
         no_picks = 0
+        opted_out = 0
         sendgrid_limit_detected = False  # Initialize flag for SendGrid limit detection
         
         print(f"DEBUG: send_pick_reminders - Processing {len(users)} users")
@@ -12200,6 +12278,25 @@ def send_pick_reminders():
                                 has_complete_picks = True
             
             if not has_complete_picks:
+                if _user_email_opted_out(user):
+                    opted_out += 1
+                    print(f"DEBUG: User {user.username} opted out of email reminders - skipping email")
+                    # Still allow push if they have it (separate consent)
+                    try:
+                        import push_service as ps
+
+                        push_result = ps.notify_pick_reminder_push(
+                            user.id,
+                            next_comp.name,
+                            deadline_time,
+                            next_comp.id,
+                        )
+                        if push_result.get("ok"):
+                            push_sent += 1
+                    except Exception as push_ex:
+                        print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
+                    continue
+
                 print(f"DEBUG: User {user.username} needs reminder - sending email")
                 user_name = user.display_name or user.username
 
@@ -12219,7 +12316,10 @@ def send_pick_reminders():
                     print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
 
                 try:
+                    from email_utils import build_unsubscribe_url
+
                     invite_url = _absolute_url("start_invite", ref=(user.username or "").strip())
+                    unsub_url = build_unsubscribe_url(base_url, user.id)
                     success, error_msg = send_pick_reminder(
                         user.email,
                         user_name,
@@ -12229,6 +12329,7 @@ def send_pick_reminders():
                         base_url=base_url,
                         trackmap_url=trackmap_url,
                         invite_url=invite_url,
+                        unsubscribe_url=unsub_url,
                     )
                     if success:
                         sent += 1
@@ -12289,7 +12390,7 @@ def send_pick_reminders():
                 no_picks += 1
                 print(f"DEBUG: User {user.username} already has complete picks - skipping")
         
-        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}")
+        print(f"DEBUG: send_pick_reminders - Final counts: sent={sent}, push_sent={push_sent}, failed={failed}, no_picks={no_picks}, no_email={no_email}, opted_out={opted_out}")
         
         # Build a more informative message
         message_parts = []
@@ -12301,10 +12402,12 @@ def send_pick_reminders():
             message_parts.append(f"Misslyckades: {failed} användare")
         if no_email > 0:
             message_parts.append(f"Ingen e-post: {no_email} användare")
+        if opted_out > 0:
+            message_parts.append(f"Avregistrerade (hoppade över mail): {opted_out} användare")
         if no_picks > 0:
             message_parts.append(f"Redan gjort picks: {no_picks} användare")
         
-        if sent == 0 and failed == 0 and no_email == 0 and no_picks == 0:
+        if sent == 0 and failed == 0 and no_email == 0 and no_picks == 0 and opted_out == 0:
             message_parts.append("Inga användare bearbetades")
         
         return jsonify({
@@ -12314,6 +12417,7 @@ def send_pick_reminders():
             "failed": failed,
             "no_email": no_email,
             "no_picks": no_picks,
+            "opted_out": opted_out,
             "competition": next_comp.name,
             "message": ", ".join(message_parts) if message_parts else "Ingen aktivitet",
             "sendgrid_limit_reached": sendgrid_limit_detected
@@ -21553,6 +21657,34 @@ def repair_known_result_anomalies() -> int:
     return repaired
 
 
+def _ensure_email_opt_out_column() -> None:
+    """users.email_opt_out — avregistrering från picks/nyhetsmail."""
+    try:
+        if "postgresql" in str(db.engine.url):
+            result = db.session.execute(
+                db.text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name = 'users' AND column_name = 'email_opt_out'"
+                )
+            )
+            if not result.fetchone():
+                db.session.execute(
+                    db.text(
+                        "ALTER TABLE users ADD COLUMN email_opt_out BOOLEAN "
+                        "NOT NULL DEFAULT FALSE"
+                    )
+                )
+                print("Added missing column users.email_opt_out")
+            db.session.commit()
+        else:
+            _sqlite_add_column_if_missing(
+                "users", "email_opt_out", "email_opt_out BOOLEAN DEFAULT 0 NOT NULL"
+            )
+    except Exception as col_err:
+        print(f"Warning: email_opt_out migration skipped: {col_err}")
+        db.session.rollback()
+
+
 # Initialize database function
 def _sqlite_add_column_if_missing(table: str, column: str, ddl: str) -> None:
     """Lightweight schema patch for older local SQLite files."""
@@ -21644,6 +21776,10 @@ def init_database():
                     _ensure_racerx_bio_skip_column()
                 except Exception as skip_col_err:
                     print(f"Warning: racerx_bio_skip migration skipped: {skip_col_err}")
+                try:
+                    _ensure_email_opt_out_column()
+                except Exception as opt_col_err:
+                    print(f"Warning: email_opt_out migration skipped: {opt_col_err}")
                 # Auto-seed WSX 2025 so it always exists for the UI
                 try:
                     ensure_wsx_series_and_competitions()

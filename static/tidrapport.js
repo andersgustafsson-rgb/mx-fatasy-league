@@ -189,6 +189,7 @@ const els = {
 
   // Sick hours (manual) tab
   sickManualName: document.getElementById("sickManualName"),
+  sickManualHours: document.getElementById("sickManualHours"),
   sickManualDays: document.getElementById("sickManualDays"),
   sickEmploymentPct: document.getElementById("sickEmploymentPct"),
   sickRatePct: document.getElementById("sickRatePct"),
@@ -703,7 +704,8 @@ function updateSickManualFormulaHint() {
   const dayHours = d.weekHours / d.workdaysPerWeek;
   const sickDayHours = calculateSickManualHours(1, d.employmentPct, d.sickPct, d.weekHours, d.workdaysPerWeek);
   els.sickManualFormulaHint.textContent =
-    `Formel: dagar × (${String(d.weekHours).replace(".", ",")} ÷ ${d.workdaysPerWeek}) × ${d.employmentPct}% syss × ${d.sickPct}% sjuk = ${round2(sickDayHours || 0)} h per sjukdag. Heltidsdag: ${round2(dayHours)} h.`;
+    `Formel om du anger dagar: dagar × (${String(d.weekHours).replace(".", ",")} ÷ ${d.workdaysPerWeek}) × ${d.employmentPct}% syss × ${d.sickPct}% sjuk = ${round2(sickDayHours || 0)} h per sjukdag. ` +
+    `Långtidssjuk / månadsbryt: fyll «Sjuktimmar (färdiga)» i stället — eller ändra i tabellen.`;
 }
 
 function renderSickManualTable() {
@@ -739,8 +741,27 @@ function renderSickManualTable() {
     tdSick.textContent = `${round2(r.sickPct)}`;
 
     const tdHours = document.createElement("td");
-    tdHours.className = "px-3 py-2 text-right tabular-nums";
-    tdHours.textContent = round2(sickManualRowHours(r) || 0).toFixed(2);
+    tdHours.className = "px-3 py-2 text-right";
+    const hoursInput = document.createElement("input");
+    hoursInput.type = "text";
+    hoursInput.inputMode = "decimal";
+    hoursInput.className =
+      "w-24 ml-auto block rounded-md bg-slate-950 border border-rose-900/50 px-2 py-1 text-right text-sm tabular-nums";
+    hoursInput.value = round2(sickManualRowHours(r) || 0).toFixed(2);
+    hoursInput.title = "Ändra till rätt antal sjuktimmar för perioden";
+    hoursInput.addEventListener("change", () => {
+      const h = parseHourNumber(hoursInput.value);
+      if (!Number.isFinite(h) || h < 0) {
+        hoursInput.value = round2(sickManualRowHours(r) || 0).toFixed(2);
+        setSickManualStatus("Ogiltiga timmar — återställde värdet.");
+        return;
+      }
+      r.hours = h;
+      saveSickManualToStorage(sickManualRows);
+      renderSickManualChart();
+      setSickManualStatus(`Uppdaterade timmar för ${r.name}: ${round2(h).toFixed(2)} h.`);
+    });
+    tdHours.appendChild(hoursInput);
 
     tr.appendChild(tdCb);
     tr.appendChild(tdName);
@@ -1061,15 +1082,33 @@ function addSickManualAbsenceRowsFromText(raw) {
 
 function addSickManualRowFromInputs() {
   const name = cleanStr(els.sickManualName?.value);
+  const hours = parseHourNumber(els.sickManualHours?.value);
   const days = parseHourNumber(els.sickManualDays?.value);
-  if (!addSickManualRow(name, days)) {
-    setSickManualStatus("Fyll i namn och antal dagar.");
+
+  // Färdiga timmar vinner — det är rätt väg för långtidssjuk / månadsbryt.
+  if (Number.isFinite(hours) && hours >= 0 && cleanStr(els.sickManualHours?.value)) {
+    if (!addSickManualFixedHoursRow(name, hours, { days: Number.isFinite(days) ? days : 0 })) {
+      setSickManualStatus("Fyll i namn och sjuktimmar (färdiga).");
+      return;
+    }
+    if (els.sickManualHours) els.sickManualHours.value = "";
+    if (els.sickManualDays) els.sickManualDays.value = "";
+    saveSickManualToStorage(sickManualRows);
+    renderSickManualTable();
+    renderSickManualChart();
+    setSickManualStatus(`Lade till ${name} med ${round2(hours).toFixed(2)} h (manuellt).`);
     return;
   }
+
+  if (!addSickManualRow(name, days)) {
+    setSickManualStatus("Fyll i namn + sjuktimmar (färdiga), eller namn + antal dagar.");
+    return;
+  }
+  if (els.sickManualDays) els.sickManualDays.value = "";
   saveSickManualToStorage(sickManualRows);
   renderSickManualTable();
   renderSickManualChart();
-  setSickManualStatus(`Lade till ${name}.`);
+  setSickManualStatus(`Lade till ${name} (beräknat från dagar).`);
 }
 
 function applySickManualPaste() {
