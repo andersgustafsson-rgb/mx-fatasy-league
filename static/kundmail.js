@@ -68,6 +68,16 @@ const TEMPLATE_DEFS = [
     fields: [{ id: "returnDeadline", type: "date" }],
   },
   {
+    id: "angerkop",
+    fields: [
+      {
+        id: "returnLabelFee",
+        type: "text",
+        default: "149",
+      },
+    ],
+  },
+  {
     id: "outlost",
     fields: [
       { id: "resendFee", type: "text", default: "99" },
@@ -95,6 +105,7 @@ const REPLY_DEFAULTS = {
   avbokad: false,
   prisandring: false,
   retur: false,
+  angerkop: true,
   outlost: false,
   produktlank: false,
 };
@@ -178,6 +189,16 @@ const UI = {
         returnDeadline: { label: "Välj sista returdatum (valfritt)" },
       },
     },
+    angerkop: {
+      label: "Ångerköp / retur (QR + PostNord)",
+      description: "Full ångerköpsmall med QR-kod, retursedel och Walley-kredit. Danska: 99 kr, svenska: 149 kr.",
+      fields: {
+        returnLabelFee: {
+          label: "Kostnad retursedel",
+          placeholder: "149 (SE) / 99 (DK)",
+        },
+      },
+    },
     outlost: {
       label: "Outlöst paket / retur till oss",
       description: "Paketet kom tillbaka från ombudet — kunden väljer omsändning eller makulering.",
@@ -235,6 +256,7 @@ const MAIL_I18N = {
       avbokad: "Order avbruten",
       prisandring: "Prisändring",
       retur: "Retur",
+      angerkop: "Ångerköp",
       outlost: "Returpaket mottaget",
       produktlank: "Produktlänk",
       default: "Angående din beställning",
@@ -271,6 +293,7 @@ const MAIL_I18N = {
       avbokad: "Ordre annulleret",
       prisandring: "Prisændring",
       retur: "Returnering",
+      angerkop: "Fortrydelseskøb",
       outlost: "Returpakke modtaget",
       produktlank: "Produktlink",
       default: "Angående din bestilling",
@@ -307,6 +330,7 @@ const MAIL_I18N = {
       avbokad: "Order cancelled",
       prisandring: "Price change",
       retur: "Return",
+      angerkop: "Withdrawal / return",
       outlost: "Returned parcel received",
       produktlank: "Product link",
       default: "Regarding your order",
@@ -740,6 +764,18 @@ function orderNum(orderNumber) {
   return cleanStr(orderNumber);
 }
 
+/** Retursedel: SE 149 kr, DK 99 danske kroner. */
+function defaultReturnLabelFee(lang) {
+  return lang === "da" ? "99" : "149";
+}
+
+function returnLabelFeeText(extras, lang) {
+  const fee = cleanStr(extras?.returnLabelFee) || defaultReturnLabelFee(lang);
+  if (lang === "da") return `${fee} danske kroner`;
+  if (lang === "en") return `${fee} SEK`;
+  return `${fee} kr`;
+}
+
 function mailIntro(ctx) {
   const { g, ord, replyToCustomer, lang } = ctx;
   const m = lang.mail;
@@ -908,6 +944,31 @@ ${mailOutro(ctx, { skipSympathy: true })}`;
       body += `
 
 När vi mottagit och kontrollerat returen återbetalar vi enligt våra returvillkor.
+
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
+
+${sig}`;
+      break;
+    }
+    case "angerkop": {
+      const feeTxt = returnLabelFeeText(extras, "sv");
+      const about = prod && prod !== lang.mail.productFallback
+        ? `Det går bra att göra ångerköp på ${prod}.`
+        : "Det går bra att göra ångerköp på varan/varorna.";
+      body = `${intro}${about}
+För att göra ångerköp får varan ej ha varit använd och/eller monterad.
+
+Vi mailar/SMS:ar ut en QR-kod som ni visar upp för PostNord-ombudet som skriver ut en retursedel tillbaka till oss. Er returförsändelse behöver vara hos oss inom 14 dagar för att kunna hanteras. Gamla fraktsedlar måste avlägsnas eller täckas över, i annat fall kan debitering av extra fraktkostnader ske.
+Motoactions retursedel kostar ${feeTxt} och dras av vid kreditering av produkten. Eventuella extra tillval i ursprungsfrakt återbetalas ej.
+
+Produkterna måste emballeras väl och med yttre emballage. Man kan t.ex. inte sätta returetiketten direkt på produkten. Kartonger som produkter ligger i såsom skokartong, batteri, drivkit etc. räknas som en del av produkten. Skadade eller förlorade produkter till följd av oaktsamhet kan leda till en varuvärdesreducering av produkten.
+
+Du kan givetvis skicka in varan/varorna med eget porto, dock måste det gå som företagspaket.
+Returer som kommer till Service Point hämtas EJ ut.
+
+Små produkter går att skicka som brev men tänk på att det ej går att spåra.
+
+När varan/varorna kommit in och blivit mottagna samt kontrollerade blir du krediterad via Walley. Vid en ej godkänd retur så skickas varan ut till dig som kund igen mot en ny returfrakt.
 
 ${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 
@@ -1102,6 +1163,31 @@ ${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 ${sig}`;
       break;
     }
+    case "angerkop": {
+      const feeTxt = returnLabelFeeText(extras, "da");
+      const about = prod && prod !== lang.mail.productFallback
+        ? `Det er i orden at fortryde købet af ${prod}.`
+        : "Det er i orden at fortryde købet af varen/varerne.";
+      body = `${intro}${about}
+For at kunne fortryde må varen ikke have været brugt og/eller monteret.
+
+Vi mailer/SMS'er en QR-kode, som I viser til PostNord-ombudet, der printer en returseddel tilbage til os. Jeres returforsendelse skal være hos os inden for 14 dage for at kunne behandles. Gamle fragtlabels skal fjernes eller tildækkes, ellers kan der blive opkrævet ekstra fragtomkostninger.
+Motoactions returseddel koster ${feeTxt} og trækkes fra ved kreditering af produktet. Eventuelle ekstra tilvalg i den oprindelige fragt refunderes ikke.
+
+Produkterne skal emballeres godt og med ydre emballage. Man kan f.eks. ikke sætte returlabelen direkte på produktet. Kartoner, som produkter ligger i — såsom skokarton, batteri, drivkit osv. — regnes som en del af produktet. Beskadigede eller mistede produkter som følge af uagtsomhed kan føre til en værdireduktion af produktet.
+
+I kan naturligvis sende varen/varerne med egen porto, men det skal være som erhvervspakke.
+Returneringer, der kommer til Service Point, hentes IKKE ud.
+
+Små produkter kan sendes som brev, men vær opmærksom på, at de ikke kan spores.
+
+Når varen/varerne er kommet ind, er blevet modtaget og kontrolleret, bliver I krediteret via Walley. Ved en ikke-godkendt returnering sendes varen ud til jer som kunde igen mod en ny returfragt.
+
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
+
+${sig}`;
+      break;
+    }
     case "outlost": {
       const resendFee = cleanStr(extras.resendFee) || "99";
       const unclaimedFee = cleanStr(extras.unclaimedFee) || "300";
@@ -1290,6 +1376,31 @@ ${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
 ${sig}`;
       break;
     }
+    case "angerkop": {
+      const feeTxt = returnLabelFeeText(extras, "en");
+      const about = prod && prod !== lang.mail.productFallback
+        ? `You are welcome to withdraw from the purchase of ${prod}.`
+        : "You are welcome to withdraw from the purchase of the item(s).";
+      body = `${intro}${about}
+To qualify for withdrawal, the item must not have been used and/or fitted.
+
+We will email/SMS a QR code that you show at the PostNord service point, which prints a return label back to us. Your return shipment needs to reach us within 14 days to be processed. Old shipping labels must be removed or covered, otherwise extra shipping charges may apply.
+Motoaction's return label costs ${feeTxt} and is deducted when the product is credited. Any optional extras on the original shipping are not refunded.
+
+Products must be packed carefully with outer packaging. For example, you cannot put the return label directly on the product. Boxes that products come in — such as shoe boxes, battery boxes, drive kits, etc. — are considered part of the product. Damaged or lost products due to negligence may lead to a reduction in the product value.
+
+You are of course welcome to return the item(s) with your own postage, but it must be sent as a business parcel.
+Returns that arrive at a Service Point will NOT be collected.
+
+Small products can be sent as a letter, but please note that they cannot be tracked.
+
+Once the item(s) have arrived, been received and checked, you will be credited via Walley. If a return is not approved, the item will be sent back to you as the customer against a new return shipping fee.
+
+${mailPhrase(lang.mail.helpOffer, ctx.settings?.tone)}
+
+${sig}`;
+      break;
+    }
     case "outlost": {
       const resendFee = cleanStr(extras.resendFee) || "99";
       const unclaimedFee = cleanStr(extras.unclaimedFee) || "300";
@@ -1451,8 +1562,12 @@ function renderExtraFields() {
         input = document.createElement("input");
         input.type = field.type === "url" ? "url" : field.type || "text";
         input.placeholder = fs.placeholder || "";
-        if (field.default != null && field.type !== "date") {
-          input.value = String(field.default);
+        let defVal = field.default;
+        if (field.id === "returnLabelFee") {
+          defVal = defaultReturnLabelFee(currentMailLang());
+        }
+        if (defVal != null && field.type !== "date") {
+          input.value = String(defVal);
         }
         input.className = "w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm";
         row.appendChild(input);
@@ -1488,7 +1603,7 @@ function collectExtras() {
   return out;
 }
 
-const PRODUCT_OPTIONAL_TEMPLATES = new Set(["outlost"]);
+const PRODUCT_OPTIONAL_TEMPLATES = new Set(["outlost", "angerkop"]);
 
 function validate() {
   const tpl = getSelectedTemplate();
@@ -1777,7 +1892,18 @@ function init() {
 
   els.replyToCustomer?.addEventListener("change", forceGenerate);
   els.tone?.addEventListener("change", forceGenerate);
-  els.language?.addEventListener("change", forceGenerate);
+  els.language?.addEventListener("change", () => {
+    const feeEl = $("extra_returnLabelFee");
+    if (feeEl) {
+      const lang = currentMailLang();
+      const cur = cleanStr(feeEl.value);
+      // Byt standardbelopp när man byter språk, om fältet fortfarande har gamla defaulten.
+      if (!cur || cur === "149" || cur === "99") {
+        feeEl.value = defaultReturnLabelFee(lang);
+      }
+    }
+    forceGenerate();
+  });
 
   els.signatureProfileSelect?.addEventListener("focus", () => {
     els.signatureProfileSelect.dataset.prevId = els.signatureProfileSelect.value;
