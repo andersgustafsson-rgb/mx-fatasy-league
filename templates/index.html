@@ -245,6 +245,20 @@
     .home-ui-panel--photo .home-ui-panel__body {
       background: #152033;
     }
+
+    /* Facebook Page Plugin = alltid ljus chrome (ingen dark mode från Meta) */
+    .fb-page-plugin-host {
+      border: 1px solid #2a3548;
+      background: #152033;
+      border-radius: 0.55rem;
+      overflow: hidden;
+    }
+    .fb-page-plugin-host iframe {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      background: #fff;
+    }
     .home-ui-panel__sub {
       margin: 0 0 0.75rem;
       font-size: 0.75rem;
@@ -1723,6 +1737,18 @@
       background-color: #222e42;
       transition: background 0.15s;
     }
+    .home-series-card__scrim {
+      position: absolute;
+      inset: 0;
+      /* Lättare än tidigare flat /90 — bild syns, text hålls läsbar längst ner */
+      background: linear-gradient(
+        180deg,
+        rgba(7, 13, 24, 0.35) 0%,
+        rgba(7, 13, 24, 0.55) 45%,
+        rgba(7, 13, 24, 0.78) 100%
+      );
+      pointer-events: none;
+    }
     .home-series-card--clickable {
       cursor: pointer;
       text-decoration: none;
@@ -1730,10 +1756,19 @@
     .home-series-card--clickable:hover {
       background-color: #2a3850;
     }
+    .home-series-card--clickable:hover .home-series-card__scrim {
+      background: linear-gradient(
+        180deg,
+        rgba(7, 13, 24, 0.28) 0%,
+        rgba(7, 13, 24, 0.48) 45%,
+        rgba(7, 13, 24, 0.72) 100%
+      );
+    }
     .home-series-card__title {
       font-weight: 700;
       color: #f1f5f9;
       margin-bottom: 0.5rem;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
     }
     .home-race-hero #active-now-badge {
       border: 1px solid #3d4f66;
@@ -2406,9 +2441,9 @@
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
                 <p class="home-ui-panel__sub home-ui-panel__sub--left">Senaste inlägg från vår Facebook-sida.</p>
-                <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden overflow-hidden rounded-lg bg-[#0a101c]">
+                <div class="fb-page-plugin-host w-full min-w-0 max-w-full overflow-x-hidden">
                   <script type="application/json" id="fb-plugin-base-url">{{ facebook_timeline_iframe_src | tojson }}</script>
-                  <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" class="h-[420px] w-full max-w-full bg-[#f5f6f7]"></iframe>
+                  <iframe id="mx-fb-page-plugin" title="MX Fantasy på Facebook" src="about:blank" width="100%" height="420" style="border:none;overflow:hidden;display:block;width:100%;max-width:100%" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" class="h-[420px] w-full max-w-full"></iframe>
                 </div>
                 <script>
                 (function () {
@@ -4813,12 +4848,12 @@
           
           
           const cardContent = `
-            <div class="absolute inset-0 bg-[#070d18]/90"></div>
+            <div class="home-series-card__scrim"></div>
             <div class="relative z-10 text-center">
               <h3 class="home-series-card__title">${serie.name}</h3>
-              <p class="text-sm ${statusColor} mb-2">${statusText}</p>
-              ${nextRace ? `<p class="text-xs text-gray-300 mb-3">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
-              <div class="text-xs text-gray-400 mt-2">${buttonText}</div>
+              <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
+              ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
+              <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${buttonText}</div>
             </div>
           `;
           
