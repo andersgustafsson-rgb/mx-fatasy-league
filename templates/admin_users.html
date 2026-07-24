@@ -9,7 +9,7 @@
 <body class="bg-gray-100 min-h-screen">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-6xl mx-auto px-4 py-4">
+        <div class="max-w-[1500px] mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <a href="/" class="text-2xl font-bold text-blue-600">🏁 MX Fantasy</a>
@@ -25,7 +25,7 @@
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-6xl mx-auto px-4 py-6">
+    <main class="max-w-[1500px] mx-auto px-4 py-6">
         <!-- Stats -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
             <h2 class="text-lg font-semibold mb-4">📊 Statistik</h2>
@@ -47,31 +47,32 @@
 
         <!-- Users Table -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="p-6 border-b border-gray-200">
+            <div class="p-4 sm:p-6 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="text-lg font-semibold">👥 Alla Användare</h2>
+                <p class="text-xs text-gray-500">Scrolla horisontellt om det behövs — åtgärderna är fast till höger.</p>
             </div>
             
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="min-w-full text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Användarnamn</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visningsnamn</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-post</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mail</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skapad</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Åtgärder</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Användarnamn</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visningsnamn</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-post</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mail</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+                            <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skapad</th>
+                            <th class="sticky right-0 z-20 bg-gray-50 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.15)] min-w-[17rem]">Åtgärder</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for user in users %}
                         <tr class="hover:bg-gray-50 {% if user.email_opt_out %}bg-amber-50/60{% endif %}">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.id }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-sm font-medium text-gray-900" id="username-{{ user.id }}">{{ user.username }}</span>
+                            <td class="px-3 py-3 whitespace-nowrap text-gray-900">{{ user.id }}</td>
+                            <td class="px-3 py-3 whitespace-nowrap">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-medium text-gray-900" id="username-{{ user.id }}">{{ user.username }}</span>
                                     <button 
                                         class="edit-username-btn text-blue-600 hover:text-blue-800 text-xs"
                                         data-user-id="{{ user.id }}"
@@ -82,72 +83,72 @@
                                     </button>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ user.display_name or '-' }}</div>
+                            <td class="px-3 py-3 whitespace-nowrap text-gray-900">
+                                {{ user.display_name or '-' }}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {{ user.email or '—' }}
+                            <td class="px-3 py-3 text-gray-700 max-w-[14rem]">
+                                <span class="block truncate" title="{{ user.email or '' }}">{{ user.email or '—' }}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-3 py-3 whitespace-nowrap">
                                 {% if user.email_opt_out %}
-                                    <span class="px-2 py-1 text-xs bg-amber-100 text-amber-900 rounded-full">Avregistrerad</span>
+                                    <span class="px-2 py-0.5 text-xs bg-amber-100 text-amber-900 rounded-full">Avreg.</span>
                                 {% else %}
-                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Prenumererar</span>
+                                    <span class="px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full">På</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-3 py-3 whitespace-nowrap">
                                 {% if user.is_admin %}
-                                    <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">👑 Admin</span>
+                                    <span class="px-2 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">Admin</span>
                                 {% else %}
-                                    <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded-full">👤 User</span>
+                                    <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-800 rounded-full">User</span>
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td class="px-3 py-3 whitespace-nowrap text-gray-500">
                                 {% if user.created_at %}
                                     {{ user.created_at[:10] }}
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div class="flex flex-wrap gap-2">
+                            <td class="sticky right-0 z-10 px-3 py-3 whitespace-nowrap shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)] {% if user.email_opt_out %}bg-amber-50{% else %}bg-white{% endif %} group-hover:bg-gray-50">
+                                <div class="flex items-center gap-1.5">
                                     <button
                                         type="button"
-                                        class="toggle-email-opt-out-btn px-3 py-1 text-xs rounded-full transition-colors {% if user.email_opt_out %}bg-green-100 text-green-800 hover:bg-green-200{% else %}bg-amber-100 text-amber-900 hover:bg-amber-200{% endif %}"
+                                        class="toggle-email-opt-out-btn px-2.5 py-1 text-xs rounded-md font-medium transition-colors {% if user.email_opt_out %}bg-green-100 text-green-800 hover:bg-green-200{% else %}bg-amber-100 text-amber-900 hover:bg-amber-200{% endif %}"
                                         data-user-id="{{ user.id }}"
                                         data-username="{{ user.username }}"
                                         data-email-opt-out="{{ user.email_opt_out|lower }}"
                                         title="Picks-påminnelser och nyhetsmail"
                                     >
                                         {% if user.email_opt_out %}
-                                            ✉️ Aktivera mail
+                                            Aktivera mail
                                         {% else %}
-                                            🚫 Unsubscribe mail
+                                            Unsubscribe
                                         {% endif %}
                                     </button>
 
-                                    <!-- Toggle Admin Button -->
                                     <button 
-                                        class="toggle-admin-btn px-3 py-1 text-xs rounded-full transition-colors {% if user.is_admin %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-blue-100 text-blue-700 hover:bg-blue-200{% endif %}"
+                                        class="toggle-admin-btn px-2.5 py-1 text-xs rounded-md font-medium transition-colors {% if user.is_admin %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-blue-100 text-blue-700 hover:bg-blue-200{% endif %}"
                                         data-user-id="{{ user.id }}"
                                         data-username="{{ user.username }}"
                                         data-is-admin="{{ user.is_admin|lower }}"
+                                        title="{% if user.is_admin %}Ta bort admin{% else %}Gör admin{% endif %}"
                                     >
                                         {% if user.is_admin %}
-                                            👑 Ta bort Admin
+                                            − Admin
                                         {% else %}
-                                            👑 Gör Admin
+                                            + Admin
                                         {% endif %}
                                     </button>
                                     
-                                    <!-- Delete Button (only for non-admin users) -->
                                     {% if not user.is_admin %}
                                     <button 
-                                        class="delete-user-btn text-red-600 hover:text-red-900 text-xs"
+                                        class="delete-user-btn px-2.5 py-1 text-xs rounded-md font-medium bg-red-50 text-red-700 hover:bg-red-100"
                                         data-user-id="{{ user.id }}"
                                         data-username="{{ user.username }}"
+                                        title="Ta bort användare"
                                     >
-                                        🗑️ Ta bort
+                                        Ta bort
                                     </button>
                                     {% endif %}
                                 </div>
