@@ -58,6 +58,8 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Användarnamn</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visningsnamn</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">E-post</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mail</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Typ</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skapad</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Åtgärder</th>
@@ -65,7 +67,7 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         {% for user in users %}
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50 {% if user.email_opt_out %}bg-amber-50/60{% endif %}">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ user.id }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-2">
@@ -83,6 +85,16 @@
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-900">{{ user.display_name or '-' }}</div>
                             </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {{ user.email or '—' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.email_opt_out %}
+                                    <span class="px-2 py-1 text-xs bg-amber-100 text-amber-900 rounded-full">Avregistrerad</span>
+                                {% else %}
+                                    <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Prenumererar</span>
+                                {% endif %}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 {% if user.is_admin %}
                                     <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">👑 Admin</span>
@@ -98,18 +110,28 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div class="flex space-x-2">
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        class="toggle-email-opt-out-btn px-3 py-1 text-xs rounded-full transition-colors {% if user.email_opt_out %}bg-green-100 text-green-800 hover:bg-green-200{% else %}bg-amber-100 text-amber-900 hover:bg-amber-200{% endif %}"
+                                        data-user-id="{{ user.id }}"
+                                        data-username="{{ user.username }}"
+                                        data-email-opt-out="{{ user.email_opt_out|lower }}"
+                                        title="Picks-påminnelser och nyhetsmail"
+                                    >
+                                        {% if user.email_opt_out %}
+                                            ✉️ Aktivera mail
+                                        {% else %}
+                                            🚫 Unsubscribe mail
+                                        {% endif %}
+                                    </button>
+
                                     <!-- Toggle Admin Button -->
                                     <button 
-                                        class="toggle-admin-btn px-3 py-1 text-xs rounded-full transition-colors"
+                                        class="toggle-admin-btn px-3 py-1 text-xs rounded-full transition-colors {% if user.is_admin %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-blue-100 text-blue-700 hover:bg-blue-200{% endif %}"
                                         data-user-id="{{ user.id }}"
                                         data-username="{{ user.username }}"
                                         data-is-admin="{{ user.is_admin|lower }}"
-                                        {% if user.is_admin %}
-                                            class="toggle-admin-btn bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 text-xs rounded-full transition-colors"
-                                        {% else %}
-                                            class="toggle-admin-btn bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 text-xs rounded-full transition-colors"
-                                        {% endif %}
                                     >
                                         {% if user.is_admin %}
                                             👑 Ta bort Admin
@@ -147,6 +169,36 @@
     </div>
 
     <script>
+        // Toggle email opt-out (unsubscribe)
+        document.addEventListener('click', async function(e) {
+            if (e.target.classList.contains('toggle-email-opt-out-btn')) {
+                const userId = e.target.getAttribute('data-user-id');
+                const username = e.target.getAttribute('data-username');
+                const optedOut = e.target.getAttribute('data-email-opt-out') === 'true';
+                const action = optedOut
+                    ? `aktivera picks/nyhetsmail igen för "${username}"`
+                    : `avregistrera "${username}" från picks/nyhetsmail`;
+
+                if (!confirm(`Vill du ${action}?`)) return;
+
+                try {
+                    const response = await fetch(`/admin/toggle_email_opt_out/${userId}`, {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast(result.message || 'Uppdaterat!');
+                        setTimeout(() => location.reload(), 600);
+                    } else {
+                        showToast(result.error || 'Ett fel uppstod', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Ett fel uppstod', 'error');
+                }
+            }
+        });
+
         // Toggle admin functionality
         document.addEventListener('click', async function(e) {
             if (e.target.classList.contains('toggle-admin-btn')) {

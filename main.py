@@ -23894,7 +23894,9 @@ def admin_users():
                 'id': user.id,
                 'username': user.username,
                 'display_name': getattr(user, 'display_name', None),
-                'created_at': user.created_at.isoformat() if hasattr(user, 'created_at') else None,
+                'email': getattr(user, 'email', None),
+                'email_opt_out': bool(getattr(user, 'email_opt_out', False)),
+                'created_at': user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
                 'is_admin': is_admin
             })
         
@@ -24050,6 +24052,36 @@ def toggle_admin(user_id):
         db.session.rollback()
         print(f"Error toggling admin status: {e}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/admin/toggle_email_opt_out/<int:user_id>", methods=["POST"])
+def toggle_email_opt_out(user_id):
+    """Toggle email reminder opt-out for a user (admin user list)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        user.email_opt_out = not bool(getattr(user, "email_opt_out", False))
+        db.session.commit()
+        return jsonify({
+            "success": True,
+            "email_opt_out": bool(user.email_opt_out),
+            "username": user.username,
+            "message": (
+                f"{user.username} tar inte emot picks/nyhetsmail"
+                if user.email_opt_out
+                else f"{user.username} får picks/nyhetsmail igen"
+            ),
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error toggling email_opt_out: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/admin/delete_user/<int:user_id>", methods=['DELETE'])
 def delete_user(user_id):
