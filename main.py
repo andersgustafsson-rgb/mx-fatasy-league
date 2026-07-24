@@ -12131,11 +12131,17 @@ def send_pick_reminders():
             return deadline_utc_naive.strftime("%Y-%m-%d %H:%M UTC")
 
         deadline_time = _format_pick_deadline_for_email(next_comp)
-        
-        competition_url = f"{request.host_url}race_picks/{next_comp.id}"
-        base_url = request.host_url.rstrip('/')
+
+        from public_url import get_public_base_url
+
+        base_url = get_public_base_url()
+        competition_url = f"{base_url}/race_picks/{next_comp.id}"
         first_trackmap = next_comp.images.order_by(CompetitionImage.sort_order).first()
-        trackmap_url = f"{base_url}/static/{first_trackmap.image_url}" if first_trackmap and first_trackmap.image_url else None
+        trackmap_url = (
+            f"{base_url}/static/{first_trackmap.image_url}"
+            if first_trackmap and first_trackmap.image_url
+            else None
+        )
 
         for user in users:
             print(f"DEBUG: Processing user: {user.username} ({user.email})")
@@ -12213,9 +12219,16 @@ def send_pick_reminders():
                     print(f"DEBUG: Pick reminder push failed for {user.username}: {push_ex}")
 
                 try:
+                    invite_url = _absolute_url("start_invite", ref=(user.username or "").strip())
                     success, error_msg = send_pick_reminder(
-                        user.email, user_name, next_comp.name, deadline_time, competition_url,
-                        base_url=base_url, trackmap_url=trackmap_url
+                        user.email,
+                        user_name,
+                        next_comp.name,
+                        deadline_time,
+                        competition_url,
+                        base_url=base_url,
+                        trackmap_url=trackmap_url,
+                        invite_url=invite_url,
                     )
                     if success:
                         sent += 1

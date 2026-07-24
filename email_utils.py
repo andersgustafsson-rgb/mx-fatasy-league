@@ -102,89 +102,201 @@ def send_pick_reminder(
     competition_url: str,
     base_url: Optional[str] = None,
     trackmap_url: Optional[str] = None,
+    invite_url: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
-    """
-    Send a reminder email to a user about upcoming picks deadline.
+    """Send inviting picks-reminder email (dark gaming card style)."""
+    html_content = build_pick_reminder_html(
+        user_name=user_name,
+        competition_name=competition_name,
+        deadline_time=deadline_time,
+        competition_url=competition_url,
+        base_url=base_url,
+        trackmap_url=trackmap_url,
+        invite_url=invite_url,
+    )
+    subject = f"🏁 {competition_name} — dags att sätta picks"
+    return send_email(user_email, subject, html_content)
 
-    Args:
-        user_email: User's email address
-        user_name: User's display name or username
-        competition_name: Name of the competition
-        deadline_time: When picks deadline is (formatted string)
-        competition_url: URL to the picks page
-        base_url: Site base URL for logo/trackmap images (e.g. https://example.com)
-        trackmap_url: Full URL to current competition trackmap image (optional)
-    """
-    subject = f"⏰ Påminnelse: Sätt dina picks för {competition_name}"
-    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else None
-    logo_html = f'<img src="{logo_url}" alt="MX Fantasy League" width="180" height="auto" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />' if logo_url else '<div class="logo">🏁</div>'
 
-    trackmap_html = ""
+def build_pick_reminder_html(
+    *,
+    user_name: str,
+    competition_name: str,
+    deadline_time: str,
+    competition_url: str,
+    base_url: Optional[str] = None,
+    trackmap_url: Optional[str] = None,
+    invite_url: Optional[str] = None,
+) -> str:
+    """HTML for picks-reminder email / admin preview (table layout for clients)."""
+    safe_name = html.escape(user_name or "du")
+    safe_comp = html.escape(competition_name or "nästa race")
+    safe_deadline = html.escape(deadline_time or "")
+    safe_picks_url = html.escape(competition_url or "", quote=True)
+    safe_invite = html.escape(invite_url or "", quote=True) if invite_url else ""
+    logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else ""
+    safe_logo = html.escape(logo_url, quote=True) if logo_url else ""
+
+    logo_block = (
+        f'<img src="{safe_logo}" alt="MX Fantasy League" width="160" '
+        f'style="display:block;margin:0 auto 10px;max-width:160px;height:auto;border:0;" />'
+        if safe_logo
+        else '<div style="font-size:40px;line-height:1;margin-bottom:8px;">🏁</div>'
+    )
+
+    hero_block = ""
     if trackmap_url:
-        trackmap_html = f"""
-                    <div class="trackmap-section">
-                        <p class="trackmap-label">Banan för denna tävling</p>
-                        <img src="{trackmap_url}" alt="Trackmap {competition_name}" class="trackmap-img" />
-                    </div>
+        safe_map = html.escape(trackmap_url, quote=True)
+        hero_block = f"""
+          <tr>
+            <td style="padding:0;line-height:0;font-size:0;">
+              <img src="{safe_map}" alt="{safe_comp}" width="560"
+                   style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
+            </td>
+          </tr>
         """
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {{ margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; }}
-            .wrapper {{ background: #0f172a; padding: 40px 24px; min-height: 100vh; }}
-            .card {{ max-width: 560px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.06); }}
-            .header {{ background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 50%, #2563eb 100%); color: #fff; padding: 40px 32px; text-align: center; }}
-            .header h1 {{ margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.02em; }}
-            .header .logo {{ font-size: 32px; margin-bottom: 8px; }}
-            .content {{ background: #1e293b; color: #e2e8f0; padding: 40px 36px; line-height: 1.7; }}
-            .content h2 {{ margin: 0 0 28px; font-size: 22px; font-weight: 600; color: #fff; }}
-            .content p {{ margin: 0 0 20px; font-size: 16px; color: #cbd5e1; }}
-            .content p:last-of-type {{ margin-bottom: 0; }}
-            .deadline-box {{ display: inline-block; background: rgba(251, 191, 36, 0.15); color: #fcd34d; padding: 12px 20px; border-radius: 12px; margin: 12px 0 28px; font-size: 15px; font-weight: 600; border: 1px solid rgba(251, 191, 36, 0.3); }}
-            .trackmap-section {{ margin: 32px 0 36px; text-align: center; }}
-            .trackmap-label {{ font-size: 14px; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }}
-            .trackmap-img {{ max-width: 100%; height: auto; border-radius: 12px; border: 1px solid #334155; display: block; margin: 0 auto; }}
-            .cta-wrap {{ text-align: center; margin: 36px 0 28px; }}
-            .cta {{ display: inline-block; background-color: #22c55e; background-image: linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color: #0b1120 !important; padding: 16px 38px; text-decoration: none; border-radius: 9999px; font-weight: 800; font-size: 16px; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 0 24px rgba(34, 197, 94, 0.75); border: 1px solid rgba(34, 197, 94, 0.9); }}
-            .fallback {{ margin-top: 28px; padding-top: 24px; border-top: 1px solid #334155; font-size: 12px; color: #64748b; word-break: break-all; }}
-            .footer {{ background: #0f172a; color: #64748b; padding: 28px 36px; text-align: center; font-size: 13px; border-top: 1px solid #1e293b; }}
-            .footer p {{ margin: 8px 0; color: #64748b; }}
-        </style>
-    </head>
-    <body>
-        <div class="wrapper">
-            <div class="card">
-                <div class="header">
-                    {logo_html}
-                    <h1>MX Fantasy League</h1>
-                </div>
-                <div class="content">
-                    <h2>Hej {user_name}!</h2>
-                    <p>Det är dags att sätta dina picks för <strong style="color:#fff;">{competition_name}</strong>!</p>
-                    <div class="deadline-box">⏰ Deadline: {deadline_time}</div>
-                    <p>Glöm inte att göra dina val innan tävlingen börjar!</p>
-                    {trackmap_html}
-                    <div class="cta-wrap">
-                        <a href="{competition_url}" class="cta">Gör dina picks nu →</a>
-                    </div>
-                    <p class="fallback">Om knappen inte fungerar, kopiera denna länk:<br>{competition_url}</p>
-                </div>
-                <div class="footer">
-                    <p>Hälsning från oss på MX Fantasy teamet</p>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+    invite_block = ""
+    if invite_url:
+        invite_block = f"""
+          <tr>
+            <td style="padding:8px 28px 6px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="border-collapse:collapse;background:#0b1c2e;border:1px solid rgba(34,211,238,0.35);border-radius:14px;">
+                <tr>
+                  <td style="padding:18px 16px;text-align:center;">
+                    <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#67e8f9;">
+                      BJUD IN EN KOMPIS
+                    </p>
+                    <p style="margin:0 0 14px;font-size:14px;line-height:1.5;color:#cbd5e1;">
+                      Tipsa någon — ju fler som spelar, desto hetare race.
+                    </p>
+                    <a href="{safe_invite}"
+                       style="display:inline-block;background:transparent;color:#a5f3fc;padding:11px 22px;text-decoration:none;border-radius:999px;font-weight:700;font-size:13px;border:1px solid rgba(103,232,249,0.55);">
+                      Dela din inbjudan →
+                    </a>
+                    <p style="margin:12px 0 0;font-size:11px;color:#64748b;word-break:break-all;line-height:1.4;">
+                      {safe_invite}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        """
 
-    success, error_msg = send_email(user_email, subject, html_content)
-    return success, error_msg
+    footer_logo = (
+        f'<img src="{safe_logo}" alt="" width="36" '
+        f'style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;" />'
+        if safe_logo
+        else ""
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Picks-påminnelse</title>
+</head>
+<body style="margin:0;padding:0;background:#070b14;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#070b14;">
+    <tr>
+      <td align="center" style="padding:28px 14px;">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0"
+               style="border-collapse:collapse;width:100%;max-width:560px;background:#121820;border:1px solid #22d3ee;border-radius:18px;overflow:hidden;box-shadow:0 0 28px rgba(34,211,238,0.22);">
+          {hero_block}
+          <tr>
+            <td align="center" style="padding:28px 24px 8px;background:#152033;">
+              {logo_block}
+              <p style="margin:0;font-size:18px;font-weight:800;letter-spacing:0.04em;color:#ffffff;">
+                MX Fantasy League
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 28px 8px;">
+              <p style="margin:0 0 14px;font-size:28px;font-weight:800;font-style:italic;color:#ffffff;line-height:1.15;">
+                Hej {safe_name}!
+              </p>
+              <p style="margin:0 0 18px;font-size:17px;line-height:1.55;color:#dbe4ee;">
+                Det är dags att sätta dina picks för
+                <strong style="color:#ffffff;">{safe_comp}!</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 16px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="border-collapse:collapse;background:#083344;border:2px solid #22d3ee;border-radius:12px;">
+                <tr>
+                  <td style="padding:14px 16px;font-size:16px;font-weight:700;color:#67e8f9;text-align:center;">
+                    ⏱&nbsp; Deadline:&nbsp;<span style="color:#ecfeff;">{safe_deadline}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 10px;">
+              <p style="margin:0;font-size:15px;line-height:1.55;color:#94a3b8;">
+                Glöm inte att göra dina val innan tävlingen börjar!
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px 28px 6px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td width="44" valign="middle" style="font-size:28px;line-height:1;padding-right:10px;">🏆</td>
+                  <td valign="middle" style="font-size:15px;line-height:1.45;color:#e2e8f0;font-weight:600;">
+                    Tävla om exklusiva priser och visa att du är bäst!
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:22px 28px 10px;">
+              <a href="{safe_picks_url}"
+                 style="display:inline-block;background:#22c55e;color:#052e16;padding:16px 36px;text-decoration:none;border-radius:999px;font-weight:900;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;border:1px solid #86efac;">
+                GÖR DINA PICKS NU 🏁
+              </a>
+            </td>
+          </tr>
+          {invite_block}
+          <tr>
+            <td style="padding:16px 28px 22px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                     style="border-collapse:collapse;background:#0a1018;border:1px solid #1f2937;border-radius:12px;">
+                <tr>
+                  <td style="padding:14px 14px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+                      Om knappen inte fungerar, kopiera denna länk:
+                    </p>
+                    <p style="margin:0;font-size:12px;color:#67e8f9;word-break:break-all;line-height:1.4;">
+                      {safe_picks_url}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:8px 24px 24px;border-top:1px solid #1e293b;">
+              {footer_logo}
+              <span style="display:inline-block;vertical-align:middle;font-size:12px;color:#64748b;">
+                Hälsning från oss på MX Fantasy teamet
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
 
 
 def send_admin_announcement(

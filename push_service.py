@@ -381,8 +381,8 @@ def notify_pick_reminder_push(
     if not user_has_push(user_id):
         return {"ok": False, "error": "no_subscription"}
     link = f"/race_picks/{int(competition_id)}"
-    title = f"⏰ Picks: {competition_name}"[:120]
-    preview = f"Deadline {deadline_time} — gör dina val innan tävlingen!"
+    title = f"🏁 {competition_name}"[:120]
+    preview = f"Picks stänger {deadline_time} — sätt laget & tipsa en kompis"
     return send_push_sync(
         user_id,
         title,
