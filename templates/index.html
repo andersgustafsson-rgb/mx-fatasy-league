@@ -510,6 +510,15 @@
       border-color: rgba(34, 211, 238, 0.35);
     }
     .home-weekly-tile--holeshot .home-inner-tile__title { color: #a5f3fc; }
+    .home-weekly-tile--king {
+      border-top: 2px solid #c4b5fd;
+    }
+    .home-weekly-tile--king .home-inner-tile__icon {
+      color: #c4b5fd;
+      background: rgba(167, 139, 250, 0.12);
+      border-color: rgba(167, 139, 250, 0.35);
+    }
+    .home-weekly-tile--king .home-inner-tile__title { color: #ddd6fe; }
     .home-inner-tile__title {
       font-size: 0.65rem;
       font-weight: 700;
@@ -3269,7 +3278,7 @@
           const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
           rowsHtml += homeLbRow(i + 1, name, row.total_points, {
             hidden: i >= 15,
-            extraRight: isWSX ? '' : delta,
+            extraRight: delta,
           });
         });
 
@@ -3542,6 +3551,7 @@
 
         const rocketLabel   = isWSX ? 'Senaste Raket (WSX)'   : 'Veckans Raket';
         const anchorLabel   = isWSX ? 'Senaste Ankare (WSX)'  : 'Veckans Ankare';
+        const holeshotLabel = isWSX ? 'Holeshot SX1+SX2' : 'Holeshot-Mästare';
         const holeshotPeriod = isWSX ? 'Senaste WSX' : 'Denna vecka';
         
         if (data.error) {
@@ -3553,9 +3563,11 @@
         const svgAnchor = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M12 7v12"/><path d="M5 13a7 7 0 0 0 14 0"/><path d="M8 12H4M20 12h-4"/></svg>';
         const svgTarget = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
         const svgZap = '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/></svg>';
+        const svgCrown = '<svg viewBox="0 0 24 24"><path d="M3 8l4 3 5-6 5 6 4-3v10H3V8z"/><path d="M3 18h18"/></svg>';
 
+        const hasAny = !!(data.rocket || data.anchor || data.perfect_picks || data.holeshot_master || data.round_king);
         let noDataMsg = '';
-        if (!data.rocket && !data.anchor && !data.perfect_picks && !data.holeshot_master) {
+        if (!hasAny) {
           if (isWSX) {
             noDataMsg = '<p class="text-slate-400 text-center col-span-full text-sm py-4">WSX-säsongen har inte börjat än — data visas här efter Canadian GP.</p>';
           }
@@ -3575,7 +3587,7 @@
             'perfect'
           );
           html += weeklyStatTile(
-            svgZap, 'Holeshot-Mästare', data.holeshot_master,
+            svgZap, holeshotLabel, data.holeshot_master,
             data.holeshot_master ? [
               data.holeshot_master.total_holeshot_points + 'p holeshot',
               holeshotPeriod
@@ -3583,6 +3595,19 @@
             data.holeshot_master && data.holeshot_master.user_id,
             'holeshot'
           );
+          // WSX: ingen wildcard — visa Rundans Kung istället
+          if (isWSX) {
+            const rk = data.round_king;
+            html += weeklyStatTile(
+              svgCrown, 'Rundans Kung', rk,
+              rk ? [
+                rk.round_points + 'p',
+                rk.competition_name || 'Senaste runda'
+              ] : [],
+              rk && rk.user_id,
+              'king'
+            );
+          }
         }
         
         container.innerHTML = html;

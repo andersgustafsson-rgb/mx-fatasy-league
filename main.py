@@ -2903,25 +2903,12 @@ def fantasy_supercross_leaderboard_for_year(year: int) -> list:
     return out
 
 
-def fantasy_wsx_leaderboard_for_year(year: int = 2026) -> list:
-    """Fantasy tippa-highscore for one WSX season only (never mixes with AMA/SMX)."""
+def _wsx_score_agg_for_comps(comp_ids: list[int]) -> dict[int, int]:
+    """Dedupe CompetitionScore per (user, competition); sum total_points per user."""
     from collections import defaultdict
 
-    wsx_series = Series.query.filter_by(name="WSX", year=int(year)).first()
-    if wsx_series is not None:
-        comps = Competition.query.filter_by(series_id=wsx_series.id).all()
-    else:
-        # Fallback: series code + calendar year (legacy rows without series_id)
-        comps = [
-            c
-            for c in Competition.query.filter_by(series="WSX").all()
-            if c.event_date and c.event_date.year == int(year)
-        ]
-    comp_ids = [c.id for c in comps]
     if not comp_ids:
-        return []
-
-    # Dedupe CompetitionScore per (user, competition) — keep highest id
+        return {}
     by_uc: dict[tuple[int, int], CompetitionScore] = {}
     for s in CompetitionScore.query.filter(
         CompetitionScore.competition_id.in_(comp_ids)
@@ -2930,16 +2917,48 @@ def fantasy_wsx_leaderboard_for_year(year: int = 2026) -> list:
         prev = by_uc.get(k)
         if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
             by_uc[k] = s
-
     agg: dict[int, int] = defaultdict(int)
     for s in by_uc.values():
         agg[int(s.user_id)] += int(s.total_points or 0)
+    return dict(agg)
 
-    ranked = sorted(agg.items(), key=lambda x: (-x[1], x[0]))
-    if not ranked:
+
+def calculate_wsx_leaderboard_deltas(
+    *,
+    year: int | None = None,
+    recent_comp_ids: set[int] | None = None,
+) -> list[dict]:
+    """
+    WSX tippa-highscore med rank-delta vs poäng *före* recent_comp_ids.
+    Används av WSX-leaderboard + Raket/Ankare (aldrig AMA/SMX-poäng).
+    """
+    year = int(year or _active_wsx_season_year())
+    comps = _wsx_competitions_for_year(year)
+    season_ids = [int(c.id) for c in comps]
+    if not season_ids:
         return []
 
-    uids = [u for u, _ in ranked]
+    recent = {int(x) for x in (recent_comp_ids or set()) if int(x) in set(season_ids)}
+    totals = _wsx_score_agg_for_comps(season_ids)
+    if not totals:
+        return []
+
+    recent_pts = _wsx_score_agg_for_comps(list(recent)) if recent else {}
+
+    rows = []
+    for uid, pts in totals.items():
+        recent_week = int(recent_pts.get(uid, 0))
+        baseline = max(0, int(pts) - recent_week)
+        rows.append(
+            {
+                "id": int(uid),
+                "total_points": int(pts),
+                "baseline_total": baseline,
+                "recent_week_points": recent_week,
+            }
+        )
+
+    uids = [r["id"] for r in rows]
     users = User.query.filter(User.id.in_(uids)).all()
     uid_map = {u.id: u for u in users}
     teams = {
@@ -2947,22 +2966,63 @@ def fantasy_wsx_leaderboard_for_year(year: int = 2026) -> list:
         for t in SeasonTeam.query.filter(SeasonTeam.user_id.in_(uids)).all()
     }
 
+    current = sorted(rows, key=lambda x: _leaderboard_sort_key(x, "total_points"))
+    # Första avklarade racet i säsongen: alla baseline=0 → delta blir meningslöst.
+    # Låt delta=0 så Raket/Ankare faller tillbaka till ren WSX-veckopoäng.
+    use_baseline = bool(recent) and any(int(r.get("baseline_total") or 0) > 0 for r in rows)
+    baseline_ranking = (
+        _build_rank_map(rows, "baseline_total") if use_baseline else {}
+    )
+
     out = []
-    for rank, (u_id, pts) in enumerate(ranked, start=1):
-        u = uid_map.get(u_id)
+    for i, row in enumerate(current, 1):
+        uid = int(row["id"])
+        u = uid_map.get(uid)
         dn = getattr(u, "display_name", None) or (u.username if u else "?")
+        baseline_rank = baseline_ranking.get(str(uid))
+        if use_baseline and baseline_rank is not None and baseline_rank > 0:
+            delta = i - int(baseline_rank)
+        else:
+            delta = 0
         out.append(
             {
-                "rank": rank,
-                "user_id": u_id,
+                "user_id": uid,
                 "username": u.username if u else "?",
                 "display_name": dn,
-                "team_name": teams.get(u_id),
-                "total_points": pts,
-                "delta": 0,
+                "team_name": teams.get(uid),
+                "rank": i,
+                "delta": delta,
+                "total_points": int(row["total_points"]),
             }
         )
     return out
+
+
+def fantasy_wsx_leaderboard_for_year(year: int = 2026) -> list:
+    """Fantasy tippa-highscore for one WSX season only (never mixes with AMA/SMX)."""
+    from datetime import datetime, timedelta
+
+    today_utc = datetime.utcnow().date()
+    since = (datetime.utcnow() - timedelta(days=90)).date()
+    comps = _wsx_competitions_for_year(int(year))
+    window_ids = [
+        int(c.id)
+        for c in comps
+        if c.event_date and since <= c.event_date <= today_utc
+    ]
+    recent_with_results: set[int] = set()
+    if window_ids:
+        recent_with_results = {
+            int(row[0])
+            for row in db.session.query(CompetitionResult.competition_id)
+            .filter(CompetitionResult.competition_id.in_(window_ids))
+            .distinct()
+            .all()
+        }
+    return calculate_wsx_leaderboard_deltas(
+        year=int(year),
+        recent_comp_ids=recent_with_results,
+    )
 
 
 @app.get("/get_wsx_leaderboard")
@@ -6955,13 +7015,10 @@ def get_weekly_fun_stats():
     AMA mode (default/SX/MX/SMX): last 7 days, excludes WSX.
     """
     try:
-        from datetime import datetime, timedelta
+        from datetime import date, datetime, timedelta
 
         series_param = _normalize_countdown_series(request.args.get("series"))
         is_wsx_mode = series_param == "WSX"
-
-        # Use shared function to calculate deltas - ensures consistency
-        leaderboard_data = calculate_leaderboard_deltas()
 
         today_utc = datetime.utcnow().date()
         if is_wsx_mode:
@@ -6983,6 +7040,27 @@ def get_weekly_fun_stats():
                 db.or_(Competition.series.is_(None), Competition.series != "WSX"),
             ).all()
         comp_ids = [c.id for c in recent_competitions]
+
+        # Endast avklarade race (har resultat)
+        recent_with_results: set[int] = set()
+        if comp_ids:
+            recent_with_results = {
+                int(row[0])
+                for row in db.session.query(CompetitionResult.competition_id)
+                .filter(CompetitionResult.competition_id.in_(comp_ids))
+                .distinct()
+                .all()
+            }
+            comp_ids = [cid for cid in comp_ids if cid in recent_with_results]
+
+        # Rank-delta: WSX highscore i WSX-läge, annars AMA/SMX unified
+        if is_wsx_mode:
+            leaderboard_data = calculate_wsx_leaderboard_deltas(
+                year=_active_wsx_season_year(),
+                recent_comp_ids=recent_with_results,
+            )
+        else:
+            leaderboard_data = calculate_leaderboard_deltas()
 
         # Veckopoäng i samma fönster som weekly fun stats (för att kunna kombinera med rank-delta)
         weekly_points_by_user: dict[int, int] = defaultdict(int)
@@ -7161,8 +7239,48 @@ def get_weekly_fun_stats():
         holeshot_master = None
         if holeshot_stats:
             holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
-        
-        
+
+        # WSX har ingen wildcard — visa istället "Rundans Kung" (högst poäng senaste avklarade WSX-rundan)
+        round_king = None
+        if is_wsx_mode and recent_with_results:
+            recent_comps_sorted = sorted(
+                [c for c in recent_competitions if int(c.id) in recent_with_results],
+                key=lambda c: (c.event_date or date.min, int(c.id)),
+                reverse=True,
+            )
+            latest = recent_comps_sorted[0] if recent_comps_sorted else None
+            if latest:
+                score_rows = CompetitionScore.query.filter_by(
+                    competition_id=int(latest.id)
+                ).all()
+                by_user: dict[int, CompetitionScore] = {}
+                for s in score_rows:
+                    uid = int(s.user_id)
+                    prev = by_user.get(uid)
+                    if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+                        by_user[uid] = s
+                best = None
+                best_pts = -1
+                for uid, s in by_user.items():
+                    pts = int(s.total_points or 0)
+                    if pts > best_pts:
+                        best_pts = pts
+                        best = s
+                if best and best_pts > 0:
+                    ru = User.query.get(int(best.user_id))
+                    if ru:
+                        round_king = {
+                            "user_id": int(ru.id),
+                            "username": ru.username,
+                            "display_name": getattr(ru, "display_name", None) or ru.username,
+                            "round_points": best_pts,
+                            "competition_id": int(latest.id),
+                            "competition_name": latest.name,
+                            "event_date": latest.event_date.isoformat()
+                            if latest.event_date
+                            else None,
+                        }
+
         from flask import make_response
         from datetime import datetime as _dt
         payload = {
@@ -7171,10 +7289,12 @@ def get_weekly_fun_stats():
             'anchor': anchor,
             'perfect_picks': perfect_picks_winner,
             'holeshot_master': holeshot_master,
+            'round_king': round_king,
             'meta': {
                 'week_competition_count': len(comp_ids),
                 'users_with_holeshot_points_gt_0': len(holeshot_stats),
                 'holeshot_master_basis': 'picks_and_results',
+                'holeshot_classes': 'wsx_sx1+wsx_sx2' if is_wsx_mode else '450cc+250cc',
                 'is_wsx_mode': is_wsx_mode,
             },
         }
@@ -7189,6 +7309,7 @@ def get_weekly_fun_stats():
             'anchor': None,
             'perfect_picks': None,
             'holeshot_master': None,
+            'round_king': None,
             'error': str(e)
         })
 
