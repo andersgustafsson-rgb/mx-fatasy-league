@@ -276,6 +276,9 @@
   function showStep3Overview() {
     step3ShowingSummary = true;
     showStep(3, { skipSave: true });
+    if (typeof window.updateSaveButtonVisibility === 'function') {
+      window.updateSaveButtonVisibility();
+    }
     $('wizard-picks-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -326,6 +329,9 @@
     if (panel) panel.open = true;
     $('wizard-step-3-forms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     updateNavButtons();
+    if (typeof window.updateSaveButtonVisibility === 'function') {
+      window.updateSaveButtonVisibility();
+    }
   }
 
   function showStep(step, opts = {}) {
@@ -844,6 +850,7 @@
     getStep,
     goToStep: showStep,
     openBonusAdjust,
+    showOverview: showStep3Overview,
     persistStep,
     refresh: refreshUI,
     renderSummary: renderPicksSummary,

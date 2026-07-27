@@ -98,20 +98,27 @@ def match_competition_for_racerx(
     event_slug: str,
     year: int,
     competitions: list,
+    *,
+    prefer_series: str | None = None,
 ) -> tuple[object | None, str | None]:
     """
     Matcha tävling i DB från URL-slug + år.
     competitions: lista med .id, .name, .event_date (Competition eller dict).
+    prefer_series: t.ex. WSX när URL är /wsx/...
     """
     url_key = _slug_match_key(event_slug)
     if not url_key:
         return None, "Tom event-slug i URL"
 
+    prefer = (prefer_series or "").strip().upper() or None
     best = None
     best_score = -1
     for comp in competitions:
         name = comp.name if hasattr(comp, "name") else comp.get("name", "")
         event_date = comp.event_date if hasattr(comp, "event_date") else comp.get("event_date")
+        series = (
+            comp.series if hasattr(comp, "series") else comp.get("series")
+        )
         comp_slug = racerx_event_slug(name)
         comp_key = _slug_match_key(comp_slug)
         if not comp_key:
@@ -123,6 +130,10 @@ def match_competition_for_racerx(
             score = 70
         else:
             continue
+        if prefer and (series or "").upper() == prefer:
+            score += 50
+        elif prefer == "WSX" and (series or "").upper() != "WSX":
+            score -= 30
         if event_date:
             if hasattr(event_date, "year"):
                 y = event_date.year

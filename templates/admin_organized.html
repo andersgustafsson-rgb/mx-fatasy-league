@@ -109,6 +109,9 @@
             <button onclick="showSection('race-results')" class="tab-btn active px-6 py-3 text-lg">
                 🏁 Tävlingsresultat
             </button>
+            <button onclick="showSection('wsx-results')" class="tab-btn px-6 py-3 text-lg">
+                🌍 WSX Resultat
+            </button>
             <button onclick="showSection('picks-management')" class="tab-btn px-6 py-3 text-lg">
                 🎯 Picks &amp; poäng
             </button>
@@ -132,8 +135,8 @@
         <!-- Race Results Section -->
         <div id="race-results" class="section-panel active">
             <div class="section-card rounded-lg p-6 mb-6">
-                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏁 Tävlingsresultat</h2>
-                <p class="text-gray-400 text-sm mb-6">Importera resultat från banan (Racer X / paste / manuellt). Picks och användarpoäng finns under fliken <button type="button" onclick="showSection('picks-management')" class="text-cyan-400 underline">Picks &amp; poäng</button>.</p>
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🏁 Tävlingsresultat (SX / MX / SMX)</h2>
+                <p class="text-gray-400 text-sm mb-6">AMA-serier. WSX har egen flik: <button type="button" onclick="showSection('wsx-results')" class="text-cyan-400 underline">WSX Resultat</button>. Picks finns under <button type="button" onclick="showSection('picks-management')" class="text-cyan-400 underline">Picks &amp; poäng</button>.</p>
 
                 <!-- Rider OUT -->
                 <div class="mb-6">
@@ -155,8 +158,8 @@
                                 <select id="wsx-out-sx2" data-searchable="1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
                             </div>
                             <div class="flex gap-2">
-                                <button type="button" onclick="setRiderOut('OUT')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
-                                <button type="button" onclick="setRiderOut('CLEAR')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
+                                <button type="button" onclick="setRiderOut('OUT', 'ama')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
+                                <button type="button" onclick="setRiderOut('CLEAR', 'ama')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
                             </div>
                         </div>
                         <div class="mt-2">
@@ -215,9 +218,9 @@
 
                 <!-- Manual Results -->
                 <div class="mb-6">
-                    <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry (WSX‑stöd)</h3>
+                    <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results Entry</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Lägg in resultat manuellt. <strong>Mata in alla positioner (1-20)</strong> för båda klasser (450cc/SX1 och 250cc/SX2) för att räkna ut förarnas leaderboard-poäng, säsongsteam-poäng och wildcard-poäng. Poängsystem: 25p för 1:a, 22p för 2:a, etc. ned till 1p för 20:e. Holeshot för båda. (Ingen wildcard för WSX)</p>
+                        <p class="text-gray-300 mb-4">Lägg in resultat manuellt. <strong>Mata in alla positioner (1-20)</strong> för 450cc och 250cc. Poängsystem: 25p för 1:a, 22p för 2:a, etc. Holeshot för båda. (Säsongsteam + wildcard räknas för AMA.)</p>
 
                         <form id="manual-results-form" method="POST" action="/admin/submit_results" class="space-y-4">
                             <div class="mb-4 p-3 bg-yellow-900/30 border border-yellow-500 rounded-lg">
@@ -235,28 +238,28 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX1 (WSX 450)</label>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 450cc</label>
                                     <select id="manual-hs-450" data-searchable="1" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Välj förare</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX2 (WSX 250)</label>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot 250cc</label>
                                     <select id="manual-hs-250" data-searchable="1" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                         <option value="">Välj förare</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- SX1 (maps to 450cc arrays) -->
+                            <!-- 450 / SX1 -->
                             <div class="mt-4">
-                                <h4 id="sx1-header" class="text-lg font-semibold text-white mb-2">WSX SX1</h4>
+                                <h4 id="sx1-header" class="text-lg font-semibold text-white mb-2">450cc</h4>
                                 <div id="manual-sx1-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                             </div>
 
-                            <!-- SX2 (maps to 250cc arrays) -->
+                            <!-- 250 / SX2 -->
                             <div class="mt-4">
-                                <h4 class="text-lg font-semibold text-white mb-2">WSX SX2</h4>
+                                <h4 id="sx2-header" class="text-lg font-semibold text-white mb-2">250cc</h4>
                                 <div id="manual-sx2-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
                             </div>
 
@@ -268,7 +271,7 @@
                             <div id="manual-hidden-inputs"></div>
                         </form>
 
-                        <p class="text-xs text-gray-400 mt-3">Notering: För WSX mappas SX1 → 450cc och SX2 → 250cc under huven så att poängberäkningen återanvänder befintliga regler.</p>
+                        <p class="text-xs text-gray-400 mt-3">Notering: Positionerna skickas som 450cc/250cc-fält till backend.</p>
                         
                         <!-- Existing Results Display -->
                         <div id="existing-results-section" class="mt-6 hidden">
@@ -294,7 +297,7 @@
                     <div class="bg-gray-800 rounded-lg p-4">
                         <p class="text-gray-300 mb-4">
                             Paste overall results directly from the results website. We use only overall positions and rider names.<br>
-                            <span class="text-yellow-300">💡 Tip:</span> Racer X <strong>SX</strong>-länk med klass fungerar (t.ex. <code class="text-cyan-300">.../450sx</code>). <strong>WSX</strong>-eventsidor har oftast ingen tabell — klistra in eller Manual Results. <strong>Hämta &amp; Preview</strong> sparar inget förrän Import.
+                            <span class="text-yellow-300">💡 Tip:</span> Racer X <strong>SX</strong>-länk med klass fungerar (t.ex. <code class="text-cyan-300">.../450sx</code>). WSX ligger under fliken <button type="button" onclick="showSection('wsx-results')" class="text-cyan-400 underline">WSX Resultat</button>. <strong>Hämta &amp; Preview</strong> sparar inget förrän Import.
                         </p>
 
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -309,8 +312,6 @@
                                 <select id="bulk-class" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
                                     <option value="450cc">450cc</option>
                                     <option value="250cc">250cc</option>
-                                    <option value="wsx_sx1">WSX SX1 (450)</option>
-                                    <option value="wsx_sx2">WSX SX2 (250)</option>
                                 </select>
                             </div>
                             <div>
@@ -367,6 +368,189 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- WSX Results -->
+        <div id="wsx-results" class="section-panel hidden">
+            <div class="section-card rounded-lg p-6 mb-6">
+                <h2 class="text-2xl font-bold text-cyan-400 mb-4">🌍 WSX Resultat</h2>
+                <p class="text-gray-400 text-sm mb-6">
+                    Tippa-only (ingen säsongsteam / wildcard). Markera OUT per GP, lägg in resultat manuellt, eller förbered Racer&nbsp;X-import.
+                    AMA ligger under <button type="button" onclick="showSection('race-results')" class="text-cyan-400 underline">Tävlingsresultat</button>.
+                </p>
+
+                <!-- Rider OUT WSX -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🚫 Rider OUT (WSX)</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                            <select id="wsx-out-competition" data-searchable="1" class="w-full max-w-md px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" onchange="wsxOutCompetitionChanged()">
+                                <option value="">Välj WSX-tävling...</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">SX1</label>
+                                <select id="wsx-panel-out-sx1" data-searchable="1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">SX2</label>
+                                <select id="wsx-panel-out-sx2" data-searchable="1" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="setRiderOut('OUT', 'wsx')" class="btn-danger px-4 py-2 rounded-lg">Set OUT</button>
+                                <button type="button" onclick="setRiderOut('CLEAR', 'wsx')" class="btn-primary px-4 py-2 rounded-lg">Clear</button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">
+                            💡 OUT sätts automatiskt på framtida WSX-GP:er i samma serie. Clear frågar om du vill ta bort bara denna GP eller alla framtida.
+                        </p>
+                        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">OUT – SX1</h4>
+                                <ul id="wsx-panel-out-list-sx1" class="text-gray-300 text-sm space-y-1"></ul>
+                            </div>
+                            <div>
+                                <h4 class="text-white font-semibold mb-2">OUT – SX2</h4>
+                                <ul id="wsx-panel-out-list-sx2" class="text-gray-300 text-sm space-y-1"></ul>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Klicka på en förare i listan för att ta bort OUT.</p>
+                    </div>
+                </div>
+
+                <!-- Manual Results WSX -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">✏️ Manual Results (WSX)</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">
+                            Mata in positioner 1–20 för SX1 och SX2 + holeshots. Ange även <strong>mästerskapspoäng</strong> per plats (rider points).
+                            Ingen wildcard. Sparar via samma backend som AMA.
+                        </p>
+                        <form id="wsx-manual-results-form" method="POST" action="/admin/submit_results" class="space-y-4">
+                            <div class="mb-4 p-3 bg-yellow-900/30 border border-yellow-500 rounded-lg">
+                                <label class="flex items-center text-yellow-300 cursor-pointer">
+                                    <input type="checkbox" name="complement_mode" value="true" id="wsx-complement-mode-checkbox" class="mr-2 w-4 h-4 text-yellow-600 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500">
+                                    <span class="text-sm font-medium">Komplettera resultat (uppdatera/lägg till utan att radera befintliga)</span>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
+                                    <select id="wsx-manual-competition" data-searchable="1" name="competition_id" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                        <option value="">Loading...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX1</label>
+                                    <select id="wsx-manual-hs-450" data-searchable="1" name="holeshot_450" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                        <option value="">Välj förare</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-300 mb-2">Holeshot SX2</label>
+                                    <select id="wsx-manual-hs-250" data-searchable="1" name="holeshot_250" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                        <option value="">Välj förare</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <h4 class="text-lg font-semibold text-white mb-2">WSX SX1 (Positioner 1–20)</h4>
+                                <div id="wsx-manual-sx1-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                            </div>
+                            <div class="mt-4">
+                                <h4 class="text-lg font-semibold text-white mb-2">WSX SX2 (Positioner 1–20)</h4>
+                                <div id="wsx-manual-sx2-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                            </div>
+                            <div class="pt-2">
+                                <button type="submit" class="btn-warning px-6 py-2 rounded-lg">💾 Spara WSX-resultat</button>
+                            </div>
+                            <div id="wsx-manual-hidden-inputs"></div>
+                        </form>
+                        <div id="wsx-existing-results-section" class="mt-6 hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="text-lg font-semibold text-white">📊 Befintliga Resultat</h4>
+                                <button type="button" onclick="refreshWsxExistingResults()" class="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded">🔄 Uppdatera</button>
+                            </div>
+                            <div class="bg-gray-900 rounded-lg p-4">
+                                <div id="wsx-existing-results-content" class="text-gray-300">
+                                    <p class="text-sm">Laddar resultat...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RacerX / Bulk WSX -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">📋 Bulk / Racer X (WSX)</h3>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <p class="text-gray-300 mb-4">
+                            Paste overall-resultat eller hämta från Racer&nbsp;X när tabeller finns.
+                            <span class="text-yellow-300">Förberedd import:</span> URL-format
+                            <code class="text-cyan-300">racerxonline.com/wsx/ÅR/event-slug/sx1</code>
+                            (eller <code class="text-cyan-300">sx2</code>). Om sidan saknar tabell — klistra in manuellt eller använd Manual Results ovan.
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
+                                <select id="wsx-bulk-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Class</label>
+                                <select id="wsx-bulk-class" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="wsx_sx1">WSX SX1</option>
+                                    <option value="wsx_sx2">WSX SX2</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Format</label>
+                                <select id="wsx-bulk-format" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="motocross">Motocross/RacerX (Overall)</option>
+                                    <option value="supercross">Supercross</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end flex-wrap gap-2">
+                                <button type="button" onclick="wsxBulkPreviewResults()" class="btn-primary px-4 py-2 rounded-lg">👁️ Preview</button>
+                                <button type="button" onclick="wsxBulkFetchRacerXAndPreview()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg">🌐 Hämta &amp; Preview</button>
+                                <button type="button" onclick="wsxBulkImportResults()" class="btn-warning px-4 py-2 rounded-lg">📥 Import</button>
+                                <button type="button" onclick="wsxBulkClearClassResults()" class="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-lg">🗑️ Rensa klass</button>
+                            </div>
+                        </div>
+                        <div class="mb-4 p-3 bg-gray-900/60 border border-gray-700 rounded-lg">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Racer X-URL (WSX — sparar inget förrän Import)</label>
+                            <input
+                                id="wsx-bulk-racerx-url"
+                                type="url"
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                                placeholder="https://racerxonline.com/wsx/2026/calgary/sx1"
+                            >
+                            <p id="wsx-bulk-fetch-status" class="text-sm mt-2 hidden"></p>
+                        </div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Paste results</label>
+                        <textarea id="wsx-bulk-paste" rows="10" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm" placeholder="Klistra in overall-resultat här..."></textarea>
+                        <div id="wsx-bulk-preview" class="mt-4 hidden">
+                            <h4 class="text-white font-semibold mb-2">Preview</h4>
+                            <div class="overflow-x-auto max-h-80 overflow-y-auto border border-gray-700 rounded">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-gray-900 text-gray-300 sticky top-0">
+                                        <tr>
+                                            <th class="px-2 py-1 text-left">Pos</th>
+                                            <th class="px-2 py-1 text-left">Namn</th>
+                                            <th class="px-2 py-1 text-left">Match</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="wsx-bulk-preview-rows" class="text-gray-200"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="wsx-bulk-missing" class="mt-3 hidden bg-yellow-900/40 border border-yellow-700 text-yellow-200 rounded p-3"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1081,11 +1265,13 @@
             r.querySelectorAll('select[data-searchable="1"]').forEach(makeSelectSearchable);
         }
 
-        /** En inflight-fetch åt gången för samma tävlingslista (fler loaders / flikar = färre spikes). */
-        let _competitionsImportInflight = null;
-        function fetchCompetitionsForImportShared() {
-            if (!_competitionsImportInflight) {
-                _competitionsImportInflight = fetch('/get_competitions_for_import')
+        /** Cache per series-scope (AMA / WSX / all) — undvik cache-kollision mellan flikar. */
+        const _competitionsImportInflight = {};
+        function fetchCompetitionsForImportShared(seriesScope) {
+            const key = (seriesScope || 'all').toUpperCase();
+            if (!_competitionsImportInflight[key]) {
+                const q = key === 'ALL' ? '' : `?series=${encodeURIComponent(key)}`;
+                _competitionsImportInflight[key] = fetch('/get_competitions_for_import' + q)
                     .then(async (response) => {
                         const data = await response.json();
                         if (!response.ok) {
@@ -1094,10 +1280,10 @@
                         return data;
                     })
                     .finally(() => {
-                        _competitionsImportInflight = null;
+                        _competitionsImportInflight[key] = null;
                     });
             }
-            return _competitionsImportInflight;
+            return _competitionsImportInflight[key];
         }
 
         // Tab switching
@@ -1117,13 +1303,22 @@
             const tab = tabEl || (typeof event !== 'undefined' && event?.target?.classList?.contains('tab-btn') ? event.target : null)
                 || document.querySelector(`.tab-btn[onclick*="showSection('${sectionId}')"]`);
             if (tab) tab.classList.add('active');
+            if (sectionId === 'wsx-results') {
+                loadWsxManualCompetitions();
+                loadWsxBulkCompetitions();
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             initSearchableSelects();
         });
 
-        function getOutCompetitionId() {
+        function getOutCompetitionId(scope) {
+            if (scope === 'wsx') {
+                return document.getElementById('wsx-out-competition')?.value
+                    || document.getElementById('wsx-manual-competition')?.value
+                    || '';
+            }
             return document.getElementById('out-competition')?.value
                 || document.getElementById('manual-competition')?.value
                 || '';
@@ -1133,7 +1328,14 @@
             const outSel = document.getElementById('out-competition');
             const manual = document.getElementById('manual-competition');
             if (outSel?.value && manual) manual.value = outSel.value;
-            await manualCompetitionChanged();
+            await manualCompetitionChanged('ama');
+        }
+
+        async function wsxOutCompetitionChanged() {
+            const outSel = document.getElementById('wsx-out-competition');
+            const manual = document.getElementById('wsx-manual-competition');
+            if (outSel?.value && manual) manual.value = outSel.value;
+            await manualCompetitionChanged('wsx');
         }
 
         // Data management functions
@@ -1618,7 +1820,7 @@
         // Bulk Import helpers
         async function loadBulkCompetitions() {
             try {
-                const data = await fetchCompetitionsForImportShared();
+                const data = await fetchCompetitionsForImportShared('AMA');
                 const select = document.getElementById('bulk-competition');
                 if (!select) return;
                 if (data.success) {
@@ -1642,17 +1844,13 @@
                                 bulkUrlParseTimer = setTimeout(bulkParseRacerxUrlFromField, 450);
                             });
                             urlInput.addEventListener('paste', () => {
-                                setTimeout(bulkParseRacerxUrlFromField, 100);
+                                setTimeout(bulkParseRacerxUrlFromField, 50);
                             });
                         }
                     }
-                    bulkSuggestRacerxUrl();
-                } else {
-                    select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
                 }
-            } catch (e) {
-                const select = document.getElementById('bulk-competition');
-                if (select) select.innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+            } catch (error) {
+                console.error('Error loading bulk competitions:', error);
             }
         }
 
@@ -2614,6 +2812,8 @@
             stagger(() => loadSimulationCompetitions(), 0);
             stagger(() => loadBulkCompetitions(), 100);
             stagger(() => loadManualCompetitions(), 200);
+            stagger(() => loadWsxManualCompetitions(), 250);
+            stagger(() => loadWsxBulkCompetitions(), 280);
             stagger(() => loadQuickHoleshotCompetitions(), 300);
             stagger(() => loadRecalculateCompetitions(), 400);
             stagger(() => loadRestoreCompetitions(), 500);
@@ -2642,7 +2842,7 @@
                     const r250 = Array.from(form.querySelectorAll('select[name="riders_250[]"]')).map(s => s.value).filter(Boolean);
                     if (hasDuplicates(r450) || hasDuplicates(r250)) {
                         e.preventDefault();
-                        alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och SX2.');
+                        alert('❌ Dubbla förare i resultatet. Kontrollera 450cc och 250cc.');
                         return false;
                     }
                     
@@ -2650,6 +2850,25 @@
                     const compId = document.getElementById('manual-competition').value;
                     if (compId) {
                         sessionStorage.setItem('lastSubmittedCompetitionId', compId);
+                        sessionStorage.setItem('lastSubmittedScope', 'ama');
+                    }
+                };
+            }
+
+            const wsxForm = document.getElementById('wsx-manual-results-form');
+            if (wsxForm) {
+                wsxForm.onsubmit = function(e) {
+                    const r450 = Array.from(wsxForm.querySelectorAll('select[name="riders_450[]"]')).map(s => s.value).filter(Boolean);
+                    const r250 = Array.from(wsxForm.querySelectorAll('select[name="riders_250[]"]')).map(s => s.value).filter(Boolean);
+                    if (hasDuplicates(r450) || hasDuplicates(r250)) {
+                        e.preventDefault();
+                        alert('❌ Dubbla förare i resultatet. Kontrollera WSX SX1 och SX2.');
+                        return false;
+                    }
+                    const compId = document.getElementById('wsx-manual-competition').value;
+                    if (compId) {
+                        sessionStorage.setItem('lastSubmittedCompetitionId', compId);
+                        sessionStorage.setItem('lastSubmittedScope', 'wsx');
                     }
                 };
             }
@@ -2657,16 +2876,27 @@
             // If we just submitted results, reload them
             if (lastCompId) {
                 // Clear it so it doesn't reload on next page load
+                const lastScope = sessionStorage.getItem('lastSubmittedScope') || 'ama';
                 sessionStorage.removeItem('lastSubmittedCompetitionId');
+                sessionStorage.removeItem('lastSubmittedScope');
                 // Wait a bit for competitions to load, then set the competition dropdown
                 setTimeout(() => {
-                    const compSelect = document.getElementById('manual-competition');
-                    if (compSelect) {
-                        compSelect.value = lastCompId;
-                        // Trigger change event to load riders and results
-                        compSelect.dispatchEvent(new Event('change'));
+                    if (lastScope === 'wsx') {
+                        showSection('wsx-results');
+                        const compSelect = document.getElementById('wsx-manual-competition');
+                        if (compSelect) {
+                            compSelect.value = lastCompId;
+                            compSelect.dispatchEvent(new Event('change'));
+                        }
+                    } else {
+                        const compSelect = document.getElementById('manual-competition');
+                        if (compSelect) {
+                            compSelect.value = lastCompId;
+                            // Trigger change event to load riders and results
+                            compSelect.dispatchEvent(new Event('change'));
+                        }
                     }
-                }, 300);
+                }, 400);
             }
         });
 
@@ -3316,7 +3546,7 @@
 
         async function loadManualCompetitions() {
             try {
-                const data = await fetchCompetitionsForImportShared();
+                const data = await fetchCompetitionsForImportShared('AMA');
                 const select = document.getElementById('manual-competition');
                 const outSelect = document.getElementById('out-competition');
                 if (!select) return;
@@ -3337,7 +3567,7 @@
                 }
                 if (!select.dataset.changeBound) {
                     select.dataset.changeBound = '1';
-                    select.addEventListener('change', manualCompetitionChanged);
+                    select.addEventListener('change', () => manualCompetitionChanged('ama'));
                 }
             } catch (error) {
                 console.error('Exception loading competitions:', error);
@@ -3348,213 +3578,159 @@
             }
         }
 
-        async function manualCompetitionChanged() {
-            const compId = document.getElementById('manual-competition')?.value;
-            const outSel = document.getElementById('out-competition');
+        function resultsScopeIds(scope) {
+            const isWsx = scope === 'wsx';
+            return {
+                isWsx,
+                seriesKey: isWsx ? 'WSX' : 'AMA',
+                manualComp: isWsx ? 'wsx-manual-competition' : 'manual-competition',
+                outComp: isWsx ? 'wsx-out-competition' : 'out-competition',
+                sx1List: isWsx ? 'wsx-manual-sx1-list' : 'manual-sx1-list',
+                sx2List: isWsx ? 'wsx-manual-sx2-list' : 'manual-sx2-list',
+                hidden: isWsx ? 'wsx-manual-hidden-inputs' : 'manual-hidden-inputs',
+                hs450: isWsx ? 'wsx-manual-hs-450' : 'manual-hs-450',
+                hs250: isWsx ? 'wsx-manual-hs-250' : 'manual-hs-250',
+                outSx1: isWsx ? 'wsx-panel-out-sx1' : 'wsx-out-sx1',
+                outSx2: isWsx ? 'wsx-panel-out-sx2' : 'wsx-out-sx2',
+                outListSx1: isWsx ? 'wsx-panel-out-list-sx1' : 'wsx-out-list-sx1',
+                outListSx2: isWsx ? 'wsx-panel-out-list-sx2' : 'wsx-out-list-sx2',
+                class1: isWsx ? 'wsx_sx1' : '450cc',
+                class2: isWsx ? 'wsx_sx2' : '250cc',
+            };
+        }
+
+        async function manualCompetitionChanged(scope) {
+            scope = scope || 'ama';
+            const ids = resultsScopeIds(scope);
+            const compId = document.getElementById(ids.manualComp)?.value;
+            const outSel = document.getElementById(ids.outComp);
             if (outSel && compId) outSel.value = compId;
+            const outListSx1 = document.getElementById(ids.outListSx1);
+            const outListSx2 = document.getElementById(ids.outListSx2);
+            const outSx1 = document.getElementById(ids.outSx1);
+            const outSx2 = document.getElementById(ids.outSx2);
             if (!compId) {
-                console.log('No competition selected - clearing OUT lists');
-                // Clear OUT lists if no competition selected
-                const outListSx1 = document.getElementById('wsx-out-list-sx1');
-                const outListSx2 = document.getElementById('wsx-out-list-sx2');
                 if (outListSx1) outListSx1.innerHTML = '<li class="text-gray-500">Välj tävling först</li>';
                 if (outListSx2) outListSx2.innerHTML = '<li class="text-gray-500">Välj tävling först</li>';
-                // Clear dropdowns too
-                const outSx1 = document.getElementById('wsx-out-sx1');
-                const outSx2 = document.getElementById('wsx-out-sx2');
                 if (outSx1) outSx1.innerHTML = '<option value="">Välj förare</option>';
                 if (outSx2) outSx2.innerHTML = '<option value="">Välj förare</option>';
                 return;
             }
-            
-            console.log('Manual competition changed:', compId);
-            
-            // Fetch competition info to check series
-            const compData = await fetchCompetitionsForImportShared();
-            // Convert compId to number for comparison since API returns numbers
-            const compIdNum = parseInt(compId);
-            const competition = compData.competitions?.find(c => c.id === compIdNum || c.id == compId);
-            const isWSX = competition?.series === 'WSX';
-            
-            console.log('Manual competition changed:', { compId, compIdNum, competition, isWSX });
-            
-            // Load existing results for this competition
-            loadExistingResults(compId);
-            
-            // Fetch riders for this competition (admin endpoint returns all riders incl. class)
-            console.log('Fetching riders for competition:', compId);
+
+            const isWSX = ids.isWsx;
+            loadExistingResults(compId, scope);
+
             const res = await fetch(`/admin/get_out_status/${compId}`);
             if (!res.ok) {
-                console.error('Error fetching riders:', res.status, res.statusText);
                 const errorData = await res.json().catch(() => ({}));
-                alert('Kunde inte hämta förarlista. Kontrollera att du är inloggad som admin. Error: ' + (errorData.error || res.statusText));
+                alert('Kunde inte hämta förarlista. Error: ' + (errorData.error || res.statusText));
                 return;
             }
             const riders = await res.json();
-            console.log('Received riders:', riders.length, 'riders');
             if (!Array.isArray(riders)) {
-                console.error('Invalid riders response:', riders);
                 alert('Ogiltigt svar från servern när förarlist skulle hämtas.');
                 return;
             }
-            // Filter riders based on series type
-            // For WSX: use wsx_sx1/wsx_sx2 classes
-            // For SX/MX/SMX: use 450cc/250cc classes
-            const sx1 = isWSX 
-                ? riders.filter(r => r.class === 'wsx_sx1')
-                : riders.filter(r => r.class === '450cc');
-            const sx2 = isWSX
-                ? riders.filter(r => r.class === 'wsx_sx2')
-                : riders.filter(r => r.class === '250cc');
+            const sx1 = riders.filter(r => r.class === ids.class1);
+            const sx2 = riders.filter(r => r.class === ids.class2);
 
-            // Build selects
-            const sx1List = document.getElementById('manual-sx1-list');
-            const sx2List = document.getElementById('manual-sx2-list');
+            const sx1List = document.getElementById(ids.sx1List);
+            const sx2List = document.getElementById(ids.sx2List);
             const sx1Header = document.getElementById('sx1-header');
-            const hidden = document.getElementById('manual-hidden-inputs');
-            sx1List.innerHTML = '';
-            sx2List.innerHTML = '';
-            hidden.innerHTML = '';
+            const sx2Header = document.getElementById('sx2-header');
+            const hidden = document.getElementById(ids.hidden);
+            if (sx1List) sx1List.innerHTML = '';
+            if (sx2List) sx2List.innerHTML = '';
+            if (hidden) hidden.innerHTML = '';
+            if (!isWSX && sx1Header) sx1Header.textContent = '450cc (Positioner 1-20)';
+            if (!isWSX && sx2Header) sx2Header.textContent = '250cc (Positioner 1-20)';
 
-            // Update header based on series
-            if (sx1Header) {
-                sx1Header.textContent = isWSX ? 'WSX SX1 (Positioner 1-20)' : '450cc/SX1 (Positioner 1-20)';
-            }
+            const riderOpt = (list) => list.map(r =>
+                `<option value="${r.id}">${(r.rider_number ? r.rider_number + ' ' : '')}${r.name}</option>`
+            ).join('');
 
-            // SX1 Top 20 for all (including WSX for leaderboard points) → backend 450 arrays
-            const sx1MaxPos = 20;
-            for (let pos = 1; pos <= sx1MaxPos; pos++) {
-                const wrapper = document.createElement('div');
-                if (isWSX) {
-                    // For WSX: show rider select + total points input
-                    wrapper.innerHTML = `
-                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                        <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
-                            <option value="">Välj förare</option>
-                            ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                        </select>
-                        <input type="number" name="rider_points_450[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />
-                    `;
-                } else {
-                    // For non-WSX: just show rider select
-                    wrapper.innerHTML = `
-                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                        <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                            <option value="">Välj förare</option>
-                            ${sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                        </select>
-                    `;
+            for (let pos = 1; pos <= 20; pos++) {
+                if (sx1List) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = isWSX
+                        ? `<label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                           <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
+                             <option value="">Välj förare</option>${riderOpt(sx1)}</select>
+                           <input type="number" name="rider_points_450[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />`
+                        : `<label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                           <select name="riders_450[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                             <option value="">Välj förare</option>${riderOpt(sx1)}</select>`;
+                    sx1List.appendChild(wrapper);
                 }
-                sx1List.appendChild(wrapper);
-                const hiddenPos = document.createElement('input');
-                hiddenPos.type = 'hidden';
-                hiddenPos.name = 'positions_450[]';
-                hiddenPos.value = String(pos);
-                hidden.appendChild(hiddenPos);
-            }
-
-            // SX2 Top 20 for all (including WSX for leaderboard points, and wildcard needs positions 10-20) → backend 250 arrays
-            const sx2MaxPos = 20;
-            for (let pos = 1; pos <= sx2MaxPos; pos++) {
-                const wrapper = document.createElement('div');
-                if (isWSX) {
-                    // For WSX: show rider select + total points input
-                    wrapper.innerHTML = `
-                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                        <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
-                            <option value="">Välj förare</option>
-                            ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                        </select>
-                        <input type="number" name="rider_points_250[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />
-                    `;
-                } else {
-                    // For non-WSX: just show rider select
-                    wrapper.innerHTML = `
-                        <label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
-                        <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
-                            <option value="">Välj förare</option>
-                            ${sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('')}
-                        </select>
-                    `;
+                if (hidden) {
+                    const hiddenPos = document.createElement('input');
+                    hiddenPos.type = 'hidden';
+                    hiddenPos.name = 'positions_450[]';
+                    hiddenPos.value = String(pos);
+                    hidden.appendChild(hiddenPos);
                 }
-                sx2List.appendChild(wrapper);
-                const hiddenPos = document.createElement('input');
-                hiddenPos.type = 'hidden';
-                hiddenPos.name = 'positions_250[]';
-                hiddenPos.value = String(pos);
-                hidden.appendChild(hiddenPos);
+            }
+            for (let pos = 1; pos <= 20; pos++) {
+                if (sx2List) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = isWSX
+                        ? `<label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                           <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white mb-2">
+                             <option value="">Välj förare</option>${riderOpt(sx2)}</select>
+                           <input type="number" name="rider_points_250[]" placeholder="Totalpoäng" min="0" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" />`
+                        : `<label class="block text-sm text-gray-300 mb-1">Pos ${pos}</label>
+                           <select name="riders_250[]" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                             <option value="">Välj förare</option>${riderOpt(sx2)}</select>`;
+                    sx2List.appendChild(wrapper);
+                }
+                if (hidden) {
+                    const hiddenPos = document.createElement('input');
+                    hiddenPos.type = 'hidden';
+                    hiddenPos.name = 'positions_250[]';
+                    hiddenPos.value = String(pos);
+                    hidden.appendChild(hiddenPos);
+                }
             }
 
-            // Holeshots
-            const hs450 = document.getElementById('manual-hs-450');
-            const hs250 = document.getElementById('manual-hs-250');
-            hs450.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
-            hs250.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
+            const hs450 = document.getElementById(ids.hs450);
+            const hs250 = document.getElementById(ids.hs250);
+            if (hs450) hs450.innerHTML = '<option value="">Välj förare</option>' + riderOpt(sx1);
+            if (hs250) hs250.innerHTML = '<option value="">Välj förare</option>' + riderOpt(sx2);
 
-            // OUT selects and current OUT lists (if panel exists)
-            const outSx1 = document.getElementById('wsx-out-sx1');
-            const outSx2 = document.getElementById('wsx-out-sx2');
-            const outListSx1 = document.getElementById('wsx-out-list-sx1');
-            const outListSx2 = document.getElementById('wsx-out-list-sx2');
             const outClass1Label = document.getElementById('out-class1-label');
             const outClass2Label = document.getElementById('out-class2-label');
             const outListClass1Label = document.getElementById('out-list-class1-label');
             const outListClass2Label = document.getElementById('out-list-class2-label');
-            
-            // Update labels based on series
-            if (outClass1Label) {
-                outClass1Label.textContent = isWSX ? 'WSX SX1 (450)' : '450cc/SX1';
+            if (!isWSX) {
+                if (outClass1Label) outClass1Label.textContent = '450cc';
+                if (outClass2Label) outClass2Label.textContent = '250cc';
+                if (outListClass1Label) outListClass1Label.textContent = 'OUT – 450cc';
+                if (outListClass2Label) outListClass2Label.textContent = 'OUT – 250cc';
             }
-            if (outClass2Label) {
-                outClass2Label.textContent = isWSX ? 'WSX SX2 (250)' : '250cc/SX2';
-            }
-            if (outListClass1Label) {
-                outListClass1Label.textContent = isWSX ? 'OUT – WSX SX1' : 'OUT – 450cc/SX1';
-            }
-            if (outListClass2Label) {
-                outListClass2Label.textContent = isWSX ? 'OUT – WSX SX2' : 'OUT – 250cc/SX2';
-            }
-            
-            if (outSx1 && outSx2) {
-                outSx1.innerHTML = '<option value="">Välj förare</option>' + sx1.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
-                outSx2.innerHTML = '<option value="">Välj förare</option>' + sx2.map(r => `<option value="${r.id}">${(r.rider_number? r.rider_number + ' ' : '')}${r.name}</option>`).join('');
-            }
+
+            if (outSx1) outSx1.innerHTML = '<option value="">Välj förare</option>' + riderOpt(sx1);
+            if (outSx2) outSx2.innerHTML = '<option value="">Välj förare</option>' + riderOpt(sx2);
             if (outListSx1 && outListSx2) {
                 const sx1Out = sx1.filter(r => r.is_out);
                 const sx2Out = sx2.filter(r => r.is_out);
-                console.log('OUT riders:', { sx1Out: sx1Out.length, sx2Out: sx2Out.length, totalSx1: sx1.length, totalSx2: sx2.length });
-                
-                // Create clickable list items with remove button
-                outListSx1.innerHTML = sx1Out.length > 0 
-                    ? sx1Out.map(r => {
-                        const riderName = `${(r.rider_number? r.rider_number + ' ' : '')}${r.name}`;
-                        return `<li class="flex items-center justify-between group hover:bg-gray-700 rounded px-2 py-1 cursor-pointer" onclick="removeRiderFromOut(${compId}, ${r.id}, '450cc')">
-                            <span>${riderName}</span>
-                            <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-2" onclick="event.stopPropagation(); removeRiderFromOut(${compId}, ${r.id}, '450cc')" title="Ta bort från OUT">
-                                ✕
-                            </button>
-                        </li>`;
-                    }).join('')
+                const outItem = (r, cls) => {
+                    const riderName = `${(r.rider_number ? r.rider_number + ' ' : '')}${r.name}`;
+                    return `<li class="flex items-center justify-between group hover:bg-gray-700 rounded px-2 py-1 cursor-pointer" onclick="removeRiderFromOut(${compId}, ${r.id}, '${cls}', '${scope}')">
+                        <span>${riderName}</span>
+                        <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-2" onclick="event.stopPropagation(); removeRiderFromOut(${compId}, ${r.id}, '${cls}', '${scope}')" title="Ta bort från OUT">✕</button>
+                    </li>`;
+                };
+                outListSx1.innerHTML = sx1Out.length
+                    ? sx1Out.map(r => outItem(r, ids.class1)).join('')
                     : '<li class="text-gray-500">Inga OUT</li>';
-                    
-                outListSx2.innerHTML = sx2Out.length > 0
-                    ? sx2Out.map(r => {
-                        const riderName = `${(r.rider_number? r.rider_number + ' ' : '')}${r.name}`;
-                        return `<li class="flex items-center justify-between group hover:bg-gray-700 rounded px-2 py-1 cursor-pointer" onclick="removeRiderFromOut(${compId}, ${r.id}, '250cc')">
-                            <span>${riderName}</span>
-                            <button class="text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity ml-2" onclick="event.stopPropagation(); removeRiderFromOut(${compId}, ${r.id}, '250cc')" title="Ta bort från OUT">
-                                ✕
-                            </button>
-                        </li>`;
-                    }).join('')
+                outListSx2.innerHTML = sx2Out.length
+                    ? sx2Out.map(r => outItem(r, ids.class2)).join('')
                     : '<li class="text-gray-500">Inga OUT</li>';
-            } else {
-                console.warn('OUT list elements not found:', { outListSx1, outListSx2 });
             }
-            
-            // Enforce unique selections live (disable already chosen riders)
-            setupUniqueSelects('select[name="riders_450[]"]');
-            setupUniqueSelects('select[name="riders_250[]"]');
+
+            const formRoot = isWSX ? '#wsx-manual-results-form' : '#manual-results-form';
+            setupUniqueSelects(formRoot + ' select[name="riders_450[]"]');
+            setupUniqueSelects(formRoot + ' select[name="riders_250[]"]');
         }
 
         function hasDuplicates(arr) {
@@ -3587,13 +3763,13 @@
             refresh();
         }
 
-        async function removeRiderFromOut(compId, riderId, className) {
+        async function removeRiderFromOut(compId, riderId, className, scope) {
+            scope = scope || 'ama';
             if (!compId || !riderId) {
                 alert('Fel: Saknar tävling eller förare-ID');
                 return;
             }
             
-            // Find rider name from the list
             const listItem = document.querySelector(`li[onclick*="${riderId}"]`);
             const riderName = listItem?.querySelector('span')?.textContent?.trim() || 'Föraren';
             
@@ -3617,8 +3793,7 @@
                 const data = await resp.json().catch(() => ({}));
                 
                 if (resp.ok) {
-                    // Reload the competition data to refresh OUT lists
-                    await manualCompetitionChanged();
+                    await manualCompetitionChanged(scope);
                     alert(`✅ ${riderName} borttagen från OUT${clearAllFuture ? ' för denna tävling och alla framtida tävlingar' : ' för denna tävling'}`);
                 } else {
                     alert('❌ Fel vid borttagning: ' + (data.error || 'Okänt fel'));
@@ -3629,33 +3804,31 @@
             }
         }
 
-        async function setRiderOut(status) {
-            const compId = getOutCompetitionId();
-            if (!compId) { alert('Välj tävling först (ovanför eller under Manual Results)'); return; }
-            const sx1Sel = document.getElementById('wsx-out-sx1');
-            const sx2Sel = document.getElementById('wsx-out-sx2');
+        async function setRiderOut(status, scope) {
+            scope = scope || 'ama';
+            const ids = resultsScopeIds(scope);
+            const compId = getOutCompetitionId(scope);
+            if (!compId) { alert('Välj tävling först'); return; }
+            const sx1Sel = document.getElementById(ids.outSx1);
+            const sx2Sel = document.getElementById(ids.outSx2);
             const riderIds = [sx1Sel?.value, sx2Sel?.value].filter(Boolean);
             if (riderIds.length === 0) { alert('Välj minst en förare att uppdatera.'); return; }
 
             let clearAllFuture = false;
             
             if (status === 'CLEAR') {
-                // Ask if user wants to clear for all future competitions too
                 clearAllFuture = confirm(
                     'Vill du ta bort OUT-status för alla framtida tävlingar i samma serie också?\n\n' +
                     'OK = Ta bort för denna tävling OCH alla framtida tävlingar\n' +
                     'Avbryt = Ta bort bara för denna tävling'
                 );
             } else {
-                // For OUT: explain that it will apply to all future competitions
-                const verb = 'sätta OUT på';
-                const confirmMsg = `Bekräfta att du vill ${verb} ${riderIds.length} förare?\n\n` +
+                const confirmMsg = `Bekräfta att du vill sätta OUT på ${riderIds.length} förare?\n\n` +
                     `⚠️ OBS: Föraren kommer automatiskt vara OUT för alla framtida tävlingar i samma serie tills du manuellt tar bort OUT-statusen.`;
                 if (!confirm(confirmMsg)) return;
             }
 
             try {
-                console.log('Rider OUT action', { status, compId, riderIds, clearAllFuture });
                 for (const rid of riderIds) {
                     const resp = await fetch('/admin/set_out_status', {
                         method: 'POST',
@@ -3667,11 +3840,9 @@
                             clear_all_future: clearAllFuture
                         })
                     });
-                    const data = await resp.json().catch(() => ({}));
-                    console.log('Rider OUT response', rid, data);
+                    await resp.json().catch(() => ({}));
                 }
-                await manualCompetitionChanged();
-                // Nollställ val
+                await manualCompetitionChanged(scope);
                 if (sx1Sel) sx1Sel.value = '';
                 if (sx2Sel) sx2Sel.value = '';
                 
@@ -3680,7 +3851,7 @@
                 } else {
                     alert(clearAllFuture 
                         ? '✅ OUT rensat för denna tävling och alla framtida tävlingar i samma serie'
-                        : '✅ OUT rensat för denna tävling (använd "Clear" igen och välj "OK" för att ta bort för alla framtida tävlingar)'
+                        : '✅ OUT rensat för denna tävling'
                     );
                 }
             } catch (e) {
@@ -3690,11 +3861,255 @@
         }
 
         function refreshExistingResults() {
-            const compId = document.getElementById('manual-competition').value;
-            if (compId) {
-                loadExistingResults(compId);
+            const compId = document.getElementById('manual-competition')?.value;
+            if (compId) loadExistingResults(compId, 'ama');
+        }
+        function refreshWsxExistingResults() {
+            const compId = document.getElementById('wsx-manual-competition')?.value;
+            if (compId) loadExistingResults(compId, 'wsx');
+        }
+
+        async function loadWsxManualCompetitions() {
+            try {
+                const data = await fetchCompetitionsForImportShared('WSX');
+                const select = document.getElementById('wsx-manual-competition');
+                const outSelect = document.getElementById('wsx-out-competition');
+                if (!select) return;
+                if (data.success) {
+                    const yearLabel = data.year ? ` ${data.year}` : '';
+                    fillCompetitionSelect(select, data.competitions, `Välj WSX${yearLabel}-tävling...`);
+                    fillCompetitionSelect(outSelect, data.competitions, `Välj WSX${yearLabel}-tävling...`);
+                } else {
+                    select.innerHTML = '<option value="">Inga WSX-tävlingar</option>';
+                }
+                if (!select.dataset.changeBound) {
+                    select.dataset.changeBound = '1';
+                    select.addEventListener('change', () => manualCompetitionChanged('wsx'));
+                }
+            } catch (e) {
+                console.error('WSX competitions load error', e);
+            }
+        }
+
+        async function loadWsxBulkCompetitions() {
+            try {
+                const data = await fetchCompetitionsForImportShared('WSX');
+                const select = document.getElementById('wsx-bulk-competition');
+                if (!select) return;
+                select.innerHTML = '<option value="">Välj WSX-tävling...</option>';
+                (data.competitions || []).forEach(comp => {
+                    const opt = document.createElement('option');
+                    opt.value = comp.id;
+                    opt.textContent = comp.name;
+                    select.appendChild(opt);
+                });
+                if (!select.dataset.racerxListeners) {
+                    select.dataset.racerxListeners = '1';
+                    select.addEventListener('change', wsxBulkSuggestRacerxUrl);
+                    document.getElementById('wsx-bulk-class')?.addEventListener('change', wsxBulkSuggestRacerxUrl);
+                    const urlInput = document.getElementById('wsx-bulk-racerx-url');
+                    if (urlInput && !urlInput.dataset.racerxParseBound) {
+                        urlInput.dataset.racerxParseBound = '1';
+                        urlInput.addEventListener('input', () => {
+                            urlInput.dataset.userEdited = '1';
+                            clearTimeout(wsxBulkUrlParseTimer);
+                            wsxBulkUrlParseTimer = setTimeout(wsxBulkParseRacerxUrlFromField, 450);
+                        });
+                    }
+                }
+                wsxBulkSuggestRacerxUrl();
+            } catch (e) {
+                console.error('WSX bulk competitions load error', e);
+            }
+        }
+
+        function wsxBulkSuggestRacerxUrl() {
+            const competitionId = document.getElementById('wsx-bulk-competition')?.value;
+            const className = document.getElementById('wsx-bulk-class')?.value || 'wsx_sx1';
+            const urlInput = document.getElementById('wsx-bulk-racerx-url');
+            if (!urlInput || !competitionId || urlInput.dataset.userEdited === '1') return;
+            const sel = document.getElementById('wsx-bulk-competition');
+            const name = sel.options[sel.selectedIndex]?.textContent || '';
+            const slug = name.split(',')[0].trim().toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-');
+            const path = className === 'wsx_sx2' ? 'sx2' : 'sx1';
+            const year = new Date().getFullYear();
+            if (slug) urlInput.placeholder = `https://racerxonline.com/wsx/${year}/${slug}/${path}`;
+        }
+
+        let wsxBulkUrlParseTimer = null;
+        async function wsxBulkParseRacerxUrlFromField() {
+            const urlInput = document.getElementById('wsx-bulk-racerx-url');
+            const url = (urlInput?.value || '').trim();
+            if (!url || !url.includes('racerx')) return;
+            try {
+                const res = await fetch('/parse_racerx_url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+                const data = await res.json();
+                if (!data.success || !data.inferred) return;
+                const inferred = data.inferred;
+                const classSel = document.getElementById('wsx-bulk-class');
+                const formatSel = document.getElementById('wsx-bulk-format');
+                const compSel = document.getElementById('wsx-bulk-competition');
+                if (inferred.class_name && classSel) {
+                    const has = Array.from(classSel.options).some(o => o.value === inferred.class_name);
+                    if (has) classSel.value = inferred.class_name;
+                }
+                if (inferred.format && formatSel) formatSel.value = inferred.format;
+                if (inferred.competition_id && compSel) compSel.value = String(inferred.competition_id);
+                const statusEl = document.getElementById('wsx-bulk-fetch-status');
+                if (statusEl) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.className = 'text-sm mt-2 text-cyan-300';
+                    statusEl.textContent = inferred.competition_id
+                        ? `Från URL: ${inferred.competition_name || 'tävling'} · ${inferred.class_name}`
+                        : (inferred.warning || 'Kunde inte matcha tävling — välj manuellt');
+                }
+            } catch (_) {}
+        }
+
+        async function wsxBulkFetchRacerXAndPreview() {
+            const competitionId = document.getElementById('wsx-bulk-competition').value;
+            const className = document.getElementById('wsx-bulk-class').value;
+            const format = document.getElementById('wsx-bulk-format').value;
+            const urlInput = document.getElementById('wsx-bulk-racerx-url');
+            const statusEl = document.getElementById('wsx-bulk-fetch-status');
+            const url = (urlInput?.value || '').trim();
+            if (!url && (!competitionId || !className || !format)) {
+                alert('Klistra in Racer X-URL, eller välj tävling, klass och format.');
+                return;
+            }
+            statusEl.classList.remove('hidden');
+            statusEl.className = 'text-sm mt-2 text-cyan-300';
+            statusEl.textContent = 'Hämtar från Racer X (WSX)…';
+            try {
+                const res = await fetch('/fetch_racerx_results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: url || undefined,
+                        competition_id: url ? undefined : competitionId,
+                        class_name: url ? undefined : className,
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    statusEl.className = 'text-sm mt-2 text-red-400';
+                    statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel') +
+                        ' — använd paste/manual om WSX-sidan saknar resultattabell.';
+                    return;
+                }
+                document.getElementById('wsx-bulk-paste').value = data.pasted_text || '';
+                if (data.source_url && urlInput && !url) urlInput.value = data.source_url;
+                statusEl.className = 'text-sm mt-2 text-green-400';
+                statusEl.textContent = `Hämtade ${data.row_count || 0} rader. Kör Preview innan Import.`;
+                await wsxBulkPreviewResults();
+            } catch (e) {
+                statusEl.className = 'text-sm mt-2 text-red-400';
+                statusEl.textContent = 'Fel: ' + (e.message || e);
+            }
+        }
+
+        async function wsxBulkPreviewResults() {
+            const competitionId = document.getElementById('wsx-bulk-competition').value;
+            const className = document.getElementById('wsx-bulk-class').value;
+            const format = document.getElementById('wsx-bulk-format').value;
+            const text = document.getElementById('wsx-bulk-paste').value;
+            if (!competitionId || !className || !format || !text.trim()) {
+                alert('Välj tävling, klass, format och klistra in resultat.');
+                return;
+            }
+            const tbody = document.getElementById('wsx-bulk-preview-rows');
+            const preview = document.getElementById('wsx-bulk-preview');
+            const missing = document.getElementById('wsx-bulk-missing');
+            tbody.innerHTML = '';
+            preview.classList.add('hidden');
+            missing.classList.add('hidden');
+            const res = await fetch('/bulk_preview_results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    competition_id: competitionId,
+                    class_name: className,
+                    format: format,
+                    pasted_text: text,
+                })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert('Fel: ' + (data.error || 'Okänt fel'));
+                return;
+            }
+            data.rows.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="px-2 py-1">${r.position}</td>
+                    <td class="px-2 py-1">${r.found_in_db && r.db_rider_name ? `${r.rider_name} → ${r.db_rider_name}` : r.rider_name}</td>
+                    <td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
+                tbody.appendChild(tr);
+            });
+            preview.classList.remove('hidden');
+            const miss = (data.rows || []).filter(r => !r.found_in_db);
+            if (miss.length) {
+                missing.classList.remove('hidden');
+                missing.textContent = `Saknas i DB (${miss.length}): ` + miss.map(r => r.rider_name).join(', ');
+            }
+        }
+
+        async function wsxBulkImportResults() {
+            const competitionId = document.getElementById('wsx-bulk-competition').value;
+            const className = document.getElementById('wsx-bulk-class').value;
+            const format = document.getElementById('wsx-bulk-format').value;
+            const text = document.getElementById('wsx-bulk-paste').value;
+            if (!competitionId || !className || !format || !text.trim()) {
+                alert('Välj tävling, klass, format och klistra in resultat.');
+                return;
+            }
+            if (!confirm('Importera WSX-resultat? Detta uppdaterar/ersätter positioner för valda klassen.')) return;
+            const res = await fetch('/bulk_import_results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    competition_id: competitionId,
+                    class_name: className,
+                    format: format,
+                    pasted_text: text,
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Importerat: ${data.imported}. Skippade: ${(data.skipped || []).length}.`);
+                refreshWsxExistingResults();
             } else {
-                alert('Välj en tävling först');
+                alert('❌ Fel: ' + (data.error || 'Okänt fel'));
+            }
+        }
+
+        async function wsxBulkClearClassResults() {
+            const competitionId = document.getElementById('wsx-bulk-competition').value;
+            const className = document.getElementById('wsx-bulk-class').value;
+            const compSelect = document.getElementById('wsx-bulk-competition');
+            const compLabel = compSelect.options[compSelect.selectedIndex]?.text || competitionId;
+            if (!competitionId || !className) {
+                alert('Välj tävling och klass först.');
+                return;
+            }
+            if (!confirm(`Rensa alla ${className}-resultat för ${compLabel}?\n\nTips påverkas inte.`)) return;
+            const res = await fetch('/clear_competition_class_results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ competition_id: competitionId, class_name: className })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ ${data.message}`);
+                document.getElementById('wsx-bulk-paste').value = '';
+                document.getElementById('wsx-bulk-preview')?.classList.add('hidden');
+            } else {
+                alert('❌ Fel: ' + (data.error || 'Okänt fel'));
             }
         }
 
@@ -3773,9 +4188,12 @@
             }
         }
 
-        async function loadExistingResults(compId) {
-            const resultsSection = document.getElementById('existing-results-section');
-            const resultsContent = document.getElementById('existing-results-content');
+        async function loadExistingResults(compId, scope) {
+            scope = scope || 'ama';
+            const ids = resultsScopeIds(scope);
+            const resultsSection = document.getElementById(ids.isWsx ? 'wsx-existing-results-section' : 'existing-results-section');
+            const resultsContent = document.getElementById(ids.isWsx ? 'wsx-existing-results-content' : 'existing-results-content');
+            if (!resultsSection || !resultsContent) return;
             
             if (!compId) {
                 resultsSection.classList.add('hidden');
@@ -3806,11 +4224,13 @@
                     return;
                 }
                 
+                const label1 = ids.isWsx ? 'SX1' : '450cc';
+                const label2 = ids.isWsx ? 'SX2' : '250cc';
                 let html = '<div class="space-y-4">';
                 
                 // Show 450cc/SX1 results
                 if (results450.length > 0) {
-                    html += '<div><h5 class="text-sm font-semibold text-yellow-400 mb-2">450cc/SX1 Resultat (' + results450.length + ' förare)</h5>';
+                    html += '<div><h5 class="text-sm font-semibold text-yellow-400 mb-2">' + label1 + ' Resultat (' + results450.length + ' förare)</h5>';
                     html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
                     results450.sort((a, b) => a.position - b.position).forEach(r => {
                         // Use calculated_points if available, otherwise use rider_points
@@ -3827,7 +4247,7 @@
                 
                 // Show 250cc/SX2 results
                 if (results250.length > 0) {
-                    html += '<div><h5 class="text-sm font-semibold text-blue-400 mb-2">250cc/SX2 Resultat (' + results250.length + ' förare)</h5>';
+                    html += '<div><h5 class="text-sm font-semibold text-blue-400 mb-2">' + label2 + ' Resultat (' + results250.length + ' förare)</h5>';
                     html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">';
                     results250.sort((a, b) => a.position - b.position).forEach(r => {
                         // Use calculated_points if available, otherwise use rider_points
@@ -3847,10 +4267,10 @@
                     html += '<div><h5 class="text-sm font-semibold text-green-400 mb-2">Holeshot</h5>';
                     html += '<div class="flex gap-4 text-xs">';
                     if (holeshot450) {
-                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">450cc/SX1: #${holeshot450.rider_number || '?'} ${holeshot450.rider_name || 'Unknown'}</span>`;
+                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">${label1}: #${holeshot450.rider_number || '?'} ${holeshot450.rider_name || 'Unknown'}</span>`;
                     }
                     if (holeshot250) {
-                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">250cc/SX2: #${holeshot250.rider_number || '?'} ${holeshot250.rider_name || 'Unknown'}</span>`;
+                        html += `<span class="text-white bg-gray-800 px-3 py-1 rounded">${label2}: #${holeshot250.rider_number || '?'} ${holeshot250.rider_name || 'Unknown'}</span>`;
                     }
                     html += '</div></div>';
                 }

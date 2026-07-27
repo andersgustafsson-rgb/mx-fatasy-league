@@ -1,7 +1,5 @@
 /** Hydrate homepage pick summary portraits (lazy, only ~15 images). */
 (function () {
-  const map = window.HOME_PICK_PORTRAITS || {};
-
   function photoUrl(r) {
     if (!r) return null;
     const candidates = [r.racerx_portrait_url, r.portrait_url, r.image_url];
@@ -19,6 +17,7 @@
   }
 
   function hydrate() {
+    const map = window.HOME_PICK_PORTRAITS || {};
     document
       .querySelectorAll('.picks-summary--on-home img.wizard-summary-portrait[data-rider-id]')
       .forEach((img) => {
@@ -30,6 +29,7 @@
         const photo = photoUrl(r);
         img.loading = 'eager';
         img.decoding = 'async';
+        img.dataset.brandTried = '';
         img.onload = null;
         img.onerror = function onPortraitError() {
           const fallback = brandSrc(r);
@@ -47,6 +47,8 @@
         }
       });
   }
+
+  window.hydrateHomePickPortraits = hydrate;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', hydrate);

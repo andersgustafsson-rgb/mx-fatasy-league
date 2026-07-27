@@ -575,7 +575,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -620,6 +620,10 @@
         {% set wsx_bg_image = "trackmaps/compressed/canadiangp.png" %}
       {% elif "australian" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/australiangp.jpg" %}
+      {% elif "british" in race_name_lower %}
+        {% set wsx_bg_image = "images/wsx_hero.jpg" %}
+      {% elif "new zealand" in race_name_lower or "christchurch" in race_name_lower %}
+        {% set wsx_bg_image = "images/wsx_hero.jpg" %}
       {% elif "swedish" in race_name_lower %}
         {% set wsx_bg_image = "trackmaps/compressed/swedishgp.jpg" %}
       {% elif "south african" in race_name_lower %}
@@ -3179,7 +3183,13 @@ function onPickChange(cls, pos, riderId = null) {
         const data = await resp.json();
         
         if (resp.ok && !data.error) {
+          window._picksDirtySinceLoad = false;
           markPicksAsSaved();
+          if (window.PicksWizard && typeof window.PicksWizard.showOverview === 'function') {
+            window.PicksWizard.showOverview();
+          } else if (window.PicksWizard && window.PicksWizard.renderSummary) {
+            window.PicksWizard.renderSummary();
+          }
           if (typeof openInviteShare === 'function') {
             openInviteShare({ afterPicks: true });
           } else {
@@ -3357,10 +3367,11 @@ function onPickChange(cls, pos, riderId = null) {
     
     // Function to check if picks have changed
     function hasPicksChanged() {
+      if (window._picksDirtySinceLoad) return true;
       if (!savedPicksState) return true; // If no saved state, show button
       return getCurrentPicksState() !== savedPicksState;
     }
-    
+
     function myPicksFromFormState() {
       try {
         const state = JSON.parse(getCurrentPicksState());
@@ -3406,17 +3417,20 @@ function onPickChange(cls, pos, riderId = null) {
         saveBtn.style.display = "flex";
         saveBtn.disabled = false;
         saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        saveBtn.classList.add("rp-btn--save-ready");
         // Visa spar-ytan om man är på steg 3 (t.ex. efter Ändra holeshot)
         const saveWrap = document.getElementById('wizard-step-save');
         if (saveWrap) saveWrap.style.display = '';
       } else {
         saveBtn.style.display = "none";
+        saveBtn.classList.remove("rp-btn--save-ready");
       }
     }
     window.updateSaveButtonVisibility = updateSaveButtonVisibility;
     
     // Function to mark picks as saved
     function markPicksAsSaved() {
+      window._picksDirtySinceLoad = false;
       savedPicksState = getCurrentPicksState();
       updateSaveButtonVisibility();
     }
@@ -3533,7 +3547,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=size-lock-2"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=save-overview-1"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}

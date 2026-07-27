@@ -2,392 +2,604 @@
 <html lang="sv">
 <head>
   {% from 'includes/mx_icon.html' import mx_icon %}
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ series.name }} - MX Fantasy League</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .neon-text {
-            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
-        }
-        .cyberpunk-button {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border: 2px solid #22d3ee;
-            color: #22d3ee;
-            box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
-            transition: all 0.3s ease;
-        }
-        .cyberpunk-button:hover {
-            background: linear-gradient(135deg, #334155 0%, #475569 100%);
-            box-shadow: 0 0 25px rgba(34, 211, 238, 0.5);
-            transform: translateY(-2px);
-        }
-        .track-background {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ series.name }} {{ series.year }} — MX Fantasy League</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=1">
-<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <style>
+    :root {
+      --sp-bg: #0b1220;
+      --sp-panel: #1a2436;
+      --sp-panel-deep: #152033;
+      --sp-border: #2a3548;
+      --sp-text: #e2e8f0;
+      --sp-muted: #94a3b8;
+      --sp-accent: #67e8f9;
+    }
+    body {
+      background: var(--sp-bg);
+      color: var(--sp-text);
+      min-height: 100vh;
+    }
+    .sp-header {
+      border-bottom: 1px solid var(--sp-border);
+      background: linear-gradient(180deg, #121a2b 0%, #0b1220 100%);
+    }
+    .sp-brand {
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #f1f5f9;
+      text-decoration: none;
+    }
+    .sp-brand:hover { color: var(--sp-accent); }
+    .sp-brand__sub {
+      color: var(--sp-muted);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .sp-btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 0.45rem;
+      border: 1px solid var(--sp-border);
+      background: #1c283a;
+      color: #cbd5e1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .sp-btn-ghost:hover {
+      background: #243247;
+      border-color: #3d4f66;
+      color: #f8fafc;
+    }
+    .sp-panel {
+      border-radius: 0.75rem;
+      border: 1px solid var(--sp-border);
+      background: var(--sp-panel);
+      overflow: hidden;
+    }
+    .sp-panel__head {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--sp-border);
+      background: #1c283a;
+    }
+    .sp-panel__head h2 {
+      margin: 0;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #e2e8f0;
+      text-align: left;
+    }
+    .sp-panel__body { padding: 1rem 1.1rem; }
+    .sp-stat-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sp-muted);
+      margin-bottom: 0.25rem;
+    }
+    .sp-stat-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .sp-hero {
+      position: relative;
+      border-radius: 0.75rem;
+      border: 1px solid var(--sp-border);
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+      background-color: var(--sp-panel-deep);
+      min-height: 11rem;
+    }
+    .sp-hero__scrim {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(11, 18, 32, 0.35) 0%,
+        rgba(11, 18, 32, 0.72) 45%,
+        rgba(11, 18, 32, 0.94) 100%
+      );
+      pointer-events: none;
+    }
+    .sp-hero__content {
+      position: relative;
+      z-index: 1;
+      padding: 1.25rem 1.25rem 1.4rem;
+    }
+    .sp-hero__title {
+      margin: 0 0 1rem;
+      font-size: clamp(1.35rem, 3vw, 1.85rem);
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+    }
+    .sp-info-tile {
+      border-radius: 0.55rem;
+      border: 1px solid rgba(42, 53, 72, 0.9);
+      background: rgba(26, 36, 54, 0.72);
+      padding: 0.85rem 1rem;
+    }
+    .sp-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 1rem;
+      padding: 0.65rem 1.15rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .sp-cta--primary {
+      background: linear-gradient(180deg, #1e8f6a 0%, #167a59 100%);
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #ecfdf5;
+    }
+    .sp-cta--primary:hover {
+      background: linear-gradient(180deg, #22a078 0%, #1a8a64 100%);
+      transform: translateY(-1px);
+    }
+    .sp-cta--done {
+      background: #1c283a;
+      border-color: #3d4f66;
+      color: #e2e8f0;
+    }
+    .sp-cta--done:hover {
+      background: #243247;
+      border-color: #4b5f78;
+    }
+    .sp-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    .sp-table th {
+      text-align: left;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sp-muted);
+      border-bottom: 1px solid var(--sp-border);
+      background: #162033;
+      white-space: nowrap;
+    }
+    .sp-table th.sp-th-center { text-align: center; }
+    .sp-table td {
+      padding: 0.75rem;
+      border-bottom: 1px solid rgba(42, 53, 72, 0.7);
+      color: #e2e8f0;
+      vertical-align: middle;
+    }
+    .sp-table tbody tr:hover td {
+      background: rgba(36, 50, 71, 0.45);
+    }
+    .sp-table tbody tr:last-child td { border-bottom: none; }
+    .sp-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .sp-badge--done {
+      background: #243041;
+      border-color: #3d4f66;
+      color: #94a3b8;
+    }
+    .sp-badge--next {
+      background: rgba(14, 116, 144, 0.25);
+      border-color: rgba(34, 211, 238, 0.35);
+      color: #a5f3fc;
+    }
+    .sp-badge--open {
+      background: rgba(6, 78, 59, 0.35);
+      border-color: rgba(52, 211, 153, 0.3);
+      color: #6ee7b7;
+    }
+    .sp-badge--tba {
+      background: rgba(120, 53, 15, 0.35);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #fcd34d;
+    }
+    .sp-badge--locked {
+      background: rgba(127, 29, 29, 0.3);
+      border-color: rgba(248, 113, 113, 0.3);
+      color: #fca5a5;
+    }
+    .sp-badge--picks {
+      background: rgba(14, 116, 144, 0.2);
+      border-color: rgba(103, 232, 249, 0.25);
+      color: #67e8f9;
+    }
+    .sp-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-decoration: none;
+      background: #1c283a;
+      border: 1px solid #3d4f66;
+      color: #e2e8f0;
+    }
+    .sp-link-btn:hover {
+      background: #243247;
+      border-color: #4b5f78;
+      color: #fff;
+    }
+    .sp-link-btn--go {
+      background: rgba(6, 78, 59, 0.45);
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #a7f3d0;
+    }
+    .sp-link-btn--go:hover {
+      background: rgba(6, 95, 70, 0.6);
+      color: #ecfdf5;
+    }
+    .sp-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    @media (min-width: 768px) {
+      .sp-actions { grid-template-columns: repeat(3, 1fr); }
+    }
+    .sp-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.85rem 1rem;
+      border-radius: 0.55rem;
+      border: 1px solid var(--sp-border);
+      background: #1c283a;
+      color: #e2e8f0;
+      font-weight: 650;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .sp-action:hover {
+      background: #243247;
+      border-color: #3d4f66;
+      color: #fff;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen">
-    <!-- Header -->
-    <div class="bg-gradient-to-r from-gray-900 to-black border-b-2 border-cyan-400" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-        <div class="container mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-4">
-                    <a href="/" class="text-2xl font-bold text-cyan-400 hover:text-cyan-300 transition-colors neon-text"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> MX Fantasy</a>
-                    <span class="text-cyan-400">|</span>
-                    <h1 class="text-2xl font-bold text-cyan-400 neon-text">{{ series.name }} {{ series.year }}</h1>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span class="text-cyan-300">Välkommen, {{ session.username }}!</span>
-                    <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">Logga ut</a>
-                </div>
-            </div>
-        </div>
+<body>
+  <header class="sp-header">
+    <div class="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0">
+        <a href="/" class="sp-brand">MX Fantasy</a>
+        <span class="sp-brand__sub">{{ series.name }} {{ series.year }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if session.username %}
+        <span class="text-sm text-slate-400 hidden sm:inline">{{ session.username }}</span>
+        {% endif %}
+        <a href="/" class="sp-btn-ghost">← Startsida</a>
+        <a href="/logout" class="sp-btn-ghost">Logga ut</a>
+      </div>
     </div>
+  </header>
 
-    <div class="container mx-auto p-4 sm:p-6">
-        <!-- Series Status -->
-        <div class="mb-6">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);">{{ series.name }} Status</h2>
-                </div>
-                <div class="p-4 bg-gray-900">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="text-center">
-                            <p class="text-sm text-cyan-300 mb-1">Säsong Start</p>
-                            <p class="text-white font-semibold">
-                                {% if series.start_date %}
-                                    {{ series.start_date.strftime('%d %B %Y') }}
-                                {% else %}
-                                    TBA
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm text-cyan-300 mb-1">Säsong Slut</p>
-                            <p class="text-white font-semibold">
-                                {% if series.end_date %}
-                                    {{ series.end_date.strftime('%d %B %Y') }}
-                                {% else %}
-                                    TBA
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-sm text-cyan-300 mb-1">Poängsystem</p>
-                            <p class="text-white font-semibold">{{ series.points_system.title() }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <main class="container mx-auto px-4 py-6 sm:py-8 max-w-6xl space-y-5">
+    <!-- Season meta -->
+    <section class="sp-panel">
+      <div class="sp-panel__head">
+        <h2>{{ series.name }} {{ series.year }}</h2>
+      </div>
+      <div class="sp-panel__body">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <p class="sp-stat-label">Säsong start</p>
+            <p class="sp-stat-value">
+              {% if series.start_date %}{{ series.start_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="sp-stat-label">Säsong slut</p>
+            <p class="sp-stat-value">
+              {% if series.end_date %}{{ series.end_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
+            </p>
+          </div>
+          <div>
+            <p class="sp-stat-label">Poängsystem</p>
+            <p class="sp-stat-value">{{ series.points_system.title() }}</p>
+          </div>
         </div>
+      </div>
+    </section>
 
-        <!-- Next Race / Current Race -->
-        {% if next_race %}
-        <div class="mb-6">
+    <!-- Next race -->
+    {% if next_race %}
+      {% if next_race.id == 9999 %}
+        {% if "race_in_3h" in next_race.name %}
+          {% set bg_image = "trackmaps/compressed/seattle.jpg" %}
+        {% elif "race_in_1h" in next_race.name %}
+          {% set bg_image = "trackmaps/compressed/anaheim1.jpg" %}
+        {% elif "race_in_30m" in next_race.name %}
+          {% set bg_image = "trackmaps/compressed/daytona.png" %}
+        {% else %}
+          {% set bg_image = "trackmaps/compressed/seattle.jpg" %}
+        {% endif %}
+      {% else %}
+        {% set race_name_lower = next_race.name.lower() %}
+        {% set race_series = next_race.series if next_race.series else "SX" %}
+        {% if race_series == "WSX" %}
+          {% if "buenos aires" in race_name_lower %}
+            {% set bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
+          {% elif "canadian" in race_name_lower %}
+            {% set bg_image = "trackmaps/compressed/canadiangp.png" %}
+          {% elif "australian" in race_name_lower %}
+            {% set bg_image = "trackmaps/compressed/australiangp.jpg" %}
+          {% elif "swedish" in race_name_lower %}
+            {% set bg_image = "trackmaps/compressed/swedishgp.jpg" %}
+          {% elif "south african" in race_name_lower %}
+            {% set bg_image = "trackmaps/compressed/southafricangp.png" %}
+          {% else %}
+            {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
+            {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+          {% endif %}
+        {% else %}
+          {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
+          {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+        {% endif %}
+      {% endif %}
+
+      {% set user_has_picks = user_picks_status.get(next_race.id, {}).get('has_picks', False) %}
+      <section class="sp-hero" style="background-image: url('{{ url_for("static", filename=bg_image) }}');">
+        <div class="sp-hero__scrim"></div>
+        <div class="sp-hero__content">
+          <h2 class="sp-hero__title">
+            {{ next_race.name }}
             {% if next_race.id == 9999 %}
-            <!-- Test Race - use track map based on scenario -->
-            {% if "race_in_3h" in next_race.name %}
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
-            {% elif "race_in_1h" in next_race.name %}
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}');">
-            {% elif "race_in_30m" in next_race.name %}
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/daytona.png") }}');">
-            {% else %}
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename="trackmaps/compressed/seattle.jpg") }}');">
+            <span class="text-amber-300 text-sm font-semibold ml-2">TEST</span>
             {% endif %}
-            {% else %}
-            <!-- Real Race or Selected Competition from Admin -->
-            {% set race_name_lower = next_race.name.lower() %}
-            {% set race_series = next_race.series if next_race.series else "SX" %}
-            {% if race_series == "WSX" %}
-              {# WSX GP races: map to correct filename #}
-              {% if "buenos aires" in race_name_lower %}
-                {% set bg_image = "trackmaps/compressed/buenosaireacitygp.png" %}
-              {% elif "canadian" in race_name_lower %}
-                {% set bg_image = "trackmaps/compressed/canadiangp.png" %}
-              {% elif "australian" in race_name_lower %}
-                {% set bg_image = "trackmaps/compressed/australiangp.jpg" %}
-              {% elif "swedish" in race_name_lower %}
-                {% set bg_image = "trackmaps/compressed/swedishgp.jpg" %}
-              {% elif "south african" in race_name_lower %}
-                {% set bg_image = "trackmaps/compressed/southafricangp.png" %}
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="sp-info-tile">
+              <p class="sp-stat-label">Race datum</p>
+              <p class="sp-stat-value">
+                {% if next_race.event_date %}{{ next_race.event_date.strftime('%d %b %Y') }}{% else %}TBA{% endif %}
+              </p>
+            </div>
+            <div class="sp-info-tile">
+              <p class="sp-stat-label">Picks</p>
+              {% if picks_open %}
+                {% if user_has_picks %}
+                  <p class="sp-stat-value text-cyan-200">Klara</p>
+                  <p class="text-sm text-slate-400 mt-0.5">Du har tippat detta race</p>
+                {% else %}
+                  <p class="sp-stat-value text-emerald-300">Öppna</p>
+                  <p class="text-sm text-slate-400 mt-0.5">Gör dina picks nu</p>
+                {% endif %}
               {% else %}
-                {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
-                {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+                {% if user_has_picks %}
+                  <p class="sp-stat-value text-cyan-200">Klara</p>
+                  <p class="text-sm text-slate-400 mt-0.5">Picks är låsta</p>
+                {% else %}
+                  <p class="sp-stat-value text-rose-300">Låsta</p>
+                  <p class="text-sm text-slate-400 mt-0.5">Du har inte tippat</p>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          {% if picks_open %}
+            {% if next_race.id == 9999 %}
+              <a href="/race_picks_test" class="sp-cta {% if user_has_picks %}sp-cta--done{% else %}sp-cta--primary{% endif %}">
+                {% if user_has_picks %}Visa test-picks{% else %}Test race picks{% endif %}
+              </a>
+            {% else %}
+              <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}"
+                 class="sp-cta {% if user_has_picks %}sp-cta--done{% else %}sp-cta--primary{% endif %}">
+                {% if user_has_picks %}Visa mina picks{% else %}Gör dina picks{% endif %}
+              </a>
+            {% endif %}
+          {% else %}
+            {% if series.start_date %}
+              {% set days_until_start = (series.start_date - current_date).days %}
+              {% if days_until_start > 7 %}
+                <div class="mt-4 sp-info-tile border-amber-500/30">
+                  <p class="text-amber-200 font-semibold text-sm">
+                    Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
+                  </p>
+                  <p class="text-xs text-slate-400 mt-1">En vecka före säsongstart {{ series.start_date.strftime('%d %b %Y') }}</p>
+                </div>
+              {% else %}
+                <div class="mt-4 sp-info-tile border-rose-500/30">
+                  <p class="text-rose-200 font-semibold text-sm">Picks är låsta för detta race</p>
+                </div>
               {% endif %}
             {% else %}
-              {# SX/MX races: try .jpg first, then .png if needed #}
-              {% set race_name_slug = race_name_lower.replace(" ", "").replace("national", "").replace("classic", "") %}
-              {% set bg_image = "trackmaps/compressed/" + race_name_slug + ".jpg" %}
+              <div class="mt-4 sp-info-tile">
+                <p class="text-slate-300 font-semibold text-sm">Säsongstartdatum saknas</p>
+              </div>
             {% endif %}
-            <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg relative overflow-hidden track-background" 
-                 style="background-image: url('{{ url_for("static", filename=bg_image) }}');">
-            {% endif %}
-                <div class="absolute inset-0 bg-black bg-opacity-40"></div>
-                <div class="relative z-10">
-                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-4">{{ next_race.name }}
-                        {% if next_race.id == 9999 %}
-                        <span class="text-yellow-400 text-sm ml-2">🧪 TEST MODE</span>
-                        {% endif %}
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div class="bg-black bg-opacity-50 rounded-lg p-4">
-                            <h3 class="text-white font-semibold mb-2"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Race Datum</h3>
-                            <p class="text-cyan-300 text-lg">{{ next_race.event_date.strftime('%d %B %Y') }}</p>
-                        </div>
-                        <div class="bg-black bg-opacity-50 rounded-lg p-4">
-                            <h3 class="text-white font-semibold mb-2"><span class="mx-heading-icon">{{ mx_icon('clock') }}</span> Picks Status</h3>
-                            {% set user_has_picks = user_picks_status.get(next_race.id, {}).get('has_picks', False) %}
-                            {% if picks_open %}
-                                {% if user_has_picks %}
-                                    <p class="text-cyan-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</p>
-                                    <p class="text-sm text-gray-300">Du har gjort dina picks</p>
-                                {% else %}
-                                    <p class="text-green-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Öppna</p>
-                                    <p class="text-sm text-gray-300">Gör dina picks nu</p>
-                                {% endif %}
-                            {% else %}
-                                {% if user_has_picks %}
-                                    <p class="text-cyan-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</p>
-                                    <p class="text-sm text-gray-300">Du har gjort dina picks</p>
-                                {% else %}
-                                    <p class="text-red-400 text-lg font-bold"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks Stängda</p>
-                                    <p class="text-sm text-gray-300">Du har inte gjort picks</p>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    {% if picks_open %}
-                        {% if next_race.id == 9999 %}
-                        <!-- Test Race - link to test race picks -->
-                        <a href="/race_picks_test" 
-                           class="inline-block {% if user_has_picks %}bg-cyan-600 hover:bg-cyan-700{% else %}bg-yellow-600 hover:bg-yellow-700{% endif %} text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
-                            {% if user_has_picks %}🧪 Visa Test Picks{% else %}🧪 Test Race Picks{% endif %}
-                        </a>
-                        {% else %}
-                        <!-- Real Race or Selected Competition from Admin -->
-                        <a href="{{ url_for('race_picks_page', competition_id=next_race.id) }}" 
-                           class="inline-block {% if user_has_picks %}bg-cyan-600 hover:bg-cyan-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white font-bold py-3 px-6 rounded-lg shadow-lg text-lg">
-                            {% if user_has_picks %}{{ mx_icon('flag') }}  Visa Mina Picks{% else %}{{ mx_icon('flag') }}  Make Your Picks{% endif %}
-                        </a>
-                        {% endif %}
-                    {% else %}
-                        {% if series.start_date %}
-                            {% set days_until_start = (series.start_date - current_date).days %}
-                            {% if days_until_start > 7 %}
-                                <div class="bg-yellow-600 bg-opacity-80 rounded-lg p-4">
-                                    <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Picks öppnar om {{ days_until_start - 7 }} dag{{ 'ar' if days_until_start - 7 != 1 else '' }}
-                                    </p>
-                                    <p class="text-sm text-yellow-100">(En vecka före säsongstart {{ series.start_date.strftime('%d %B %Y') }})</p>
-                                </div>
-                            {% else %}
-                                <div class="bg-red-600 bg-opacity-80 rounded-lg p-4">
-                                    <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks är låsta för detta race</p>
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <div class="bg-gray-600 bg-opacity-80 rounded-lg p-4">
-                                <p class="text-white font-semibold"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Säsongstartdatum saknas</p>
-                            </div>
-                        {% endif %}
-                    {% endif %}
-                </div>
-            </div>
+          {% endif %}
         </div>
-        {% else %}
-        <div class="mb-6">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="p-6 text-center">
-                    <h2 class="text-xl font-bold text-cyan-400 mb-2"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Säsong Avslutad</h2>
-                    <p class="text-gray-300">Alla races i {{ series.name }} {{ series.year }} är avslutade.</p>
-                </div>
-            </div>
+      </section>
+    {% else %}
+      <section class="sp-panel">
+        <div class="sp-panel__body text-center py-8">
+          <h2 class="text-lg font-bold text-slate-100 mb-1">Säsong avslutad</h2>
+          <p class="text-slate-400 text-sm">Alla races i {{ series.name }} {{ series.year }} är avslutade.</p>
         </div>
-        {% endif %}
+      </section>
+    {% endif %}
 
-        <!-- Race Schedule -->
-        <div class="mb-6">
-            <div class="bg-gradient-to-r from-gray-900 to-black rounded-lg shadow-2xl border-2 border-cyan-400 overflow-hidden" style="box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);">
-                <div class="bg-gradient-to-r from-cyan-500 to-blue-500 px-4 py-3" style="box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);">
-                    <h2 class="text-xl font-bold text-center text-white" style="text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);"><span class="mx-heading-icon">{{ mx_icon('calendar') }}</span> Race Schema</h2>
+    <!-- Schedule -->
+    <section class="sp-panel">
+      <div class="sp-panel__head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('calendar') }}<span>Race schema</span></span></h2>
+      </div>
+      <div class="sp-panel__body !p-0 overflow-x-auto">
+        <table class="sp-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Race</th>
+              <th>Bana / Ort</th>
+              <th>Status</th>
+              <th class="sp-th-center">Åtgärd</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for comp in competitions %}
+            {% set has_results = competition_results[comp.id]|length > 0 %}
+            {% set user_has_picks = user_picks_status[comp.id].has_picks %}
+            <tr>
+              <td class="whitespace-nowrap">
+                {% if comp.event_date %}
+                  {{ comp.event_date.strftime('%d %b %Y') }}
+                {% else %}
+                  <span class="text-amber-300 font-semibold">TBA</span>
+                {% endif %}
+              </td>
+              <td class="font-semibold text-slate-100">{{ comp.name }}</td>
+              <td class="text-slate-400">{{ competition_venues.get(comp.id, '—') }}</td>
+              <td>
+                <div class="flex flex-wrap gap-1.5">
+                  {% if has_results %}
+                    <span class="sp-badge sp-badge--done">Avslutad</span>
+                  {% elif not comp.event_date %}
+                    <span class="sp-badge sp-badge--tba">Datum TBA</span>
+                  {% elif comp.event_date == current_date %}
+                    <span class="sp-badge sp-badge--tba">Idag</span>
+                  {% elif active_race_id and comp.id == active_race_id %}
+                    <span class="sp-badge sp-badge--next">Aktivt race</span>
+                  {% elif next_race and comp.id == next_race.id %}
+                    <span class="sp-badge sp-badge--next">Nästa</span>
+                  {% else %}
+                    <span class="sp-badge sp-badge--open">Kommande</span>
+                  {% endif %}
+                  {% if user_has_picks and not has_results %}
+                    <span class="sp-badge sp-badge--picks">Picks klara</span>
+                  {% endif %}
                 </div>
-                <div class="p-4 bg-gray-900">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="bg-gray-800 border-b border-cyan-400">
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Datum</th>
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Race</th>
-                                    <th class="px-4 py-3 text-left text-cyan-400 font-semibold">Status</th>
-                                    <th class="px-4 py-3 text-center text-cyan-400 font-semibold">Åtgärd</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for comp in competitions %}
-                                <tr class="border-b border-gray-700 hover:bg-gray-800">
-                                    <td class="px-4 py-3 text-white">{{ comp.event_date.strftime('%d %b %Y') }}</td>
-                                    <td class="px-4 py-3 text-white">{{ comp.name }}</td>
-                                    <td class="px-4 py-3">
-                                        {% set has_results = competition_results[comp.id]|length > 0 %}
-                                        {% set user_has_picks = user_picks_status[comp.id].has_picks %}
-                                        
-                                        {% if has_results %}
-                                            <span class="px-2 py-1 rounded text-xs font-semibold bg-gray-600 text-white">Avslutad</span>
-                                        {% elif comp.event_date == current_date %}
-                                            <span class="px-2 py-1 rounded text-xs font-semibold bg-yellow-600 text-white">Idag</span>
-                                        {% elif active_race_id and comp.id == active_race_id %}
-                                            <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-600 text-white">Aktivt Race</span>
-                                        {% elif comp.id == next_race.id %}
-                                            <span class="px-2 py-1 rounded text-xs font-semibold bg-blue-600 text-white">Nästa</span>
-                                        {% else %}
-                                            <span class="px-2 py-1 rounded text-xs font-semibold bg-green-600 text-white">Kommande</span>
-                                        {% endif %}
-                                        
-                                        {% if user_has_picks and not has_results %}
-                                            <div class="mt-1">
-                                                <span class="px-2 py-1 rounded text-xs font-semibold bg-cyan-600 text-white"><span class="mx-heading-icon">{{ mx_icon('check-circle') }}</span> Picks Klara</span>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-                                    <td class="px-4 py-3 text-center">
-                                        {% if active_race_id and comp.id == active_race_id %}
-                                            {% if picks_locked_status[comp.id] %}
-                                                <span class="bg-red-600 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('lock') }}</span> Picks Låsta
-                                                </span>
-                                            {% else %}
-                                                <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
-                                                   class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Picks (Aktivt)
-                                                </a>
-                                            {% endif %}
-                                        {% elif comp.id == next_race.id and picks_open %}
-                                            {% if next_race.id == 9999 %}
-                                            <a href="/race_picks_test" 
-                                               class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-xs">
-                                                🧪 Test Picks
-                                            </a>
-                                            {% else %}
-                                            <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" 
-                                               class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"><span class="mx-heading-icon">{{ mx_icon('flag') }}</span> Picks
-                                            </a>
-                                            {% endif %}
-                                        {% elif comp.event_date >= current_date %}
-                                            {% if series.start_date %}
-                                                {% set days_until_start = (series.start_date - current_date).days %}
-                                                {% if days_until_start > 7 %}
-                                                    <span class="text-yellow-400 text-xs">Upcoming</span>
-                                                {% else %}
-                                                    <span class="text-blue-400 text-xs">Soon</span>
-                                                {% endif %}
-                                            {% else %}
-                                                <span class="text-blue-400 text-xs">Upcoming</span>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-gray-400 text-xs">-</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+              </td>
+              <td class="text-center">
+                {% if active_race_id and comp.id == active_race_id %}
+                  {% if picks_locked_status[comp.id] %}
+                    <span class="sp-badge sp-badge--locked">Picks låsta</span>
+                  {% else %}
+                    <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" class="sp-link-btn sp-link-btn--go">Picks</a>
+                  {% endif %}
+                {% elif next_race and comp.id == next_race.id and picks_open %}
+                  {% if next_race.id == 9999 %}
+                    <a href="/race_picks_test" class="sp-link-btn">Test picks</a>
+                  {% else %}
+                    <a href="{{ url_for('race_picks_page', competition_id=comp.id) }}" class="sp-link-btn sp-link-btn--go">Picks</a>
+                  {% endif %}
+                {% elif comp.event_date and comp.event_date >= current_date %}
+                  <span class="text-xs text-slate-500">—</span>
+                {% elif not comp.event_date %}
+                  <span class="text-xs text-amber-400/80">TBA</span>
+                {% else %}
+                  <span class="text-xs text-slate-600">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-        {% if series.name and 'SMX' in series.name %}
-        <!-- SMX Qualification Standings -->
-        <div class="bg-gray-800 border border-cyan-400 rounded-lg p-6 mb-6">
-            <h3 class="text-xl font-bold text-cyan-400 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}</span> SMX Finals Kvalificering</h3>
-            <div class="mb-4">
-                <button onclick="loadSMXQualification()" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
-                    🔄 Uppdatera Kvalificering
-                </button>
-            </div>
-            <div id="smx-qualification-container" class="space-y-2">
-                <p class="text-gray-400">Klicka på "Uppdatera Kvalificering" för att se aktuell status</p>
-            </div>
+    {% if series.name and 'SMX' in series.name %}
+    <section class="sp-panel">
+      <div class="sp-panel__head">
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Finals kvalificering</span></span></h2>
+      </div>
+      <div class="sp-panel__body">
+        <button type="button" onclick="loadSMXQualification()" class="sp-link-btn mb-3">Uppdatera kvalificering</button>
+        <div id="smx-qualification-container" class="space-y-2">
+          <p class="text-slate-500 text-sm">Klicka för att ladda aktuell status</p>
         </div>
-        {% endif %}
+      </div>
+    </section>
+    {% endif %}
 
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a href="/" class="cyberpunk-button px-4 py-3 rounded-lg text-center">
-                {{ mx_icon('flag') }}  Tillbaka till Huvudsida
-            </a>
-            {% if series.name and 'WSX' not in series.name %}
-            <a href="/season_team_page" class="cyberpunk-button px-4 py-3 rounded-lg text-center"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam
-            </a>
-            {% endif %}
-            <a href="/my_scores" class="cyberpunk-button px-4 py-3 rounded-lg text-center"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina Poäng
-            </a>
-        </div>
-    </div>
+    <nav class="sp-actions" aria-label="Snabbval">
+      <a href="/" class="sp-action">← Startsida</a>
+      {% if series.name and 'WSX' not in series.name %}
+      <a href="/season_team_page" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam</a>
+      {% endif %}
+      <a href="/my_scores" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
+    </nav>
+  </main>
 
-    <script>
-        async function loadSMXQualification() {
-            try {
-                const response = await fetch('/api/smx_qualification');
-                const result = await response.json();
-                
-                if (result.success) {
-                    displaySMXQualification(result.qualification);
-                } else {
-                    alert('❌ Fel vid laddning av SMX kvalificering: ' + (result.error || 'Okänt fel'));
-                }
-            } catch (error) {
-                console.error('Error loading SMX qualification:', error);
-                alert('❌ Fel vid laddning av SMX kvalificering: ' + error.message);
-            }
+  <script>
+    async function loadSMXQualification() {
+      try {
+        const response = await fetch('/api/smx_qualification');
+        const result = await response.json();
+        if (result.success) {
+          displaySMXQualification(result.qualification);
+        } else {
+          alert('Fel vid laddning av SMX kvalificering: ' + (result.error || 'Okänt fel'));
         }
+      } catch (error) {
+        console.error('Error loading SMX qualification:', error);
+        alert('Fel vid laddning av SMX kvalificering: ' + error.message);
+      }
+    }
 
-        function displaySMXQualification(qualification) {
-            const container = document.getElementById('smx-qualification-container');
-            if (!container) return;
-            
-            let html = '<div class="bg-gray-900 border border-cyan-400 rounded-lg p-4">';
-            html += '<h4 class="text-lg font-bold text-cyan-400 mb-3 mx-heading-icon">' + (typeof mxIcon==='function'?mxIcon('trophy'):'') + '<span>SMX Finals Kvalificering (Top 20)</span></h4>';
-            
-            if (qualification.length === 0) {
-                html += '<p class="text-gray-400">Inga resultat ännu. Lägg in race resultat för att se kvalificering.</p>';
-            } else {
-                html += '<div class="space-y-2">';
-                qualification.forEach((rider, index) => {
-                    const isQualified = rider.qualified;
-                    const bgColor = isQualified ? 'bg-green-900 border-green-500' : 'bg-gray-800 border-gray-600';
-                    const textColor = isQualified ? 'text-green-400' : 'text-gray-400';
-                    
-                    html += `
-                        <div class="${bgColor} border rounded-lg p-3 flex justify-between items-center">
-                            <div class="flex items-center space-x-3">
-                                <span class="text-cyan-400 font-bold">${rider.position}.</span>
-                                <span class="text-white font-semibold">#${rider.rider_number} ${rider.rider_name}</span>
-                                <span class="text-gray-400">(${rider.bike_brand})</span>
-                            </div>
-                            <div class="text-right">
-                                <div class="${textColor} font-bold">${rider.total_points} pts</div>
-                                <div class="text-xs text-gray-500">SX: ${rider.sx_points} | MX: ${rider.mx_points}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-            }
-            
-            html += '</div>';
-            container.innerHTML = html;
-        }
-    </script>
+    function displaySMXQualification(qualification) {
+      const container = document.getElementById('smx-qualification-container');
+      if (!container) return;
+
+      let html = '';
+      if (!qualification.length) {
+        html = '<p class="text-slate-500 text-sm">Inga resultat ännu.</p>';
+      } else {
+        html = '<div class="space-y-2">';
+        qualification.forEach((rider) => {
+          const isQualified = rider.qualified;
+          const rowClass = isQualified
+            ? 'border-emerald-500/30 bg-emerald-950/30'
+            : 'border-slate-700 bg-slate-900/40';
+          const ptsClass = isQualified ? 'text-emerald-300' : 'text-slate-400';
+          html += `
+            <div class="border rounded-lg p-3 flex justify-between items-center ${rowClass}">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-slate-400 font-bold tabular-nums">${rider.position}.</span>
+                <span class="text-slate-100 font-semibold truncate">#${rider.rider_number} ${rider.rider_name}</span>
+                <span class="text-slate-500 text-sm hidden sm:inline">${rider.bike_brand || ''}</span>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="${ptsClass} font-bold">${rider.total_points} p</div>
+                <div class="text-xs text-slate-500">SX ${rider.sx_points} · MX ${rider.mx_points}</div>
+              </div>
+            </div>`;
+        });
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+  </script>
 </body>
 </html>

@@ -16,7 +16,10 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=scroll-fix-2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
+  {% if is_logged_in %}
+  <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
+  {% endif %}
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/mx_fantasy_app_icon_512.png') }}" />
   <link rel="preload" as="image" href="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" />
   <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" />
@@ -119,6 +122,14 @@
     }
     /* Supercross season wrap: allow resultat / serier / MX-länkar även för gäst */
     .readonly-mode a.sx-season-hero-link {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+    /* Serie-kort + race-hero picks: gäster ska kunna öppna schema / login-flow */
+    .readonly-mode a.home-series-card--clickable,
+    .readonly-mode .home-series-card--clickable,
+    .readonly-mode .home-race-hero a {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -1752,6 +1763,7 @@
     .home-series-card--clickable {
       cursor: pointer;
       text-decoration: none;
+      transition: background 0.15s, outline-color 0.15s, box-shadow 0.15s;
     }
     .home-series-card--clickable:hover {
       background-color: #2a3850;
@@ -1763,6 +1775,38 @@
         rgba(7, 13, 24, 0.48) 45%,
         rgba(7, 13, 24, 0.72) 100%
       );
+    }
+    .home-series-card--selected {
+      outline: 2px solid rgba(34, 211, 238, 0.85);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.2), 0 10px 28px rgba(0, 0, 0, 0.35);
+    }
+    .home-series-card__open {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.65rem;
+      padding: 0.32rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 0.4rem;
+      text-decoration: none;
+      box-shadow: none;
+      backdrop-filter: blur(4px);
+    }
+    .home-series-card__open:hover {
+      color: #f8fafc;
+      background: rgba(30, 41, 59, 0.75);
+      border-color: rgba(148, 163, 184, 0.55);
+    }
+    .home-series-card--selected .home-series-card__open {
+      color: #e2e8f0;
+      border-color: rgba(103, 232, 249, 0.35);
+      background: rgba(15, 23, 42, 0.65);
     }
     .home-series-card__title {
       font-weight: 700;
@@ -1953,12 +1997,9 @@
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
-                <button type="button"
-                  {% if upcoming_race and upcoming_race.series == 'WSX' %}
-                  class="tab-btn rp-tab-btn" disabled title="Säsongsteam är endast tillgängligt för SX, MX och SMX-serierna. Öppnar 2026-01-01"
-                  {% else %}
+                <button type="button" id="tab-season-team-btn"
                   class="tab-btn rp-tab-btn" data-tab="season-team"
-                  {% endif %}
+                  {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                 >Team</button>
                 <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden">Inst.</span><span class="hidden sm:inline">Settings</span></button>
                 <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
@@ -2288,14 +2329,14 @@
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
                 <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
-                  {% if not upcoming_race or upcoming_race.series != 'WSX' %}
-                  <a href="{{ url_for('season_team_page') }}" class="home-inner-tile home-action-tile--team">
+                  <a href="{{ url_for('season_team_page') }}" id="quick-action-season-team"
+                     class="home-inner-tile home-action-tile--team{% if upcoming_race and upcoming_race.series == 'WSX' %} home-inner-tile--muted{% endif %}"
+                     {% if upcoming_race and upcoming_race.series == 'WSX' %}aria-disabled="true" title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}>
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
                     <span class="home-inner-tile__label">Säsongsteam</span>
                   </a>
-                  {% endif %}
 
                   <a href="{{ url_for('race_results_page') }}" class="home-inner-tile home-action-tile--results">
                     <span class="home-inner-tile__icon" aria-hidden="true">
@@ -2367,7 +2408,7 @@
             <!-- Race Info + Facebook (50/50 som Snabba åtgärder / Veckans prestationer) -->
             {% set fb_embed = facebook_show_timeline_embed and facebook_timeline_iframe_src %}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 md:mb-8 lg:items-stretch">
-              <div class="home-ui-panel home-ui-panel--photo min-w-0 flex flex-col h-full {% if not fb_embed %}lg:col-span-2{% endif %}"
+              <div id="sidebar-race-panel" class="home-ui-panel home-ui-panel--photo min-w-0 flex flex-col h-full {% if not fb_embed %}lg:col-span-2{% endif %}"
                    style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/" + (upcoming_race.name.lower().replace(" ", "") if upcoming_race else "anaheim1") + ".jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
@@ -2375,8 +2416,8 @@
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
           {% if upcoming_race %}
-                <p class="text-base sm:text-lg font-semibold break-words text-white mb-1">{{ upcoming_race.name }}</p>
-                <p class="text-sm sm:text-base text-gray-300 mb-4">
+                <p id="sidebar-race-name" class="text-base sm:text-lg font-semibold break-words text-white mb-1">{{ upcoming_race.name }}</p>
+                <p id="sidebar-race-date" class="text-sm sm:text-base text-gray-300 mb-4">
             {{ upcoming_race.event_date.strftime('%Y-%m-%d') if upcoming_race.event_date else '' }}
           </p>
                 
@@ -2397,7 +2438,6 @@
                     {% include 'partials/picks_summary_board.html' %}
                     {% if home_pick_portraits %}
                     <script>window.HOME_PICK_PORTRAITS = {{ home_pick_portraits | tojson }};</script>
-                    <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=2" defer></script>
                     {% endif %}
                     <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
                       {% if picks_status == 'has_picks' %}
@@ -2525,7 +2565,7 @@
             <div id="power-ranking-wrap" class="mt-6 mb-2 hidden">
               <div class="home-ui-panel">
                 <div class="home-ui-panel__head">
-                  <h2>Nya power rankings</h2>
+                  <h2 id="power-ranking-title">Nya power rankings</h2>
                 </div>
                 <div class="home-ui-panel__body">
                 <p id="power-ranking-sub" class="text-xs text-gray-400 mb-2"></p>
@@ -2558,7 +2598,7 @@
               <div class="home-ui-panel__head">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Leaderboard</span></span></h2>
+                  <h2 id="home-fantasy-lb-title"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Leaderboard</span></span></h2>
                 </div>
               </div>
               <div class="home-ui-panel__body">
@@ -3075,43 +3115,75 @@
 
     async function fetchSeasonLeaderboard() {
       const c = document.getElementById("season-leaderboard-list");
+      const titleEl = document.getElementById("home-fantasy-lb-title");
       const requestId = (window.seasonLeaderboardRequestId || 0) + 1;
       window.seasonLeaderboardRequestId = requestId;
       c.innerHTML = homeLbLoading('cyan');
-      try {
-        const res = await fetch(`/get_season_leaderboard`);
-        if (requestId !== window.seasonLeaderboardRequestId) return;
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Leaderboard fetch failed:", res.status, errorText);
-          c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta leaderboard: ' + res.status + '</p>';
-          return;
-        }
-        const leaderboard = await res.json();
-        if (requestId !== window.seasonLeaderboardRequestId) return;
-        console.log("Leaderboard data:", leaderboard);
-        
-        // Check if response is an error object
-        if (leaderboard.error) {
-          console.error("Leaderboard error:", leaderboard.error);
-          c.innerHTML = '<p class="text-red-400 text-center">Fel i leaderboard: ' + leaderboard.error + '</p>';
-          return;
-        }
-        
-        // Check if it's an array
-        if (!Array.isArray(leaderboard)) {
-          console.error("Leaderboard is not an array:", leaderboard);
-          c.innerHTML = '<p class="text-red-400 text-center">Ogiltigt svar från server</p>';
-          return;
-        }
-        
-        if (leaderboard.length === 0) {
-          c.innerHTML = homeLbEmpty('Inga poäng registrerade ännu.', 'cyan');
-        } else {
-          // Store leaderboard data globally for expand/collapse
-          window.seasonLeaderboardData = leaderboard;
 
-          // Populate header chips for current user (if logged in)
+      const isWSX = homeSelectedSeries === 'WSX';
+      if (titleEl) {
+        titleEl.innerHTML = isWSX
+          ? `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>WSX Fantasy 2026</span></span>`
+          : `<span class="mx-heading-icon">${typeof mxIcon === 'function' ? mxIcon('trophy') : ''}<span>SMX Leaderboard</span></span>`;
+      }
+      // Season-team is AMA-only — hide when browsing WSX
+      const seasonTeamPanel = document.getElementById('season-team-leaderboard-list')?.closest('.home-ui-panel');
+      if (seasonTeamPanel) seasonTeamPanel.style.display = isWSX ? 'none' : '';
+
+      try {
+        let leaderboard;
+        if (isWSX) {
+          const res = await fetch(`/get_wsx_leaderboard?year=2026`);
+          if (requestId !== window.seasonLeaderboardRequestId) return;
+          if (!res.ok) {
+            c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta WSX-leaderboard</p>';
+            return;
+          }
+          const payload = await res.json();
+          if (payload.error) {
+            c.innerHTML = '<p class="text-red-400 text-center">Fel: ' + payload.error + '</p>';
+            return;
+          }
+          leaderboard = Array.isArray(payload.leaderboard) ? payload.leaderboard : [];
+        } else {
+          const res = await fetch(`/get_season_leaderboard`);
+          if (requestId !== window.seasonLeaderboardRequestId) return;
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error("Leaderboard fetch failed:", res.status, errorText);
+            c.innerHTML = '<p class="text-red-400 text-center">Kunde inte hämta leaderboard: ' + res.status + '</p>';
+            return;
+          }
+          leaderboard = await res.json();
+          if (leaderboard.error) {
+            console.error("Leaderboard error:", leaderboard.error);
+            c.innerHTML = '<p class="text-red-400 text-center">Fel i leaderboard: ' + leaderboard.error + '</p>';
+            return;
+          }
+          if (!Array.isArray(leaderboard)) {
+            console.error("Leaderboard is not an array:", leaderboard);
+            c.innerHTML = '<p class="text-red-400 text-center">Ogiltigt svar från server</p>';
+            return;
+          }
+        }
+
+        if (requestId !== window.seasonLeaderboardRequestId) return;
+
+        if (leaderboard.length === 0) {
+          c.innerHTML = homeLbEmpty(
+            isWSX
+              ? 'Inga WSX-poäng ännu — highscoren fylls efter Canadian GP.'
+              : 'Inga poäng registrerade ännu.',
+            'cyan'
+          );
+          return;
+        }
+
+        // Store leaderboard data globally for expand/collapse
+        window.seasonLeaderboardData = leaderboard;
+
+        // Populate header chips for current user only on AMA leaderboard
+        if (!isWSX) {
           try {
             const currentUsername = (window.currentUsername || '').toString().trim().toLowerCase();
             if (currentUsername) {
@@ -3136,7 +3208,6 @@
                   ptsFill.style.width = leaderPts > 0 ? Math.min(100, Math.round((myPts / leaderPts) * 100)) + '%' : '0%';
                 }
 
-                // Latest completed race points
                 try {
                   const r2 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/latest_points`);
                   const d2 = await r2.json();
@@ -3153,7 +3224,6 @@
                   }
                 } catch (e) {}
 
-                // Tier badge from achievements
                 try {
                   const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
                   const d3 = await r3.json();
@@ -3185,38 +3255,38 @@
           } catch (e) {
             console.warn('welcome chips: leaderboard parse failed', e);
           }
+        }
 
-          if (requestId !== window.seasonLeaderboardRequestId) return;
-          seasonLeaderboardExpanded = false;
+        if (requestId !== window.seasonLeaderboardRequestId) return;
+        seasonLeaderboardExpanded = false;
 
-          const initialCount = Math.min(15, leaderboard.length);
-          const remainingCount = leaderboard.length - initialCount;
-          let rowsHtml = '';
+        const initialCount = Math.min(15, leaderboard.length);
+        const remainingCount = leaderboard.length - initialCount;
+        let rowsHtml = '';
 
-          leaderboard.forEach((row, i) => {
-            const name = `<a href="/profile/${row.user_id}" class="hover:text-cyan-200 transition-colors" title="Visa ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
-            const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
-            rowsHtml += homeLbRow(i + 1, name, row.total_points, {
-              hidden: i >= 15,
-              extraRight: delta,
-            });
+        leaderboard.forEach((row, i) => {
+          const name = `<a href="/profile/${row.user_id}" class="hover:text-cyan-200 transition-colors" title="Visa ${row.display_name || row.username}">${row.display_name || row.username}${row.team_name ? ` <span class="text-xs font-normal text-gray-400">/ ${row.team_name}</span>` : ''}</a>`;
+          const delta = deltaIcon(row.delta === null || row.delta === undefined ? 0 : Number(row.delta));
+          rowsHtml += homeLbRow(i + 1, name, row.total_points, {
+            hidden: i >= 15,
+            extraRight: isWSX ? '' : delta,
           });
+        });
 
-          c.innerHTML = homeLbPanel(rowsHtml, 'cyan');
+        c.innerHTML = homeLbPanel(rowsHtml, 'cyan');
 
-          if (leaderboard.length > 15) {
-            const expandBtn = document.createElement("div");
-            expandBtn.className = "mt-4 text-center";
-            expandBtn.id = "expand-leaderboard-btn-container";
-            expandBtn.innerHTML = `
-              <button id="expand-leaderboard-btn"
-                      onclick="toggleSeasonLeaderboard()"
-                      class="w-full text-xs text-cyan-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
-                ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa fler (${remainingCount} till)
-              </button>
-            `;
-            c.appendChild(expandBtn);
-          }
+        if (leaderboard.length > 15) {
+          const expandBtn = document.createElement("div");
+          expandBtn.className = "mt-4 text-center";
+          expandBtn.id = "expand-leaderboard-btn-container";
+          expandBtn.innerHTML = `
+            <button id="expand-leaderboard-btn"
+                    onclick="toggleSeasonLeaderboard()"
+                    class="w-full text-xs text-cyan-300 hover:text-white transition-colors bg-gray-950/50 rounded-lg px-2 py-1.5 border border-gray-700">
+              ${typeof mxIcon==='function'?mxIcon('clipboard'):''} Visa fler (${remainingCount} till)
+            </button>
+          `;
+          c.appendChild(expandBtn);
         }
       } catch (e) {
         console.error("Leaderboard error:", e);
@@ -3456,10 +3526,23 @@
     async function fetchWeeklyFunStats() {
       const container = document.getElementById("weekly-fun-stats");
       if (!container) return;
+
+      const seriesQ = homeSelectedSeries ? `?series=${encodeURIComponent(homeSelectedSeries)}` : '';
+      const isWSX = homeSelectedSeries === 'WSX';
       
       try {
-        const res = await mxFetchTimed('weekly_fun_stats', '/get_weekly_fun_stats');
+        const res = await mxFetchTimed('weekly_fun_stats', `/get_weekly_fun_stats${seriesQ}`);
         const data = await res.json();
+
+        // Update panel heading to reflect the active series
+        const panelHead = container.closest('.home-ui-panel')?.querySelector('.home-ui-panel__head h2 span span');
+        if (panelHead) {
+          panelHead.textContent = isWSX ? 'WSX Prestationer' : 'Veckans Prestationer';
+        }
+
+        const rocketLabel   = isWSX ? 'Senaste Raket (WSX)'   : 'Veckans Raket';
+        const anchorLabel   = isWSX ? 'Senaste Ankare (WSX)'  : 'Veckans Ankare';
+        const holeshotPeriod = isWSX ? 'Senaste WSX' : 'Denna vecka';
         
         if (data.error) {
           container.innerHTML = '<p class="text-red-400 text-center col-span-full text-sm">Fel vid laddning av statistik.</p>';
@@ -3471,27 +3554,36 @@
         const svgTarget = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>';
         const svgZap = '<svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/></svg>';
 
-        let html = '';
-        html += weeklyStatTile(svgRocket, 'Veckans Raket', data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id, 'rocket');
-        html += weeklyStatTile(svgAnchor, 'Veckans Ankare', data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id, 'anchor');
-        html += weeklyStatTile(
-          svgTarget, 'Perfekt Gissning', data.perfect_picks,
-          data.perfect_picks ? [
-            data.perfect_picks.perfect_count + ' perfekta picks',
-            data.perfect_picks.total_perfect_points + 'p totalt'
-          ] : [],
-          data.perfect_picks && data.perfect_picks.user_id,
-          'perfect'
-        );
-        html += weeklyStatTile(
-          svgZap, 'Holeshot-Mästare', data.holeshot_master,
-          data.holeshot_master ? [
-            data.holeshot_master.total_holeshot_points + 'p holeshot',
-            'Denna vecka'
-          ] : [],
-          data.holeshot_master && data.holeshot_master.user_id,
-          'holeshot'
-        );
+        let noDataMsg = '';
+        if (!data.rocket && !data.anchor && !data.perfect_picks && !data.holeshot_master) {
+          if (isWSX) {
+            noDataMsg = '<p class="text-slate-400 text-center col-span-full text-sm py-4">WSX-säsongen har inte börjat än — data visas här efter Canadian GP.</p>';
+          }
+        }
+
+        let html = noDataMsg || '';
+        if (!noDataMsg) {
+          html += weeklyStatTile(svgRocket, rocketLabel, data.rocket, weeklyWinnerMeta(data.rocket, 'up'), data.rocket && data.rocket.user_id, 'rocket');
+          html += weeklyStatTile(svgAnchor, anchorLabel, data.anchor, weeklyWinnerMeta(data.anchor, 'down'), data.anchor && data.anchor.user_id, 'anchor');
+          html += weeklyStatTile(
+            svgTarget, 'Perfekt Gissning', data.perfect_picks,
+            data.perfect_picks ? [
+              data.perfect_picks.perfect_count + ' perfekta picks',
+              data.perfect_picks.total_perfect_points + 'p totalt'
+            ] : [],
+            data.perfect_picks && data.perfect_picks.user_id,
+            'perfect'
+          );
+          html += weeklyStatTile(
+            svgZap, 'Holeshot-Mästare', data.holeshot_master,
+            data.holeshot_master ? [
+              data.holeshot_master.total_holeshot_points + 'p holeshot',
+              holeshotPeriod
+            ] : [],
+            data.holeshot_master && data.holeshot_master.user_id,
+            'holeshot'
+          );
+        }
         
         container.innerHTML = html;
       } catch (e) {
@@ -3532,10 +3624,109 @@
     let realCountdownServerSyncInterval;
     let _realCountdownSeconds = { race: null, deadline: null };
     let _realCountdownLastSyncMs = 0;
+    // Homepage default stays on AMA chain (SX→MX→SMX). WSX only via series card.
+    let homeSelectedSeries = null;
+    let _seriesStatusCache = [];
+
+    function seriesNameToCode(name) {
+      const n = String(name || '').toLowerCase();
+      if (n.includes('wsx')) return 'WSX';
+      if (n.includes('supercross')) return 'SX';
+      if (n.includes('motocross')) return 'MX';
+      if (n.includes('smx')) return 'SMX';
+      return null;
+    }
+
+    function resolveDefaultHomeSeries(seriesList) {
+      const list = Array.isArray(seriesList) ? seriesList : [];
+      for (const code of ['SX', 'MX', 'SMX']) {
+        const hit = list.find((s) => (s.series_code || seriesNameToCode(s.name)) === code);
+        if (hit && hit.next_race) return code;
+      }
+      return 'SX';
+    }
+
+    function updateRaceHeroBackground(nextRace) {
+      const hero = document.getElementById('real-countdown-widget');
+      if (!hero || !nextRace) return;
+      const bg = nextRace.bg_url;
+      if (bg) {
+        hero.style.backgroundImage = `url('${bg}')`;
+        const sidePanel = document.getElementById('sidebar-race-panel');
+        if (sidePanel) sidePanel.style.backgroundImage = `url('${bg}')`;
+      }
+    }
+
+    async function selectHomeSeries(seriesCode, { navigateIfSame = false, seriesId = null } = {}) {
+      const code = String(seriesCode || '').toUpperCase();
+      if (!code) return;
+      if (navigateIfSame && homeSelectedSeries === code && seriesId) {
+        window.location.href = `/series/${seriesId}`;
+        return;
+      }
+      homeSelectedSeries = code;
+      try {
+        localStorage.setItem('home_selected_series', code);
+      } catch (_) {}
+      markSelectedSeriesCard(code);
+      updateAmaOnlyHomeUi();
+      // Clear stale countdown race id so power ranking doesn't keep AMA while WSX loads
+      window._homeCountdownCompetitionId = null;
+      // Countdown first (sets live race id), then other series-scoped panels
+      await fetchRealCountdownData();
+      await Promise.all([
+        fetchWeeklyFunStats(),
+        fetchSeasonLeaderboard(),
+        fetchPowerRanking(),
+        fetchRiderSpotlight(),
+      ]);
+    }
+
+    function updateAmaOnlyHomeUi() {
+      const isWSX = homeSelectedSeries === 'WSX';
+      const teamTile = document.getElementById('quick-action-season-team');
+      if (teamTile) {
+        teamTile.classList.toggle('home-inner-tile--muted', isWSX);
+        if (isWSX) {
+          teamTile.setAttribute('aria-disabled', 'true');
+          teamTile.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
+        } else {
+          teamTile.removeAttribute('aria-disabled');
+          teamTile.removeAttribute('title');
+        }
+      }
+      const teamTab = document.getElementById('tab-season-team-btn');
+      if (teamTab) {
+        teamTab.disabled = isWSX;
+        if (isWSX) {
+          teamTab.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
+          if (teamTab.classList.contains('active')) {
+            const raceTab = document.querySelector('.tab-btn[data-tab="race-info"]');
+            if (raceTab) raceTab.click();
+          }
+        } else {
+          teamTab.removeAttribute('title');
+        }
+      }
+    }
+
+    function markSelectedSeriesCard(seriesCode) {
+      const root = document.getElementById('series-selection');
+      if (!root) return;
+      root.querySelectorAll('[data-series-code]').forEach((el) => {
+        const selected = el.getAttribute('data-series-code') === seriesCode;
+        el.classList.toggle('home-series-card--selected', selected);
+        const hint = el.querySelector('[data-series-hint]');
+        if (hint) {
+          hint.textContent = selected ? 'Vald · se schema nedan' : 'Visa countdown';
+        }
+      });
+    }
     
     async function fetchRealCountdownData() {
       try {
-        const response = await fetch('/race_countdown?mode=real');
+        const seriesQ = homeSelectedSeries ? `&series=${encodeURIComponent(homeSelectedSeries)}` : '';
+        const response = await fetch(`/race_countdown?mode=real${seriesQ}`);
         const data = await response.json();
         
         
@@ -3545,13 +3736,32 @@
           document.getElementById('real-deadline-countdown').textContent = '--:--:--';
           updateRaceHeroMeta(null);
           updateRaceDayWeather(null);
+          if (data.series) {
+            homeSelectedSeries = data.series;
+            markSelectedSeriesCard(data.series);
+            updateAmaOnlyHomeUi();
+          }
           return;
         }
+
+        if (data.series) {
+          homeSelectedSeries = data.series;
+          markSelectedSeriesCard(data.series);
+          updateAmaOnlyHomeUi();
+        }
         
-        // Update race name
+        // Update race name (hero + sidebar)
         document.getElementById('real-countdown-race-name').textContent = data.next_race.name;
+        const sidebarName = document.getElementById('sidebar-race-name');
+        if (sidebarName) sidebarName.textContent = data.next_race.name;
+        const sidebarDate = document.getElementById('sidebar-race-date');
+        if (sidebarDate) sidebarDate.textContent = data.next_race.event_date || '';
+        if (data.next_race.id) {
+          window._homeCountdownCompetitionId = data.next_race.id;
+        }
 
         updateRaceHeroMeta(data.next_race);
+        updateRaceHeroBackground(data.next_race);
         updateNextMxDaysLabel(data);
         updateRaceDayWeather(data.weather);
         
@@ -3578,7 +3788,10 @@
 
     async function fetchRiderSpotlight() {
       try {
-        const res = await mxFetchTimed('rider_spotlight', '/get_rider_spotlight');
+        const seriesQ = homeSelectedSeries
+          ? `?series=${encodeURIComponent(homeSelectedSeries)}`
+          : '';
+        const res = await mxFetchTimed('rider_spotlight', '/get_rider_spotlight' + seriesQ);
         const data = await res.json();
         updateRiderSpotlight(data);
       } catch (e) {
@@ -3678,7 +3891,13 @@
         cardsEl.innerHTML = '<p class="text-amber-100/70 text-sm text-center py-8">Laddar...</p>';
       }
       try {
-        const res = await mxFetchTimed('rider_spotlight_' + modeKey, '/get_rider_spotlight?mode=' + encodeURIComponent(modeKey));
+        const seriesQ = homeSelectedSeries
+          ? `&series=${encodeURIComponent(homeSelectedSeries)}`
+          : '';
+        const res = await mxFetchTimed(
+          'rider_spotlight_' + modeKey,
+          '/get_rider_spotlight?mode=' + encodeURIComponent(modeKey) + seriesQ
+        );
         const data = await res.json();
         if (data.available && data.data) {
           if (!_spotlightPayload.modes) _spotlightPayload.modes = {};
@@ -3937,12 +4156,217 @@
     }
 
     function applySidebarPicksStatus(status) {
+      // Legacy stub — real board is refreshed via refreshHomePicksBoard().
+      if (!status) return;
+    }
+
+    function _escHome(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function _homePickSlotHtml(pick, pos) {
+      const podium = pick && pos <= 3 ? ` wizard-summary-slot--p${pos}` : '';
+      const empty = pick ? '' : ' wizard-summary-slot--empty';
+      if (!pick) {
+        return `<li class="wizard-summary-slot${empty}">
+          <span class="wizard-summary-pos">${pos}</span>
+          <div class="wizard-summary-portrait"></div>
+          <span class="wizard-summary-empty">—</span>
+        </li>`;
+      }
+      return `<li class="wizard-summary-slot${podium}">
+        <span class="wizard-summary-pos">${pos}</span>
+        <img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${pick.rider_id}">
+        <div class="wizard-summary-rider">
+          <span class="wizard-summary-num">#${_escHome(pick.rider_number)}</span>
+          <span class="wizard-summary-name">${_escHome(pick.rider_name)}</span>
+        </div>
+      </li>`;
+    }
+
+    function _homeHoleshotHtml(hs, label) {
+      const empty = hs ? '' : ' wizard-summary-extra--empty';
+      const portrait = hs
+        ? `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${hs.rider_id}">`
+        : '<div class="wizard-summary-portrait"></div>';
+      const name = hs ? `#${_escHome(hs.rider_number)} ${_escHome(hs.rider_name)}` : 'Ej vald';
+      const zap = typeof mxIcon === 'function' ? mxIcon('zap') : '';
+      return `<div class="wizard-summary-extra wizard-summary-extra--holeshot${empty}">
+        <span class="wizard-summary-extra__icon">${zap}</span>
+        ${portrait}
+        <div class="wizard-summary-extra__body">
+          <div class="wizard-summary-extra__label">Holeshot ${_escHome(label)}</div>
+          <div class="wizard-summary-extra__name">${name}</div>
+        </div>
+      </div>`;
+    }
+
+    function renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX }) {
+      const panel = document.getElementById('home-sidebar-picks-status');
+      if (!panel) return;
+
+      const label450 = isWSX ? 'SX1' : '450cc';
+      const label250 = isWSX ? 'SX2' : '250cc';
+      const top6 = myPicks?.top6_picks || [];
+      const picks450 = top6.filter((p) => ['450cc', 'wsx_sx1'].includes(p.class));
+      const picks250 = top6.filter((p) => ['250cc', 'wsx_sx2'].includes(p.class));
+      const byPos = (arr, pos) => arr.find((p) => Number(p.predicted_position) === pos) || null;
+      const hs450 = myPicks?.holeshot_450 || null;
+      const hs250 = myPicks?.holeshot_250 || null;
+      const wildcard = (!isWSX && myPicks?.wildcard) ? myPicks.wildcard : null;
+      const complete = picksStatus === 'has_picks';
+      const partial = picksStatus === 'partial_picks';
+      const hasAny = top6.length > 0 || hs450 || hs250 || wildcard;
+
+      if (!hasAny) {
+        panel.innerHTML = `
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
+              <span class="text-orange-200 font-semibold">Inga val gjorda än</span>
+            </div>
+            <p class="text-sm text-gray-200 mb-3">Gör dina picks innan racet startar!</p>
+            <a href="${_escHome(openHref)}" class="text-cyan-300 underline text-sm font-semibold">Sätt picks →</a>
+          </div>`;
+        return;
+      }
+
+      let slots450 = '';
+      let slots250 = '';
+      for (let i = 1; i <= 6; i++) {
+        slots450 += _homePickSlotHtml(byPos(picks450, i), i);
+        slots250 += _homePickSlotHtml(byPos(picks250, i), i);
+      }
+
+      let extras = _homeHoleshotHtml(hs450, label450) + _homeHoleshotHtml(hs250, label250);
+      if (!isWSX) {
+        const empty = wildcard ? '' : ' wizard-summary-extra--empty';
+        const target = typeof mxIcon === 'function' ? mxIcon('target') : '';
+        const portrait = wildcard
+          ? `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${wildcard.rider_id}">`
+          : '<div class="wizard-summary-portrait"></div>';
+        const pos = wildcard?.position ?? '?';
+        const name = wildcard
+          ? `#${_escHome(wildcard.rider_number)} ${_escHome(wildcard.rider_name)}`
+          : 'Ej valt';
+        extras += `<div class="wizard-summary-extra wizard-summary-extra--wildcard${empty}">
+          <span class="wizard-summary-extra__icon">${target}</span>
+          <span class="wizard-summary-wc-pos">${_escHome(pos)}</span>
+          ${portrait}
+          <div class="wizard-summary-extra__body">
+            <div class="wizard-summary-extra__label">Wildcard plats ${_escHome(wildcard?.position || '—')}</div>
+            <div class="wizard-summary-extra__name">${name}</div>
+          </div>
+        </div>`;
+      }
+
+      const bannerIcon = complete
+        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
+        : (typeof mxIcon === 'function' ? mxIcon(partial ? 'note' : 'clipboard') : '');
+      const bannerText = complete
+        ? 'Alla val klara!'
+        : partial
+          ? 'Påbörjat — komplettera dina val'
+          : 'Dina val';
+      const statusNote = complete
+        ? 'Inlämnat till tävlingen.'
+        : partial
+          ? 'Ofullständigt — komplettera här'
+          : '';
+
+      panel.innerHTML = `
+        <div class="mb-3">
+          <div class="wizard-picks-summary${complete ? ' is-complete' : ''} picks-summary--on-home">
+            <div class="wizard-summary-banner${complete ? '' : ' is-pending'}">
+              <span class="mx-heading-icon">${bannerIcon}<span>${bannerText}</span></span>
+            </div>
+            <div class="wizard-summary-body">
+              <div class="wizard-summary-grid">
+                <div class="wizard-summary-col wizard-summary-col--450">
+                  <h4 class="wizard-summary-col__title">${label450} topp 6</h4>
+                  <ol class="wizard-summary-list">${slots450}</ol>
+                </div>
+                <div class="wizard-summary-col wizard-summary-col--250">
+                  <h4 class="wizard-summary-col__title">${label250} topp 6</h4>
+                  <ol class="wizard-summary-list">${slots250}</ol>
+                </div>
+              </div>
+              <div class="wizard-summary-extras">${extras}</div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
+            ${complete
+              ? `${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : ''} ${statusNote}`
+              : `${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--warn' }) : ''} ${statusNote} — <a href="${_escHome(openHref)}" class="text-cyan-300 underline">komplettera här</a>`}
+          </p>
+        </div>`;
+
+      // Portrait map for home_picks_portraits.js
+      const portraits = {};
+      [...picks450, ...picks250, hs450, hs250, wildcard].forEach((p) => {
+        if (!p || !p.rider_id) return;
+        portraits[String(p.rider_id)] = {
+          portrait_url: p.portrait_url || '',
+          image_url: p.image_url || '',
+          racerx_portrait_url: p.racerx_portrait_url || '',
+          bike_brand: p.bike_brand || '',
+        };
+      });
+      window.HOME_PICK_PORTRAITS = portraits;
+      if (window.hydrateHomePickPortraits) {
+        window.hydrateHomePickPortraits();
+      } else if (typeof window !== 'undefined') {
+        // Fallback: set brand logos if portrait script not loaded yet
+        panel.querySelectorAll('img.wizard-summary-portrait[data-rider-id]').forEach((img) => {
+          const r = portraits[String(img.dataset.riderId)];
+          if (!r) return;
+          const url = r.racerx_portrait_url || r.portrait_url || r.image_url;
+          if (url && !String(url).includes('/brand_logos/')) {
+            img.src = url;
+          } else {
+            img.src = `/static/brand_logos/${(r.bike_brand || 'honda').toLowerCase()}.png`;
+          }
+        });
+      }
+    }
+
+    async function refreshHomePicksBoard(data) {
+      const panel = document.getElementById('home-sidebar-picks-status');
+      if (!panel) return;
+      const compId = data?.picks_competition_id || data?.next_race?.id;
+      const openHref =
+        (compId ? `/race_picks/${compId}` : null) ||
+        document.getElementById('real-picks-open-status')?.getAttribute('href') ||
+        '/race_picks_active';
+      const isWSX = (data?.series || data?.next_race?.series || homeSelectedSeries) === 'WSX';
+      const picksStatus = data?.picks_status || 'no_picks';
+
+      if (!compId || !window.__MX_LOGGED_IN__) {
+        // Keep SSR content for guests; for logged-in without race just show empty prompt
+        if (window.__MX_LOGGED_IN__) {
+          renderHomePicksBoard(null, { picksStatus: 'no_picks', openHref, isWSX });
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch(`/get_my_picks/${compId}`);
+        if (!res.ok) throw new Error('picks fetch failed');
+        const myPicks = await res.json();
+        renderHomePicksBoard(myPicks, { picksStatus, openHref, isWSX });
+      } catch (e) {
+        console.warn('refreshHomePicksBoard:', e);
+        applySidebarPicksStatusFallback(picksStatus, openHref);
+      }
+    }
+
+    function applySidebarPicksStatusFallback(status, openHref) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel || !status) return;
-      // Rör aldrig SSR-boarden (wizard-picks-summary) — den är den riktiga översikten.
-      if (panel.querySelector('.wizard-picks-summary, .picks-summary--on-home')) return;
-      // Bara om sidan renderades som "inga val" men API säger något annat:
-      const openHref = document.getElementById('real-picks-open-status')?.getAttribute('href') || '/race_picks_active';
       if (status === 'has_picks') {
         panel.innerHTML = `
           <div class="mb-4">
@@ -3952,7 +4376,6 @@
             </div>
             <p class="text-sm text-gray-200 mb-2">Inlämnat till tävlingen.</p>
             <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Visa / redigera picks →</a>
-            <p class="text-[11px] text-slate-500 mt-2">Ladda om sidan för att se lineup-översikten här.</p>
           </div>`;
       } else if (status === 'partial_picks') {
         panel.innerHTML = `
@@ -3963,6 +4386,16 @@
             </div>
             <p class="text-sm text-gray-200 mb-2">Du har påbörjat val — komplettera innan deadline.</p>
             <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Komplettera här →</a>
+          </div>`;
+      } else if (status === 'no_picks') {
+        panel.innerHTML = `
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
+              <span class="text-orange-200 font-semibold">Inga val gjorda än</span>
+            </div>
+            <p class="text-sm text-gray-200 mb-3">Gör dina picks innan racet startar!</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Sätt picks →</a>
           </div>`;
       }
     }
@@ -4062,13 +4495,24 @@
         if (lockedStatus) lockedStatus.classList.add('hidden');
         if (openStatus) {
           openStatus.classList.remove('hidden');
-          if (!openStatus.dataset.picksHref) {
+          const compId = data.picks_competition_id || data.next_race?.id || data.view_picks_competition_id;
+          const raceName = (data.next_race && data.next_race.name) || data.view_picks_race_name;
+          if (compId) {
+            const picksHref = `/race_picks/${compId}`;
+            openStatus.href = picksHref;
+            openStatus.dataset.picksHref = picksHref;
+            window.racePicksUrl = picksHref;
+          } else if (!openStatus.dataset.picksHref) {
             openStatus.dataset.picksHref = openStatus.getAttribute('href') || '/race_picks_active';
+            openStatus.href = openStatus.dataset.picksHref;
+          } else {
+            openStatus.href = openStatus.dataset.picksHref;
           }
-          openStatus.href = openStatus.dataset.picksHref;
+          if (raceName) {
+            openStatus.dataset.raceLabel = raceName;
+          }
           const liveStatus = data.picks_status || openStatus.dataset.picksStatus || 'no_picks';
           applyHeroPicksCta(liveStatus);
-          applySidebarPicksStatus(liveStatus);
         }
         
         // Hide "Se Andras Picks" until deadline — show disabled placeholder
@@ -4094,6 +4538,9 @@
         if (crowdWrap) crowdWrap.classList.add('hidden');
         window._crowdTeaserLoadedFor = null;
       }
+
+      // Always refresh Aktuellt Race picks board for the selected series/race
+      void refreshHomePicksBoard(data);
     }
     
     // updateTestPicksStatus removed
@@ -4792,34 +5239,36 @@
             }
             statusColor = daysFromNextRace != null && daysFromNextRace <= 7 ? 'text-yellow-400' : 'text-green-400';
             buttonClass = 'bg-green-600 hover:bg-green-700';
-            buttonText = 'Gå till serie';
+            buttonText = 'Visa countdown';
             isClickable = true;
           } else if (daysUntilStart && daysUntilStart > 0) {
             if (daysUntilStart <= 7) {
               statusText = `Öppnar om ${daysUntilStart} dag${daysUntilStart !== 1 ? 'ar' : ''}`;
               statusColor = 'text-yellow-400';
               buttonClass = 'bg-yellow-600 hover:bg-yellow-700';
-              buttonText = 'Gå till serie';
+              buttonText = 'Visa countdown';
               isClickable = true;
             } else {
               statusText = `Startar om ${daysUntilStart} dagar`;
               statusColor = 'text-gray-400';
               buttonClass = 'bg-blue-600 hover:bg-blue-700';
-              buttonText = 'Visa schema';
+              buttonText = 'Visa countdown';
               isClickable = true; // Always allow viewing schedule
             }
           } else {
             statusText = 'Avslutad';
             statusColor = 'text-gray-400';
             buttonClass = 'bg-blue-600 hover:bg-blue-700';
-            buttonText = 'Visa schema';
+            buttonText = 'Visa countdown';
             isClickable = true; // Always allow viewing schedule
           }
           
           // Backgrounds handled by CSS classes. No inline background-image to avoid overrides.
+          const seriesCode = serie.series_code || seriesNameToCode(serie.name) || '';
+          const isSelected = homeSelectedSeries && seriesCode && homeSelectedSeries === seriesCode;
           
           const cardClass = isClickable
-            ? 'home-series-card home-series-card--clickable'
+            ? `home-series-card home-series-card--clickable${isSelected ? ' home-series-card--selected' : ''}`
             : 'home-series-card';
           
           // Add background class based on series
@@ -4845,6 +5294,8 @@
           const wsxInlineBg = serie.name.toLowerCase().includes('wsx')
             ? 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;'
             : '';
+
+          const hintText = isSelected ? 'Vald · se schema nedan' : buttonText;
           
           
           const cardContent = `
@@ -4853,18 +5304,38 @@
               <h3 class="home-series-card__title">${serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
               ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
-              <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${buttonText}</div>
+              <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
+              <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">Schema & banor →</a>
             </div>
           `;
           
           
           return isClickable
-            ? `<a href="/series/${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg}">${cardContent}</a>`
+            ? `<div role="button" tabindex="0" data-series-code="${seriesCode}" data-series-id="${serie.id}" class="block ${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`
             : `<div class="${finalCardClass}" style="${wsxInlineBg}">${cardContent}</div>`;
         }).join('');
         
         // Set the HTML content
         seriesContainer.innerHTML = seriesHTML;
+
+        seriesContainer.querySelectorAll('[data-series-code]').forEach((el) => {
+          const activate = () => {
+            const code = el.getAttribute('data-series-code');
+            const sid = el.getAttribute('data-series-id');
+            selectHomeSeries(code, { navigateIfSame: true, seriesId: sid });
+          };
+          el.addEventListener('click', (ev) => {
+            if (ev.target.closest('[data-series-open]')) return;
+            activate();
+          });
+          el.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' || ev.key === ' ') {
+              ev.preventDefault();
+              activate();
+            }
+          });
+        });
+        if (homeSelectedSeries) markSelectedSeriesCard(homeSelectedSeries);
 
         // WSX background debug: verify computed background image loads
         try {
@@ -4901,7 +5372,34 @@
         const response = await fetch('/api/series_status');
         const series = await response.json();
         if (series.error) throw new Error(series.error);
+        _seriesStatusCache = series;
+
+        // Restore selection if valid; otherwise default to AMA chain (never WSX auto).
+        let preferred = null;
+        try {
+          preferred = localStorage.getItem('home_selected_series');
+        } catch (_) {}
+        const validCodes = new Set(
+          series.map((s) => s.series_code || seriesNameToCode(s.name)).filter(Boolean)
+        );
+        if (preferred === 'WSX' && validCodes.has('WSX')) {
+          homeSelectedSeries = 'WSX';
+        } else if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) {
+          homeSelectedSeries = preferred;
+        } else {
+          homeSelectedSeries = resolveDefaultHomeSeries(series);
+        }
+
         renderSeriesSelection(series);
+        updateAmaOnlyHomeUi();
+        // Countdown first so power ranking gets the right competition_id
+        await fetchRealCountdownData();
+        await Promise.all([
+          fetchWeeklyFunStats(),
+          fetchRiderSpotlight(),
+          fetchPowerRanking(),
+          fetchSeasonLeaderboard(),
+        ]);
       } catch (error) {
         console.error('Error loading series:', error);
         const el = document.getElementById('series-selection');
@@ -4978,22 +5476,30 @@
       }
       wrap.classList.remove('hidden');
       const c = data.competition || {};
+      const titleEl = document.getElementById('power-ranking-title');
+      if (titleEl) {
+        titleEl.textContent = (c.series === 'WSX')
+          ? 'WSX power rankings'
+          : 'Nya power rankings';
+      }
       const scopeLabel = data.form_scope_label ? String(data.form_scope_label) : '';
       const crowdN = data.crowd_users != null ? `${data.crowd_users} spelares picks` : '';
       const lockedLbl = data.crowd_picks_locked ? 'låsta' : 'öppna';
       sub.textContent = [c.name, c.series, scopeLabel, crowdN ? `picks ${lockedLbl} (${crowdN})` : '']
         .filter(Boolean).join(' · ');
       let html = '';
-      // Desktop: 450 vänster, 250 höger; mobil: staplade
+      const label450 = data.label_450 || '450cc';
+      const label250 = data.label_250 || '250cc';
+      // Desktop: 450/SX1 vänster, 250/SX2 höger; mobil: staplade
       html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
-      html += '<div>' + renderPowerRankingRows(data.riders_450, '450cc — topp 3') + '</div>';
+      html += '<div>' + renderPowerRankingRows(data.riders_450, `${label450} — topp 3`) + '</div>';
       if (data.riders_250_east && data.riders_250_west) {
         html += '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">' +
-          '<div>' + renderPowerRankingRows(data.riders_250_east, '250cc East') + '</div>' +
-          '<div>' + renderPowerRankingRows(data.riders_250_west, '250cc West') + '</div>' +
+          '<div>' + renderPowerRankingRows(data.riders_250_east, `${label250} East`) + '</div>' +
+          '<div>' + renderPowerRankingRows(data.riders_250_west, `${label250} West`) + '</div>' +
           '</div>';
       } else {
-        html += '<div>' + renderPowerRankingRows(data.riders_250, '250cc — topp 3') + '</div>';
+        html += '<div>' + renderPowerRankingRows(data.riders_250, `${label250} — topp 3`) + '</div>';
       }
       html += '</div>';
       if (data.method) {
@@ -5003,15 +5509,30 @@
     }
 
     async function fetchPowerRanking() {
-      let url = '/api/power_ranking';
-      {% if upcoming_race %}
-      url += '?competition_id={{ upcoming_race.id }}';
-      {% endif %}
+      const params = new URLSearchParams();
+      if (homeSelectedSeries) {
+        params.set('series', homeSelectedSeries);
+      }
+      // Only attach competition_id when countdown already resolved for this series
+      const liveCompId = window._homeCountdownCompetitionId;
+      if (liveCompId) {
+        params.set('competition_id', String(liveCompId));
+      }
+      const qs = params.toString();
+      const url = '/api/power_ranking' + (qs ? `?${qs}` : '');
       try {
         const res = await mxFetchTimed('power_ranking', url);
         const data = await res.json();
         if (res.status !== 200) {
           applyPowerRankingData(null);
+          return;
+        }
+        // Ignore late responses from a previous series selection
+        if (
+          homeSelectedSeries
+          && data?.competition?.series
+          && String(data.competition.series).toUpperCase() !== String(homeSelectedSeries).toUpperCase()
+        ) {
           return;
         }
         applyPowerRankingData(data);
@@ -5060,6 +5581,7 @@
     window.__MX_SERIES_STATUS__ = {{ series_status_data | tojson }};
     window.__MX_RIDER_SPOTLIGHT__ = {{ rider_spotlight_data | tojson }};
     window.__MX_POWER_RANKING__ = {{ power_ranking_data | tojson }};
+    window.__MX_LOGGED_IN__ = {{ 'true' if is_logged_in else 'false' }};
     window.__MX_DEBUG_PERF__ = /(?:\?|&)perf=1(?:&|$)/.test(window.location.search);
 
     async function mxFetchTimed(label, url, options) {
@@ -5082,27 +5604,57 @@
       }
 
       if (window.__MX_SERIES_STATUS__ && window.__MX_SERIES_STATUS__.length) {
-        renderSeriesSelection(window.__MX_SERIES_STATUS__);
+        _seriesStatusCache = window.__MX_SERIES_STATUS__;
+        let preferred = null;
+        try { preferred = localStorage.getItem('home_selected_series'); } catch (_) {}
+        const validCodes = new Set(
+          _seriesStatusCache.map((s) => s.series_code || seriesNameToCode(s.name)).filter(Boolean)
+        );
+        if (preferred === 'WSX' && validCodes.has('WSX')) {
+          homeSelectedSeries = 'WSX';
+        } else if (preferred && preferred !== 'WSX' && validCodes.has(preferred)) {
+          homeSelectedSeries = preferred;
+        } else {
+          homeSelectedSeries = resolveDefaultHomeSeries(_seriesStatusCache);
+        }
+        renderSeriesSelection(_seriesStatusCache);
+        updateAmaOnlyHomeUi();
+        fetchRealCountdownData().then(() => {
+          fetchPowerRanking();
+          fetchSeasonLeaderboard();
+        });
+        fetchWeeklyFunStats();
+        // Prefer series-scoped spotlight (SSR payload is AMA default only)
+        if (
+          homeSelectedSeries
+          && homeSelectedSeries !== 'WSX'
+          && window.__MX_RIDER_SPOTLIGHT__
+          && window.__MX_RIDER_SPOTLIGHT__.available
+        ) {
+          updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
+        }
+        fetchRiderSpotlight();
       } else {
         loadSeriesSelection();
-      }
-      if (window.__MX_RIDER_SPOTLIGHT__ && window.__MX_RIDER_SPOTLIGHT__.available) {
-        updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
-      } else {
-        fetchRiderSpotlight();
+        if (window.__MX_RIDER_SPOTLIGHT__ && window.__MX_RIDER_SPOTLIGHT__.available) {
+          updateRiderSpotlight(window.__MX_RIDER_SPOTLIGHT__);
+        }
       }
 
-      if (window.__MX_POWER_RANKING__ && window.__MX_POWER_RANKING__.ok) {
+      // SSR power ranking is AMA-default — skip paint when WSX is preferred
+      if (
+        homeSelectedSeries !== 'WSX'
+        && window.__MX_POWER_RANKING__
+        && window.__MX_POWER_RANKING__.ok
+      ) {
         applyPowerRankingData(window.__MX_POWER_RANKING__);
-      } else {
+      } else if (homeSelectedSeries !== 'WSX') {
         setTimeout(fetchPowerRanking, 2500);
       }
 
       [
-        fetchSeasonLeaderboard,
         fetchLeagueLeaderboard,
         fetchCrossDinoHighscores,
-        fetchWeeklyFunStats,
         loadSeriesLeaders,
         loadWSXLeaders,
       ].forEach(function(fn, i) {

@@ -16,6 +16,14 @@
   width: 100%;
 }
 
+.wizard-step-save__actions .rp-btn--primary.rp-btn--save-ready {
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+  color: #0f172a;
+  border-color: rgba(251, 191, 36, 0.65);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35), 0 8px 20px rgba(249, 115, 22, 0.25);
+  font-weight: 800;
+}
+
 @media (min-width: 480px) {
   .wizard-step-save__actions {
     flex-direction: row;

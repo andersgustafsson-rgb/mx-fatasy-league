@@ -50,7 +50,9 @@ TRACK_GEO: dict[str, dict[str, Any]] = {
     "Ironman National": {"lat": 40.0417, "lon": -86.8745, "city": "Crawfordsville, IN"},
     # WSX
     "Buenos Aires City GP": {"lat": -34.6037, "lon": -58.3816, "city": "Buenos Aires"},
-    "Canadian GP": {"lat": 49.2827, "lon": -123.1207, "city": "Vancouver"},
+    "Canadian GP": {"lat": 51.0717, "lon": -114.1217, "city": "Calgary"},
+    "British GP": {"lat": 52.4436, "lon": -1.9400, "city": "Birmingham"},
+    "New Zealand GP": {"lat": -43.5321, "lon": 172.6362, "city": "Christchurch"},
     "Australian GP": {"lat": -28.0167, "lon": 153.4000, "city": "Gold Coast"},
     "Swedish GP": {"lat": 59.3293, "lon": 18.0686, "city": "Stockholm"},
     "South African GP": {"lat": -33.9249, "lon": 18.4241, "city": "Cape Town"},

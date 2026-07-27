@@ -37,7 +37,8 @@ _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
 _MOTO_COLUMNS_CHECKED = False
 _CHAMPIONSHIP_TOTALS_CACHE: dict[int, tuple[float, dict]] = {}
-_RIDER_SPOTLIGHT_CACHE: tuple[float, dict] | None = None
+# Shell/mode cache keyed by series scope ("AMA", "SX", "MX", "SMX", "WSX")
+_RIDER_SPOTLIGHT_CACHE: dict[str, tuple[float, dict]] = {}
 _RIDER_SPOTLIGHT_MODE_CACHE: dict[str, tuple[float, dict]] = {}
 _SPOTLIGHT_TAB_META: dict[str, dict[str, str]] = {
     "last_race": {"label": "Senaste race", "icon": "🏁"},
@@ -56,12 +57,19 @@ _PORTRAIT_DECODE_SEM = threading.Semaphore(
 )
 
 
-def _peek_rider_spotlight_cache() -> dict | None:
-    global _RIDER_SPOTLIGHT_CACHE
+def _spotlight_series_cache_key(series: str | None) -> str:
+    return _normalize_countdown_series(series) or "AMA"
+
+
+def _peek_rider_spotlight_cache(series: str | None = None) -> dict | None:
+    key = _spotlight_series_cache_key(series)
     now = time.time()
-    if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
-        cached = _RIDER_SPOTLIGHT_CACHE[1]
-        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(cached):
+    entry = _RIDER_SPOTLIGHT_CACHE.get(key)
+    if entry and entry[0] > now:
+        cached = entry[1]
+        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(
+            cached, series=series
+        ):
             return cached
     return None
 
@@ -722,6 +730,39 @@ def _next_competition_for_picks(
     return None
 
 
+def _home_primary_competition(*, require_open: bool = False) -> Competition | None:
+    """Homepage default race: AMA chain SX → MX → SMX. WSX is opt-in via series card."""
+    for series_code in ("SX", "MX", "SMX"):
+        comp = _next_competition_for_picks(series=series_code, require_open=require_open)
+        if comp is not None:
+            return comp
+    return None
+
+
+def _home_default_countdown_series() -> str:
+    """Default countdown series for homepage (never auto-select WSX)."""
+    for series_code in ("SX", "MX", "SMX"):
+        if _next_competition_for_picks(series=series_code, require_open=False) is not None:
+            return series_code
+    return "SX"
+
+
+def _normalize_countdown_series(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    key = str(raw).strip().upper()
+    aliases = {
+        "SX": "SX",
+        "SUPERCROSS": "SX",
+        "MX": "MX",
+        "MOTOCROSS": "MX",
+        "SMX": "SMX",
+        "SMX FINALS": "SMX",
+        "WSX": "WSX",
+    }
+    return aliases.get(key)
+
+
 def _current_picks_competition() -> Competition | None:
     """Nästa tävling utan resultat — inkl. låsta picks (t.ex. Hangtown efter deadline)."""
     return _next_competition_for_picks(require_open=False)
@@ -819,36 +860,35 @@ def build_sx_season_wrap_context(competitions: list, today: date) -> dict | None
 
 
 def ensure_wsx_series_and_competitions():
-    """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns."""
+    """Skapa WSX 2025 och dess 5 tävlingar om de inte redan finns (historik)."""
     from datetime import date as _date
+    from datetime import time as _time
+
     wsx = Series.query.filter_by(name='WSX', year=2025).first()
     if not wsx:
         wsx = Series(
             name='WSX', year=2025,
             start_date=_date(2025, 11, 8),
             end_date=_date(2025, 12, 13),
-            is_active=True, points_system='standard'
+            is_active=False, points_system='standard'
         )
         db.session.add(wsx)
         db.session.flush()
-        # name, location, date, timezone, start_time (HH:MM local) or None
         comps = [
-            ('Buenos Aires City GP', 'Buenos Aires, Argentina', _date(2025, 11, 8), 'America/Argentina/Buenos_Aires', '13:00'),
-            ('Canadian GP', 'Vancouver, Canada', _date(2025, 11, 15), 'America/Los_Angeles', None),
-            ('Australian GP', 'Gold Coast, Australia', _date(2025, 11, 29), 'Australia/Brisbane', None),
-            ('Swedish GP', 'Stockholm, Sweden', _date(2025, 12, 6), 'Europe/Stockholm', '17:00'),
-            ('South African GP', 'Cape Town, South Africa', _date(2025, 12, 13), 'Africa/Johannesburg', None),
+            ('Buenos Aires City GP', _date(2025, 11, 8), 'America/Argentina/Buenos_Aires', '13:00'),
+            ('Canadian GP', _date(2025, 11, 15), 'America/Los_Angeles', None),
+            ('Australian GP', _date(2025, 11, 29), 'Australia/Brisbane', None),
+            ('Swedish GP', _date(2025, 12, 6), 'Europe/Stockholm', '17:00'),
+            ('South African GP', _date(2025, 12, 13), 'Africa/Johannesburg', None),
         ]
-        from datetime import time as _time
-        for n, loc, d, tz, start_hhmm in comps:
-            comp = Competition.query.filter_by(name=n).first()
+        for n, d, tz, start_hhmm in comps:
+            # Bind to this series_id so we never steal 2026 rows with same display name
+            comp = Competition.query.filter_by(name=n, series_id=wsx.id).first()
             if comp is None:
                 comp = Competition(name=n, event_date=d, series='WSX', series_id=wsx.id)
                 db.session.add(comp)
-            # Set timezone if column exists
             if hasattr(comp, 'timezone'):
                 comp.timezone = tz
-            # Set start_time if column exists in DB (handled via property in model)
             if start_hhmm and hasattr(comp, 'start_time'):
                 try:
                     hh, mm = map(int, start_hhmm.split(':'))
@@ -856,31 +896,395 @@ def ensure_wsx_series_and_competitions():
                 except Exception:
                     pass
         db.session.commit()
-        print("[WSX-SEED] WSX-serie och 5 tävlingar skapade!")
+        print("[WSX-SEED] WSX 2025-serie och 5 tävlingar skapade!")
     else:
-        # Series already exists – ensure Buenos Aires has correct timezone and start_time
         try:
-            from datetime import time as _time
-            comp = Competition.query.filter_by(name='Buenos Aires City GP').first()
+            comp = Competition.query.filter_by(name='Buenos Aires City GP', series_id=wsx.id).first()
             if comp:
                 if hasattr(comp, 'timezone'):
                     comp.timezone = 'America/Argentina/Buenos_Aires'
                 if hasattr(comp, 'start_time'):
                     comp.start_time = _time(hour=13, minute=0)
                 db.session.commit()
-                print("[WSX-SEED] Updated Buenos Aires timezone/start_time to 13:00 local")
         except Exception as e:
-            print(f"[WSX-SEED] Failed to update BA start time: {e}")
-        print("[WSX-SEED] WSX-serie fanns redan!")
+            print(f"[WSX-SEED] Failed to update BA 2025 start time: {e}")
+        print("[WSX-SEED] WSX 2025-serie fanns redan!")
+
+
+def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
+    """Upsert WSX 2026 Series + GPs (official calendar from worldsupercrosschampionship.com).
+
+    R05 South African GP has city/date TBA — created without event_date until announced.
+    Competitions are matched by (name, series_id) so 2025 rows are never overwritten.
+    """
+    from datetime import date as _date
+    from datetime import time as _time
+
+    created_series = False
+    wsx = Series.query.filter_by(name='WSX', year=2026).first()
+    if not wsx:
+        wsx = Series(
+            name='WSX',
+            year=2026,
+            start_date=_date(2026, 8, 8),
+            end_date=_date(2026, 12, 5),
+            is_active=True,
+            points_system='standard',
+        )
+        db.session.add(wsx)
+        db.session.flush()
+        created_series = True
+    else:
+        wsx.start_date = _date(2026, 8, 8)
+        wsx.end_date = _date(2026, 12, 5)
+        wsx.is_active = True
+
+    if deactivate_2025:
+        old = Series.query.filter_by(name='WSX', year=2025).first()
+        if old and old.is_active:
+            old.is_active = False
+
+    # name, date|None, timezone, start_time HH:MM local (track/show start when known)
+    comps_spec = [
+        ('Canadian GP', _date(2026, 8, 8), 'America/Edmonton', '19:30'),  # Calgary / McMahon
+        ('British GP', _date(2026, 10, 10), 'Europe/London', None),  # Birmingham
+        ('Buenos Aires City GP', _date(2026, 10, 24), 'America/Argentina/Buenos_Aires', None),
+        ('Australian GP', _date(2026, 11, 21), 'Australia/Brisbane', None),  # Gold Coast
+        ('South African GP', None, 'Africa/Johannesburg', None),  # city & date TBA
+        ('New Zealand GP', _date(2026, 12, 5), 'Pacific/Auckland', None),  # Christchurch finale
+    ]
+
+    created_comps = 0
+    updated_comps = 0
+    comp_ids = []
+    for n, d, tz, start_hhmm in comps_spec:
+        comp = Competition.query.filter_by(name=n, series_id=wsx.id).first()
+        if comp is None:
+            # Prefer a free-standing WSX row with same name and no series_id (legacy)
+            orphan = (
+                Competition.query.filter_by(name=n, series='WSX', series_id=None).first()
+            )
+            if orphan:
+                comp = orphan
+                comp.series_id = wsx.id
+                updated_comps += 1
+            else:
+                comp = Competition(name=n, event_date=d, series='WSX', series_id=wsx.id)
+                db.session.add(comp)
+                created_comps += 1
+        else:
+            updated_comps += 1
+
+        comp.series = 'WSX'
+        comp.series_id = wsx.id
+        if d is not None:
+            comp.event_date = d
+        if hasattr(comp, 'timezone') and tz:
+            comp.timezone = tz
+        if start_hhmm and hasattr(comp, 'start_time'):
+            try:
+                hh, mm = map(int, start_hhmm.split(':'))
+                # Flush so setter has an id on brand-new rows
+                db.session.flush()
+                comp.start_time = _time(hour=hh, minute=mm)
+            except Exception:
+                pass
+        db.session.flush()
+        comp_ids.append(comp.id)
+
+    db.session.commit()
+    info = {
+        "series_id": wsx.id,
+        "year": 2026,
+        "created_series": created_series,
+        "created_competitions": created_comps,
+        "updated_competitions": updated_comps,
+        "competition_ids": comp_ids,
+        "rounds": [c[0] for c in comps_spec],
+    }
+    print(f"[WSX-SEED] WSX 2026 OK series_id={wsx.id} created={created_comps} updated={updated_comps}")
+    return info
+
+
+# Official 2026 championship roster (MX1Onboard / WSX announcements, Jul 2026).
+# Tuple: (name, class, number|None, brand|None, team|None)
+# price is a placeholder — WSX is tippa-only (no season-team).
+_WSX_2026_ROSTER = [
+    # --- SX1 ---
+    ("Cooper Webb", "wsx_sx1", 2, "Yamaha", "Rick Ware Racing"),
+    ("Justin Hill", "wsx_sx1", 46, "Yamaha", "Rick Ware Racing"),
+    ("Joey Savatgy", "wsx_sx1", 17, "Honda", "Quad Lock Honda"),
+    ("Christian Craig", "wsx_sx1", 28, "Honda", "Quad Lock Honda"),
+    ("Jason Anderson", "wsx_sx1", 1, "Suzuki", "Pipes Motorsport Group"),
+    ("Colt Nichols", "wsx_sx1", 45, "Suzuki", "Pipes Motorsport Group"),
+    ("Vince Friese", "wsx_sx1", 719, "Stark", "Stark Racing"),
+    ("Jorge Zaragoza", "wsx_sx1", 99, "Stark", "Stark Racing"),
+    ("Greg Aranda", "wsx_sx1", 20, "KTM", "595 Racing"),
+    ("Kevin Moranz", "wsx_sx1", 78, "KTM", "595 Racing"),
+    ("Austin Politelli", "wsx_sx1", 98, "Honda", "MotoConcepts Racing"),
+    ("Enzo Lopes", "wsx_sx1", 16, "Honda", "MotoConcepts Racing"),
+    ("Luke Clout", "wsx_sx1", 4, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Mitchell Harrison", "wsx_sx1", 41, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Maxime Desprey", "wsx_sx1", 141, "Yamaha", "Team GSM"),
+    ("Jordi Tixier", "wsx_sx1", 911, "Yamaha", "Team GSM"),
+    # --- SX2 ---
+    ("Max Anstie", "wsx_sx2", 69, "Yamaha", "Rick Ware Racing"),
+    ("Devin Simonson", "wsx_sx2", 88, "Yamaha", "Rick Ware Racing"),
+    ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
+    ("Cole Thompson", "wsx_sx2", 2, "Yamaha", "Team GSM"),
+    ("Calvin Fonvieille", "wsx_sx2", 11, "Yamaha", "Team GSM"),
+    ("Ryan Breece", "wsx_sx2", 200, "Honda", "MotoConcepts Racing"),
+    ("Robbie Wageman", "wsx_sx2", 237, "Honda", "MotoConcepts Racing"),
+    ("Henry Miller", "wsx_sx2", 29, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Jake Cannon", "wsx_sx2", 3, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Michael Hicks", "wsx_sx2", 460, "Stark", "Stark Racing"),
+    ("Brian Hsu", "wsx_sx2", 81, "Stark", "Stark Racing"),
+    ("Kyle Peters", "wsx_sx2", 110, "Suzuki", "Pipes Motorsport Group"),
+    ("Crockett Myers", "wsx_sx2", 411, "Suzuki", "Pipes Motorsport Group"),
+    ("Hector Assuncao", "wsx_sx2", 4, "KTM", "595 Racing"),
+    ("Nico Koch", "wsx_sx2", 260, "KTM", "595 Racing"),
+    # Round wildcards (available in tippa; not full-time championship seats)
+    ("Mike Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
+    ("Tom Vialle", "wsx_sx2", 28, "KTM", "Red Bull KTM"),  # British GP
+]
+
+# Names that moved class or left the championship grid — drop from tippa lists.
+_WSX_2026_RETIRED_FROM_GRID = {
+    "Coty Schock",  # RWR SX2 seat taken by Max Anstie
+}
+
+_WSX_2026_ROSTER_NAMES_BY_CLASS = {
+    "wsx_sx1": {name for name, class_name, *_ in _WSX_2026_ROSTER if class_name == "wsx_sx1"},
+    "wsx_sx2": {name for name, class_name, *_ in _WSX_2026_ROSTER if class_name == "wsx_sx2"},
+}
+
+
+def wsx_roster_query(class_name: str):
+    """Query only the currently official WSX 2026 roster for the given class."""
+    names = _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
+    return rider_query_for_list_ui().filter_by(class_name=class_name).filter(Rider.name.in_(names))
+
+
+def _remap_wsx_rider_refs(old_id: int, new_id: int) -> int:
+    """Flytta FK-referenser från orphan WSX-rad till kanonisk roster-rad."""
+    if old_id == new_id:
+        return 0
+    moved = 0
+
+    # OUT-status: undvik unik-krock per (competition_id, rider_id)
+    for row in CompetitionRiderStatus.query.filter_by(rider_id=old_id).all():
+        existing = CompetitionRiderStatus.query.filter_by(
+            competition_id=row.competition_id, rider_id=new_id
+        ).first()
+        if existing:
+            db.session.delete(row)
+        else:
+            row.rider_id = new_id
+            moved += 1
+
+    for model in (RacePick, HoleshotPick, WildcardPick, CompetitionResult, HoleshotResult):
+        for row in model.query.filter_by(rider_id=old_id).all():
+            # CompetitionResult / picks kan ha unikhet per rider — uppdatera om möjligt
+            try:
+                row.rider_id = new_id
+                moved += 1
+            except Exception:
+                db.session.delete(row)
+
+    try:
+        for row in SeasonTeamRider.query.filter_by(rider_id=old_id).all():
+            existing = SeasonTeamRider.query.filter_by(
+                season_team_id=row.season_team_id, rider_id=new_id
+            ).first()
+            if existing:
+                db.session.delete(row)
+            else:
+                row.rider_id = new_id
+                moved += 1
+    except Exception:
+        pass
+
+    return moved
+
+
+def _dedupe_wsx_roster_riders() -> dict:
+    """
+    Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Myers som wsx_sx1 orphan
+    medan tippa använder wsx_sx2 #411). Remappar OUT/picks till kanonisk rad.
+    """
+    merged = 0
+    deleted = 0
+    remapped = 0
+    official_names = _WSX_2026_ROSTER_NAMES_BY_CLASS["wsx_sx1"] | _WSX_2026_ROSTER_NAMES_BY_CLASS["wsx_sx2"]
+    target_class_by_name = {
+        name: class_name for name, class_name, *_ in _WSX_2026_ROSTER
+    }
+    target_number_by_name = {
+        name: number for name, _cls, number, *_ in _WSX_2026_ROSTER
+    }
+
+    for name in sorted(official_names):
+        target_cls = target_class_by_name.get(name)
+        if not target_cls:
+            continue
+        rows = (
+            Rider.query.filter(
+                Rider.name == name,
+                Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+            )
+            .order_by(Rider.id.asc())
+            .all()
+        )
+        if len(rows) <= 1:
+            # En rad men fel klass → reclassa
+            if len(rows) == 1 and rows[0].class_name != target_cls:
+                rows[0].class_name = target_cls
+                merged += 1
+            continue
+
+        # Prefer correct class + matching number
+        want_num = target_number_by_name.get(name)
+        keeper = None
+        for r in rows:
+            if r.class_name == target_cls and (
+                want_num is None or r.rider_number == want_num
+            ):
+                keeper = r
+                break
+        if keeper is None:
+            for r in rows:
+                if r.class_name == target_cls:
+                    keeper = r
+                    break
+        if keeper is None:
+            keeper = rows[0]
+            keeper.class_name = target_cls
+
+        for extra in rows:
+            if extra.id == keeper.id:
+                continue
+            remapped += _remap_wsx_rider_refs(int(extra.id), int(keeper.id))
+            db.session.delete(extra)
+            deleted += 1
+            merged += 1
+
+    if merged or deleted or remapped:
+        db.session.commit()
+    return {"merged": merged, "deleted": deleted, "remapped": remapped}
+
+
+def ensure_wsx_2026_roster() -> dict:
+    """Create/update WSX SX1/SX2 riders; reclassify if a rider changed class."""
+    created = 0
+    updated = 0
+    reclassed = 0
+    for name, class_name, number, brand, team in _WSX_2026_ROSTER:
+        rider = Rider.query.filter_by(name=name, class_name=class_name).first()
+        if rider is None:
+            # Same person may already exist in the other WSX class
+            other = (
+                Rider.query.filter(
+                    Rider.name == name,
+                    Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+                ).first()
+            )
+            if other:
+                other.class_name = class_name
+                rider = other
+                reclassed += 1
+            else:
+                rider = Rider(
+                    name=name,
+                    class_name=class_name,
+                    rider_number=number,
+                    bike_brand=brand or None,
+                    manufacturer=brand or None,
+                    team=team or None,
+                    price=100000,
+                    series_participation="wsx",
+                )
+                db.session.add(rider)
+                created += 1
+                continue
+
+        changed = False
+        if number is not None and rider.rider_number != number:
+            rider.rider_number = number
+            changed = True
+        if brand and rider.bike_brand != brand:
+            rider.bike_brand = brand
+            changed = True
+        if brand and getattr(rider, "manufacturer", None) != brand:
+            rider.manufacturer = brand
+            changed = True
+        if team and rider.team != team:
+            rider.team = team
+            changed = True
+        if getattr(rider, "series_participation", None) != "wsx":
+            rider.series_participation = "wsx"
+            changed = True
+        if changed:
+            updated += 1
+
+    db.session.commit()
+    # Dedupe is best-effort: never fail the whole roster upsert if remap hits a constraint.
+    dedupe = {"merged": 0, "deleted": 0, "remapped": 0, "skipped": False}
+    try:
+        dedupe = _dedupe_wsx_roster_riders()
+    except Exception as dedupe_err:
+        db.session.rollback()
+        dedupe = {
+            "merged": 0,
+            "deleted": 0,
+            "remapped": 0,
+            "skipped": True,
+            "error": str(dedupe_err),
+        }
+        print(f"[WSX-SEED] roster dedupe skipped: {dedupe_err}")
+    sx1 = Rider.query.filter_by(class_name="wsx_sx1").count()
+    sx2 = Rider.query.filter_by(class_name="wsx_sx2").count()
+    info = {
+        "created": created,
+        "updated": updated,
+        "reclassed": reclassed,
+        "deduped": dedupe,
+        "wsx_sx1": sx1,
+        "wsx_sx2": sx2,
+        "roster_size": len(_WSX_2026_ROSTER),
+    }
+    print(
+        f"[WSX-SEED] roster created={created} updated={updated} "
+        f"reclassed={reclassed} dedupe={dedupe} sx1={sx1} sx2={sx2}"
+    )
+    return info
+
 
 @app.post("/admin/seed_wsx")
 def admin_seed_wsx():
+    """Legacy: ensure WSX 2025 rows exist (history). Prefer /admin/seed_wsx_2026."""
     if not is_admin_user():
         return jsonify({"error": "unauthorized"}), 403
     try:
         ensure_wsx_series_and_competitions()
-        return jsonify({"message": "WSX seeded/verified"})
+        return jsonify({"message": "WSX 2025 seeded/verified"})
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/admin/seed_wsx_2026")
+def admin_seed_wsx_2026():
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        series_info = ensure_wsx_2026(deactivate_2025=True)
+        roster_info = ensure_wsx_2026_roster()
+        return jsonify({
+            "message": "WSX 2026 seeded/verified",
+            "series": series_info,
+            "roster": roster_info,
+        })
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 def is_admin_user():
@@ -965,7 +1369,7 @@ def get_track_timezone(track_name):
         'Arlington': 'America/Chicago',          # Arlington, TX
         'St. Louis': 'America/Chicago',          # St. Louis, MO
         'Nashville': 'America/Chicago',          # Nashville, TN
-        'Birmingham': 'America/Chicago',         # Birmingham, AL
+        'Birmingham': 'America/Chicago',         # Birmingham, AL (AMA SX)
         
         # Eastern Time (UTC-5/-4) - Florida, Indiana, Michigan, Ohio, Pennsylvania
         'Daytona': 'America/New_York',           # Daytona Beach, FL
@@ -973,6 +1377,15 @@ def get_track_timezone(track_name):
         'Detroit': 'America/New_York',           # Detroit, MI
         'Cleveland': 'America/New_York',         # Cleveland, OH
         'Philadelphia': 'America/New_York',      # Philadelphia, PA
+
+        # WSX GPs (stadium names differ by year; keys are Competition.name)
+        'Canadian GP': 'America/Edmonton',       # 2026 Calgary (McMahon)
+        'British GP': 'Europe/London',           # Birmingham UK
+        'Buenos Aires City GP': 'America/Argentina/Buenos_Aires',
+        'Australian GP': 'Australia/Brisbane',   # Gold Coast
+        'South African GP': 'Africa/Johannesburg',
+        'New Zealand GP': 'Pacific/Auckland',    # Christchurch
+        'Swedish GP': 'Europe/Stockholm',
     }
     return timezone_map.get(track_name, 'America/New_York')  # Default to Eastern
 
@@ -1591,7 +2004,8 @@ def build_series_status_list() -> list[dict]:
         )
     ).all()
 
-    series_order = {"WSX": 1, "Supercross": 2, "Motocross": 3, "SMX Finals": 4}
+    # SX/MX first on homepage; WSX is selectable but not default focus
+    series_order = {"Supercross": 1, "Motocross": 2, "SMX Finals": 3, "WSX": 4}
     all_series.sort(key=lambda s: series_order.get(s.name, 999))
 
     simulation_active = False
@@ -1606,13 +2020,6 @@ def build_series_status_list() -> list[dict]:
     series_data: list[dict] = []
 
     for s in all_series:
-        is_currently_active = s.is_active
-        if not simulation_active:
-            if s.start_date and s.end_date:
-                is_currently_active = s.start_date <= current_date <= s.end_date
-            elif s.start_date:
-                is_currently_active = current_date >= s.start_date
-
         series_code = None
         if s.name == "Supercross":
             series_code = "SX"
@@ -1637,6 +2044,22 @@ def build_series_status_list() -> list[dict]:
                 .first()
             )
 
+        # Playable/active for UI: not past end_date, and either inside the window
+        # or already has an upcoming race (so preseason tippa works — e.g. WSX before R01).
+        if not simulation_active:
+            if s.end_date and current_date > s.end_date:
+                is_currently_active = False
+            elif next_race is not None:
+                is_currently_active = True
+            elif s.start_date and s.end_date:
+                is_currently_active = s.start_date <= current_date <= s.end_date
+            elif s.start_date:
+                is_currently_active = current_date >= s.start_date
+            else:
+                is_currently_active = bool(s.is_active)
+        else:
+            is_currently_active = bool(s.is_active)
+
         days_until_next_race = None
         if next_race and next_race.event_date:
             days_until_next_race = (next_race.event_date - current_date).days
@@ -1649,6 +2072,7 @@ def build_series_status_list() -> list[dict]:
             {
                 "id": s.id,
                 "name": s.name,
+                "series_code": series_code,
                 "is_active": is_currently_active,
                 "start_date": s.start_date.isoformat() if s.start_date else None,
                 "end_date": s.end_date.isoformat() if s.end_date else None,
@@ -1656,6 +2080,7 @@ def build_series_status_list() -> list[dict]:
                 "days_until_next_race": days_until_next_race,
                 "next_race": (
                     {
+                        "id": next_race.id,
                         "name": next_race.name,
                         "date": next_race.event_date.isoformat(),
                     }
@@ -1835,8 +2260,8 @@ def index():
         except Exception as e2:
             print(f"Error getting competitions (retry): {e2}")
             competitions = []    
-    # Aktuellt race = nästa utan resultat (inkl. låst Hangtown). Öppna picks kan vara ett senare race.
-    upcoming_race = _current_picks_competition()
+    # Homepage default = AMA chain (SX→MX→SMX). WSX only via series-card selection.
+    upcoming_race = _home_primary_competition(require_open=False)
     view_picks_race = upcoming_race
     
     # Get user-specific data only if logged in
@@ -2476,6 +2901,96 @@ def fantasy_supercross_leaderboard_for_year(year: int) -> list:
             }
         )
     return out
+
+
+def fantasy_wsx_leaderboard_for_year(year: int = 2026) -> list:
+    """Fantasy tippa-highscore for one WSX season only (never mixes with AMA/SMX)."""
+    from collections import defaultdict
+
+    wsx_series = Series.query.filter_by(name="WSX", year=int(year)).first()
+    if wsx_series is not None:
+        comps = Competition.query.filter_by(series_id=wsx_series.id).all()
+    else:
+        # Fallback: series code + calendar year (legacy rows without series_id)
+        comps = [
+            c
+            for c in Competition.query.filter_by(series="WSX").all()
+            if c.event_date and c.event_date.year == int(year)
+        ]
+    comp_ids = [c.id for c in comps]
+    if not comp_ids:
+        return []
+
+    # Dedupe CompetitionScore per (user, competition) — keep highest id
+    by_uc: dict[tuple[int, int], CompetitionScore] = {}
+    for s in CompetitionScore.query.filter(
+        CompetitionScore.competition_id.in_(comp_ids)
+    ).all():
+        k = (int(s.user_id), int(s.competition_id))
+        prev = by_uc.get(k)
+        if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+            by_uc[k] = s
+
+    agg: dict[int, int] = defaultdict(int)
+    for s in by_uc.values():
+        agg[int(s.user_id)] += int(s.total_points or 0)
+
+    ranked = sorted(agg.items(), key=lambda x: (-x[1], x[0]))
+    if not ranked:
+        return []
+
+    uids = [u for u, _ in ranked]
+    users = User.query.filter(User.id.in_(uids)).all()
+    uid_map = {u.id: u for u in users}
+    teams = {
+        int(t.user_id): t.team_name
+        for t in SeasonTeam.query.filter(SeasonTeam.user_id.in_(uids)).all()
+    }
+
+    out = []
+    for rank, (u_id, pts) in enumerate(ranked, start=1):
+        u = uid_map.get(u_id)
+        dn = getattr(u, "display_name", None) or (u.username if u else "?")
+        out.append(
+            {
+                "rank": rank,
+                "user_id": u_id,
+                "username": u.username if u else "?",
+                "display_name": dn,
+                "team_name": teams.get(u_id),
+                "total_points": pts,
+                "delta": 0,
+            }
+        )
+    return out
+
+
+@app.get("/get_wsx_leaderboard")
+def get_wsx_leaderboard():
+    """Standalone WSX fantasy leaderboard (default: current/open season year)."""
+    try:
+        year_raw = request.args.get("year")
+        if year_raw:
+            year = int(year_raw)
+        else:
+            wsx = (
+                Series.query.filter_by(name="WSX", is_active=True)
+                .order_by(Series.year.desc())
+                .first()
+            )
+            year = int(wsx.year) if wsx and wsx.year else 2026
+        rows = fantasy_wsx_leaderboard_for_year(year)
+        return jsonify(
+            {
+                "series": "WSX",
+                "year": year,
+                "leaderboard": rows,
+            }
+        )
+    except Exception as e:
+        print(f"ERROR in get_wsx_leaderboard: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e), "leaderboard": []}), 500
 
 
 @app.get("/supercross/sasong/<int:year>")
@@ -3428,20 +3943,34 @@ def api_leagues_stats():
         return jsonify({"error": str(e)}), 500
 
 
-def _resolve_power_ranking_competition(competition_id: int | None) -> Competition | None:
+def _resolve_power_ranking_competition(
+    competition_id: int | None,
+    *,
+    series: str | None = None,
+) -> Competition | None:
     """Resolve target competition for power ranking (match index logic, ignore stale admin active race)."""
+    series_code = _normalize_countdown_series(series)
     if competition_id:
         c = Competition.query.get(competition_id)
         if c:
-            return c
+            # Reject stale countdown id from another series (e.g. MX id + series=WSX).
+            if series_code:
+                comp_series = _normalize_countdown_series(getattr(c, "series", None))
+                if comp_series == series_code:
+                    return c
+            else:
+                return c
 
     # Prefer upcoming race with open picks; fallback to next race without results.
-    nxt = _next_competition_for_picks(require_open=True)
+    nxt = _next_competition_for_picks(series=series_code, require_open=True)
     if nxt:
         return nxt
-    nxt = _next_competition_for_picks(require_open=False)
+    nxt = _next_competition_for_picks(series=series_code, require_open=False)
     if nxt:
         return nxt
+    # Explicit series with no race → don't silently fall back to AMA.
+    if series_code:
+        return None
     return None
 
 
@@ -3483,6 +4012,8 @@ def _form_scores_for_riders(
     for res in CompetitionResult.query.filter(
         CompetitionResult.competition_id.in_(comp_ids)
     ).all():
+        if res.rider_id is None:
+            continue
         rid = int(res.rider_id)
         if rid not in rider_ids:
             continue
@@ -3510,6 +4041,8 @@ def _result_median_scores_for_riders(
         for res in CompetitionResult.query.filter(
             CompetitionResult.competition_id.in_(comp_ids)
         ).all():
+            if res.rider_id is None:
+                continue
             rid = int(res.rider_id)
             if rid not in rider_ids:
                 continue
@@ -3645,18 +4178,26 @@ def _out_rider_ids(competition_id: int) -> set[int]:
         return set()
 
 
-def _riders_450_scope(out_ids: set[int]) -> list[Rider]:
+def _riders_450_scope(out_ids: set[int], *, series: str | None = None) -> list[Rider]:
+    if series == "WSX":
+        return [r for r in wsx_roster_query("wsx_sx1").all() if r.id not in out_ids]
     q = rider_query_for_list_ui().filter(Rider.class_name == "450cc")
     riders = [r for r in q.all() if r.id not in out_ids]
     return riders
 
 
-def _riders_250_scope(out_ids: set[int], coast: str | None) -> tuple[list[Rider], list[Rider] | None]:
+def _riders_250_scope(
+    out_ids: set[int], coast: str | None, *, series: str | None = None
+) -> tuple[list[Rider], list[Rider] | None]:
     """
     Returns (single_list, split_pair).
     If coast is 'both', single_list is empty and split_pair is (east_riders, west_riders).
     Otherwise single_list is filtered 250 riders for that coast.
+    WSX: SX2 roster as a single list (no East/West).
     """
+    if series == "WSX":
+        return [r for r in wsx_roster_query("wsx_sx2").all() if r.id not in out_ids], None
+
     base = [
         r
         for r in rider_query_for_list_ui().filter(Rider.class_name == "250cc").all()
@@ -4231,6 +4772,10 @@ def build_power_ranking_payload(target: Competition) -> dict:
     if cached and cached[0] > now:
         return cached[1]
 
+    series_code = _normalize_countdown_series(getattr(target, "series", None)) or getattr(
+        target, "series", None
+    )
+
     # Form: senaste avklarade race i samma serie (inte hela säsongen — undvik att MX #2 ser ut som #1)
     past = _past_races_for_form(target, limit=5)
     out_ids = _out_rider_ids(target.id)
@@ -4253,12 +4798,17 @@ def build_power_ranking_payload(target: Competition) -> dict:
     else:
         fw, cw = 0.55, 0.45
 
-    riders_450 = _riders_450_scope(out_ids)
+    riders_450 = _riders_450_scope(out_ids, series=series_code)
     # För SX: visa alltid både East/West power rankings (även om veckans coast är bara en av dem).
-    if getattr(target, "series", None) == "SX":
-        single_250, split_250 = _riders_250_scope(out_ids, "both")
+    if series_code == "SX":
+        single_250, split_250 = _riders_250_scope(out_ids, "both", series=series_code)
     else:
-        single_250, split_250 = _riders_250_scope(out_ids, getattr(target, "coast_250", None))
+        single_250, split_250 = _riders_250_scope(
+            out_ids, getattr(target, "coast_250", None), series=series_code
+        )
+
+    label_450 = "SX1" if series_code == "WSX" else "450cc"
+    label_250 = "SX2" if series_code == "WSX" else "250cc"
 
     top_450, picks_only_450 = _rank_bucket(
         riders_450, target, past, out_ids, form_weight=fw, crowd_weight=cw, use_prior_pick_fallback=False
@@ -4296,6 +4846,8 @@ def build_power_ranking_payload(target: Competition) -> dict:
             "coast_250": target.coast_250,
             "event_date": target.event_date.isoformat() if target.event_date else None,
         },
+        "label_450": label_450,
+        "label_250": label_250,
         "method": method,
         "past_races_used": len(past),
         "form_races": form_names,
@@ -4345,10 +4897,12 @@ def api_power_ranking():
     """
     Informationsvy: form från senaste resultat + aggregerade spelarpicks.
     Inte bettingodds.
+    Query: competition_id=… and/or series=SX|MX|SMX|WSX
     """
     try:
         comp_id = request.args.get("competition_id", type=int)
-        target = _resolve_power_ranking_competition(comp_id)
+        series = request.args.get("series")
+        target = _resolve_power_ranking_competition(comp_id, series=series)
         if not target:
             return jsonify({"ok": False, "error": "no_competition"}), 404
         return jsonify(build_power_ranking_payload(target))
@@ -4480,8 +5034,8 @@ def _challenge_riders_for_competition(comp: Competition) -> dict[str, list[dict]
     is_wsx = getattr(comp, "series", None) == "WSX"
 
     if is_wsx:
-        riders_450 = rider_query_for_list_ui().filter_by(class_name="wsx_sx1").order_by(Rider.rider_number).all()
-        riders_250 = rider_query_for_list_ui().filter_by(class_name="wsx_sx2").order_by(Rider.rider_number).all()
+        riders_450 = wsx_roster_query("wsx_sx1").order_by(Rider.rider_number).all()
+        riders_250 = wsx_roster_query("wsx_sx2").order_by(Rider.rider_number).all()
         keys = ("wsx_sx1", "wsx_sx2")
     else:
         riders_450 = rider_query_for_list_ui().filter_by(class_name="450cc").order_by(Rider.rider_number).all()
@@ -6374,15 +6928,19 @@ def aggregate_weekly_holeshot_points_from_picks(comp_ids: list[int]) -> dict[int
 
 @app.get("/get_rider_spotlight")
 def get_rider_spotlight():
-    """Featured rider from the most recent completed race (homepage spotlight box)."""
+    """Featured rider from the most recent completed race (homepage spotlight box).
+
+    Optional query param: ?series=WSX|SX|MX|SMX
+    """
     try:
+        series = _normalize_countdown_series(request.args.get("series"))
         mode = (request.args.get("mode") or "").strip()
         if mode:
-            data = build_spotlight_mode(mode)
+            data = build_spotlight_mode(mode, series=series)
             if not data:
                 return jsonify({"available": False, "mode": mode}), 404
             return jsonify({"available": True, "mode": mode, "data": data})
-        return jsonify(build_rider_spotlight())
+        return jsonify(build_rider_spotlight(series=series))
     except Exception as e:
         print(f"get_rider_spotlight: {e}")
         return jsonify({"available": False, "error": str(e)})
@@ -6390,22 +6948,40 @@ def get_rider_spotlight():
 
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
-    """Get fun weekly statistics like rocket, anchor, perfect picks, etc."""
+    """Get fun weekly statistics like rocket, anchor, perfect picks, etc.
+
+    Optional query param: ?series=WSX|SX|MX|SMX
+    WSX mode: looks back up to 90 days for completed WSX rounds.
+    AMA mode (default/SX/MX/SMX): last 7 days, excludes WSX.
+    """
     try:
         from datetime import datetime, timedelta
-        
+
+        series_param = _normalize_countdown_series(request.args.get("series"))
+        is_wsx_mode = series_param == "WSX"
+
         # Use shared function to calculate deltas - ensures consistency
         leaderboard_data = calculate_leaderboard_deltas()
 
-        # Tävlingar senaste 7 dagarna (endast datum som passerat, undvik framtida race i samma lista)
-        week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
         today_utc = datetime.utcnow().date()
-        recent_competitions = Competition.query.filter(
-            Competition.event_date.isnot(None),
-            Competition.event_date >= week_ago_date,
-            Competition.event_date <= today_utc,
-            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
-        ).all()
+        if is_wsx_mode:
+            # WSX: look back up to 90 days for completed rounds
+            since_date = (datetime.utcnow() - timedelta(days=90)).date()
+            recent_competitions = Competition.query.filter(
+                Competition.event_date.isnot(None),
+                Competition.event_date >= since_date,
+                Competition.event_date <= today_utc,
+                Competition.series == "WSX",
+            ).all()
+        else:
+            # AMA default: last 7 days, no WSX
+            week_ago_date = (datetime.utcnow() - timedelta(days=7)).date()
+            recent_competitions = Competition.query.filter(
+                Competition.event_date.isnot(None),
+                Competition.event_date >= week_ago_date,
+                Competition.event_date <= today_utc,
+                db.or_(Competition.series.is_(None), Competition.series != "WSX"),
+            ).all()
         comp_ids = [c.id for c in recent_competitions]
 
         # Veckopoäng i samma fönster som weekly fun stats (för att kunna kombinera med rank-delta)
@@ -6587,7 +7163,10 @@ def get_weekly_fun_stats():
             holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
         
         
-        return jsonify({
+        from flask import make_response
+        from datetime import datetime as _dt
+        payload = {
+            'series': series_param or 'AMA',
             'rocket': rocket,
             'anchor': anchor,
             'perfect_picks': perfect_picks_winner,
@@ -6596,11 +7175,16 @@ def get_weekly_fun_stats():
                 'week_competition_count': len(comp_ids),
                 'users_with_holeshot_points_gt_0': len(holeshot_stats),
                 'holeshot_master_basis': 'picks_and_results',
+                'is_wsx_mode': is_wsx_mode,
             },
-        })
+        }
+        resp = make_response(jsonify(payload))
+        resp.headers["Cache-Control"] = "public, max-age=120"
+        return resp
         
     except Exception as e:
         return jsonify({
+            'series': request.args.get("series") or 'AMA',
             'rocket': None,
             'anchor': None,
             'perfect_picks': None,
@@ -7526,10 +8110,31 @@ def series_page(series_id):
             print(f"DEBUG: No series found, redirecting to index")
             return redirect(url_for("index"))
         
-        # Get competitions for this series
+        # Get competitions for this series (TBA/null dates last — SQLite-safe)
         db.session.rollback()
-        competitions = Competition.query.filter_by(series_id=series_id).order_by(Competition.event_date).all()
+        competitions = Competition.query.filter_by(series_id=series_id).all()
+        competitions.sort(
+            key=lambda c: (
+                c.event_date is None,
+                c.event_date or date.max,
+                c.id or 0,
+            )
+        )
         print(f"DEBUG: Found {len(competitions)} competitions for series {series_id}")
+
+        # Venue/bana labels for schedule (WSX official calendar)
+        venue_by_name = {
+            "Canadian GP": "Calgary — McMahon Stadium",
+            "British GP": "Birmingham — Alexander Stadium",
+            "Buenos Aires City GP": "Buenos Aires — Óscar & Juan Gálvez",
+            "Australian GP": "Gold Coast — Cbus Super Stadium",
+            "South African GP": "Sydafrika — stad & datum TBA",
+            "New Zealand GP": "Christchurch — One New Zealand Stadium",
+            "Swedish GP": "Sverige",
+        }
+        competition_venues = {
+            c.id: venue_by_name.get(c.name) for c in competitions if venue_by_name.get(c.name)
+        }
         
         # Check if there's an active race set in admin panel
         active_race_id = None
@@ -7694,6 +8299,7 @@ def series_page(series_id):
                              series=series, 
                              competitions=competitions,
                              competition_results=competition_results,
+                             competition_venues=competition_venues,
                              user_picks_status=user_picks_status,
                              picks_locked_status=picks_locked_status,
                              next_race=next_race,
@@ -7935,18 +8541,22 @@ def race_picks_page(competition_id):
 
     if is_wsx:
         # WSX använder egna klasser och separata förare
-        riders_450 = (
-            rider_query_for_list_ui()
-            .filter_by(class_name="wsx_sx1")
-            .order_by(Rider.rider_number)
-            .all()
-        )
-        riders_250 = (
-            rider_query_for_list_ui()
-            .filter_by(class_name="wsx_sx2")
-            .order_by(Rider.rider_number)
-            .all()
-        )
+        riders_450 = wsx_roster_query("wsx_sx1").order_by(Rider.rider_number).all()
+        riders_250 = wsx_roster_query("wsx_sx2").order_by(Rider.rider_number).all()
+        # Orphan OUT (fel rider_id / gammal klass) → mappa till tippa-roster via namn
+        tippa_by_name = {
+            (r.name or "").strip().lower(): r.id for r in (riders_450 + riders_250)
+        }
+        tippa_ids = set(tippa_by_name.values())
+        for oid in list(out_ids):
+            if oid in tippa_ids:
+                continue
+            orphan = Rider.query.get(oid)
+            if not orphan:
+                continue
+            mapped = tippa_by_name.get((orphan.name or "").strip().lower())
+            if mapped:
+                out_ids.add(mapped)
     else:
         # SX/MX/SMX – befintlig logik
         riders_450 = (
@@ -8018,6 +8628,10 @@ def race_picks_page(competition_id):
 
     riders_450_json = [serialize_rider(r) for r in riders_450]
     riders_250_json = [serialize_rider(r) for r in riders_250]
+
+    tippa_ids = {r.id for r in riders_450} | {r.id for r in riders_250}
+    # Banner/listor: bara tippa-roster (orphan OUT redan mappad via namn ovan)
+    out_ids = {i for i in out_ids if i in tippa_ids}
 
     _by_json_id = {r["id"]: r for r in riders_450_json + riders_250_json}
     out_riders_mini = [_by_json_id[i] for i in sorted(out_ids) if i in _by_json_id]
@@ -9307,16 +9921,29 @@ def _rider_championship_standings(rider: Rider, year: int) -> list[dict[str, Any
     return rows
 
 
-def _last_completed_competition() -> Competition | None:
+def _last_completed_competition(*, series: str | None = None) -> Competition | None:
+    """Senaste tävling med resultat. series=None → AMA (exkl. WSX)."""
     today = get_today()
-    return (
+    series_code = _normalize_countdown_series(series)
+    q = (
         db.session.query(Competition)
         .join(CompetitionResult, CompetitionResult.competition_id == Competition.id)
         .filter(Competition.event_date.isnot(None))
         .filter(Competition.event_date <= today)
-        .order_by(Competition.event_date.desc(), Competition.id.desc())
-        .first()
     )
+    if series_code:
+        q = q.filter(Competition.series == series_code)
+    else:
+        q = q.filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+    return q.order_by(Competition.event_date.desc(), Competition.id.desc()).first()
+
+
+def _spotlight_upcoming_competition(*, series: str | None = None) -> Competition | None:
+    """Nästa pick-race för spotlight (crowd pick), scoped per serie."""
+    series_code = _normalize_countdown_series(series)
+    if series_code:
+        return _next_competition_for_picks(series=series_code, require_open=False)
+    return _home_primary_competition(require_open=False)
 
 
 def _p1_winners_for_comp(comp: Competition) -> list[tuple[Rider, CompetitionResult, str]]:
@@ -9783,14 +10410,14 @@ def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
     return False
 
 
-def _spotlight_shell_stale(payload: dict) -> bool:
+def _spotlight_shell_stale(payload: dict, *, series: str | None = None) -> bool:
     """Shell med crowd_pick-flik ska byggas om när picks ännu/inte längre finns."""
     if not payload.get("available"):
         return False
     lazy = payload.get("lazy_modes") or []
     modes = payload.get("modes") or {}
     has_crowd_tab = "crowd_pick" in lazy or "crowd_pick" in modes
-    upcoming = _current_picks_competition()
+    upcoming = _spotlight_upcoming_competition(series=series)
     try:
         locked = is_picks_locked(upcoming) if upcoming else True
     except Exception:
@@ -9995,10 +10622,16 @@ def _build_spotlight_mode_data(
     return None, []
 
 
-def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
-    """Bygg ett spotlight-läge (cachad per flik)."""
+def build_spotlight_mode(
+    mode_key: str,
+    *,
+    series: str | None = None,
+) -> dict[str, Any] | None:
+    """Bygg ett spotlight-läge (cachad per flik + serie)."""
+    series_code = _normalize_countdown_series(series)
+    cache_key = f"{_spotlight_series_cache_key(series_code)}:{mode_key}"
     now = time.time()
-    cached = _RIDER_SPOTLIGHT_MODE_CACHE.get(mode_key)
+    cached = _RIDER_SPOTLIGHT_MODE_CACHE.get(cache_key)
     if cached and cached[0] > now:
         mode_data = cached[1]
         if mode_key == "rocket" and int(mode_data.get("_calc_v") or 0) < 3:
@@ -10008,8 +10641,8 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
         elif not _spotlight_mode_needs_portrait_refresh(mode_data):
             return mode_data
 
-    last_comp = _last_completed_competition()
-    upcoming = _current_picks_competition()
+    last_comp = _last_completed_competition(series=series_code)
+    upcoming = _spotlight_upcoming_competition(series=series_code)
     season_year = _spotlight_season_year(last_comp)
     mode_data, riders = _build_spotlight_mode_data(
         mode_key,
@@ -10025,37 +10658,41 @@ def build_spotlight_mode(mode_key: str) -> dict[str, Any] | None:
         mode_data["_calc_v"] = 3
     if mode_key == "crowd_pick":
         mode_data["_calc_v"] = 2
-    _RIDER_SPOTLIGHT_MODE_CACHE[mode_key] = (now + _HOMEPAGE_CACHE_TTL, mode_data)
+    _RIDER_SPOTLIGHT_MODE_CACHE[cache_key] = (now + _HOMEPAGE_CACHE_TTL, mode_data)
     return mode_data
 
 
-def build_rider_spotlight() -> dict[str, Any]:
+def build_rider_spotlight(*, series: str | None = None) -> dict[str, Any]:
     """Spotlight-shell: metadata + endast standardflik (övriga laddas lazy)."""
-    global _RIDER_SPOTLIGHT_CACHE
+    series_code = _normalize_countdown_series(series)
+    cache_key = _spotlight_series_cache_key(series_code)
     now = time.time()
-    if _RIDER_SPOTLIGHT_CACHE and _RIDER_SPOTLIGHT_CACHE[0] > now:
-        cached = _RIDER_SPOTLIGHT_CACHE[1]
-        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(cached):
+    entry = _RIDER_SPOTLIGHT_CACHE.get(cache_key)
+    if entry and entry[0] > now:
+        cached = entry[1]
+        if not _spotlight_cache_needs_refresh(cached) and not _spotlight_shell_stale(
+            cached, series=series_code
+        ):
             return cached
 
-    last_comp = _last_completed_competition()
-    upcoming = _current_picks_competition()
+    last_comp = _last_completed_competition(series=series_code)
+    upcoming = _spotlight_upcoming_competition(series=series_code)
     available = _spotlight_available_mode_keys(last_comp, upcoming)
     if not available:
-        payload = {"available": False}
-        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        payload = {"available": False, "series": series_code}
+        _RIDER_SPOTLIGHT_CACHE[cache_key] = (now + _HOMEPAGE_CACHE_TTL, payload)
         return payload
 
     default_mode = _spotlight_default_mode_key(available, upcoming)
-    default_data = build_spotlight_mode(default_mode)
+    default_data = build_spotlight_mode(default_mode, series=series_code)
     if not default_data:
         fallback = next((k for k in available if k != default_mode), None)
         if fallback:
             default_mode = fallback
-            default_data = build_spotlight_mode(default_mode)
+            default_data = build_spotlight_mode(default_mode, series=series_code)
     if not default_data:
-        payload = {"available": False}
-        _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+        payload = {"available": False, "series": series_code}
+        _RIDER_SPOTLIGHT_CACHE[cache_key] = (now + _HOMEPAGE_CACHE_TTL, payload)
         return payload
 
     mode_tabs = [
@@ -10066,12 +10703,13 @@ def build_rider_spotlight() -> dict[str, Any]:
     payload = {
         "available": True,
         "title": "I rampljuset",
+        "series": series_code,
         "default_mode": default_mode,
         "mode_tabs": mode_tabs,
         "lazy_modes": [k for k in available if k != default_mode],
         "modes": {default_mode: default_data},
     }
-    _RIDER_SPOTLIGHT_CACHE = (now + _HOMEPAGE_CACHE_TTL, payload)
+    _RIDER_SPOTLIGHT_CACHE[cache_key] = (now + _HOMEPAGE_CACHE_TTL, payload)
     return payload
 
 
@@ -12450,34 +13088,42 @@ def submit_results():
 
     hs_450 = request.form.get("holeshot_450", type=int)
     hs_250 = request.form.get("holeshot_250", type=int)
+
+    # Check if this is a WSX competition early (needed for holeshot class labels)
+    competition = Competition.query.get(comp_id)
+    is_wsx = competition and competition.series == 'WSX'
+    hs_class_450 = "wsx_sx1" if is_wsx else "450cc"
+    hs_class_250 = "wsx_sx2" if is_wsx else "250cc"
     
     if hs_450:
         if complement_mode:
             # Update or add holeshot
-            existing_hs_450 = HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="450cc"
+            existing_hs_450 = HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(["450cc", "wsx_sx1"]),
             ).first()
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
+                existing_hs_450.class_name = hs_class_450
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name=hs_class_450))
         else:
-            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name=hs_class_450))
     
     if hs_250:
         if complement_mode:
             # Update or add holeshot
-            existing_hs_250 = HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="250cc"
+            existing_hs_250 = HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(["250cc", "wsx_sx2"]),
             ).first()
             if existing_hs_250:
                 existing_hs_250.rider_id = hs_250
+                existing_hs_250.class_name = hs_class_250
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name=hs_class_250))
         else:
-            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
+            db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name=hs_class_250))
 
     positions_450_raw = request.form.getlist("positions_450[]")
     riders_450_raw = request.form.getlist("riders_450[]")
@@ -12492,16 +13138,11 @@ def submit_results():
     
     print(f"🔍 DEBUG submit_results: positions_450 length={len(positions_450)}, riders_450 length={len(riders_450)}")
     print(f"🔍 DEBUG submit_results: Non-zero riders_450: {[r for r in riders_450 if r]}")
-    print(f"🔍 DEBUG submit_results: positions_250 length={len(positions_250)}, riders_250 length={len(riders_250)}")
     print(f"🔍 DEBUG submit_results: Non-zero riders_250: {[r for r in riders_250 if r]}")
     
     # Get rider points for WSX (if provided)
     rider_points_450 = request.form.getlist("rider_points_450[]", type=int)
     rider_points_250 = request.form.getlist("rider_points_250[]", type=int)
-    
-    # Check if this is a WSX competition
-    competition = Competition.query.get(comp_id)
-    is_wsx = competition and competition.series == 'WSX'
 
     # Validera att inga dubletter finns inom samma klass
     riders_450_filtered = [rid for rid in riders_450 if rid]
@@ -13423,8 +14064,12 @@ def fetch_racerx_results():
         else:
             parsed = parse_racerx_results_url(url)
             all_comps = Competition.query.order_by(Competition.event_date.desc()).all()
+            prefer = "WSX" if parsed.get("series_key") == "wsx" else None
             matched, warn = match_competition_for_racerx(
-                parsed["event_slug"], parsed["year"], all_comps
+                parsed["event_slug"],
+                parsed["year"],
+                all_comps,
+                prefer_series=prefer,
             )
             inferred = {
                 "event_slug": parsed["event_slug"],
@@ -13432,6 +14077,7 @@ def fetch_racerx_results():
                 "class_segment": parsed["class_segment"],
                 "class_name": parsed["class_name"],
                 "format": parsed["format"],
+                "series_key": parsed.get("series_key"),
                 "competition_id": matched.id if matched else None,
                 "competition_name": matched.name if matched else None,
                 "warning": warn,
@@ -13466,8 +14112,12 @@ def parse_racerx_url():
             return jsonify({"error": "URL saknas"}), 400
         parsed = parse_racerx_results_url(url)
         all_comps = Competition.query.order_by(Competition.event_date.desc()).all()
+        prefer = "WSX" if parsed.get("series_key") == "wsx" else None
         matched, warn = match_competition_for_racerx(
-            parsed["event_slug"], parsed["year"], all_comps
+            parsed["event_slug"],
+            parsed["year"],
+            all_comps,
+            prefer_series=prefer,
         )
         return jsonify({
             "success": True,
@@ -13477,6 +14127,7 @@ def parse_racerx_url():
                 "class_segment": parsed["class_segment"],
                 "class_name": parsed["class_name"],
                 "format": parsed["format"],
+                "series_key": parsed.get("series_key"),
                 "competition_id": matched.id if matched else None,
                 "competition_name": matched.name if matched else None,
                 "warning": warn,
@@ -14399,9 +15050,25 @@ def admin_get_out_status(competition_id):
     try:
         print(f"DEBUG: admin_get_out_status called for competition {competition_id}")
 
-        # all riders
-        riders = db.session.query(Rider).order_by(Rider.class_name.desc(), Rider.rider_number.asc()).all()
-        print(f"DEBUG: Found {len(riders)} riders")
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return jsonify({"error": "competition_not_found"}), 404
+
+        is_wsx = (comp.series or "") == "WSX"
+        if is_wsx:
+            # Same tippa roster as race picks — no orphan/wrong-class duplicates
+            riders = (
+                wsx_roster_query("wsx_sx1").order_by(Rider.rider_number.asc()).all()
+                + wsx_roster_query("wsx_sx2").order_by(Rider.rider_number.asc()).all()
+            )
+        else:
+            riders = (
+                db.session.query(Rider)
+                .filter(Rider.class_name.in_(["450cc", "250cc"]))
+                .order_by(Rider.class_name.desc(), Rider.rider_number.asc())
+                .all()
+            )
+        print(f"DEBUG: Found {len(riders)} riders (wsx={is_wsx})")
 
         # out set for this competition
         out_rows = (
@@ -14413,6 +15080,19 @@ def admin_get_out_status(competition_id):
             .all()
         )
         out_ids = {rid for (rid,) in out_rows}
+
+        # Map orphan OUT rows (wrong rider_id) onto tippa roster by name
+        if is_wsx and out_ids:
+            by_name = {(r.name or "").strip().lower(): r.id for r in riders}
+            orphan_ids = out_ids - {r.id for r in riders}
+            for oid in orphan_ids:
+                orphan = Rider.query.get(oid)
+                if not orphan:
+                    continue
+                key = (orphan.name or "").strip().lower()
+                tippa_id = by_name.get(key)
+                if tippa_id:
+                    out_ids.add(tippa_id)
         print(f"DEBUG: Found {len(out_ids)} OUT riders for competition {competition_id}")
 
         result = [
@@ -14434,14 +15114,6 @@ def admin_get_out_status(competition_id):
         traceback.print_exc()
         return jsonify({"error": "internal_error"}), 500
 
-
-
-
-    # CLEAR (remove or flip to not OUT)
-    if row:
-        db.session.delete(row)
-        db.session.commit()
-    return jsonify({"ok": True, "message": "Rider cleared"}), 200
 
 @app.post("/admin/set_out_status")
 def admin_set_out_status():
@@ -14671,36 +15343,89 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
         wc_pos = payload["wildcard_pos"]
 
     rider_ids = [int(p["rider_id"]) for p in picks if p.get("rider_id") is not None]
-    class_by_rider: dict[int, str] = {}
+    hs450_id = next((rid for cls, rid in holos_map.items() if cls in ("450cc", "wsx_sx1")), None)
+    hs250_id = next((rid for cls, rid in holos_map.items() if cls in ("250cc", "wsx_sx2")), None)
+    for extra_id in (hs450_id, hs250_id, wc_rider):
+        if extra_id is not None:
+            try:
+                rider_ids.append(int(extra_id))
+            except (TypeError, ValueError):
+                pass
+    rider_ids = list({int(rid) for rid in rider_ids if rid})
+
+    riders_by_id: dict[int, Rider] = {}
     if rider_ids:
-        class_by_rider = {
-            int(r.id): (r.class_name or "")
-            for r in Rider.query.filter(Rider.id.in_(rider_ids)).all()
+        riders_by_id = {
+            int(r.id): r
+            for r in rider_query_for_list_ui().filter(Rider.id.in_(rider_ids)).all()
+        }
+    riders_by_name = _riders_by_name_for(list(riders_by_id.values())) if riders_by_id else {}
+
+    def _pick_rider_payload(rid: int | None) -> dict | None:
+        if rid is None:
+            return None
+        rider = riders_by_id.get(int(rid))
+        if not rider:
+            return {"rider_id": int(rid), "rider_name": "?", "rider_number": "?", "class": ""}
+        portraits = _rider_portrait_payload(rider, riders_by_name=riders_by_name)
+        return {
+            "rider_id": int(rider.id),
+            "rider_name": rider.name,
+            "rider_number": rider.rider_number,
+            "class": rider.class_name or "",
+            **portraits,
         }
 
-    return {
-        "top6_picks": [
+    top6_picks = []
+    for p in picks:
+        rid = p.get("rider_id")
+        if rid is None:
+            continue
+        rider = riders_by_id.get(int(rid))
+        portraits = (
+            _rider_portrait_payload(rider, riders_by_name=riders_by_name)
+            if rider
+            else {}
+        )
+        top6_picks.append(
             {
-                "rider_id": p.get("rider_id"),
+                "rider_id": int(rid),
                 "predicted_position": p.get("predicted_position"),
-                "class": class_by_rider.get(int(p["rider_id"]), "") if p.get("rider_id") else "",
+                "class": (rider.class_name if rider else "") or "",
+                "rider_name": rider.name if rider else "?",
+                "rider_number": rider.rider_number if rider else "?",
+                **portraits,
             }
-            for p in picks
-        ],
+        )
+
+    hs450 = _pick_rider_payload(hs450_id)
+    hs250 = _pick_rider_payload(hs250_id)
+    wc_payload = _pick_rider_payload(wc_rider)
+    if wc_payload is not None and wc_pos is not None:
+        wc_payload = {**wc_payload, "position": wc_pos}
+
+    return {
+        "top6_picks": top6_picks,
         "holeshot_picks": {
-            "450cc": next((rid for cls, rid in holos_map.items() if cls in ("450cc", "wsx_sx1")), None),
-            "250cc": next((rid for cls, rid in holos_map.items() if cls in ("250cc", "wsx_sx2")), None),
+            "450cc": hs450_id,
+            "250cc": hs250_id,
             **(
                 {
-                    "wsx_sx1": holos_map.get("wsx_sx1"),
-                    "wsx_sx2": holos_map.get("wsx_sx2"),
+                    "wsx_sx1": holos_map.get("wsx_sx1") or hs450_id,
+                    "wsx_sx2": holos_map.get("wsx_sx2") or hs250_id,
                 }
                 if is_wsx
                 else {}
             ),
         },
+        "holeshot_450": hs450,
+        "holeshot_250": hs250,
         "wildcard_pick": wc_rider,
         "wildcard_pos": wc_pos,
+        "wildcard": wc_payload,
+        "is_wsx": is_wsx,
+        "competition_id": competition_id,
+        "series": getattr(comp, "series", None),
         "snapshot_used": bool(snap),
     }
 
@@ -15306,10 +16031,7 @@ def save_picks():
     if len(new_rider_ids) != len(set(new_rider_ids)):
         return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
 
-    # Extra skydd: om Rider-tabellen råkar innehålla dubletter (samma rider_number i samma klass men olika id),
-    # blockera ändå att man kan välja "samma förare" flera gånger.
     seen_number_keys = set()
-    
     # --- VALIDERA ALLT FÖRST (inga raderingar) så att vi inte tömmer användarens picks vid valideringsfel ---
     wc_pick = data.get("wildcard_pick")
     wc_pos = data.get("wildcard_pos")
@@ -15330,11 +16052,8 @@ def save_picks():
         if rider.id in out_ids:
             return jsonify({"error": "Förare är OUT för detta race"}), 400
 
-        if rider.rider_number is not None:
-            key = (rider.class_name, int(rider.rider_number))
-            if key in seen_number_keys:
-                return jsonify({"error": "Du kan inte välja samma förare flera gånger"}), 400
-            seen_number_keys.add(key)
+        # Rider-id-unikitet redan kontrollerad ovan (set-jämförelse).
+        # rider_number-check hoppas över — samma nummer kan finnas i SX1 och SX2.
 
         if rider.class_name == "250cc" and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
@@ -15410,13 +16129,15 @@ def save_picks():
         saved_picks += 1
         print(f"DEBUG: Added pick - {rider.name} at position {pos}")
     
+    hs_class_450 = "wsx_sx1" if comp.series == "WSX" else "450cc"
+    hs_class_250 = "wsx_sx2" if comp.series == "WSX" else "250cc"
     rid = int(hs450)
     db.session.add(
         HoleshotPick(
             user_id=uid,
             competition_id=comp_id,
             rider_id=rid,
-            class_name="450cc"
+            class_name=hs_class_450,
         )
     )
     rid = int(hs250)
@@ -15425,7 +16146,7 @@ def save_picks():
             user_id=uid,
             competition_id=comp_id,
             rider_id=rid,
-            class_name="250cc"
+            class_name=hs_class_250,
         )
     )
     
@@ -17323,25 +18044,103 @@ def confirm_import_results():
         print(f"Error in confirm_import_results: {e}")
         return jsonify({"error": str(e)}), 500
 
+def _active_wsx_season_year() -> int:
+    """Kalenderår för aktiv WSX-serie (fallback: senaste WSX-år / 2026)."""
+    active = (
+        Series.query.filter_by(name="WSX", is_active=True)
+        .order_by(Series.year.desc())
+        .first()
+    )
+    if active and active.year:
+        return int(active.year)
+    latest = Series.query.filter_by(name="WSX").order_by(Series.year.desc()).first()
+    if latest and latest.year:
+        return int(latest.year)
+    return 2026
+
+
+def _wsx_competitions_for_year(year: int):
+    """WSX-tävlingar för ett säsongsår — via series_id (inkl. TBA utan datum)."""
+    wsx_series = Series.query.filter_by(name="WSX", year=int(year)).first()
+    q = Competition.query.filter(Competition.series == "WSX")
+    if wsx_series:
+        q = q.filter(
+            db.or_(
+                Competition.series_id == wsx_series.id,
+                db.and_(
+                    Competition.series_id.is_(None),
+                    Competition.event_date.isnot(None),
+                    db.extract("year", Competition.event_date) == int(year),
+                ),
+            )
+        )
+    else:
+        q = q.filter(
+            Competition.event_date.isnot(None),
+            db.extract("year", Competition.event_date) == int(year),
+        )
+    comps = q.all()
+    # Kronologisk; TBA (null date) sist — portabelt för SQLite + Postgres
+    comps.sort(key=lambda c: (c.event_date is None, c.event_date or date.max, int(c.id)))
+    return comps
+
+
 _import_competitions_cache: dict[str, tuple[float, dict]] = {}
 
 
 @app.get("/get_competitions_for_import")
 def get_competitions_for_import():
-    """Get list of competitions for CSV import"""
+    """Get list of competitions for CSV import.
+
+    Optional ?series=WSX|AMA|SX|MX|SMX
+    AMA = all non-WSX competitions.
+    For WSX: defaults to active season year. Use ?year=2025 or ?year=all for older/all.
+    """
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
 
     try:
         import time
 
+        series_raw = (request.args.get("series") or "").strip().upper()
+        series_filter = None
+        if series_raw == "AMA":
+            series_filter = "AMA"
+        elif series_raw in ("WSX", "SX", "MX", "SMX"):
+            series_filter = series_raw
+
+        year_raw = (request.args.get("year") or "").strip().lower()
+        year_filter: int | None = None
+        if series_filter == "WSX":
+            if year_raw == "all":
+                year_filter = None
+            elif year_raw.isdigit():
+                year_filter = int(year_raw)
+            else:
+                year_filter = _active_wsx_season_year()
+
+        cache_key = series_filter or "all"
+        if series_filter == "WSX":
+            cache_key = f"WSX:{year_filter if year_filter is not None else 'all'}"
+
         ttl = float((os.getenv("IMPORT_COMPETITIONS_CACHE_TTL") or "25").strip())
         now = time.time()
-        cached = _import_competitions_cache.get("payload")
+        cached = _import_competitions_cache.get(cache_key)
         if cached and (now - cached[0]) < ttl:
             return jsonify(cached[1])
 
-        competitions = Competition.query.order_by(Competition.event_date.desc()).all()
+        if series_filter == "WSX" and year_filter is not None:
+            competitions = _wsx_competitions_for_year(year_filter)
+        else:
+            q = Competition.query
+            if series_filter == "AMA":
+                q = q.filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+            elif series_filter == "WSX":
+                q = q.filter(Competition.series == "WSX")
+            elif series_filter:
+                q = q.filter(Competition.series == series_filter)
+            competitions = q.order_by(Competition.event_date.desc()).all()
+
         cids = [c.id for c in competitions]
         has_results_ids: set[int] = set()
         if cids:
@@ -17365,8 +18164,13 @@ def get_competitions_for_import():
             for comp in competitions
         ]
 
-        payload = {"success": True, "competitions": competition_list}
-        _import_competitions_cache["payload"] = (now, payload)
+        payload = {
+            "success": True,
+            "competitions": competition_list,
+            "series": series_filter,
+            "year": year_filter,
+        }
+        _import_competitions_cache[cache_key] = (now, payload)
         return jsonify(payload)
 
     except Exception as e:
@@ -21780,11 +22584,19 @@ def init_database():
                     _ensure_email_opt_out_column()
                 except Exception as opt_col_err:
                     print(f"Warning: email_opt_out migration skipped: {opt_col_err}")
-                # Auto-seed WSX 2025 so it always exists for the UI
+                # Auto-seed WSX so calendar exists for the UI (2025 history + 2026 season)
                 try:
                     ensure_wsx_series_and_competitions()
                 except Exception as seed_err:
-                    print(f"Warning: WSX seed failed: {seed_err}")
+                    print(f"Warning: WSX 2025 seed failed: {seed_err}")
+                try:
+                    ensure_wsx_2026(deactivate_2025=True)
+                except Exception as seed_err:
+                    print(f"Warning: WSX 2026 series seed failed: {seed_err}")
+                try:
+                    ensure_wsx_2026_roster()
+                except Exception as seed_err:
+                    print(f"Warning: WSX 2026 roster seed failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             
@@ -21816,12 +22628,28 @@ def init_database():
                         db.session.commit()
                         print("Timezone column added successfully")
                     
-                    # Update existing competitions with timezone data
+                    # Keep mapped venues in sync; only default when timezone is blank
                     competitions = Competition.query.all()
+                    touched = 0
+                    explicit_names = {
+                        'Anaheim 1', 'Anaheim 2', 'San Diego', 'Seattle', 'Denver',
+                        'Salt Lake City', 'Glendale', 'Houston', 'Arlington', 'St. Louis',
+                        'Nashville', 'Birmingham', 'Daytona', 'Indianapolis', 'Detroit',
+                        'Cleveland', 'Philadelphia',
+                        'Canadian GP', 'British GP', 'Buenos Aires City GP', 'Australian GP',
+                        'South African GP', 'New Zealand GP', 'Swedish GP',
+                    }
                     for comp in competitions:
-                        comp.timezone = get_track_timezone(comp.name)
+                        if comp.name in explicit_names:
+                            mapped = get_track_timezone(comp.name)
+                            if comp.timezone != mapped:
+                                comp.timezone = mapped
+                                touched += 1
+                        elif not (comp.timezone or "").strip():
+                            comp.timezone = get_track_timezone(comp.name)
+                            touched += 1
                     db.session.commit()
-                    print(f"Updated {len(competitions)} competitions with timezone data")
+                    print(f"Updated timezone on {touched}/{len(competitions)} competitions")
             except Exception as e:
                 print(f"Warning: Could not migrate timezone column: {e}")
                 # Continue anyway, the column will be added when creating new competitions
@@ -24649,9 +25477,15 @@ def race_countdown():
             # Real mode - use actual race dates
             # Skip competitions that already have results (completed races)
             today = get_today()
+            series_filter = _normalize_countdown_series(request.args.get("series"))
+            if series_filter is None:
+                # Homepage default: AMA chain, never auto-hijack to WSX
+                series_filter = _home_default_countdown_series()
+
             all_upcoming = (
                 Competition.query
                 .filter(Competition.event_date >= today)
+                .filter(Competition.series == series_filter)
                 .order_by(Competition.event_date.asc())
                 .all()
             )
@@ -24665,7 +25499,10 @@ def race_countdown():
                     break
             
             if not next_race_obj:
-                return jsonify({"error": "No upcoming races"})
+                return jsonify({
+                    "error": "No upcoming races",
+                    "series": series_filter,
+                })
             
             # Expire the object so properties (like start_time) are re-read from database
             db.session.expire(next_race_obj)
@@ -24678,10 +25515,20 @@ def race_countdown():
             race_datetime = schedule["race_utc"]
             deadline_datetime = schedule["deadline_utc"]
             hero_meta = _race_hero_meta(next_race_obj, schedule)
+
+            bg_url = None
+            try:
+                from trackmap_utils import race_background_static_url
+                bg_path = race_background_static_url(next_race_obj)
+                if bg_path:
+                    bg_url = f"/static/{bg_path}"
+            except Exception:
+                bg_url = None
             
             next_race = {
                 "id": next_race_obj.id,
                 "name": next_race_obj.name,
+                "series": getattr(next_race_obj, "series", None) or series_filter,
                 "event_date": next_race_obj.event_date.isoformat(),
                 "race_start_display": schedule["race_start_display"],
                 "pick_deadline_display": schedule["pick_deadline_display"],
@@ -24691,6 +25538,7 @@ def race_countdown():
                 "time_label": hero_meta.get("time_label"),
                 "location": hero_meta.get("location"),
                 "flag": hero_meta.get("flag"),
+                "bg_url": bg_url,
             }
         
         now = datetime.utcnow()
@@ -24723,74 +25571,9 @@ def race_countdown():
                 "seconds": seconds
             }
         
-        # Use is_picks_locked for consistency
-        # Find the actual competition for this race (skip completed races)
-        all_upcoming_week = Competition.query.filter(
-            Competition.event_date >= today,
-            Competition.event_date <= today + timedelta(days=7)
-        ).order_by(Competition.event_date).all()
-        
-        upcoming_race = None
-        for comp in all_upcoming_week:
-            # Check if this competition has results (is completed)
-            has_results = CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
-            if not has_results:
-                upcoming_race = comp
-                break
-        
-        picks_locked = False
-        if upcoming_race:
-            # Ensure same self-heal for BA when checking lock state
-            try:
-                needs_commit2 = False
-                if 'buenos aires' in (upcoming_race.name or '').lower():
-                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
-                        upcoming_race.timezone = 'America/Argentina/Buenos_Aires'
-                        needs_commit2 = True
-                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
-                        from datetime import time as _t
-                        upcoming_race.start_time = _t(hour=13, minute=0)
-                        needs_commit2 = True
-                elif 'australian' in (upcoming_race.name or '').lower():
-                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
-                        upcoming_race.timezone = 'Australia/Brisbane'
-                        needs_commit2 = True
-                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
-                        from datetime import time as _t
-                        upcoming_race.start_time = _t(hour=18, minute=0)
-                        needs_commit2 = True
-                elif 'swedish' in (upcoming_race.name or '').lower():
-                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
-                        upcoming_race.timezone = 'Europe/Stockholm'
-                        needs_commit2 = True
-                    if hasattr(upcoming_race, 'start_time') and not upcoming_race.start_time:
-                        from datetime import time as _t
-                        upcoming_race.start_time = _t(hour=17, minute=0)
-                        needs_commit2 = True
-                elif 'anaheim 1' in (upcoming_race.name or '').lower():
-                    # Fix event_date if wrong (should be 2026-01-10)
-                    from datetime import date as _d
-                    if upcoming_race.event_date != _d(2026, 1, 10):
-                        upcoming_race.event_date = _d(2026, 1, 10)
-                        needs_commit2 = True
-                    if hasattr(upcoming_race, 'timezone') and not upcoming_race.timezone:
-                        upcoming_race.timezone = 'America/Los_Angeles'
-                        needs_commit2 = True
-                    # Always set start_time to 11:30 for Anaheim 1 (even if it's already set)
-                    if hasattr(upcoming_race, 'start_time'):
-                        from datetime import time as _t
-                        correct_time = _t(hour=11, minute=30)
-                        current_time = upcoming_race.start_time
-                        if current_time is None or current_time != correct_time:
-                            # Race start 11:30 AM PT (11:30) = Sunday Jan 11, 8:30 PM GMT+1, picks deadline 9:30 AM PT (2h before)
-                            upcoming_race.start_time = correct_time
-                            needs_commit2 = True
-                if needs_commit2:
-                    db.session.commit()
-            except Exception as _e3:
-                db.session.rollback()
-                print(f"DEBUG: lock-check BA fix failed: {_e3}")
-            picks_locked = is_picks_locked(upcoming_race)
+        # Use is_picks_locked for consistency against the selected countdown race
+        upcoming_race = next_race_obj
+        picks_locked = is_picks_locked(upcoming_race) if upcoming_race else False
         
         # Check if race has results (is completed)
         has_results = CompetitionResult.query.filter_by(competition_id=next_race_obj.id).first() is not None
@@ -24809,6 +25592,7 @@ def race_countdown():
                 print(f"race_countdown weather: {_we}")
 
         payload = {
+            "series": getattr(next_race_obj, "series", None) or series_filter,
             "next_race": next_race,
             "countdown": {
                 "race_start": format_countdown(race_diff),
@@ -24842,7 +25626,7 @@ def race_countdown():
         from datetime import datetime as _dt
         minute_tag = _dt.utcnow().strftime("%Y%m%d%H%M")
         user_tag = f"u{uid}" if uid else "anon"
-        etag = f"\"racecd:{mode}:{minute_tag}:{user_tag}\""
+        etag = f"\"racecd:{mode}:{series_filter}:{minute_tag}:{user_tag}\""
         if request.headers.get("If-None-Match") == etag:
             resp = make_response("", 304)
         else:
@@ -26326,57 +27110,63 @@ def get_mx_series_leaders():
     return leaders
 
 
-def get_wsx_leaders():
-    """Get current leaders for WSX series (SX1 and SX2) - sum points from all WSX competitions"""
-    
+def get_wsx_leaders(year: int | None = None):
+    """Rider championship leaders for one WSX season (SX1/SX2) — never mixes years."""
     leaders = {
         'wsx_sx1': {'leader': None, 'points': 0, 'top_5': []},
-        'wsx_sx2': {'leader': None, 'points': 0, 'top_5': []}
+        'wsx_sx2': {'leader': None, 'points': 0, 'top_5': []},
     }
-    
-    # Get all riders with WSX classes
-    riders = Rider.query.filter(Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])).all()
-    
-    # Get all WSX competitions
-    wsx_competitions = Competition.query.filter_by(series='WSX').all()
-    
+
+    if year is None:
+        active = (
+            Series.query.filter_by(name="WSX", is_active=True)
+            .order_by(Series.year.desc())
+            .first()
+        )
+        year = int(active.year) if active and active.year else 2026
+
+    wsx_series = Series.query.filter_by(name="WSX", year=int(year)).first()
+    if wsx_series is not None:
+        wsx_competitions = Competition.query.filter_by(series_id=wsx_series.id).all()
+    else:
+        wsx_competitions = [
+            c
+            for c in Competition.query.filter_by(series="WSX").all()
+            if c.event_date and c.event_date.year == int(year)
+        ]
+
     if not wsx_competitions:
-        print("DEBUG: No WSX competitions found")
+        print(f"DEBUG: No WSX competitions found for year={year}")
         return leaders
-    
-    # Calculate points for all WSX riders
+
+    comp_ids = [c.id for c in wsx_competitions]
+    riders = Rider.query.filter(Rider.class_name.in_(['wsx_sx1', 'wsx_sx2'])).all()
+
     rider_points = {}
     for rider in riders:
         total_points = 0
-        
-        # Get results for this rider from WSX competitions only
-        results = db.session.query(CompetitionResult).join(Competition).filter(
+        results = CompetitionResult.query.filter(
             CompetitionResult.rider_id == rider.id,
-            Competition.series == 'WSX'
+            CompetitionResult.competition_id.in_(comp_ids),
         ).all()
-        
-        # Calculate total points from all WSX competitions
-        # Use rider_points if provided (manual entry), otherwise calculate from position
+
         for result in results:
             if result.position and result.position <= 20:
                 if result.rider_points is not None:
-                    # Use manually entered total points for WSX
                     points = result.rider_points
                 else:
-                    # Fallback to calculating from position (for backwards compatibility)
                     points = get_smx_qualification_points(result.position)
                 total_points += points
-        
+
         rider_points[rider.id] = {
             'rider': rider,
             'points': total_points
         }
-    
-    # Sort riders by class, get top 5 for each
+
     for rider_id, data in rider_points.items():
         rider = data['rider']
         points = data['points']
-        
+
         if rider.class_name == 'wsx_sx1':
             leaders['wsx_sx1']['top_5'].append({'rider': rider, 'points': points})
             if points > leaders['wsx_sx1']['points']:
@@ -26387,12 +27177,11 @@ def get_wsx_leaders():
             if points > leaders['wsx_sx2']['points']:
                 leaders['wsx_sx2']['leader'] = rider
                 leaders['wsx_sx2']['points'] = points
-    
-    # Sort top 5 for each series
+
     for series in leaders:
         leaders[series]['top_5'].sort(key=lambda x: x['points'], reverse=True)
         leaders[series]['top_5'] = leaders[series]['top_5'][:5]
-    
+
     return leaders
 
 def get_smx_qualification_points(position):
