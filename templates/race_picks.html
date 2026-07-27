@@ -2161,14 +2161,9 @@ function imgSrcFor(riderId) {
   const isWSX = (r.class === 'wsx_sx1' || r.class === 'wsx_sx2' || (r.series_participation && r.series_participation && r.series_participation.toLowerCase() === 'wsx'));
   if (staticRiderImages && isWSX && r.name) {
     const nameLower = (r.name || '').toLowerCase().trim();
-    // WSX files have inconsistent formats:
-    // - Some have underscores: "cole_thompson (1).jpg" 
-    // - Some don't: "shanemcelrath (1).jpg"
-    // Try no-spaces format first (most common: shanemcelrath, cooperwebb, etc.)
     const fileSlugNoSpaces = nameLower.replace(/\./g, '').replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
-    const imagePath = `riders/wsx/${fileSlugNoSpaces} (1).jpg`;
-    const url = `/static/${imagePath}`;
-    return url;
+    // Clean filenames (no spaces) — legacy "slug (1).jpg" handled in handleImageError
+    return `/static/riders/wsx/${fileSlugNoSpaces}.jpg`;
   }
   
   // 3. If no image_url, try 250 East/West subfolder first (e.g. riders/250east/50_enzo_lopes.png)
@@ -2256,7 +2251,20 @@ function handleImageError(img) {
   
   // If we tried jpg from wsx folder, try variations
   if (src.includes('/static/riders/wsx/')) {
-    const filename = src.split('/').pop();
+    const filename = decodeURIComponent(src.split('/').pop() || '');
+
+    // New clean slug.jpg → try legacy spaced (1)/(2) then brand
+    if (filename.endsWith('.jpg') && !filename.includes(' (') && !filename.includes('_(')) {
+      const base = filename.replace(/\.jpg$/i, '');
+      const tryLegacy1 = `/static/riders/wsx/${encodeURIComponent(base + ' (1).jpg')}`;
+      img.onerror = function () {
+        const tryLegacy2 = `/static/riders/wsx/${encodeURIComponent(base + ' (2).jpg')}`;
+        img.onerror = fallbackToBrandLogo;
+        img.src = tryLegacy2;
+      };
+      img.src = tryLegacy1;
+      return;
+    }
     
     // Try (2) if we tried (1)
     if (filename.includes(' (1).jpg')) {

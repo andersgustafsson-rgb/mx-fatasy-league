@@ -4275,13 +4275,84 @@ def _riders_250_scope(
     return base, None
 
 
+def _wsx_portrait_slug(name: str | None) -> str:
+    nl = (name or "").lower().strip().replace(".", "")
+    return "".join(c for c in nl if c.isalnum())
+
+
+def _wsx_static_portrait_rel(name: str | None) -> str | None:
+    """Relativ static-sökväg till WSX-porträtt om filen finns (utan mellanslag i URL)."""
+    slug = _wsx_portrait_slug(name)
+    if not slug:
+        return None
+    root = os.path.join(app.root_path, "static", "riders", "wsx")
+    # Prefer clean slug.jpg; keep legacy "slug (1).jpg" as fallback
+    for fname in (f"{slug}.jpg", f"{slug}.png", f"{slug} (1).jpg", f"{slug}_1.jpg"):
+        path = os.path.join(root, fname)
+        if os.path.isfile(path):
+            return f"riders/wsx/{fname}"
+    return None
+
+
 def _rider_portrait_url(r: Rider) -> str | None:
     """Data-URL eller relativ sökväg under static (samma som övriga API:er)."""
-    raw = getattr(r, "rider_image_data", None) or getattr(r, "image_url", None)
-    if not raw:
+    if not r:
         return None
-    s = str(raw).strip()
-    return s or None
+    raw_blob = getattr(r, "rider_image_data", None)
+    if raw_blob and str(raw_blob).strip().startswith("data:"):
+        return str(raw_blob).strip()
+
+    # 1) Egen image_url om filen faktiskt finns (undvik trasiga mellanslags-URL:er)
+    img = (getattr(r, "image_url", None) or "").strip()
+    if img:
+        if img.startswith(("http://", "https://", "data:")):
+            return img
+        static_hit = _static_rider_file_url(img)
+        if static_hit:
+            # powerRankingPortraitSrc förväntar relativ riders/... (inte /static/)
+            return static_hit[len("/static/") :] if static_hit.startswith("/static/") else static_hit
+        # Legacy: riders/wsx/foo (1).jpg → prova slug.jpg
+        if "riders/wsx/" in img.replace("\\", "/"):
+            wsx_rel = _wsx_static_portrait_rel(getattr(r, "name", None))
+            if wsx_rel:
+                return wsx_rel
+
+    # 2) WSX-mapp efter namn
+    cls = (getattr(r, "class_name", None) or "").strip()
+    sp = (getattr(r, "series_participation", None) or "").strip().lower()
+    if cls in ("wsx_sx1", "wsx_sx2") or sp == "wsx":
+        wsx_rel = _wsx_static_portrait_rel(getattr(r, "name", None))
+        if wsx_rel:
+            return wsx_rel
+
+    # 3) AMA/SMX-tvilling med befintlig static-fil eller portrait-route
+    try:
+        from racerx_rider_bio import find_best_portrait_rider_for_name
+
+        best = find_best_portrait_rider_for_name(getattr(r, "name", None) or "")
+    except Exception:
+        best = None
+    if best is not None and int(best.id) != int(r.id):
+        twin_img = (getattr(best, "image_url", None) or "").strip()
+        if twin_img and not twin_img.startswith(("http://", "https://", "data:")):
+            static_hit = _static_rider_file_url(twin_img)
+            if static_hit:
+                return static_hit[len("/static/") :] if static_hit.startswith("/static/") else static_hit
+        twin_blob = getattr(best, "rider_image_data", None)
+        if twin_blob and str(twin_blob).strip().startswith("data:"):
+            return f"/rider_portrait/{int(best.id)}"
+        # portraits/*.webp etc via display helper
+        try:
+            src = template_rider_image_src(best)
+            if src and "/brand_logos/" not in src:
+                if src.startswith("/static/"):
+                    return src[len("/static/") :]
+                if src.startswith("/rider_portrait/"):
+                    return src
+        except Exception:
+            pass
+
+    return None
 
 
 def _static_rider_file_url(image_url: str | None) -> str | None:
@@ -4656,11 +4727,9 @@ def _resolve_rider_headshot_for_display(rider: Rider) -> str | None:
     cls = (getattr(rider, "class_name", None) or "").strip()
     sp = (getattr(rider, "series_participation", None) or "").strip().lower()
     if cls in ("wsx_sx1", "wsx_sx2") or sp == "wsx":
-        if rider.name:
-            nl = (rider.name or "").lower().strip().replace(".", "")
-            slug = "".join(c for c in nl if c.isalnum())
-            if slug:
-                return f"riders/wsx/{slug} (1).jpg"
+        wsx_rel = _wsx_static_portrait_rel(getattr(rider, "name", None))
+        if wsx_rel:
+            return wsx_rel
 
     coast = (getattr(rider, "coast_250", None) or "").strip().lower()
     if cls == "250cc" and rider.rider_number is not None and rider.name and coast in (

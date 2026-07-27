@@ -233,16 +233,19 @@ def main() -> int:
             print(f"[SKIP] no image for {name}")
             continue
         data, ext = result
-        primary = OUT_DIR / f"{slug} (1).jpg"
+        primary = OUT_DIR / f"{slug}.jpg"
         primary.write_bytes(data)
-        # Drop legacy numbered variants so tippa always hits the new (1).jpg
+        # Drop legacy numbered / spaced variants
         for old in OUT_DIR.glob(f"{slug} (*).*"):
-            if old.resolve() != primary.resolve():
-                try:
-                    old.unlink()
-                except OSError:
-                    pass
-        # Drop underscore-slug duplicate (cole_thompson vs colethompson)
+            try:
+                old.unlink()
+            except OSError:
+                pass
+        for old in OUT_DIR.glob(f"{slug}_*.*"):
+            if old.resolve() == primary.resolve():
+                continue
+            # keep only if different slug prefix accidentally — skip
+            pass
         underscore = "".join(
             c if c.isalnum() else "_" for c in name.lower().replace(".", "")
         ).strip("_")
@@ -253,7 +256,13 @@ def main() -> int:
                     old.unlink()
                 except OSError:
                     pass
-        rel = f"riders/wsx/{slug} (1).jpg"
+            underscored = OUT_DIR / f"{underscore}.jpg"
+            if underscored.exists() and underscored.resolve() != primary.resolve():
+                try:
+                    underscored.unlink()
+                except OSError:
+                    pass
+        rel = f"riders/wsx/{slug}.jpg"
         saved[name] = rel
         print(f"[OK] {name} -> {primary.name} ({len(data)} bytes)")
 

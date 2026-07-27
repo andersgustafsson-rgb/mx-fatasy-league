@@ -5454,10 +5454,19 @@
     }
     
     function powerRankingPortraitSrc(r) {
-      if (!r || !r.image_url) return '';
-      const u = r.image_url;
-      if (u.startsWith('data:')) return u;
-      return '/static/' + (u.startsWith('riders/') ? u : 'riders/' + u);
+      if (!r) return '';
+      let u = (r.image_url || '').trim();
+      if (!u && r.name) {
+        const slug = String(r.name).toLowerCase().replace(/\./g, '').replace(/[^a-z0-9]/g, '');
+        if (slug) u = `riders/wsx/${slug}.jpg`;
+      }
+      if (!u) return '';
+      if (u.startsWith('data:') || u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/')) {
+        return u.includes(' ') ? encodeURI(u) : u;
+      }
+      const rel = u.startsWith('riders/') ? u : `riders/${u}`;
+      // encodeURI keeps / but encodes spaces & parentheses
+      return encodeURI('/static/' + rel);
     }
 
     function renderPowerRankingRows(rows, label) {
