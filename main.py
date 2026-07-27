@@ -4294,6 +4294,70 @@ def _wsx_static_portrait_rel(name: str | None) -> str | None:
     return None
 
 
+def _wsx_static_avatar_rel(name: str | None) -> str | None:
+    """Kvadratisk ansikts-crop för små cirklar (power ranking m.m.)."""
+    slug = _wsx_portrait_slug(name)
+    if not slug:
+        return None
+    root = os.path.join(app.root_path, "static", "riders", "wsx", "avatars")
+    for fname in (f"{slug}.jpg", f"{slug}.png"):
+        path = os.path.join(root, fname)
+        if os.path.isfile(path):
+            return f"riders/wsx/avatars/{fname}"
+    return None
+
+
+def _static_rel_from_public(url: str | None) -> str | None:
+    """'/static/riders/x' → 'riders/x'; absolute /rider_portrait/... behålls."""
+    u = str(url or "").strip()
+    if not u:
+        return None
+    if u.startswith("/static/"):
+        return u[len("/static/") :]
+    if u.startswith("/rider_portrait/") or u.startswith(("http://", "https://", "data:")):
+        return u
+    return u
+
+
+def _rider_ama_twin_avatar_rel(r: Rider) -> str | None:
+    """Tight AMA/SMX-headshot från tvillingrad (bättre i små cirklar än WSX-kort)."""
+    try:
+        from racerx_rider_bio import find_best_portrait_rider_for_name
+
+        best = find_best_portrait_rider_for_name(getattr(r, "name", None) or "")
+    except Exception:
+        best = None
+    if best is None or int(best.id) == int(r.id):
+        return None
+    twin_img = (getattr(best, "image_url", None) or "").strip()
+    if twin_img and not twin_img.startswith(("http://", "https://", "data:")):
+        static_hit = _static_rider_file_url(twin_img)
+        if static_hit:
+            return _static_rel_from_public(static_hit)
+    twin_blob = getattr(best, "rider_image_data", None)
+    if twin_blob and str(twin_blob).strip().startswith("data:"):
+        return f"/rider_portrait/{int(best.id)}"
+    try:
+        src = template_rider_image_src(best)
+        if src and "/brand_logos/" not in str(src):
+            return _static_rel_from_public(src)
+    except Exception:
+        pass
+    # Klassisk riders/{num}_{name}.png
+    num = getattr(best, "rider_number", None)
+    name = getattr(best, "name", None) or ""
+    if num is not None and name:
+        name_slug = re.sub(
+            r"[^a-z0-9_]",
+            "",
+            re.sub(r"\s+", "_", name.lower().strip()),
+        )
+        rel = f"riders/{int(num)}_{name_slug}.png"
+        if _static_rider_file_url(rel):
+            return rel
+    return None
+
+
 def _rider_portrait_url(r: Rider) -> str | None:
     """Data-URL eller relativ sökväg under static (samma som övriga API:er)."""
     if not r:
@@ -4310,7 +4374,7 @@ def _rider_portrait_url(r: Rider) -> str | None:
         static_hit = _static_rider_file_url(img)
         if static_hit:
             # powerRankingPortraitSrc förväntar relativ riders/... (inte /static/)
-            return static_hit[len("/static/") :] if static_hit.startswith("/static/") else static_hit
+            return _static_rel_from_public(static_hit)
         # Legacy: riders/wsx/foo (1).jpg → prova slug.jpg
         if "riders/wsx/" in img.replace("\\", "/"):
             wsx_rel = _wsx_static_portrait_rel(getattr(r, "name", None))
@@ -4325,35 +4389,28 @@ def _rider_portrait_url(r: Rider) -> str | None:
         if wsx_rel:
             return wsx_rel
 
-    # 3) AMA/SMX-tvilling med befintlig static-fil eller portrait-route
-    try:
-        from racerx_rider_bio import find_best_portrait_rider_for_name
-
-        best = find_best_portrait_rider_for_name(getattr(r, "name", None) or "")
-    except Exception:
-        best = None
-    if best is not None and int(best.id) != int(r.id):
-        twin_img = (getattr(best, "image_url", None) or "").strip()
-        if twin_img and not twin_img.startswith(("http://", "https://", "data:")):
-            static_hit = _static_rider_file_url(twin_img)
-            if static_hit:
-                return static_hit[len("/static/") :] if static_hit.startswith("/static/") else static_hit
-        twin_blob = getattr(best, "rider_image_data", None)
-        if twin_blob and str(twin_blob).strip().startswith("data:"):
-            return f"/rider_portrait/{int(best.id)}"
-        # portraits/*.webp etc via display helper
-        try:
-            src = template_rider_image_src(best)
-            if src and "/brand_logos/" not in src:
-                if src.startswith("/static/"):
-                    return src[len("/static/") :]
-                if src.startswith("/rider_portrait/"):
-                    return src
-        except Exception:
-            pass
+    # 3) AMA/SMX-tvilling
+    twin = _rider_ama_twin_avatar_rel(r)
+    if twin:
+        return twin
 
     return None
 
+
+def _rider_avatar_url(r: Rider) -> str | None:
+    """
+    Bild för små cirklar (power ranking): föredra AMA-headshot / ansikts-crop
+    framför WSX helfigur-kort (som blir oläsliga i 40px).
+    """
+    if not r:
+        return None
+    twin = _rider_ama_twin_avatar_rel(r)
+    if twin:
+        return twin
+    avatar = _wsx_static_avatar_rel(getattr(r, "name", None))
+    if avatar:
+        return avatar
+    return _rider_portrait_url(r)
 
 def _static_rider_file_url(image_url: str | None) -> str | None:
     """Om image_url pekar på en fil under static/ som finns — använd den (ej DB-blob)."""
@@ -4803,7 +4860,7 @@ def _rank_bucket_picks_only(
                     "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4),
                     "source": "picks",
                 },
-                "image_url": _rider_portrait_url(r),
+                "image_url": _rider_avatar_url(r),
             }
         )
     return rows
@@ -4887,7 +4944,7 @@ def _rank_bucket(
                     "crowd_raw": round(float(crowd_raw.get(rid, 0.0)), 4) if crowd_raw else None,
                     "source": "results_and_picks",
                 },
-                "image_url": _rider_portrait_url(r),
+                "image_url": _rider_avatar_url(r),
             }
         )
     return rows, False

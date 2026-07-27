@@ -5480,9 +5480,9 @@
         const coast = r.coast_250 ? ` <span class="text-gray-500 text-[10px]">(${String(r.coast_250).toUpperCase()})</span>` : '';
         const src = powerRankingPortraitSrc(r);
         const imgBlock = src
-          ? `<img src="${src}" alt="" class="w-10 h-10 rounded-full object-cover border-2 border-cyan-500/40 shrink-0 bg-gray-900" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden');" />
-             <div class="hidden w-10 h-10 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`
-          : `<div class="w-10 h-10 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`;
+          ? `<img src="${src}" alt="" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover object-top border-2 border-cyan-500/40 shrink-0 bg-slate-900" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden');" />
+             <div class="hidden w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`
+          : `<div class="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-gray-600 shrink-0 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-gray-400">#${r.number ?? '—'}</div>`;
         h += `
           <div class="flex items-center justify-between gap-3 rounded-lg bg-gray-800/80 border border-gray-700/80 px-3 py-2">
             <div class="flex items-center gap-3 min-w-0">
