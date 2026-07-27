@@ -1357,7 +1357,9 @@ def get_track_timezone(track_name):
         'Anaheim 1': 'America/Los_Angeles',      # Anaheim, CA
         'Anaheim 2': 'America/Los_Angeles',      # Anaheim, CA
         'San Diego': 'America/Los_Angeles',      # San Diego, CA
+        'San Francisco': 'America/Los_Angeles',  # San Francisco, CA
         'Seattle': 'America/Los_Angeles',        # Seattle, WA
+        'Las Vegas': 'America/Los_Angeles',      # Las Vegas, NV
         
         # Mountain Time (UTC-7/-6) - Colorado, Utah, Arizona
         'Denver': 'America/Denver',              # Denver, CO
@@ -1370,13 +1372,31 @@ def get_track_timezone(track_name):
         'St. Louis': 'America/Chicago',          # St. Louis, MO
         'Nashville': 'America/Chicago',          # Nashville, TN
         'Birmingham': 'America/Chicago',         # Birmingham, AL (AMA SX)
+        'Minneapolis': 'America/Chicago',        # Minneapolis, MN
         
-        # Eastern Time (UTC-5/-4) - Florida, Indiana, Michigan, Ohio, Pennsylvania
+        # Eastern Time (UTC-5/-4)
         'Daytona': 'America/New_York',           # Daytona Beach, FL
-        'Indianapolis': 'America/New_York',      # Indianapolis, IN
-        'Detroit': 'America/New_York',           # Detroit, MI
+        'Tampa': 'America/New_York',             # Tampa, FL
+        'Indianapolis': 'America/Indiana/Indianapolis',
+        'Detroit': 'America/Detroit',            # Detroit, MI
         'Cleveland': 'America/New_York',         # Cleveland, OH
         'Philadelphia': 'America/New_York',      # Philadelphia, PA
+        'East Rutherford': 'America/New_York',   # MetLife, NJ
+        'Foxborough': 'America/New_York',        # Foxborough, MA
+        'Atlanta': 'America/New_York',           # Atlanta, GA
+
+        # Pro Motocross nationals
+        'Fox Raceway National': 'America/Los_Angeles',   # Pala, CA
+        'Hangtown Classic': 'America/Los_Angeles',       # Sacramento, CA
+        'Thunder Valley National': 'America/Denver',     # Lakewood, CO
+        'High Point National': 'America/New_York',       # Mt. Morris, PA
+        'RedBud National': 'America/Detroit',            # Buchanan, MI
+        'Southwick National': 'America/New_York',        # Southwick, MA
+        'Spring Creek National': 'America/Chicago',      # Millville, MN
+        'Washougal National': 'America/Los_Angeles',     # Washougal, WA
+        'Unadilla National': 'America/New_York',         # New Berlin, NY
+        'Budds Creek National': 'America/New_York',      # Mechanicsville, MD
+        'Ironman National': 'America/Indiana/Indianapolis',  # Crawfordsville, IN
 
         # WSX GPs (stadium names differ by year; keys are Competition.name)
         'Canadian GP': 'America/Edmonton',       # 2026 Calgary (McMahon)
@@ -22879,10 +22899,17 @@ def init_database():
                     competitions = Competition.query.all()
                     touched = 0
                     explicit_names = {
-                        'Anaheim 1', 'Anaheim 2', 'San Diego', 'Seattle', 'Denver',
-                        'Salt Lake City', 'Glendale', 'Houston', 'Arlington', 'St. Louis',
-                        'Nashville', 'Birmingham', 'Daytona', 'Indianapolis', 'Detroit',
-                        'Cleveland', 'Philadelphia',
+                        'Anaheim 1', 'Anaheim 2', 'San Diego', 'San Francisco', 'Seattle',
+                        'Denver', 'Salt Lake City', 'Glendale', 'Houston', 'Arlington',
+                        'St. Louis', 'Nashville', 'Birmingham', 'Daytona', 'Tampa',
+                        'Indianapolis', 'Detroit', 'Cleveland', 'Philadelphia',
+                        'East Rutherford', 'Foxborough', 'Minneapolis', 'Atlanta', 'Las Vegas',
+                        # Pro Motocross
+                        'Fox Raceway National', 'Hangtown Classic', 'Thunder Valley National',
+                        'High Point National', 'RedBud National', 'Southwick National',
+                        'Spring Creek National', 'Washougal National', 'Unadilla National',
+                        'Budds Creek National', 'Ironman National',
+                        # WSX
                         'Canadian GP', 'British GP', 'Buenos Aires City GP', 'Australian GP',
                         'South African GP', 'New Zealand GP', 'Swedish GP',
                     }
