@@ -974,6 +974,10 @@
   const holeshotResults = {{ holeshot_results|tojson }};
   const allRiders = {{ (riders_450_json + riders_250_json) | tojson }};
   window.allRiders = allRiders;
+  const validRiderIdSet = new Set(allRiders.map((r) => String(r.id)));
+  function isValidTippaRiderId(riderId) {
+    return riderId != null && riderId !== '' && validRiderIdSet.has(String(riderId));
+  }
   const staticRiderImages = {{ static_rider_images | tojson }};
   const portraitsInDropdown = {{ portraits_in_dropdown | tojson }};
   // NYTT: OUT-lista från servern för att kunna validera i UI
@@ -1169,6 +1173,8 @@
 
   function ensureSelectValue(sel, value, label) {
     if (!sel || value == null || value === '') return;
+    // WSX tippa: injicera aldrig förare utanför aktuell roster (t.ex. Roczen från localStorage)
+    if (isWSXSeries && !isValidTippaRiderId(value)) return;
     const v = String(value);
     if (![...sel.options].some((o) => o.value === v)) {
       const o = document.createElement('option');
@@ -1342,12 +1348,28 @@
         return;
       }
 
+      let pruned = false;
+      const dropIfInvalid = (pick) => {
+        if (!pick || pick.riderId == null) return null;
+        if (isWSXSeries && !isValidTippaRiderId(pick.riderId)) {
+          pruned = true;
+          return null;
+        }
+        return pick;
+      };
+
       // Load race picks
       const riderClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
       riderClasses.forEach(riderClass => {
-        if (picks.racePicks[riderClass]) {
+        if (picks.racePicks && picks.racePicks[riderClass]) {
           Object.keys(picks.racePicks[riderClass]).forEach(position => {
-            const pick = picks.racePicks[riderClass][position];
+            const pick = dropIfInvalid(picks.racePicks[riderClass][position]);
+            if (!pick) {
+              if (picks.racePicks[riderClass][position]) {
+                delete picks.racePicks[riderClass][position];
+              }
+              return;
+            }
             const selector = document.querySelector(`.rider-selector[data-class="${riderClass}"][data-position="${position}"]`);
             if (selector && pick) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
@@ -1378,8 +1400,12 @@
 
       // Load holeshot picks
       ['450', '250'].forEach(classType => {
-        if (picks.holeshotPicks[classType]) {
-          const pick = picks.holeshotPicks[classType];
+        if (picks.holeshotPicks && picks.holeshotPicks[classType]) {
+          const pick = dropIfInvalid(picks.holeshotPicks[classType]);
+          if (!pick) {
+            delete picks.holeshotPicks[classType];
+            return;
+          }
           const selector = document.querySelector(`.rider-selector[data-class="holeshot-${classType}"]`);
           if (selector && pick) {
             const selectedRiderSpan = selector.querySelector('.selected-rider');
@@ -1394,6 +1420,12 @@
           }
         }
       });
+
+      if (pruned) {
+        try {
+          localStorage.setItem(`race_picks_${competitionId}`, JSON.stringify(picks));
+        } catch (e) {}
+      }
 
       // Load wildcard pick (only for non-WSX series)
       if (!isWSXSeries && picks.wildcardPick) {

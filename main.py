@@ -1051,6 +1051,17 @@ _WSX_2026_ROSTER = [
 # Names that moved class or left the championship grid — drop from tippa lists.
 _WSX_2026_RETIRED_FROM_GRID = {
     "Coty Schock",  # RWR SX2 seat taken by Max Anstie
+    # 2025 leftovers still stored as wsx_sx* in DB — never tippa for 2026
+    "Ken Roczen",
+    "Eli Tomac",
+    "Haiden Deegan",
+    "Justin Cooper",
+    "Matt Moss",
+    "Anthony Bourdon",
+    "Kyle Chisholm",
+    "Cullin Park",
+    "Noah Viney",
+    "Lance Kobusch",
 }
 
 _WSX_2026_ROSTER_NAMES_BY_CLASS = {
@@ -1063,6 +1074,79 @@ def wsx_roster_query(class_name: str):
     """Query only the currently official WSX 2026 roster for the given class."""
     names = _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
     return rider_query_for_list_ui().filter_by(class_name=class_name).filter(Rider.name.in_(names))
+
+
+def _wsx_official_roster_ids() -> set[int]:
+    ids: set[int] = set()
+    for cls in ("wsx_sx1", "wsx_sx2"):
+        for (rid,) in (
+            db.session.query(Rider.id)
+            .filter(
+                Rider.class_name == cls,
+                Rider.name.in_(_WSX_2026_ROSTER_NAMES_BY_CLASS.get(cls, set())),
+            )
+            .all()
+        ):
+            ids.add(int(rid))
+    return ids
+
+
+def prune_off_roster_wsx_picks(competition_id: int) -> dict[str, int]:
+    """
+    Ta bort tippa/holeshot-val på WSX-tävlingar som pekar på förare utanför 2026-rostern
+    (t.ex. Ken Roczen kvar från 2025).
+    """
+    comp = Competition.query.get(int(competition_id))
+    if not comp or (getattr(comp, "series", None) or "").upper() != "WSX":
+        return {"deleted_race": 0, "deleted_hs": 0, "skipped": 1}
+
+    # Bevara historik för tidigare säsonger (t.ex. WSX 2025)
+    year = None
+    try:
+        if getattr(comp, "series_id", None):
+            series = Series.query.get(comp.series_id)
+            if series and series.year:
+                year = int(series.year)
+    except Exception:
+        year = None
+    if year is None and getattr(comp, "event_date", None):
+        year = int(comp.event_date.year)
+    if year is not None and year < 2026:
+        return {"deleted_race": 0, "deleted_hs": 0, "skipped": 1}
+
+    allowed = _wsx_official_roster_ids()
+    if not allowed:
+        return {"deleted_race": 0, "deleted_hs": 0, "skipped": 1}
+
+    deleted_race = (
+        RacePick.query.filter(
+            RacePick.competition_id == int(competition_id),
+            ~RacePick.rider_id.in_(allowed),
+        ).delete(synchronize_session=False)
+        or 0
+    )
+    deleted_hs = (
+        HoleshotPick.query.filter(
+            HoleshotPick.competition_id == int(competition_id),
+            ~HoleshotPick.rider_id.in_(allowed),
+        ).delete(synchronize_session=False)
+        or 0
+    )
+    # Wildcard finns inte på WSX — städa om gamla rader hängt kvar
+    deleted_wc = (
+        WildcardPick.query.filter_by(competition_id=int(competition_id)).delete(
+            synchronize_session=False
+        )
+        or 0
+    )
+    if deleted_race or deleted_hs or deleted_wc:
+        db.session.commit()
+    return {
+        "deleted_race": int(deleted_race),
+        "deleted_hs": int(deleted_hs),
+        "deleted_wc": int(deleted_wc),
+        "skipped": 0,
+    }
 
 
 def _remap_wsx_rider_refs(old_id: int, new_id: int) -> int:
@@ -8808,6 +8892,11 @@ def race_picks_page(competition_id):
 
     if is_wsx:
         # WSX använder egna klasser och separata förare
+        try:
+            prune_off_roster_wsx_picks(int(comp.id))
+        except Exception as prune_err:
+            print(f"WSX pick prune skipped: {prune_err}")
+            db.session.rollback()
         riders_450 = wsx_roster_query("wsx_sx1").order_by(Rider.rider_number).all()
         riders_250 = wsx_roster_query("wsx_sx2").order_by(Rider.rider_number).all()
         # Orphan OUT (fel rider_id / gammal klass) → mappa till tippa-roster via namn
@@ -15810,6 +15899,13 @@ def get_my_picks(competition_id):
     if not comp:
         return jsonify({"error": "not_found"}), 404
 
+    if (getattr(comp, "series", None) or "").upper() == "WSX":
+        try:
+            prune_off_roster_wsx_picks(int(competition_id))
+        except Exception as prune_err:
+            print(f"WSX pick prune skipped: {prune_err}")
+            db.session.rollback()
+
     return jsonify(_my_picks_api_dict(session["user_id"], comp))
 
 
@@ -16305,7 +16401,13 @@ def save_picks():
     if comp.series == "WSX":
         wc_pick = None
         wc_pos = None
+        try:
+            prune_off_roster_wsx_picks(int(comp.id))
+        except Exception:
+            db.session.rollback()
     
+    wsx_allowed_ids = _wsx_official_roster_ids() if comp.series == "WSX" else set()
+
     riders_450_ids = []
     for p in picks:
         try:
@@ -16318,6 +16420,10 @@ def save_picks():
             return jsonify({"error": f"Förare med id {rid} hittades inte"}), 400
         if rider.id in out_ids:
             return jsonify({"error": "Förare är OUT för detta race"}), 400
+        if comp.series == "WSX" and int(rider.id) not in wsx_allowed_ids:
+            return jsonify({
+                "error": f"{rider.name} är inte med i WSX 2026-rostern — välj om dina picks"
+            }), 400
 
         # Rider-id-unikitet redan kontrollerad ovan (set-jämförelse).
         # rider_number-check hoppas över — samma nummer kan finnas i SX1 och SX2.
@@ -16346,6 +16452,8 @@ def save_picks():
         rid = int(hs450)
         if rid in out_ids:
             return jsonify({"error": "Förare är OUT för detta race"}), 400
+        if comp.series == "WSX" and rid not in wsx_allowed_ids:
+            return jsonify({"error": "Holeshot SX1 måste vara en 2026-rosterförare"}), 400
     except Exception:
         return jsonify({"error": "Ogiltig holeshot-förare för 450cc/SX1"}), 400
     
@@ -16357,6 +16465,8 @@ def save_picks():
         rider = Rider.query.get(rid)
         if rider and rider.id in out_ids:
             return jsonify({"error": "Förare är OUT för detta race"}), 400
+        if comp.series == "WSX" and rid not in wsx_allowed_ids:
+            return jsonify({"error": "Holeshot SX2 måste vara en 2026-rosterförare"}), 400
         if rider and comp.coast_250 in ("east", "west"):
             if rider.coast_250 not in (comp.coast_250, "both"):
                 return jsonify({"error": "250-holeshot matchar inte denna coast"}), 400
