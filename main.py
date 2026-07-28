@@ -46,6 +46,8 @@ _SPOTLIGHT_TAB_META: dict[str, dict[str, str]] = {
     "rocket": {"label": "Veckans raket", "icon": "🚀"},
     "dark_horse": {"label": "Mörk häst", "icon": "🌙"},
 }
+# Bump when portrait resolution logic changes (one-time cache rebuild, not every request).
+_SPOTLIGHT_PORTRAIT_CACHE_V = 3
 _SERIES_STATUS_CACHE: tuple[float, list] | None = None
 _POWER_RANKING_CACHE: dict[int, tuple[float, dict]] = {}
 _HOMEPAGE_CACHE_TTL = 600.0
