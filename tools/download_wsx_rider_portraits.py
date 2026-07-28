@@ -69,7 +69,9 @@ ROSTER_NAMES = {
     "Nico Koch",
     "Mike Alessi",
     "Tom Vialle",
-    # On site but not in tippa roster — still download if present
+    "Dean Wilson",
+    "Jack Chambers",
+    "Luke Fauser",
     "Cameron McAdoo",
     "Brodie Connolly",
 }

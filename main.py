@@ -1006,47 +1006,91 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
     return info
 
 
-# Official 2026 championship roster (MX1Onboard / WSX announcements, Jul 2026).
+# Official 2026 championship + round entry list (MX1Onboard / WSX Calgary cards, Jul 2026).
 # Tuple: (name, class, number|None, brand|None, team|None)
 # price is a placeholder — WSX is tippa-only (no season-team).
 _WSX_2026_ROSTER = [
-    # --- SX1 ---
+    # --- SX1 (Calgary line-up + season riders who may return later) ---
+    ("Jason Anderson", "wsx_sx1", 21, "Suzuki", "Pipes Motorsport Group"),
+    ("Colt Nichols", "wsx_sx1", 45, "Suzuki", "Pipes Motorsport Group"),
+    ("Jordi Tixier", "wsx_sx1", 911, "Yamaha", "Team GSM"),
+    ("Maxime Desprey", "wsx_sx1", 141, "Yamaha", "Team GSM"),
+    ("Mitchell Harrison", "wsx_sx1", 41, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Luke Clout", "wsx_sx1", 4, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Cooper Webb", "wsx_sx1", 2, "Yamaha", "Rick Ware Racing"),
     ("Justin Hill", "wsx_sx1", 46, "Yamaha", "Rick Ware Racing"),
-    ("Joey Savatgy", "wsx_sx1", 17, "Honda", "Quad Lock Honda"),
-    ("Christian Craig", "wsx_sx1", 28, "Honda", "Quad Lock Honda"),
-    ("Jason Anderson", "wsx_sx1", 1, "Suzuki", "Pipes Motorsport Group"),
-    ("Colt Nichols", "wsx_sx1", 45, "Suzuki", "Pipes Motorsport Group"),
+    ("Austin Politelli", "wsx_sx1", 98, "Honda", "MotoConcepts Racing"),
+    ("Mike Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
+    ("Dean Wilson", "wsx_sx1", 15, "Honda", "Fire Power Honda / KMG"),
+    ("Christian Craig", "wsx_sx1", 28, "Honda", "Fire Power Honda / KMG"),
     ("Vince Friese", "wsx_sx1", 719, "Stark", "Stark Racing"),
     ("Jorge Zaragoza", "wsx_sx1", 99, "Stark", "Stark Racing"),
     ("Greg Aranda", "wsx_sx1", 20, "KTM", "595 Racing"),
-    ("Kevin Moranz", "wsx_sx1", 78, "KTM", "595 Racing"),
-    ("Austin Politelli", "wsx_sx1", 98, "Honda", "MotoConcepts Racing"),
+    ("Kevin Moranz", "wsx_sx1", 89, "KTM", "595 Racing"),
+    # Season / later rounds (OUT for Calgary if not on gate)
+    ("Joey Savatgy", "wsx_sx1", 17, "Honda", "Quad Lock Honda"),
     ("Enzo Lopes", "wsx_sx1", 16, "Honda", "MotoConcepts Racing"),
-    ("Luke Clout", "wsx_sx1", 4, "Kawasaki", "Venum Bud Racing Kawasaki"),
-    ("Mitchell Harrison", "wsx_sx1", 41, "Kawasaki", "Venum Bud Racing Kawasaki"),
-    ("Maxime Desprey", "wsx_sx1", 141, "Yamaha", "Team GSM"),
-    ("Jordi Tixier", "wsx_sx1", 911, "Yamaha", "Team GSM"),
-    # --- SX2 ---
-    ("Max Anstie", "wsx_sx2", 69, "Yamaha", "Rick Ware Racing"),
-    ("Devin Simonson", "wsx_sx2", 88, "Yamaha", "Rick Ware Racing"),
-    ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
-    ("Cole Thompson", "wsx_sx2", 2, "Yamaha", "Team GSM"),
-    ("Calvin Fonvieille", "wsx_sx2", 11, "Yamaha", "Team GSM"),
+    # --- SX2 Calgary line-up ---
+    ("Max Anstie", "wsx_sx2", 1, "Honda", "Fire Power Honda"),
+    ("Devin Simonson", "wsx_sx2", 70, "Honda", "Fire Power Honda"),
+    ("Crockett Myers", "wsx_sx2", 112, "Suzuki", "Pipes Motorsport Group"),
+    ("Kyle Peters", "wsx_sx2", 110, "Suzuki", "Pipes Motorsport Group"),
+    ("Cole Thompson", "wsx_sx2", 16, "Yamaha", "Team GSM"),
+    ("Calvin Fonvieille", "wsx_sx2", 111, "Yamaha", "Team GSM"),
+    ("Henry Miller", "wsx_sx2", 29, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Jack Chambers", "wsx_sx2", 69, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Ryan Breece", "wsx_sx2", 200, "Honda", "MotoConcepts Racing"),
     ("Robbie Wageman", "wsx_sx2", 237, "Honda", "MotoConcepts Racing"),
-    ("Henry Miller", "wsx_sx2", 29, "Kawasaki", "Venum Bud Racing Kawasaki"),
-    ("Jake Cannon", "wsx_sx2", 3, "Kawasaki", "Venum Bud Racing Kawasaki"),
-    ("Michael Hicks", "wsx_sx2", 460, "Stark", "Stark Racing"),
+    ("Cameron McAdoo", "wsx_sx2", 142, "Honda", "KMG"),
+    ("Brodie Connolly", "wsx_sx2", 88, "Honda", "KMG"),
+    ("Michael Hicks", "wsx_sx2", 46, "Stark", "Stark Racing"),
     ("Brian Hsu", "wsx_sx2", 81, "Stark", "Stark Racing"),
-    ("Kyle Peters", "wsx_sx2", 110, "Suzuki", "Pipes Motorsport Group"),
-    ("Crockett Myers", "wsx_sx2", 411, "Suzuki", "Pipes Motorsport Group"),
-    ("Hector Assuncao", "wsx_sx2", 4, "KTM", "595 Racing"),
     ("Nico Koch", "wsx_sx2", 260, "KTM", "595 Racing"),
-    # Round wildcards (available in tippa; not full-time championship seats)
-    ("Mike Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
-    ("Tom Vialle", "wsx_sx2", 28, "KTM", "Red Bull KTM"),  # British GP
+    ("Luke Fauser", "wsx_sx2", 462, "KTM", "595 Racing"),
+    # Season / later rounds (OUT for Calgary if not on gate)
+    ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
+    ("Jake Cannon", "wsx_sx2", 3, "Kawasaki", "Venum Bud Racing Kawasaki"),
+    ("Hector Assuncao", "wsx_sx2", 4, "KTM", "595 Racing"),
+    ("Tom Vialle", "wsx_sx2", 28, "KTM", "Red Bull KTM"),  # British GP wildcard
 ]
+
+# Calgary Canadian GP gate lists (official SX1/SX2 Calgary line-up cards).
+_WSX_CANADIAN_GP_SX1 = {
+    "Jason Anderson",
+    "Colt Nichols",
+    "Jordi Tixier",
+    "Maxime Desprey",
+    "Mitchell Harrison",
+    "Luke Clout",
+    "Cooper Webb",
+    "Justin Hill",
+    "Austin Politelli",
+    "Mike Alessi",
+    "Dean Wilson",
+    "Christian Craig",
+    "Vince Friese",
+    "Jorge Zaragoza",
+    "Greg Aranda",
+    "Kevin Moranz",
+}
+_WSX_CANADIAN_GP_SX2 = {
+    "Max Anstie",
+    "Devin Simonson",
+    "Crockett Myers",
+    "Kyle Peters",
+    "Cole Thompson",
+    "Calvin Fonvieille",
+    "Henry Miller",
+    "Jack Chambers",
+    "Ryan Breece",
+    "Robbie Wageman",
+    "Cameron McAdoo",
+    "Brodie Connolly",
+    "Michael Hicks",
+    "Brian Hsu",
+    "Nico Koch",
+    "Luke Fauser",
+}
 
 # Names that moved class or left the championship grid — drop from tippa lists.
 _WSX_2026_RETIRED_FROM_GRID = {
@@ -1343,6 +1387,75 @@ def ensure_wsx_2026_roster() -> dict:
     return info
 
 
+def sync_wsx_canadian_gp_entry_list() -> dict:
+    """
+    Markera roster-förare som inte står på Calgary-grinden som OUT för Canadian GP 2026.
+    Rör bara den tävlingen (säsongsförare kan tippas i senare GP).
+    Gate-förare som råkat vara OUT rensas.
+    """
+    wsx = Series.query.filter_by(name="WSX", year=2026).first()
+    if not wsx:
+        return {"skipped": True, "reason": "no_wsx_2026"}
+
+    comp = Competition.query.filter_by(name="Canadian GP", series_id=wsx.id).first()
+    if not comp:
+        return {"skipped": True, "reason": "no_canadian_gp"}
+
+    gate = _WSX_CANADIAN_GP_SX1 | _WSX_CANADIAN_GP_SX2
+    marked_out = 0
+    cleared = 0
+
+    roster_riders = (
+        Rider.query.filter(
+            Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+            Rider.name.in_(_WSX_2026_ROSTER_NAMES_BY_CLASS["wsx_sx1"]
+                           | _WSX_2026_ROSTER_NAMES_BY_CLASS["wsx_sx2"]),
+        ).all()
+    )
+
+    for rider in roster_riders:
+        on_gate = (rider.name or "") in gate
+        row = CompetitionRiderStatus.query.filter_by(
+            competition_id=comp.id, rider_id=rider.id
+        ).first()
+        if on_gate:
+            if row:
+                db.session.delete(row)
+                cleared += 1
+            continue
+        if not row:
+            db.session.add(
+                CompetitionRiderStatus(
+                    competition_id=comp.id, rider_id=rider.id, status="OUT"
+                )
+            )
+            marked_out += 1
+        elif row.status != "OUT":
+            row.status = "OUT"
+            marked_out += 1
+
+    if marked_out or cleared:
+        db.session.commit()
+
+    try:
+        prune_off_roster_wsx_picks(int(comp.id))
+    except Exception as prune_err:
+        print(f"[WSX-SEED] Canadian GP pick prune skipped: {prune_err}")
+
+    info = {
+        "competition_id": int(comp.id),
+        "gate_size": len(gate),
+        "marked_out": marked_out,
+        "cleared": cleared,
+        "skipped": False,
+    }
+    print(
+        f"[WSX-SEED] Canadian GP entry list: out={marked_out} cleared={cleared} "
+        f"gate={len(gate)} comp_id={comp.id}"
+    )
+    return info
+
+
 @app.post("/admin/seed_wsx")
 def admin_seed_wsx():
     """Legacy: ensure WSX 2025 rows exist (history). Prefer /admin/seed_wsx_2026."""
@@ -1362,10 +1475,12 @@ def admin_seed_wsx_2026():
     try:
         series_info = ensure_wsx_2026(deactivate_2025=True)
         roster_info = ensure_wsx_2026_roster()
+        entry_info = sync_wsx_canadian_gp_entry_list()
         return jsonify({
             "message": "WSX 2026 seeded/verified",
             "series": series_info,
             "roster": roster_info,
+            "canadian_gp_entry": entry_info,
         })
     except Exception as e:
         db.session.rollback()
@@ -22974,6 +23089,10 @@ def init_database():
                     ensure_wsx_2026_roster()
                 except Exception as seed_err:
                     print(f"Warning: WSX 2026 roster seed failed: {seed_err}")
+                try:
+                    sync_wsx_canadian_gp_entry_list()
+                except Exception as seed_err:
+                    print(f"Warning: WSX Canadian GP entry sync failed: {seed_err}")
             except Exception as e:
                 print(f"Warning: Could not create tables (they may already exist): {e}")
             
