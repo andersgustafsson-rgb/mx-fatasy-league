@@ -7,6 +7,12 @@
 {% set _good_to_know = picks_good_to_know | default([]) %}
 {% set _is_mx = is_mx_race | default(competition.series == 'MX') %}
 {% set _show_layout_images = (not _is_mx) and (_trackmap_urls|length > 0) %}
+{% set _venue = race_prep_venue | default(none) %}
+{% set _start_label = race_prep_start_label | default(none) %}
+{% set _out_count = (out_ids | default([])) | length %}
+{% set _wc_names = race_prep_wildcard_names | default([]) %}
+{% set _has_weather = picks_weather and picks_weather.get('available') %}
+{% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr %}
 <div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
   <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
     <h2>{% if _show_layout_images %}{{ mx_icon('map-pin') }} Banlayout &amp; inför racet{% else %}{{ mx_icon('map-pin') }} Inför racet{% endif %}</h2>
@@ -40,20 +46,34 @@
       <details class="race-prep-details" open>
         <summary>{{ mx_icon('flag') }} Race Info</summary>
         <div class="race-prep-details__body">
-          <div class="race-prep-kv"><span>Bana</span><span>{{ competition.name }}</span></div>
+          <div class="race-prep-kv"><span>Tävling</span><span>{{ competition.name }}</span></div>
+          {% if _venue %}
+          <div class="race-prep-kv"><span>Plats</span><span>{{ _venue }}</span></div>
+          {% endif %}
           <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
-          {% if _is_mx %}
+          {% if _start_label %}
+          <div class="race-prep-kv"><span>Start</span><span>{{ _start_label }}</span></div>
+          {% endif %}
+          {% if _is_wsx_hdr %}
+          <div class="race-prep-kv"><span>Serie</span><span>WSX · SX1 + SX2</span></div>
+          {% elif _is_mx %}
           <div class="race-prep-kv"><span>Serie</span><span>Pro Motocross</span></div>
           {% elif competition.coast_250 %}
           <div class="race-prep-kv"><span>250SX</span><span>{{ competition.coast_250|capitalize }}</span></div>
           {% endif %}
+          {% if _out_count > 0 %}
+          <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }} förare syns inte i listorna</span></div>
+          {% endif %}
+          {% if _wc_names %}
+          <div class="race-prep-kv"><span>WC / fill-in</span><span>{{ _wc_names | join(', ') }}</span></div>
+          {% endif %}
         </div>
       </details>
 
-      <details class="race-prep-details"{% if picks_weather and picks_weather.get('available') and _is_mx %} open{% endif %}>
+      <details class="race-prep-details"{% if _open_know %} open{% endif %}>
         <summary>{{ mx_icon('note') }} Bra att veta</summary>
         <div class="race-prep-details__body">
-          {% if picks_weather and picks_weather.get('available') %}
+          {% if _has_weather %}
           <div class="race-prep-weather">
             <div class="race-prep-weather__summary">{{ picks_weather.summary_sv }}</div>
             <div class="race-prep-weather__icon{% if picks_weather.icon in ('cloud', 'partly') %} race-prep-weather__icon--{{ picks_weather.icon }}{% endif %}" aria-hidden="true">
@@ -88,6 +108,12 @@
           <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
           <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
           <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
+          {% if _out_count > 0 %}
+          <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }}</span></div>
+          {% endif %}
+          {% if _wc_names %}
+          <div class="race-prep-kv"><span>WC denna runda</span><span>{{ _wc_names | length }}</span></div>
+          {% endif %}
         </div>
       </details>
     </div>

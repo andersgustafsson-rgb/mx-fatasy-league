@@ -1113,6 +1113,67 @@ def _wsx_wildcard_names_for_competition(comp: Competition | None) -> set[str]:
     return set(_WSX_ROUND_WILDCARDS.get((comp.name or "").strip(), set()))
 
 
+_WSX_VENUE_BY_NAME = {
+    "Canadian GP": "Calgary — McMahon Stadium",
+    "British GP": "Birmingham — Alexander Stadium",
+    "Buenos Aires City GP": "Buenos Aires — Oscar & Juan Gálvez",
+    "Australian GP": "Gold Coast — Cbus Super Stadium",
+    "South African GP": "TBA",
+    "New Zealand GP": "Christchurch — One NZ Stadium",
+}
+
+
+def _race_prep_venue_label(comp: Competition | None) -> str | None:
+    if not comp:
+        return None
+    loc = (getattr(comp, "location", None) or "").strip()
+    if loc:
+        return loc
+    if (getattr(comp, "series", None) or "").upper() == "WSX":
+        return _WSX_VENUE_BY_NAME.get((comp.name or "").strip())
+    return None
+
+
+def _race_prep_start_label(comp: Competition | None) -> str | None:
+    """Local start time label for Inför racet (e.g. 19:30 MDT)."""
+    if not comp:
+        return None
+    st = getattr(comp, "start_time", None)
+    hhmm = None
+    if st:
+        try:
+            hhmm = st.strftime("%H:%M") if hasattr(st, "strftime") else str(st)[:5]
+        except Exception:
+            hhmm = str(st)[:5]
+        if hhmm in ("None", "null", ""):
+            hhmm = None
+    # Seed fallback for known WSX rounds when DB start_time is still blank
+    if not hhmm and (getattr(comp, "series", None) or "").upper() == "WSX":
+        hhmm = {
+            "Canadian GP": "19:30",
+        }.get((comp.name or "").strip())
+    if not hhmm:
+        return None
+    tz = (getattr(comp, "timezone", None) or "").strip()
+    tz_short = {
+        "America/Edmonton": "MDT",
+        "America/Los_Angeles": "PT",
+        "America/Denver": "MT",
+        "America/Chicago": "CT",
+        "America/New_York": "ET",
+        "Europe/London": "BST/GMT",
+        "Australia/Brisbane": "AEST",
+        "Pacific/Auckland": "NZDT",
+        "America/Argentina/Buenos_Aires": "ART",
+        "Africa/Johannesburg": "SAST",
+    }.get(tz)
+    if tz_short:
+        return f"{hhmm} {tz_short} (banans tid)"
+    if tz:
+        return f"{hhmm} lokal tid"
+    return hhmm
+
+
 # Names that moved class or left the championship grid — drop from tippa lists.
 _WSX_2026_RETIRED_FROM_GRID = {
     "Coty Schock",  # RWR SX2 seat taken by Max Anstie
@@ -9413,6 +9474,9 @@ def race_picks_page(competition_id):
         picks_good_to_know=picks_good_to_know,
         picks_weather=picks_weather,
         is_mx_race=is_mx_race,
+        race_prep_venue=_race_prep_venue_label(comp),
+        race_prep_start_label=_race_prep_start_label(comp),
+        race_prep_wildcard_names=sorted(_wsx_wildcard_names_for_competition(comp)),
         picks_locked=picks_locked,
         static_rider_images=not _on_render,
         portraits_in_dropdown=not _on_render,

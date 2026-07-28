@@ -250,12 +250,20 @@ def get_picks_good_to_know(competition) -> list[str]:
         return tips
 
     if series == "WSX":
+        name = (getattr(competition, "name", None) or "").strip()
         tips.extend(
             [
-                "WSX: två klasser (SX1 / SX2) — gör picks i båda.",
-                "Holeshot ger extra poäng — välj en realistisk holeshot-favorit per klass.",
+                "WSX: tippa SX1 och SX2 topp 6 — ingen wildcard-omgång.",
+                "Holeshot ger extra poäng — en favorit per klass (SX1 + SX2).",
+                "Deadline är 2 timmar före start — spara i tid.",
             ]
         )
+        if name == "Canadian GP":
+            tips[0:0] = [
+                "Calgary / McMahon Stadium — öppningsrunda 2026.",
+                "Fyra fill-ins (WC) kör bara denna runda: Alessi, Wilson, Chambers, Fauser.",
+                "OUT-listan gömmer säsongsförare som inte står på Calgary-grinden.",
+            ]
         return tips
 
     coast = (getattr(competition, "coast_250", None) or "").lower()

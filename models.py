@@ -101,9 +101,17 @@ class Competition(db.Model):
         if not self.has_start_time_column():
             return
         try:
+            from datetime import time as _time
+
+            if isinstance(value, _time):
+                bound = value.strftime("%H:%M:%S")
+            elif value is None:
+                bound = None
+            else:
+                bound = str(value).strip() or None
             db.session.execute(
                 db.text("UPDATE competitions SET start_time = :start_time WHERE id = :id"),
-                {'start_time': value, 'id': self.id}
+                {"start_time": bound, "id": self.id},
             )
         except Exception:
             pass
