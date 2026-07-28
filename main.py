@@ -1342,6 +1342,7 @@ def ensure_wsx_2026_roster() -> dict:
                 rider = other
                 reclassed += 1
             else:
+                wsx_rel = _wsx_static_portrait_rel(name)
                 rider = Rider(
                     name=name,
                     class_name=class_name,
@@ -1351,6 +1352,7 @@ def ensure_wsx_2026_roster() -> dict:
                     team=team or None,
                     price=100000,
                     series_participation="wsx",
+                    image_url=wsx_rel,
                 )
                 db.session.add(rider)
                 created += 1
@@ -1371,6 +1373,11 @@ def ensure_wsx_2026_roster() -> dict:
             changed = True
         if getattr(rider, "series_participation", None) != "wsx":
             rider.series_participation = "wsx"
+            changed = True
+        # Bind local WSX card path when file exists (keeps tippa/spotlight off brand logos)
+        wsx_rel = _wsx_static_portrait_rel(name)
+        if wsx_rel and (getattr(rider, "image_url", None) or "").strip() != wsx_rel:
+            rider.image_url = wsx_rel
             changed = True
         if changed:
             updated += 1
@@ -4716,6 +4723,17 @@ def template_rider_image_src(
     """Bild-URL för Jinja (förarlista, bio) — inkl. dublett-fallback."""
     if not rider:
         return None
+
+    # WSX: prefer downloaded card/avatar over AMA twin webp (often missing in prod → brand logo).
+    cls = (getattr(rider, "class_name", None) or "").strip()
+    if cls in ("wsx_sx1", "wsx_sx2"):
+        own_static = _static_rider_file_url(getattr(rider, "image_url", None))
+        if own_static:
+            return own_static
+        wsx_rel = _wsx_static_portrait_rel(getattr(rider, "name", None))
+        if wsx_rel:
+            return f"/static/{wsx_rel}"
+
     try:
         from racerx_rider_bio import (
             find_best_portrait_rider_for_name,
