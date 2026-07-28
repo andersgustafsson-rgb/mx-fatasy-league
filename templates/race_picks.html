@@ -69,6 +69,10 @@
         width: 52px;
         height: 52px;
       }
+      .preview-avatar-wrap {
+        width: 52px;
+        height: 52px;
+      }
     }
   .result-correct { border-left: 4px solid #22c55e; }
   .dark .result-correct { background-color: rgba(34, 197, 94, 0.1); }
@@ -255,12 +259,54 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    margin-right: 10px;
+    margin-right: 0;
     object-fit: contain;
     object-position: center;
     background: #374151;
     border: 2px solid #4b5563;
     flex-shrink: 0;
+    display: block;
+  }
+  .rider-avatar-wrap {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  .preview-avatar-wrap {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+  }
+  .preview-avatar-wrap .preview-img {
+    margin: 0;
+  }
+  .wc-flag {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.15rem;
+    height: 1.15rem;
+    padding: 0 3px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #111827;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    border: 1.5px solid rgba(17, 24, 39, 0.85);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+  }
+  .wc-flag[hidden] {
+    display: none !important;
   }
   .rider-avatar.portrait-photo {
     object-fit: cover;
@@ -286,10 +332,11 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    margin-right: 10px;
+    margin-right: 0;
     background: #374151;
     border: 2px solid #4b5563;
     flex-shrink: 0;
+    display: block;
   }
 
   .preview-img.is-loading {
@@ -345,6 +392,16 @@
     .rider-avatar {
       width: 48px;
       height: 48px;
+    }
+    .rider-avatar-wrap,
+    .preview-avatar-wrap {
+      width: 48px;
+      height: 48px;
+    }
+    .wc-flag {
+      min-width: 1rem;
+      height: 1rem;
+      font-size: 7px;
     }
     
     .rider-name {
@@ -745,7 +802,10 @@
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_450_label }}</h3>
       {% for i in range(1, 7) %}
         <div class="pick-row mb-1.5">
-          <img id="prev-450-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+          <div class="preview-avatar-wrap">
+            <img id="prev-450-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+            <span class="wc-flag" hidden title="Wildcard / fill-in">WC</span>
+          </div>
           <div class="flex items-center gap-2">
             <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
             <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
@@ -784,7 +844,10 @@
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">{{ class_250_label }}</h3>
       {% for i in range(1, 7) %}
         <div class="pick-row mb-1.5">
-          <img id="prev-250-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+          <div class="preview-avatar-wrap">
+            <img id="prev-250-{{ i }}" class="preview-img" alt="" loading="lazy" decoding="async" />
+            <span class="wc-flag" hidden title="Wildcard / fill-in">WC</span>
+          </div>
           <div class="flex items-center gap-2">
             <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
             <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
@@ -1002,6 +1065,25 @@
     return OUT_IDS.some((x) => Number(x) === Number(rid));
   }
 
+  function isWildcardRider(riderOrId) {
+    if (riderOrId && typeof riderOrId === 'object') {
+      return !!riderOrId.is_wildcard;
+    }
+    const rid = Number(riderOrId);
+    if (!rid) return false;
+    const hit = allRiders.find((r) => Number(r.id) === rid);
+    return !!(hit && hit.is_wildcard);
+  }
+  window.isWildcardRider = isWildcardRider;
+
+  function setPreviewWildcardFlag(imgEl, on) {
+    const wrap = imgEl && imgEl.closest && imgEl.closest('.preview-avatar-wrap');
+    const flag = wrap && wrap.querySelector('.wc-flag');
+    if (!flag) return;
+    if (on) flag.removeAttribute('hidden');
+    else flag.setAttribute('hidden', '');
+  }
+
   function getSelectedTop6Ids(dataClass) {
     return Array.from(document.querySelectorAll(`.rider-selector[data-class="${dataClass}"]`))
       .map((sel) => {
@@ -1091,11 +1173,15 @@
     }
     const outHtml = div.dataset.out === 'true' ? '<span class="out-badge">OUT</span>' : '';
     const photo = effectivePhotoUrl(rider);
-    const avatarHtml = photo
+    const wcFlag = isWildcardRider(rider)
+      ? '<span class="wc-flag" title="Wildcard / fill-in">WC</span>'
+      : '';
+    const avatarInner = photo
       ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '" src="' + String(photo).replace(/"/g, '&quot;') + '">'
       : (portraitsInDropdown
         ? '<img alt="" class="rider-avatar" data-rider-id="' + rider.id + '">'
         : '<span class="rider-avatar-placeholder" aria-hidden="true"></span>');
+    const avatarHtml = '<span class="rider-avatar-wrap">' + avatarInner + wcFlag + '</span>';
     div.innerHTML =
       avatarHtml +
       '<span class="rider-info">' +
@@ -2541,6 +2627,7 @@ function onPickChange(cls, pos, riderId = null) {
 
   if (img) {
     loadSelectedRiderPortrait(val, img);
+    setPreviewWildcardFlag(img, isWildcardRider(val));
   }
 
   updateDropdowns(cls);

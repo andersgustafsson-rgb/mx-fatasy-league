@@ -609,7 +609,10 @@
 
   function portraitHtml(rider) {
     if (!rider) return '<div class="wizard-summary-portrait"></div>';
-    return `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${rider.id}">`;
+    const wc = (typeof window.isWildcardRider === 'function' && window.isWildcardRider(rider))
+      || !!rider.is_wildcard;
+    const flag = wc ? '<span class="wc-flag" title="Wildcard / fill-in">WC</span>' : '';
+    return `<span class="wizard-summary-portrait-wrap"><img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${rider.id}">${flag}</span>`;
   }
 
   function hydrateSummaryPortraits(root) {

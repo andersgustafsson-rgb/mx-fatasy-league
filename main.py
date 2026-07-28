@@ -1092,6 +1092,27 @@ _WSX_CANADIAN_GP_SX2 = {
     "Luke Fauser",
 }
 
+# Round fill-ins / wildcards (not full-season championship seats for that GP).
+# Shown with a small WC badge next to the tippa portrait.
+_WSX_ROUND_WILDCARDS = {
+    "Canadian GP": {
+        "Mike Alessi",  # fill-in for Enzo Lopes
+        "Dean Wilson",  # fill-in for Joey Savatgy
+        "Jack Chambers",  # fill-in for Jake Cannon
+        "Luke Fauser",  # fill-in for Hector Assuncao
+    },
+    "British GP": {
+        "Tom Vialle",
+    },
+}
+
+
+def _wsx_wildcard_names_for_competition(comp: Competition | None) -> set[str]:
+    if not comp or (getattr(comp, "series", None) or "").upper() != "WSX":
+        return set()
+    return set(_WSX_ROUND_WILDCARDS.get((comp.name or "").strip(), set()))
+
+
 # Names that moved class or left the championship grid — drop from tippa lists.
 _WSX_2026_RETIRED_FROM_GRID = {
     "Coty Schock",  # RWR SX2 seat taken by Max Anstie
@@ -2623,6 +2644,7 @@ def index():
                 # Remove duplicates based on rider_id first
                 seen_rider_ids_450 = set()
                 seen_rider_ids_250 = set()
+                home_wc_names = _wsx_wildcard_names_for_competition(upcoming_race)
                 
                 # Sort picks by predicted_position to ensure correct order
                 sorted_race_picks = sorted(race_picks, key=lambda p: p.predicted_position)
@@ -2640,6 +2662,7 @@ def index():
                                 "image_url": portraits["image_url"],
                                 "racerx_portrait_url": portraits["racerx_portrait_url"],
                                 "bike_brand": portraits["bike_brand"],
+                                "is_wildcard": (rider.name or "") in home_wc_names,
                             }
                             
                             # Separate by class (map WSX classes to display classes)
@@ -9068,6 +9091,8 @@ def race_picks_page(competition_id):
     riders_by_name = build_riders_by_name_map(all_pick_riders)
 
     # 3) Serialisering för JS (inkl is_out + image_url)
+    wildcard_names = _wsx_wildcard_names_for_competition(comp)
+
     def serialize_rider(r: Rider):
         # Samma porträttslogik som spotlight/bio (inkl. dublett-förare som Jett 450/250).
         from app.portrait_urls import lookup_racerx_portrait_by_name
@@ -9090,6 +9115,7 @@ def race_picks_page(competition_id):
             "bike_brand": r.bike_brand,
             "price": r.price,
             "is_out": (r.id in out_ids),
+            "is_wildcard": (r.name or "") in wildcard_names,
             "image_url": img_url,
             "portrait_url": portrait_url,
             "racerx_portrait_url": racerx_url,
