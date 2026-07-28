@@ -4529,30 +4529,55 @@ def _wsx_portrait_slug(name: str | None) -> str:
     return "".join(c for c in nl if c.isalnum())
 
 
+# Historical typos / alt spellings in DB → official roster name (portraits + display).
+_WSX_NAME_ALIASES = {
+    "Jason Andersson": "Jason Anderson",
+}
+
+
+def _canonical_wsx_rider_name(name: str | None) -> str:
+    raw = (name or "").strip()
+    if not raw:
+        return ""
+    return _WSX_NAME_ALIASES.get(raw, raw)
+
+
+def _wsx_portrait_name_candidates(name: str | None) -> list[str]:
+    raw = (name or "").strip()
+    if not raw:
+        return []
+    out = [raw]
+    canon = _canonical_wsx_rider_name(raw)
+    if canon and canon not in out:
+        out.append(canon)
+    return out
+
+
 def _wsx_static_portrait_rel(name: str | None) -> str | None:
     """Relativ static-sökväg till WSX-porträtt om filen finns (utan mellanslag i URL)."""
-    slug = _wsx_portrait_slug(name)
-    if not slug:
-        return None
     root = os.path.join(app.root_path, "static", "riders", "wsx")
-    # Prefer clean slug.jpg; keep legacy "slug (1).jpg" as fallback
-    for fname in (f"{slug}.jpg", f"{slug}.png", f"{slug} (1).jpg", f"{slug}_1.jpg"):
-        path = os.path.join(root, fname)
-        if os.path.isfile(path):
-            return f"riders/wsx/{fname}"
+    for candidate in _wsx_portrait_name_candidates(name):
+        slug = _wsx_portrait_slug(candidate)
+        if not slug:
+            continue
+        for fname in (f"{slug}.jpg", f"{slug}.png", f"{slug} (1).jpg", f"{slug}_1.jpg"):
+            path = os.path.join(root, fname)
+            if os.path.isfile(path):
+                return f"riders/wsx/{fname}"
     return None
 
 
 def _wsx_static_avatar_rel(name: str | None) -> str | None:
     """Kvadratisk ansikts-crop för små cirklar (power ranking m.m.)."""
-    slug = _wsx_portrait_slug(name)
-    if not slug:
-        return None
     root = os.path.join(app.root_path, "static", "riders", "wsx", "avatars")
-    for fname in (f"{slug}.jpg", f"{slug}.png"):
-        path = os.path.join(root, fname)
-        if os.path.isfile(path):
-            return f"riders/wsx/avatars/{fname}"
+    for candidate in _wsx_portrait_name_candidates(name):
+        slug = _wsx_portrait_slug(candidate)
+        if not slug:
+            continue
+        for fname in (f"{slug}.jpg", f"{slug}.png"):
+            path = os.path.join(root, fname)
+            if os.path.isfile(path):
+                return f"riders/wsx/avatars/{fname}"
     return None
 
 
@@ -4733,6 +4758,31 @@ def template_rider_image_src(
         wsx_rel = _wsx_static_portrait_rel(getattr(rider, "name", None))
         if wsx_rel:
             return f"/static/{wsx_rel}"
+        # Typo rows (e.g. Jason Andersson) may point at a missing riders/21_*.png —
+        # try AMA twin / classic headshot via canonical spelling before brand logo.
+        canon = _canonical_wsx_rider_name(getattr(rider, "name", None))
+        if canon and canon != (getattr(rider, "name", None) or "").strip():
+            try:
+                from racerx_rider_bio import find_best_portrait_rider_for_name
+
+                twin = find_best_portrait_rider_for_name(canon)
+            except Exception:
+                twin = None
+            if twin is not None:
+                twin_static = _static_rider_file_url(getattr(twin, "image_url", None))
+                if twin_static:
+                    return twin_static
+                num = getattr(twin, "rider_number", None)
+                if num is not None:
+                    name_slug = re.sub(
+                        r"[^a-z0-9_]",
+                        "",
+                        re.sub(r"\s+", "_", canon.lower().strip()),
+                    )
+                    rel = f"riders/{int(num)}_{name_slug}.png"
+                    hit = _static_rider_file_url(rel)
+                    if hit:
+                        return hit
 
     try:
         from racerx_rider_bio import (
@@ -10542,7 +10592,14 @@ def _patch_spotlight_portraits(
             r = by_id.get(int(card.get("rider_id") or 0))
             if not r:
                 continue
+            canon = _canonical_wsx_rider_name(getattr(r, "name", None))
+            if canon and canon != (getattr(r, "name", None) or "").strip():
+                card["name"] = canon
             url = template_rider_image_src(r, bio_card=True, riders_by_name=riders_by_name)
+            if not url or "/brand_logos/" in str(url):
+                wsx_rel = _wsx_static_portrait_rel(canon or getattr(r, "name", None))
+                if wsx_rel:
+                    url = f"/static/{wsx_rel}"
             if url:
                 card["portrait_url"] = url
 
@@ -10939,7 +10996,11 @@ def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
 
 def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
     for card in mode.get("riders") or []:
-        if not card.get("portrait_url"):
+        url = str(card.get("portrait_url") or "")
+        if not url or "/brand_logos/" in url:
+            return True
+        # Legacy typo path that 404s in prod (Jason Andersson)
+        if "andersson" in url.lower() or str(card.get("name") or "") == "Jason Andersson":
             return True
     return False
 
