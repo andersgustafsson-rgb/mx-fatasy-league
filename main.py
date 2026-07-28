@@ -8859,12 +8859,21 @@ def _build_pick_suggestions_for_user(
     class_450 = "wsx_sx1" if is_wsx else "450cc"
     class_250 = "wsx_sx2" if is_wsx else "250cc"
     blocked = set(int(x) for x in (out_ids or []))
+    # WSX tippa: never suggest off-roster leftovers (Roczen/Tomac from 2025 seeds)
+    allowed_ids: set[int] | None = _wsx_official_roster_ids() if is_wsx else None
 
-    series_comp_ids = [
-        c.id
-        for c in Competition.query.filter(Competition.series == series).all()
-        if c.id != comp.id
-    ]
+    series_q = Competition.query.filter(Competition.series == series)
+    # Prefer same season (series_id) so WSX 2025 picks don't leak into 2026 chips
+    if getattr(comp, "series_id", None):
+        series_q = series_q.filter(Competition.series_id == comp.series_id)
+    series_comp_ids = [c.id for c in series_q.all() if c.id != comp.id]
+
+    def _chip_allowed(rid: int) -> bool:
+        if rid in blocked:
+            return False
+        if allowed_ids is not None and rid not in allowed_ids:
+            return False
+        return True
 
     def _chip(rider: Rider, position: int | None = None) -> dict:
         row = {
@@ -8888,13 +8897,13 @@ def _build_pick_suggestions_for_user(
             .filter(Rider.class_name == class_name)
             .group_by(RacePick.rider_id)
             .order_by(func.count(RacePick.pick_id).desc())
-            .limit(limit + len(blocked))
+            .limit(limit + len(blocked) + 20)
             .all()
         )
         rider_ids: list[int] = []
         for rider_id, _cnt in rows:
             rid = int(rider_id)
-            if rid in blocked:
+            if not _chip_allowed(rid):
                 continue
             rider_ids.append(rid)
             if len(rider_ids) >= limit:
@@ -8909,6 +8918,10 @@ def _build_pick_suggestions_for_user(
         for rid in rider_ids:
             rider = riders_by_id.get(rid)
             if rider and rider.class_name == class_name:
+                if allowed_ids is not None and (rider.name or "") not in (
+                    _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
+                ):
+                    continue
                 out.append(_chip(rider))
         return out
 
@@ -8917,6 +8930,8 @@ def _build_pick_suggestions_for_user(
             Competition.series == series,
             Competition.id != comp.id,
         )
+        if getattr(comp, "series_id", None):
+            prev_q = prev_q.filter(Competition.series_id == comp.series_id)
         if comp.event_date:
             prev_q = prev_q.filter(Competition.event_date < comp.event_date)
         prev_comp = prev_q.order_by(Competition.event_date.desc()).first()
@@ -8933,7 +8948,7 @@ def _build_pick_suggestions_for_user(
             if not p.rider_id or not p.predicted_position:
                 continue
             rid = int(p.rider_id)
-            if rid in blocked:
+            if not _chip_allowed(rid):
                 continue
             rider_ids.append(rid)
             positions[rid] = int(p.predicted_position)
@@ -8947,6 +8962,10 @@ def _build_pick_suggestions_for_user(
         for rid in rider_ids:
             rider = riders_by_id.get(rid)
             if not rider or rider.class_name != class_name:
+                continue
+            if allowed_ids is not None and (rider.name or "") not in (
+                _WSX_2026_ROSTER_NAMES_BY_CLASS.get(class_name, set())
+            ):
                 continue
             chips.append(_chip(rider, positions[rid]))
         return chips

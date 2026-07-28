@@ -1040,6 +1040,7 @@
   function isValidTippaRiderId(riderId) {
     return riderId != null && riderId !== '' && validRiderIdSet.has(String(riderId));
   }
+  window.isValidTippaRiderId = isValidTippaRiderId;
   const staticRiderImages = {{ static_rider_images | tojson }};
   const portraitsInDropdown = {{ portraits_in_dropdown | tojson }};
   // NYTT: OUT-lista från servern för att kunna validera i UI

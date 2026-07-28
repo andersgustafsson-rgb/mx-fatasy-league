@@ -64,10 +64,18 @@
   function mergeChips(bucket) {
     const seen = new Set();
     const out = [];
+    const tippaOk =
+      typeof window.isValidTippaRiderId === 'function'
+        ? window.isValidTippaRiderId
+        : null;
     const add = (list) => {
       (list || []).forEach((r) => {
         const id = Number(r.id);
         if (!id || seen.has(id)) return;
+        // WSX: hide off-roster chips (Roczen etc.) even if server sent stale data
+        if (tippaOk && !tippaOk(id)) return;
+        const inAll = (window.allRiders || []).some((x) => Number(x.id) === id);
+        if ((window.allRiders || []).length && !inAll) return;
         seen.add(id);
         out.push(r);
       });
