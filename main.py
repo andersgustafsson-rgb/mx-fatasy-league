@@ -1256,6 +1256,84 @@ def _remap_wsx_rider_refs(old_id: int, new_id: int) -> int:
     return moved
 
 
+def _merge_wsx_name_aliases() -> dict:
+    """
+    Slå ihop typo-rader (Jason Andersson → Jason Anderson) innan delete,
+    så CompetitionResult inte blir rider_id=NULL.
+    """
+    merged = 0
+    deleted = 0
+    remapped = 0
+    for typo, canon in _WSX_NAME_ALIASES.items():
+        typo_rows = (
+            Rider.query.filter(
+                Rider.name == typo,
+                Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+            ).all()
+        )
+        for row in typo_rows:
+            keeper = Rider.query.filter_by(
+                name=canon, class_name=row.class_name
+            ).first()
+            if keeper is None:
+                row.name = canon
+                merged += 1
+                continue
+            remapped += _remap_wsx_rider_refs(int(row.id), int(keeper.id))
+            db.session.delete(row)
+            deleted += 1
+            merged += 1
+    if merged or deleted or remapped:
+        db.session.commit()
+    return {"merged": merged, "deleted": deleted, "remapped": remapped}
+
+
+def _repair_orphaned_wsx_p1_results() -> dict:
+    """
+    Återkoppla WSX P1-resultat där föraren raderats (rider_id NULL).
+    Vanlig orsak: typo-rad Jason Andersson raderades utan remap.
+    """
+    fixed = 0
+    removed = 0
+    orphans = (
+        CompetitionResult.query.filter(CompetitionResult.rider_id.is_(None))
+        .filter(CompetitionResult.position == 1)
+        .filter(CompetitionResult.class_name.in_(("wsx_sx1", "wsx_sx2")))
+        .all()
+    )
+    for row in orphans:
+        cls = (row.class_name or "").strip()
+        # Finns redan en giltig P1 i klassen? Ta bort orphan-dubblett.
+        existing = (
+            db.session.query(CompetitionResult)
+            .join(Rider, Rider.id == CompetitionResult.rider_id)
+            .filter(CompetitionResult.competition_id == row.competition_id)
+            .filter(CompetitionResult.position == 1)
+            .filter(
+                db.func.coalesce(CompetitionResult.class_name, Rider.class_name) == cls
+            )
+            .first()
+        )
+        if existing:
+            db.session.delete(row)
+            removed += 1
+            continue
+
+        keeper = None
+        if cls == "wsx_sx1":
+            keeper = Rider.query.filter_by(
+                name="Jason Anderson", class_name="wsx_sx1"
+            ).first()
+        if keeper is None:
+            continue
+        row.rider_id = int(keeper.id)
+        fixed += 1
+
+    if fixed or removed:
+        db.session.commit()
+    return {"fixed": fixed, "removed": removed}
+
+
 def _dedupe_wsx_roster_riders() -> dict:
     """
     Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Myers som wsx_sx1 orphan
@@ -1383,6 +1461,19 @@ def ensure_wsx_2026_roster() -> dict:
             updated += 1
 
     db.session.commit()
+    # Alias merge + orphan P1 repair before class dedupe
+    alias_info = {"merged": 0, "deleted": 0, "remapped": 0}
+    orphan_info = {"fixed": 0, "removed": 0}
+    try:
+        alias_info = _merge_wsx_name_aliases()
+    except Exception as alias_err:
+        db.session.rollback()
+        print(f"[WSX-SEED] alias merge skipped: {alias_err}")
+    try:
+        orphan_info = _repair_orphaned_wsx_p1_results()
+    except Exception as orphan_err:
+        db.session.rollback()
+        print(f"[WSX-SEED] orphan P1 repair skipped: {orphan_err}")
     # Dedupe is best-effort: never fail the whole roster upsert if remap hits a constraint.
     dedupe = {"merged": 0, "deleted": 0, "remapped": 0, "skipped": False}
     try:
@@ -1403,6 +1494,8 @@ def ensure_wsx_2026_roster() -> dict:
         "created": created,
         "updated": updated,
         "reclassed": reclassed,
+        "aliases": alias_info,
+        "orphan_p1": orphan_info,
         "deduped": dedupe,
         "wsx_sx1": sx1,
         "wsx_sx2": sx2,
@@ -1410,7 +1503,8 @@ def ensure_wsx_2026_roster() -> dict:
     }
     print(
         f"[WSX-SEED] roster created={created} updated={updated} "
-        f"reclassed={reclassed} dedupe={dedupe} sx1={sx1} sx2={sx2}"
+        f"reclassed={reclassed} aliases={alias_info} orphan_p1={orphan_info} "
+        f"dedupe={dedupe} sx1={sx1} sx2={sx2}"
     )
     return info
 
