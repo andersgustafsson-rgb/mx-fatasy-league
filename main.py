@@ -11155,9 +11155,16 @@ def _spotlight_crowd_cards(comp: Competition) -> list[dict[str, Any]]:
 
 
 def _spotlight_mode_needs_portrait_refresh(mode: dict) -> bool:
+    """Only force rebuild for empty/bad typo URLs — not every brand-logo fallback.
+
+    Treating brand_logos as always-stale caused perpetual spotlight rebuilds on
+    every homepage hit (1 gunicorn worker → intermittent 500 under load).
+    """
+    if int(mode.get("_portrait_v") or 0) < _SPOTLIGHT_PORTRAIT_CACHE_V:
+        return True
     for card in mode.get("riders") or []:
         url = str(card.get("portrait_url") or "")
-        if not url or "/brand_logos/" in url:
+        if not url:
             return True
         # Legacy typo path that 404s in prod (Jason Andersson)
         if "andersson" in url.lower() or str(card.get("name") or "") == "Jason Andersson":
@@ -11409,6 +11416,7 @@ def build_spotlight_mode(
         return None
 
     _patch_spotlight_portraits({mode_key: mode_data}, riders)
+    mode_data["_portrait_v"] = _SPOTLIGHT_PORTRAIT_CACHE_V
     if mode_key == "rocket":
         mode_data["_calc_v"] = 3
     if mode_key == "crowd_pick":
