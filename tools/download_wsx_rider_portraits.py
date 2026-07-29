@@ -268,24 +268,49 @@ def main() -> int:
         saved[name] = rel
         print(f"[OK] {name} -> {primary.name} ({len(data)} bytes)")
 
-    missing_roster = sorted(n for n in ROSTER_NAMES if n not in saved and n in {
-        "Cooper Webb", "Justin Hill", "Joey Savatgy", "Christian Craig", "Jason Anderson",
-        "Colt Nichols", "Vince Friese", "Jorge Zaragoza", "Greg Aranda", "Kevin Moranz",
-        "Austin Politelli", "Enzo Lopes", "Luke Clout", "Mitchell Harrison", "Maxime Desprey",
-        "Jordi Tixier", "Max Anstie", "Devin Simonson", "Shane McElrath", "Cole Thompson",
-        "Calvin Fonvieille", "Ryan Breece", "Robbie Wageman", "Henry Miller", "Jake Cannon",
-        "Michael Hicks", "Brian Hsu", "Kyle Peters", "Crockett Myers", "Hector Assuncao",
-        "Nico Koch", "Mike Alessi", "Tom Vialle",
-    })
+    missing_roster = sorted(n for n in ROSTER_NAMES if n not in saved)
     print("\nRoster without WSX site photo:", ", ".join(missing_roster) or "(none)")
+
+    # Fill-ins / riders not on WSX cards — try RacerX CDN headshot.
+    if missing_roster:
+        root = Path(__file__).resolve().parents[1]
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+        from app.portrait_urls import lookup_racerx_portrait_by_name, normalize_racerx_portrait_url
+
+        try:
+            from app.routes.admin import _fetch_racerx_og_image
+        except Exception:
+            _fetch_racerx_og_image = None  # type: ignore[assignment]
+
+        for name in missing_roster:
+            url = lookup_racerx_portrait_by_name(name)
+            if not url and _fetch_racerx_og_image:
+                url = _fetch_racerx_og_image(name)
+            url = normalize_racerx_portrait_url(url) if url else None
+            if not url:
+                print(f"[RacerX SKIP] {name}")
+                continue
+            result = download_best(url)
+            if not result:
+                print(f"[RacerX FAIL] {name} ({url})")
+                continue
+            data, _ext = result
+            slug = slug_nospace(name)
+            primary = OUT_DIR / f"{slug}.jpg"
+            primary.write_bytes(data)
+            rel = f"riders/wsx/{slug}.jpg"
+            saved[name] = rel
+            print(f"[RacerX OK] {name} -> {primary.name} ({len(data)} bytes)")
 
     # Update local DB image_url for WSX riders
     root = Path(__file__).resolve().parents[1]
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    from main import app
+    from tools.apply_racerx_bio import _make_app
     from models import Rider, db
 
+    app = _make_app()
     updated = 0
     with app.app_context():
         for name, rel in saved.items():
@@ -305,7 +330,14 @@ def main() -> int:
                     updated += 1
         db.session.commit()
     print(f"DB rows touched: {updated}")
-    print(f"Files in {OUT_DIR}: {len(list(OUT_DIR.glob('*')))}")
+    print(f"Files in {OUT_DIR}: {len(list(OUT_DIR.glob('*.jpg')))}")
+
+    try:
+        from tools.generate_wsx_avatars import main as gen_avatars
+
+        gen_avatars()
+    except Exception as exc:
+        print(f"Avatar generation skipped: {exc}")
     return 0
 
 
