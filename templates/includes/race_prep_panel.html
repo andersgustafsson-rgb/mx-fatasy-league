@@ -15,7 +15,7 @@
 {% set _open_know = _has_weather or (_good_to_know | length > 0) or _is_wsx_hdr %}
 <div class="mb-6 race-prep-panel {% if _is_mx %}race-prep-panel--mx{% else %}race-prep-panel--sx{% endif %}">
   <div class="race-prep-head {% if _is_mx %}race-prep-head--mx{% else %}race-prep-head--sx{% endif %}">
-    <h2>{% if _show_layout_images %}{{ mx_icon('map-pin') }} Banlayout &amp; inför racet{% else %}{{ mx_icon('map-pin') }} Inför racet{% endif %}</h2>
+    <h2>{% if _show_layout_images %}{{ mx_icon('map-pin') }} <span data-i18n="prep.layout_title">Banlayout &amp; inför racet</span>{% else %}{{ mx_icon('map-pin') }} <span data-i18n="prep.title">Inför racet</span>{% endif %}</h2>
     <p class="race-prep-teaser">
       {{ competition.name }}
       {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
@@ -44,25 +44,25 @@
 
     <div class="{% if _show_layout_images %}lg:col-span-2{% else %}lg:col-span-4{% endif %} race-prep-accordions">
       <details class="race-prep-details" open>
-        <summary>{{ mx_icon('flag') }} Race Info</summary>
+        <summary>{{ mx_icon('flag') }} <span data-i18n="panel.race_info">Race Info</span></summary>
         <div class="race-prep-details__body">
-          <div class="race-prep-kv"><span>Tävling</span><span>{{ competition.name }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.competition">Tävling</span><span>{{ competition.name }}</span></div>
           {% if _venue %}
-          <div class="race-prep-kv"><span>Plats</span><span>{{ _venue }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.venue">Plats</span><span>{{ _venue }}</span></div>
           {% endif %}
-          <div class="race-prep-kv"><span>Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.date">Datum</span><span>{{ competition.event_date.strftime('%Y-%m-%d') if competition.event_date else 'TBA' }}</span></div>
           {% if _start_label %}
-          <div class="race-prep-kv"><span>Start</span><span>{{ _start_label }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.start">Start</span><span>{{ _start_label }}</span></div>
           {% endif %}
           {% if _is_wsx_hdr %}
-          <div class="race-prep-kv"><span>Serie</span><span>WSX · SX1 + SX2</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>WSX · SX1 + SX2</span></div>
           {% elif _is_mx %}
-          <div class="race-prep-kv"><span>Serie</span><span>Pro Motocross</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.series">Serie</span><span>Pro Motocross</span></div>
           {% elif competition.coast_250 %}
           <div class="race-prep-kv"><span>250SX</span><span>{{ competition.coast_250|capitalize }}</span></div>
           {% endif %}
           {% if _out_count > 0 %}
-          <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }} förare syns inte i listorna</span></div>
+          <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }} <span data-i18n="prep.out_hidden">förare syns inte i listorna</span></span></div>
           {% endif %}
           {% if _wc_names %}
           <div class="race-prep-kv"><span>WC / fill-in</span><span>{{ _wc_names | join(', ') }}</span></div>
@@ -71,7 +71,7 @@
       </details>
 
       <details class="race-prep-details"{% if _open_know %} open{% endif %}>
-        <summary>{{ mx_icon('note') }} Bra att veta</summary>
+        <summary>{{ mx_icon('note') }} <span data-i18n="panel.good_to_know">Bra att veta</span></summary>
         <div class="race-prep-details__body">
           {% if _has_weather %}
           <div class="race-prep-weather">
@@ -103,16 +103,16 @@
       </details>
 
       <details class="race-prep-details">
-        <summary>{{ mx_icon('chart') }} Statistik</summary>
+        <summary>{{ mx_icon('chart') }} <span data-i18n="panel.stats">Statistik</span></summary>
         <div class="race-prep-details__body">
-          <div class="race-prep-kv"><span>Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.active_riders">Aktiva förare</span><span>{{ riders_450_json|length + riders_250_json|length }}</span></div>
           <div class="race-prep-kv"><span>{{ _class_450_hdr }}</span><span>{{ riders_450_json|length }}</span></div>
           <div class="race-prep-kv"><span>{{ _class_250_hdr }}</span><span>{{ riders_250_json|length }}</span></div>
           {% if _out_count > 0 %}
           <div class="race-prep-kv"><span>OUT</span><span>{{ _out_count }}</span></div>
           {% endif %}
           {% if _wc_names %}
-          <div class="race-prep-kv"><span>WC denna runda</span><span>{{ _wc_names | length }}</span></div>
+          <div class="race-prep-kv"><span data-i18n="prep.wc_this_round">WC denna runda</span><span>{{ _wc_names | length }}</span></div>
           {% endif %}
         </div>
       </details>

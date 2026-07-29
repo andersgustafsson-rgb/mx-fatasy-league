@@ -11,6 +11,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=1"></script>
   <style>
     body {
       background:
@@ -269,6 +270,39 @@
       color: #a5f3fc;
       text-decoration: underline;
     }
+    /* Language blocks */
+    .lang-en { display: none; }
+    html[lang="en"] .lang-sv { display: none; }
+    html[lang="en"] .lang-en { display: block; }
+    /* Language toggle (reuse shared styles from mx_i18n) */
+    .mx-lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: rgba(20,28,44,0.7);
+      border: 1px solid #2a3548;
+      border-radius: 0.5rem;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+    .mx-lang-btn {
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.25rem 0.45rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .mx-lang-btn:hover { color: #94a3b8; }
+    .mx-lang-btn--active, .mx-lang-btn[aria-pressed="true"] {
+      background: #1e3a5f;
+      color: #67e8f9;
+    }
   </style>
 </head>
 <body>
@@ -277,91 +311,112 @@
       <div class="flex items-center gap-2 min-w-0">
         <a href="{{ url_for('index') }}" class="manual-brand truncate">MX Fantasy</a>
         <span class="text-slate-600 hidden sm:inline">|</span>
-        <span class="manual-title hidden sm:inline">Spelmanual</span>
+        <span class="manual-title hidden sm:inline lang-sv">Spelmanual</span>
+        <span class="manual-title hidden sm:inline lang-en">Game Manual</span>
       </div>
-      <a href="{{ url_for('index') }}" id="manual-back-link" class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← Tillbaka</a>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+          <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+          <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a href="{{ url_for('index') }}" id="manual-back-link" class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← <span class="lang-sv">Tillbaka</span><span class="lang-en">Back</span></a>
+      </div>
     </div>
   </header>
 
   <main class="manual-shell">
     <section class="manual-card manual-card--hero text-center">
-      <h1 class="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">Spelmanual</h1>
-      <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base">
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">
+        <span class="lang-sv">Spelmanual</span><span class="lang-en">Game Manual</span>
+      </h1>
+      <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base lang-sv">
         Kort guide till picks, poäng, säsongsteam, ligor och resten av MX Fantasy League.
         Varje kapitel har en länk direkt till rätt ställe i appen.
+      </p>
+      <p class="text-slate-300 max-w-2xl mx-auto text-sm sm:text-base lang-en">
+        Quick guide to picks, scoring, season team, leagues and everything else in MX Fantasy League.
+        Each chapter links directly to the right place in the app.
       </p>
     </section>
 
     <section class="manual-card">
-      <h2>Innehåll</h2>
+      <h2><span class="lang-sv">Innehåll</span><span class="lang-en">Contents</span></h2>
       <nav class="manual-toc grid grid-cols-1 sm:grid-cols-2 gap-1">
-        <a href="#grunderna">1. Grunderna</a>
-        <a href="#serier">2. Serier</a>
+        <a href="#grunderna"><span class="lang-sv">1. Grunderna</span><span class="lang-en">1. Basics</span></a>
+        <a href="#serier"><span class="lang-sv">2. Serier</span><span class="lang-en">2. Series</span></a>
         <a href="#race-picks">3. Race picks</a>
-        <a href="#holeshot">4. Holeshot &amp; wildcard</a>
-        <a href="#poangsystem">5. Poängsystem</a>
-        <a href="#season-team">6. Säsongsteam</a>
-        <a href="#ligor">7. Ligor</a>
-        <a href="#liga-dueller">8. Liga-dueller</a>
-        <a href="#mer">9. Mer i appen</a>
-        <a href="#spel">10. Spel</a>
+        <a href="#holeshot"><span class="lang-sv">4. Holeshot &amp; wildcard</span><span class="lang-en">4. Holeshot &amp; wildcard</span></a>
+        <a href="#poangsystem"><span class="lang-sv">5. Poängsystem</span><span class="lang-en">5. Scoring</span></a>
+        <a href="#season-team"><span class="lang-sv">6. Säsongsteam</span><span class="lang-en">6. Season team</span></a>
+        <a href="#ligor"><span class="lang-sv">7. Ligor</span><span class="lang-en">7. Leagues</span></a>
+        <a href="#liga-dueller"><span class="lang-sv">8. Liga-dueller</span><span class="lang-en">8. League duels</span></a>
+        <a href="#mer"><span class="lang-sv">9. Mer i appen</span><span class="lang-en">9. More in the app</span></a>
+        <a href="#spel"><span class="lang-sv">10. Spel</span><span class="lang-en">10. Games</span></a>
         <a href="#tips">11. Tips</a>
       </nav>
     </section>
 
     <section id="grunderna" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('info') }}<span>Grunderna</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('index') }}">Öppna startsidan →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('info') }}<span class="lang-sv">Grunderna</span><span class="lang-en">Basics</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}"><span class="lang-sv">Öppna startsidan →</span><span class="lang-en">Open home page →</span></a>
       </div>
-      <p>
-        MX Fantasy League är ett gratis fantasy-motocross-spel. Inför varje race tippar du topp&nbsp;6,
-        holeshot och (i de flesta serier) wildcard. Du får poäng utifrån hur nära du är rätt resultat.
-      </p>
-      <h3>Klasser</h3>
-      <ul>
-        <li><strong>450cc / SX1</strong> — huvudklassen</li>
-        <li><strong>250cc / SX2</strong> — utvecklingsklassen</li>
-      </ul>
-      <p>I WSX heter klasserna SX1 och SX2, men picks fungerar likadant (topp&nbsp;6 + holeshot).</p>
+      <div class="lang-sv">
+        <p>MX Fantasy League är ett gratis fantasy-motocross-spel. Inför varje race tippar du topp&nbsp;6, holeshot och (i de flesta serier) wildcard. Du får poäng utifrån hur nära du är rätt resultat.</p>
+        <h3>Klasser</h3>
+        <ul>
+          <li><strong>450cc / SX1</strong> — huvudklassen</li>
+          <li><strong>250cc / SX2</strong> — utvecklingsklassen</li>
+        </ul>
+        <p>I WSX heter klasserna SX1 och SX2, men picks fungerar likadant (topp&nbsp;6 + holeshot).</p>
+      </div>
+      <div class="lang-en">
+        <p>MX Fantasy League is a free fantasy motocross game. Before each race you predict a top&nbsp;6, holeshot and (in most series) a wildcard. You earn points based on how close your predictions are to the actual results.</p>
+        <h3>Classes</h3>
+        <ul>
+          <li><strong>450cc / SX1</strong> — main class</li>
+          <li><strong>250cc / SX2</strong> — development class</li>
+        </ul>
+        <p>In WSX the classes are called SX1 and SX2, but picks work the same way (top&nbsp;6 + holeshot).</p>
+      </div>
     </section>
 
     <section id="serier" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Serier</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('index') }}">Byt serie på startsidan →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span class="lang-sv">Serier</span><span class="lang-en">Series</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}"><span class="lang-sv">Byt serie på startsidan →</span><span class="lang-en">Switch series on home page →</span></a>
       </div>
       <div class="series-grid mb-4">
         <div class="series-tile">
           <h4>Supercross (SX)</h4>
-          <p>Vintersäsong</p>
+          <p class="lang-sv">Vintersäsong</p><p class="lang-en">Winter season</p>
           <ul>
-            <li>Topp 6 + holeshot + wildcard</li>
-            <li>Säsongsteam</li>
+            <li class="lang-sv">Topp 6 + holeshot + wildcard</li><li class="lang-en">Top 6 + holeshot + wildcard</li>
+            <li class="lang-sv">Säsongsteam</li><li class="lang-en">Season team</li>
           </ul>
         </div>
         <div class="series-tile">
           <h4>Pro Motocross (MX)</h4>
-          <p>Utomhussäsong</p>
+          <p class="lang-sv">Utomhussäsong</p><p class="lang-en">Outdoor season</p>
           <ul>
-            <li>Topp 6 + holeshot + wildcard</li>
-            <li>Säsongsteam</li>
+            <li class="lang-sv">Topp 6 + holeshot + wildcard</li><li class="lang-en">Top 6 + holeshot + wildcard</li>
+            <li class="lang-sv">Säsongsteam</li><li class="lang-en">Season team</li>
           </ul>
         </div>
         <div class="series-tile">
           <h4>SMX Finals</h4>
-          <p>Efter MX</p>
+          <p class="lang-sv">Efter MX</p><p class="lang-en">After MX</p>
           <ul>
-            <li>Topp 6 + holeshot + wildcard</li>
-            <li>Säsongsteam (+ top-6-bonus)</li>
+            <li class="lang-sv">Topp 6 + holeshot + wildcard</li><li class="lang-en">Top 6 + holeshot + wildcard</li>
+            <li class="lang-sv">Säsongsteam (+ top-6-bonus)</li><li class="lang-en">Season team (+ top-6 bonus)</li>
           </ul>
         </div>
         <div class="series-tile">
           <h4>WSX</h4>
           <p>World Supercross</p>
           <ul>
-            <li>Topp 6 + holeshot</li>
-            <li>Ingen wildcard, inget säsongsteam</li>
+            <li class="lang-sv">Topp 6 + holeshot</li><li class="lang-en">Top 6 + holeshot</li>
+            <li class="lang-sv">Ingen wildcard, inget säsongsteam</li><li class="lang-en">No wildcard, no season team</li>
           </ul>
         </div>
       </div>
@@ -370,33 +425,30 @@
         <table class="manual-table">
           <thead>
             <tr>
-              <th>Funktion</th>
-              <th class="c">SX</th>
-              <th class="c">MX</th>
-              <th class="c">SMX</th>
-              <th class="c">WSX</th>
+              <th><span class="lang-sv">Funktion</span><span class="lang-en">Feature</span></th>
+              <th class="c">SX</th><th class="c">MX</th><th class="c">SMX</th><th class="c">WSX</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Race picks (topp 6)</td>
-              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td>
+              <td><span class="lang-sv">Race picks (topp 6)</span><span class="lang-en">Race picks (top 6)</span></td>
+              <td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td>
             </tr>
             <tr>
               <td>Holeshot</td>
-              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td>
+              <td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td>
             </tr>
             <tr>
               <td>Wildcard</td>
-              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+              <td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td>
             </tr>
             <tr>
-              <td>Säsongsteam</td>
-              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+              <td><span class="lang-sv">Säsongsteam</span><span class="lang-en">Season team</span></td>
+              <td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td>
             </tr>
             <tr>
-              <td>Räknas till ligapoäng</td>
-              <td class="c">Ja</td><td class="c">Ja</td><td class="c">Ja</td><td class="c">Nej</td>
+              <td><span class="lang-sv">Räknas till ligapoäng</span><span class="lang-en">Counts toward league points</span></td>
+              <td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td>
             </tr>
           </tbody>
         </table>
@@ -406,243 +458,352 @@
     <section id="race-picks" class="manual-card">
       <div class="manual-card-head">
         <h2><span class="mx-heading-icon">{{ mx_icon('clipboard') }}<span>Race picks</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Gör race picks →</a>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}"><span class="lang-sv">Gör race picks →</span><span class="lang-en">Make race picks →</span></a>
       </div>
-      <p>
-        Inför varje race går du igenom en wizard i tre steg: <strong>450/SX1 topp&nbsp;6</strong>,
-        <strong>250/SX2 topp&nbsp;6</strong>, sedan <strong>holeshot</strong>
-        (plus wildcard i SX/MX/SMX).
-      </p>
-      <div class="manual-note">
-        <strong>Regler</strong>
-        <ul>
-          <li>Exakt <strong>6 förare</strong> per klass, en plats vardera (1–6)</li>
-          <li>Samma förare kan inte väljas två gånger</li>
-          <li><strong>OUT-förare</strong> syns inte i listorna och kan inte väljas</li>
-          <li>Picks låses <strong>2 timmar</strong> före race</li>
-          <li>Utkast sparas lokalt — lämna in för att registrera hos tävlingen</li>
-        </ul>
+      <div class="lang-sv">
+        <p>Inför varje race går du igenom en wizard i tre steg: <strong>450/SX1 topp&nbsp;6</strong>, <strong>250/SX2 topp&nbsp;6</strong>, sedan <strong>holeshot</strong> (plus wildcard i SX/MX/SMX).</p>
+        <div class="manual-note">
+          <strong>Regler</strong>
+          <ul>
+            <li>Exakt <strong>6 förare</strong> per klass, en plats vardera (1–6)</li>
+            <li>Samma förare kan inte väljas två gånger</li>
+            <li><strong>OUT-förare</strong> syns inte i listorna och kan inte väljas</li>
+            <li>Picks låses <strong>2 timmar</strong> före race</li>
+            <li>Utkast sparas lokalt — lämna in för att registrera hos tävlingen</li>
+          </ul>
+        </div>
+        <h3>Se andras picks</h3>
+        <p>När picksen är låsta (eller racet är klart) kan du öppna <strong>Se andras picks</strong> från startsidan eller race picks-sidan.</p>
       </div>
-      <h3>Se andras picks</h3>
-      <p>
-        När picksen är låsta (eller racet är klart) kan du öppna <strong>Se andras picks</strong>
-        från startsidan eller race picks-sidan.
-      </p>
+      <div class="lang-en">
+        <p>Before each race you go through a three-step wizard: <strong>450/SX1 top&nbsp;6</strong>, <strong>250/SX2 top&nbsp;6</strong>, then <strong>holeshot</strong> (plus wildcard in SX/MX/SMX).</p>
+        <div class="manual-note">
+          <strong>Rules</strong>
+          <ul>
+            <li>Exactly <strong>6 riders</strong> per class, one per position (1–6)</li>
+            <li>The same rider cannot be picked twice</li>
+            <li><strong>OUT riders</strong> are hidden from the lists and cannot be picked</li>
+            <li>Picks lock <strong>2 hours</strong> before the race</li>
+            <li>Draft is saved locally — submit to register with the competition</li>
+          </ul>
+        </div>
+        <h3>View others' picks</h3>
+        <p>Once picks are locked (or the race is done) you can open <strong>View others' picks</strong> from the home page or race picks page.</p>
+      </div>
     </section>
 
     <section id="holeshot" class="manual-card">
       <div class="manual-card-head">
         <h2><span class="mx-heading-icon">{{ mx_icon('zap') }}<span>Holeshot &amp; wildcard</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Välj i race picks →</a>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}"><span class="lang-sv">Välj i race picks →</span><span class="lang-en">Choose in race picks →</span></a>
       </div>
-      <h3>Holeshot</h3>
-      <p>
-        Välj vem som tar starten (först till första kurvan) i <strong>båda klasserna</strong>.
-      </p>
-      <ul>
-        <li>Rätt holeshot = <strong>+10p</strong> per klass</li>
-        <li>Båda rätt = <strong>25p totalt</strong> (inkl. 5p bonus)</li>
-      </ul>
-
-      <h3>Wildcard (SX / MX / SMX)</h3>
-      <p>
-        Du slumpar en plats mellan <strong>10 och 20</strong> och väljer en <strong>450-förare</strong>
-        som du tror hamnar där.
-      </p>
-      <ul>
-        <li>Rätt förare + rätt plats = <strong>+15p</strong></li>
-        <li>Wildcard-föraren får <strong>inte</strong> redan finnas i din topp&nbsp;6</li>
-        <li>OUT-förare kan inte väljas</li>
-        <li><strong>Finns inte i WSX</strong></li>
-      </ul>
+      <div class="lang-sv">
+        <h3>Holeshot</h3>
+        <p>Välj vem som tar starten (först till första kurvan) i <strong>båda klasserna</strong>.</p>
+        <ul>
+          <li>Rätt holeshot = <strong>+10p</strong> per klass</li>
+          <li>Båda rätt = <strong>25p totalt</strong> (inkl. 5p bonus)</li>
+        </ul>
+        <h3>Wildcard (SX / MX / SMX)</h3>
+        <p>Du slumpar en plats mellan <strong>10 och 20</strong> och väljer en <strong>450-förare</strong> som du tror hamnar där.</p>
+        <ul>
+          <li>Rätt förare + rätt plats = <strong>+15p</strong></li>
+          <li>Wildcard-föraren får <strong>inte</strong> redan finnas i din topp&nbsp;6</li>
+          <li>OUT-förare kan inte väljas</li>
+          <li><strong>Finns inte i WSX</strong></li>
+        </ul>
+      </div>
+      <div class="lang-en">
+        <h3>Holeshot</h3>
+        <p>Pick who takes the start (first to the first turn) in <strong>both classes</strong>.</p>
+        <ul>
+          <li>Correct holeshot = <strong>+10 pts</strong> per class</li>
+          <li>Both correct = <strong>25 pts total</strong> (incl. 5 pt bonus)</li>
+        </ul>
+        <h3>Wildcard (SX / MX / SMX)</h3>
+        <p>You spin a random position between <strong>10 and 20</strong> and pick a <strong>450 rider</strong> you think will finish there.</p>
+        <ul>
+          <li>Correct rider + correct position = <strong>+15 pts</strong></li>
+          <li>Your wildcard rider must <strong>not</strong> already be in your top&nbsp;6</li>
+          <li>OUT riders cannot be picked</li>
+          <li><strong>Not available in WSX</strong></li>
+        </ul>
+      </div>
     </section>
 
     <section id="poangsystem" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('chart') }}<span>Poängsystem (race picks)</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('my_scores') }}">Mina poäng →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('chart') }}<span class="lang-sv">Poängsystem (race picks)</span><span class="lang-en">Scoring (race picks)</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('my_scores') }}"><span class="lang-sv">Mina poäng →</span><span class="lang-en">My scores →</span></a>
       </div>
-      <p>Poäng utifrån hur nära din tippade plats är den verkliga:</p>
+      <p class="lang-sv">Poäng utifrån hur nära din tippade plats är den verkliga:</p>
+      <p class="lang-en">Points based on how close your predicted position is to the actual result:</p>
       <div class="pts-grid my-3">
-        <div class="pts-cell"><div class="lbl">Exakt rätt</div><div class="val">25</div></div>
-        <div class="pts-cell"><div class="lbl">1 plats fel</div><div class="val">18</div></div>
-        <div class="pts-cell"><div class="lbl">2 platser fel</div><div class="val">13</div></div>
-        <div class="pts-cell"><div class="lbl">3 platser fel</div><div class="val">9</div></div>
-        <div class="pts-cell"><div class="lbl">4 platser fel</div><div class="val">6</div></div>
-        <div class="pts-cell"><div class="lbl">5+ platser fel</div><div class="val">3</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">Exakt rätt</div><div class="lbl lang-en">Exact</div><div class="val">25</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">1 plats fel</div><div class="lbl lang-en">1 off</div><div class="val">18</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">2 platser fel</div><div class="lbl lang-en">2 off</div><div class="val">13</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">3 platser fel</div><div class="lbl lang-en">3 off</div><div class="val">9</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">4 platser fel</div><div class="lbl lang-en">4 off</div><div class="val">6</div></div>
+        <div class="pts-cell"><div class="lbl lang-sv">5+ platser fel</div><div class="lbl lang-en">5+ off</div><div class="val">3</div></div>
       </div>
-      <div class="manual-ok">
+      <div class="manual-ok lang-sv">
         <strong>Bonusar:</strong> holeshot 10p (25p om båda), wildcard 15p.
         Max per race blir högt om du träffar nära på många platser.
+      </div>
+      <div class="manual-ok lang-en">
+        <strong>Bonuses:</strong> holeshot 10 pts (25 pts if both), wildcard 15 pts.
+        A high max is possible if you nail many positions closely.
       </div>
     </section>
 
     <section id="season-team" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span>Säsongsteam</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('season_team_page') }}">Öppna säsongsteam →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span class="lang-sv">Säsongsteam</span><span class="lang-en">Season team</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('season_team_page') }}"><span class="lang-sv">Öppna säsongsteam →</span><span class="lang-en">Open season team →</span></a>
       </div>
-      <div class="manual-warn">
-        Finns för <strong>SX, MX och SMX</strong> — inte för WSX.
+      <div class="lang-sv">
+        <div class="manual-warn">Finns för <strong>SX, MX och SMX</strong> — inte för WSX.</div>
+        <p>Du bygger ett lag som får poäng varje race utifrån förarnas placering. Säsongsteam har en <strong>egen leaderboard</strong>, separat från race picks.</p>
+        <h3>Laguppställning &amp; budget</h3>
+        <ul>
+          <li><strong>2 × 450cc</strong> och <strong>2 × 250cc</strong></li>
+          <li>Budget: <strong>1&nbsp;500&nbsp;000</strong></li>
+        </ul>
+        <h3>Placeringspoäng (per race)</h3>
+        <ul>
+          <li>1:a 25 · 2:a 20 · 3:e 15 · 4:e 12 · 5:e 10 · 6:e 8</li>
+          <li>7–10:e 5 · 11–15:e 3 · 16–20:e 1 · 21+ 0</li>
+        </ul>
+        <h3>Top-6-bonus (SMX)</h3>
+        <p>Under <strong>SMX Finals</strong>: om <strong>båda</strong> dina förare i samma klass hamnar i topp&nbsp;6 i samma race får du <strong>+50p</strong> för den klassen (upp till +100p om båda klasserna träffar).</p>
+        <h3>Byten</h3>
+        <ul>
+          <li>Byte kostar <strong>50p per förare</strong> (dras från race-pick-poäng)</li>
+          <li>Du måste ha tillräckligt med poäng för bytet</li>
+          <li>Namnbyte utan förarbyten kostar inget</li>
+          <li>Gratis <strong>250→450-klassbyte</strong> kan erbjudas när officiella byten sker inför MX</li>
+        </ul>
       </div>
-      <p>
-        Du bygger ett lag som får poäng varje race utifrån förarnas placering.
-        Säsongsteam har en <strong>egen leaderboard</strong>, separat från race picks.
-      </p>
-      <h3>Laguppställning &amp; budget</h3>
-      <ul>
-        <li><strong>2 × 450cc</strong> och <strong>2 × 250cc</strong></li>
-        <li>Budget: <strong>1&nbsp;500&nbsp;000</strong></li>
-      </ul>
-      <h3>Placeringspoäng (per race)</h3>
-      <ul>
-        <li>1:a 25 · 2:a 20 · 3:e 15 · 4:e 12 · 5:e 10 · 6:e 8</li>
-        <li>7–10:e 5 · 11–15:e 3 · 16–20:e 1 · 21+ 0</li>
-      </ul>
-      <h3>Top-6-bonus (SMX)</h3>
-      <p>
-        Under <strong>SMX Finals</strong>: om <strong>båda</strong> dina förare i samma klass
-        hamnar i topp&nbsp;6 i samma race får du <strong>+50p</strong> för den klassen
-        (upp till +100p om båda klasserna träffar).
-      </p>
-      <h3>Byten</h3>
-      <ul>
-        <li>Byte kostar <strong>50p per förare</strong> (dras från race-pick-poäng)</li>
-        <li>Du måste ha tillräckligt med poäng för bytet</li>
-        <li>Namnbyte utan förarbyten kostar inget</li>
-        <li>Gratis <strong>250→450-klassbyte</strong> kan erbjudas när officiella byten sker inför MX
-            (då slipper du straff för just den promoten)</li>
-      </ul>
+      <div class="lang-en">
+        <div class="manual-warn">Available in <strong>SX, MX and SMX</strong> — not in WSX.</div>
+        <p>You build a roster that earns points each race based on rider finishing positions. Season team has its own <strong>leaderboard</strong>, separate from race picks.</p>
+        <h3>Roster &amp; budget</h3>
+        <ul>
+          <li><strong>2 × 450cc</strong> and <strong>2 × 250cc</strong></li>
+          <li>Budget: <strong>1,500,000</strong></li>
+        </ul>
+        <h3>Finishing position points (per race)</h3>
+        <ul>
+          <li>1st 25 · 2nd 20 · 3rd 15 · 4th 12 · 5th 10 · 6th 8</li>
+          <li>7–10th 5 · 11–15th 3 · 16–20th 1 · 21+ 0</li>
+        </ul>
+        <h3>Top-6 bonus (SMX)</h3>
+        <p>During <strong>SMX Finals</strong>: if <strong>both</strong> your riders in the same class finish in the top&nbsp;6 in the same race you earn <strong>+50 pts</strong> for that class (up to +100 pts if both classes hit).</p>
+        <h3>Transfers</h3>
+        <ul>
+          <li>Transfer costs <strong>50 pts per rider</strong> (deducted from race-pick points)</li>
+          <li>You must have enough points to cover the transfer</li>
+          <li>Renaming without changing riders is free</li>
+          <li>A free <strong>250→450 class upgrade</strong> may be offered when official promotions happen before MX</li>
+        </ul>
+      </div>
     </section>
 
     <section id="ligor" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Ligor</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('leagues_page') }}">Öppna ligor →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span class="lang-sv">Ligor</span><span class="lang-en">Leagues</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('leagues_page') }}"><span class="lang-sv">Öppna ligor →</span><span class="lang-en">Open leagues →</span></a>
       </div>
-      <p>
-        Skapa eller gå med i ligor under <strong>Ligor</strong>. Privata ligor använder inbjudningskod;
-        publika kan du utforska och ansöka till.
-      </p>
-      <h3>Inom ligan</h3>
-      <p>Ranking efter medlemmarnas totala säsongspoäng från race picks.</p>
-      <h3>Mellan ligor</h3>
-      <p>Rättvist snitt per race beroende på ligastorlek:</p>
-      <ul>
-        <li>1 medlem: den personens poäng</li>
-        <li>2: snitt av båda</li>
-        <li>3–4: snitt av top&nbsp;2</li>
-        <li>5–6: snitt av top&nbsp;3</li>
-        <li>7+: snitt av bästa 50&nbsp;%</li>
-      </ul>
-      <div class="manual-note">
-        <strong>WSX</strong> ger race-pick-poäng till dig personligen, men räknas
-        <strong>inte</strong> in i liga-poängen mellan ligor.
+      <div class="lang-sv">
+        <p>Skapa eller gå med i ligor under <strong>Ligor</strong>. Privata ligor använder inbjudningskod; publika kan du utforska och ansöka till.</p>
+        <h3>Inom ligan</h3>
+        <p>Ranking efter medlemmarnas totala säsongspoäng från race picks.</p>
+        <h3>Mellan ligor</h3>
+        <p>Rättvist snitt per race beroende på ligastorlek:</p>
+        <ul>
+          <li>1 medlem: den personens poäng</li>
+          <li>2: snitt av båda</li>
+          <li>3–4: snitt av top&nbsp;2</li>
+          <li>5–6: snitt av top&nbsp;3</li>
+          <li>7+: snitt av bästa 50&nbsp;%</li>
+        </ul>
+        <div class="manual-note"><strong>WSX</strong> ger race-pick-poäng till dig personligen, men räknas <strong>inte</strong> in i liga-poängen mellan ligor.</div>
+      </div>
+      <div class="lang-en">
+        <p>Create or join leagues under <strong>Leagues</strong>. Private leagues use an invite code; public leagues can be explored and applied to.</p>
+        <h3>Within a league</h3>
+        <p>Ranked by members' total season points from race picks.</p>
+        <h3>Between leagues</h3>
+        <p>Fair average per race based on league size:</p>
+        <ul>
+          <li>1 member: that person's points</li>
+          <li>2: average of both</li>
+          <li>3–4: average of top&nbsp;2</li>
+          <li>5–6: average of top&nbsp;3</li>
+          <li>7+: average of best 50&nbsp;%</li>
+        </ul>
+        <div class="manual-note"><strong>WSX</strong> gives race-pick points to you personally but does <strong>not</strong> count toward inter-league points.</div>
       </div>
     </section>
 
     <section id="liga-dueller" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('swords') }}<span>Liga-dueller</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('leagues_page') }}">Dueller via ligor →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('swords') }}<span class="lang-sv">Liga-dueller</span><span class="lang-en">League duels</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('leagues_page') }}"><span class="lang-sv">Dueller via ligor →</span><span class="lang-en">Duels via leagues →</span></a>
       </div>
-      <p>
-        1v1-utmaningar inom ligan inför ett race. Separat från liga-leaderboarden —
-        mer skryt och märken än säsongspoäng.
-      </p>
-      <ol>
-        <li>Du utmanar en medlem</li>
-        <li>Motståndaren väljer motfråga + klass</li>
-        <li>Båda låser svar innan picks stänger</li>
-        <li>Avgörs efter racet</li>
-      </ol>
-      <div class="duel-grid my-3">
-        <div class="duel-tile">
-          <h4>H2H Prognos</h4>
-          <p class="text-sm text-slate-400 m-0">Välj förare + tippa plats 1–20. Närmast rätt vinner (exakt träff vinner direkt).</p>
+      <div class="lang-sv">
+        <p>1v1-utmaningar inom ligan inför ett race. Separat från liga-leaderboarden — mer skryt och märken än säsongspoäng.</p>
+        <ol>
+          <li>Du utmanar en medlem</li>
+          <li>Motståndaren väljer motfråga + klass</li>
+          <li>Båda låser svar innan picks stänger</li>
+          <li>Avgörs efter racet</li>
+        </ol>
+        <div class="duel-grid my-3">
+          <div class="duel-tile"><h4>H2H Prognos</h4><p class="text-sm text-slate-400 m-0">Välj förare + tippa plats 1–20. Närmast rätt vinner (exakt träff vinner direkt).</p></div>
+          <div class="duel-tile"><h4>Vem högre?</h4><p class="text-sm text-slate-400 m-0">Utmanade väljer två förare; utmanaren tippar vem som placerar sig bäst.</p></div>
+          <div class="duel-tile"><h4>Brand battle</h4><p class="text-sm text-slate-400 m-0">Två märken ställs mot varandra; bästa placering per märke i klassen avgör.</p></div>
         </div>
-        <div class="duel-tile">
-          <h4>Vem högre?</h4>
-          <p class="text-sm text-slate-400 m-0">Utmanade väljer två förare; utmanaren tippar vem som placerar sig bäst.</p>
-        </div>
-        <div class="duel-tile">
-          <h4>Brand battle</h4>
-          <p class="text-sm text-slate-400 m-0">Två märken ställs mot varandra; bästa placering per märke i klassen avgör.</p>
-        </div>
+        <ul>
+          <li>Max <strong>2 aktiva</strong> dueller per race (egna + accepterade)</li>
+          <li>Max <strong>1 väntande</strong> egen utmaning</li>
+          <li>Samma par: max 1 aktiv duell per race</li>
+          <li>Oavgjort ger varken W eller L</li>
+          <li>Saldo W−L ger glory-/shame-märke för det racet</li>
+        </ul>
       </div>
-      <ul>
-        <li>Max <strong>2 aktiva</strong> dueller per race (egna + accepterade)</li>
-        <li>Max <strong>1 väntande</strong> egen utmaning</li>
-        <li>Samma par: max 1 aktiv duell per race</li>
-        <li>Oavgjort ger varken W eller L</li>
-        <li>Saldo W−L ger glory-/shame-märke för det racet</li>
-      </ul>
+      <div class="lang-en">
+        <p>1v1 challenges within the league before a race. Separate from the league leaderboard — more bragging rights and badges than season points.</p>
+        <ol>
+          <li>You challenge a member</li>
+          <li>The opponent chooses their counter-question + class</li>
+          <li>Both lock answers before picks close</li>
+          <li>Settled after the race</li>
+        </ol>
+        <div class="duel-grid my-3">
+          <div class="duel-tile"><h4>H2H Prediction</h4><p class="text-sm text-slate-400 m-0">Pick a rider + predict position 1–20. Closest wins (exact match wins outright).</p></div>
+          <div class="duel-tile"><h4>Who finishes higher?</h4><p class="text-sm text-slate-400 m-0">Challenged picks two riders; challenger predicts who finishes best.</p></div>
+          <div class="duel-tile"><h4>Brand battle</h4><p class="text-sm text-slate-400 m-0">Two brands go head to head; best finishing position per brand in the class decides.</p></div>
+        </div>
+        <ul>
+          <li>Max <strong>2 active</strong> duels per race (own + accepted)</li>
+          <li>Max <strong>1 pending</strong> own challenge</li>
+          <li>Same pair: max 1 active duel per race</li>
+          <li>Draw gives neither a W nor an L</li>
+          <li>W−L balance earns a glory/shame badge for that race</li>
+        </ul>
+      </div>
     </section>
 
     <section id="mer" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span>Mer i appen</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('pit_lane.pit_lane_page') }}">Öppna Pit Lane →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span class="lang-sv">Mer i appen</span><span class="lang-en">More in the app</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('pit_lane.pit_lane_page') }}"><span class="lang-sv">Öppna Pit Lane →</span><span class="lang-en">Open Pit Lane →</span></a>
       </div>
-      <ul class="manual-feature-list">
-        <li><a href="{{ url_for('pit_lane.pit_lane_page') }}">Pit Lane</a> — notiser, Race Control och meddelanden (klockikonen)</li>
-        <li><a href="{{ url_for('bulletin_board') }}">Trash Talk Brädan</a> — diskussioner och reaktioner</li>
-        <li><a href="{{ url_for('my_scores') }}">Mina Poäng</a> — dina resultat per race</li>
-        <li><a href="{{ url_for('race_results_page') }}">Race Resultat</a> — officiella resultat och jämförelse</li>
-        <li><a href="{{ url_for('finished_series_page') }}">Färdiga Serier</a> — avslutade säsonger och slutställningar</li>
-        <li><a href="{{ url_for('trackmaps_page') }}">Track Maps</a> — banlayouter där de finns</li>
-        <li><a href="{{ url_for('riders_directory') }}">Förarguide</a> — förare och info</li>
-        <li><strong>Pit Pass</strong> — snabbregistrering för gäster (e-post/konto)</li>
-      </ul>
-      <p class="text-slate-400 text-sm mt-3 mb-0">
-        Påminnelser: slå gärna på push-notiser i Pit Lane eller via prompts i appen så du inte missar deadline.
-      </p>
+      <div class="lang-sv">
+        <ul class="manual-feature-list">
+          <li><a href="{{ url_for('pit_lane.pit_lane_page') }}">Pit Lane</a> — notiser, Race Control och meddelanden (klockikonen)</li>
+          <li><a href="{{ url_for('bulletin_board') }}">Trash Talk Brädan</a> — diskussioner och reaktioner</li>
+          <li><a href="{{ url_for('my_scores') }}">Mina Poäng</a> — dina resultat per race</li>
+          <li><a href="{{ url_for('race_results_page') }}">Race Resultat</a> — officiella resultat och jämförelse</li>
+          <li><a href="{{ url_for('finished_series_page') }}">Färdiga Serier</a> — avslutade säsonger och slutställningar</li>
+          <li><a href="{{ url_for('trackmaps_page') }}">Track Maps</a> — banlayouter där de finns</li>
+          <li><a href="{{ url_for('riders_directory') }}">Förarguide</a> — förare och info</li>
+          <li><strong>Pit Pass</strong> — snabbregistrering för gäster (e-post/konto)</li>
+        </ul>
+        <p class="text-slate-400 text-sm mt-3 mb-0">Påminnelser: slå gärna på push-notiser i Pit Lane eller via prompts i appen så du inte missar deadline.</p>
+      </div>
+      <div class="lang-en">
+        <ul class="manual-feature-list">
+          <li><a href="{{ url_for('pit_lane.pit_lane_page') }}">Pit Lane</a> — notifications, Race Control and messages (bell icon)</li>
+          <li><a href="{{ url_for('bulletin_board') }}">Trash Talk Board</a> — discussions and reactions</li>
+          <li><a href="{{ url_for('my_scores') }}">My Scores</a> — your results per race</li>
+          <li><a href="{{ url_for('race_results_page') }}">Race Results</a> — official results and comparison</li>
+          <li><a href="{{ url_for('finished_series_page') }}">Finished Series</a> — completed seasons and final standings</li>
+          <li><a href="{{ url_for('trackmaps_page') }}">Track Maps</a> — track layouts where available</li>
+          <li><a href="{{ url_for('riders_directory') }}">Rider Guide</a> — riders and info</li>
+          <li><strong>Pit Pass</strong> — quick sign-up for guests (email/account)</li>
+        </ul>
+        <p class="text-slate-400 text-sm mt-3 mb-0">Reminders: enable push notifications in Pit Lane or via in-app prompts so you don't miss the deadline.</p>
+      </div>
     </section>
 
     <section id="spel" class="manual-card">
       <div class="manual-card-head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('gamepad') }}<span>Spel</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('index') }}#games">Spel på startsidan →</a>
+        <h2><span class="mx-heading-icon">{{ mx_icon('gamepad') }}<span class="lang-sv">Spel</span><span class="lang-en">Games</span></span></h2>
+        <a class="manual-goto" href="{{ url_for('index') }}#games"><span class="lang-sv">Spel på startsidan →</span><span class="lang-en">Games on home page →</span></a>
       </div>
       <ul class="manual-feature-list">
-        <li><a href="{{ url_for('cross_jump_modern') }}">Cross Jump Modern</a> — hoppspel (finns även klassisk variant)</li>
-        <li><a href="{{ url_for('motocross_quiz') }}">Motocross Quiz</a> — kunskapstest</li>
+        <li><a href="{{ url_for('cross_jump_modern') }}">Cross Jump Modern</a> — <span class="lang-sv">hoppspel (finns även klassisk variant)</span><span class="lang-en">jump game (classic variant also available)</span></li>
+        <li><a href="{{ url_for('motocross_quiz') }}">Motocross Quiz</a> — <span class="lang-sv">kunskapstest</span><span class="lang-en">knowledge test</span></li>
       </ul>
       <div class="manual-goto-row">
-        <a class="manual-goto" href="{{ url_for('cross_jump_modern') }}">Spela Cross Jump →</a>
-        <a class="manual-goto" href="{{ url_for('motocross_quiz') }}">Starta quiz →</a>
+        <a class="manual-goto" href="{{ url_for('cross_jump_modern') }}"><span class="lang-sv">Spela Cross Jump →</span><span class="lang-en">Play Cross Jump →</span></a>
+        <a class="manual-goto" href="{{ url_for('motocross_quiz') }}"><span class="lang-sv">Starta quiz →</span><span class="lang-en">Start quiz →</span></a>
       </div>
-      <p class="mt-3 mb-0 text-slate-400 text-sm">Highscores syns under fliken <strong>Spel</strong> på startsidan.</p>
+      <p class="mt-3 mb-0 text-slate-400 text-sm lang-sv">Highscores syns under fliken <strong>Spel</strong> på startsidan.</p>
+      <p class="mt-3 mb-0 text-slate-400 text-sm lang-en">Highscores are shown under the <strong>Games</strong> tab on the home page.</p>
     </section>
 
     <section id="tips" class="manual-card">
       <div class="manual-card-head">
         <h2><span class="mx-heading-icon">{{ mx_icon('target') }}<span>Tips</span></span></h2>
-        <a class="manual-goto" href="{{ url_for('race_picks_active') }}">Till race picks →</a>
+        <a class="manual-goto" href="{{ url_for('race_picks_active') }}"><span class="lang-sv">Till race picks →</span><span class="lang-en">To race picks →</span></a>
       </div>
-      <ul>
+      <ul class="lang-sv">
         <li>Lämna in picks i god tid — deadline är 2&nbsp;h före start</li>
         <li>Kolla OUT-listan innan du tippar</li>
         <li>Närhet belönas: en plats fel ger fortfarande bra poäng</li>
         <li>Säsongsteam: prioritera stabila topplaceringar framför enstaka vinster</li>
         <li>I ligor: jämn form i laget väger tyngre än en ensam stjärna</li>
       </ul>
+      <ul class="lang-en">
+        <li>Submit picks in good time — deadline is 2&nbsp;h before start</li>
+        <li>Check the OUT list before you pick</li>
+        <li>Proximity is rewarded: one position off still earns good points</li>
+        <li>Season team: favour consistent top finishers over one-off winners</li>
+        <li>In leagues: steady team form outweighs a single star</li>
+      </ul>
     </section>
 
     <section class="manual-card text-center">
-      <h2 class="!mb-2">Lycka till</h2>
-      <p class="text-slate-400 mb-4">Ha kul, följ sporten — och lämna in innan deadline.</p>
+      <h2 class="!mb-2"><span class="lang-sv">Lycka till</span><span class="lang-en">Good luck</span></h2>
+      <p class="text-slate-400 mb-4 lang-sv">Ha kul, följ sporten — och lämna in innan deadline.</p>
+      <p class="text-slate-400 mb-4 lang-en">Have fun, follow the sport — and submit before the deadline.</p>
       {% if not is_logged_in %}
       <div class="flex flex-col sm:flex-row gap-2 justify-center">
-        <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Registrera dig</a>
-        <a href="{{ url_for('login') }}" class="rp-btn rp-btn--secondary">Logga in</a>
+        <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary"><span class="lang-sv">Registrera dig</span><span class="lang-en">Sign up</span></a>
+        <a href="{{ url_for('login') }}" class="rp-btn rp-btn--secondary"><span class="lang-sv">Logga in</span><span class="lang-en">Log in</span></a>
       </div>
       {% else %}
-      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--primary">Till startsidan</a>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--primary"><span class="lang-sv">Till startsidan</span><span class="lang-en">To home page</span></a>
       {% endif %}
     </section>
   </main>
 
+  <script>
+    // Apply saved language preference and wire toggle buttons
+    (function () {
+      if (typeof MxI18n === 'undefined') return;
+      var lang = MxI18n.getLang();
+      if (lang === 'en') document.documentElement.lang = 'en';
+      // Update toggle button states
+      document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {
+        var active = btn.dataset.lang === lang;
+        btn.classList.toggle('mx-lang-btn--active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.addEventListener('click', function () {
+          var l = MxI18n.set(btn.dataset.lang);
+          document.documentElement.lang = l === 'en' ? 'en' : 'sv';
+          document.querySelectorAll('.mx-lang-btn').forEach(function (b) {
+            var a = b.dataset.lang === l;
+            b.classList.toggle('mx-lang-btn--active', a);
+            b.setAttribute('aria-pressed', a ? 'true' : 'false');
+          });
+        });
+      });
+    })();
+  </script>
   <script>
     (function () {
       var backLink = document.getElementById('manual-back-link');

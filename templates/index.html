@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
@@ -1842,9 +1843,39 @@
     @media (min-width: 1024px) {
       .home-tabs__inner {
         display: grid;
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(8, minmax(0, 1fr)) auto;
         gap: 0.35rem;
       }
+    }
+    /* Language toggle */
+    .mx-lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: #141c2c;
+      border: 1px solid #2a3548;
+      border-radius: 0.5rem;
+      padding: 2px;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .mx-lang-btn {
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.25rem 0.45rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+    .mx-lang-btn:hover { color: #94a3b8; }
+    .mx-lang-btn--active, .mx-lang-btn[aria-pressed="true"] {
+      background: #1e3a5f;
+      color: #67e8f9;
     }
     .home-tabs .tab-btn.rp-tab-btn {
       background: #1a2436;
@@ -2001,17 +2032,21 @@
         <div class="home-header-stack">
         <div class="home-tabs relative z-10">
           <div id="tab-scroll-container" class="home-tabs__inner">
-                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden">Race</span><span class="hidden sm:inline">Race Info</span></button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden">Toppl.</span><span class="hidden sm:inline">Leaderboard</span></button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="stats">Stats</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="games">Spel</button>
-                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues">Ligor</button>
+                <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info"><span class="sm:hidden" data-i18n="tab.race_info.short">Race</span><span class="hidden sm:inline" data-i18n="tab.race_info">Race Info</span></button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard"><span class="sm:hidden" data-i18n="tab.leaderboard.short">Toppl.</span><span class="hidden sm:inline" data-i18n="tab.leaderboard">Topplista</span></button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="stats" data-i18n="tab.stats">Statistik</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
+                <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
                 <button type="button" id="tab-season-team-btn"
                   class="tab-btn rp-tab-btn" data-tab="season-team"
                   {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
-                >Team</button>
-                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden">Inst.</span><span class="hidden sm:inline">Settings</span></button>
-                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik">Manual</a>
+                  data-i18n="tab.team">Team</button>
+                <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden" data-i18n="tab.settings.short">Inst.</span><span class="hidden sm:inline" data-i18n="tab.settings">Inställningar</span></button>
+                <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" title="Öppna spelmanualen i ny flik" data-i18n="tab.manual">Manual</a>
+                <div id="lang-toggle-tabs" class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+                  <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+                  <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+                </div>
           </div>
         </div>
 
@@ -2147,11 +2182,11 @@
                 </div>
                 <div class="home-race-hero__timers">
                   <div class="home-race-timer home-race-timer--start">
-                    <div class="home-race-timer__label">Race Start</div>
+                    <div class="home-race-timer__label" data-i18n="countdown.race_start">Racestart</div>
                     <div id="real-race-countdown" class="home-race-timer__value">--:--:--</div>
                   </div>
                   <div class="home-race-timer home-race-timer--deadline">
-                    <div class="home-race-timer__label">Pick Deadline</div>
+                    <div class="home-race-timer__label" data-i18n="countdown.deadline">Deadline picks</div>
                     <div id="real-deadline-countdown" class="home-race-timer__value">--:--:--</div>
                   </div>
                 </div>
@@ -2159,20 +2194,25 @@
                   <span id="real-picks-locked-status" class="hidden bg-red-950/80 border border-red-800/50 text-red-200 px-3 py-2 rounded-md text-xs font-semibold">Picks låsta</span>
                   {% set _cta_race = picks_cta_race_label or (upcoming_race.name if upcoming_race else 'racet') %}
                   {% if picks_status == 'has_picks' %}
-                    {% set _cta_text = 'Alla picks klara — redigera?' %}
+                    {% set _cta_sv = 'Alla picks klara — redigera?' %}
+                    {% set _cta_en = 'All picks done — edit?' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--done' %}
                   {% elif picks_status == 'partial_picks' %}
-                    {% set _cta_text = 'Komplettera picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_sv = 'Komplettera picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_en = 'Complete picks for ' ~ _cta_race ~ ' →' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
                   {% else %}
-                    {% set _cta_text = 'Sätt dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_sv = 'Sätt dina picks till ' ~ _cta_race ~ ' →' %}
+                    {% set _cta_en = 'Set your picks for ' ~ _cta_race ~ ' →' %}
                     {% set _cta_class = 'mx-picks-cta mx-picks-cta--need' %}
                   {% endif %}
                   <a id="real-picks-open-status"
                      href="{% if upcoming_race %}{{ url_for('race_picks_page', competition_id=upcoming_race.id) }}{% else %}/race_picks_active{% endif %}"
                      class="hidden {{ _cta_class }}"
                      data-picks-status="{{ picks_status }}"
-                     data-race-label="{{ _cta_race }}">{{ _cta_text }}</a>
+                     data-race-label="{{ _cta_race }}"
+                     data-i18n-sv="{{ _cta_sv }}"
+                     data-i18n-en="{{ _cta_en }}">{{ _cta_sv }}</a>
                 </div>
               </div>
             </div>
@@ -2334,7 +2374,7 @@
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>Snabba åtgärder</h2>
+                  <h2 data-i18n="home.quick_actions">Snabba åtgärder</h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
                 <div class="home-panel__tiles grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5">
@@ -2344,28 +2384,28 @@
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Säsongsteam</span>
+                    <span class="home-inner-tile__label" data-i18n="home.season_team">Säsongsteam</span>
                   </a>
 
                   <a href="{{ url_for('race_results_page') }}" class="home-inner-tile home-action-tile--results">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Race Resultat</span>
+                    <span class="home-inner-tile__label" data-i18n="home.race_results">Race Resultat</span>
                   </a>
 
                   <a href="{{ url_for('my_scores') }}" class="home-inner-tile home-action-tile--scores">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 4H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Mina Poäng</span>
+                    <span class="home-inner-tile__label" data-i18n="home.my_scores">Mina Poäng</span>
                   </a>
 
                   <a href="{{ url_for('finished_series_page') }}" class="home-inner-tile home-action-tile--finished">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Färdiga Serier</span>
+                    <span class="home-inner-tile__label" data-i18n="home.finished_series">Färdiga Serier</span>
                   </a>
 
                   {% if view_picks_race %}
@@ -2374,13 +2414,13 @@
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Se Andras Picks</span>
+                    <span class="home-inner-tile__label" data-i18n="home.see_others_picks">Se Andras Picks</span>
                   </button>
                   <div id="picks-locked-disabled-btn" class="home-inner-tile home-inner-tile--muted home-action-tile--locked{% if can_view_other_picks %} hidden{% endif %}">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
                     </span>
-                    <span class="home-inner-tile__label">Picks Låsta</span>
+                    <span class="home-inner-tile__label" data-i18n="home.picks_locked">Picks Låsta</span>
                   </div>
                   {% endif %}
                 </div>
@@ -2391,7 +2431,7 @@
                    style="background-image: url('{{ home_panel_bg }}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('party') }}<span>Veckans Prestationer</span></span></h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('party') }}<span id="weekly-panel-heading" data-i18n="home.achievements">Veckans Prestationer</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body home-panel__body">
                   <div id="weekly-fun-stats" class="home-panel__tiles grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5">
@@ -2404,7 +2444,7 @@
                    style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span>I rampljuset</span></span></h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('sparkles') }}<span data-i18n="home.spotlight">I rampljuset</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body">
                   <div id="rider-spotlight-tabs" class="flex flex-wrap justify-center gap-2 mb-3 px-1 overflow-x-auto"></div>
@@ -2421,7 +2461,7 @@
                    style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/" + (upcoming_race.name.lower().replace(" ", "") if upcoming_race else "anaheim1") + ".jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2>Aktuellt Race</h2>
+                  <h2 data-i18n="home.current_race">Aktuellt Race</h2>
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
           {% if upcoming_race %}
@@ -2486,7 +2526,7 @@
                      style="background-image: url('{% if upcoming_race_bg_url %}{{ url_for("static", filename=upcoming_race_bg_url) }}{% else %}{{ url_for("static", filename="trackmaps/compressed/anaheim1.jpg") }}{% endif %}');">
                 <div class="home-ui-panel__scrim"></div>
                 <div class="home-ui-panel__head">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('megaphone') }}<span>Nyheter &amp; påminnelser</span></span></h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('megaphone') }}<span data-i18n="home.news">Nyheter &amp; påminnelser</span></span></h2>
                 </div>
                 <div class="home-ui-panel__body flex flex-col flex-1 min-h-0">
                 <p class="home-ui-panel__sub home-ui-panel__sub--left">Senaste inlägg från vår Facebook-sida.</p>
@@ -2607,7 +2647,7 @@
               <div class="home-ui-panel__head">
                 <div class="flex items-center justify-center gap-3">
                   <img src="{{ url_for('static', filename='images/mx_fantasy_logo.png') }}" alt="MX Fantasy League" class="h-8 w-auto">
-                  <h2 id="home-fantasy-lb-title"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>SMX Leaderboard</span></span></h2>
+                  <h2 id="home-fantasy-lb-title"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span data-i18n="lb.smx">SMX Topplista</span></span></h2>
                 </div>
               </div>
               <div class="home-ui-panel__body">
@@ -2626,7 +2666,7 @@
     
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span>Säsongsteam Leaderboard</span></span></h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('users') }}<span data-i18n="lb.season_team">Säsongsteam Topplista</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="season-team-leaderboard-list">
@@ -2643,7 +2683,7 @@
 
     <div class="home-ui-panel mb-6">
       <div class="home-ui-panel__head">
-        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Liga Leaderboard</span></span></h2>
+        <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span data-i18n="lb.liga">Liga Topplista</span></span></h2>
       </div>
       <div class="home-ui-panel__body">
         <div id="league-leaderboard-list">
@@ -2726,7 +2766,7 @@
                       <span class="mx-heading-icon">{{ mx_icon('chart-up') }}<span>Se prestationer, statistik och bakgrundshistorier</span></span>
                     </div>
                   </div>
-                  <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--block rp-btn--accent">Förarguide</a>
+                  <a href="{{ url_for('riders_directory') }}" class="rp-btn rp-btn--block rp-btn--accent" data-i18n="home.rider_guide">Förarguide</a>
                 </div>
               </div>
             </div>
@@ -2742,12 +2782,12 @@
                   <a href="{{ url_for('dino_game') }}" class="rp-btn rp-btn--block rp-btn--accent">Cross Jump (klassisk)</a>
                   <a href="{{ url_for('trackmaps_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Track Maps</a>
                   <a href="{{ url_for('motocross_quiz') }}" class="rp-btn rp-btn--block rp-btn--accent">Motocross Quiz</a>
-                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent">Trash Talk Brädan</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent" data-i18n="home.trash_talk">Trash Talk Brädan</a>
                 </div>
               </div>
               
               <div class="bg-white bg-opacity-90 dark:bg-gray-800 dark:bg-opacity-90 p-4 sm:p-6 rounded-lg shadow-lg">
-                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span>Game Highscores</span></span></h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-100 mb-4"><span class="mx-heading-icon">{{ mx_icon('trophy') }}<span data-i18n="lb.game_highscores">Spel — Highscores</span></span></h2>
                 
                 <!-- Cross Jump Highscores -->
                 <div class="mb-6">
@@ -2877,7 +2917,7 @@
                 <div class="rp-btn-stack">
                   {% if is_logged_in %}
                   <a href="{{ url_for('profile_page') }}" class="rp-btn rp-btn--block rp-btn--accent">Min Profil</a>
-                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent">Trash Talk Brädan</a>
+                  <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--block rp-btn--accent" data-i18n="home.trash_talk">Trash Talk Brädan</a>
                   {% else %}
                   <button type="button" onclick="openLoginModal();" class="rp-btn rp-btn--block rp-btn--primary">Logga in</button>
                   <button type="button" onclick="openGuestSignup();" class="rp-btn rp-btn--block rp-btn--accent">Registrera dig</button>
@@ -3546,13 +3586,20 @@
         // Update panel heading to reflect the active series
         const panelHead = container.closest('.home-ui-panel')?.querySelector('.home-ui-panel__head h2 span span');
         if (panelHead) {
-          panelHead.textContent = isWSX ? 'WSX Prestationer' : 'Veckans Prestationer';
+          const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+          if (isWSX) {
+            panelHead.textContent = isEn ? 'WSX Highlights' : 'WSX Prestationer';
+          } else {
+            panelHead.textContent = isEn ? "This week's highlights" : 'Veckans Prestationer';
+          }
+          panelHead.removeAttribute('data-i18n'); // JS now owns this text
         }
 
-        const rocketLabel   = isWSX ? 'Senaste Raket (WSX)'   : 'Veckans Raket';
-        const anchorLabel   = isWSX ? 'Senaste Ankare (WSX)'  : 'Veckans Ankare';
-        const holeshotLabel = isWSX ? 'Holeshot SX1+SX2' : 'Holeshot-Mästare';
-        const holeshotPeriod = isWSX ? 'Senaste WSX' : 'Denna vecka';
+        const isEnLabel = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+        const rocketLabel   = isWSX ? (isEnLabel ? 'Latest Rocket (WSX)' : 'Senaste Raket (WSX)')   : (isEnLabel ? 'Rocket of the week' : 'Veckans Raket');
+        const anchorLabel   = isWSX ? (isEnLabel ? 'Latest Anchor (WSX)' : 'Senaste Ankare (WSX)')  : (isEnLabel ? 'Anchor of the week' : 'Veckans Ankare');
+        const holeshotLabel = isWSX ? 'Holeshot SX1+SX2' : (isEnLabel ? 'Holeshot King' : 'Holeshot-Mästare');
+        const holeshotPeriod = isWSX ? (isEnLabel ? 'Latest WSX' : 'Senaste WSX') : (isEnLabel ? 'This week' : 'Denna vecka');
         
         if (data.error) {
           container.innerHTML = '<p class="text-red-400 text-center col-span-full text-sm">Fel vid laddning av statistik.</p>';
@@ -6285,5 +6332,22 @@
       </div>
     </div>
   </div>
+  <script>
+    // Language toggle init
+    (function () {
+      if (typeof MxI18n === 'undefined') return;
+      function applyAll(lang) {
+        MxI18n.apply(lang);
+        document.querySelectorAll('[data-i18n-sv],[data-i18n-en]').forEach(function (el) {
+          var val = lang === 'en' ? el.dataset.i18nEn : el.dataset.i18nSv;
+          if (val !== undefined) el.textContent = val;
+        });
+      }
+      applyAll(MxI18n.getLang());
+      document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { applyAll(MxI18n.set(btn.dataset.lang)); });
+      });
+    })();
+  </script>
 </body>
 </html>

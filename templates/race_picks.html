@@ -630,6 +630,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=1" defer></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
 </head>
@@ -744,8 +745,18 @@
         <div class="flex items-center gap-3 min-w-0">
           <div id="status-icon" class="shrink-0">{% if initial_picks_status and initial_picks_status.icon == '✅' %}{{ mx_icon('check-circle', 'mx-icon--xl mx-icon--ok') }}{% elif initial_picks_status and initial_picks_status.icon == '⚠️' %}{{ mx_icon('alert', 'mx-icon--xl mx-icon--warn') }}{% elif initial_picks_status %}{{ mx_icon('note', 'mx-icon--xl') }}{% else %}{{ mx_icon('hourglass', 'mx-icon--xl') }}{% endif %}</div>
           <div class="min-w-0">
-            <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words">{{ initial_picks_status.title if initial_picks_status else 'Laddar picks-status...' }}</h3>
-            <p id="status-message" class="text-sm text-gray-300 break-words">{{ initial_picks_status.message if initial_picks_status else 'Kontrollerar om du har gjort dina val' }}</p>
+            {% if initial_picks_status and initial_picks_status.icon == '✅' %}
+            <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words"
+                data-i18n-sv="Alla val gjorda!" data-i18n-en="All picks done!">{{ initial_picks_status.title }}</h3>
+            <p id="status-message" class="text-sm text-gray-300 break-words"
+               data-i18n-sv="Du har gjort alla dina val för detta race. Lycka till!" data-i18n-en="You have made all your picks for this race. Good luck!">{{ initial_picks_status.message }}</p>
+            {% elif initial_picks_status %}
+            <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words">{{ initial_picks_status.title }}</h3>
+            <p id="status-message" class="text-sm text-gray-300 break-words">{{ initial_picks_status.message }}</p>
+            {% else %}
+            <h3 id="status-title" class="text-base sm:text-lg font-semibold text-cyan-400 break-words">Laddar picks-status...</h3>
+            <p id="status-message" class="text-sm text-gray-300 break-words">Kontrollerar om du har gjort dina val</p>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -754,7 +765,7 @@
     {% if out_ids %}
     <details class="race-picks-out-details mb-3">
       <summary>
-        {{ out_ids|length }} förare är OUT för detta race (syns inte i listorna)
+        {{ out_ids|length }} <span data-i18n="picks.out_riders">förare är OUT för detta race (syns inte i listorna)</span>
       </summary>
       <div class="race-picks-out-details__body">
         <ul class="race-picks-out-details__list">
@@ -791,8 +802,8 @@
     <header class="wizard-step-hero wizard-step-hero--450">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bikers.svg') }}" alt="">
       <div>
-        <h2>Steg 1 — {{ class_450_label }} topp 6</h2>
-        <p>Välj dina 6 förare. Snabbval ovan eller listan nedan.</p>
+        <h2><span data-i18n="picks.step1">Steg 1</span> — {{ class_450_label }} topp 6</h2>
+        <p data-i18n-sv="Välj dina 6 förare. Snabbval ovan eller listan nedan." data-i18n-en="Choose your 6 riders. Quick picks above or the list below.">Välj dina 6 förare. Snabbval ovan eller listan nedan.</p>
       </div>
     </header>
     <div id="wizard-quick-450" class="wizard-quick-picks"></div>
@@ -833,8 +844,8 @@
     <header class="wizard-step-hero wizard-step-hero--250">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
       <div>
-        <h2>Steg 2 — {{ class_250_label }} topp 6</h2>
-        <p>Välj 6 förare i {{ class_250_label }}.</p>
+        <h2><span data-i18n="picks.step2">Steg 2</span> — {{ class_250_label }} topp 6</h2>
+        <p data-i18n-sv="Välj 6 förare i {{ class_250_label }}." data-i18n-en="Choose 6 riders in {{ class_250_label }}.">Välj 6 förare i {{ class_250_label }}.</p>
       </div>
     </header>
     <div id="wizard-quick-250" class="wizard-quick-picks"></div>
@@ -875,7 +886,7 @@
     <header class="wizard-step-hero wizard-step-hero--bonus">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bike_silhouette.svg') }}" alt="">
       <div>
-        <h2>Steg 3 — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
+        <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
         <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
       </div>
     </header>
@@ -884,7 +895,7 @@
 
     <div id="wizard-step-3-forms" class="wizard-step-3-forms">
     <div class="mt-2">
-      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md">Gissa Holeshot</h3>
+      <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md" data-i18n="picks.holeshot">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_450_label }}:</label>
@@ -960,7 +971,7 @@
 
     <div id="wizard-step-save" class="wizard-step-save" style="display: {% if initial_wiz_step >= 3 %}block{% else %}none{% endif %};">
       <div class="wizard-step-save__actions mt-4 sm:mt-6">
-        <button type="button" id="save-picks-btn" onclick="savePicks()" class="rp-btn rp-btn--primary">Lämna in mina val</button>
+        <button type="button" id="save-picks-btn" onclick="savePicks()" class="rp-btn rp-btn--primary" data-i18n="picks.submit">Lämna in mina val</button>
         {% if picks_locked %}
         <button type="button" onclick="showOtherUsersPicks()" class="rp-btn rp-btn--accent">Visa andras picks</button>
         {% else %}
@@ -972,11 +983,11 @@
   </section>
 
   <footer class="wizard-nav">
-    <button type="button" id="wizard-btn-back" class="rp-btn rp-btn--secondary wizard-nav__btn wizard-nav__btn--back" disabled>← Tillbaka</button>
-    <span id="wizard-step-label" class="wizard-nav__label">Steg 1 av 3</span>
-    <button type="button" id="wizard-btn-next" class="rp-btn rp-btn--accent wizard-nav__btn wizard-nav__btn--next">Nästa: {{ class_250_label }} →</button>
+    <button type="button" id="wizard-btn-back" class="rp-btn rp-btn--secondary wizard-nav__btn wizard-nav__btn--back" disabled data-i18n-sv="← Tillbaka" data-i18n-en="← Back">← Tillbaka</button>
+    <span id="wizard-step-label" class="wizard-nav__label" data-i18n-sv="Steg 1 av 3" data-i18n-en="Step 1 of 3">Steg 1 av 3</span>
+    <button type="button" id="wizard-btn-next" class="rp-btn rp-btn--accent wizard-nav__btn wizard-nav__btn--next" data-i18n-sv="Nästa: {{ class_250_label }} →" data-i18n-en="Next: {{ class_250_label }} →">Nästa: {{ class_250_label }} →</button>
   </footer>
-  <p class="wizard-draft-note">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
+  <p class="wizard-draft-note" data-i18n-sv="Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen." data-i18n-en="Draft saved automatically on this device. Submit to register with the competition.">Utkast sparas automatiskt på den här enheten. Lämna in för att registrera hos tävlingen.</p>
 </div>
 </div><!-- /picks-wizard-shell -->
 
@@ -2510,25 +2521,25 @@ function updatePicksStatus(myPicks) {
   // Required picks: 12 top picks (6+6) + 2 holeshots + (0 for WSX, 1 wildcard for others) = 14 for WSX, 15 for others
   const totalRequired = isWSXSeries ? 14 : 15;
   
+  const _en = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
   if (totalPicks === 0) {
-    // No picks made
     statusIcon.innerHTML = mxIcon('note', { className: 'mx-icon--xl' });
-    statusTitle.textContent = 'Inga val gjorda än';
-    statusMessage.textContent = isWSXSeries ? 'Gör dina val för topp 6 och holeshot' : 'Gör dina val för topp 6, holeshot och wildcard';
+    statusTitle.textContent = _en ? 'No picks made yet' : 'Inga val gjorda än';
+    statusMessage.textContent = isWSXSeries
+      ? (_en ? 'Make your top 6 and holeshot picks' : 'Gör dina val för topp 6 och holeshot')
+      : (_en ? 'Make your top 6, holeshot and wildcard picks' : 'Gör dina val för topp 6, holeshot och wildcard');
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-yellow-400 bg-yellow-900/30';
   } else if (picksAreLocked) {
     // Locked — status only
   } else if (totalPicks < totalRequired) {
-    // Partial picks
     statusIcon.innerHTML = mxIcon('alert', { className: 'mx-icon--xl mx-icon--warn' });
-    statusTitle.textContent = `Delvis klart (${totalPicks}/${totalRequired} val)`;
-    statusMessage.textContent = 'Du har gjort några val, men inte alla. Komplettera dina picks!';
+    statusTitle.textContent = _en ? `Partially done (${totalPicks}/${totalRequired})` : `Delvis klart (${totalPicks}/${totalRequired} val)`;
+    statusMessage.textContent = _en ? 'You have some picks but not all. Complete your picks!' : 'Du har gjort några val, men inte alla. Komplettera dina picks!';
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-orange-400 bg-orange-900/30';
   } else {
-    // All picks made
     statusIcon.innerHTML = mxIcon('check-circle', { className: 'mx-icon--xl mx-icon--ok' });
-    statusTitle.textContent = 'Alla val gjorda!';
-    statusMessage.textContent = 'Du har gjort alla dina val för detta race. Lycka till!';
+    statusTitle.textContent = _en ? 'All picks done!' : 'Alla val gjorda!';
+    statusMessage.textContent = _en ? 'You have made all your picks for this race. Good luck!' : 'Du har gjort alla dina val för detta race. Lycka till!';
     statusContainer.className = 'mb-4 p-4 rounded-lg border-2 border-dashed border-green-400 bg-green-900/30';
   }
 }
@@ -3693,5 +3704,23 @@ function setMainTrackmap(src, thumbEl) {
 {% include 'includes/invite_share_modal.html' %}
 {% endif %}
 
+<script>
+  window.addEventListener('load', function () {
+    if (typeof MxI18n === 'undefined') return;
+    function applyBilingual(lang) {
+      MxI18n.apply(lang);
+      document.querySelectorAll('[data-i18n-sv],[data-i18n-en]').forEach(function (el) {
+        var val = lang === 'en' ? el.dataset.i18nEn : el.dataset.i18nSv;
+        if (val !== undefined) el.textContent = val;
+      });
+    }
+    applyBilingual(MxI18n.getLang());
+    document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        applyBilingual(MxI18n.set(btn.dataset.lang));
+      });
+    });
+  });
+</script>
 </body>
 </html>
