@@ -246,17 +246,20 @@
         </div>
         {% endif %}
 
+        {# Prefer Swedish for SSR so bio is visible even if the language JS fails. #}
+        {% set ssr_bio = bio_sv if (bio_sv.full or bio_sv.hook) else bio_en %}
+        {% set ssr_ach = achievements_sv if achievements_sv else achievements_en %}
         <div class="rounded-xl border border-slate-600/50 bg-slate-900/60 backdrop-blur-sm overflow-hidden">
           <div class="px-4 py-2.5 border-b border-slate-700/60 bg-slate-900/40">
             <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Biografi</h2>
           </div>
           <div class="p-4 sm:p-5 space-y-4">
-            <div id="rider-bio-hook-wrap" class="bio-hook-wrap hidden rounded-lg bg-slate-800/40 pl-4 pr-4 py-4">
+            <div id="rider-bio-hook-wrap" class="bio-hook-wrap rounded-lg bg-slate-800/40 pl-4 pr-4 py-4{% if not ssr_bio.hook %} hidden{% endif %}">
               <p class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">I korthet</p>
-              <blockquote id="rider-bio-hook" class="text-base sm:text-lg font-medium text-slate-100 leading-relaxed"></blockquote>
+              <blockquote id="rider-bio-hook" class="text-base sm:text-lg font-medium text-slate-100 leading-relaxed">{{ ssr_bio.hook }}</blockquote>
             </div>
-            <p id="rider-bio-body" class="text-slate-400 text-sm sm:text-base leading-relaxed whitespace-pre-line hidden"></p>
-            <p id="rider-bio-fallback" class="text-slate-500 italic text-sm">Ingen biografi tillagd ännu.</p>
+            <p id="rider-bio-body" class="text-slate-400 text-sm sm:text-base leading-relaxed whitespace-pre-line{% if not ssr_bio.body and not (ssr_bio.full and not ssr_bio.hook) %} hidden{% endif %}">{% if ssr_bio.body %}{{ ssr_bio.body }}{% elif ssr_bio.full and not ssr_bio.hook %}{{ ssr_bio.full }}{% endif %}</p>
+            <p id="rider-bio-fallback" class="text-slate-500 italic text-sm{% if ssr_bio.full or ssr_bio.hook or ssr_bio.body %} hidden{% endif %}">Ingen biografi tillagd ännu.</p>
           </div>
         </div>
 
@@ -265,7 +268,7 @@
             Meriter
           </summary>
           <div class="p-4 sm:p-5">
-            <div id="rider-achievements-text" class="text-slate-300 whitespace-pre-line text-sm leading-relaxed">Inga meriter tillagda ännu.</div>
+            <div id="rider-achievements-text" class="text-slate-300 whitespace-pre-line text-sm leading-relaxed">{{ ssr_ach if ssr_ach else 'Inga meriter tillagda ännu.' }}</div>
           </div>
         </details>
         <p id="bio-translate-status" class="text-xs text-slate-500 hidden"></p>
@@ -323,8 +326,8 @@
       },
     };
 
-    const emptyBioSv = 'Ingen biografi tillagd ännu.';
-    const emptyAchSv = 'Inga meriter tillagda ännu.';
+    const emptyBioSv = 'Ingen biografi tillagd \u00e4nnu.';
+    const emptyAchSv = 'Inga meriter tillagda \u00e4nnu.';
 
     function setActive(lang) {
       buttons.forEach((btn) => {
@@ -366,27 +369,30 @@
 
     function renderBio(lang) {
       const pack = content[lang] || content.en;
-      const hook = pack.hook || '';
-      const body = pack.body || '';
-      const full = pack.full || '';
-      fallbackEl.classList.add('hidden');
-      hookWrapEl.classList.add('hidden');
-      bodyEl.classList.add('hidden');
+      const hook = (pack.hook || '').trim();
+      const body = (pack.body || '').trim();
+      const full = (pack.full || '').trim();
 
       if (!full && !hook && !body) {
         fallbackEl.textContent = lang === 'sv' ? emptyBioSv : (content.en.full || emptyBioSv);
         fallbackEl.classList.remove('hidden');
         return;
       }
+
+      fallbackEl.classList.add('hidden');
+      hookWrapEl.classList.add('hidden');
+      bodyEl.classList.add('hidden');
+
       if (hook) {
         hookEl.textContent = hook;
         hookWrapEl.classList.remove('hidden');
       }
-      if (body) {
-        bodyEl.textContent = body;
-        bodyEl.classList.remove('hidden');
-      } else if (full && !hook) {
-        bodyEl.textContent = full;
+      let bodyText = body;
+      if (!bodyText && full) {
+        bodyText = hook ? full.replace(hook, '').trim() : full;
+      }
+      if (bodyText) {
+        bodyEl.textContent = bodyText;
         bodyEl.classList.remove('hidden');
       }
     }
@@ -457,6 +463,29 @@
     } else {
       render('en');
     }
+
+    // Race picks → Bio → tillbaka kan visa gammal bfcache utan bio.
+    window.addEventListener('pageshow', (event) => {
+      if (!event.persisted) return;
+      const hasVisibleBio =
+        !hookWrapEl.classList.contains('hidden') ||
+        !bodyEl.classList.contains('hidden');
+      const hasData =
+        content.sv.full || content.sv.hook || content.en.full || content.en.hook;
+      if (!hasVisibleBio && hasData) {
+        const lang =
+          (() => {
+            try {
+              return localStorage.getItem(storageKey);
+            } catch (_) {
+              return null;
+            }
+          })() || 'sv';
+        render(lang === 'en' ? 'en' : 'sv');
+      } else if (!hasVisibleBio && !hasData) {
+        window.location.reload();
+      }
+    });
   })();
   </script>
 </body>

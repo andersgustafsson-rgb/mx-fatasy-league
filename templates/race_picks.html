@@ -1191,7 +1191,7 @@
       '<span class="rider-name"></span>' +
       '<span class="rider-brand"></span>' +
       '</span>' +
-      '<a href="/rider/' + rider.id + '" class="rider-bio-link" title="Förarprofil" onclick="event.stopPropagation();">Bio</a>' +
+      '<a href="/rider/' + rider.id + '" class="rider-bio-link" title="Förarprofil" target="_blank" rel="noopener" onclick="event.stopPropagation();">Bio</a>' +
       outHtml;
     div.querySelector('.rider-name').textContent = rider.name || '';
     div.querySelector('.rider-brand').textContent = rider.bike_brand || '';

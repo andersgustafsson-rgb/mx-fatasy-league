@@ -11561,7 +11561,8 @@ def rider_profile(rider_id: int):
     bio_en = _bio_content_parts(bio_source.bio)
     bio_sv_raw = (bio_source.bio_sv or "").strip()
     bio_sv = _bio_content_parts(bio_sv_raw) if bio_sv_raw else {"hook": "", "body": "", "full": ""}
-    return render_template(
+    resp = make_response(
+        render_template(
         'rider_detail.html',
         rider=rider,
         bio_source=bio_source,
@@ -11576,7 +11577,10 @@ def rider_profile(rider_id: int):
         ),
         game_context=build_rider_game_context(rider),
         username=session.get('username'),
+        )
     )
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 
 @app.get('/api/rider/<int:rider_id>/bio')
