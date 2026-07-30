@@ -4217,17 +4217,26 @@
       if (!openStatus) return;
       const race = openStatus.dataset.raceLabel || 'racet';
       const picksStatus = state || openStatus.dataset.picksStatus || 'no_picks';
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       openStatus.dataset.picksStatus = picksStatus;
+      let sv;
+      let en;
       if (picksStatus === 'has_picks') {
-        openStatus.textContent = `Alla picks klara — redigera?`;
+        sv = 'Alla picks klara — redigera?';
+        en = 'All picks done — edit?';
         openStatus.className = 'mx-picks-cta mx-picks-cta--done';
       } else if (picksStatus === 'partial_picks') {
-        openStatus.textContent = `Komplettera picks till ${race} →`;
+        sv = `Komplettera picks till ${race} →`;
+        en = `Complete picks for ${race} →`;
         openStatus.className = 'mx-picks-cta mx-picks-cta--need';
       } else {
-        openStatus.textContent = `Sätt dina picks till ${race} →`;
+        sv = `Sätt dina picks till ${race} →`;
+        en = `Set your picks for ${race} →`;
         openStatus.className = 'mx-picks-cta mx-picks-cta--need';
       }
+      openStatus.dataset.i18nSv = sv;
+      openStatus.dataset.i18nEn = en;
+      openStatus.textContent = isEn ? en : sv;
     }
 
     function applySidebarPicksStatus(status) {
