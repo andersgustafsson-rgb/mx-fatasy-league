@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=1"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=2"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
@@ -2318,13 +2318,13 @@
             <div class="mb-6">
               <div class="home-series-panel home-ui-panel">
                 <div class="home-series-panel__head">
-                  <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span>Välj Serie</span></span></h2>
+                  <h2><span class="mx-heading-icon">{{ mx_icon('flag') }}<span data-i18n="home.choose_series">Välj Serie</span></span></h2>
                 </div>
                 <div class="home-series-panel__body">
                   <div id="series-selection" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="text-center text-gray-400 py-8 col-span-full">
                       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-500 mx-auto mb-2"></div>
-                      Laddar serier...
+                      <span data-i18n="home.loading_series">Laddar serier...</span>
                     </div>
                   </div>
                 </div>
@@ -3698,7 +3698,7 @@
     let _realCountdownLastSyncMs = 0;
     // Homepage default stays on AMA chain (SX→MX→SMX). WSX only via series card.
     let homeSelectedSeries = null;
-    let _seriesStatusCache = [];
+    var _seriesStatusCache = []; // var so language toggle (other script) can re-render cards
 
     function seriesNameToCode(name) {
       const n = String(name || '').toLowerCase();
@@ -3785,12 +3785,15 @@
     function markSelectedSeriesCard(seriesCode) {
       const root = document.getElementById('series-selection');
       if (!root) return;
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       root.querySelectorAll('[data-series-code]').forEach((el) => {
         const selected = el.getAttribute('data-series-code') === seriesCode;
         el.classList.toggle('home-series-card--selected', selected);
         const hint = el.querySelector('[data-series-hint]');
         if (hint) {
-          hint.textContent = selected ? 'Vald · se schema nedan' : 'Visa countdown';
+          hint.textContent = selected
+            ? (isEn ? 'Selected · see schedule below' : 'Vald · se schema nedan')
+            : (isEn ? 'Show countdown' : 'Visa countdown');
         }
       });
     }
@@ -5262,7 +5265,10 @@
         if (!seriesContainer) return;
 
         if (!series || series.length === 0) {
-          seriesContainer.innerHTML = '<div class="text-center text-gray-400 py-8">Inga serier hittades</div>';
+          const emptyMsg = (typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en')
+            ? 'No series found'
+            : 'Inga serier hittades';
+          seriesContainer.innerHTML = `<div class="text-center text-gray-400 py-8">${emptyMsg}</div>`;
           return;
         }
         
@@ -5293,6 +5299,7 @@
           const nextRace = serie.next_race;
           const daysFromNextRace = Number.isFinite(serie.days_until_next_race) ? serie.days_until_next_race : null;
           const daysFromSeriesStart = Number.isFinite(serie.days_until_start) ? serie.days_until_start : null;
+          const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
           // Matcha serverns countdown: föredra nästa tävlings datum, annars seriens startdatum.
           const daysUntilStart =
             daysFromNextRace != null && daysFromNextRace > 0
@@ -5309,35 +5316,41 @@
           
           if (isActive) {
             if (daysFromNextRace != null && daysFromNextRace > 0) {
-              statusText = `Aktiv · nästa race om ${daysFromNextRace} dag${daysFromNextRace !== 1 ? 'ar' : ''}`;
+              statusText = isEn
+                ? `Active · next race in ${daysFromNextRace} day${daysFromNextRace !== 1 ? 's' : ''}`
+                : `Aktiv · nästa race om ${daysFromNextRace} dag${daysFromNextRace !== 1 ? 'ar' : ''}`;
             } else if (daysFromNextRace === 0) {
-              statusText = 'Aktiv · race idag';
+              statusText = isEn ? 'Active · race today' : 'Aktiv · race idag';
             } else {
-              statusText = 'Aktiv';
+              statusText = isEn ? 'Active' : 'Aktiv';
             }
             statusColor = daysFromNextRace != null && daysFromNextRace <= 7 ? 'text-yellow-400' : 'text-green-400';
             buttonClass = 'bg-green-600 hover:bg-green-700';
-            buttonText = 'Visa countdown';
+            buttonText = isEn ? 'Show countdown' : 'Visa countdown';
             isClickable = true;
           } else if (daysUntilStart && daysUntilStart > 0) {
             if (daysUntilStart <= 7) {
-              statusText = `Öppnar om ${daysUntilStart} dag${daysUntilStart !== 1 ? 'ar' : ''}`;
+              statusText = isEn
+                ? `Opens in ${daysUntilStart} day${daysUntilStart !== 1 ? 's' : ''}`
+                : `Öppnar om ${daysUntilStart} dag${daysUntilStart !== 1 ? 'ar' : ''}`;
               statusColor = 'text-yellow-400';
               buttonClass = 'bg-yellow-600 hover:bg-yellow-700';
-              buttonText = 'Visa countdown';
+              buttonText = isEn ? 'Show countdown' : 'Visa countdown';
               isClickable = true;
             } else {
-              statusText = `Startar om ${daysUntilStart} dagar`;
+              statusText = isEn
+                ? `Starts in ${daysUntilStart} days`
+                : `Startar om ${daysUntilStart} dagar`;
               statusColor = 'text-gray-400';
               buttonClass = 'bg-blue-600 hover:bg-blue-700';
-              buttonText = 'Visa countdown';
+              buttonText = isEn ? 'Show countdown' : 'Visa countdown';
               isClickable = true; // Always allow viewing schedule
             }
           } else {
-            statusText = 'Avslutad';
+            statusText = isEn ? 'Finished' : 'Avslutad';
             statusColor = 'text-gray-400';
             buttonClass = 'bg-blue-600 hover:bg-blue-700';
-            buttonText = 'Visa countdown';
+            buttonText = isEn ? 'Show countdown' : 'Visa countdown';
             isClickable = true; // Always allow viewing schedule
           }
           
@@ -5373,7 +5386,9 @@
             ? 'background-image: url("/static/images/wsx_hero.jpg"); background-size: cover; background-position: center;'
             : '';
 
-          const hintText = isSelected ? 'Vald · se schema nedan' : buttonText;
+          const hintText = isSelected
+            ? (isEn ? 'Selected · see schedule below' : 'Vald · se schema nedan')
+            : buttonText;
           
           
           const cardContent = `
@@ -5381,9 +5396,9 @@
             <div class="relative z-10 text-center">
               <h3 class="home-series-card__title">${serie.name}</h3>
               <p class="text-sm ${statusColor} mb-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${statusText}</p>
-              ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">Nästa: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
+              ${nextRace ? `<p class="text-xs text-gray-200 mb-3" style="text-shadow:0 1px 6px rgba(0,0,0,.7)">${isEn ? 'Next' : 'Nästa'}: ${nextRace.name}<br>${formatIsoDateSv(nextRace.date)}</p>` : ''}
               <div class="text-xs text-gray-300 mt-2" style="text-shadow:0 1px 6px rgba(0,0,0,.7)" data-series-hint>${hintText}</div>
-              <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">Schema & banor →</a>
+              <a href="/series/${serie.id}" class="home-series-card__open" data-series-open onclick="event.stopPropagation()">${isEn ? 'Schedule & tracks →' : 'Schema & banor →'}</a>
             </div>
           `;
           
@@ -6342,6 +6357,10 @@
           var val = lang === 'en' ? el.dataset.i18nEn : el.dataset.i18nSv;
           if (val !== undefined) el.textContent = val;
         });
+        // Re-render series cards so status/hint text follows language
+        if (typeof renderSeriesSelection === 'function' && typeof _seriesStatusCache !== 'undefined' && _seriesStatusCache && _seriesStatusCache.length) {
+          renderSeriesSelection(_seriesStatusCache);
+        }
       }
       applyAll(MxI18n.getLang());
       document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {

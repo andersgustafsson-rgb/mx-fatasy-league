@@ -630,7 +630,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=1" defer></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=2" defer></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
 </head>
@@ -765,7 +765,7 @@
     {% if out_ids %}
     <details class="race-picks-out-details mb-3">
       <summary>
-        {{ out_ids|length }} <span data-i18n="picks.out_riders">förare är OUT för detta race (syns inte i listorna)</span>
+        {{ out_ids|length }} <span data-i18n="picks.out_riders" data-i18n-sv="förare är OUT för detta race (syns inte i listorna)" data-i18n-en="riders are OUT for this race (hidden from lists)">förare är OUT för detta race (syns inte i listorna)</span>
       </summary>
       <div class="race-picks-out-details__body">
         <ul class="race-picks-out-details__list">
@@ -777,7 +777,7 @@
     </details>
     {% endif %}
 
-    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2">{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
+    <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
     {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep">{% include 'includes/race_prep_panel.html' %}</aside><div class="race-picks-bonus-layout__forms">{% endif %}
 
