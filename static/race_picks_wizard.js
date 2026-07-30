@@ -16,6 +16,18 @@
     return document.getElementById(id);
   }
 
+  function isEn() {
+    return typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+  }
+
+  function tPick(key, svFallback) {
+    if (typeof MxI18n !== 'undefined' && MxI18n.t) {
+      const v = MxI18n.t(key);
+      if (v) return v;
+    }
+    return svFallback;
+  }
+
   function riderClassForStep(step) {
     if (step === 1) return cfg.class450;
     if (step === 2) return cfg.class250;
@@ -664,7 +676,7 @@
       slots += slotHtml(getSlotRider(riderClass, i), i);
     }
     return `<div class="wizard-summary-col wizard-summary-col--${mod}">
-      <h4 class="wizard-summary-col__title">${escapeHtml(label)} topp 6</h4>
+      <h4 class="wizard-summary-col__title">${escapeHtml(label)} ${tPick('picks.top6', 'topp 6')}</h4>
       <ol class="wizard-summary-list">${slots}</ol>
     </div>`;
   }
@@ -677,7 +689,7 @@
       ${rider ? portraitHtml(rider) : '<div class="wizard-summary-portrait"></div>'}
       <div class="wizard-summary-extra__body">
         <div class="wizard-summary-extra__label">Holeshot ${escapeHtml(label)}</div>
-        <div class="wizard-summary-extra__name">${rider ? `#${rider.rider_number} ${escapeHtml(rider.name)}` : 'Ej vald'}</div>
+        <div class="wizard-summary-extra__name">${rider ? `#${rider.rider_number} ${escapeHtml(rider.name)}` : (isEn() ? 'Not selected' : 'Ej vald')}</div>
       </div>
     </div>`;
   }
@@ -703,8 +715,10 @@
     const complete = isPicksFullyComplete();
     const bannerCls = complete ? 'wizard-summary-banner' : 'wizard-summary-banner is-pending';
     const bannerText = complete
-      ? `${mxIcon('check-circle', { className: 'mx-icon--ok' })} Alla val klara!`
-      : `${mxIcon('clipboard')} Din lineup hittills — fyll i holeshot` + (cfg.isWSX ? '' : ' & wildcard') + ' nedan';
+      ? `${mxIcon('check-circle', { className: 'mx-icon--ok' })} ${tPick('picks.all_done', 'Alla val klara!')}`
+      : `${mxIcon('clipboard')} ` + (isEn()
+          ? ('Your lineup so far — fill in holeshot' + (cfg.isWSX ? '' : ' & wildcard') + ' below')
+          : ('Din lineup hittills — fyll i holeshot' + (cfg.isWSX ? '' : ' & wildcard') + ' nedan'));
 
     let extras = extraHoleshotHtml('450', cfg.label450);
     extras += extraHoleshotHtml('250', cfg.label250);
@@ -717,8 +731,8 @@
         ${wcPos ? `<span class="wizard-summary-wc-pos">${escapeHtml(wcPos)}</span>` : '<span class="wizard-summary-wc-pos">?</span>'}
         ${wcRider ? portraitHtml(wcRider) : '<div class="wizard-summary-portrait"></div>'}
         <div class="wizard-summary-extra__body">
-          <div class="wizard-summary-extra__label">Wildcard plats ${wcPos || '—'}</div>
-          <div class="wizard-summary-extra__name">${wcRider ? `#${wcRider.rider_number} ${escapeHtml(wcRider.name)}` : 'Välj 450-förare'}</div>
+          <div class="wizard-summary-extra__label">${isEn() ? 'Wildcard position' : 'Wildcard plats'} ${wcPos || '—'}</div>
+          <div class="wizard-summary-extra__name">${wcRider ? `#${wcRider.rider_number} ${escapeHtml(wcRider.name)}` : (isEn() ? 'Choose 450 rider' : 'Välj 450-förare')}</div>
         </div>
       </div>`;
     }
@@ -749,10 +763,12 @@
       const heroP = step3.querySelector('.wizard-step-hero p');
       if (heroP) {
         heroP.textContent = complete
-          ? 'Klart! Utkast sparat — lämna in med knappen nedan när du vill.'
+          ? tPick('picks.draft_ready', 'Klart! Utkast sparat — lämna in med knappen nedan när du vill.')
           : cfg.isWSX
-            ? 'Vem tar första kurvan i SX1 och SX2?'
-            : 'Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.';
+            ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
+            : (isEn()
+                ? 'Holeshot + spin a wildcard position (10–20) and pick a 450 rider.'
+                : 'Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.');
       }
     }
 
@@ -762,7 +778,7 @@
           const panel = document.createElement('details');
           panel.className = 'wizard-adjust-panel';
           panel.innerHTML =
-            '<summary>Justera holeshot' + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
+            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
           while (forms.firstChild) {
             panel.appendChild(forms.firstChild);
           }

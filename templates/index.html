@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=2"></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=3"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
   {% if is_logged_in %}
   <script src="{{ url_for('static', filename='home_picks_portraits.js') }}?v=3" defer></script>
@@ -4274,7 +4274,8 @@
       const portrait = hs
         ? `<img class="wizard-summary-portrait" alt="" loading="eager" decoding="async" data-rider-id="${hs.rider_id}">`
         : '<div class="wizard-summary-portrait"></div>';
-      const name = hs ? `#${_escHome(hs.rider_number)} ${_escHome(hs.rider_name)}` : 'Ej vald';
+      const isEnHs = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      const name = hs ? `#${_escHome(hs.rider_number)} ${_escHome(hs.rider_name)}` : (isEnHs ? 'Not selected' : 'Ej vald');
       const zap = typeof mxIcon === 'function' ? mxIcon('zap') : '';
       return `<div class="wizard-summary-extra wizard-summary-extra--holeshot${empty}">
         <span class="wizard-summary-extra__icon">${zap}</span>
@@ -4290,6 +4291,8 @@
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel) return;
 
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+      const top6Lbl = isEn ? 'top 6' : 'topp 6';
       const label450 = isWSX ? 'SX1' : '450cc';
       const label250 = isWSX ? 'SX2' : '250cc';
       const top6 = myPicks?.top6_picks || [];
@@ -4308,10 +4311,10 @@
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-3">
               <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
-              <span class="text-orange-200 font-semibold">Inga val gjorda än</span>
+              <span class="text-orange-200 font-semibold">${isEn ? 'No picks made yet' : 'Inga val gjorda än'}</span>
             </div>
-            <p class="text-sm text-gray-200 mb-3">Gör dina picks innan racet startar!</p>
-            <a href="${_escHome(openHref)}" class="text-cyan-300 underline text-sm font-semibold">Sätt picks →</a>
+            <p class="text-sm text-gray-200 mb-3">${isEn ? 'Make your picks before the race starts!' : 'Gör dina picks innan racet startar!'}</p>
+            <a href="${_escHome(openHref)}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'Set picks →' : 'Sätt picks →'}</a>
           </div>`;
         return;
       }
@@ -4333,13 +4336,13 @@
         const pos = wildcard?.position ?? '?';
         const name = wildcard
           ? `#${_escHome(wildcard.rider_number)} ${_escHome(wildcard.rider_name)}`
-          : 'Ej valt';
+          : (isEn ? 'Not selected' : 'Ej valt');
         extras += `<div class="wizard-summary-extra wizard-summary-extra--wildcard${empty}">
           <span class="wizard-summary-extra__icon">${target}</span>
           <span class="wizard-summary-wc-pos">${_escHome(pos)}</span>
           ${portrait}
           <div class="wizard-summary-extra__body">
-            <div class="wizard-summary-extra__label">Wildcard plats ${_escHome(wildcard?.position || '—')}</div>
+            <div class="wizard-summary-extra__label">${isEn ? 'Wildcard position' : 'Wildcard plats'} ${_escHome(wildcard?.position || '—')}</div>
             <div class="wizard-summary-extra__name">${name}</div>
           </div>
         </div>`;
@@ -4349,14 +4352,14 @@
         ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
         : (typeof mxIcon === 'function' ? mxIcon(partial ? 'note' : 'clipboard') : '');
       const bannerText = complete
-        ? 'Alla val klara!'
+        ? (isEn ? 'All picks done!' : 'Alla val klara!')
         : partial
-          ? 'Påbörjat — komplettera dina val'
-          : 'Dina val';
+          ? (isEn ? 'In progress — complete your picks' : 'Påbörjat — komplettera dina val')
+          : (isEn ? 'Your picks' : 'Dina val');
       const statusNote = complete
-        ? 'Inlämnat till tävlingen.'
+        ? (isEn ? 'Submitted to the competition.' : 'Inlämnat till tävlingen.')
         : partial
-          ? 'Ofullständigt — komplettera här'
+          ? (isEn ? 'Incomplete — finish here' : 'Ofullständigt — komplettera här')
           : '';
 
       panel.innerHTML = `
@@ -4368,11 +4371,11 @@
             <div class="wizard-summary-body">
               <div class="wizard-summary-grid">
                 <div class="wizard-summary-col wizard-summary-col--450">
-                  <h4 class="wizard-summary-col__title">${label450} topp 6</h4>
+                  <h4 class="wizard-summary-col__title">${label450} ${top6Lbl}</h4>
                   <ol class="wizard-summary-list">${slots450}</ol>
                 </div>
                 <div class="wizard-summary-col wizard-summary-col--250">
-                  <h4 class="wizard-summary-col__title">${label250} topp 6</h4>
+                  <h4 class="wizard-summary-col__title">${label250} ${top6Lbl}</h4>
                   <ol class="wizard-summary-list">${slots250}</ol>
                 </div>
               </div>
@@ -4382,7 +4385,7 @@
           <p class="text-xs text-gray-300 mt-2 text-center sm:text-left">
             ${complete
               ? `${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : ''} ${statusNote}`
-              : `${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--warn' }) : ''} ${statusNote} — <a href="${_escHome(openHref)}" class="text-cyan-300 underline">komplettera här</a>`}
+              : `${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--warn' }) : ''} ${statusNote} — <a href="${_escHome(openHref)}" class="text-cyan-300 underline">${isEn ? 'finish here' : 'komplettera här'}</a>`}
           </p>
         </div>`;
 
@@ -4448,35 +4451,36 @@
     function applySidebarPicksStatusFallback(status, openHref) {
       const panel = document.getElementById('home-sidebar-picks-status');
       if (!panel || !status) return;
+      const isEn = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
       if (status === 'has_picks') {
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
               ${typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--lg mx-icon--ok' }) : ''}
-              <span class="text-emerald-200 font-semibold">Alla val klara</span>
+              <span class="text-emerald-200 font-semibold">${isEn ? 'All picks done' : 'Alla val klara'}</span>
             </div>
-            <p class="text-sm text-gray-200 mb-2">Inlämnat till tävlingen.</p>
-            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Visa / redigera picks →</a>
+            <p class="text-sm text-gray-200 mb-2">${isEn ? 'Submitted to the competition.' : 'Inlämnat till tävlingen.'}</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'View / edit picks →' : 'Visa / redigera picks →'}</a>
           </div>`;
       } else if (status === 'partial_picks') {
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-2">
               <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
-              <span class="text-orange-200 font-semibold">Ofullständiga picks</span>
+              <span class="text-orange-200 font-semibold">${isEn ? 'Incomplete picks' : 'Ofullständiga picks'}</span>
             </div>
-            <p class="text-sm text-gray-200 mb-2">Du har påbörjat val — komplettera innan deadline.</p>
-            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Komplettera här →</a>
+            <p class="text-sm text-gray-200 mb-2">${isEn ? 'You started picks — finish before the deadline.' : 'Du har påbörjat val — komplettera innan deadline.'}</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'Finish here →' : 'Komplettera här →'}</a>
           </div>`;
       } else if (status === 'no_picks') {
         panel.innerHTML = `
           <div class="mb-4">
             <div class="flex items-center gap-2 mb-3">
               <span class="text-orange-300">${typeof mxIcon === 'function' ? mxIcon('alert', { className: 'mx-icon--lg' }) : ''}</span>
-              <span class="text-orange-200 font-semibold">Inga val gjorda än</span>
+              <span class="text-orange-200 font-semibold">${isEn ? 'No picks made yet' : 'Inga val gjorda än'}</span>
             </div>
-            <p class="text-sm text-gray-200 mb-3">Gör dina picks innan racet startar!</p>
-            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">Sätt picks →</a>
+            <p class="text-sm text-gray-200 mb-3">${isEn ? 'Make your picks before the race starts!' : 'Gör dina picks innan racet startar!'}</p>
+            <a href="${openHref}" class="text-cyan-300 underline text-sm font-semibold">${isEn ? 'Set picks →' : 'Sätt picks →'}</a>
           </div>`;
       }
     }
@@ -6360,6 +6364,10 @@
         // Re-render series cards so status/hint text follows language
         if (typeof renderSeriesSelection === 'function' && typeof _seriesStatusCache !== 'undefined' && _seriesStatusCache && _seriesStatusCache.length) {
           renderSeriesSelection(_seriesStatusCache);
+        }
+        // Re-render home picks status board (Alla val klara / topp 6 etc.)
+        if (typeof refreshHomePicksBoard === 'function') {
+          try { void refreshHomePicksBoard(); } catch (_) {}
         }
       }
       applyAll(MxI18n.getLang());
