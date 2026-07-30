@@ -6,6 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ competition.name }} - Race Picks</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Apply saved language ASAP so html[lang] is correct before paint
+    try {
+      var _mxLang = localStorage.getItem('mxfantasy_lang') || 'sv';
+      document.documentElement.lang = _mxLang === 'en' ? 'en' : 'sv';
+    } catch (_) {}
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     /* Dark background like leagues page */
@@ -13,6 +20,33 @@
       overflow-x: hidden;
       max-width: 100%;
       overscroll-behavior-x: none;
+    }
+    .mx-lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      background: rgba(20,28,44,0.85);
+      border: 1px solid #2a3548;
+      border-radius: 0.5rem;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+    .mx-lang-btn {
+      background: transparent;
+      border: none;
+      color: #64748b;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.25rem 0.45rem;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .mx-lang-btn:hover { color: #94a3b8; }
+    .mx-lang-btn--active, .mx-lang-btn[aria-pressed="true"] {
+      background: #1e3a5f;
+      color: #67e8f9;
     }
     body {
       font-family: 'Rajdhani', sans-serif;
@@ -630,7 +664,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
   <link rel="stylesheet" href="{{ url_for('static', filename='mx_icons.css') }}?v=size-lock-2">
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
-  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=3" defer></script>
+  <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=save-ready-1">
 </head>
@@ -662,8 +696,12 @@
     {% endif %}
   </div>
 
-      <div class="rp-btn-row w-full sm:w-auto sm:shrink-0">
-        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial">← Tillbaka</a>
+      <div class="rp-btn-row w-full sm:w-auto sm:shrink-0" style="align-items:center;gap:0.5rem;">
+        <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+          <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+          <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary rp-btn--sm flex-1 sm:flex-initial" data-i18n="picks.back">← Tillbaka</a>
         <a href="{{ url_for('bulletin_board') }}" class="rp-btn rp-btn--warm rp-btn--sm flex-1 sm:flex-initial">Trash Talk</a>
       </div>
 </div>
@@ -723,7 +761,7 @@
         {% if competition.event_date %}
         <p class="text-emerald-300 text-lg">{{ competition.event_date.strftime('%d %B %Y') }}</p>
         {% endif %}
-        <p class="text-emerald-100/80 text-sm mt-2">Pro Motocross — utomhus</p>
+        <p class="text-emerald-100/80 text-sm mt-2" data-i18n="picks.mx_outdoor">Pro Motocross — utomhus</p>
       </div>
     </div>
     {% endif %}
@@ -802,7 +840,7 @@
     <header class="wizard-step-hero wizard-step-hero--450">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bikers.svg') }}" alt="">
       <div>
-        <h2><span data-i18n="picks.step1">Steg 1</span> — {{ class_450_label }} topp 6</h2>
+        <h2><span data-i18n="picks.step1">Steg 1</span> — {{ class_450_label }} <span data-i18n="picks.top6">topp 6</span></h2>
         <p data-i18n-sv="Välj dina 6 förare. Snabbval ovan eller listan nedan." data-i18n-en="Choose your 6 riders. Quick picks above or the list below.">Välj dina 6 förare. Snabbval ovan eller listan nedan.</p>
       </div>
     </header>
@@ -820,7 +858,7 @@
             <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
             <div class="rider-selector" data-class="{{ class_450_data }}" data-position="{{ i }}">
               <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_450_data }}', {{ i }})">
-                <span class="selected-rider">-- välj förare --</span>
+                <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
                 <div class="flex items-center gap-2">
                   <span class="clear-selection" onclick="clearRiderSelection('{{ class_450_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
                   <span class="dropdown-arrow">▼</span>
@@ -844,7 +882,7 @@
     <header class="wizard-step-hero wizard-step-hero--250">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/blue_biker.svg') }}" alt="">
       <div>
-        <h2><span data-i18n="picks.step2">Steg 2</span> — {{ class_250_label }} topp 6</h2>
+        <h2><span data-i18n="picks.step2">Steg 2</span> — {{ class_250_label }} <span data-i18n="picks.top6">topp 6</span></h2>
         <p data-i18n-sv="Välj 6 förare i {{ class_250_label }}." data-i18n-en="Choose 6 riders in {{ class_250_label }}.">Välj 6 förare i {{ class_250_label }}.</p>
       </div>
     </header>
@@ -862,7 +900,7 @@
             <span class="w-8 text-cyan-400 font-semibold">{{ i }}.</span>
             <div class="rider-selector" data-class="{{ class_250_data }}" data-position="{{ i }}">
               <div class="rider-selector-input" onclick="toggleRiderSelector('{{ class_250_data }}', {{ i }})">
-                <span class="selected-rider">-- välj förare --</span>
+                <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
                 <div class="flex items-center gap-2">
                   <span class="clear-selection" onclick="clearRiderSelection('{{ class_250_data }}', {{ i }}); event.stopPropagation();" style="display: none;">✕</span>
                   <span class="dropdown-arrow">▼</span>
@@ -901,7 +939,7 @@
           <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_450_label }}:</label>
           <div class="rider-selector" data-class="holeshot-450">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-450', 0)">
-              <span class="selected-rider">-- välj förare --</span>
+              <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
               <span class="dropdown-arrow">▼</span>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
@@ -916,7 +954,7 @@
           <label class="block text-sm sm:text-base mb-1 text-cyan-300 font-semibold">{{ class_250_label }}:</label>
           <div class="rider-selector" data-class="holeshot-250">
             <div class="rider-selector-input" onclick="toggleRiderSelector('holeshot-250', 0)">
-              <span class="selected-rider">-- välj förare --</span>
+              <span class="selected-rider" data-i18n="picks.choose_placeholder">-- välj förare --</span>
               <span class="dropdown-arrow">▼</span>
             </div>
             <div class="rider-selector-dropdown" style="display: none;">
@@ -952,7 +990,7 @@
       <input type="hidden" id="wildcard-position" />
       <div class="rider-selector w-full mt-3" data-class="wildcard-pick">
         <div class="rider-selector-input" onclick="toggleRiderSelector('wildcard-pick', 0)">
-          <span class="selected-rider">-- välj 450cc förare --</span>
+          <span class="selected-rider" data-i18n="picks.choose_450">-- välj 450cc förare --</span>
           <span class="dropdown-arrow">▼</span>
         </div>
         <div class="rider-selector-dropdown" style="display: none;">
@@ -1249,13 +1287,33 @@
     });
   }
 
+  function emptyRiderLabel(kind) {
+    const en = typeof MxI18n !== 'undefined' && MxI18n.getLang() === 'en';
+    if (kind === '450') return en ? '-- choose 450cc rider --' : '-- välj 450cc förare --';
+    if (kind === '250') return en ? '-- choose 250cc rider --' : '-- välj 250cc förare --';
+    return en ? '-- choose rider --' : '-- välj förare --';
+  }
+
+  function isEmptyRiderText(txt) {
+    if (!txt) return true;
+    const t = String(txt).trim();
+    return (
+      t === '-- välj förare --' ||
+      t === '-- choose rider --' ||
+      t === '-- välj 450cc förare --' ||
+      t === '-- choose 450cc rider --' ||
+      t === '-- välj 250cc förare --' ||
+      t === '-- choose 250cc rider --'
+    );
+  }
+
   function fillSelectFromRiders(sel, riders, emptyText) {
     if (!sel) return;
     const prev = sel.value ? String(sel.value) : '';
     sel.innerHTML = '';
     const o0 = document.createElement('option');
     o0.value = '';
-    o0.textContent = emptyText || '-- välj förare --';
+    o0.textContent = emptyText || emptyRiderLabel();
     sel.appendChild(o0);
     riders.forEach((r) => {
       const o = document.createElement('option');
@@ -1328,11 +1386,11 @@
     const l450 = pickColumn450List();
     const l250 = pickColumn250List();
     for (let i = 1; i <= 6; i++) {
-      fillSelectFromRiders(document.querySelector(`select[name="pick_450_${i}"]`), l450, '-- välj förare --');
-      fillSelectFromRiders(document.querySelector(`select[name="pick_250_${i}"]`), l250, '-- välj förare --');
+      fillSelectFromRiders(document.querySelector(`select[name="pick_450_${i}"]`), l450, emptyRiderLabel());
+      fillSelectFromRiders(document.querySelector(`select[name="pick_250_${i}"]`), l250, emptyRiderLabel());
     }
-    fillSelectFromRiders(document.getElementById('holeshot-450'), l450, '-- välj förare --');
-    fillSelectFromRiders(document.getElementById('holeshot-250'), l250, '-- välj förare --');
+    fillSelectFromRiders(document.getElementById('holeshot-450'), l450, emptyRiderLabel());
+    fillSelectFromRiders(document.getElementById('holeshot-250'), l250, emptyRiderLabel());
     fillSelectFromRiders(
       document.getElementById('wildcard-pick'),
       l450.filter((r) => !isOutRiderId(r.id)),
@@ -1365,7 +1423,7 @@
           const currentText = (selector.querySelector('.selected-rider')?.textContent || '').trim();
           if (
             riderId &&
-            currentText !== '-- välj förare --' &&
+            !isEmptyRiderText(currentText) &&
             currentText !== '-- välj 450cc förare --'
           ) {
             picks.racePicks[riderClass][i] = {
@@ -1384,7 +1442,7 @@
         const selectedRiderSpan = selector.querySelector('.selected-rider');
         const currentText = selectedRiderSpan.textContent;
         
-        if (currentText !== '-- välj förare --') {
+        if (!isEmptyRiderText(currentText)) {
           const riderOption = selector.querySelector(`.rider-option[data-rider-name="${currentText}"]`);
           if (riderOption) {
             picks.holeshotPicks[classType] = {
@@ -1583,7 +1641,7 @@
         const selectedRiderSpan = selector.querySelector('.selected-rider');
         const currentText = selectedRiderSpan.textContent;
         
-        if (currentText === '-- välj förare --' || currentText === '-- välj 250cc förare --') {
+        if (isEmptyRiderText(currentText)) {
           return;
         }
         
@@ -1591,7 +1649,7 @@
         if (riderOption) {
           const riderCoast = riderOption.dataset.coast;
           if (riderCoast && riderCoast !== competitionCoast && riderCoast !== 'both') {
-            selectedRiderSpan.textContent = '-- välj förare --';
+            selectedRiderSpan.textContent = emptyRiderLabel();
             
             const position = selector.dataset.position;
             const imgId = `prev-250-${position}`;
@@ -1741,7 +1799,7 @@
       const selPos = Number(sel.dataset.position || 0);
       if (selPos === Number(position)) continue;
       const txt = (sel.querySelector('.selected-rider')?.textContent || '').trim().replace(/\s+/g, ' ');
-      if (!txt || txt === '-- välj förare --' || txt === '-- välj 450cc förare --' || txt === '-- välj 250cc förare --') continue;
+      if (isEmptyRiderText(txt)) continue;
       if (txt === normName) {
         alert(`Du kan inte välja samma förare flera gånger (${normName}).`);
         return;
@@ -1839,7 +1897,7 @@
         const currentText = selectedRiderSpan.textContent;
         
         // Skip if no selection made yet
-        if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --' || currentText === '-- välj 250cc förare --') {
+        if (isEmptyRiderText(currentText)) {
           return null;
         }
         
@@ -1970,7 +2028,7 @@
     const clearBtn = selector.querySelector('.clear-selection');
     
     // Reset display
-    selectedRiderSpan.textContent = '-- välj förare --';
+    selectedRiderSpan.textContent = emptyRiderLabel();
     
     // Hide clear button
     if (clearBtn) {
@@ -2014,7 +2072,7 @@
       const currentText = selectedRiderSpan.textContent;
       
       // Skip if no selection made yet
-      if (currentText === '-- välj förare --' || currentText === '-- välj 450cc förare --' || currentText === '-- välj 250cc förare --') {
+      if (isEmptyRiderText(currentText)) {
         return null;
       }
       
@@ -2560,8 +2618,8 @@ function resetBonusPicksUI() {
   const hs250SelEl = document.querySelector('.rider-selector[data-class="holeshot-250"]');
   const hs450Sel = hs450SelEl?.querySelector('.selected-rider');
   const hs250Sel = hs250SelEl?.querySelector('.selected-rider');
-  if (hs450Sel) hs450Sel.textContent = '-- välj förare --';
-  if (hs250Sel) hs250Sel.textContent = '-- välj förare --';
+  if (hs450Sel) hs450Sel.textContent = emptyRiderLabel();
+  if (hs250Sel) hs250Sel.textContent = emptyRiderLabel();
   if (hs450SelEl) delete hs450SelEl.dataset.selectedRiderId;
   if (hs250SelEl) delete hs250SelEl.dataset.selectedRiderId;
   const hs450Hidden = document.getElementById('holeshot-450');
@@ -3162,11 +3220,7 @@ function onPickChange(cls, pos, riderId = null) {
 
     const selectedRiderSpan = selector.querySelector('.selected-rider');
     const riderText = (selectedRiderSpan?.textContent || '').trim().replace(/\s+/g, ' ');
-    if (
-      !riderText ||
-      riderText === '-- välj förare --' ||
-      riderText === '-- välj 450cc förare --'
-    ) {
+    if (isEmptyRiderText(riderText)) {
       return null;
     }
 
@@ -3381,7 +3435,7 @@ function onPickChange(cls, pos, riderId = null) {
         const sel250 = document.querySelector(`.rider-selector[data-class="${class250}"][data-position="${i}"]`);
         if (sel450) {
           const span = sel450.querySelector('.selected-rider');
-          if (span) span.textContent = '-- välj förare --';
+          if (span) span.textContent = emptyRiderLabel();
           const clearBtn = sel450.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'none';
           delete sel450.dataset.selectedRiderId;
@@ -3394,7 +3448,7 @@ function onPickChange(cls, pos, riderId = null) {
         }
         if (sel250) {
           const span = sel250.querySelector('.selected-rider');
-          if (span) span.textContent = '-- välj förare --';
+          if (span) span.textContent = emptyRiderLabel();
           const clearBtn = sel250.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'none';
           delete sel250.dataset.selectedRiderId;
@@ -3705,9 +3759,9 @@ function setMainTrackmap(src, thumbEl) {
 {% endif %}
 
 <script>
-  window.addEventListener('load', function () {
-    if (typeof MxI18n === 'undefined') return;
+  (function () {
     function applyBilingual(lang) {
+      if (typeof MxI18n === 'undefined') return;
       MxI18n.apply(lang);
       document.querySelectorAll('[data-i18n-sv],[data-i18n-en]').forEach(function (el) {
         var val = lang === 'en' ? el.dataset.i18nEn : el.dataset.i18nSv;
@@ -3720,13 +3774,21 @@ function setMainTrackmap(src, thumbEl) {
         try { updatePicksStatus(); } catch (_) {}
       }
     }
-    applyBilingual(MxI18n.getLang());
-    document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        applyBilingual(MxI18n.set(btn.dataset.lang));
+    window.mxApplyRacePicksLang = applyBilingual;
+
+    function bootLang() {
+      if (typeof MxI18n === 'undefined') return;
+      applyBilingual(MxI18n.getLang());
+      document.querySelectorAll('.mx-lang-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          applyBilingual(MxI18n.set(btn.dataset.lang));
+        });
       });
-    });
-  });
+    }
+    // Run now (script is at end of body) and again on load after wizard init
+    bootLang();
+    window.addEventListener('load', bootLang);
+  })();
 </script>
 </body>
 </html>

@@ -19,7 +19,7 @@
     <p class="race-prep-teaser">
       {{ competition.name }}
       {% if competition.event_date %} · {{ competition.event_date.strftime('%Y-%m-%d') }}{% endif %}
-      · {{ riders_450_json|length + riders_250_json|length }} aktiva förare
+      · {{ riders_450_json|length + riders_250_json|length }} <span data-i18n="picks.active_riders_n">aktiva förare</span>
     </p>
   </div>
 
