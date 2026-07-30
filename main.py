@@ -2511,21 +2511,88 @@ def series_status():
 
 @app.route("/")
 def index():
-    # Validate session and check if user is logged in
-    if "user_id" in session and "username" in session:
-        # Verify user still exists in database
-        user = User.query.get(session["user_id"])
-        if user and user.username == session["username"]:
-            uid = session["user_id"]
-            is_logged_in = True
-        else:
-            # User no longer exists or username mismatch - clear session
-            session.clear()
-            uid = None
-            is_logged_in = False
-    else:
-        uid = None
-        is_logged_in = False
+    try:
+        return _index_impl()
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        print(f"index() failed (serving degraded): {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            db.engine.dispose()
+        except Exception:
+            pass
+        try:
+            return (
+                render_template(
+                    "index.html",
+                    username=session.get("username", "Gäst"),
+                    user_profile_picture=None,
+                    upcoming_race=None,
+                    view_picks_race=None,
+                    can_view_other_picks=False,
+                    upcoming_race_bg_url=None,
+                    upcoming_races=[],
+                    my_team=None,
+                    team_riders=[],
+                    current_picks_450=None,
+                    current_picks_250=None,
+                    current_holeshot_450=None,
+                    current_holeshot_250=None,
+                    current_wildcard=None,
+                    new_bulletin_posts=0,
+                    latest_post_author=None,
+                    league_requests_count=0,
+                    picks_status="no_picks",
+                    picks_locked=True,
+                    home_pick_portraits={},
+                    is_admin=False,
+                    is_logged_in=bool(session.get("user_id")),
+                    needs_email=False,
+                    admin_message=None,
+                    admin_message_priority=None,
+                    admin_announcement_id=None,
+                    user_total_points=0,
+                    races_participated=0,
+                    best_position=None,
+                    sx_season_wrap=None,
+                    series_status_data=[],
+                    rider_spotlight_data=None,
+                    power_ranking_data=None,
+                    pit_pass_race_name="MX Fantasy League",
+                    pit_pass_next_url=url_for("index"),
+                    pit_pass_peek_key="mx_pit_pass_peek_home",
+                    pit_pass_auto_show=False,
+                    pit_pass_start_hidden=True,
+                    pit_pass_guard_selectors=[],
+                    invite_share=None,
+                    picks_cta_race_label=None,
+                ),
+                200,
+            )
+        except Exception as e2:
+            print(f"index() degraded render failed: {e2}")
+            return (
+                "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                "<meta http-equiv='refresh' content='2'>"
+                "<title>MX Fantasy</title></head><body style='background:#141c2c;color:#e2e8f0;"
+                "font-family:system-ui;padding:2rem;text-align:center'>"
+                "<h1>MX Fantasy League</h1>"
+                "<p>Sidan laddas om…</p></body></html>",
+                200,
+                {"Content-Type": "text/html; charset=utf-8", "Retry-After": "2"},
+            )
+
+
+def _index_impl():
+    # Validate session AFTER DB reconnect path below — cold Postgres after idle
+    # used to 500 here before schema retry could dispose the pool.
+    uid = None
+    is_logged_in = False
     today = get_today()
 
     # Ensure database is initialized (only once per worker).
@@ -2635,20 +2702,47 @@ def index():
                 except Exception:
                     pass
                 if _attempt == 1:
-                    print(f"Database check error: {e}")
-                    try:
-                        init_database()
-                    except Exception as init_err:
-                        print(f"init_database after reconnect failed: {init_err}")
+                    # Do NOT call init_database() here — seeding on a cold homepage
+                    # request can exceed gunicorn timeout and cause the intermittent 500.
+                    print(f"Database check error (continuing without schema init): {e}")
                     _INDEX_SCHEMA_CHECKED = True
             except Exception as e:
                 print(f"Database check error: {e}")
                 try:
-                    init_database()
-                except Exception as init_err:
-                    print(f"init_database failed: {init_err}")
+                    db.session.rollback()
+                except Exception:
+                    pass
+                try:
+                    db.engine.dispose()
+                except Exception:
+                    pass
+                # Avoid heavy init_database() on the request path
                 _INDEX_SCHEMA_CHECKED = True
                 break
+
+    # Session user lookup after pool reconnect above
+    if "user_id" in session and "username" in session:
+        try:
+            user = User.query.get(session["user_id"])
+            if user and user.username == session["username"]:
+                uid = session["user_id"]
+                is_logged_in = True
+            else:
+                session.clear()
+                uid = None
+                is_logged_in = False
+        except Exception as e:
+            print(f"index session user lookup: {e}")
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            try:
+                db.engine.dispose()
+            except Exception:
+                pass
+            uid = None
+            is_logged_in = False
 
     _ensure_competition_result_moto_columns()
 
@@ -2665,7 +2759,15 @@ def index():
             print(f"Error getting competitions (retry): {e2}")
             competitions = []    
     # Homepage default = AMA chain (SX→MX→SMX). WSX only via series-card selection.
-    upcoming_race = _home_primary_competition(require_open=False)
+    try:
+        upcoming_race = _home_primary_competition(require_open=False)
+    except Exception as e:
+        print(f"index upcoming_race: {e}")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        upcoming_race = None
     view_picks_race = upcoming_race
     
     # Get user-specific data only if logged in
@@ -3043,9 +3145,14 @@ def index():
     except Exception:
         pass
 
-    can_view_other_picks = (
-        _can_view_other_users_picks(view_picks_race) if view_picks_race else False
-    )
+    can_view_other_picks = False
+    try:
+        can_view_other_picks = (
+            _can_view_other_users_picks(view_picks_race) if view_picks_race else False
+        )
+    except Exception as e:
+        print(f"index can_view_other_picks: {e}")
+        can_view_other_picks = False
 
     series_status_data: list[dict] = []
     try:

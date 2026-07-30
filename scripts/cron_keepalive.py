@@ -62,24 +62,43 @@ def main() -> int:
         print(f"KEEPALIVE_URL måste vara https://, got: {url}", file=sys.stderr)
         return 1
 
+    ok = False
     try:
         code, body = _get_curl(url)
         if code == 0:
             print(body or '{"ok":true}')
-            return 0
+            ok = True
     except FileNotFoundError:
         pass
 
-    try:
-        status, body = _get_urllib(url)
-        print(body or f'{{"status":{status}}}')
-        return 0 if 200 <= status < 400 else 1
-    except urllib.error.HTTPError as e:
-        print(f"HTTP {e.code}: {e.reason}", file=sys.stderr)
-        return 1
-    except Exception as e:
-        print(f"keepalive failed: {e}", file=sys.stderr)
-        return 1
+    if not ok:
+        try:
+            status, body = _get_urllib(url)
+            print(body or f'{{"status":{status}}}')
+            ok = 200 <= status < 400
+        except urllib.error.HTTPError as e:
+            print(f"HTTP {e.code}: {e.reason}", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"keepalive failed: {e}", file=sys.stderr)
+            return 1
+
+    # Also warm the homepage so the first human visit after idle/deploy
+    # does not hit a cold / with heavy schema + queries.
+    home = url.rsplit("/health", 1)[0].rstrip("/") + "/"
+    if home.startswith("https://") and home != url:
+        try:
+            code, _ = _get_curl(home)
+            if code == 0:
+                print("homepage warm: ok")
+            else:
+                # curl -f fails on 4xx/5xx; try urllib anyway
+                status, _ = _get_urllib(home)
+                print(f"homepage warm: {status}")
+        except Exception as e:
+            print(f"homepage warm skipped: {e}")
+
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
