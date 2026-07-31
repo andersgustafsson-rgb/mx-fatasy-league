@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  {% set seo_title = 'Om MX Fantasy League — gratis fantasy motocross-spel i Sverige' %}
-  {% set seo_description = 'MX Fantasy League är gratis fantasy motocross i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Poäng, ligor, dueller — utan betting.' %}
+  {% set seo_title = 'Om MX Fantasy League — tippa motocross, mx-spel & fantasy MX i Sverige' %}
+  {% set seo_description = 'Vill du tippa motocross online? MX Fantasy League är ett gratis mx-spel / fantasy motocross där du tippar SX, MX, SMX och WSX. Topp 6, holeshot, wildcard, ligor — utan betting.' %}
   {% set seo_path = '/om' %}
   {% include 'includes/seo_head.html' %}
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
@@ -16,6 +16,14 @@
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Hur tippar man motocross online?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "På MX Fantasy League skapar du gratis konto, öppnar nästa race och tippar topp 6, holeshot och wildcard innan deadline. Det fungerar som fantasy motocross / mx-spel för SX, MX, SMX och WSX — du spelar om fantasypoäng, inte pengar."
+        }
+      },
       {
         "@type": "Question",
         "name": "Vad är MX Fantasy League?",
@@ -174,11 +182,12 @@
     </nav>
 
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400 mb-2">MX Fantasy League</p>
-    <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Gratis fantasy motocross-spel i Sverige</h1>
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Tippa motocross — gratis mx-spel i Sverige</h1>
     <p class="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
-      MX Fantasy League är spelet för dig som följer motocross och supercross och vill tippa race,
+      MX Fantasy League är spelet för dig som vill <strong class="text-white">tippa motocross</strong> och supercross,
       samla poäng och mäta dig mot andra fans — utan betting och utan kostnad.
-      Spelet körs på <strong class="text-white">mx-fantasy.se</strong>.
+      Ett enkelt <strong class="text-white">fantasy motocross</strong>- / <strong class="text-white">mx-spel</strong>
+      på <strong class="text-white">mx-fantasy.se</strong>.
     </p>
     <div class="flex flex-wrap gap-3 mb-10">
       <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
@@ -195,8 +204,9 @@
         wildcard — och följer poängen över hela säsongen.
       </p>
       <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
-        MX Fantasy League är byggt för svenska (och internationella) fans som vill ha ett enkelt,
-        seriöst tippspel kring SX, MX, SMX och WSX. Du spelar i webbläsaren på mobil eller dator.
+        Söker du efter <strong class="text-white">mx spel</strong>, <strong class="text-white">tippa mx</strong>,
+        <strong class="text-white">tippa supercross</strong> eller <strong class="text-white">motocross tippning</strong>
+        online är det precis det MX Fantasy League är byggt för — på svenska, i webbläsaren, för SX, MX, SMX och WSX.
       </p>
     </section>
 
@@ -259,6 +269,10 @@
       <h2 class="text-xl font-bold text-cyan-300 mb-4">Vanliga frågor</h2>
       <div class="space-y-3">
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4" open>
+          <summary class="cursor-pointer font-semibold text-white">Hur tippar man motocross online?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Skapa gratis konto på mx-fantasy.se, öppna nästa race och tippa topp 6, holeshot och wildcard innan deadline. Det är fantasy motocross / mx-spel — poäng och ligor, ingen betting.</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Vad är MX Fantasy League?</summary>
           <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ett gratis fantasy motocross-spel där du tippar förare inför riktiga race i SX, MX, SMX och WSX och får fantasypoäng efter resultat. Spelas på mx-fantasy.se.</p>
         </details>

@@ -1,13 +1,14 @@
-{# SEO meta + Open Graph. Expects optional: seo_title, seo_description, seo_path, seo_image #}
-{% set _title = seo_title|default('MX Fantasy League — gratis fantasy motocross-spel i Sverige', true) %}
-{% set _desc = seo_description|default('Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Skapa lag, spela i ligor och följ leaderboard — helt gratis.', true) %}
+{# SEO meta + Open Graph. Expects optional: seo_title, seo_description, seo_path, seo_image, seo_keywords #}
+{% set _title = seo_title|default('MX Fantasy League — tippa motocross | gratis mx-spel i Sverige', true) %}
+{% set _desc = seo_description|default('Gratis fantasy motocross och mx-spel i Sverige. Tippa motocross och supercross: topp 6, holeshot och wildcard i SX, MX, SMX och WSX. Skapa lag och ligor — helt gratis, utan betting.', true) %}
 {% set _path = seo_path|default('/', true) %}
 {% set _base = public_base_url|default(request.url_root.rstrip('/'), true) %}
 {% set _url = _base ~ _path %}
 {% set _img = seo_image|default(_base ~ url_for('static', filename='images/mx_fantasy_logo.png'), true) %}
+{% set _keywords = seo_keywords|default('fantasy motocross, fantasy mx, mx spel, tippa motocross, tippa supercross, tippa mx, motocross tippning, supercross fantasy, mx fantasy sverige, SMX fantasy, WSX fantasy, gratis fantasy sport, motocross spel online, fantasy racing, MX Fantasy League', true) %}
 <title>{{ _title }}</title>
 <meta name="description" content="{{ _desc }}">
-<meta name="keywords" content="fantasy motocross, fantasy mx, mx spel, supercross fantasy, motocross tippa, SMX fantasy, gratis fantasy sport, MX Fantasy League, Sverige">
+<meta name="keywords" content="{{ _keywords }}">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="{{ _url }}">
 <meta property="og:type" content="website">
