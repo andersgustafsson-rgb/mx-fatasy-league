@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% set seo_title = page.seo_title %}
+  {% set seo_description = page.seo_description %}
+  {% set seo_path = page.path %}
+  {% set seo_keywords = page.seo_keywords %}
+  {% include 'includes/seo_head.html' %}
+  <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
+  <link rel="icon" href="{{ url_for('static', filename='images/mx_fantasy_favicon.png') }}" type="image/png" sizes="512x512">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
+  <script type="application/ld+json">
+  {{ page.faq_json|safe }}
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Startsida",
+        "item": "{{ public_base_url }}/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Om spelet",
+        "item": "{{ public_base_url }}/om"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": {{ page.breadcrumb_name|tojson }},
+        "item": "{{ public_base_url }}{{ page.path }}"
+      }
+    ]
+  }
+  </script>
+  <style>
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 15% 0%, rgba(34, 211, 238, 0.14), transparent 45%),
+        radial-gradient(ellipse at 85% 10%, rgba(251, 191, 36, 0.1), transparent 40%),
+        #020617;
+      color: #e2e8f0;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary { list-style: none; }
+  </style>
+</head>
+<body class="px-4 py-8 sm:py-12">
+  <main class="mx-auto max-w-3xl">
+    <nav class="text-xs text-slate-500 mb-4" aria-label="Brödsmula">
+      <a href="{{ url_for('index') }}" class="hover:text-cyan-400">Startsida</a>
+      <span class="mx-1.5 text-slate-600">/</span>
+      <a href="{{ url_for('about_game_page') }}" class="hover:text-cyan-400">Om spelet</a>
+      <span class="mx-1.5 text-slate-600">/</span>
+      <span class="text-slate-400">{{ page.breadcrumb_name }}</span>
+    </nav>
+
+    <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400 mb-2">MX Fantasy League · {{ page.series_short }}</p>
+    <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">{{ page.h1 }}</h1>
+    <p class="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">{{ page.lead }}</p>
+
+    <div class="flex flex-wrap gap-3 mb-10">
+      <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary">Till spelet</a>
+      <a href="{{ url_for('manual_page') }}" class="rp-btn rp-btn--ghost">Spelmanual</a>
+    </div>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">{{ page.what_title }}</h2>
+      {% for para in page.what_paragraphs %}
+      <p class="text-slate-300 text-sm sm:text-base leading-relaxed{% if not loop.last %} mb-3{% endif %}">{{ para }}</p>
+      {% endfor %}
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Så tippar du {{ page.series_short }} hos oss</h2>
+      <ol class="space-y-3 text-slate-300 text-sm sm:text-base leading-relaxed list-decimal list-inside">
+        {% for step in page.steps %}
+        <li>{{ step|safe }}</li>
+        {% endfor %}
+      </ol>
+      <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+        Mer om poäng, holeshot och wildcard finns i
+        <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('manual_page') }}">spelmanualen</a>.
+      </p>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-amber-700/40 bg-amber-950/20 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-amber-200 mb-3">Gratis — ingen betting</h2>
+      <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+        Du tippar om <strong class="text-white">fantasypoäng</strong> och ranking — inte om pengar.
+        MX Fantasy League är tippning för nöje, inte odds eller casino.
+      </p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="text-xl font-bold text-cyan-300 mb-4">Vanliga frågor om att tippa {{ page.series_short }}</h2>
+      <div class="space-y-3">
+        {% for item in page.faq %}
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4"{% if loop.first %} open{% endif %}>
+          <summary class="cursor-pointer font-semibold text-white">{{ item.q }}</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">{{ item.a|safe }}</p>
+        </details>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/40 p-5 sm:p-6">
+      <h2 class="text-lg font-bold text-slate-200 mb-3">Andra serier</h2>
+      <ul class="space-y-2 text-sm text-slate-300">
+        {% for link in page.related_links %}
+        <li>
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ link.href }}">{{ link.label }}</a>
+          — {{ link.blurb }}
+        </li>
+        {% endfor %}
+        <li>
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('about_game_page') }}">Om spelet</a>
+          — hela översikten av MX Fantasy League
+        </li>
+      </ul>
+    </section>
+
+    <div class="flex flex-wrap gap-3 mb-10">
+      <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
+      <a href="{{ url_for('about_game_page') }}" class="rp-btn rp-btn--ghost">Tillbaka till Om spelet</a>
+    </div>
+
+    {% include 'includes/site_legal_footer.html' %}
+  </main>
+</body>
+</html>

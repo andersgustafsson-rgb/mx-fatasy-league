@@ -228,8 +228,14 @@
     <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
       <h2 class="text-xl font-bold text-cyan-300 mb-3">Vilka serier kan man tippa?</h2>
       <ul class="space-y-3 text-slate-300 text-sm sm:text-base leading-relaxed">
-        <li><strong class="text-white">Supercross (SX)</strong> — amerikansk arenasupercross, oftast under vinter/vår.</li>
-        <li><strong class="text-white">Pro Motocross (MX)</strong> — utomhus-motocross i USA med heat och overall.</li>
+        <li>
+          <strong class="text-white">Supercross (SX)</strong> — amerikansk arenasupercross, oftast under vinter/vår.
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('tippa_supercross_page') }}">Hur tippar jag SX?</a>
+        </li>
+        <li>
+          <strong class="text-white">Pro Motocross (MX)</strong> — utomhus-motocross i USA med heat och overall.
+          <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('tippa_motocross_page') }}">Hur tippar jag MX?</a>
+        </li>
         <li><strong class="text-white">SuperMotocross (SMX)</strong> — playoff-formatet som avslutar den amerikanska säsongen.</li>
         <li><strong class="text-white">World Supercross (WSX)</strong> — världsserien med race runt om i världen.</li>
       </ul>

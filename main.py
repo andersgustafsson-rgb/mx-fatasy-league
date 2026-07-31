@@ -618,6 +618,8 @@ def sitemap_xml():
     urls = [
         ("/", "weekly", "1.0"),
         ("/om", "weekly", "0.95"),
+        ("/tippa-supercross", "weekly", "0.9"),
+        ("/tippa-motocross", "weekly", "0.9"),
         ("/start", "weekly", "0.9"),
         ("/manual", "monthly", "0.85"),
         ("/register", "monthly", "0.7"),
@@ -647,6 +649,198 @@ def sitemap_xml():
 def about_game_page():
     """SEO landing: vad spelet är, hur det funkar, FAQ (svenska)."""
     return render_template("om_spelet.html")
+
+
+def _tippa_serie_faq_json(faq_items: list[dict]) -> str:
+    import json
+
+    entity = [
+        {
+            "@type": "Question",
+            "name": item["q"],
+            "acceptedAnswer": {"@type": "Answer", "text": item["a_plain"]},
+        }
+        for item in faq_items
+    ]
+    return json.dumps(
+        {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": entity},
+        ensure_ascii=False,
+    )
+
+
+def _tippa_supercross_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag Supercross (SX)?",
+            "a": "Skapa gratis konto på mx-fantasy.se, välj serien Supercross, öppna nästa race och tippa topp 6 i 450 och 250 plus holeshot och wildcard innan deadline.",
+            "a_plain": "Skapa gratis konto på mx-fantasy.se, välj serien Supercross, öppna nästa race och tippa topp 6 i 450 och 250 plus holeshot och wildcard innan deadline.",
+        },
+        {
+            "q": "Vad är skillnaden mellan tippa SX och tippa motocross?",
+            "a": "Supercross körs oftast i arena med ett huvudrace per klass. Pro Motocross (utomhus-MX) har oftast två heat och overall. I MX Fantasy tippar du inför varje tävling i den serie du följer.",
+            "a_plain": "Supercross körs oftast i arena med ett huvudrace per klass. Pro Motocross (utomhus-MX) har oftast två heat och overall. I MX Fantasy tippar du inför varje tävling i den serie du följer.",
+        },
+        {
+            "q": "Kostar det att tippa supercross hos er?",
+            "a": "Nej. Konto, tips, ligor och leaderboard är gratis. Du spelar om fantasypoäng — ingen betting.",
+            "a_plain": "Nej. Konto, tips, ligor och leaderboard är gratis. Du spelar om fantasypoäng — ingen betting.",
+        },
+        {
+            "q": "När måste SX-tipsen vara inne?",
+            "a": "Normalt två timmar före race startar. När tipset låses kan du inte ändra mer. Se deadline i appen för varje race.",
+            "a_plain": "Normalt två timmar före race startar. När tipset låses kan du inte ändra mer. Se deadline i appen för varje race.",
+        },
+        {
+            "q": "Kan man tippa både 450 och 250 i Supercross?",
+            "a": "Ja. Du tippar topp 6 i båda klasserna (där de finns), plus holeshot och wildcard enligt spelets setup för racehelgen.",
+            "a_plain": "Ja. Du tippar topp 6 i båda klasserna (där de finns), plus holeshot och wildcard enligt spelets setup för racehelgen.",
+        },
+        {
+            "q": "Finns det fantasy Supercross på svenska?",
+            "a": "Ja — MX Fantasy League är byggt för svenska fans med SV/EN i appen. Den här guiden förklarar hur du tippar SX hos oss.",
+            "a_plain": "Ja — MX Fantasy League är byggt för svenska fans med SV/EN i appen. Den här guiden förklarar hur du tippar SX hos oss.",
+        },
+    ]
+    return {
+        "path": "/tippa-supercross",
+        "series_short": "SX",
+        "breadcrumb_name": "Tippa Supercross",
+        "seo_title": "Tippa Supercross (SX) — gratis fantasy SX-spel | MX Fantasy League",
+        "seo_description": "Hur tippar man Supercross online? Gratis fantasy SX / tippa supercross i MX Fantasy League: topp 6, holeshot och wildcard — utan betting. Guiden för svenska fans.",
+        "seo_keywords": (
+            "tippa supercross, fantasy supercross, fantasy sx, tippa sx, "
+            "supercross fantasy sverige, sx spel, tippa 450 supercross, "
+            "gratis fantasy supercross, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag Supercross?",
+        "lead": (
+            "Vill du tippa Supercross (SX) online? I MX Fantasy League tippar du topp 6, "
+            "holeshot och wildcard inför amerikanska SX-race — gratis fantasy supercross "
+            "utan betting, på mx-fantasy.se."
+        ),
+        "what_title": "Vad är tippa Supercross / fantasy SX?",
+        "what_paragraphs": [
+            (
+                "Amerikansk Supercross är arenaserien med 450- och 250-klass. "
+                "I fantasy SX tippar du vilka förare som placerar sig högst i riktiga race "
+                "och får fantasypoäng utifrån hur nära du ligger resultatet."
+            ),
+            (
+                "MX Fantasy League är ett gratis sx-spel för dig som följer sporten i Sverige "
+                "(eller internationellt): skapa konto, tippa inför varje racehelg, spela solo "
+                "eller i liga med kompisar."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> på mx-fantasy.se — gratis.",
+            "<strong class=\"text-white\">Välj serien Supercross (SX)</strong> på startsidan.",
+            "<strong class=\"text-white\">Öppna nästa race</strong> och sätt topp 6 i 450 och 250.",
+            "<strong class=\"text-white\">Lägg till holeshot och wildcard</strong> innan deadline (ofta 2 h före start).",
+            "<strong class=\"text-white\">Följ poängen</strong> när race är klart — och utmana i ligor/dueller.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": [
+            {
+                "href": "/tippa-motocross",
+                "label": "Tippa Motocross (MX)",
+                "blurb": "utomhus-Pro Motocross, heat och overall",
+            },
+        ],
+    }
+
+
+def _tippa_motocross_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag motocross (Pro MX)?",
+            "a": "Skapa gratis konto, välj serien Pro Motocross / MX, öppna nästa racehelg och tippa topp 6, holeshot och wildcard innan deadline.",
+            "a_plain": "Skapa gratis konto, välj serien Pro Motocross / MX, öppna nästa racehelg och tippa topp 6, holeshot och wildcard innan deadline.",
+        },
+        {
+            "q": "Vad betyder tippa mx / fantasy motocross?",
+            "a": "Du tippar förare i riktiga utomhus-motocrossrace och får fantasypoäng. Det är ett mx-spel för nöje — inte betting om pengar.",
+            "a_plain": "Du tippar förare i riktiga utomhus-motocrossrace och får fantasypoäng. Det är ett mx-spel för nöje — inte betting om pengar.",
+        },
+        {
+            "q": "Är Pro Motocross samma sak som Supercross?",
+            "a": "Nej. Supercross är oftast arena; Pro Motocross är utomhusbanor med typiskt två heat och overall. Du tippar dem som separata serier i appen.",
+            "a_plain": "Nej. Supercross är oftast arena; Pro Motocross är utomhusbanor med typiskt två heat och overall. Du tippar dem som separata serier i appen.",
+        },
+        {
+            "q": "Kostar mx-spelet något?",
+            "a": "Nej. Tippa motocross hos MX Fantasy League är gratis — konto, picks och ligor utan kostnad.",
+            "a_plain": "Nej. Tippa motocross hos MX Fantasy League är gratis — konto, picks och ligor utan kostnad.",
+        },
+        {
+            "q": "När måste MX-tipsen vara inne?",
+            "a": "Normalt två timmar före start. Kolla alltid deadline i appen för just den racehelgen.",
+            "a_plain": "Normalt två timmar före start. Kolla alltid deadline i appen för just den racehelgen.",
+        },
+        {
+            "q": "Kan man tippa motocross med vänner?",
+            "a": "Ja — skapa eller gå med i en privat liga, jämför säsongspoäng och kör dueller. Eller spela solo mot leaderboarden.",
+            "a_plain": "Ja — skapa eller gå med i en privat liga, jämför säsongspoäng och kör dueller. Eller spela solo mot leaderboarden.",
+        },
+    ]
+    return {
+        "path": "/tippa-motocross",
+        "series_short": "MX",
+        "breadcrumb_name": "Tippa Motocross",
+        "seo_title": "Tippa motocross (MX) — gratis mx-spel & fantasy MX | MX Fantasy League",
+        "seo_description": "Hur tippar man motocross online? Gratis mx-spel / fantasy motocross i MX Fantasy League: tippa Pro MX topp 6, holeshot och wildcard — utan betting.",
+        "seo_keywords": (
+            "tippa motocross, tippa mx, mx spel, fantasy motocross, fantasy mx, "
+            "motocross tippning, tippa pro motocross, gratis mx spel, "
+            "motocross spel online, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag motocross?",
+        "lead": (
+            "Vill du tippa motocross online? I MX Fantasy League är mx-spelet gratis fantasy "
+            "motocross: tippa topp 6, holeshot och wildcard i amerikanska Pro Motocross — "
+            "poäng och ligor utan betting."
+        ),
+        "what_title": "Vad är tippa mx / fantasy motocross?",
+        "what_paragraphs": [
+            (
+                "Pro Motocross (ofta kallat MX eller utomhus-motocross) körs på jordbanor "
+                "ute, vanligtvis med två heat och en overall-placering. I fantasy tippar du "
+                "förare inför racehelgen och får fantasypoäng efter resultatet."
+            ),
+            (
+                "Söker du efter mx spel, tippa mx eller motocross tippning på svenska är "
+                "MX Fantasy League byggt för just det — i webbläsaren på mobil eller dator."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> — gratis på mx-fantasy.se.",
+            "<strong class=\"text-white\">Välj Pro Motocross (MX)</strong> som serie.",
+            "<strong class=\"text-white\">Öppna nästa racehelg</strong> och tippa topp 6 i klasserna som gäller.",
+            "<strong class=\"text-white\">Fyll i holeshot och wildcard</strong> innan deadline.",
+            "<strong class=\"text-white\">Samla poäng</strong> och tävla i ligor eller solo.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": [
+            {
+                "href": "/tippa-supercross",
+                "label": "Tippa Supercross (SX)",
+                "blurb": "amerikansk arenasupercross",
+            },
+        ],
+    }
+
+
+@app.get("/tippa-supercross")
+def tippa_supercross_page():
+    """SEO: hur man tippar Supercross / fantasy SX."""
+    return render_template("tippa_serie.html", page=_tippa_supercross_page_data())
+
+
+@app.get("/tippa-motocross")
+def tippa_motocross_page():
+    """SEO: hur man tippar motocross / fantasy MX."""
+    return render_template("tippa_serie.html", page=_tippa_motocross_page_data())
 
 
 # -------------------------------------------------
