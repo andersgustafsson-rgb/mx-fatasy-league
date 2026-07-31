@@ -37,7 +37,7 @@ const TEMPLATE_DEFS = [
   {
     id: "usa_forsening",
     fields: [
-      { id: "newDeliveryDate", type: "date", required: true },
+      { id: "newDeliveryDate", type: "date" },
       { id: "alternativeProduct", type: "text" },
       { id: "productLink", type: "url" },
     ],
@@ -163,9 +163,9 @@ const UI = {
     },
     usa_forsening: {
       label: "USA-leverans — störningar",
-      description: "Produkt från USA försenad. Datum + valfritt alternativ. Erbjud vänta, byt eller avboka.",
+      description: "Produkt från USA försenad. Valfritt skickdatum + alternativ. Erbjud vänta, byt eller avboka.",
       fields: {
-        newDeliveryDate: { label: "Beräknat skickdatum" },
+        newDeliveryDate: { label: "Beräknat skickdatum (valfritt)" },
         alternativeProduct: { label: "Alternativ produkt (valfritt)" },
         productLink: { label: "Länk till alternativ (valfritt)" },
       },
