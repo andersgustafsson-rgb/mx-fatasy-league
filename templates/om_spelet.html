@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% set seo_title = 'Om MX Fantasy League — gratis fantasy motocross-spel i Sverige' %}
-  {% set seo_description = 'MX Fantasy League är ett gratis fantasy motocross-spel för svenska fans. Tippa topp 6, holeshot och wildcard i SX, MX, SMX och WSX. Så fungerar spelet, poäng och ligor.' %}
+  {% set seo_description = 'MX Fantasy League är gratis fantasy motocross i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX. Poäng, ligor, dueller — utan betting.' %}
   {% set seo_path = '/om' %}
   {% include 'includes/seo_head.html' %}
   <link rel="icon" href="/favicon.ico" sizes="any" type="image/png">
@@ -21,15 +21,23 @@
         "name": "Vad är MX Fantasy League?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "MX Fantasy League är ett gratis fantasy motocross-spel där du tippar topp 6, holeshot och wildcard i riktiga race i Supercross, Pro Motocross (MX), SMX och World Supercross (WSX)."
+          "text": "MX Fantasy League är ett gratis fantasy motocross-spel där du tippar topp 6, holeshot och wildcard i riktiga race i Supercross (SX), Pro Motocross (MX), SuperMotocross (SMX) och World Supercross (WSX). Du samlar fantasypoäng, spelar i ligor och mäter dig mot andra fans."
         }
       },
       {
         "@type": "Question",
-        "name": "Kostar det något att spela?",
+        "name": "Kostar det något att spela MX Fantasy League?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Nej. MX Fantasy League är helt gratis att skapa konto, tippa och spela i ligor."
+          "text": "Nej. Det är helt gratis att skapa konto, tippa race, gå med i ligor och följa leaderboard. Det finns ingen betting och inga insatser med riktiga pengar."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Är MX Fantasy League betting eller hasardspel?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nej. MX Fantasy League är ett tippningsspel för nöje och prestige. Du spelar om fantasypoäng, inte om pengar."
         }
       },
       {
@@ -37,23 +45,63 @@
         "name": "Hur fungerar poängsystemet?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Du får fantasypoäng utifrån hur dina tippade förare placerar sig i riktiga race. Ju närmare verkligt resultat, desto fler poäng. Holeshot och wildcard ger extra poängmöjligheter."
+          "text": "Du tippar vilka förare som kommer högst i race. Ju närmare dina tips ligger verkligt resultat, desto fler fantasypoäng. Holeshot och wildcard ger extra poängchanser. Exakta tabeller finns i spelmanualen."
         }
       },
       {
         "@type": "Question",
-        "name": "Vilka serier kan man tippa?",
+        "name": "Vilka serier kan man tippa i?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Du kan tippa i amerikanska Supercross (SX), Pro Motocross (MX), SuperMotocross (SMX) och World Supercross (WSX)."
+          "text": "Amerikanska Supercross (SX), Pro Motocross / utomhus-MX, SuperMotocross (SMX) och World Supercross (WSX). Du växlar serie i appen och tippar inför varje race."
         }
       },
       {
         "@type": "Question",
-        "name": "Kan man spela i privata ligor?",
+        "name": "Vad tippar man inför varje race?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Ja. Skapa eller gå med i privata ligor och tävla mot vänner med säsongspoäng och dueller."
+          "text": "Topp 6 i 450- och 250-klassen (där serien har dem), plus holeshot och en wildcard. Deadline är innan race startar — när tipset låses kan du inte ändra mer."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Kan man spela i privata ligor med vänner?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja. Skapa eller gå med i privata ligor, tävla om säsongspoäng och utmana varandra i dueller. Du kan också spela solo mot den globala leaderboarden."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Vad är säsongsteam i MX Fantasy?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Utöver race-tips kan du bygga ett säsongsteam med förare som ger poäng över hela säsongen. Det kompletterar race picks och ger mer strategi över tid."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Behöver man kunna motocross för att spela?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Nej, men det blir roligare om du följer sporten. Nybörjare kan tippa utifrån favoriter och statistik i appen; erfarna fans kan gräva i form, bana och historik."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Var spelar man MX Fantasy League?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "På webben via mx-fantasy.se. Skapa konto, öppna nästa race och sätt dina picks innan deadline. Spelet fungerar i mobil och desktop."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Finns det en spelmanual?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ja. Spelmanualen beskriver picks, poäng, holeshot, wildcard, säsongsteam, ligor, dueller och mer — på svenska och engelska."
         }
       }
     ]
@@ -64,16 +112,42 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "MX Fantasy League",
+    "alternateName": ["MX Fantasy", "Fantasy Motocross Sverige"],
     "url": "{{ public_base_url }}/",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Web",
-    "inLanguage": "sv-SE",
-    "description": "Gratis fantasy motocross-spel i Sverige med tippning av topp 6, holeshot och wildcard.",
+    "inLanguage": ["sv-SE", "en"],
+    "description": "Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard i Supercross, Pro Motocross, SMX och WSX.",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "SEK"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "MX Fantasy League",
+      "url": "{{ public_base_url }}/"
     }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Startsida",
+        "item": "{{ public_base_url }}/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Om spelet",
+        "item": "{{ public_base_url }}/om"
+      }
+    ]
   }
   </script>
   <style>
@@ -85,54 +159,167 @@
         #020617;
       color: #e2e8f0;
     }
+    .om-prose p { margin: 0 0 0.85rem; }
+    .om-prose p:last-child { margin-bottom: 0; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary { list-style: none; }
   </style>
 </head>
 <body class="px-4 py-8 sm:py-12">
   <main class="mx-auto max-w-3xl">
+    <nav class="text-xs text-slate-500 mb-4" aria-label="Brödsmula">
+      <a href="{{ url_for('index') }}" class="hover:text-cyan-400">Startsida</a>
+      <span class="mx-1.5 text-slate-600">/</span>
+      <span class="text-slate-400">Om spelet</span>
+    </nav>
+
     <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400 mb-2">MX Fantasy League</p>
     <h1 class="text-3xl sm:text-4xl font-extrabold text-white mb-4">Gratis fantasy motocross-spel i Sverige</h1>
-    <p class="text-slate-300 text-base sm:text-lg leading-relaxed mb-8">
-      MX Fantasy League är spelet för dig som följer motocross och vill tippa race, samla poäng och mäta dig mot andra fans —
-      utan betting och utan kostnad.
+    <p class="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
+      MX Fantasy League är spelet för dig som följer motocross och supercross och vill tippa race,
+      samla poäng och mäta dig mot andra fans — utan betting och utan kostnad.
+      Spelet körs på <strong class="text-white">mx-fantasy.se</strong>.
     </p>
+    <div class="flex flex-wrap gap-3 mb-10">
+      <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
+      <a href="{{ url_for('manual_page') }}" class="rp-btn rp-btn--secondary">Spelmanual</a>
+      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--ghost">Till startsidan</a>
+    </div>
+
+    <section class="mb-10 om-prose rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Vad är fantasy motocross?</h2>
+      <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+        Fantasy motocross fungerar ungefär som fantasy i andra sporter: du tippar vilka förare som lyckas i
+        riktiga race och får <strong class="text-white">fantasypoäng</strong> utifrån hur det går.
+        Skillnaden mot att bara tippa vinnare är att du bygger en hel rad — toppplaceringar, holeshot och
+        wildcard — och följer poängen över hela säsongen.
+      </p>
+      <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+        MX Fantasy League är byggt för svenska (och internationella) fans som vill ha ett enkelt,
+        seriöst tippspel kring SX, MX, SMX och WSX. Du spelar i webbläsaren på mobil eller dator.
+      </p>
+    </section>
 
     <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
-      <h2 class="text-xl font-bold text-cyan-300 mb-3">🇸🇪 Så funkar det</h2>
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Så funkar MX Fantasy League</h2>
+      <ol class="space-y-3 text-slate-300 text-sm sm:text-base leading-relaxed list-decimal list-inside">
+        <li><strong class="text-white">Skapa konto</strong> — gratis, tar någon minut.</li>
+        <li><strong class="text-white">Välj serie</strong> — Supercross, Pro Motocross, SMX eller WSX.</li>
+        <li><strong class="text-white">Sätt race picks</strong> — tippa topp 6 (450/250 där det finns), holeshot och wildcard innan deadline.</li>
+        <li><strong class="text-white">Följ resultatet</strong> — när race är klart räknas dina fantasypoäng in.</li>
+        <li><strong class="text-white">Tävla vidare</strong> — leaderboard, säsongsteam, privata ligor och dueller.</li>
+      </ol>
+      <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+        Detaljerade regler, poängtabeller och skärmguider finns i
+        <a class="text-cyan-400 underline underline-offset-2" href="{{ url_for('manual_page') }}">spelmanualen</a>.
+      </p>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Vilka serier kan man tippa?</h2>
       <ul class="space-y-3 text-slate-300 text-sm sm:text-base leading-relaxed">
-        <li><strong class="text-white">Hur det fungerar:</strong> Skapa konto, tippa topp 6 i 450 och 250, plus holeshot och wildcard. Poäng baseras på riktiga race-resultat.</li>
-        <li><strong class="text-white">Poängsystem:</strong> Ju närmare verklig placering, desto fler fantasypoäng. Följ leaderboard och säsongspoäng.</li>
-        <li><strong class="text-white">Serier:</strong> Supercross (SX), Pro Motocross (MX), SuperMotocross (SMX) och World Supercross (WSX).</li>
-        <li><strong class="text-white">Kostnad:</strong> Helt gratis att spela.</li>
-        <li><strong class="text-white">Ligor:</strong> Spela solo eller skapa privata ligor med vänner.</li>
+        <li><strong class="text-white">Supercross (SX)</strong> — amerikansk arenasupercross, oftast under vinter/vår.</li>
+        <li><strong class="text-white">Pro Motocross (MX)</strong> — utomhus-motocross i USA med heat och overall.</li>
+        <li><strong class="text-white">SuperMotocross (SMX)</strong> — playoff-formatet som avslutar den amerikanska säsongen.</li>
+        <li><strong class="text-white">World Supercross (WSX)</strong> — världsserien med race runt om i världen.</li>
       </ul>
+      <p class="mt-4 text-sm text-slate-400 leading-relaxed">
+        Du tippar inför varje tävling i den serie du följer. Inför racet finns också hjälp i appen
+        (t.ex. tips, statistik och baninfo när det finns).
+      </p>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-700/80 bg-slate-900/60 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-cyan-300 mb-3">Poäng, ligor och säsongsteam</h2>
+      <div class="om-prose text-slate-300 text-sm sm:text-base leading-relaxed">
+        <p>
+          <strong class="text-white">Race picks</strong> är kärnan: tippa rätt förare på rätt plats och samla poäng
+          per race. Holeshot och wildcard ger extra chanser när du träffar rätt.
+        </p>
+        <p>
+          <strong class="text-white">Säsongsteam</strong> låter dig välja förare som poängsätts över längre tid —
+          mer strategi mellan racehelgerna.
+        </p>
+        <p>
+          <strong class="text-white">Ligor och dueller</strong> gör spelet socialt: skapa en liga med kompisgänget,
+          jämför säsongspoäng och utmana varandra head-to-head. Du kan lika gärna spela solo mot den öppna tabellen.
+        </p>
+      </div>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-amber-700/40 bg-amber-950/20 p-5 sm:p-6">
+      <h2 class="text-xl font-bold text-amber-200 mb-3">Gratis — ingen betting</h2>
+      <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+        MX Fantasy League är <strong class="text-white">inte</strong> ett casinospel och inte oddstips om pengar.
+        Du spelar om fantasypoäng, ranking och bragder i ligan. Konto, tips och ligor är gratis.
+      </p>
     </section>
 
     <section class="mb-10">
       <h2 class="text-xl font-bold text-cyan-300 mb-4">Vanliga frågor</h2>
-      <div class="space-y-4">
+      <div class="space-y-3">
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4" open>
           <summary class="cursor-pointer font-semibold text-white">Vad är MX Fantasy League?</summary>
-          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ett gratis fantasy motocross-spel där du tippar förare inför riktiga race och får poäng efter resultat.</p>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ett gratis fantasy motocross-spel där du tippar förare inför riktiga race i SX, MX, SMX och WSX och får fantasypoäng efter resultat. Spelas på mx-fantasy.se.</p>
         </details>
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Kostar det något?</summary>
-          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Nej — konto, tips och ligor är gratis.</p>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Nej — konto, tips, ligor och leaderboard är gratis.</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Är det betting?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Nej. Du spelar om fantasypoäng och prestige, inte om pengar.</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Vad tippar man inför ett race?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Topp 6 i relevanta klasser, plus holeshot och wildcard. Tips måste vara inne innan deadline.</p>
         </details>
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Vilka serier finns?</summary>
-          <p class="mt-2 text-sm text-slate-300 leading-relaxed">SX, MX, SMX och WSX — de stora internationella motocross- och supercross-serierna.</p>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Supercross (SX), Pro Motocross (MX), SuperMotocross (SMX) och World Supercross (WSX).</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Kan man spela med vänner?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ja — privata ligor, säsongspoäng och dueller. Eller solo mot den globala tabellen.</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Vad är säsongsteam?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ett lag med förare som ger poäng över säsongen, utöver dina race-tips inför varje tävling.</p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Behöver jag kunna MX sedan tidigare?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Nej. Nybörjare klarar sig; fans som följer sporten har mer att gräva i. Manualen förklarar spelets delar steg för steg.</p>
         </details>
         <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
           <summary class="cursor-pointer font-semibold text-white">Hur börjar jag?</summary>
-          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Registrera dig, öppna nästa race och sätt dina picks innan deadline. Läs mer i <a class="text-cyan-400 underline" href="{{ url_for('manual_page') }}">spelmanualen</a>.</p>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">
+            <a class="text-cyan-400 underline" href="{{ url_for('register') }}">Registrera dig</a>,
+            öppna nästa race och sätt picks innan deadline. Läs mer i
+            <a class="text-cyan-400 underline" href="{{ url_for('manual_page') }}">spelmanualen</a>.
+          </p>
+        </details>
+        <details class="rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+          <summary class="cursor-pointer font-semibold text-white">Finns spelet på engelska?</summary>
+          <p class="mt-2 text-sm text-slate-300 leading-relaxed">Ja. Du kan växla SV/EN i appen och i spelmanualen. Den här sidan är skriven på svenska för sök och tydlighet.</p>
         </details>
       </div>
     </section>
 
+    <section class="mb-10 om-prose rounded-xl border border-slate-700/80 bg-slate-900/40 p-5 sm:p-6" lang="en">
+      <h2 class="text-lg font-bold text-slate-200 mb-2">MX Fantasy League in short (English)</h2>
+      <p class="text-slate-400 text-sm leading-relaxed">
+        MX Fantasy League is a free fantasy motocross game: pick top 6, holeshot and wildcard for real SX, MX, SMX and WSX races,
+        score fantasy points, join leagues and duel friends. No betting — play at
+        <a class="text-cyan-400 underline" href="{{ public_base_url }}/">mx-fantasy.se</a>.
+        Full rules:
+        <a class="text-cyan-400 underline" href="{{ url_for('manual_page') }}">game manual</a>.
+      </p>
+    </section>
+
     <div class="flex flex-wrap gap-3 mb-10">
       <a href="{{ url_for('register') }}" class="rp-btn rp-btn--primary">Skapa gratis konto</a>
-      <a href="{{ url_for('index') }}" class="rp-btn rp-btn--secondary">Till startsidan</a>
-      <a href="{{ url_for('manual_page') }}" class="rp-btn rp-btn--ghost">Spelmanual</a>
+      <a href="{{ url_for('manual_page') }}" class="rp-btn rp-btn--secondary">Läs spelmanualen</a>
+      <a href="{{ url_for('contact_page') }}" class="rp-btn rp-btn--ghost">Kontakt</a>
     </div>
 
     {% include 'includes/site_legal_footer.html' %}
