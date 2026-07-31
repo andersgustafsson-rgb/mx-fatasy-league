@@ -35,6 +35,14 @@ const TEMPLATE_DEFS = [
     ],
   },
   {
+    id: "usa_forsening",
+    fields: [
+      { id: "newDeliveryDate", type: "date", required: true },
+      { id: "alternativeProduct", type: "text" },
+      { id: "productLink", type: "url" },
+    ],
+  },
+  {
     id: "alternativ",
     fields: [
       { id: "alternativeProduct", type: "text", required: true },
@@ -101,6 +109,7 @@ const REPLY_DEFAULTS = {
   inkommer: false,
   utgatt: false,
   forsening: false,
+  usa_forsening: false,
   alternativ: false,
   avbokad: false,
   prisandring: false,
@@ -150,6 +159,15 @@ const UI = {
       fields: {
         newDeliveryDate: { label: "Välj nytt leveransdatum" },
         delayReason: { label: "Orsak (valfritt)", placeholder: "t.ex. försening från leverantör" },
+      },
+    },
+    usa_forsening: {
+      label: "USA-leverans — störningar",
+      description: "Produkt från USA försenad. Datum + valfritt alternativ. Erbjud vänta, byt eller avboka.",
+      fields: {
+        newDeliveryDate: { label: "Beräknat skickdatum" },
+        alternativeProduct: { label: "Alternativ produkt (valfritt)" },
+        productLink: { label: "Länk till alternativ (valfritt)" },
       },
     },
     alternativ: {
@@ -252,6 +270,7 @@ const MAIL_I18N = {
       inkommer: "Kommer in i lager",
       utgatt: "Produkt utgått",
       forsening: "Produkt försenad",
+      usa_forsening: "Leverans från USA",
       alternativ: "Alternativ produkt",
       avbokad: "Order avbruten",
       prisandring: "Prisändring",
@@ -289,6 +308,7 @@ const MAIL_I18N = {
       inkommer: "Kommer på lager",
       utgatt: "Produkt udgået",
       forsening: "Produkt forsinket",
+      usa_forsening: "Levering fra USA",
       alternativ: "Alternativt produkt",
       avbokad: "Ordre annulleret",
       prisandring: "Prisændring",
@@ -326,6 +346,7 @@ const MAIL_I18N = {
       inkommer: "Back in stock soon",
       utgatt: "Product discontinued",
       forsening: "Delivery delayed",
+      usa_forsening: "USA shipping delay",
       alternativ: "Alternative product",
       avbokad: "Order cancelled",
       prisandring: "Price change",
@@ -883,6 +904,40 @@ Vi gör vårt bästa för att leverera så snart som möjligt.
 ${outro}`;
       break;
     }
+    case "usa_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const alt = cleanStr(extras.alternativeProduct);
+      const link = cleanStr(extras.productLink);
+      body = `${intro}Vi behöver tyvärr meddela dig om en leveransförsening på ${prod}${orderNo ? ` i ${orderRef}` : ""}.
+
+Produkten skickas från USA, och just nu förekommer störningar i sändningarna därifrån. Det gör att leveranstiden blir längre än vanligt.`;
+      body += when
+        ? ` Vi räknar med att kunna skicka varan omkring ${when}.`
+        : ` Vi återkommer med mer information så snart vi har ett säkrare datum.`;
+      body += `
+
+Du kan välja hur du vill gå vidare:`;
+      if (alt) {
+        body += `
+
+1. Vänta — vi behåller ordern och skickar så snart varan är på väg.
+2. Byt till alternativ — vi kan erbjuda ${alt} som ersättning.`;
+        if (link) body += `\n   Du hittar produkten här: ${link}`;
+        body += `
+3. Avboka — vi avbryter raden/ordern och du får pengarna tillbaka enligt gällande betalningssätt.`;
+      } else {
+        body += `
+
+1. Vänta — vi behåller ordern och skickar så snart varan är på väg.
+2. Avboka — vi avbryter raden/ordern och du får pengarna tillbaka enligt gällande betalningssätt.`;
+      }
+      body += `
+
+Svara gärna på detta mail med vilket alternativ som passar dig bäst. Vi hjälper dig vidare så fort vi hör från dig.
+
+${outro}`;
+      break;
+    }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
@@ -1096,6 +1151,40 @@ Vi gør vores bedste for at levere så hurtigt som muligt.
 ${outro}`;
       break;
     }
+    case "usa_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const alt = cleanStr(extras.alternativeProduct);
+      const link = cleanStr(extras.productLink);
+      body = `${intro}Vi er desværre nødt til at meddele dig om en leveringsforsinkelse på ${prod}${orderNo ? ` i ${orderRef}` : ""}.
+
+Produktet sendes fra USA, og der er i øjeblikket forstyrrelser i forsendelserne derfra. Det betyder, at leveringstiden bliver længere end normalt.`;
+      body += when
+        ? ` Vi forventer at kunne sende varen omkring ${when}.`
+        : ` Vi vender tilbage med mere information, så snart vi har en mere sikker dato.`;
+      body += `
+
+Du kan vælge, hvordan du vil gå videre:`;
+      if (alt) {
+        body += `
+
+1. Vent — vi beholder ordren og sender, så snart varen er på vej.
+2. Skift til alternativ — vi kan tilbyde ${alt} som erstatning.`;
+        if (link) body += `\n   Du finder produktet her: ${link}`;
+        body += `
+3. Annullér — vi annullerer linjen/ordren, og du får pengene tilbage efter gældende betalingsmetode.`;
+      } else {
+        body += `
+
+1. Vent — vi beholder ordren og sender, så snart varen er på vej.
+2. Annullér — vi annullerer linjen/ordren, og du får pengene tilbage efter gældende betalingsmetode.`;
+      }
+      body += `
+
+Svar gerne på denne mail med, hvilket alternativ der passer dig bedst. Vi hjælper dig videre, så snart vi hører fra dig.
+
+${outro}`;
+      break;
+    }
     case "alternativ": {
       const alt = cleanStr(extras.alternativeProduct);
       const link = cleanStr(extras.productLink);
@@ -1305,6 +1394,40 @@ Please get in touch if you would like to cancel the order or if we can help you 
       body += `
 
 We are doing our best to deliver as soon as possible.
+
+${outro}`;
+      break;
+    }
+    case "usa_forsening": {
+      const when = formatLocaleDate(extras.newDeliveryDate);
+      const alt = cleanStr(extras.alternativeProduct);
+      const link = cleanStr(extras.productLink);
+      body = `${intro}We need to let you know about a delivery delay for ${prod}${orderNo ? ` on ${orderRef}` : ""}.
+
+This item ships from the USA, and there are currently disruptions to shipments from there. As a result, delivery is taking longer than usual.`;
+      body += when
+        ? ` We currently expect to be able to dispatch the item around ${when}.`
+        : ` We will update you with more information as soon as we have a more reliable date.`;
+      body += `
+
+You can choose how you would like to proceed:`;
+      if (alt) {
+        body += `
+
+1. Wait — we keep the order and ship as soon as the item is on its way.
+2. Switch to an alternative — we can offer ${alt} as a replacement.`;
+        if (link) body += `\n   You can find the product here: ${link}`;
+        body += `
+3. Cancel — we cancel the line/order and refund you according to your payment method.`;
+      } else {
+        body += `
+
+1. Wait — we keep the order and ship as soon as the item is on its way.
+2. Cancel — we cancel the line/order and refund you according to your payment method.`;
+      }
+      body += `
+
+Please reply to this email with the option that suits you best. We will help you as soon as we hear from you.
 
 ${outro}`;
       break;
