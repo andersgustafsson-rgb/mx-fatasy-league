@@ -1876,24 +1876,28 @@ function setTranslateStatus(msg, isError = false) {
 }
 
 async function translateMailTo(targetLang) {
-  const labels = { da: "danska", en: "engelska" };
+  const labels = { sv: "svenska", da: "danska", en: "engelska" };
   const label = labels[targetLang] || targetLang;
   const subject = cleanStr(els.subjectOut?.value);
   const body = getBodyPlain();
   const hadImages = bodyHasImages();
   if (!subject && !body && !hadImages) {
-    setTranslateStatus("Skriv eller generera mail först.", true);
+    setTranslateStatus("Skriv eller klistra in text först.", true);
     return;
   }
 
-  const btn = targetLang === "en" ? els.translateToEnglish : els.translateToDanish;
+  const btnMap = {
+    sv: els.translateToSwedish,
+    da: els.translateToDanish,
+    en: els.translateToEnglish,
+  };
+  const btn = btnMap[targetLang];
   const oldLabel = btn?.textContent;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Översätter…";
+  const allBtns = [els.translateToSwedish, els.translateToDanish, els.translateToEnglish];
+  for (const b of allBtns) {
+    if (b) b.disabled = true;
   }
-  if (els.translateToDanish) els.translateToDanish.disabled = true;
-  if (els.translateToEnglish) els.translateToEnglish.disabled = true;
+  if (btn) btn.textContent = "Översätter…";
   setTranslateStatus(`Översätter till ${label}…`);
 
   const source = "auto";
@@ -1930,15 +1934,21 @@ async function translateMailTo(targetLang) {
   } catch (err) {
     setTranslateStatus(err?.message || "Översättning misslyckades.", true);
   } finally {
-    if (els.translateToDanish) {
-      els.translateToDanish.disabled = false;
-      if (targetLang === "da") els.translateToDanish.textContent = oldLabel || "Översätt till danska";
-    }
-    if (els.translateToEnglish) {
-      els.translateToEnglish.disabled = false;
-      if (targetLang === "en") els.translateToEnglish.textContent = oldLabel || "Översätt till engelska";
+    const defaults = {
+      sv: "Översätt till svenska",
+      da: "Översätt till danska",
+      en: "Översätt till engelska",
+    };
+    for (const [lang, el] of Object.entries(btnMap)) {
+      if (!el) continue;
+      el.disabled = false;
+      if (lang === targetLang) el.textContent = oldLabel || defaults[lang];
     }
   }
+}
+
+function translateMailToSwedish() {
+  return translateMailTo("sv");
 }
 
 function translateMailToDanish() {
@@ -1982,6 +1992,7 @@ function init() {
   els.bodyOut = $("bodyOut");
   els.outputEditHint = $("outputEditHint");
   els.regenerateMail = $("regenerateMail");
+  els.translateToSwedish = $("translateToSwedish");
   els.translateToDanish = $("translateToDanish");
   els.translateToEnglish = $("translateToEnglish");
   els.validation = $("validation");
@@ -2065,6 +2076,7 @@ function init() {
   els.subjectOut?.addEventListener("input", markOutputEdited);
   els.bodyOut?.addEventListener("input", markOutputEdited);
   els.regenerateMail?.addEventListener("click", forceGenerate);
+  els.translateToSwedish?.addEventListener("click", translateMailToSwedish);
   els.translateToDanish?.addEventListener("click", translateMailToDanish);
   els.translateToEnglish?.addEventListener("click", translateMailToEnglish);
 
