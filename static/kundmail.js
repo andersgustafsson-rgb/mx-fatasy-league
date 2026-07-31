@@ -583,7 +583,7 @@ function ensureSignatureProfiles() {
   const settings = loadSettings();
 
   if (!profiles.length) {
-    const legacyText = cleanStr(settings.customSignature);
+    let legacyText = cleanStr(settings.customSignature);
     if (!legacyText) {
       try {
         const oldRaw = localStorage.getItem("kundmail_settings_v3")
@@ -591,19 +591,26 @@ function ensureSignatureProfiles() {
           || localStorage.getItem("kundmail_settings_v1");
         if (oldRaw) {
           const old = JSON.parse(oldRaw);
-          const migrated = cleanStr(old.customSignature);
-          if (migrated) profiles = [{ id: newSignatureId(), name: "Min signatur", text: migrated }];
+          legacyText = cleanStr(old.customSignature);
+          if (!legacyText) {
+            legacyText = [old.senderName, old.companyName, old.supportEmail]
+              .map(cleanStr)
+              .filter(Boolean)
+              .join("\n");
+          }
         }
       } catch {
         /* ignore */
       }
-    } else {
-      profiles = [{ id: newSignatureId(), name: "Min signatur", text: legacyText }];
     }
-  }
-
-  if (!profiles.length) {
-    profiles = [{ id: newSignatureId(), name: "Min signatur", text: "" }];
+    if (!legacyText) {
+      legacyText = cleanStr(settings.companyName);
+    }
+    profiles = [{
+      id: newSignatureId(),
+      name: "Min signatur",
+      text: legacyText || "",
+    }];
   }
 
   saveSignatureProfiles(profiles);
@@ -614,6 +621,15 @@ function ensureSignatureProfiles() {
   }
 
   return profiles;
+}
+
+function signatureSenderName(profileName) {
+  const n = cleanStr(profileName);
+  if (!n) return "";
+  if (/^min signatur$/i.test(n)) return "";
+  if (/^ny signatur(\s+\d+)?$/i.test(n)) return "";
+  if (/^signatur$/i.test(n)) return "";
+  return n;
 }
 
 function getActiveSignatureProfile() {
@@ -765,11 +781,16 @@ function mailOutro(ctx, options = {}) {
 }
 
 function signature(settings, langPack) {
-  const custom = cleanStr(settings.customSignature);
+  // Behåll radbrytningar i signaturtexten (trim bara ytterkanter).
+  const custom = String(settings.customSignature ?? "").trim();
   if (custom) {
     return `${langPack.mail.signatureEmpty}\n${custom}`;
   }
-  return langPack.mail.signatureEmpty;
+  const parts = [];
+  if (cleanStr(settings.senderName)) parts.push(cleanStr(settings.senderName));
+  if (cleanStr(settings.companyName)) parts.push(cleanStr(settings.companyName));
+  if (!parts.length) return langPack.mail.signatureEmpty;
+  return langPack.mail.signature(parts);
 }
 
 function orderLine(orderNumber, langPack) {
@@ -1745,6 +1766,11 @@ function generate(opts = {}) {
   const force = opts.force === true;
   if (outputManuallyEdited && !force) return;
 
+  // Spara signatur direkt, även om övriga fält ännu inte är giltiga.
+  if (els.signatureProfileText || els.signatureProfileName) {
+    saveActiveProfileFromForm();
+  }
+
   const err = validate();
   if (err) {
     els.validation.textContent = err;
@@ -1754,12 +1780,14 @@ function generate(opts = {}) {
   }
   els.validation.textContent = "";
 
-  saveActiveProfileFromForm();
   const activeSignature = getActiveSignatureProfile();
+  // Läs alltid från formuläret först så signaturen inte tappas om profil-sync halkar efter.
+  const signatureText = String(els.signatureProfileText?.value ?? activeSignature?.text ?? "").trim();
 
   const settings = {
     companyName: cleanStr(els.companyName?.value),
-    customSignature: cleanStr(activeSignature?.text),
+    customSignature: signatureText,
+    senderName: signatureSenderName(els.signatureProfileName?.value || activeSignature?.name),
     activeSignatureId: activeSignature?.id || "",
     tone: els.tone?.value || "formal",
     language: currentMailLang(),

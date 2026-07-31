@@ -227,7 +227,7 @@
                   class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm leading-relaxed resize-y"
                 ></textarea>
               </div>
-              <p class="text-[11px] text-slate-500">Varje kollega skapar sin egen signatur här — sparas i webbläsaren på den dator du använder. Byt signatur i listan ovan.</p>
+              <p class="text-[11px] text-slate-500">Signaturtexten hamnar under «Med vänliga hälsningar». Saknas text används namnet på signaturen + företagsnamn. Sparad i webbläsaren på den här datorn.</p>
             </div>
             <div class="space-y-1">
               <label for="tone" class="block text-xs font-medium text-slate-400">Ton</label>
@@ -349,6 +349,6 @@
 
   <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
   <script src="{{ url_for('static', filename='reminders.js') }}?v=2"></script>
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260731-usa-optional-date"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260731-sig-fix"></script>
 </body>
 </html>
