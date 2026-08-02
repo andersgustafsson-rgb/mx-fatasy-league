@@ -2109,6 +2109,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 Bjud in vänner
               </button>
+              <button type="button" id="wsx-hype-share-btn" onclick="openInviteShare({wsxHype:true});" class="home-sidebar-nav__link" style="color:#fb923c;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                Dela WSX-hype
+              </button>
               <div
                 class="home-sidebar-nav__notif"
                 role="button"
@@ -2213,6 +2217,11 @@
                      data-race-label="{{ _cta_race }}"
                      data-i18n-sv="{{ _cta_sv }}"
                      data-i18n-en="{{ _cta_en }}">{{ _cta_sv }}</a>
+                  {% if is_logged_in and invite_share %}
+                  <button type="button" onclick="openInviteShare({wsxHype:true});" class="mt-2 w-full sm:w-auto rounded-lg bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm px-4 py-2.5 shadow-lg shadow-orange-900/30">
+                    Dela WSX-hype till Stories
+                  </button>
+                  {% endif %}
                 </div>
               </div>
             </div>

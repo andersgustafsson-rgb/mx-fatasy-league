@@ -2339,7 +2339,7 @@ def _absolute_url(endpoint: str, **values) -> str:
     return f"{get_public_base_url()}{path}"
 
 
-def _build_invite_share_payload(username: str) -> dict:
+def _build_invite_share_payload(username: str, *, prefer_series: str | None = None) -> dict:
     """Share text + URL for 'Bjud in en kompis' (no league required)."""
     uname = (username or "").strip()
     race_name, next_url = _invite_picks_target()
@@ -2350,31 +2350,74 @@ def _build_invite_share_payload(username: str) -> dict:
     )
     invite_path = url_for("start_invite", ref=uname) if uname else url_for("start_invite")
     card_ref = uname or None
-    card_image_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="story")
-    card_og_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="og")
+    prefer = (prefer_series or "").strip().upper() or None
 
-    if race_name and race_name != "MX Fantasy League":
+    # Detect WSX for default payload when next open race is WSX.
+    is_wsx = prefer == "WSX"
+    if not is_wsx:
+        try:
+            race = _current_picks_competition()
+            if race and (getattr(race, "series", None) or "").upper() == "WSX":
+                is_wsx = True
+                prefer = "WSX"
+                race_name = race.name or race_name
+        except Exception:
+            pass
+
+    card_kwargs = {"ref": card_ref, "layout": "story"}
+    og_kwargs = {"ref": card_ref, "layout": "og"}
+    if prefer == "WSX":
+        card_kwargs["series"] = "WSX"
+        og_kwargs["series"] = "WSX"
+
+    card_image_url = _absolute_url("api_invite_card_png", **card_kwargs)
+    card_og_url = _absolute_url("api_invite_card_png", **og_kwargs)
+
+    if is_wsx and race_name and race_name != "MX Fantasy League":
+        share_body = (
+            f"🔥 WSX 2026 — {race_name}!\n"
+            "Tippa World Supercross gratis hos MX Fantasy.\n"
+            + (f"Jag kör som {uname}." if uname else "Topp 6 · holeshot · wildcard.")
+        )
+        share_title = f"WSX 2026 · {race_name} — MX Fantasy"
+    elif race_name and race_name != "MX Fantasy League":
         share_body = (
             f"🏁 {race_name} i helgen — har du satt picks?\n"
             + (f"Jag är redo. Kör som {uname}." if uname else "Gratis fantasy motocross — klart på några minuter.")
         )
+        share_title = f"{race_name} i helgen — MX Fantasy"
     else:
         share_body = (
             f"🏁 MX Fantasy League — har du satt picks?\n"
             + (f"Jag kör som {uname}." if uname else "Gratis fantasy motocross.")
         )
+        share_title = "MX Fantasy League"
+
+    # Always include a dedicated WSX card URL for the hype button.
+    wsx_card_url = _absolute_url("api_invite_card_png", ref=card_ref, layout="story", series="WSX")
+    wsx_share_body = (
+        f"🔥 WSX 2026 startar — Canadian GP!\n"
+        "Tippa World Supercross gratis på mx-fantasy.se\n"
+        + (f"Jag kör som {uname}." if uname else "Sätt picks innan gate drop.")
+    )
+
     share_text = f"{share_body}\n{invite_url}"
     return {
         "invite_url": invite_url,
         "invite_path": invite_path,
         "share_body": share_body,
         "share_text": share_text,
-        "share_title": f"{race_name} i helgen — MX Fantasy" if race_name != "MX Fantasy League" else "MX Fantasy League",
+        "share_title": share_title,
         "race_name": race_name,
         "next_url": next_url,
         "username": uname,
         "card_image_url": card_image_url,
         "card_og_url": card_og_url,
+        "is_wsx": is_wsx,
+        "wsx_card_image_url": wsx_card_url,
+        "wsx_share_body": wsx_share_body,
+        "wsx_share_title": "WSX 2026 — tippa hos MX Fantasy",
+        "wsx_share_text": f"{wsx_share_body}\n{invite_url}",
     }
 
 
@@ -2456,10 +2499,11 @@ def api_invite_card_png():
     layout = (request.args.get("layout") or "story").lower()
     if layout not in ("story", "og"):
         layout = "story"
+    series = (request.args.get("series") or "").strip().upper() or None
     try:
         from invite_card_service import build_invite_card_data, render_invite_card_png
 
-        data = build_invite_card_data(ref)
+        data = build_invite_card_data(ref, prefer_series=series)
         png_bytes = render_invite_card_png(data, layout=layout)
         resp = Response(png_bytes, mimetype="image/png")
         resp.headers["Cache-Control"] = "public, max-age=300"

@@ -28,9 +28,10 @@ def _format_deadline_countdown(delta: timedelta) -> str:
     return f"{minutes}m"
 
 
-def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
+def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None = None) -> dict[str, Any]:
     """Aggregate race + inviter context for invite card rendering."""
-    from main import _competition_race_schedule, _next_open_picks_competition, get_current_time
+    from main import _competition_race_schedule, _next_open_picks_competition, get_current_time, get_today
+    from models import Competition
     from track_weather import build_picks_weather_tips, get_weather_for_competition
 
     inviter = None
@@ -38,14 +39,71 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
     if ref_clean:
         inviter = User.query.filter(db.func.lower(User.username) == ref_clean.lower()).first()
 
-    comp = _next_open_picks_competition()
+    prefer = (prefer_series or "").strip().upper() or None
+    comp = None
+    if prefer == "WSX":
+        today = get_today()
+        upcoming_wsx = (
+            Competition.query.filter(
+                Competition.series == "WSX",
+                Competition.event_date.isnot(None),
+                Competition.event_date >= today,
+            )
+            .order_by(Competition.event_date.asc())
+            .first()
+        )
+        comp = upcoming_wsx
+    if comp is None:
+        comp = _next_open_picks_competition()
+
     race_name = comp.name if comp else "MX Fantasy League"
     series = getattr(comp, "series", None) if comp else None
+    event_date = getattr(comp, "event_date", None) if comp else None
 
     race_start_display = None
     stockholm_display = None
     deadline_countdown = None
     deadline_display = None
+    event_countdown = None
+    event_date_display = None
+    location_line = None
+
+    if event_date:
+        try:
+            event_date_display = event_date.strftime("%d %b %Y")
+        except Exception:
+            event_date_display = str(event_date)
+        try:
+            today = get_today()
+            days = (event_date - today).days
+            if days > 1:
+                event_countdown = f"{days} dagar"
+            elif days == 1:
+                event_countdown = "I morgon"
+            elif days == 0:
+                event_countdown = "I dag"
+            else:
+                event_countdown = None
+        except Exception:
+            pass
+
+    if series == "WSX" and race_name:
+        loc_map = {
+            "canadian gp": "Calgary · McMahon Stadium",
+            "british gp": "Birmingham",
+            "buenos aires": "Buenos Aires",
+            "australian gp": "Australia",
+            "new zealand": "New Zealand",
+            "south african": "South Africa",
+            "swedish gp": "Sweden",
+        }
+        key = race_name.lower()
+        for needle, loc in loc_map.items():
+            if needle in key:
+                location_line = loc
+                break
+        if not location_line:
+            location_line = "World Supercross"
 
     if comp:
         try:
@@ -130,6 +188,9 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
         "stockholm_display": stockholm_display,
         "deadline_display": deadline_display,
         "deadline_countdown": deadline_countdown,
+        "event_date_display": event_date_display,
+        "event_countdown": event_countdown,
+        "location_line": location_line,
         "weather_line": weather_line,
         "weather_tip": weather_tip,
         "inviter_name": inviter_name,
@@ -137,6 +198,7 @@ def build_invite_card_data(ref: str | None = None) -> dict[str, Any]:
         "host_line": host_line,
         "has_race": comp is not None,
         "top5": top5,
+        "is_wsx_hype": series == "WSX",
     }
 
 
@@ -145,7 +207,192 @@ def render_invite_card_png(data: dict[str, Any], *, layout: str = "story") -> by
     layout = (layout or "story").lower()
     if layout == "og":
         return _render_og_card(data)
+    if data.get("is_wsx_hype") or (data.get("series") or "").upper() == "WSX":
+        return _render_wsx_story_card(data)
     return _render_story_card(data)
+
+
+def _render_wsx_story_card(data: dict[str, Any]) -> bytes:
+    """Vertical 9:16 WSX season-hype card for Snap / IG Stories / Reels stills."""
+    from PIL import Image, ImageDraw
+
+    from social_recap_service import (
+        CYAN,
+        GOLD,
+        MUTED,
+        WHITE,
+        _draw_styled_text,
+        _font_height,
+        _footer,
+        _load_brand_logo,
+        _load_display_font,
+        _load_font_px,
+        _plain_draw_text,
+        _text_width,
+    )
+
+    # Deep night + ember accents — feels more “championship night” than default cyan card.
+    bg_top = (12, 8, 28)
+    bg_bot = (6, 14, 32)
+    ember = (255, 90, 40)
+    ember_soft = (255, 140, 70)
+    panel = (18, 22, 44)
+    panel_edge = (70, 55, 110)
+
+    img = Image.new("RGB", (W_STORY, H_STORY), bg_bot)
+    # Manual vertical blend
+    px = img.load()
+    for y in range(H_STORY):
+        t = y / max(H_STORY - 1, 1)
+        r = int(bg_top[0] * (1 - t) + bg_bot[0] * t)
+        g = int(bg_top[1] * (1 - t) + bg_bot[1] * t)
+        b = int(bg_top[2] * (1 - t) + bg_bot[2] * t)
+        for x in range(W_STORY):
+            px[x, y] = (r, g, b)
+    draw = ImageDraw.Draw(img)
+
+    margin = 56
+    draw.rectangle([0, 0, W_STORY, 12], fill=ember)
+    draw.rectangle([0, H_STORY - 12, W_STORY, H_STORY], fill=CYAN)
+
+    y = 56
+    logo = _load_brand_logo(110)
+    if logo:
+        img.paste(logo, (margin, y), logo)
+    brand_f = _load_display_font(30, bold=True)
+    _draw_styled_text(
+        draw, (margin + 130, y + 24), "MX FANTASY LEAGUE", brand_f, CYAN, anchor="lm"
+    )
+    _draw_styled_text(
+        draw, (margin + 130, y + 64), "TIPPA WSX GRATIS", _load_font_px(22), MUTED, anchor="lm"
+    )
+    y += 150
+
+    # Season pill
+    pill_f = _load_display_font(30, bold=True)
+    pill_text = "WSX 2026"
+    pill_w = _text_width(pill_f, pill_text) + 56
+    pill_h = 56
+    px0 = (W_STORY - pill_w) // 2
+    draw.rounded_rectangle(
+        [px0, y, px0 + pill_w, y + pill_h], radius=28, fill=(48, 18, 12), outline=ember, width=3
+    )
+    _draw_styled_text(draw, (W_STORY // 2, y + pill_h // 2), pill_text, pill_f, ember_soft, anchor="mm")
+    y += pill_h + 42
+
+    race_name = _plain_draw_text(data.get("race_name") or "World Supercross")
+    race_f = _load_display_font(78, bold=True)
+    for size in (78, 68, 58, 48):
+        race_f = _load_display_font(size, bold=True)
+        lines = textwrap.wrap(race_name.upper(), width=14)
+        if len(lines) <= 2:
+            break
+    line_h = _font_height(race_f, "Ay") + 10
+    for line in lines[:2]:
+        _draw_styled_text(
+            draw,
+            (W_STORY // 2, y),
+            line,
+            race_f,
+            WHITE,
+            anchor="mt",
+            stroke=(20, 10, 8),
+            stroke_width=4,
+        )
+        y += line_h
+    y += 12
+
+    loc = _plain_draw_text(data.get("location_line") or "World Supercross")
+    _draw_styled_text(draw, (W_STORY // 2, y), loc.upper(), _load_font_px(30, bold=True), GOLD, anchor="mt")
+    y += 48
+
+    # Countdown panel
+    panel_x1, panel_x2 = margin, W_STORY - margin
+    panel_y1 = y
+    panel_y2 = panel_y1 + 300
+    draw.rounded_rectangle(
+        [panel_x1, panel_y1, panel_x2, panel_y2], radius=28, fill=panel, outline=panel_edge, width=2
+    )
+    py = panel_y1 + 36
+    event_cd = data.get("event_countdown")
+    if event_cd:
+        _draw_styled_text(draw, (W_STORY // 2, py), "COUNTDOWN", _load_font_px(24), MUTED, anchor="mt")
+        py += 40
+        _draw_styled_text(
+            draw,
+            (W_STORY // 2, py),
+            _plain_draw_text(event_cd).upper(),
+            _load_display_font(64, bold=True),
+            ember_soft,
+            anchor="mt",
+        )
+        py += 84
+    when = data.get("stockholm_display") or data.get("race_start_display") or data.get("event_date_display")
+    if when:
+        _draw_styled_text(
+            draw, (W_STORY // 2, py), _plain_draw_text(when), _load_font_px(28), CYAN, anchor="mt"
+        )
+        py += 44
+    picks_cd = data.get("deadline_countdown")
+    if picks_cd:
+        _draw_styled_text(
+            draw,
+            (W_STORY // 2, py),
+            f"Picks stänger om {_plain_draw_text(picks_cd)}",
+            _load_font_px(26, bold=True),
+            GOLD,
+            anchor="mt",
+        )
+        py += 40
+    else:
+        _draw_styled_text(
+            draw,
+            (W_STORY // 2, py),
+            "Sätt picks innan gate drop",
+            _load_font_px(26, bold=True),
+            GOLD,
+            anchor="mt",
+        )
+
+    y = panel_y2 + 48
+    inviter = data.get("inviter_name") or data.get("inviter_username")
+    if inviter:
+        hook = f"{inviter} tippar WSX."
+        sub = "Hänger du med?"
+    else:
+        hook = "Säsongen sparkar igång."
+        sub = "Tippa topp 6 · holeshot · wildcard"
+    _draw_styled_text(draw, (W_STORY // 2, y), hook, _load_font_px(34, bold=True), WHITE, anchor="mt")
+    y += 48
+    _draw_styled_text(draw, (W_STORY // 2, y), sub, _load_font_px(28), CYAN, anchor="mt")
+    y += 56
+
+    btn_w = W_STORY - margin * 2
+    btn_h = 80
+    draw.rounded_rectangle(
+        [margin, y, margin + btn_w, y + btn_h], radius=20, fill=ember, outline=ember_soft, width=2
+    )
+    _draw_styled_text(
+        draw,
+        (W_STORY // 2, y + btn_h // 2),
+        "TIPPA WSX NU",
+        _load_display_font(36, bold=True),
+        WHITE,
+        anchor="mm",
+    )
+    y += btn_h + 40
+
+    top5 = data.get("top5") or []
+    if top5 and y < H_STORY - 320:
+        y = _draw_top5_panel(draw, y, top5, margin=margin)
+
+    host = _plain_draw_text(data.get("host_line") or "mx-fantasy.se/start")
+    _draw_styled_text(draw, (W_STORY // 2, H_STORY - 110), host, _load_font_px(22), MUTED, anchor="mt")
+    _footer(img, draw, H_STORY, bar_h=0)
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
 
 def _render_story_card(data: dict[str, Any]) -> bytes:
