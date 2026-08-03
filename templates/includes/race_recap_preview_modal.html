@@ -1,4 +1,4 @@
-{# Preview / mock: "Din kväll" post-race summary popup. Offline demo only. #}
+{# «Din kväll» post-race summary — live API + offline demo preview. #}
 <style>
   #raceRecapModal {
     padding: 0.75rem;
@@ -79,8 +79,10 @@
     color: #86efac;
     margin-top: 0.2rem;
     font-weight: 600;
+    min-height: 1rem;
   }
   #raceRecapModal .race-recap-stat .hint--down { color: #fca5a5; }
+  #raceRecapModal .race-recap-stat .hint--muted { color: #94a3b8; }
   #raceRecapModal .race-recap-highlights {
     list-style: none;
     margin: 0 0 1rem;
@@ -121,6 +123,7 @@
     margin-bottom: 1rem;
     font-weight: 600;
   }
+  #raceRecapModal .race-recap-rival.is-empty { display: none; }
   #raceRecapModal .race-recap-actions {
     display: flex;
     flex-direction: column;
@@ -162,69 +165,229 @@
     border-radius: 999px;
     padding: 0.15rem 0.45rem;
   }
+  #raceRecapModal .race-recap-demo-tag.is-hidden { display: none; }
 </style>
 
-<div id="raceRecapModal" class="hidden fixed inset-0 z-[99997] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-[2px]" onclick="if (event.target === this) closeRaceRecapPreview();" role="presentation">
+<div id="raceRecapModal" class="hidden fixed inset-0 z-[99997] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-[2px]" onclick="if (event.target === this) closeRaceRecap();" role="presentation">
   <div class="race-recap-sheet" role="dialog" aria-modal="true" aria-labelledby="raceRecapTitle">
-    <span class="race-recap-demo-tag">Demo</span>
-    <button type="button" onclick="closeRaceRecapPreview();" class="absolute top-2 right-2 text-slate-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center" aria-label="Stäng">×</button>
+    <span id="raceRecapDemoTag" class="race-recap-demo-tag is-hidden">Demo</span>
+    <button type="button" onclick="closeRaceRecap();" class="absolute top-2 right-2 text-slate-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center" aria-label="Stäng">×</button>
 
     <p class="race-recap-eyebrow">Din kväll</p>
-    <h2 id="raceRecapTitle" class="race-recap-title">Canadian GP</h2>
-    <p class="race-recap-sub">WSX · resultat inne — så gick det för dig</p>
+    <h2 id="raceRecapTitle" class="race-recap-title">—</h2>
+    <p id="raceRecapSub" class="race-recap-sub">Resultat inne — så gick det för dig</p>
 
     <div class="race-recap-hero">
       <div class="race-recap-stat">
         <div class="lbl">Poäng</div>
-        <div class="val">186</div>
-        <div class="hint">+24 vs snitt</div>
+        <div id="raceRecapPoints" class="val">—</div>
+        <div id="raceRecapVsAvg" class="hint hint--muted"></div>
       </div>
       <div class="race-recap-stat">
         <div class="lbl">Placering</div>
-        <div class="val val--gold">#7</div>
-        <div class="hint">↑ 3 platser</div>
+        <div id="raceRecapRank" class="val val--gold">—</div>
+        <div id="raceRecapDelta" class="hint hint--muted"></div>
       </div>
     </div>
 
-    <ul class="race-recap-highlights">
-      <li><span class="dot dot--gold" aria-hidden="true"></span><span><strong class="text-white">Holeshot prickad</strong> i SX1 — +15 p</span></li>
-      <li><span class="dot" aria-hidden="true"></span><span><strong class="text-white">Jett Lawrence P1</strong> rätt i topp 6</span></li>
-      <li><span class="dot dot--orange" aria-hidden="true"></span><span>Wildcard nära: 1 plats från bonus</span></li>
-    </ul>
+    <ul id="raceRecapHighlights" class="race-recap-highlights"></ul>
 
-    <div class="race-recap-rival">
-      Du slog <strong>KalleMX</strong> med 12 p den här racehelgen.
-    </div>
+    <div id="raceRecapRival" class="race-recap-rival is-empty"></div>
 
     <div class="race-recap-actions">
-      <button type="button" class="btn-primary" onclick="alert('Här skulle dela-kortet öppnas (Stories). Demo only.');">Dela din kväll</button>
-      <button type="button" class="btn-secondary" onclick="closeRaceRecapPreview();">Stäng</button>
+      <button type="button" id="raceRecapShareBtn" class="btn-primary">Dela din kväll</button>
+      <button type="button" class="btn-secondary" onclick="closeRaceRecap();">Stäng</button>
     </div>
   </div>
 </div>
 
 <script>
 (function () {
-  window.openRaceRecapPreview = function openRaceRecapPreview() {
+  var DEMO = {
+    competition_id: null,
+    race_name: 'Canadian GP',
+    series: 'WSX',
+    points: 186,
+    race_rank: 7,
+    field_size: 42,
+    vs_avg_label: '+24 vs snitt',
+    season_delta_label: '↑ 3 platser',
+    highlights: [
+      { tone: 'gold', text: 'Holeshot prickad i SX1 — +15 p' },
+      { tone: 'cyan', text: 'Jett Lawrence P1 rätt i topp 6' },
+      { tone: 'orange', text: 'Wildcard nära: 1 plats från bonus' }
+    ],
+    rival_line: 'Du slog KalleMX med 12 p den här racehelgen.',
+    _demo: true
+  };
+
+  var current = null;
+  var SEEN_KEY = 'mx_race_recap_seen_v1';
+
+  function seenLocal() {
+    try {
+      var raw = localStorage.getItem(SEEN_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map(String) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function markSeenLocal(competitionId) {
+    if (!competitionId) return;
+    try {
+      var ids = seenLocal();
+      var id = String(competitionId);
+      if (ids.indexOf(id) === -1) {
+        ids.push(id);
+        localStorage.setItem(SEEN_KEY, JSON.stringify(ids.slice(-40)));
+      }
+    } catch (e) {}
+  }
+
+  function markSeenServer(competitionId) {
+    if (!competitionId) return;
+    try {
+      fetch('/api/race_recap/seen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ competition_id: competitionId })
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function fillRecap(data) {
+    current = data || null;
+    var demoTag = document.getElementById('raceRecapDemoTag');
+    if (demoTag) demoTag.classList.toggle('is-hidden', !data._demo);
+
+    var title = document.getElementById('raceRecapTitle');
+    var sub = document.getElementById('raceRecapSub');
+    var pts = document.getElementById('raceRecapPoints');
+    var vs = document.getElementById('raceRecapVsAvg');
+    var rank = document.getElementById('raceRecapRank');
+    var delta = document.getElementById('raceRecapDelta');
+    var list = document.getElementById('raceRecapHighlights');
+    var rival = document.getElementById('raceRecapRival');
+
+    if (title) title.textContent = data.race_name || 'Race';
+    if (sub) {
+      var bits = [];
+      if (data.series) bits.push(data.series);
+      bits.push('resultat inne — så gick det för dig');
+      sub.textContent = bits.join(' · ');
+    }
+    if (pts) pts.textContent = data.points != null ? String(data.points) : '—';
+    if (vs) {
+      vs.textContent = data.vs_avg_label || '';
+      vs.classList.toggle('hint--down', !!(data.vs_avg_label && String(data.vs_avg_label).charAt(0) === '-'));
+      vs.classList.toggle('hint--muted', !data.vs_avg_label);
+    }
+    if (rank) {
+      rank.textContent = data.race_rank != null ? ('#' + data.race_rank) : '—';
+    }
+    if (delta) {
+      var dlab = data.season_delta_label || '';
+      if (!dlab && data.field_size) dlab = 'av ' + data.field_size;
+      delta.textContent = dlab;
+      delta.classList.toggle('hint--down', dlab.indexOf('↓') === 0);
+      delta.classList.toggle('hint--muted', !dlab || dlab.indexOf('av ') === 0);
+    }
+    if (list) {
+      list.innerHTML = '';
+      (data.highlights || []).forEach(function (h) {
+        var li = document.createElement('li');
+        var dot = document.createElement('span');
+        dot.className = 'dot';
+        if (h.tone === 'gold') dot.className += ' dot--gold';
+        if (h.tone === 'orange') dot.className += ' dot--orange';
+        var txt = document.createElement('span');
+        txt.textContent = h.text || '';
+        li.appendChild(dot);
+        li.appendChild(txt);
+        list.appendChild(li);
+      });
+      if (!(data.highlights || []).length) {
+        var li0 = document.createElement('li');
+        var dot0 = document.createElement('span');
+        dot0.className = 'dot';
+        var txt0 = document.createElement('span');
+        txt0.textContent = 'Bra fight — kolla detaljerna i dina race-resultat.';
+        li0.appendChild(dot0);
+        li0.appendChild(txt0);
+        list.appendChild(li0);
+      }
+    }
+    if (rival) {
+      if (data.rival_line) {
+        rival.textContent = data.rival_line;
+        rival.classList.remove('is-empty');
+      } else {
+        rival.textContent = '';
+        rival.classList.add('is-empty');
+      }
+    }
+  }
+
+  function openModal() {
     var modal = document.getElementById('raceRecapModal');
     if (!modal) return;
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+  }
+
+  window.openRaceRecapPreview = function openRaceRecapPreview() {
+    fillRecap(DEMO);
+    openModal();
   };
-  window.closeRaceRecapPreview = function closeRaceRecapPreview() {
+
+  window.openRaceRecap = function openRaceRecap(data) {
+    fillRecap(data);
+    openModal();
+  };
+
+  window.closeRaceRecap = function closeRaceRecap() {
     var modal = document.getElementById('raceRecapModal');
-    if (!modal) return;
-    modal.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
     document.body.style.overflow = '';
+    if (current && current.competition_id && !current._demo) {
+      markSeenLocal(current.competition_id);
+      markSeenServer(current.competition_id);
+    }
   };
+  window.closeRaceRecapPreview = window.closeRaceRecap;
+
+  document.getElementById('raceRecapShareBtn')?.addEventListener('click', function () {
+    if (typeof window.openInviteShare === 'function') {
+      window.openInviteShare({ afterPicks: true });
+      return;
+    }
+    alert('Dela-kortet kommer snart — stäng och använd «Bjud in vänner» under tiden.');
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     try {
       var params = new URLSearchParams(window.location.search);
       if (params.get('preview_recap') === '1') {
         setTimeout(function () { window.openRaceRecapPreview(); }, 400);
+        return;
       }
     } catch (e) {}
+
+    {% if is_logged_in %}
+    setTimeout(function () {
+      fetch('/api/race_recap', { credentials: 'same-origin' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data || !data.available || !data.competition_id) return;
+          if (seenLocal().indexOf(String(data.competition_id)) !== -1) return;
+          window.openRaceRecap(data);
+        })
+        .catch(function () {});
+    }, 900);
+    {% endif %}
   });
 })();
 </script>

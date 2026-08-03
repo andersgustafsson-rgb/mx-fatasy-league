@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, rider_query_for_list_ui
+from models import db, User, GlobalSimulation, Series, Competition, Rider, SeasonTeam, SeasonTeamRider, League, LeagueMembership, LeagueRequest, LeagueChallenge, UserLeagueChallengeBadge, InboxNotification, BulletinPost, BulletinReaction, RacePick, PicksSnapshot, CompetitionScore, LeaderboardHistory, CompetitionRiderStatus, CompetitionResult, HoleshotPick, HoleshotResult, WildcardPick, CompetitionImage, CrossDinoHighScore, FinishedSeriesStats, AdminAnnouncement, UserRaceRecapDismissal, rider_query_for_list_ui
 
 _INDEX_SCHEMA_CHECKED = False
 _RIDER_IMAGE_COLUMN_CHECKED = False
@@ -17738,6 +17738,282 @@ def _build_race_results_detail(
         },
         "breakdown": breakdown,
     }
+
+
+def _completed_competitions_for_recap(limit: int | None = 8) -> list[Competition]:
+    """Competitions with results (all series incl. WSX), newest first."""
+    ids_with_results = [
+        row[0] for row in db.session.query(CompetitionResult.competition_id).distinct().all()
+    ]
+    if not ids_with_results:
+        return []
+    q = (
+        Competition.query.filter(Competition.id.in_(ids_with_results))
+        .order_by(Competition.event_date.desc().nullslast(), Competition.id.desc())
+    )
+    if limit:
+        q = q.limit(limit)
+    return q.all()
+
+
+def _competition_race_ranks(competition_id: int) -> dict[int, dict]:
+    """user_id -> {rank, points, field_size, avg_points} for one race."""
+    rows = (
+        CompetitionScore.query.filter_by(competition_id=competition_id)
+        .order_by(CompetitionScore.score_id.desc())
+        .all()
+    )
+    best: dict[int, int] = {}
+    for sc in rows:
+        uid = int(sc.user_id)
+        if uid in best or sc.total_points is None:
+            continue
+        best[uid] = int(sc.total_points)
+    if not best:
+        return {}
+    ranked = sorted(best.items(), key=lambda x: (-x[1], x[0]))
+    avg = sum(best.values()) / max(len(best), 1)
+    field = len(ranked)
+    return {
+        uid: {"rank": i, "points": pts, "field_size": field, "avg_points": avg}
+        for i, (uid, pts) in enumerate(ranked, start=1)
+    }
+
+
+def _personal_race_recap_highlights(user_id: int, competition_id: int) -> list[dict]:
+    highlights: list[dict] = []
+    try:
+        detail = _build_race_results_detail(user_id, competition_id, dedupe_picks=True)
+    except Exception:
+        return highlights
+
+    secs = (detail or {}).get("sections") or {}
+    summary = (detail or {}).get("summary") or {}
+
+    perfects = [
+        r
+        for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or [])
+        if r.get("status") == "perfect"
+    ]
+    if perfects:
+        first = perfects[0].get("rider_name") or "förare"
+        extra = len(perfects) - 1
+        text = f"{first} P{perfects[0].get('predicted')} exakt rätt"
+        if extra > 0:
+            text += f" (+{extra} perfekta till)"
+        highlights.append({"tone": "gold", "text": text})
+
+    hs_pts = int(summary.get("holeshot_points") or 0)
+    if hs_pts >= 20:
+        highlights.append({"tone": "cyan", "text": f"Full holeshot-träff (+{hs_pts}p)"})
+    elif hs_pts >= 10:
+        highlights.append({"tone": "cyan", "text": f"Holeshot prickad (+{hs_pts}p)"})
+
+    for wc in secs.get("wildcard") or []:
+        if wc.get("status") == "correct":
+            name = wc.get("rider_name")
+            highlights.append({
+                "tone": "orange",
+                "text": "Wildcard rätt"
+                + (f": {name}" if name else "")
+                + f" (+{int(wc.get('points') or 0)}p)",
+            })
+            break
+
+    if not highlights:
+        close = [
+            r
+            for r in (secs.get("picks_450") or []) + (secs.get("picks_250") or [])
+            if r.get("status") == "close" and int(r.get("points") or 0) >= 13
+        ]
+        if close:
+            r0 = close[0]
+            highlights.append({
+                "tone": "cyan",
+                "text": f"Nära: {r0.get('rider_name')} ({r0.get('diff')} plats fel, +{r0.get('points')}p)",
+            })
+    return highlights[:3]
+
+
+def _build_personal_race_recap(user_id: int, competition_id: int | None = None) -> dict | None:
+    """Payload for Din kväll popup. None if nothing eligible."""
+    today = get_today()
+    max_age_days = 35  # visa senaste avslutade race inom denna tid (en gång)
+
+    if competition_id:
+        comp = Competition.query.get(competition_id)
+        if not comp:
+            return None
+        if CompetitionResult.query.filter_by(competition_id=comp.id).first() is None:
+            return None
+        comps = [comp]
+    else:
+        comps = _completed_competitions_for_recap(limit=10)
+
+    dismissed_ids = {
+        int(r.competition_id)
+        for r in UserRaceRecapDismissal.query.filter_by(user_id=user_id).all()
+    }
+
+    chosen = None
+    my_points = None
+    for comp in comps:
+        cid = int(comp.id)
+        if competition_id is None and cid in dismissed_ids:
+            continue
+        if (
+            competition_id is None
+            and comp.event_date
+            and (today - comp.event_date).days > max_age_days
+        ):
+            continue
+        pts = _user_competition_points(user_id, cid)
+        if pts is None:
+            continue
+        chosen = comp
+        my_points = pts
+        break
+
+    if not chosen or my_points is None:
+        return None
+
+    ranks = _competition_race_ranks(int(chosen.id))
+    me = ranks.get(int(user_id)) or {}
+    race_rank = me.get("rank")
+    field_size = me.get("field_size") or len(ranks)
+    avg_pts = me.get("avg_points")
+
+    vs_avg_label = None
+    if avg_pts is not None:
+        vs_avg = int(round(my_points - avg_pts))
+        if vs_avg > 0:
+            vs_avg_label = f"+{vs_avg} vs snitt"
+        elif vs_avg < 0:
+            vs_avg_label = f"{vs_avg} vs snitt"
+        else:
+            vs_avg_label = "På snittet"
+
+    season_rank = None
+    season_delta_label = None
+    board = []
+    try:
+        board = calculate_leaderboard_deltas()
+        for row in board:
+            if int(row.get("user_id") or 0) == int(user_id):
+                season_rank = row.get("rank")
+                try:
+                    d = int(row.get("delta") or 0)
+                    # delta = current_rank - baseline_rank → negativ = klättrat
+                    if d < 0:
+                        season_delta_label = f"↑ {abs(d)} platser"
+                    elif d > 0:
+                        season_delta_label = f"↓ {d} platser"
+                    else:
+                        season_delta_label = "Oförändrad"
+                except Exception:
+                    pass
+                break
+    except Exception:
+        board = []
+
+    highlights = _personal_race_recap_highlights(user_id, int(chosen.id))
+
+    rival_line = None
+    try:
+        my_idx = next(
+            (i for i, r in enumerate(board) if int(r.get("user_id") or 0) == int(user_id)),
+            None,
+        )
+        if my_idx is not None:
+            for j in (my_idx - 1, my_idx + 1):
+                if j < 0 or j >= len(board):
+                    continue
+                other = board[j]
+                oid = int(other.get("user_id") or 0)
+                if not oid:
+                    continue
+                opp_pts = _user_competition_points(oid, int(chosen.id))
+                if opp_pts is None:
+                    continue
+                diff = my_points - opp_pts
+                oname = (other.get("display_name") or other.get("username") or "rival").strip()
+                if diff > 0:
+                    rival_line = f"Du slog {oname} med {diff} p den här racehelgen."
+                elif diff < 0:
+                    rival_line = f"{oname} slog dig med {-diff} p den här racehelgen."
+                break
+    except Exception:
+        rival_line = None
+
+    series = (chosen.series or "").upper() or None
+    return {
+        "available": True,
+        "competition_id": int(chosen.id),
+        "race_name": chosen.name or "Race",
+        "series": series,
+        "event_date": chosen.event_date.isoformat() if chosen.event_date else None,
+        "points": int(my_points),
+        "race_rank": race_rank,
+        "field_size": field_size,
+        "vs_avg_label": vs_avg_label,
+        "season_rank": season_rank,
+        "season_delta_label": season_delta_label,
+        "highlights": highlights,
+        "rival_line": rival_line,
+    }
+
+
+def _ensure_race_recap_table() -> None:
+    try:
+        db.create_all()
+    except Exception:
+        pass
+
+
+@app.get("/api/race_recap")
+def api_race_recap():
+    """Personal post-race «Din kväll» summary for the logged-in user."""
+    if "user_id" not in session:
+        return jsonify({"available": False, "error": "not_logged_in"}), 401
+    uid = int(session["user_id"])
+    comp_id = request.args.get("competition_id", type=int)
+    try:
+        _ensure_race_recap_table()
+        data = _build_personal_race_recap(uid, competition_id=comp_id)
+        if not data:
+            return jsonify({"available": False})
+        return jsonify(data)
+    except Exception as e:
+        db.session.rollback()
+        print(f"api_race_recap error: {e}")
+        return jsonify({"available": False, "error": "failed"}), 500
+
+
+@app.post("/api/race_recap/seen")
+def api_race_recap_seen():
+    """Mark Din kväll as seen for a competition."""
+    if "user_id" not in session:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+    uid = int(session["user_id"])
+    payload = request.get_json(silent=True) or {}
+    comp_id = payload.get("competition_id") or request.args.get("competition_id", type=int)
+    try:
+        comp_id = int(comp_id)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "missing_competition_id"}), 400
+    try:
+        _ensure_race_recap_table()
+        existing = UserRaceRecapDismissal.query.filter_by(
+            user_id=uid, competition_id=comp_id
+        ).first()
+        if not existing:
+            db.session.add(UserRaceRecapDismissal(user_id=uid, competition_id=comp_id))
+            db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        print(f"api_race_recap_seen error: {e}")
+        return jsonify({"ok": False, "error": "failed"}), 500
 
 
 @app.get("/get_my_race_results/<int:competition_id>")

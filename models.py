@@ -476,6 +476,14 @@ class UserAnnouncementDismissal(db.Model):
     dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
+class UserRaceRecapDismissal(db.Model):
+    """Användare har sett «Din kväll»-sammanfattningen för ett race."""
+    __tablename__ = "user_race_recap_dismissals"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    competition_id = db.Column(db.Integer, db.ForeignKey("competitions.id"), primary_key=True)
+    dismissed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class MessageThread(db.Model):
     __tablename__ = "message_threads"
     id = db.Column(db.Integer, primary_key=True)
