@@ -222,7 +222,8 @@
   };
 
   var current = null;
-  var SEEN_KEY = 'mx_race_recap_seen_v1';
+  var SEEN_KEY = 'mx_race_recap_seen_v1_' + String(window.currentUsername || 'anon').toLowerCase();
+  var SESSION_LOCK = 'mx_race_recap_session_lock_v1';
 
   function seenLocal() {
     try {
@@ -243,19 +244,44 @@
         ids.push(id);
         localStorage.setItem(SEEN_KEY, JSON.stringify(ids.slice(-40)));
       }
+      sessionStorage.setItem(SESSION_LOCK, id);
     } catch (e) {}
   }
 
   function markSeenServer(competitionId) {
     if (!competitionId) return;
+    var body = JSON.stringify({ competition_id: Number(competitionId) });
+    try {
+      if (navigator.sendBeacon) {
+        var blob = new Blob([body], { type: 'application/json' });
+        if (navigator.sendBeacon('/api/race_recap/seen', blob)) return;
+      }
+    } catch (e) {}
     try {
       fetch('/api/race_recap/seen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ competition_id: competitionId })
+        keepalive: true,
+        body: body
       }).catch(function () {});
     } catch (e) {}
+  }
+
+  function markSeen(competitionId) {
+    if (!competitionId) return;
+    markSeenLocal(competitionId);
+    markSeenServer(competitionId);
+  }
+
+  function alreadySeen(competitionId) {
+    if (!competitionId) return true;
+    var id = String(competitionId);
+    if (seenLocal().indexOf(id) !== -1) return true;
+    try {
+      if (sessionStorage.getItem(SESSION_LOCK) === id) return true;
+    } catch (e) {}
+    return false;
   }
 
   function fillRecap(data) {
@@ -345,6 +371,10 @@
 
   window.openRaceRecap = function openRaceRecap(data) {
     fillRecap(data);
+    // Markera direkt vid visning — annars dyker den upp igen vid refresh innan man stängt.
+    if (data && data.competition_id && !data._demo) {
+      markSeen(data.competition_id);
+    }
     openModal();
   };
 
@@ -353,8 +383,7 @@
     if (modal) modal.classList.add('hidden');
     document.body.style.overflow = '';
     if (current && current.competition_id && !current._demo) {
-      markSeenLocal(current.competition_id);
-      markSeenServer(current.competition_id);
+      markSeen(current.competition_id);
     }
   };
   window.closeRaceRecapPreview = window.closeRaceRecap;
@@ -382,7 +411,7 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data || !data.available || !data.competition_id) return;
-          if (seenLocal().indexOf(String(data.competition_id)) !== -1) return;
+          if (alreadySeen(data.competition_id)) return;
           window.openRaceRecap(data);
         })
         .catch(function () {});

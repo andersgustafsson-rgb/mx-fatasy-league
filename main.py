@@ -17964,10 +17964,28 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
 
 
 def _ensure_race_recap_table() -> None:
+    """Create dismissal table if missing (create_all alone is flaky on some deploys)."""
     try:
         db.create_all()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"race_recap create_all: {e}")
+    try:
+        db.session.execute(
+            db.text(
+                """
+                CREATE TABLE IF NOT EXISTS user_race_recap_dismissals (
+                    user_id INTEGER NOT NULL,
+                    competition_id INTEGER NOT NULL,
+                    dismissed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (user_id, competition_id)
+                )
+                """
+            )
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"race_recap ensure table: {e}")
 
 
 @app.get("/api/race_recap")
