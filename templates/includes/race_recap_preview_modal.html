@@ -1,0 +1,230 @@
+{# Preview / mock: "Din kväll" post-race summary popup. Offline demo only. #}
+<style>
+  #raceRecapModal {
+    padding: 0.75rem;
+    box-sizing: border-box;
+  }
+  #raceRecapModal .race-recap-sheet {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: min(26rem, 100%);
+    border-radius: 1.1rem;
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(6, 182, 212, 0.22), transparent 55%),
+      radial-gradient(ellipse 70% 40% at 100% 100%, rgba(251, 146, 60, 0.12), transparent 50%),
+      #0b1220;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+    padding: 1.15rem 1.15rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  #raceRecapModal .race-recap-sheet::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #06b6d4, #f59e0b, #fb923c);
+  }
+  #raceRecapModal .race-recap-eyebrow {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #67e8f9;
+    margin: 0 0 0.35rem;
+  }
+  #raceRecapModal .race-recap-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.2;
+    margin: 0 0 0.25rem;
+  }
+  #raceRecapModal .race-recap-sub {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0 0 1rem;
+  }
+  #raceRecapModal .race-recap-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem;
+    margin-bottom: 0.85rem;
+  }
+  #raceRecapModal .race-recap-stat {
+    border-radius: 0.75rem;
+    border: 1px solid #2a3548;
+    background: rgba(15, 23, 42, 0.85);
+    padding: 0.75rem 0.7rem;
+    text-align: center;
+  }
+  #raceRecapModal .race-recap-stat .lbl {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+  #raceRecapModal .race-recap-stat .val {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #67e8f9;
+    margin-top: 0.15rem;
+    line-height: 1.1;
+  }
+  #raceRecapModal .race-recap-stat .val--gold { color: #fbbf24; }
+  #raceRecapModal .race-recap-stat .hint {
+    font-size: 0.7rem;
+    color: #86efac;
+    margin-top: 0.2rem;
+    font-weight: 600;
+  }
+  #raceRecapModal .race-recap-stat .hint--down { color: #fca5a5; }
+  #raceRecapModal .race-recap-highlights {
+    list-style: none;
+    margin: 0 0 1rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #raceRecapModal .race-recap-highlights li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid #1e293b;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.65rem;
+    line-height: 1.35;
+  }
+  #raceRecapModal .race-recap-highlights .dot {
+    flex-shrink: 0;
+    width: 0.55rem;
+    height: 0.55rem;
+    margin-top: 0.35rem;
+    border-radius: 999px;
+    background: #22d3ee;
+  }
+  #raceRecapModal .race-recap-highlights .dot--gold { background: #fbbf24; }
+  #raceRecapModal .race-recap-highlights .dot--orange { background: #fb923c; }
+  #raceRecapModal .race-recap-rival {
+    border-radius: 0.65rem;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(120, 53, 15, 0.22);
+    padding: 0.65rem 0.75rem;
+    font-size: 0.8rem;
+    color: #fde68a;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  #raceRecapModal .race-recap-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  #raceRecapModal .race-recap-actions .btn-primary {
+    width: 100%;
+    border-radius: 0.75rem;
+    background: linear-gradient(90deg, #22d3ee, #34d399);
+    color: #0f172a;
+    font-weight: 800;
+    font-size: 0.9rem;
+    padding: 0.7rem 1rem;
+    border: none;
+    cursor: pointer;
+  }
+  #raceRecapModal .race-recap-actions .btn-secondary {
+    width: 100%;
+    border-radius: 0.75rem;
+    background: #1e293b;
+    color: #e2e8f0;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.65rem 1rem;
+    border: 1px solid #334155;
+    cursor: pointer;
+  }
+  #raceRecapModal .race-recap-demo-tag {
+    position: absolute;
+    top: 0.65rem;
+    right: 2.5rem;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    background: rgba(120, 53, 15, 0.5);
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 999px;
+    padding: 0.15rem 0.45rem;
+  }
+</style>
+
+<div id="raceRecapModal" class="hidden fixed inset-0 z-[99997] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-[2px]" onclick="if (event.target === this) closeRaceRecapPreview();" role="presentation">
+  <div class="race-recap-sheet" role="dialog" aria-modal="true" aria-labelledby="raceRecapTitle">
+    <span class="race-recap-demo-tag">Demo</span>
+    <button type="button" onclick="closeRaceRecapPreview();" class="absolute top-2 right-2 text-slate-400 hover:text-white text-2xl leading-none w-8 h-8 flex items-center justify-center" aria-label="Stäng">×</button>
+
+    <p class="race-recap-eyebrow">Din kväll</p>
+    <h2 id="raceRecapTitle" class="race-recap-title">Canadian GP</h2>
+    <p class="race-recap-sub">WSX · resultat inne — så gick det för dig</p>
+
+    <div class="race-recap-hero">
+      <div class="race-recap-stat">
+        <div class="lbl">Poäng</div>
+        <div class="val">186</div>
+        <div class="hint">+24 vs snitt</div>
+      </div>
+      <div class="race-recap-stat">
+        <div class="lbl">Placering</div>
+        <div class="val val--gold">#7</div>
+        <div class="hint">↑ 3 platser</div>
+      </div>
+    </div>
+
+    <ul class="race-recap-highlights">
+      <li><span class="dot dot--gold" aria-hidden="true"></span><span><strong class="text-white">Holeshot prickad</strong> i SX1 — +15 p</span></li>
+      <li><span class="dot" aria-hidden="true"></span><span><strong class="text-white">Jett Lawrence P1</strong> rätt i topp 6</span></li>
+      <li><span class="dot dot--orange" aria-hidden="true"></span><span>Wildcard nära: 1 plats från bonus</span></li>
+    </ul>
+
+    <div class="race-recap-rival">
+      Du slog <strong>KalleMX</strong> med 12 p den här racehelgen.
+    </div>
+
+    <div class="race-recap-actions">
+      <button type="button" class="btn-primary" onclick="alert('Här skulle dela-kortet öppnas (Stories). Demo only.');">Dela din kväll</button>
+      <button type="button" class="btn-secondary" onclick="closeRaceRecapPreview();">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  window.openRaceRecapPreview = function openRaceRecapPreview() {
+    var modal = document.getElementById('raceRecapModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  };
+  window.closeRaceRecapPreview = function closeRaceRecapPreview() {
+    var modal = document.getElementById('raceRecapModal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('preview_recap') === '1') {
+        setTimeout(function () { window.openRaceRecapPreview(); }, 400);
+      }
+    } catch (e) {}
+  });
+})();
+</script>

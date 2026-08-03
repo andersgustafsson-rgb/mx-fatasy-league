@@ -2128,6 +2128,9 @@
             </nav>
 
             <div class="home-sidebar-foot">
+              <button type="button" onclick="openRaceRecapPreview();" class="home-sidebar-foot__btn" title="Förhandsvisning — fejkad data">
+                Test: din kväll
+              </button>
               <button type="button" onclick="document.querySelector(&quot;.tab-btn[data-tab='settings']&quot;)?.click(); document.getElementById('tab-scroll-container')?.scrollIntoView({behavior:'smooth', block:'nearest'});" class="home-sidebar-foot__btn">
                 Inställningar
               </button>
@@ -2140,6 +2143,7 @@
               <div class="home-sidebar-guest-actions">
                 <button type="button" onclick="openLoginModal();" class="home-sidebar-foot__btn home-sidebar-foot__btn--primary">Logga in</button>
                 <button type="button" onclick="openGuestSignup();" class="home-sidebar-foot__btn">Skapa konto</button>
+                <button type="button" onclick="openRaceRecapPreview();" class="home-sidebar-foot__btn" title="Förhandsvisning">Test: din kväll</button>
               </div>
             </div>
             {% endif %}
@@ -6327,6 +6331,7 @@
   {% if is_logged_in and invite_share %}
   {% include 'includes/invite_share_modal.html' %}
   {% endif %}
+  {% include 'includes/race_recap_preview_modal.html' %}
 
   <!-- Login Modal -->
   <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="handleModalClick(event)">
