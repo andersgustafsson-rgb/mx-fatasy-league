@@ -1937,6 +1937,9 @@ async function createZendeskTicket(btn) {
         requester_email: email,
         requester_name: cleanStr(els.customerName?.value) || undefined,
         order_number: cleanStr(els.orderNumber?.value) || undefined,
+        template_id: getSelectedTemplate()?.id || undefined,
+        notify_requester: Boolean(els.zendeskNotifyCustomer?.checked),
+        solve: true,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -1952,8 +1955,9 @@ async function createZendeskTicket(btn) {
       }
       return;
     }
+    const note = data.notified_requester ? " (mail till kund)" : " (utan kundmail)";
     if (statusEl) {
-      statusEl.innerHTML = `Skapat: <a class="text-orange-300 underline" href="${escapeHtml(
+      statusEl.innerHTML = `Skapat & löst${note}: <a class="text-orange-300 underline" href="${escapeHtml(
         data.ticket_url
       )}" target="_blank" rel="noopener">ticket #${escapeHtml(String(data.ticket_id))}</a>`;
     }
@@ -2103,6 +2107,7 @@ function init() {
   els.productName = $("productName");
   els.customerName = $("customerName");
   els.customerEmail = $("customerEmail");
+  els.zendeskNotifyCustomer = $("zendeskNotifyCustomer");
   els.orderNumber = $("orderNumber");
   els.zendeskStatus = $("zendeskStatus");
   els.createZendeskTicket = $("createZendeskTicket");

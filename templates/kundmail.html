@@ -182,6 +182,11 @@
               <label for="orderNumber" class="block text-xs font-medium text-slate-400">Ordernummer</label>
               <input id="orderNumber" type="text" placeholder="valfritt" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
             </div>
+
+            <label class="flex items-start gap-2 text-xs text-slate-300 pt-1">
+              <input id="zendeskNotifyCustomer" type="checkbox" checked class="mt-0.5 rounded border-slate-600 bg-slate-900" />
+              <span>Skicka svar till kund via Zendesk (avmarkera vid test — då skapas bara intern anteckning, ärendet löses ändå)</span>
+            </label>
           </div>
         </div>
 
@@ -358,6 +363,6 @@
 
   <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
   <script src="{{ url_for('static', filename='reminders.js') }}?v=2"></script>
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260804-zendesk"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260804-zendesk2"></script>
 </body>
 </html>

@@ -29069,6 +29069,14 @@ def kundmail_zendesk_ticket():
     requester_email = (data.get("requester_email") or data.get("email") or "").strip()
     requester_name = (data.get("requester_name") or data.get("customer_name") or "").strip()
     order_number = (data.get("order_number") or "").strip()
+    template_id = (data.get("template_id") or "").strip() or None
+    case_type = (data.get("case_type") or "").strip() or None
+    notify_requester = bool(data.get("notify_requester", True))
+    solve = bool(data.get("solve", True))
+
+    is_return = data.get("is_return", None)
+    if isinstance(is_return, str):
+        is_return = is_return.strip().lower() in ("1", "true", "yes", "ja")
 
     from zendesk_service import create_support_ticket
 
@@ -29078,6 +29086,11 @@ def kundmail_zendesk_ticket():
         requester_email=requester_email,
         requester_name=requester_name or None,
         order_number=order_number or None,
+        template_id=template_id,
+        case_type=case_type,
+        is_return=is_return if isinstance(is_return, bool) else None,
+        notify_requester=notify_requester,
+        solve=solve,
         tags=["kundmail"],
     )
     status = 200 if result.get("ok") else 400
