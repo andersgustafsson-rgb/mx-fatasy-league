@@ -113,6 +113,7 @@
                 <span class="text-gray-300">Rekord: <span class="text-white font-semibold" id="visit-peak-uv">–</span> <span class="text-gray-500" id="visit-peak-day"></span></span>
             </div>
             <button type="button" onclick="loadVisitStats()" class="text-xs px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200">Uppdatera</button>
+            <button type="button" onclick="resetVisitStatsToday()" class="text-xs px-3 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-600">Nollställ idag</button>
         </div>
 
         <!-- Navigation Tabs -->
@@ -2294,6 +2295,21 @@
                 }
             } catch (error) {
                 console.error('visit stats', error);
+            }
+        }
+
+        async function resetVisitStatsToday() {
+            if (!confirm('Nollställa dagens besökarsiffror?')) return;
+            try {
+                const response = await fetch('/admin/api/visit_stats/reset_today', { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    alert(data.error || 'Kunde inte nollställa');
+                    return;
+                }
+                await loadVisitStats();
+            } catch (error) {
+                alert('Fel: ' + error.message);
             }
         }
         

@@ -221,6 +221,25 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
     }
 
 
+def reset_today_stats() -> dict[str, Any]:
+    """Zero today's pageviews + unique visitors (Europe/Stockholm day)."""
+    _ensure_table()
+    day = today_stockholm()
+    row = DailySiteStats.query.filter_by(day=day).first()
+    if not row:
+        row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
+        db.session.add(row)
+    else:
+        row.pageviews = 0
+        row.unique_visitors = 0
+    db.session.commit()
+    return {
+        "day": day.isoformat(),
+        "pageviews": 0,
+        "unique_visitors": 0,
+    }
+
+
 def track_after_request(req: Request, response: Response) -> Response:
     if not should_count_request(req, response):
         return response

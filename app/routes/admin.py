@@ -642,6 +642,19 @@ def admin_visit_stats():
 		return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@bp.post("/admin/api/visit_stats/reset_today")
+@login_required
+def admin_visit_stats_reset_today():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from visit_stats import reset_today_stats
+
+		return jsonify({"ok": True, **reset_today_stats()})
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @bp.post("/admin/tools/racerx_portraits/normalize")
 @login_required
 def admin_racerx_portraits_normalize():
