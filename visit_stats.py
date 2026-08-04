@@ -66,7 +66,6 @@ def _client_ip(req: Request) -> str:
 
 
 def _visitor_fingerprint(req: Request) -> str:
-    """Stable same-day key when cookie is missing (collapses parallel first hits)."""
     raw = f"{_client_ip(req)}|{(req.headers.get('User-Agent') or '')[:240]}"
     return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()[:40]
 
@@ -80,11 +79,27 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
         if low == prefix.rstrip("/") or low.startswith(prefix):
             return False
     if low.endswith(
-        (".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".woff", ".woff2", ".json", ".xml", ".txt", ".webmanifest")
+        (
+            ".js",
+            ".css",
+            ".map",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".gif",
+            ".ico",
+            ".svg",
+            ".woff",
+            ".woff2",
+            ".json",
+            ".xml",
+            ".txt",
+            ".webmanifest",
+        )
     ):
         return False
 
-    # Only top-level document navigations when the browser sends Fetch Metadata.
     dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
     if dest and dest != "document":
         return False
@@ -100,10 +115,27 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     if not ua or len(ua) < 12:
         return False
     bot_bits = (
-        "bot", "spider", "crawl", "slurp", "facebookexternalhit", "preview",
-        "wget", "curl", "python-requests", "httpclient", "scrapy", "semrush",
-        "ahrefs", "petalbot", "bytespider", "gptbot", "claudebot",
-        "uptime", "pingdom", "headless", "phantom",
+        "bot",
+        "spider",
+        "crawl",
+        "slurp",
+        "facebookexternalhit",
+        "preview",
+        "wget",
+        "curl",
+        "python-requests",
+        "httpclient",
+        "scrapy",
+        "semrush",
+        "ahrefs",
+        "petalbot",
+        "bytespider",
+        "gptbot",
+        "claudebot",
+        "uptime",
+        "pingdom",
+        "headless",
+        "phantom",
     )
     if any(b in ua for b in bot_bits):
         return False
@@ -111,7 +143,6 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     if response is not None:
         if response.status_code >= 400:
             return False
-        # Redirects often fire before the real page — don't count them as visits.
         if 300 <= response.status_code < 400:
             return False
         ct = (response.content_type or "").lower()
@@ -124,47 +155,51 @@ def _get_or_create_day_row(day: date) -> DailySiteStats | None:
     row = DailySiteStats.query.filter_by(day=day).first()
     if row:
         return row
-    row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
-    db.session.add(row)
     try:
-        db.session.flush()
-        return row
+        with db.session.begin_nested():
+            row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
+            db.session.add(row)
+            db.session.flush()
+            return row
     except IntegrityError:
-        db.session.rollback()
         return DailySiteStats.query.filter_by(day=day).first()
+
+
+def _recount_uniques(day: date) -> int:
+    return int(
+        db.session.query(DailyVisitorSighting)
+        .filter_by(day=day)
+        .count()
+    )
 
 
 def record_visit(req: Request) -> str | None:
     """
-    Increment today's counters.
-    Uniques are deduped via daily_visitor_sightings using IP+UA fingerprint,
-    so cookieless parallel page loads only count once.
-    Cookie is still set for debugging / future use.
+    Increment today's pageviews. Uniques = distinct fingerprints in
+    daily_visitor_sightings (savepoint insert so races don't inflate the counter).
     """
     try:
         _ensure_table()
         day = today_stockholm()
         existing = (req.cookies.get(COOKIE_NAME) or "").strip()
         new_cookie = None if existing else str(uuid.uuid4())
-        # Fingerprint-only unique key (stable across first-hit cookie races).
         visitor_key = f"f:{_visitor_fingerprint(req)}"
-
-        is_new_unique = False
-        db.session.add(DailyVisitorSighting(day=day, visitor_key=visitor_key))
-        try:
-            db.session.flush()
-            is_new_unique = True
-        except IntegrityError:
-            db.session.rollback()
-            is_new_unique = False
 
         row = _get_or_create_day_row(day)
         if not row:
             return new_cookie
 
+        try:
+            with db.session.begin_nested():
+                db.session.add(DailyVisitorSighting(day=day, visitor_key=visitor_key))
+                db.session.flush()
+        except IntegrityError:
+            pass  # already seen today
+
+        # Re-load in case nested ops touched identity map
+        row = DailySiteStats.query.filter_by(day=day).first() or row
         row.pageviews = int(row.pageviews or 0) + 1
-        if is_new_unique:
-            row.unique_visitors = int(row.unique_visitors or 0) + 1
+        row.unique_visitors = _recount_uniques(day)
         db.session.commit()
         return new_cookie
     except Exception as e:
@@ -257,7 +292,6 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
 
 
 def reset_today_stats() -> dict[str, Any]:
-    """Zero today's pageviews + unique visitors (Europe/Stockholm day)."""
     _ensure_table()
     day = today_stockholm()
     DailyVisitorSighting.query.filter_by(day=day).delete()
