@@ -628,6 +628,20 @@ def admin_page():
 		return f"<h1>Database Error</h1><p>{e}</p>"
 
 
+@bp.get("/admin/api/visit_stats")
+@login_required
+def admin_visit_stats():
+	if not is_admin_user():
+		return jsonify({"error": "unauthorized"}), 401
+	try:
+		from visit_stats import get_visit_summary
+
+		days = request.args.get("days", 14, type=int)
+		return jsonify({"ok": True, **get_visit_summary(days=days)})
+	except Exception as e:
+		return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @bp.post("/admin/tools/racerx_portraits/normalize")
 @login_required
 def admin_racerx_portraits_normalize():

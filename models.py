@@ -558,3 +558,11 @@ class UserReminder(db.Model):
     link_url = db.Column(db.String(300), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class DailySiteStats(db.Model):
+    """Aggregerade sidvisningar / unika besokare per kalenderdag (Europe/Stockholm)."""
+    __tablename__ = "daily_site_stats"
+    day = db.Column(db.Date, primary_key=True)
+    pageviews = db.Column(db.Integer, nullable=False, default=0)
+    unique_visitors = db.Column(db.Integer, nullable=False, default=0)
+

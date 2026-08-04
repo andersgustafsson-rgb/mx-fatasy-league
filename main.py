@@ -514,6 +514,18 @@ def _redirect_legacy_render_host():
         return redirect(legacy_redirect_url(request.full_path), code=301)
 
 
+@app.after_request
+def _track_site_visits(response):
+    """Count public pageviews / unique visitors for admin stats."""
+    try:
+        from visit_stats import track_after_request
+
+        return track_after_request(request, response)
+    except Exception as e:
+        print(f"visit track error: {e}")
+        return response
+
+
 # Database is initialized in models.py and bound here via db.init_app(app)
 
 # --- Backward-compatible blueprint registration (prod runs main:app) ---
