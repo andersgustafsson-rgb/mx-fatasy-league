@@ -185,7 +185,7 @@
 
             <label class="flex items-start gap-2 text-xs text-slate-300 pt-1">
               <input id="zendeskNotifyCustomer" type="checkbox" checked class="mt-0.5 rounded border-slate-600 bg-slate-900" />
-              <span>Skicka svar till kund via Zendesk (avmarkera vid test — då skapas bara intern anteckning, ärendet löses ändå)</span>
+              <span>Skicka svar till kund via Zendesk (avmarkera vid test). Kundmail-signaturen tas bort automatiskt — Zendesk lägger på sin egen.</span>
             </label>
           </div>
         </div>
@@ -363,6 +363,6 @@
 
   <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
   <script src="{{ url_for('static', filename='reminders.js') }}?v=2"></script>
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260804-zendesk3"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260804-zendesk4"></script>
 </body>
 </html>

@@ -793,6 +793,28 @@ function signature(settings, langPack) {
   return langPack.mail.signature(parts);
 }
 
+/** Zendesk lägger på agentens signatur själv — strippa Kundmail-signaturen vid API-skapande. */
+function stripMailSignatureForZendesk(plain) {
+  const text = String(plain || "").replace(/\r\n/g, "\n");
+  if (!text.trim()) return text;
+
+  const markers = [
+    /\n+Med vänliga hälsningar\b/i,
+    /\n+Med venlig hilsen\b/i,
+    /\n+Kind regards\b/i,
+    /\n+Best regards\b/i,
+    /\n+Vänliga hälsningar\b/i,
+  ];
+
+  let cut = -1;
+  for (const re of markers) {
+    const m = re.exec(text);
+    if (m && (cut < 0 || m.index < cut)) cut = m.index;
+  }
+  if (cut < 0) return text.trimEnd();
+  return text.slice(0, cut).trimEnd();
+}
+
 function orderLine(orderNumber, langPack) {
   const o = cleanStr(orderNumber);
   return o ? langPack.mail.orderLine(o) : "";
@@ -1911,7 +1933,8 @@ async function createZendeskTicket(btn) {
   const statusEl = $("zendeskStatus");
   const email = cleanStr(els.customerEmail?.value);
   const subject = cleanStr(els.subjectOut?.value);
-  const body = getBodyPlain();
+  // Lämna Kundmail-signaturen i UI/kopiera — Zendesk har egen agent-signatur.
+  const body = stripMailSignatureForZendesk(getBodyPlain());
   if (!email || !email.includes("@")) {
     if (statusEl) statusEl.textContent = "Ange kundens e-post innan du skapar i Zendesk.";
     els.customerEmail?.focus();
