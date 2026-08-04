@@ -162,8 +162,24 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
 
     today = by_day.get(end.isoformat(), {"day": end.isoformat(), "pageviews": 0, "unique_visitors": 0})
     last7 = series[:7]
+
+    peak_row = (
+        DailySiteStats.query.order_by(
+            DailySiteStats.unique_visitors.desc(),
+            DailySiteStats.day.desc(),
+        ).first()
+    )
+    peak = None
+    if peak_row and int(peak_row.unique_visitors or 0) > 0:
+        peak = {
+            "day": peak_row.day.isoformat(),
+            "unique_visitors": int(peak_row.unique_visitors or 0),
+            "pageviews": int(peak_row.pageviews or 0),
+        }
+
     return {
         "today": today,
+        "peak": peak,
         "last_7_days": {
             "pageviews": sum(d["pageviews"] for d in last7),
             "unique_visitors": sum(d["unique_visitors"] for d in last7),
