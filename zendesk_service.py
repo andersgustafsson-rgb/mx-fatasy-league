@@ -17,6 +17,24 @@ FIELD_ENGAGEMENT_MAIL = int(os.getenv("ZENDESK_FIELD_ENGAGEMENT_MAIL", "37225890
 DEFAULT_ASSIGNEE_ID = int(os.getenv("ZENDESK_ASSIGNEE_ID", "280814751"))  # Anders Gustafsson
 DEFAULT_GROUP_ID = int(os.getenv("ZENDESK_GROUP_ID", "20391188"))  # Support
 
+# mx-fantasy username / display_name (lowercase) → Zendesk agent
+# Jennie uses Zendesk-kontot johan@motoaction.se; Hampus loggar in som "ture" i spelet.
+ASSIGNEE_BY_LOGIN: dict[str, dict[str, Any]] = {
+    "ture": {"id": 276674277, "name": "Hampus Lundberg", "email": "hampus@motoaction.se"},
+    "hampus": {"id": 276674277, "name": "Hampus Lundberg", "email": "hampus@motoaction.se"},
+    "jennie bengtsson": {"id": 278923758, "name": "Johan Andersson", "email": "johan@motoaction.se"},
+    "jennie": {"id": 278923758, "name": "Johan Andersson", "email": "johan@motoaction.se"},
+    "johan": {"id": 278923758, "name": "Johan Andersson", "email": "johan@motoaction.se"},
+    "anders": {"id": 280814751, "name": "Anders Gustafsson", "email": "print@motoaction.se"},
+    "anders gustafsson": {"id": 280814751, "name": "Anders Gustafsson", "email": "print@motoaction.se"},
+}
+
+DEFAULT_ASSIGNEE = {
+    "id": DEFAULT_ASSIGNEE_ID,
+    "name": "Anders Gustafsson",
+    "email": "print@motoaction.se",
+}
+
 # template_id -> Typ av ärende tagger value
 TEMPLATE_CASE_TYPE = {
     "slut": "leverans",
@@ -70,6 +88,33 @@ def _order_as_int(order_number: str | None) -> int | None:
         return None
 
 
+def _norm_login(value: str | None) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
+def resolve_assignee(
+    *,
+    username: str | None = None,
+    display_name: str | None = None,
+) -> dict[str, Any]:
+    """Map mx-fantasy login to Zendesk assignee. Falls back to Anders."""
+    candidates = [_norm_login(username), _norm_login(display_name)]
+    for key in candidates:
+        if key and key in ASSIGNEE_BY_LOGIN:
+            return dict(ASSIGNEE_BY_LOGIN[key])
+
+    blob = " ".join(c for c in candidates if c)
+    if "ture" in blob.split() or blob == "ture":
+        return dict(ASSIGNEE_BY_LOGIN["ture"])
+    if "jennie" in blob:
+        return dict(ASSIGNEE_BY_LOGIN["jennie"])
+    if "hampus" in blob:
+        return dict(ASSIGNEE_BY_LOGIN["hampus"])
+    if "anders" in blob:
+        return dict(ASSIGNEE_BY_LOGIN["anders"])
+    return dict(DEFAULT_ASSIGNEE)
+
+
 def resolve_case_type(template_id: str | None, override: str | None = None) -> str:
     if override and override.strip():
         return override.strip()
@@ -96,12 +141,15 @@ def create_support_ticket(
     notify_requester: bool = True,
     solve: bool = True,
     tags: list[str] | None = None,
+    fantasy_username: str | None = None,
+    fantasy_display_name: str | None = None,
 ) -> dict[str, Any]:
     """
     Create a Zendesk ticket for Motoaction kundmail.
 
     notify_requester=False => internal note (no customer email).
     solve=True => status solved + assignee/group + required custom fields filled.
+    Assignee is chosen from the logged-in mx-fantasy user (ture/jennie/anders).
     """
     if not zendesk_configured():
         return {
@@ -119,6 +167,10 @@ def create_support_ticket(
     if not requester_email or "@" not in requester_email:
         return {"ok": False, "error": "Ange kundens e-post"}
 
+    assignee = resolve_assignee(
+        username=fantasy_username,
+        display_name=fantasy_display_name,
+    )
     is_ret = resolve_is_return(template_id, is_return)
     typ = resolve_case_type(template_id, case_type)
     order_int = _order_as_int(order_number)
@@ -149,7 +201,7 @@ def create_support_ticket(
             "email": requester_email,
             "name": (requester_name or "").strip() or requester_email.split("@")[0],
         },
-        "assignee_id": DEFAULT_ASSIGNEE_ID,
+        "assignee_id": int(assignee["id"]),
         "group_id": DEFAULT_GROUP_ID,
         "custom_fields": custom_fields,
         "tags": tag_list,
@@ -195,4 +247,6 @@ def create_support_ticket(
         "ticket_url": ticket_url,
         "status": ticket_obj.get("status"),
         "notified_requester": bool(notify_requester),
+        "assignee_name": assignee.get("name"),
+        "assignee_id": int(assignee["id"]),
     }

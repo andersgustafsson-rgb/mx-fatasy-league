@@ -29049,11 +29049,25 @@ def kundmail_translate():
 def kundmail_zendesk_status():
     if "user_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    from zendesk_service import zendesk_configured
+    from zendesk_service import resolve_assignee, zendesk_configured
 
+    username = (session.get("username") or "").strip()
+    display_name = ""
+    try:
+        user = User.query.get(int(session["user_id"]))
+        if user:
+            username = user.username or username
+            display_name = (user.display_name or "").strip()
+    except Exception:
+        pass
+
+    assignee = resolve_assignee(username=username, display_name=display_name or None)
     return jsonify({
         "configured": zendesk_configured(),
         "subdomain": (os.getenv("ZENDESK_SUBDOMAIN") or "").strip() or None,
+        "fantasy_username": username or None,
+        "assignee_name": assignee.get("name"),
+        "assignee_id": assignee.get("id"),
     })
 
 
@@ -29078,6 +29092,16 @@ def kundmail_zendesk_ticket():
     if isinstance(is_return, str):
         is_return = is_return.strip().lower() in ("1", "true", "yes", "ja")
 
+    fantasy_username = (session.get("username") or "").strip()
+    fantasy_display_name = ""
+    try:
+        user = User.query.get(int(session["user_id"]))
+        if user:
+            fantasy_username = user.username or fantasy_username
+            fantasy_display_name = (user.display_name or "").strip()
+    except Exception:
+        pass
+
     from zendesk_service import create_support_ticket
 
     result = create_support_ticket(
@@ -29092,6 +29116,8 @@ def kundmail_zendesk_ticket():
         notify_requester=notify_requester,
         solve=solve,
         tags=["kundmail"],
+        fantasy_username=fantasy_username or None,
+        fantasy_display_name=fantasy_display_name or None,
     )
     status = 200 if result.get("ok") else 400
     return jsonify(result), status

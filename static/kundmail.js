@@ -1889,9 +1889,12 @@ async function refreshZendeskStatus() {
     }
     const data = await res.json();
     if (data.configured) {
+      const who = data.assignee_name
+        ? ` · handläggare ${data.assignee_name}`
+        : "";
       el.textContent = data.subdomain
-        ? `Zendesk: redo (${data.subdomain}.zendesk.com)`
-        : "Zendesk: redo";
+        ? `Zendesk: redo (${data.subdomain}.zendesk.com)${who}`
+        : `Zendesk: redo${who}`;
       if (btn) btn.disabled = false;
     } else {
       el.textContent =
@@ -1955,9 +1958,10 @@ async function createZendeskTicket(btn) {
       }
       return;
     }
+    const who = data.assignee_name ? ` · ${escapeHtml(data.assignee_name)}` : "";
     const note = data.notified_requester ? " (mail till kund)" : " (utan kundmail)";
     if (statusEl) {
-      statusEl.innerHTML = `Skapat & löst${note}: <a class="text-orange-300 underline" href="${escapeHtml(
+      statusEl.innerHTML = `Skapat & löst${note}${who}: <a class="text-orange-300 underline" href="${escapeHtml(
         data.ticket_url
       )}" target="_blank" rel="noopener">ticket #${escapeHtml(String(data.ticket_id))}</a>`;
     }
