@@ -19,6 +19,8 @@ _SKIP_PREFIXES = (
     "/static/",
     "/api/",
     "/admin",
+    "/kundmail",
+    "/tidrapport",
     "/health",
     "/healthz",
     "/favicon",
@@ -28,6 +30,9 @@ _SKIP_PREFIXES = (
     "/migrate",
     "/force_",
     "/create_",
+    "/login",
+    "/logout",
+    "/register",
 )
 
 _TABLE_READY = False
@@ -53,20 +58,47 @@ def _ensure_table() -> None:
 
 
 def should_count_request(req: Request, response: Response | None = None) -> bool:
-    if req.method not in ("GET", "HEAD"):
+    if req.method != "GET":
         return False
     path = req.path or "/"
     low = path.lower()
     for prefix in _SKIP_PREFIXES:
         if low == prefix.rstrip("/") or low.startswith(prefix):
             return False
-    if low.endswith((".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".woff", ".woff2")):
+    if low.endswith((".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".woff", ".woff2", ".json", ".xml", ".txt")):
         return False
+
+    # Prefer real browser navigations (not prefetch / XHR / iframes).
+    dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
+    if dest and dest not in ("document", "empty"):
+        # "empty" kept for older clients; non-document fetch modes skipped.
+        if dest in ("image", "script", "style", "font", "video", "audio", "worker", "manifest", "object"):
+            return False
+    mode = (req.headers.get("Sec-Fetch-Mode") or "").lower()
+    if mode in ("cors", "no-cors", "websocket"):
+        return False
+
+    accept = (req.headers.get("Accept") or "").lower()
+    if accept and "text/html" not in accept and "*/*" not in accept:
+        return False
+
     ua = (req.headers.get("User-Agent") or "").lower()
-    if any(b in ua for b in ("bot", "spider", "crawl", "slurp", "facebookexternalhit", "preview")):
+    if not ua or len(ua) < 12:
         return False
-    if response is not None and response.status_code >= 400:
+    bot_bits = (
+        "bot", "spider", "crawl", "slurp", "facebookexternalhit", "preview",
+        "wget", "curl", "python-requests", "httpclient", "scrapy", "semrush",
+        "ahrefs", "petalbot", "bytespider", "gptbot", "claudebot", "render",
+    )
+    if any(b in ua for b in bot_bits):
         return False
+
+    if response is not None:
+        if response.status_code >= 400:
+            return False
+        ct = (response.content_type or "").lower()
+        if ct and "text/html" not in ct:
+            return False
     return True
 
 
@@ -126,6 +158,7 @@ def attach_visitor_cookie(response: Response, visitor_id: str) -> Response:
         httponly=True,
         samesite="Lax",
         secure=secure,
+        path="/",
     )
     return response
 
