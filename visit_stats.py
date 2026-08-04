@@ -1,6 +1,7 @@
 """Lightweight daily site visit counters (pageviews + unique visitors)."""
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 from datetime import date, datetime, timedelta
@@ -10,7 +11,7 @@ from zoneinfo import ZoneInfo
 from flask import Request, Response, g
 from sqlalchemy.exc import IntegrityError
 
-from models import DailySiteStats, db
+from models import DailySiteStats, DailyVisitorSighting, db
 
 COOKIE_NAME = "mx_vid"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 400  # ~13 months
@@ -42,7 +43,6 @@ def today_stockholm() -> date:
     try:
         return datetime.now(ZoneInfo("Europe/Stockholm")).date()
     except Exception:
-        # Windows without tzdata package — UTC date is close enough for local dev.
         return datetime.utcnow().date()
 
 
@@ -52,9 +52,23 @@ def _ensure_table() -> None:
         return
     try:
         DailySiteStats.__table__.create(bind=db.engine, checkfirst=True)
+        DailyVisitorSighting.__table__.create(bind=db.engine, checkfirst=True)
         _TABLE_READY = True
     except Exception as e:
         print(f"daily_site_stats ensure table: {e}")
+
+
+def _client_ip(req: Request) -> str:
+    xff = (req.headers.get("X-Forwarded-For") or "").strip()
+    if xff:
+        return xff.split(",")[0].strip()
+    return (req.remote_addr or "").strip()
+
+
+def _visitor_fingerprint(req: Request) -> str:
+    """Stable same-day key when cookie is missing (collapses parallel first hits)."""
+    raw = f"{_client_ip(req)}|{(req.headers.get('User-Agent') or '')[:240]}"
+    return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()[:40]
 
 
 def should_count_request(req: Request, response: Response | None = None) -> bool:
@@ -65,21 +79,21 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     for prefix in _SKIP_PREFIXES:
         if low == prefix.rstrip("/") or low.startswith(prefix):
             return False
-    if low.endswith((".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".woff", ".woff2", ".json", ".xml", ".txt")):
+    if low.endswith(
+        (".js", ".css", ".map", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".svg", ".woff", ".woff2", ".json", ".xml", ".txt", ".webmanifest")
+    ):
         return False
 
-    # Prefer real browser navigations (not prefetch / XHR / iframes).
+    # Only top-level document navigations when the browser sends Fetch Metadata.
     dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
-    if dest and dest not in ("document", "empty"):
-        # "empty" kept for older clients; non-document fetch modes skipped.
-        if dest in ("image", "script", "style", "font", "video", "audio", "worker", "manifest", "object"):
-            return False
+    if dest and dest != "document":
+        return False
     mode = (req.headers.get("Sec-Fetch-Mode") or "").lower()
-    if mode in ("cors", "no-cors", "websocket"):
+    if mode and mode not in ("navigate",):
         return False
 
     accept = (req.headers.get("Accept") or "").lower()
-    if accept and "text/html" not in accept and "*/*" not in accept:
+    if accept and "text/html" not in accept:
         return False
 
     ua = (req.headers.get("User-Agent") or "").lower()
@@ -88,7 +102,8 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     bot_bits = (
         "bot", "spider", "crawl", "slurp", "facebookexternalhit", "preview",
         "wget", "curl", "python-requests", "httpclient", "scrapy", "semrush",
-        "ahrefs", "petalbot", "bytespider", "gptbot", "claudebot", "render",
+        "ahrefs", "petalbot", "bytespider", "gptbot", "claudebot",
+        "uptime", "pingdom", "headless", "phantom",
     )
     if any(b in ua for b in bot_bits):
         return False
@@ -96,39 +111,59 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
     if response is not None:
         if response.status_code >= 400:
             return False
+        # Redirects often fire before the real page — don't count them as visits.
+        if 300 <= response.status_code < 400:
+            return False
         ct = (response.content_type or "").lower()
         if ct and "text/html" not in ct:
             return False
     return True
 
 
+def _get_or_create_day_row(day: date) -> DailySiteStats | None:
+    row = DailySiteStats.query.filter_by(day=day).first()
+    if row:
+        return row
+    row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
+    db.session.add(row)
+    try:
+        db.session.flush()
+        return row
+    except IntegrityError:
+        db.session.rollback()
+        return DailySiteStats.query.filter_by(day=day).first()
+
+
 def record_visit(req: Request) -> str | None:
     """
-    Increment today's counters. Returns a new visitor cookie value if one should be set.
+    Increment today's counters.
+    Uniques are deduped via daily_visitor_sightings using IP+UA fingerprint,
+    so cookieless parallel page loads only count once.
+    Cookie is still set for debugging / future use.
     """
     try:
         _ensure_table()
         day = today_stockholm()
         existing = (req.cookies.get(COOKIE_NAME) or "").strip()
-        is_new = not existing
-        new_cookie = None
-        if is_new:
-            new_cookie = str(uuid.uuid4())
+        new_cookie = None if existing else str(uuid.uuid4())
+        # Fingerprint-only unique key (stable across first-hit cookie races).
+        visitor_key = f"f:{_visitor_fingerprint(req)}"
 
-        row = DailySiteStats.query.filter_by(day=day).first()
+        is_new_unique = False
+        db.session.add(DailyVisitorSighting(day=day, visitor_key=visitor_key))
+        try:
+            db.session.flush()
+            is_new_unique = True
+        except IntegrityError:
+            db.session.rollback()
+            is_new_unique = False
+
+        row = _get_or_create_day_row(day)
         if not row:
-            row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
-            db.session.add(row)
-            try:
-                db.session.flush()
-            except IntegrityError:
-                db.session.rollback()
-                row = DailySiteStats.query.filter_by(day=day).first()
-                if not row:
-                    return new_cookie
+            return new_cookie
 
         row.pageviews = int(row.pageviews or 0) + 1
-        if is_new:
+        if is_new_unique:
             row.unique_visitors = int(row.unique_visitors or 0) + 1
         db.session.commit()
         return new_cookie
@@ -225,6 +260,7 @@ def reset_today_stats() -> dict[str, Any]:
     """Zero today's pageviews + unique visitors (Europe/Stockholm day)."""
     _ensure_table()
     day = today_stockholm()
+    DailyVisitorSighting.query.filter_by(day=day).delete()
     row = DailySiteStats.query.filter_by(day=day).first()
     if not row:
         row = DailySiteStats(day=day, pageviews=0, unique_visitors=0)
@@ -243,7 +279,6 @@ def reset_today_stats() -> dict[str, Any]:
 def track_after_request(req: Request, response: Response) -> Response:
     if not should_count_request(req, response):
         return response
-    # Avoid counting the same request twice if something re-enters.
     if getattr(g, "_visit_counted", False):
         return response
     g._visit_counted = True

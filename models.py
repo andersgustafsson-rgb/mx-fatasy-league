@@ -566,3 +566,9 @@ class DailySiteStats(db.Model):
     pageviews = db.Column(db.Integer, nullable=False, default=0)
     unique_visitors = db.Column(db.Integer, nullable=False, default=0)
 
+class DailyVisitorSighting(db.Model):
+    # One row per unique visitor key per day (dedupe cookie races).
+    __tablename__ = "daily_visitor_sightings"
+    day = db.Column(db.Date, primary_key=True)
+    visitor_key = db.Column(db.String(64), primary_key=True)
+
