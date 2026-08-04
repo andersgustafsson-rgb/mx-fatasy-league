@@ -60,6 +60,45 @@ def kundmail_translate():
 		return jsonify({"error": "Översättning misslyckades"}), 500
 
 
+@bp.get("/api/kundmail/zendesk_status")
+def kundmail_zendesk_status():
+	if "user_id" not in session:
+		return jsonify({"error": "Unauthorized"}), 401
+	from zendesk_service import zendesk_configured
+
+	return jsonify({
+		"configured": zendesk_configured(),
+		"subdomain": (os.getenv("ZENDESK_SUBDOMAIN") or "").strip() or None,
+	})
+
+
+@bp.post("/api/kundmail/zendesk_ticket")
+def kundmail_zendesk_ticket():
+	"""Create a new Zendesk ticket from kundmail (subject/body/requester)."""
+	if "user_id" not in session:
+		return jsonify({"error": "Unauthorized"}), 401
+
+	data = request.get_json(silent=True) or {}
+	subject = (data.get("subject") or "").strip()
+	body = (data.get("body") or "").strip()
+	requester_email = (data.get("requester_email") or data.get("email") or "").strip()
+	requester_name = (data.get("requester_name") or data.get("customer_name") or "").strip()
+	order_number = (data.get("order_number") or "").strip()
+
+	from zendesk_service import create_support_ticket
+
+	result = create_support_ticket(
+		subject=subject,
+		body=body,
+		requester_email=requester_email,
+		requester_name=requester_name or None,
+		order_number=order_number or None,
+		tags=["kundmail"],
+	)
+	status = 200 if result.get("ok") else 400
+	return jsonify(result), status
+
+
 def _require_login():
 	if "user_id" not in session:
 		return None

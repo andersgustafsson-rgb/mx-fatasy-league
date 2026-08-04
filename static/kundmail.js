@@ -1876,6 +1876,100 @@ async function translateTextGtx(text, source = "sv", target = "da") {
   return out.join("\n\n");
 }
 
+async function refreshZendeskStatus() {
+  const el = $("zendeskStatus");
+  const btn = $("createZendeskTicket");
+  if (!el) return;
+  try {
+    const res = await fetch("/api/kundmail/zendesk_status", { credentials: "same-origin" });
+    if (!res.ok) {
+      el.textContent = "Zendesk: inloggning krävs.";
+      if (btn) btn.disabled = true;
+      return;
+    }
+    const data = await res.json();
+    if (data.configured) {
+      el.textContent = data.subdomain
+        ? `Zendesk: redo (${data.subdomain}.zendesk.com)`
+        : "Zendesk: redo";
+      if (btn) btn.disabled = false;
+    } else {
+      el.textContent =
+        "Zendesk: saknar env (ZENDESK_SUBDOMAIN, ZENDESK_EMAIL, ZENDESK_API_TOKEN).";
+      if (btn) btn.disabled = true;
+    }
+  } catch (_e) {
+    el.textContent = "Zendesk: kunde inte kontrollera status.";
+    if (btn) btn.disabled = true;
+  }
+}
+
+async function createZendeskTicket(btn) {
+  const statusEl = $("zendeskStatus");
+  const email = cleanStr(els.customerEmail?.value);
+  const subject = cleanStr(els.subjectOut?.value);
+  const body = getBodyPlain();
+  if (!email || !email.includes("@")) {
+    if (statusEl) statusEl.textContent = "Ange kundens e-post innan du skapar i Zendesk.";
+    els.customerEmail?.focus();
+    return;
+  }
+  if (!subject || !body) {
+    if (statusEl) statusEl.textContent = "Ämne och meddelande måste finnas.";
+    return;
+  }
+
+  const label = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Skapar…";
+  }
+  if (statusEl) statusEl.textContent = "Skapar Zendesk-ärende…";
+
+  try {
+    const res = await fetch("/api/kundmail/zendesk_ticket", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject,
+        body,
+        requester_email: email,
+        requester_name: cleanStr(els.customerName?.value) || undefined,
+        order_number: cleanStr(els.orderNumber?.value) || undefined,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      const detail =
+        typeof data.detail === "string"
+          ? data.detail
+          : data.detail
+            ? JSON.stringify(data.detail).slice(0, 200)
+            : "";
+      if (statusEl) {
+        statusEl.textContent = `${data.error || "Kunde inte skapa ärende"}${detail ? `: ${detail}` : ""}`;
+      }
+      return;
+    }
+    if (statusEl) {
+      statusEl.innerHTML = `Skapat: <a class="text-orange-300 underline" href="${escapeHtml(
+        data.ticket_url
+      )}" target="_blank" rel="noopener">ticket #${escapeHtml(String(data.ticket_id))}</a>`;
+    }
+    if (data.ticket_url) {
+      window.open(data.ticket_url, "_blank", "noopener");
+    }
+  } catch (e) {
+    if (statusEl) statusEl.textContent = `Fel: ${e.message || e}`;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = label || "Skapa i Zendesk";
+    }
+  }
+}
+
 async function translateViaServer(subject, body, source, target) {
   const res = await fetch("/api/kundmail/translate", {
     method: "POST",
@@ -2008,7 +2102,10 @@ function init() {
   els.extraFields = $("extraFields");
   els.productName = $("productName");
   els.customerName = $("customerName");
+  els.customerEmail = $("customerEmail");
   els.orderNumber = $("orderNumber");
+  els.zendeskStatus = $("zendeskStatus");
+  els.createZendeskTicket = $("createZendeskTicket");
   els.signatureProfileSelect = $("signatureProfileSelect");
   els.signatureProfileName = $("signatureProfileName");
   els.signatureProfileText = $("signatureProfileText");
@@ -2099,6 +2196,8 @@ function init() {
     const plain = `${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${getBodyPlain()}`;
     copyRichContent(plain, `<p><strong>${escapeHtml(els.subjectOut.value)}</strong></p>${els.bodyOut?.innerHTML || ""}`, e.currentTarget);
   });
+  $("createZendeskTicket")?.addEventListener("click", (e) => createZendeskTicket(e.currentTarget));
+  refreshZendeskStatus();
 
   els.bodyOut?.addEventListener("paste", handleBodyPaste);
   els.subjectOut?.addEventListener("input", markOutputEdited);

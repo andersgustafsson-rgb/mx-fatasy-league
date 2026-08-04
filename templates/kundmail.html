@@ -174,6 +174,11 @@
             </div>
 
             <div class="space-y-1">
+              <label for="customerEmail" class="block text-xs font-medium text-slate-400">Kundens e-post (Zendesk)</label>
+              <input id="customerEmail" type="email" placeholder="kund@exempel.se" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" autocomplete="email" />
+            </div>
+
+            <div class="space-y-1">
               <label for="orderNumber" class="block text-xs font-medium text-slate-400">Ordernummer</label>
               <input id="orderNumber" type="text" placeholder="valfritt" class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm" />
             </div>
@@ -259,9 +264,13 @@
             <button id="copySubject" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera ämne</button>
             <button id="copyBody" type="button" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs border border-slate-600">Kopiera text</button>
             <button id="copyAll" type="button" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-xs font-semibold">Kopiera allt</button>
+            <button id="createZendeskTicket" type="button" class="px-3 py-1.5 rounded-lg bg-orange-700 hover:bg-orange-600 text-xs font-semibold border border-orange-600" title="Skapar ett nytt Zendesk-ärende med ämne, text och kundens e-post">
+              Skapa i Zendesk
+            </button>
           </div>
         </div>
 
+        <p id="zendeskStatus" class="text-xs text-slate-500"></p>
         <p id="validation" class="text-xs text-amber-400"></p>
 
         <p id="outputEditHint" class="hidden text-xs text-amber-400/90">Du har redigerat texten. «Generera om från mall» byter till mall på valt språk. «Översätt till …» översätter det du skrivit eller klistrat in.</p>
@@ -349,6 +358,6 @@
 
   <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
   <script src="{{ url_for('static', filename='reminders.js') }}?v=2"></script>
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260731-sig-fix"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260804-zendesk"></script>
 </body>
 </html>
