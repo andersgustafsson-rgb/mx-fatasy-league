@@ -121,6 +121,17 @@
       pointer-events: none;
       cursor: not-allowed;
     }
+    /* Public browse: topplistor, spel-highscores, mini-spel, guide */
+    .readonly-mode a[href*="finished_series"],
+    .readonly-mode a[href*="cross_jump"],
+    .readonly-mode a[href*="dino_game"],
+    .readonly-mode a[href*="motocross_quiz"],
+    .readonly-mode a[href*="trackmaps"],
+    .readonly-mode a[href*="riders"] {
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
     /* Supercross season wrap: allow resultat / serier / MX-länkar även för gäst */
     .readonly-mode a.sx-season-hero-link {
       opacity: 1 !important;
@@ -679,8 +690,8 @@
       opacity: 1 !important;
     }
     
-    /* Disable interactive buttons in readonly mode, but allow login buttons, settings tab and manual link */
-    .readonly-mode .tab-btn:not([data-tab="settings"]):not([href*="manual"]),
+    /* Disable interactive buttons in readonly mode, but allow login, public browse tabs, settings and manual */
+    .readonly-mode .tab-btn:not([data-tab="settings"]):not([data-tab="leaderboard"]):not([data-tab="games"]):not([href*="manual"]),
     .readonly-mode button[onclick*="showOtherUsersPicksFromMain"],
     .readonly-mode button[onclick*="toggleSeriesExpansion"],
     .readonly-mode button[onclick*="toggleSMXExpansion"],
@@ -690,12 +701,15 @@
       cursor: not-allowed;
     }
     
-    /* Ensure login buttons, settings tab and manual link are always clickable */
+    /* Ensure login buttons, public tabs and manual link are always clickable */
     .readonly-mode button[onclick*="openLoginModal"],
     .readonly-mode button[onclick*="openGuestSignup"],
     .readonly-mode button[onclick*="MXShowPitPass"],
     .readonly-mode .tab-btn[data-tab="settings"],
-    .readonly-mode a.tab-btn[href*="manual"] {
+    .readonly-mode .tab-btn[data-tab="leaderboard"],
+    .readonly-mode .tab-btn[data-tab="games"],
+    .readonly-mode a.tab-btn[href*="manual"],
+    .readonly-mode #expand-leaderboard-btn {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -2140,7 +2154,6 @@
               <div class="home-sidebar-guest-actions">
                 <button type="button" onclick="openLoginModal();" class="home-sidebar-foot__btn home-sidebar-foot__btn--primary">Logga in</button>
                 <button type="button" onclick="openGuestSignup();" class="home-sidebar-foot__btn">Skapa konto</button>
-                <button type="button" onclick="openRaceRecapPreview();" class="home-sidebar-foot__btn" title="Demo">Demo: din kväll</button>
               </div>
             </div>
             {% endif %}
@@ -4756,7 +4769,8 @@
             loadSeriesLeaders();
             fetchWeeklyFunStats();
           } else if (targetTab === 'games') {
-            loadGameHighscores();
+            fetchCrossDinoHighscores();
+            loadQuizHighscores();
           } else if (targetTab === 'leagues') {
             loadMyLeagues();
           } else if (targetTab === 'season-team') {
