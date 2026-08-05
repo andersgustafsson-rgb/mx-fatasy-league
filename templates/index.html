@@ -3441,21 +3441,7 @@
                   ptsFill.style.width = leaderPts > 0 ? Math.min(100, Math.round((myPts / leaderPts) * 100)) + '%' : '0%';
                 }
 
-                try {
-                  const r2 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/latest_points`);
-                  const d2 = await r2.json();
-                  const latestLine = document.getElementById('welcome-latest-line');
-                  if (latestLine && r2.ok && d2 && d2.ok && d2.latest) {
-                    const pts = Number(d2.latest.points || 0);
-                    const name = (d2.latest.name || '').toString();
-                    latestLine.textContent = pts > 0 ? `+${pts.toLocaleString('sv-SE')}p senaste race` : `0p senaste race`;
-                    latestLine.className = 'home-sidebar-points__delta' + (pts > 0 ? ' home-sidebar-points__delta--gain' : '');
-                    if (pts > 0 && name) latestLine.textContent += ` · ${name}`;
-                  } else if (latestLine) {
-                    latestLine.textContent = '—';
-                    latestLine.className = 'home-sidebar-points__delta';
-                  }
-                } catch (e) {}
+                loadWelcomeLatestRace();
 
                 try {
                   const r3 = await fetch(`/api/users/${encodeURIComponent(window.currentUsername)}/achievements`);
@@ -5909,6 +5895,28 @@
       return res;
     }
 
+    async function loadWelcomeLatestRace() {
+      const latestLine = document.getElementById('welcome-latest-line');
+      const uname = (window.currentUsername || '').toString().trim();
+      if (!latestLine || !uname) return;
+      try {
+        const r2 = await fetch(`/api/users/${encodeURIComponent(uname)}/latest_points`);
+        const d2 = await r2.json().catch(() => ({}));
+        if (latestLine && r2.ok && d2 && d2.ok && d2.latest) {
+          const pts = Number(d2.latest.points || 0);
+          const name = (d2.latest.name || '').toString();
+          latestLine.textContent = pts > 0 ? `+${pts.toLocaleString('sv-SE')}p senaste race` : `0p senaste race`;
+          latestLine.className = 'home-sidebar-points__delta' + (pts > 0 ? ' home-sidebar-points__delta--gain' : '');
+          if (name) latestLine.textContent += ` · ${name}`;
+        } else if (latestLine) {
+          latestLine.textContent = 'Inget race.resultat ännu';
+          latestLine.className = 'home-sidebar-points__delta';
+        }
+      } catch (_e) {
+        /* leave SSR placeholder */
+      }
+    }
+
     function setHomeMenuOpen(open) {
       const btn = document.getElementById('home-menu-open');
       const backdrop = document.getElementById('home-menu-backdrop');
@@ -5917,6 +5925,7 @@
       if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       if (backdrop) backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
       document.body.style.overflow = isOpen ? 'hidden' : '';
+      if (isOpen) loadWelcomeLatestRace();
     }
 
     function toggleHomeMenu() {
