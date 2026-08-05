@@ -20,6 +20,7 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 400  # ~13 months
 # Staff accounts — never count (kundmail / admin / testing noise).
 _STAFF_USERNAMES = {
     "anders",
+    "spliffan",
     "ture",
     "hampus",
     "jennie",
