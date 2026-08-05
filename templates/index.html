@@ -122,6 +122,7 @@
       cursor: not-allowed;
     }
     /* Public browse: topplistor, spel-highscores, mini-spel, guide */
+    .readonly-mode a.mx-brand,
     .readonly-mode a[href*="finished_series"],
     .readonly-mode a[href*="cross_jump"],
     .readonly-mode a[href*="dino_game"],
@@ -943,6 +944,21 @@
       line-height: 0.92;
       margin: 0 auto;
       user-select: none;
+    }
+    a.mx-brand {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    a.mx-brand:hover,
+    a.mx-brand:focus-visible {
+      color: inherit;
+      outline: none;
+    }
+    a.mx-brand:focus-visible .mx-brand__frame {
+      box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.45);
     }
     @media (min-width: 640px) {
       .mx-brand { margin: 0; }
@@ -2249,7 +2265,7 @@
         <div class="home-page-shell relative z-30">
           <aside class="home-sidebar">
             <div class="home-brand-row">
-              <h1 class="mx-brand" aria-label="MX Fantasy League">
+              <a href="{{ url_for('index') }}" id="home-brand-link" class="mx-brand" aria-label="MX Fantasy League — till startsidan">
                 <span class="mx-brand__skew">
                   <span class="mx-brand__mx">MX</span>
                   <span class="mx-brand__aside">
@@ -2262,7 +2278,7 @@
                     </span>
                   </span>
                 </span>
-              </h1>
+              </a>
               <button
                 type="button"
                 id="home-menu-open"
