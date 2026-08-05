@@ -6021,9 +6021,21 @@
       const closeBtn = document.getElementById('home-menu-close');
       const backdrop = document.getElementById('home-menu-backdrop');
       const drawer = document.getElementById('home-sidebar-body');
+      const brandLink = document.getElementById('home-brand-link');
       openBtn?.addEventListener('click', toggleHomeMenu);
       closeBtn?.addEventListener('click', () => setHomeMenuOpen(false));
       backdrop?.addEventListener('click', () => setHomeMenuOpen(false));
+      brandLink?.addEventListener('click', (e) => {
+        // Redan på startsidan: tillbaka till Race Info + scrolla upp (utan full reload)
+        const path = (location.pathname || '/').replace(/\/+$/, '') || '/';
+        if (path !== '/' && path !== '') return;
+        e.preventDefault();
+        setHomeMenuOpen(false);
+        const raceBtn = document.querySelector('.tab-btn[data-tab="race-info"]:not([disabled])');
+        if (raceBtn) raceBtn.click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try { history.replaceState(null, '', '/'); } catch (_) {}
+      });
       drawer?.addEventListener('click', (e) => {
         const t = e.target;
         if (!(t instanceof Element)) return;
