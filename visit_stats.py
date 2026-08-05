@@ -1,14 +1,15 @@
-"""Lightweight daily site visit counters (pageviews + unique visitors)."""
+"""Daily visit counters for the fantasy game (not tools / not staff)."""
 from __future__ import annotations
 
 import hashlib
 import os
+import re
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from flask import Request, Response, g
+from flask import Request, Response, g, has_request_context, session
 from sqlalchemy.exc import IntegrityError
 
 from models import DailySiteStats, DailyVisitorSighting, db
@@ -16,24 +17,58 @@ from models import DailySiteStats, DailyVisitorSighting, db
 COOKIE_NAME = "mx_vid"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 400  # ~13 months
 
-_SKIP_PREFIXES = (
-    "/static/",
-    "/api/",
-    "/admin",
-    "/kundmail",
-    "/tidrapport",
-    "/health",
-    "/healthz",
-    "/favicon",
-    "/sw.js",
-    "/robots.txt",
-    "/sitemap",
-    "/migrate",
-    "/force_",
-    "/create_",
-    "/login",
-    "/logout",
-    "/register",
+# Staff accounts — never count (kundmail / admin / testing noise).
+_STAFF_USERNAMES = {
+    "anders",
+    "ture",
+    "hampus",
+    "jennie",
+    "jennie bengtsson",
+    "johan",
+    "print",
+    "test",
+    "admin",
+}
+
+# Only count public "game" HTML pages (not tools, APIs, random SEO scrapes of everything).
+_GAME_EXACT = {
+    "/",
+    "/start",
+    "/om",
+    "/om-spelet",
+    "/manual",
+    "/riders",
+    "/finished_series",
+    "/dino_game",
+    "/cross_jump_modern",
+    "/motocross_quiz",
+    "/trackmaps",
+    "/tippa-supercross",
+    "/tippa-motocross",
+    "/my_scores",
+    "/leagues",
+    "/bulletin_board",
+    "/bulletin",
+}
+
+_GAME_PREFIXES = (
+    "/start",
+    "/tippa-",
+    "/riders/",
+    "/finished_series",
+    "/race_picks",
+    "/picks",
+    "/leagues/",
+    "/season_team",
+    "/competition",
+    "/series",
+    "/wsx",
+    "/dino",
+    "/cross_jump",
+    "/motocross_quiz",
+    "/trackmaps",
+    "/manual",
+    "/om",
 )
 
 _TABLE_READY = False
@@ -70,49 +105,54 @@ def _visitor_fingerprint(req: Request) -> str:
     return hashlib.sha256(raw.encode("utf-8", errors="ignore")).hexdigest()[:40]
 
 
+def _norm_path(path: str) -> str:
+    p = (path or "/").split("?", 1)[0].lower().rstrip("/")
+    return p or "/"
+
+
+def _is_game_page(path: str) -> bool:
+    p = _norm_path(path)
+    if p in _GAME_EXACT:
+        return True
+    return any(p == pref.rstrip("/") or p.startswith(pref) for pref in _GAME_PREFIXES)
+
+
+def _is_staff_session() -> bool:
+    if not has_request_context():
+        return False
+    uname = (session.get("username") or "").strip().lower()
+    if uname and uname in _STAFF_USERNAMES:
+        return True
+    # Also catch display-like usernames with extra spaces
+    if uname and re.sub(r"\s+", " ", uname) in _STAFF_USERNAMES:
+        return True
+    return False
+
+
 def should_count_request(req: Request, response: Response | None = None) -> bool:
     if req.method != "GET":
         return False
-    path = req.path or "/"
-    low = path.lower()
-    for prefix in _SKIP_PREFIXES:
-        if low == prefix.rstrip("/") or low.startswith(prefix):
-            return False
-    if low.endswith(
-        (
-            ".js",
-            ".css",
-            ".map",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".webp",
-            ".gif",
-            ".ico",
-            ".svg",
-            ".woff",
-            ".woff2",
-            ".json",
-            ".xml",
-            ".txt",
-            ".webmanifest",
-        )
-    ):
+    if _is_staff_session():
         return False
 
-    dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
-    if dest and dest != "document":
+    path = req.path or "/"
+    if not _is_game_page(path):
         return False
+
+    # Real Chrome/Firefox/Safari navigations always send these. Crawlers usually don't.
+    dest = (req.headers.get("Sec-Fetch-Dest") or "").lower()
     mode = (req.headers.get("Sec-Fetch-Mode") or "").lower()
-    if mode and mode not in ("navigate",):
+    if dest != "document" or mode != "navigate":
         return False
 
     accept = (req.headers.get("Accept") or "").lower()
-    if accept and "text/html" not in accept:
+    if "text/html" not in accept:
         return False
 
     ua = (req.headers.get("User-Agent") or "").lower()
-    if not ua or len(ua) < 12:
+    if not ua or len(ua) < 20:
+        return False
+    if not any(b in ua for b in ("mozilla", "chrome", "safari", "firefox", "edg/", "applewebkit")):
         return False
     bot_bits = (
         "bot",
@@ -136,6 +176,16 @@ def should_count_request(req: Request, response: Response | None = None) -> bool
         "pingdom",
         "headless",
         "phantom",
+        "lighthouse",
+        "gtmetrix",
+        "pagespeed",
+        "yandex",
+        "baidu",
+        "duckduck",
+        "bingpreview",
+        "slurp",
+        "monitoring",
+        "render",
     )
     if any(b in ua for b in bot_bits):
         return False
@@ -166,17 +216,13 @@ def _get_or_create_day_row(day: date) -> DailySiteStats | None:
 
 
 def _recount_uniques(day: date) -> int:
-    return int(
-        db.session.query(DailyVisitorSighting)
-        .filter_by(day=day)
-        .count()
-    )
+    return int(db.session.query(DailyVisitorSighting).filter_by(day=day).count())
 
 
 def record_visit(req: Request) -> str | None:
     """
-    Increment today's pageviews. Uniques = distinct fingerprints in
-    daily_visitor_sightings (savepoint insert so races don't inflate the counter).
+    Count a game-page visit. Uniques = distinct fingerprints that day
+    (savepoint insert + recount so races cannot inflate the number).
     """
     try:
         _ensure_table()
@@ -194,9 +240,8 @@ def record_visit(req: Request) -> str | None:
                 db.session.add(DailyVisitorSighting(day=day, visitor_key=visitor_key))
                 db.session.flush()
         except IntegrityError:
-            pass  # already seen today
+            pass
 
-        # Re-load in case nested ops touched identity map
         row = DailySiteStats.query.filter_by(day=day).first() or row
         row.pageviews = int(row.pageviews or 0) + 1
         row.unique_visitors = _recount_uniques(day)
@@ -212,7 +257,7 @@ def record_visit(req: Request) -> str | None:
 
 
 def attach_visitor_cookie(response: Response, visitor_id: str) -> Response:
-    from flask import has_request_context, request as flask_request
+    from flask import request as flask_request
 
     secure = False
     if has_request_context():
