@@ -714,7 +714,7 @@
     .readonly-mode #home-menu-close,
     .readonly-mode .home-sidebar-body button,
     .readonly-mode .home-sidebar-body a,
-    .readonly-mode .home-drawer-pages .tab-btn {
+    .readonly-mode .home-sidebar-foot .tab-btn {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -1176,6 +1176,8 @@
         right: 0;
         bottom: 0;
         z-index: 90;
+        display: flex;
+        flex-direction: column;
         width: min(20rem, 88vw);
         margin: 0 !important;
         padding: 1rem 0.9rem 1.25rem;
@@ -1205,6 +1207,7 @@
         margin-bottom: 0.75rem;
         padding: 0.15rem 0.15rem 0.75rem;
         border-bottom: 1px solid #2a3548;
+        flex-shrink: 0;
       }
       .home-menu-drawer-head__title {
         font-size: 0.95rem;
@@ -1225,48 +1228,15 @@
         line-height: 1;
         cursor: pointer;
       }
-      .home-drawer-pages {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-        margin: 0 0 0.85rem;
-        padding: 0.35rem;
-        border-radius: 0.75rem;
-        border: 1px solid #2a3548;
-        background: #1a2436;
-      }
-      .home-drawer-pages__label {
-        padding: 0.35rem 0.55rem 0.15rem;
-        font-size: 0.68rem;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: #64748b;
-      }
-      .home-drawer-pages .tab-btn.rp-tab-btn {
-        width: 100%;
-        justify-content: flex-start;
-        text-align: left;
-        border-radius: 0.55rem;
-        padding: 0.7rem 0.75rem;
-        font-size: 0.95rem;
-        opacity: 1;
-        pointer-events: auto;
-        cursor: pointer;
-      }
-      .home-drawer-pages .tab-btn.rp-tab-btn.active {
-        background: rgba(34, 211, 238, 0.12);
-        border-color: rgba(34, 211, 238, 0.35);
-        color: #e2e8f0;
-      }
-      .home-drawer-pages .mx-lang-toggle {
-        margin: 0.35rem 0.4rem 0.45rem;
-        align-self: flex-start;
+      .home-sidebar-body .home-sidebar-foot {
+        margin-top: auto;
+        padding-top: 1rem;
       }
     }
     @media (min-width: 640px) {
       .home-menu-drawer-head,
-      .home-drawer-pages {
+      .home-sidebar-foot__page,
+      .home-sidebar-lang {
         display: none;
       }
     }
@@ -1555,6 +1525,19 @@
       border-color: rgba(100, 116, 139, 0.55);
       background: rgba(30, 41, 59, 0.65);
       color: #f8fafc;
+    }
+    .home-sidebar-foot__btn.active {
+      border-color: rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.12);
+      color: #e2e8f0;
+    }
+    .home-sidebar-foot__btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .home-sidebar-lang {
+      margin-top: 0.15rem;
+      align-self: flex-start;
     }
     .home-sidebar-foot__btn--primary {
       border-color: rgba(34, 211, 238, 0.35);
@@ -2280,24 +2263,6 @@
               <button type="button" id="home-menu-close" class="home-menu-close" aria-label="Stäng meny">×</button>
             </div>
 
-            <nav class="home-drawer-pages" aria-label="Sidor">
-              <div class="home-drawer-pages__label">Sidor</div>
-              <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info" data-i18n="tab.race_info">Race Info</button>
-              <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard" data-i18n="tab.leaderboard">Topplista</button>
-              <button type="button" class="tab-btn rp-tab-btn" data-tab="stats" data-i18n="tab.stats">Statistik</button>
-              <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
-              <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
-              <button type="button" class="tab-btn rp-tab-btn tab-season-team-btn" data-tab="season-team"
-                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
-                data-i18n="tab.team">Team</button>
-              <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
-              <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
-              <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
-                <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
-                <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
-              </div>
-            </nav>
-
             {% if is_logged_in %}
             <div class="home-sidebar-card">
               <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
@@ -2357,11 +2322,22 @@
               </div>
             </nav>
 
-            <div class="home-sidebar-foot">
-              <button type="button" onclick="document.querySelector(&quot;.tab-btn[data-tab='settings']&quot;)?.click(); document.getElementById('tab-scroll-container')?.scrollIntoView({behavior:'smooth', block:'nearest'});" class="home-sidebar-foot__btn">
-                Inställningar
-              </button>
+            <div class="home-sidebar-foot" aria-label="Sidor">
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page active" data-tab="race-info" data-i18n="tab.race_info">Race Info</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leaderboard" data-i18n="tab.leaderboard">Topplista</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="stats" data-i18n="tab.stats">Statistik</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="games" data-i18n="tab.games">Spel</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn" data-tab="season-team"
+                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
+                data-i18n="tab.team">Team</button>
+              <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
+              <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
               <a href="{{ url_for('logout') }}" class="home-sidebar-foot__btn home-sidebar-foot__btn--out">Logga ut</a>
+              <div class="mx-lang-toggle home-sidebar-lang" role="group" aria-label="Välj språk / Choose language">
+                <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+                <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+              </div>
             </div>
             {% else %}
             <div class="home-sidebar-card home-sidebar-card--guest">
@@ -2370,6 +2346,23 @@
               <div class="home-sidebar-guest-actions">
                 <button type="button" onclick="openLoginModal();" class="home-sidebar-foot__btn home-sidebar-foot__btn--primary">Logga in</button>
                 <button type="button" onclick="openGuestSignup();" class="home-sidebar-foot__btn">Skapa konto</button>
+              </div>
+            </div>
+
+            <div class="home-sidebar-foot" aria-label="Sidor">
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page active" data-tab="race-info" data-i18n="tab.race_info">Race Info</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leaderboard" data-i18n="tab.leaderboard">Topplista</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="stats" data-i18n="tab.stats">Statistik</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="games" data-i18n="tab.games">Spel</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
+              <button type="button" class="tab-btn home-sidebar-foot__btn home-sidebar-foot__page tab-season-team-btn" data-tab="season-team"
+                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
+                data-i18n="tab.team">Team</button>
+              <a href="{{ url_for('manual_page') }}" class="home-sidebar-foot__btn home-sidebar-foot__page" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
+              <button type="button" class="tab-btn home-sidebar-foot__btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
+              <div class="mx-lang-toggle home-sidebar-lang" role="group" aria-label="Välj språk / Choose language">
+                <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+                <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
               </div>
             </div>
             {% endif %}
@@ -4981,7 +4974,7 @@
           fetchSeasonTeamStats();
         }
 
-        if (sourceButton && sourceButton.closest('.home-drawer-pages')) {
+        if (sourceButton && sourceButton.closest('#home-sidebar-body') && window.matchMedia('(max-width: 639px)').matches) {
           setHomeMenuOpen(false);
         }
       }
