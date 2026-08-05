@@ -1081,6 +1081,9 @@
     }
     /* Mobil: logo+meny → flikar → race-hero (sidomeny i drawer via ⋮) */
     @media (max-width: 639px) {
+      html {
+        scroll-padding-top: 5.25rem;
+      }
       .home-header-stack {
         display: flex;
         flex-direction: column;
@@ -1091,7 +1094,20 @@
       }
       .home-header-stack .home-brand-row {
         order: 1;
-        margin: 0 0 0.65rem;
+        position: sticky;
+        top: 0;
+        z-index: 70;
+        align-items: center;
+        margin: 0 -1rem 0.65rem;
+        padding: max(0.4rem, env(safe-area-inset-top, 0px)) 1rem 0.5rem;
+        background: rgba(20, 28, 44, 0.94);
+        backdrop-filter: saturate(1.15) blur(12px);
+        -webkit-backdrop-filter: saturate(1.15) blur(12px);
+        border-bottom: 1px solid rgba(42, 53, 72, 0.95);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+      }
+      .home-header-stack .home-brand-row .home-menu-btn {
+        margin-top: 0;
       }
       /* Flikar ligger i ⋮-menyn på mobil — inte i scrollflödet */
       .home-header-stack .home-tabs {
@@ -1105,6 +1121,9 @@
       .home-header-stack .home-sidebar-body {
         order: unset;
         margin-bottom: 0;
+      }
+      .home-main .tab-content {
+        scroll-margin-top: 5.25rem;
       }
     }
     .home-brand-row {
