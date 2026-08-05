@@ -713,7 +713,8 @@
     .readonly-mode #home-menu-open,
     .readonly-mode #home-menu-close,
     .readonly-mode .home-sidebar-body button,
-    .readonly-mode .home-sidebar-body a {
+    .readonly-mode .home-sidebar-body a,
+    .readonly-mode .home-drawer-pages .tab-btn {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -1092,12 +1093,12 @@
         order: 1;
         margin: 0 0 0.65rem;
       }
+      /* Flikar ligger i ⋮-menyn på mobil — inte i scrollflödet */
       .home-header-stack .home-tabs {
-        order: 2;
-        margin-bottom: 0.75rem;
+        display: none !important;
       }
       .home-header-stack .home-main {
-        order: 3;
+        order: 2;
         margin-bottom: 0.85rem;
       }
       /* Sidomeny ligger i drawer — inte i scrollflödet */
@@ -1224,9 +1225,48 @@
         line-height: 1;
         cursor: pointer;
       }
+      .home-drawer-pages {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin: 0 0 0.85rem;
+        padding: 0.35rem;
+        border-radius: 0.75rem;
+        border: 1px solid #2a3548;
+        background: #1a2436;
+      }
+      .home-drawer-pages__label {
+        padding: 0.35rem 0.55rem 0.15rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .home-drawer-pages .tab-btn.rp-tab-btn {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+        border-radius: 0.55rem;
+        padding: 0.7rem 0.75rem;
+        font-size: 0.95rem;
+        opacity: 1;
+        pointer-events: auto;
+        cursor: pointer;
+      }
+      .home-drawer-pages .tab-btn.rp-tab-btn.active {
+        background: rgba(34, 211, 238, 0.12);
+        border-color: rgba(34, 211, 238, 0.35);
+        color: #e2e8f0;
+      }
+      .home-drawer-pages .mx-lang-toggle {
+        margin: 0.35rem 0.4rem 0.45rem;
+        align-self: flex-start;
+      }
     }
     @media (min-width: 640px) {
-      .home-menu-drawer-head {
+      .home-menu-drawer-head,
+      .home-drawer-pages {
         display: none;
       }
     }
@@ -2192,7 +2232,7 @@
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
                 <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
                 <button type="button" id="tab-season-team-btn"
-                  class="tab-btn rp-tab-btn" data-tab="season-team"
+                  class="tab-btn rp-tab-btn tab-season-team-btn" data-tab="season-team"
                   {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
                   data-i18n="tab.team">Team</button>
                 <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings"><span class="sm:hidden" data-i18n="tab.settings.short">Inst.</span><span class="hidden sm:inline" data-i18n="tab.settings">Inställningar</span></button>
@@ -2239,6 +2279,25 @@
               <span class="home-menu-drawer-head__title">Meny</span>
               <button type="button" id="home-menu-close" class="home-menu-close" aria-label="Stäng meny">×</button>
             </div>
+
+            <nav class="home-drawer-pages" aria-label="Sidor">
+              <div class="home-drawer-pages__label">Sidor</div>
+              <button type="button" class="tab-btn rp-tab-btn active" data-tab="race-info" data-i18n="tab.race_info">Race Info</button>
+              <button type="button" class="tab-btn rp-tab-btn" data-tab="leaderboard" data-i18n="tab.leaderboard">Topplista</button>
+              <button type="button" class="tab-btn rp-tab-btn" data-tab="stats" data-i18n="tab.stats">Statistik</button>
+              <button type="button" class="tab-btn rp-tab-btn" data-tab="games" data-i18n="tab.games">Spel</button>
+              <button type="button" class="tab-btn rp-tab-btn" data-tab="leagues" data-i18n="tab.leagues">Ligor</button>
+              <button type="button" class="tab-btn rp-tab-btn tab-season-team-btn" data-tab="season-team"
+                {% if upcoming_race and upcoming_race.series == 'WSX' %}disabled title="Säsongsteam gäller bara SX, MX och SMX"{% endif %}
+                data-i18n="tab.team">Team</button>
+              <button type="button" class="tab-btn rp-tab-btn settings-btn" data-tab="settings" data-i18n="tab.settings">Inställningar</button>
+              <a href="{{ url_for('manual_page') }}" class="tab-btn rp-tab-btn" target="_blank" rel="noopener" data-i18n="tab.manual">Manual</a>
+              <div class="mx-lang-toggle" role="group" aria-label="Välj språk / Choose language">
+                <button type="button" class="mx-lang-btn" data-lang="sv" aria-pressed="true">SV</button>
+                <button type="button" class="mx-lang-btn" data-lang="en" aria-pressed="false">EN</button>
+              </div>
+            </nav>
+
             {% if is_logged_in %}
             <div class="home-sidebar-card">
               <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
@@ -3937,8 +3996,8 @@
           teamTile.removeAttribute('title');
         }
       }
-      const teamTab = document.getElementById('tab-season-team-btn');
-      if (teamTab) {
+      const teamTabs = document.querySelectorAll('.tab-season-team-btn');
+      teamTabs.forEach((teamTab) => {
         teamTab.disabled = isWSX;
         if (isWSX) {
           teamTab.setAttribute('title', 'Säsongsteam gäller bara SX, MX och SMX');
@@ -3949,7 +4008,7 @@
         } else {
           teamTab.removeAttribute('title');
         }
-      }
+      });
     }
 
     function markSelectedSeriesCard(seriesCode) {
@@ -4877,73 +4936,70 @@
     function initTabs() {
       const tabButtons = document.querySelectorAll('.tab-btn');
       const tabPanels = document.querySelectorAll('.tab-panel');
-      
-      tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-          // Skip if button is disabled
-          if (button.disabled) {
-            return;
-          }
-          
-          const targetTab = button.getAttribute('data-tab');
-          if (!targetTab) {
-            return; // No target tab, skip
-          }
-          
-          // Remove active class from all buttons and panels
-          tabButtons.forEach(btn => {
-            if (!btn.disabled) {
-              btn.classList.remove('active');
-            }
-          });
-          
-          tabPanels.forEach(panel => {
-            panel.classList.add('hidden');
-            panel.classList.remove('active');
-          });
-          
-          // Add active class to clicked button and corresponding panel
-          button.classList.add('active');
-          
-          const targetPanel = document.getElementById(targetTab);
-          if (targetPanel) {
-            targetPanel.classList.remove('hidden');
-            targetPanel.classList.add('active');
 
-            // Mobil: scrolla till innehållet så flikbytet syns (hero/sidebar täcker annars vyn)
-            if (window.matchMedia('(max-width: 767px)').matches) {
-              const scrollTarget = document.querySelector('.tab-content') || targetPanel;
-              requestAnimationFrame(() => {
-                scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              });
-            }
+      function setActiveTab(targetTab, sourceButton) {
+        if (!targetTab) return;
+        if (sourceButton && sourceButton.disabled) return;
+
+        tabButtons.forEach((btn) => {
+          const btnTab = btn.getAttribute('data-tab');
+          if (!btnTab) return;
+          if (!btn.disabled) btn.classList.remove('active');
+          if (btnTab === targetTab && !btn.disabled) btn.classList.add('active');
+        });
+
+        tabPanels.forEach((panel) => {
+          panel.classList.add('hidden');
+          panel.classList.remove('active');
+        });
+
+        const targetPanel = document.getElementById(targetTab);
+        if (targetPanel) {
+          targetPanel.classList.remove('hidden');
+          targetPanel.classList.add('active');
+
+          if (window.matchMedia('(max-width: 767px)').matches) {
+            const scrollTarget = document.querySelector('.tab-content') || targetPanel;
+            requestAnimationFrame(() => {
+              scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
           }
-          
-          // Load leaderboard data when leaderboard tab is clicked
-          if (targetTab === 'leaderboard') {
-            fetchSeasonLeaderboard();
-            fetchSeasonTeamLeaderboard();
-            fetchLeagueLeaderboard();
-            loadSeriesLeaders();
-            fetchWeeklyFunStats();
-          } else if (targetTab === 'games') {
-            fetchCrossDinoHighscores();
-            loadQuizHighscores();
-          } else if (targetTab === 'leagues') {
-            loadMyLeagues();
-          } else if (targetTab === 'season-team') {
-            fetchSeasonTeamStats();
-          }
+        }
+
+        if (targetTab === 'leaderboard') {
+          fetchSeasonLeaderboard();
+          fetchSeasonTeamLeaderboard();
+          fetchLeagueLeaderboard();
+          loadSeriesLeaders();
+          fetchWeeklyFunStats();
+        } else if (targetTab === 'games') {
+          fetchCrossDinoHighscores();
+          loadQuizHighscores();
+        } else if (targetTab === 'leagues') {
+          loadMyLeagues();
+        } else if (targetTab === 'season-team') {
+          fetchSeasonTeamStats();
+        }
+
+        if (sourceButton && sourceButton.closest('.home-drawer-pages')) {
+          setHomeMenuOpen(false);
+        }
+      }
+
+      tabButtons.forEach((button) => {
+        button.addEventListener('click', (e) => {
+          const targetTab = button.getAttribute('data-tab');
+          if (!targetTab) return; // e.g. Manual link
+          e.preventDefault();
+          setActiveTab(targetTab, button);
         });
       });
 
       // Deep-link: /#games, /#leagues, /#season-team, etc.
       const hashTab = (location.hash || '').replace(/^#/, '');
       if (hashTab) {
-        const hashBtn = document.querySelector(`.tab-btn[data-tab="${hashTab}"]`);
-        if (hashBtn && !hashBtn.disabled) {
-          hashBtn.click();
-        }
+        const hashBtn = document.querySelector(`.tab-btn[data-tab="${hashTab}"]:not([disabled])`);
+        if (hashBtn) hashBtn.click();
       }
     }
 
@@ -5955,6 +6011,7 @@
       window.addEventListener('resize', () => {
         if (window.matchMedia('(min-width: 640px)').matches) setHomeMenuOpen(false);
       });
+      if (window.__MX_LOGGED_IN__) loadWelcomeLatestRace();
 
       if (window.__MX_DEBUG_PERF__) {
         const nav = performance.getEntriesByType('navigation')[0];
