@@ -153,6 +153,47 @@ def create_app() -> Flask:
 			"Disallow: /admin\n"
 			"Disallow: /api/\n"
 			f"Sitemap: {base}/sitemap.xml\n"
+			f"# AI agents: {base}/llms.txt\n"
+		)
+		resp = make_response(body)
+		resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+		return resp
+
+	@app.get("/llms.txt")
+	def llms_txt():
+		"""Curated reading list for AI agents."""
+		from flask import make_response
+		from public_url import get_public_base_url
+
+		base = get_public_base_url()
+		fb = (
+			os.getenv("FACEBOOK_PAGE_URL")
+			or "https://www.facebook.com/profile.php?id=61586769893903"
+		)
+		body = (
+			"# MX Fantasy League\n"
+			"\n"
+			"> Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard "
+			"i SX, MX, SMX och WSX — ligor, poäng och leaderboard utan betting.\n"
+			"\n"
+			"Officiell webbplats: https://mx-fantasy.se\n"
+			"\n"
+			"## Viktiga sidor\n"
+			f"- [Startsida]({base}/): tippa race, topplista och spelöversikt\n"
+			f"- [Om spelet]({base}/om): vad MX Fantasy League är, hur tippning fungerar, FAQ\n"
+			f"- [Tippa supercross]({base}/tippa-supercross): tippa AMA Supercross / SX gratis\n"
+			f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
+			f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
+			f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
+			f"- [Registrera]({base}/register): gratis konto\n"
+			"\n"
+			"## Kort fakta\n"
+			"- Namn: MX Fantasy League (även MX Fantasy)\n"
+			"- Språk: svenska\n"
+			"- Kostnad: gratis, ingen betting\n"
+			"- Serier: SX, MX, SMX, WSX\n"
+			f"- Sitemap: {base}/sitemap.xml\n"
+			f"- Facebook: {fb}\n"
 		)
 		resp = make_response(body)
 		resp.headers["Content-Type"] = "text/plain; charset=utf-8"
@@ -196,6 +237,11 @@ def create_app() -> Flask:
     <loc>{base}/manual</loc>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>{base}/llms.txt</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
   <url>
     <loc>{base}/register</loc>

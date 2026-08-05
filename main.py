@@ -601,6 +601,35 @@ def google_site_verification():
     return resp
 
 
+def _llms_txt_body(base: str) -> str:
+    """Curated site map for AI agents / coding tools that fetch /llms.txt."""
+    return (
+        "# MX Fantasy League\n"
+        "\n"
+        "> Gratis fantasy motocross-spel i Sverige. Tippa topp 6, holeshot och wildcard "
+        "i SX, MX, SMX och WSX — ligor, poäng och leaderboard utan betting.\n"
+        "\n"
+        "Officiell webbplats: https://mx-fantasy.se\n"
+        "\n"
+        "## Viktiga sidor\n"
+        f"- [Startsida]({base}/): tippa race, topplista och spelöversikt\n"
+        f"- [Om spelet]({base}/om): vad MX Fantasy League är, hur tippning fungerar, FAQ\n"
+        f"- [Tippa supercross]({base}/tippa-supercross): tippa AMA Supercross / SX gratis\n"
+        f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
+        f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
+        f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
+        f"- [Registrera]({base}/register): gratis konto\n"
+        "\n"
+        "## Kort fakta\n"
+        "- Namn: MX Fantasy League (även MX Fantasy)\n"
+        "- Språk: svenska\n"
+        "- Kostnad: gratis, ingen betting\n"
+        "- Serier: SX, MX, SMX, WSX\n"
+        f"- Sitemap: {base}/sitemap.xml\n"
+        f"- Facebook: {os.getenv('FACEBOOK_PAGE_URL') or 'https://www.facebook.com/profile.php?id=61586769893903'}\n"
+    )
+
+
 @app.get("/robots.txt")
 def robots_txt():
     """Tell search engines which pages to crawl."""
@@ -613,8 +642,19 @@ def robots_txt():
         "Disallow: /admin\n"
         "Disallow: /api/\n"
         f"Sitemap: {base}/sitemap.xml\n"
+        f"# AI agents: {base}/llms.txt\n"
     )
     resp = make_response(body)
+    resp.headers["Content-Type"] = "text/plain; charset=utf-8"
+    return resp
+
+
+@app.get("/llms.txt")
+def llms_txt():
+    """Curated reading list for AI agents (optional; complements sitemap)."""
+    from flask import make_response
+
+    resp = make_response(_llms_txt_body(get_public_base_url()))
     resp.headers["Content-Type"] = "text/plain; charset=utf-8"
     return resp
 
@@ -634,6 +674,7 @@ def sitemap_xml():
         ("/tippa-motocross", "weekly", "0.9"),
         ("/start", "weekly", "0.9"),
         ("/manual", "monthly", "0.85"),
+        ("/llms.txt", "monthly", "0.4"),
         ("/register", "monthly", "0.7"),
         ("/login", "monthly", "0.5"),
         ("/privacy", "yearly", "0.3"),
