@@ -1542,10 +1542,10 @@
     .home-sidebar-foot__btn {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 0.45rem;
       width: 100%;
-      padding: 0.55rem 0.75rem;
+      padding: 0.55rem 0.75rem 0.55rem 0.95rem;
       border-radius: 0.5rem;
       border: 1px solid #2a3548;
       background: #1a2436;
@@ -1553,6 +1553,7 @@
       font-weight: 600;
       color: #cbd5e1;
       text-decoration: none;
+      text-align: left;
       cursor: pointer;
       transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
     }
@@ -1609,6 +1610,12 @@
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
+    }
+    .home-sidebar-guest-actions .home-sidebar-foot__btn {
+      justify-content: center;
+      text-align: center;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
     }
 
     .home-sidebar .mx-brand {
@@ -2331,10 +2338,6 @@
             </div>
 
             <nav class="home-sidebar-nav" aria-label="Snabbnavigering">
-              <a href="{{ url_for('leagues_page') }}" class="home-sidebar-nav__link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10l1 7H6l1-7zM9 11v3M15 11v3"/></svg>
-                Liga
-              </a>
               <button type="button" id="invite-friend-btn" onclick="openInviteShare();" class="home-sidebar-nav__link">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
                 Bjud in vänner
