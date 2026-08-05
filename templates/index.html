@@ -709,7 +709,11 @@
     .readonly-mode .tab-btn[data-tab="leaderboard"],
     .readonly-mode .tab-btn[data-tab="games"],
     .readonly-mode a.tab-btn[href*="manual"],
-    .readonly-mode #expand-leaderboard-btn {
+    .readonly-mode #expand-leaderboard-btn,
+    .readonly-mode #home-menu-open,
+    .readonly-mode #home-menu-close,
+    .readonly-mode .home-sidebar-body button,
+    .readonly-mode .home-sidebar-body a {
       opacity: 1 !important;
       pointer-events: auto !important;
       cursor: pointer !important;
@@ -1074,7 +1078,7 @@
         align-self: flex-start;
       }
     }
-    /* Mobil: logo → flikar → race-hero → profil/nav (race syns utan scroll) */
+    /* Mobil: logo+meny → flikar → race-hero (sidomeny i drawer via ⋮) */
     @media (max-width: 639px) {
       .home-header-stack {
         display: flex;
@@ -1084,10 +1088,9 @@
       .home-header-stack .home-sidebar {
         display: contents;
       }
-      .home-header-stack .mx-brand {
+      .home-header-stack .home-brand-row {
         order: 1;
         margin: 0 0 0.65rem;
-        text-align: left;
       }
       .home-header-stack .home-tabs {
         order: 2;
@@ -1097,9 +1100,134 @@
         order: 3;
         margin-bottom: 0.85rem;
       }
+      /* Sidomeny ligger i drawer — inte i scrollflödet */
       .home-header-stack .home-sidebar-body {
-        order: 4;
+        order: unset;
+        margin-bottom: 0;
+      }
+    }
+    .home-brand-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .home-brand-row .mx-brand {
+      margin: 0;
+      text-align: left;
+    }
+    .home-menu-btn {
+      display: none;
+      flex-shrink: 0;
+      width: 2.5rem;
+      height: 2.5rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.65rem;
+      border: 1px solid #2a3548;
+      background: #1a2436;
+      color: #e2e8f0;
+      cursor: pointer;
+      margin-top: 0.15rem;
+    }
+    .home-menu-btn:hover,
+    .home-menu-btn[aria-expanded="true"] {
+      border-color: rgba(34, 211, 238, 0.45);
+      background: #222e42;
+      color: #fff;
+    }
+    .home-menu-btn__dots {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      align-items: center;
+    }
+    .home-menu-btn__dots span {
+      width: 4px;
+      height: 4px;
+      border-radius: 9999px;
+      background: currentColor;
+    }
+    .home-menu-backdrop {
+      display: none;
+    }
+    @media (max-width: 639px) {
+      .home-menu-btn {
+        display: inline-flex;
+      }
+      .home-menu-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        background: rgba(2, 6, 16, 0.62);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+      body.home-menu-open .home-menu-backdrop {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .home-sidebar-body {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 90;
+        width: min(20rem, 88vw);
+        margin: 0 !important;
+        padding: 1rem 0.9rem 1.25rem;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        background: #141c2c;
+        border-left: 1px solid #2a3548;
+        box-shadow: -18px 0 40px rgba(0, 0, 0, 0.45);
+        transform: translateX(105%);
+        transition: transform 0.22s ease;
+        pointer-events: none;
+        visibility: hidden;
+      }
+      body.home-menu-open .home-sidebar-body {
+        transform: translateX(0);
+        pointer-events: auto;
+        visibility: visible;
+      }
+      .home-sidebar-body .home-sidebar-card {
+        margin-top: 0.35rem;
+      }
+      .home-menu-drawer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
         margin-bottom: 0.75rem;
+        padding: 0.15rem 0.15rem 0.75rem;
+        border-bottom: 1px solid #2a3548;
+      }
+      .home-menu-drawer-head__title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+      .home-menu-close {
+        width: 2.25rem;
+        height: 2.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.55rem;
+        border: 1px solid #2a3548;
+        background: #1a2436;
+        color: #cbd5e1;
+        font-size: 1.35rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+    }
+    @media (min-width: 640px) {
+      .home-menu-drawer-head {
+        display: none;
       }
     }
     .home-sidebar {
@@ -2078,22 +2206,39 @@
 
         <div class="home-page-shell relative z-30">
           <aside class="home-sidebar">
-            <h1 class="mx-brand" aria-label="MX Fantasy League">
-              <span class="mx-brand__skew">
-                <span class="mx-brand__mx">MX</span>
-                <span class="mx-brand__aside">
-                  <span class="mx-brand__frame">
-                    <span class="mx-brand__frame-border-bottom" aria-hidden="true"></span>
-                    <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
-                    <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
-                    <span class="mx-brand__fantasy">Fantasy</span>
-                    <span class="mx-brand__league">League</span>
+            <div class="home-brand-row">
+              <h1 class="mx-brand" aria-label="MX Fantasy League">
+                <span class="mx-brand__skew">
+                  <span class="mx-brand__mx">MX</span>
+                  <span class="mx-brand__aside">
+                    <span class="mx-brand__frame">
+                      <span class="mx-brand__frame-border-bottom" aria-hidden="true"></span>
+                      <span class="mx-brand__tick mx-brand__tick--top" aria-hidden="true"></span>
+                      <span class="mx-brand__tick mx-brand__tick--bot" aria-hidden="true"></span>
+                      <span class="mx-brand__fantasy">Fantasy</span>
+                      <span class="mx-brand__league">League</span>
+                    </span>
                   </span>
                 </span>
-              </span>
-            </h1>
+              </h1>
+              <button
+                type="button"
+                id="home-menu-open"
+                class="home-menu-btn"
+                aria-label="Öppna meny"
+                aria-expanded="false"
+                aria-controls="home-sidebar-body"
+              >
+                <span class="home-menu-btn__dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              </button>
+            </div>
 
-            <div class="home-sidebar-body">
+            <div id="home-menu-backdrop" class="home-menu-backdrop" aria-hidden="true"></div>
+            <div class="home-sidebar-body" id="home-sidebar-body">
+            <div class="home-menu-drawer-head">
+              <span class="home-menu-drawer-head__title">Meny</span>
+              <button type="button" id="home-menu-close" class="home-menu-close" aria-label="Stäng meny">×</button>
+            </div>
             {% if is_logged_in %}
             <div class="home-sidebar-card">
               <a href="{{ url_for('profile_page') }}" class="home-sidebar-profile">
@@ -2283,7 +2428,7 @@
                     <span class="text-sm font-extrabold text-white">Ny här? Skaffa Pit Pass</span>
                     <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Gratis</span>
                   </div>
-                  <p class="mt-0.5 truncate text-xs text-slate-300">Har du konto? Logga in uppe vid logotypen</p>
+                  <p class="mt-0.5 truncate text-xs text-slate-300">Har du konto? Öppna menyn ⋮ uppe till höger</p>
                 </div>
                 <svg class="h-5 w-5 flex-shrink-0 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
               </div>
@@ -5764,7 +5909,44 @@
       return res;
     }
 
+    function setHomeMenuOpen(open) {
+      const btn = document.getElementById('home-menu-open');
+      const backdrop = document.getElementById('home-menu-backdrop');
+      const isOpen = Boolean(open);
+      document.body.classList.toggle('home-menu-open', isOpen);
+      if (btn) btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (backdrop) backdrop.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      document.body.style.overflow = isOpen ? 'hidden' : '';
+    }
+
+    function toggleHomeMenu() {
+      setHomeMenuOpen(!document.body.classList.contains('home-menu-open'));
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
+      const openBtn = document.getElementById('home-menu-open');
+      const closeBtn = document.getElementById('home-menu-close');
+      const backdrop = document.getElementById('home-menu-backdrop');
+      const drawer = document.getElementById('home-sidebar-body');
+      openBtn?.addEventListener('click', toggleHomeMenu);
+      closeBtn?.addEventListener('click', () => setHomeMenuOpen(false));
+      backdrop?.addEventListener('click', () => setHomeMenuOpen(false));
+      drawer?.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!(t instanceof Element)) return;
+        // Stäng efter navigering / login / logout / invite
+        if (t.closest('a, button')) {
+          // Behåll öppen om man bara klickar inne i tom yta — knappar/länkar stänger
+          setTimeout(() => setHomeMenuOpen(false), 80);
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setHomeMenuOpen(false);
+      });
+      window.addEventListener('resize', () => {
+        if (window.matchMedia('(min-width: 640px)').matches) setHomeMenuOpen(false);
+      });
+
       if (window.__MX_DEBUG_PERF__) {
         const nav = performance.getEntriesByType('navigation')[0];
         if (nav) {
