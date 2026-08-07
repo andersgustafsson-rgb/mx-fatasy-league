@@ -979,6 +979,47 @@ def _next_competition_for_picks(
     return None
 
 
+def _next_competition_for_pick_reminders() -> Competition | None:
+    """
+    Nästa race för picks-påminnelse-mail — inkl. WSX.
+    Väljer snartaste start bland race utan resultat; föredrar öppna picks.
+    """
+    from datetime import datetime
+
+    today = get_today()
+    comps = (
+        Competition.query
+        .filter(Competition.event_date.isnot(None))
+        .filter(Competition.event_date >= today)
+        .all()
+    )
+    usable: list[Competition] = []
+    for comp in comps:
+        if CompetitionResult.query.filter_by(competition_id=comp.id).first():
+            continue
+        usable.append(comp)
+    if not usable:
+        return None
+
+    unlocked = [c for c in usable if not is_picks_locked(c)]
+    pool = unlocked or usable
+
+    def _start_key(c: Competition):
+        try:
+            sched = _competition_race_schedule(c)
+            utc = sched.get("race_datetime_utc")
+        except Exception:
+            utc = None
+        if utc is None:
+            utc = datetime.combine(c.event_date, datetime.max.time())
+        # Same calendar day: prefer WSX (e.g. Canadian GP over an AMA national)
+        series_rank = 0 if (getattr(c, "series", None) or "").upper() == "WSX" else 1
+        return (c.event_date, series_rank, utc)
+
+    pool.sort(key=_start_key)
+    return pool[0]
+
+
 def _home_primary_competition(*, require_open: bool = False) -> Competition | None:
     """Homepage default race: AMA chain SX → MX → SMX. WSX is opt-in via series card."""
     for series_code in ("SX", "MX", "SMX"):
@@ -13844,19 +13885,7 @@ def get_next_competition():
 
             return deadline_utc_naive.strftime("%Y-%m-%d %H:%M UTC")
 
-        today = get_today()
-        next_comp = (
-            Competition.query
-            .filter(Competition.event_date >= today)
-            .filter(
-                db.or_(
-                    Competition.series.is_(None),
-                    Competition.series != 'WSX'
-                )
-            )
-            .order_by(Competition.event_date)
-            .first()
-        )
+        next_comp = _next_competition_for_pick_reminders()
         
         if not next_comp:
             return jsonify({
@@ -13874,6 +13903,7 @@ def get_next_competition():
             "competition": {
                 "id": next_comp.id,
                 "name": next_comp.name,
+                "series": next_comp.series,
                 "event_date": str(next_comp.event_date) if next_comp.event_date else None,
                 "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None,
                 "pick_deadline_stockholm": _pick_deadline_stockholm_str(next_comp),
@@ -13898,20 +13928,8 @@ def send_pick_reminders():
         
         print(f"DEBUG: send_pick_reminders - Received user_emails: {selected_emails}")
         
-        # Get next upcoming competition
-        today = get_today()
-        next_comp = (
-            Competition.query
-            .filter(Competition.event_date >= today)
-            .filter(
-                db.or_(
-                    Competition.series.is_(None),
-                    Competition.series != 'WSX'
-                )
-            )
-            .order_by(Competition.event_date)
-            .first()
-        )
+        # Nästa race inkl. WSX (snartaste start / öppna picks)
+        next_comp = _next_competition_for_pick_reminders()
         
         if not next_comp:
             return jsonify({"error": "No upcoming competition found"}), 404
