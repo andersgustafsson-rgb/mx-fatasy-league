@@ -306,9 +306,10 @@
     const back = $('wizard-btn-back');
     const editPicks = $('wizard-btn-edit-picks');
     const label = $('wizard-step-label');
+    const complete = isPicksFullyComplete();
 
     const onCompleteOverview =
-      currentStep === 3 && isPicksFullyComplete() && step3ShowingSummary;
+      currentStep === 3 && complete && step3ShowingSummary;
 
     if (onCompleteOverview) {
       if (back) {
@@ -326,10 +327,22 @@
       back.textContent = '← Tillbaka';
       back.setAttribute('aria-label', 'Tillbaka till föregående steg');
       back.disabled = currentStep <= 1;
+      // Redigeringsläge: bakåt = holeshot → SX2 → SX1
+      back.classList.toggle('wizard-nav__btn--edit', complete && !step3ShowingSummary);
     }
 
     if (label) {
-      if (currentStep === 3 && isPicksFullyComplete()) {
+      if (complete && !step3ShowingSummary) {
+        if (currentStep === 3) {
+          label.textContent = cfg.isWSX
+            ? 'Redigera holeshot'
+            : 'Redigera holeshot & wildcard';
+        } else if (currentStep === 2) {
+          label.textContent = `Redigera ${cfg.label250}`;
+        } else {
+          label.textContent = `Redigera ${cfg.label450}`;
+        }
+      } else if (currentStep === 3 && complete) {
         label.textContent = cfg.isWSX
           ? 'Redigera holeshot'
           : 'Redigera holeshot & wildcard';
@@ -339,15 +352,46 @@
     }
   }
 
+  function syncBonusSelectorsFromHidden() {
+    const mapOne = (dataClass, hiddenId) => {
+      const hidden = $(hiddenId);
+      const sel = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+      if (!hidden || !sel) return;
+      const rid = String(hidden.value || '').trim();
+      const span = sel.querySelector('.selected-rider');
+      if (!rid) {
+        if (span) span.textContent = '-- välj förare --';
+        delete sel.dataset.selectedRiderId;
+        return;
+      }
+      sel.dataset.selectedRiderId = rid;
+      const rider = riderById(Number(rid));
+      if (span) {
+        span.textContent = rider
+          ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand || ''})`
+          : `#${rid}`;
+      }
+    };
+    mapOne('holeshot-450', 'holeshot-450');
+    mapOne('holeshot-250', 'holeshot-250');
+    if (!cfg.isWSX) {
+      mapOne('wildcard-pick', 'wildcard-pick');
+    }
+  }
+
   function enterStep3BonusEdit() {
     if (typeof window.ensureWizardDropdownsReady === 'function') {
       window.ensureWizardDropdownsReady();
     }
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
-    const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
+    syncBonusSelectorsFromHidden();
+    // Visa holeshot-formulären direkt (inte ihopfälld summary)
+    const forms = $('wizard-step-3-forms');
+    const panel = forms?.querySelector('.wizard-adjust-panel');
     if (panel) panel.open = true;
-    $('wizard-step-3-forms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    forms?.classList.add('is-editing');
+    forms?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     updateNavButtons();
     if (typeof window.updateSaveButtonVisibility === 'function') {
       window.updateSaveButtonVisibility();
@@ -524,7 +568,12 @@
 
   function bindNav() {
     $('wizard-btn-back')?.addEventListener('click', () => {
-      if (currentStep > 1) showStep(currentStep - 1);
+      if (currentStep <= 1) return;
+      // Från holeshot-redigering bakåt till SX2/SX1 — behåll valen
+      if (currentStep === 3) {
+        step3ShowingSummary = false;
+      }
+      showStep(currentStep - 1);
     });
 
     $('wizard-btn-edit-picks')?.addEventListener('click', () => {
@@ -741,9 +790,9 @@
     el.className =
       'wizard-picks-summary' +
       (complete ? ' is-complete' : '') +
-      (showFullSummary ? ' is-overview' : ' is-bonus-focus');
-    el.innerHTML = showFullSummary
-      ? `
+      (showFullSummary ? ' is-overview' : complete ? ' is-edit-hint' : ' is-bonus-focus');
+    if (showFullSummary) {
+      el.innerHTML = `
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
         <div class="wizard-summary-grid">
@@ -751,19 +800,28 @@
           ${columnHtml('250', cfg.class250, cfg.label250, '250')}
         </div>
         <div class="wizard-summary-extras">${extras}</div>
-      </div>`
-      : '';
-
-    if (showFullSummary) {
+      </div>`;
       hydrateSummaryPortraits(el);
+    } else if (complete) {
+      // Redigeringsläge: topp 6 finns kvar — guida bakåt genom wizarden
+      const backHint = isEn()
+        ? `Your top 6 are kept. Edit holeshot here, or tap Back to change ${cfg.label250} then ${cfg.label450}.`
+        : `Dina topp 6 behålls. Justera holeshot här, eller tryck Tillbaka för att ändra ${cfg.label250} och sedan ${cfg.label450}.`;
+      el.innerHTML = `<div class="wizard-edit-hint">${mxIcon('edit')} ${backHint}</div>`;
+    } else {
+      el.innerHTML = '';
     }
 
     if (step3) {
       step3.classList.toggle('wizard-step--complete', complete);
       const heroP = step3.querySelector('.wizard-step-hero p');
       if (heroP) {
-        heroP.textContent = complete
+        heroP.textContent = complete && step3ShowingSummary
           ? tPick('picks.draft_ready', 'Klart! Utkast sparat — lämna in med knappen nedan när du vill.')
+          : complete && !step3ShowingSummary
+            ? (isEn()
+                ? 'Edit holeshot, or go Back to change your top 6.'
+                : 'Justera holeshot, eller gå Tillbaka för att ändra topp 6.')
           : cfg.isWSX
             ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
             : (isEn()
@@ -797,6 +855,7 @@
           panel.remove();
         }
         forms.classList.remove('is-collapsed');
+        forms.classList.remove('is-editing');
       }
     }
   }

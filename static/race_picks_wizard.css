@@ -349,9 +349,32 @@
   background: rgba(120, 53, 15, 0.55);
 }
 
-.wizard-picks-summary.is-editing,
 .wizard-picks-summary.is-bonus-focus {
   display: none;
+}
+
+.wizard-picks-summary.is-edit-hint {
+  display: block;
+  margin: 0 0 0.85rem;
+}
+
+.wizard-edit-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  background: rgba(8, 51, 68, 0.55);
+  color: #a5f3fc;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.wizard-edit-hint .mx-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 
 .wizard-step-3-forms.is-editing .wizard-adjust-panel summary {
