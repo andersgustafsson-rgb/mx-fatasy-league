@@ -1875,8 +1875,10 @@ def sync_wsx_canadian_gp_entry_list() -> dict:
         return {"skipped": True, "reason": "no_canadian_gp"}
 
     gate = _WSX_CANADIAN_GP_SX1 | _WSX_CANADIAN_GP_SX2
+    gate_lower = {n.lower() for n in gate}
     marked_out = 0
     cleared = 0
+    cleared_stray = 0
 
     roster_riders = (
         Rider.query.filter(
@@ -1907,7 +1909,26 @@ def sync_wsx_canadian_gp_entry_list() -> dict:
             row.status = "OUT"
             marked_out += 1
 
-    if marked_out or cleared:
+    # AMA/SX-rader med samma namn får inte ligga som OUT på WSX-GP
+    # (tippa mappade tidigare OUT via namn och gömde t.ex. Cameron McAdoo).
+    for row in list(
+        CompetitionRiderStatus.query.filter_by(
+            competition_id=comp.id, status="OUT"
+        ).all()
+    ):
+        rider = Rider.query.get(row.rider_id)
+        if not rider:
+            db.session.delete(row)
+            cleared_stray += 1
+            continue
+        cls = (rider.class_name or "")
+        if cls in ("wsx_sx1", "wsx_sx2"):
+            continue
+        if (rider.name or "").strip().lower() in gate_lower:
+            db.session.delete(row)
+            cleared_stray += 1
+
+    if marked_out or cleared or cleared_stray:
         db.session.commit()
 
     try:
@@ -1920,11 +1941,12 @@ def sync_wsx_canadian_gp_entry_list() -> dict:
         "gate_size": len(gate),
         "marked_out": marked_out,
         "cleared": cleared,
+        "cleared_stray_ama_out": cleared_stray,
         "skipped": False,
     }
     print(
         f"[WSX-SEED] Canadian GP entry list: out={marked_out} cleared={cleared} "
-        f"gate={len(gate)} comp_id={comp.id}"
+        f"stray={cleared_stray} gate={len(gate)} comp_id={comp.id}"
     )
     return info
 
@@ -9727,7 +9749,9 @@ def race_picks_page(competition_id):
             db.session.rollback()
         riders_450 = wsx_roster_query("wsx_sx1").order_by(Rider.rider_number).all()
         riders_250 = wsx_roster_query("wsx_sx2").order_by(Rider.rider_number).all()
-        # Orphan OUT (fel rider_id / gammal klass) → mappa till tippa-roster via namn
+        # Orphan OUT (fel rider_id / gammal WSX-klass) → mappa till tippa-roster via namn.
+        # Viktigt: mappa ALDRIG AMA 250cc/450cc OUT hit (t.ex. "Cameron Mcadoo" 250cc
+        # får inte gömma WSX "Cameron McAdoo").
         tippa_by_name = {
             (r.name or "").strip().lower(): r.id for r in (riders_450 + riders_250)
         }
@@ -9737,6 +9761,8 @@ def race_picks_page(competition_id):
                 continue
             orphan = Rider.query.get(oid)
             if not orphan:
+                continue
+            if (orphan.class_name or "") not in ("wsx_sx1", "wsx_sx2"):
                 continue
             mapped = tippa_by_name.get((orphan.name or "").strip().lower())
             if mapped:
