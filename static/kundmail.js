@@ -422,14 +422,69 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
+/** Collapse runaway blank lines (contenteditable/GTX often triples them). */
+function normalizeMailNewlines(text) {
+  return String(text ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\u200b/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd();
+}
+
+/**
+ * Serialize contenteditable without double-counting DIV + BR newlines.
+ * Chrome's innerText often turns one blank paragraph into \\n\\n\\n.
+ */
+function serializeBodyEditable(root) {
+  let out = "";
+  const isBlock = (tag) => /^(DIV|P|LI|H[1-6]|TR|SECTION|ARTICLE)$/.test(tag);
+
+  const walk = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += (node.nodeValue || "").replace(/\u00a0/g, " ");
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const tag = node.tagName;
+    if (tag === "BR") {
+      out += "\n";
+      return;
+    }
+    if (tag === "IMG") return;
+
+    const block = isBlock(tag);
+    const onlyBr =
+      block &&
+      node.childNodes.length === 1 &&
+      node.firstChild.nodeType === Node.ELEMENT_NODE &&
+      node.firstChild.tagName === "BR";
+
+    if (block && out && !out.endsWith("\n")) out += "\n";
+
+    if (onlyBr) {
+      // Empty visual line: one newline, not BR + block-end.
+      out += "\n";
+      return;
+    }
+
+    for (const child of node.childNodes) walk(child);
+    if (block && out && !out.endsWith("\n")) out += "\n";
+  };
+
+  for (const child of root.childNodes) walk(child);
+  return out;
+}
+
 function getBodyPlain() {
   if (!els.bodyOut) return "";
-  return (els.bodyOut.innerText || "").replace(/\u00a0/g, " ").trimEnd();
+  return normalizeMailNewlines(serializeBodyEditable(els.bodyOut));
 }
 
 function setBodyPlain(text) {
   if (!els.bodyOut) return;
-  const t = String(text ?? "");
+  const t = normalizeMailNewlines(text);
   els.bodyOut.innerHTML = escapeHtml(t).replace(/\n/g, "<br>");
 }
 
@@ -1856,23 +1911,6 @@ function forceGenerate() {
   generate({ force: true });
 }
 
-function splitTranslateChunks(text, maxLen = 3000) {
-  const t = cleanStr(text);
-  if (!t) return [];
-  if (t.length <= maxLen) return [t];
-  const parts = [];
-  let buf = "";
-  for (const block of t.split(/(\n\n+)/)) {
-    if (buf.length + block.length > maxLen && buf) {
-      parts.push(buf.trim());
-      buf = "";
-    }
-    buf += block;
-  }
-  if (buf.trim()) parts.push(buf.trim());
-  return parts;
-}
-
 async function gtxTranslateChunk(text, source, target) {
   const url = new URL("https://translate.googleapis.com/translate_a/single");
   url.searchParams.set("client", "gtx");
@@ -1888,14 +1926,22 @@ async function gtxTranslateChunk(text, source, target) {
 }
 
 async function translateTextGtx(text, source = "sv", target = "da") {
-  if (source === target) return cleanStr(text);
-  const chunks = splitTranslateChunks(text);
-  if (!chunks.length) return "";
+  const normalized = normalizeMailNewlines(text);
+  if (source === target) return cleanStr(normalized);
+  // Translate paragraph-by-paragraph so GTX cannot invent extra blank lines.
+  const parts = normalized.split(/(\n+)/);
   const out = [];
-  for (const chunk of chunks) {
-    out.push(await gtxTranslateChunk(chunk, source, target));
+  for (const part of parts) {
+    if (!part) continue;
+    if (/^\n+$/.test(part)) {
+      out.push(part.length >= 2 ? "\n\n" : "\n");
+      continue;
+    }
+    const translated = await gtxTranslateChunk(part, source, target);
+    // Single-line segments should stay single-line (GTX sometimes injects \\n).
+    out.push(String(translated || "").replace(/\s*\n+\s*/g, " ").replace(/\u200b/g, "").trim());
   }
-  return out.join("\n\n");
+  return normalizeMailNewlines(out.join(""));
 }
 
 async function refreshZendeskStatus() {
@@ -2073,7 +2119,7 @@ async function translateMailTo(targetLang) {
       throw new Error("Översättningen blev tom — försök igen.");
     }
 
-    els.subjectOut.value = subjectOut;
+    els.subjectOut.value = normalizeMailNewlines(subjectOut);
     setBodyPlain(bodyOut);
     if (els.language) els.language.value = targetLang;
     markOutputPristine();

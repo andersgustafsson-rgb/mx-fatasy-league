@@ -71,7 +71,10 @@ def translate_text(text: str, *, source: str, target: str) -> str:
     if source == target:
         return text
     chunks = _split_for_translation(text)
-    return "\n\n".join(_translate_chunk(chunk, source=source, target=target) for chunk in chunks).strip()
+    out = "\n\n".join(_translate_chunk(chunk, source=source, target=target) for chunk in chunks).strip()
+    # GTX/contenteditable kan tripla blankrader — behåll max en tom rad.
+    out = re.sub(r"\n{3,}", "\n\n", out.replace("\u200b", ""))
+    return out
 
 
 def translate_en_to_sv(text: str) -> str:
