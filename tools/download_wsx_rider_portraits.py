@@ -64,7 +64,7 @@ ROSTER_NAMES = {
     "Michael Hicks",
     "Brian Hsu",
     "Kyle Peters",
-    "Crockett Myers",
+    "Crockett Meyers",
     "Hector Assuncao",
     "Nico Koch",
     "Mike Alessi",
@@ -81,6 +81,7 @@ NAME_ALIASES = {
     "hector assunção": "Hector Assuncao",
     "hector assuncao": "Hector Assuncao",
     "cameron mcadoo": "Cameron McAdoo",
+    "crockett myers": "Crockett Meyers",
 }
 
 

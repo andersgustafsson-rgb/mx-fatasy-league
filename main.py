@@ -1301,7 +1301,7 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
 # price is a placeholder — WSX is tippa-only (no season-team).
 _WSX_2026_ROSTER = [
     # --- SX1 (Calgary line-up + season riders who may return later) ---
-    ("Jason Anderson", "wsx_sx1", 21, "Suzuki", "Pipes Motorsport Group"),
+    ("Jason Anderson", "wsx_sx1", 1, "Suzuki", "Pipes Motorsport Group"),
     ("Colt Nichols", "wsx_sx1", 45, "Suzuki", "Pipes Motorsport Group"),
     ("Jordi Tixier", "wsx_sx1", 911, "Yamaha", "Team GSM"),
     ("Maxime Desprey", "wsx_sx1", 141, "Yamaha", "Team GSM"),
@@ -1316,24 +1316,24 @@ _WSX_2026_ROSTER = [
     ("Vince Friese", "wsx_sx1", 719, "Stark", "Stark Racing"),
     ("Jorge Zaragoza", "wsx_sx1", 99, "Stark", "Stark Racing"),
     ("Greg Aranda", "wsx_sx1", 20, "KTM", "595 Racing"),
-    ("Kevin Moranz", "wsx_sx1", 89, "KTM", "595 Racing"),
+    ("Kevin Moranz", "wsx_sx1", 78, "KTM", "595 Racing"),
     # Season / later rounds (OUT for Calgary if not on gate)
     ("Joey Savatgy", "wsx_sx1", 17, "Honda", "Quad Lock Honda"),
     ("Enzo Lopes", "wsx_sx1", 16, "Honda", "MotoConcepts Racing"),
     # --- SX2 Calgary line-up ---
     ("Max Anstie", "wsx_sx2", 1, "Honda", "Fire Power Honda"),
     ("Devin Simonson", "wsx_sx2", 70, "Honda", "Fire Power Honda"),
-    ("Crockett Myers", "wsx_sx2", 112, "Suzuki", "Pipes Motorsport Group"),
+    ("Crockett Meyers", "wsx_sx2", 411, "Suzuki", "Pipes Motorsport Group"),
     ("Kyle Peters", "wsx_sx2", 110, "Suzuki", "Pipes Motorsport Group"),
     ("Cole Thompson", "wsx_sx2", 16, "Yamaha", "Team GSM"),
-    ("Calvin Fonvieille", "wsx_sx2", 111, "Yamaha", "Team GSM"),
+    ("Calvin Fonvieille", "wsx_sx2", 11, "Yamaha", "Team GSM"),
     ("Henry Miller", "wsx_sx2", 29, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Jack Chambers", "wsx_sx2", 69, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Ryan Breece", "wsx_sx2", 200, "Honda", "MotoConcepts Racing"),
     ("Robbie Wageman", "wsx_sx2", 237, "Honda", "MotoConcepts Racing"),
     ("Cameron McAdoo", "wsx_sx2", 142, "Honda", "KMG"),
     ("Brodie Connolly", "wsx_sx2", 88, "Honda", "KMG"),
-    ("Michael Hicks", "wsx_sx2", 46, "Stark", "Stark Racing"),
+    ("Michael Hicks", "wsx_sx2", 460, "Stark", "Stark Racing"),
     ("Brian Hsu", "wsx_sx2", 81, "Stark", "Stark Racing"),
     ("Nico Koch", "wsx_sx2", 260, "KTM", "595 Racing"),
     ("Luke Fauser", "wsx_sx2", 462, "KTM", "595 Racing"),
@@ -1366,7 +1366,7 @@ _WSX_CANADIAN_GP_SX1 = {
 _WSX_CANADIAN_GP_SX2 = {
     "Max Anstie",
     "Devin Simonson",
-    "Crockett Myers",
+    "Crockett Meyers",
     "Kyle Peters",
     "Cole Thompson",
     "Calvin Fonvieille",
@@ -1687,7 +1687,7 @@ def _repair_orphaned_wsx_p1_results() -> dict:
 
 def _dedupe_wsx_roster_riders() -> dict:
     """
-    Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Myers som wsx_sx1 orphan
+    Ta bort felklassade/duplicerade WSX-rader (t.ex. Crockett Meyers som wsx_sx1 orphan
     medan tippa använder wsx_sx2 #411). Remappar OUT/picks till kanonisk rad.
     """
     merged = 0
@@ -5128,6 +5128,7 @@ def _wsx_portrait_slug(name: str | None) -> str:
 # Historical typos / alt spellings in DB → official roster name (portraits + display).
 _WSX_NAME_ALIASES = {
     "Jason Andersson": "Jason Anderson",
+    "Crockett Myers": "Crockett Meyers",
 }
 
 
@@ -5146,6 +5147,12 @@ def _wsx_portrait_name_candidates(name: str | None) -> list[str]:
     canon = _canonical_wsx_rider_name(raw)
     if canon and canon not in out:
         out.append(canon)
+    # Also try typo spellings that map TO this official name (legacy portrait files)
+    for typo, official in _WSX_NAME_ALIASES.items():
+        if official == raw and typo not in out:
+            out.append(typo)
+        if official == canon and typo not in out:
+            out.append(typo)
     return out
 
 
