@@ -158,11 +158,11 @@ def resolve_mx_trackmap_urls(competition_name: str) -> List[str]:
 
 
 def race_background_static_url(competition) -> Optional[str]:
-    """Background image path for url_for('static', filename=...) — MX or SX compressed."""
+    """Background image path for url_for('static', filename=...) — MX or SX/WSX compressed."""
     if not competition:
         return None
     name = getattr(competition, "name", None) or ""
-    series = getattr(competition, "series", None)
+    series = (getattr(competition, "series", None) or "").strip().upper()
 
     if is_mx_competition(competition):
         urls = resolve_mx_trackmap_urls(name)
@@ -174,15 +174,59 @@ def race_background_static_url(competition) -> Optional[str]:
         .replace("national", "")
         .replace("classic", "")
     )
+    candidates = [slug, name.lower().replace(" ", "")]
+    # WSX venues often stored as canadiangp.png / australian.jpg etc.
+    if series == "WSX":
+        lower = name.lower()
+        if "canadian" in lower or "calgary" in lower:
+            candidates.extend(["canadiangp", "canadian", "calgary"])
+        elif "british" in lower or "birmingham" in lower:
+            candidates.extend(["birmingham", "britishgp"])
+        elif "buenos" in lower:
+            candidates.extend(["buenosaireacitygp", "buenosaires"])
+        elif "australian" in lower:
+            candidates.extend(["australiangp", "australian"])
+        elif "south african" in lower or "southafrica" in lower.replace(" ", ""):
+            candidates.extend(["southafricangp", "southafrican"])
+        elif "swedish" in lower:
+            candidates.extend(["swedishgp", "swedish"])
+
     base = Path("static/trackmaps/compressed")
-    for cand in (slug, name.lower().replace(" ", "")):
-        if not cand:
+    seen: set[str] = set()
+    for cand in candidates:
+        if not cand or cand in seen:
             continue
+        seen.add(cand)
         for ext in (".jpg", ".png", ".webp", ".jpeg"):
             p = base / f"{cand}{ext}"
             if p.is_file():
                 return f"trackmaps/compressed/{cand}{ext}"
     return None
+
+
+def resolve_competition_hero_static_url(competition) -> Optional[str]:
+    """Hero image for emails / cards: DB CompetitionImage, else compressed fallback."""
+    if not competition:
+        return None
+    try:
+        from models import CompetitionImage
+
+        first = (
+            CompetitionImage.query.filter_by(competition_id=competition.id)
+            .order_by(CompetitionImage.sort_order)
+            .first()
+        )
+        url = (getattr(first, "image_url", None) or "").strip() if first else ""
+        if url:
+            if url.startswith("http://") or url.startswith("https://"):
+                return url
+            if (Path("static") / url).is_file():
+                return url
+            # Still return DB path — may exist on deploy even if missing locally
+            return url
+    except Exception:
+        pass
+    return race_background_static_url(competition)
 
 
 def as_trackmap_image_objects(urls: Sequence[str]) -> list[SimpleNamespace]:

@@ -134,6 +134,61 @@ def send_email(
         return False, error_msg
 
 
+def pick_reminder_race_copy(competition) -> dict:
+    """Display copy for picks-reminder (WSX gets extra hype)."""
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    name = (getattr(competition, "name", None) or "").strip() or "nästa race"
+    location = None
+    kicker = None
+    body_lead = None
+    display_name = name
+    subject = f"🏁 {name} — dags att sätta picks"
+    accent = "cyan"
+
+    if series == "WSX":
+        accent = "ember"
+        loc_map = {
+            "Canadian GP": "Calgary · McMahon Stadium",
+            "British GP": "Birmingham",
+            "Buenos Aires City GP": "Buenos Aires",
+            "Australian GP": "Australia",
+            "South African GP": "South Africa",
+            "Swedish GP": "Sweden",
+        }
+        location = loc_map.get(name)
+        display_name = f"WSX {name}"
+        if name == "Canadian GP":
+            kicker = "WORLD SUPERCROSS 2026 · ÖPPNINGSRUNDA"
+            location = location or "Calgary · McMahon Stadium"
+            display_name = "WSX Canadian GP"
+            subject = "🔥 WSX Calgary — dags att sätta picks"
+            body_lead = (
+                "Säsongen sparkar igång under McMahon-ljusen i Calgary — "
+                "tippa SX1 & SX2 topp 6 (+ holeshot) innan grinden droppar!"
+            )
+        else:
+            kicker = "WORLD SUPERCROSS 2026"
+            subject = f"🔥 WSX {name} — dags att sätta picks"
+            body_lead = (
+                f"Det är dags att tippa {display_name}"
+                + (f" ({location})" if location else "")
+                + " — SX1 & SX2 topp 6 + holeshot!"
+            )
+    else:
+        body_lead = f"Det är dags att sätta dina picks för {name}!"
+
+    return {
+        "series": series or None,
+        "name": name,
+        "display_name": display_name,
+        "location": location,
+        "kicker": kicker,
+        "body_lead": body_lead,
+        "subject": subject,
+        "accent": accent,
+    }
+
+
 def send_pick_reminder(
     user_email: str,
     user_name: str,
@@ -144,6 +199,13 @@ def send_pick_reminder(
     trackmap_url: Optional[str] = None,
     invite_url: Optional[str] = None,
     unsubscribe_url: Optional[str] = None,
+    *,
+    series: Optional[str] = None,
+    location: Optional[str] = None,
+    kicker: Optional[str] = None,
+    body_lead: Optional[str] = None,
+    subject: Optional[str] = None,
+    accent: Optional[str] = None,
 ) -> tuple[bool, Optional[str]]:
     """Send inviting picks-reminder email (dark gaming card style)."""
     html_content = build_pick_reminder_html(
@@ -155,11 +217,16 @@ def send_pick_reminder(
         trackmap_url=trackmap_url,
         invite_url=invite_url,
         unsubscribe_url=unsubscribe_url,
+        series=series,
+        location=location,
+        kicker=kicker,
+        body_lead=body_lead,
+        accent=accent,
     )
-    subject = f"🏁 {competition_name} — dags att sätta picks"
+    mail_subject = subject or f"🏁 {competition_name} — dags att sätta picks"
     return send_email(
         user_email,
-        subject,
+        mail_subject,
         html_content,
         list_unsubscribe_url=unsubscribe_url,
     )
@@ -175,6 +242,11 @@ def build_pick_reminder_html(
     trackmap_url: Optional[str] = None,
     invite_url: Optional[str] = None,
     unsubscribe_url: Optional[str] = None,
+    series: Optional[str] = None,
+    location: Optional[str] = None,
+    kicker: Optional[str] = None,
+    body_lead: Optional[str] = None,
+    accent: Optional[str] = None,
 ) -> str:
     """HTML for picks-reminder email / admin preview (table layout for clients)."""
     safe_name = html.escape(user_name or "du")
@@ -183,8 +255,26 @@ def build_pick_reminder_html(
     safe_picks_url = html.escape(competition_url or "", quote=True)
     safe_invite = html.escape(invite_url or "", quote=True) if invite_url else ""
     safe_unsub = html.escape(unsubscribe_url or "", quote=True) if unsubscribe_url else ""
+    safe_location = html.escape(location) if location else ""
+    safe_kicker = html.escape(kicker) if kicker else ""
+    safe_lead = html.escape(
+        body_lead
+        or f"Det är dags att sätta dina picks för {competition_name or 'nästa race'}!"
+    )
     logo_url = f"{base_url}/static/images/mx_fantasy_logo.png" if base_url else ""
     safe_logo = html.escape(logo_url, quote=True) if logo_url else ""
+
+    is_wsx = (accent or "").lower() == "ember" or (series or "").upper() == "WSX"
+    border = "#fb923c" if is_wsx else "#22d3ee"
+    glow = "rgba(251,146,60,0.28)" if is_wsx else "rgba(34,211,238,0.22)"
+    deadline_bg = "#3b1a0d" if is_wsx else "#083344"
+    deadline_border = "#fb923c" if is_wsx else "#22d3ee"
+    deadline_label = "#fdba74" if is_wsx else "#67e8f9"
+    cta_bg = "#ea580c" if is_wsx else "#22c55e"
+    cta_fg = "#fff7ed" if is_wsx else "#052e16"
+    cta_border = "#fdba74" if is_wsx else "#86efac"
+    cta_label = "TIPPA WSX NU 🔥" if is_wsx else "GÖR DINA PICKS NU 🏁"
+    header_bg = "#1a1020" if is_wsx else "#152033"
 
     logo_block = (
         f'<img src="{safe_logo}" alt="MX Fantasy League" width="160" '
@@ -198,30 +288,56 @@ def build_pick_reminder_html(
         safe_map = html.escape(trackmap_url, quote=True)
         hero_block = f"""
           <tr>
-            <td style="padding:0;line-height:0;font-size:0;">
+            <td style="padding:0;line-height:0;font-size:0;position:relative;">
               <img src="{safe_map}" alt="{safe_comp}" width="560"
                    style="display:block;width:100%;max-width:560px;height:auto;border:0;" />
             </td>
           </tr>
         """
 
+    kicker_block = ""
+    if safe_kicker:
+        kicker_color = "#fdba74" if is_wsx else "#67e8f9"
+        kicker_block = f"""
+              <p style="margin:0 0 10px;font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:{kicker_color};">
+                {safe_kicker}
+              </p>
+        """
+
+    location_block = ""
+    if safe_location:
+        location_block = f"""
+              <p style="margin:6px 0 0;font-size:15px;font-weight:600;color:#94a3b8;">
+                📍 {safe_location}
+              </p>
+        """
+
     invite_block = ""
     if invite_url:
+        invite_border = "rgba(251,146,60,0.45)" if is_wsx else "rgba(34,211,238,0.35)"
+        invite_title = "#fdba74" if is_wsx else "#67e8f9"
+        invite_btn = "#fdba74" if is_wsx else "#a5f3fc"
+        invite_btn_border = "rgba(251,146,60,0.55)" if is_wsx else "rgba(103,232,249,0.55)"
+        invite_copy = (
+            "Dra in en kompis i WSX-hypen — ju fler tippare, desto hetare."
+            if is_wsx
+            else "Tipsa någon — ju fler som spelar, desto hetare race."
+        )
         invite_block = f"""
           <tr>
             <td style="padding:8px 28px 6px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                     style="border-collapse:collapse;background:#0b1c2e;border:1px solid rgba(34,211,238,0.35);border-radius:14px;">
+                     style="border-collapse:collapse;background:#0b1c2e;border:1px solid {invite_border};border-radius:14px;">
                 <tr>
                   <td style="padding:18px 16px;text-align:center;">
-                    <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#67e8f9;">
+                    <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:{invite_title};">
                       BJUD IN EN KOMPIS
                     </p>
                     <p style="margin:0 0 14px;font-size:14px;line-height:1.5;color:#cbd5e1;">
-                      Tipsa någon — ju fler som spelar, desto hetare race.
+                      {invite_copy}
                     </p>
                     <a href="{safe_invite}"
-                       style="display:inline-block;background:transparent;color:#a5f3fc;padding:11px 22px;text-decoration:none;border-radius:999px;font-weight:700;font-size:13px;border:1px solid rgba(103,232,249,0.55);">
+                       style="display:inline-block;background:transparent;color:{invite_btn};padding:11px 22px;text-decoration:none;border-radius:999px;font-weight:700;font-size:13px;border:1px solid {invite_btn_border};">
                       Dela din inbjudan →
                     </a>
                     <p style="margin:12px 0 0;font-size:11px;color:#64748b;word-break:break-all;line-height:1.4;">
@@ -251,6 +367,12 @@ def build_pick_reminder_html(
               </p>
         """
 
+    prize_line = (
+        "Tippa SX1 & SX2 — holeshot kan ge dig kanten i öppningsrundan!"
+        if is_wsx
+        else "Tävla om exklusiva priser och visa att du är bäst!"
+    )
+
     return f"""<!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -263,10 +385,10 @@ def build_pick_reminder_html(
     <tr>
       <td align="center" style="padding:28px 14px;">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0"
-               style="border-collapse:collapse;width:100%;max-width:560px;background:#121820;border:1px solid #22d3ee;border-radius:18px;overflow:hidden;box-shadow:0 0 28px rgba(34,211,238,0.22);">
+               style="border-collapse:collapse;width:100%;max-width:560px;background:#121820;border:1px solid {border};border-radius:18px;overflow:hidden;box-shadow:0 0 28px {glow};">
           {hero_block}
           <tr>
-            <td align="center" style="padding:28px 24px 8px;background:#152033;">
+            <td align="center" style="padding:28px 24px 8px;background:{header_bg};">
               {logo_block}
               <p style="margin:0;font-size:18px;font-weight:800;letter-spacing:0.04em;color:#ffffff;">
                 MX Fantasy League
@@ -275,21 +397,25 @@ def build_pick_reminder_html(
           </tr>
           <tr>
             <td style="padding:18px 28px 8px;">
+              {kicker_block}
               <p style="margin:0 0 14px;font-size:28px;font-weight:800;font-style:italic;color:#ffffff;line-height:1.15;">
                 Hej {safe_name}!
               </p>
-              <p style="margin:0 0 18px;font-size:17px;line-height:1.55;color:#dbe4ee;">
-                Det är dags att sätta dina picks för
-                <strong style="color:#ffffff;">{safe_comp}!</strong>
+              <p style="margin:0 0 8px;font-size:22px;font-weight:800;color:#ffffff;line-height:1.25;">
+                {safe_comp}
+              </p>
+              {location_block}
+              <p style="margin:16px 0 18px;font-size:17px;line-height:1.55;color:#dbe4ee;">
+                {safe_lead}
               </p>
             </td>
           </tr>
           <tr>
             <td style="padding:0 28px 16px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                     style="border-collapse:collapse;background:#083344;border:2px solid #22d3ee;border-radius:12px;">
+                     style="border-collapse:collapse;background:{deadline_bg};border:2px solid {deadline_border};border-radius:12px;">
                 <tr>
-                  <td style="padding:14px 16px;font-size:16px;font-weight:700;color:#67e8f9;text-align:center;">
+                  <td style="padding:14px 16px;font-size:16px;font-weight:700;color:{deadline_label};text-align:center;">
                     ⏱&nbsp; Deadline:&nbsp;<span style="color:#ecfeff;">{safe_deadline}</span>
                   </td>
                 </tr>
@@ -299,7 +425,7 @@ def build_pick_reminder_html(
           <tr>
             <td style="padding:0 28px 10px;">
               <p style="margin:0;font-size:15px;line-height:1.55;color:#94a3b8;">
-                Glöm inte att göra dina val innan tävlingen börjar!
+                Glöm inte att spara innan deadline — 2 timmar före start!
               </p>
             </td>
           </tr>
@@ -307,9 +433,9 @@ def build_pick_reminder_html(
             <td style="padding:10px 28px 6px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
                 <tr>
-                  <td width="44" valign="middle" style="font-size:28px;line-height:1;padding-right:10px;">🏆</td>
+                  <td width="44" valign="middle" style="font-size:28px;line-height:1;padding-right:10px;">{"🔥" if is_wsx else "🏆"}</td>
                   <td valign="middle" style="font-size:15px;line-height:1.45;color:#e2e8f0;font-weight:600;">
-                    Tävla om exklusiva priser och visa att du är bäst!
+                    {prize_line}
                   </td>
                 </tr>
               </table>
@@ -318,8 +444,8 @@ def build_pick_reminder_html(
           <tr>
             <td align="center" style="padding:22px 28px 10px;">
               <a href="{safe_picks_url}"
-                 style="display:inline-block;background:#22c55e;color:#052e16;padding:16px 36px;text-decoration:none;border-radius:999px;font-weight:900;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;border:1px solid #86efac;">
-                GÖR DINA PICKS NU 🏁
+                 style="display:inline-block;background:{cta_bg};color:{cta_fg};padding:16px 36px;text-decoration:none;border-radius:999px;font-weight:900;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;border:1px solid {cta_border};">
+                {cta_label}
               </a>
             </td>
           </tr>
@@ -333,7 +459,7 @@ def build_pick_reminder_html(
                     <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
                       Om knappen inte fungerar, kopiera denna länk:
                     </p>
-                    <p style="margin:0;font-size:12px;color:#67e8f9;word-break:break-all;line-height:1.4;">
+                    <p style="margin:0;font-size:12px;color:{deadline_label};word-break:break-all;line-height:1.4;">
                       {safe_picks_url}
                     </p>
                   </td>

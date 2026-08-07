@@ -13892,23 +13892,118 @@ def get_next_competition():
                 "success": False,
                 "error": "No upcoming competition found"
             })
-        
-        first_trackmap = next_comp.images.order_by(CompetitionImage.sort_order).first()
+
+        from email_utils import pick_reminder_race_copy
+        from trackmap_utils import resolve_competition_hero_static_url
+
+        copy = pick_reminder_race_copy(next_comp)
+        hero_rel = resolve_competition_hero_static_url(next_comp)
         trackmap_url = None
-        if first_trackmap and first_trackmap.image_url:
-            trackmap_url = f"/static/{first_trackmap.image_url}"
+        if hero_rel:
+            if hero_rel.startswith("http://") or hero_rel.startswith("https://"):
+                trackmap_url = hero_rel
+            else:
+                trackmap_url = f"/static/{hero_rel.lstrip('/')}"
 
         return jsonify({
             "success": True,
             "competition": {
                 "id": next_comp.id,
                 "name": next_comp.name,
-                "series": next_comp.series,
+                "display_name": copy["display_name"],
+                "series": copy.get("series") or next_comp.series,
+                "location": copy.get("location"),
+                "kicker": copy.get("kicker"),
+                "body_lead": copy.get("body_lead"),
+                "subject": copy.get("subject"),
+                "accent": copy.get("accent"),
                 "event_date": str(next_comp.event_date) if next_comp.event_date else None,
                 "start_time": str(next_comp.start_time) if hasattr(next_comp, 'start_time') and next_comp.start_time else None,
                 "pick_deadline_stockholm": _pick_deadline_stockholm_str(next_comp),
                 "trackmap_url": trackmap_url
             }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/preview_pick_reminder")
+def preview_pick_reminder():
+    """HTML-förhandsvisning av picks-påminnelse (samma mall som skickas)."""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+    try:
+        from email_utils import build_pick_reminder_html, pick_reminder_race_copy
+        from public_url import get_public_base_url
+        from trackmap_utils import resolve_competition_hero_static_url
+
+        next_comp = _next_competition_for_pick_reminders()
+        if not next_comp:
+            return jsonify({"success": False, "error": "No upcoming competition found"}), 404
+
+        copy = pick_reminder_race_copy(next_comp)
+        base_url = get_public_base_url()
+        hero_rel = resolve_competition_hero_static_url(next_comp)
+        trackmap_url = None
+        if hero_rel:
+            if hero_rel.startswith("http://") or hero_rel.startswith("https://"):
+                trackmap_url = hero_rel
+            else:
+                trackmap_url = f"{base_url}/static/{hero_rel.lstrip('/')}"
+
+        deadline = None
+        # reuse get_next_competition deadline formatting lightly
+        try:
+            from datetime import datetime, timedelta
+            from zoneinfo import ZoneInfo
+            start_time = getattr(next_comp, "start_time", None)
+            if next_comp.event_date:
+                if start_time:
+                    race_local_naive = datetime.combine(next_comp.event_date, start_time)
+                else:
+                    race_local_naive = datetime.combine(
+                        next_comp.event_date, datetime.min.time().replace(hour=20, minute=0)
+                    )
+                tz_name = getattr(next_comp, "timezone", None) or "America/Los_Angeles"
+                race_utc = (
+                    race_local_naive.replace(tzinfo=ZoneInfo(tz_name))
+                    .astimezone(ZoneInfo("UTC"))
+                    .replace(tzinfo=None)
+                )
+                deadline_stockholm = (
+                    (race_utc - timedelta(hours=2))
+                    .replace(tzinfo=ZoneInfo("UTC"))
+                    .astimezone(ZoneInfo("Europe/Stockholm"))
+                )
+                deadline = deadline_stockholm.strftime("%Y-%m-%d kl. %H:%M")
+        except Exception:
+            deadline = str(next_comp.event_date) if next_comp.event_date else "—"
+
+        html_content = build_pick_reminder_html(
+            user_name="[Användarnamn]",
+            competition_name=copy["display_name"],
+            deadline_time=deadline or "—",
+            competition_url=f"{base_url}/race_picks/{next_comp.id}",
+            base_url=base_url,
+            trackmap_url=trackmap_url,
+            invite_url=f"{base_url}/start?ref=exempel",
+            unsubscribe_url=f"{base_url}/unsubscribe?token=exempel",
+            series=copy.get("series"),
+            location=copy.get("location"),
+            kicker=copy.get("kicker"),
+            body_lead=copy.get("body_lead"),
+            accent=copy.get("accent"),
+        )
+        return jsonify({
+            "success": True,
+            "subject": copy["subject"],
+            "html": html_content,
+            "competition": {
+                "id": next_comp.id,
+                "name": next_comp.name,
+                "display_name": copy["display_name"],
+                "series": copy.get("series"),
+            },
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -13920,7 +14015,7 @@ def send_pick_reminders():
         return jsonify({"error": "unauthorized"}), 403
     
     try:
-        from email_utils import send_pick_reminder
+        from email_utils import pick_reminder_race_copy, send_pick_reminder
         from datetime import datetime, timedelta
         
         data = request.get_json() or {}
@@ -13933,6 +14028,8 @@ def send_pick_reminders():
         
         if not next_comp:
             return jsonify({"error": "No upcoming competition found"}), 404
+
+        race_copy = pick_reminder_race_copy(next_comp)
         
         # Get users - either selected ones or all users with email addresses
         if selected_emails and len(selected_emails) > 0:
@@ -14032,15 +14129,17 @@ def send_pick_reminders():
         deadline_time = _format_pick_deadline_for_email(next_comp)
 
         from public_url import get_public_base_url
+        from trackmap_utils import resolve_competition_hero_static_url
 
         base_url = get_public_base_url()
         competition_url = f"{base_url}/race_picks/{next_comp.id}"
-        first_trackmap = next_comp.images.order_by(CompetitionImage.sort_order).first()
-        trackmap_url = (
-            f"{base_url}/static/{first_trackmap.image_url}"
-            if first_trackmap and first_trackmap.image_url
-            else None
-        )
+        hero_rel = resolve_competition_hero_static_url(next_comp)
+        trackmap_url = None
+        if hero_rel:
+            if hero_rel.startswith("http://") or hero_rel.startswith("https://"):
+                trackmap_url = hero_rel
+            else:
+                trackmap_url = f"{base_url}/static/{hero_rel.lstrip('/')}"
 
         for user in users:
             print(f"DEBUG: Processing user: {user.username} ({user.email})")
@@ -14144,13 +14243,19 @@ def send_pick_reminders():
                     success, error_msg = send_pick_reminder(
                         user.email,
                         user_name,
-                        next_comp.name,
+                        race_copy["display_name"],
                         deadline_time,
                         competition_url,
                         base_url=base_url,
                         trackmap_url=trackmap_url,
                         invite_url=invite_url,
                         unsubscribe_url=unsub_url,
+                        series=race_copy.get("series"),
+                        location=race_copy.get("location"),
+                        kicker=race_copy.get("kicker"),
+                        body_lead=race_copy.get("body_lead"),
+                        subject=race_copy.get("subject"),
+                        accent=race_copy.get("accent"),
                     )
                     if success:
                         sent += 1

@@ -2473,161 +2473,17 @@
         
         async function showPickReminderPreview() {
             try {
-                // Get next competition info
-                const response = await fetch('/admin/get_next_competition');
-                const compData = await response.json();
-                
-                if (!compData.success || !compData.competition) {
-                    alert('❌ Kunde inte hämta nästa tävling. Förhandsvisning visar exempel.');
+                const response = await fetch('/admin/preview_pick_reminder');
+                const data = await response.json();
+                if (!data.success || !data.html) {
+                    alert('❌ Kunde inte ladda förhandsvisning: ' + (data.error || 'okänt fel'));
+                    return;
                 }
-                
-                const comp = compData.competition || { name: 'Exempel Tävling', event_date: '2026-01-15', start_time: '20:00', pick_deadline_stockholm: '2026-01-15 kl. 18:00', trackmap_url: null };
-                const deadlineTime = comp.pick_deadline_stockholm || (comp.start_time ? `${comp.event_date} kl. ${comp.start_time}` : comp.event_date);
-                const publicBase = 'https://mx-fantasy.se';
-                const competitionUrl = `${publicBase}/race_picks/${comp.id || 1}`;
-                const inviteUrl = `${publicBase}/start?ref=exempel`;
-                const logoUrl = publicBase + '/static/images/mx_fantasy_logo.png';
-                const trackmapFullUrl = comp.trackmap_url ? (publicBase + comp.trackmap_url) : null;
-                const heroBlock = trackmapFullUrl
-                    ? `<tr><td style="padding:0;line-height:0;font-size:0;"><img src="${trackmapFullUrl}" alt="${comp.name}" width="560" style="display:block;width:100%;max-width:560px;height:auto;border:0;" /></td></tr>`
-                    : '';
-                const previewHTML = `<!DOCTYPE html>
-<html lang="sv">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Picks-påminnelse</title>
-</head>
-<body style="margin:0;padding:0;background:#070b14;font-family:'Segoe UI',Arial,Helvetica,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#070b14;">
-    <tr>
-      <td align="center" style="padding:28px 14px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0"
-               style="border-collapse:collapse;width:100%;max-width:560px;background:#121820;border:1px solid #22d3ee;border-radius:18px;overflow:hidden;box-shadow:0 0 28px rgba(34,211,238,0.22);">
-          ${heroBlock}
-          <tr>
-            <td align="center" style="padding:28px 24px 8px;background:#152033;">
-              <img src="${logoUrl}" alt="MX Fantasy League" width="160"
-                   style="display:block;margin:0 auto 10px;max-width:160px;height:auto;border:0;" />
-              <p style="margin:0;font-size:18px;font-weight:800;letter-spacing:0.04em;color:#ffffff;">
-                MX Fantasy League
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:18px 28px 8px;">
-              <p style="margin:0 0 14px;font-size:28px;font-weight:800;font-style:italic;color:#ffffff;line-height:1.15;">
-                Hej [Användarnamn]!
-              </p>
-              <p style="margin:0 0 18px;font-size:17px;line-height:1.55;color:#dbe4ee;">
-                Det är dags att sätta dina picks för
-                <strong style="color:#ffffff;">${comp.name}!</strong>
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 28px 16px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                     style="border-collapse:collapse;background:#083344;border:2px solid #22d3ee;border-radius:12px;">
-                <tr>
-                  <td style="padding:14px 16px;font-size:16px;font-weight:700;color:#67e8f9;text-align:center;">
-                    ⏱&nbsp; Deadline:&nbsp;<span style="color:#ecfeff;">${deadlineTime}</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 28px 10px;">
-              <p style="margin:0;font-size:15px;line-height:1.55;color:#94a3b8;">
-                Glöm inte att göra dina val innan tävlingen börjar!
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:10px 28px 6px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                <tr>
-                  <td width="44" valign="middle" style="font-size:28px;line-height:1;padding-right:10px;">🏆</td>
-                  <td valign="middle" style="font-size:15px;line-height:1.45;color:#e2e8f0;font-weight:600;">
-                    Tävla om exklusiva priser och visa att du är bäst!
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:22px 28px 10px;">
-              <a href="${competitionUrl}"
-                 style="display:inline-block;background:#22c55e;color:#052e16;padding:16px 36px;text-decoration:none;border-radius:999px;font-weight:900;font-size:16px;letter-spacing:0.06em;text-transform:uppercase;border:1px solid #86efac;">
-                GÖR DINA PICKS NU 🏁
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:8px 28px 6px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                     style="border-collapse:collapse;background:#0b1c2e;border:1px solid rgba(34,211,238,0.35);border-radius:14px;">
-                <tr>
-                  <td style="padding:18px 16px;text-align:center;">
-                    <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#67e8f9;">
-                      BJUD IN EN KOMPIS
-                    </p>
-                    <p style="margin:0 0 14px;font-size:14px;line-height:1.5;color:#cbd5e1;">
-                      Tipsa någon — ju fler som spelar, desto hetare race.
-                    </p>
-                    <a href="${inviteUrl}"
-                       style="display:inline-block;background:transparent;color:#a5f3fc;padding:11px 22px;text-decoration:none;border-radius:999px;font-weight:700;font-size:13px;border:1px solid rgba(103,232,249,0.55);">
-                      Dela din inbjudan →
-                    </a>
-                    <p style="margin:12px 0 0;font-size:11px;color:#64748b;word-break:break-all;line-height:1.4;">
-                      ${inviteUrl}
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 28px 22px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-                     style="border-collapse:collapse;background:#0a1018;border:1px solid #1f2937;border-radius:12px;">
-                <tr>
-                  <td style="padding:14px 14px;">
-                    <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
-                      Om knappen inte fungerar, kopiera denna länk:
-                    </p>
-                    <p style="margin:0;font-size:12px;color:#67e8f9;word-break:break-all;line-height:1.4;">
-                      ${competitionUrl}
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding:8px 24px 18px;border-top:1px solid #1e293b;">
-              <img src="${logoUrl}" alt="" width="36"
-                   style="display:inline-block;vertical-align:middle;margin-right:8px;border:0;" />
-              <span style="display:inline-block;vertical-align:middle;font-size:12px;color:#64748b;">
-                Hälsning från oss på MX Fantasy teamet
-              </span>
-              <p style="margin:14px 0 0;font-size:11px;line-height:1.5;color:#64748b;">
-                <a href="${publicBase}/unsubscribe?token=exempel"
-                   style="color:#94a3b8;text-decoration:underline;">
-                  Avregistrera dig från picks-påminnelser
-                </a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-                
-                showPreviewModal('Picks-påminnelse Förhandsvisning', previewHTML, `🏁 ${comp.name} — dags att sätta picks`);
+                showPreviewModal(
+                    'Picks-påminnelse Förhandsvisning',
+                    data.html,
+                    data.subject || 'Picks-påminnelse'
+                );
             } catch (error) {
                 console.error('Error loading preview:', error);
                 alert('❌ Kunde inte ladda förhandsvisning: ' + error.message);
