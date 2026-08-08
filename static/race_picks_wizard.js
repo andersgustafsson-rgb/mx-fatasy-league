@@ -386,8 +386,8 @@
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
     syncBonusSelectorsFromHidden();
-    // Visa holeshot-formulären direkt (inte ihopfälld summary)
     const forms = $('wizard-step-3-forms');
+    forms?.classList.remove('is-collapsed');
     const panel = forms?.querySelector('.wizard-adjust-panel');
     if (panel) panel.open = true;
     forms?.classList.add('is-editing');
@@ -755,13 +755,55 @@
     return true;
   }
 
+  function updateStep3Hero() {
+    const step3 = $('wizard-step-3');
+    if (!step3) return;
+    const h2 = step3.querySelector('.wizard-step-hero h2');
+    const heroP = step3.querySelector('.wizard-step-hero p');
+    const complete = isPicksFullyComplete() || !!cfg.picksComplete;
+    const onOverview = complete && step3ShowingSummary && !isEditWalkback;
+
+    if (h2) {
+      if (onOverview) {
+        h2.textContent = isEn() ? 'Overview — your picks' : 'Översikt — dina val';
+      } else if (isEditWalkback) {
+        h2.textContent = cfg.isWSX
+          ? (isEn() ? 'Edit holeshot' : 'Redigera holeshot')
+          : (isEn() ? 'Edit holeshot & wildcard' : 'Redigera holeshot & wildcard');
+      } else {
+        h2.innerHTML =
+          '<span data-i18n="picks.step3">Steg 3</span> — Holeshot' +
+          (cfg.isWSX ? '' : ' & Wildcard');
+      }
+    }
+
+    if (heroP) {
+      if (onOverview) {
+        heroP.textContent = tPick(
+          'picks.draft_ready',
+          'Klart! Utkast sparat — lämna in med knappen nedan när du vill.'
+        );
+      } else if (isEditWalkback) {
+        heroP.textContent = isEn()
+          ? 'Edit holeshot, or go Back to change your top 6.'
+          : 'Justera holeshot, eller gå Tillbaka för att ändra topp 6.';
+      } else {
+        heroP.textContent = cfg.isWSX
+          ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
+          : (isEn()
+              ? 'Holeshot + spin a wildcard position (10–20) and pick a 450 rider.'
+              : 'Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.');
+      }
+    }
+  }
+
   function renderPicksSummary() {
     const el = $('wizard-picks-summary');
     const step3 = $('wizard-step-3');
     const forms = $('wizard-step-3-forms');
     if (!el) return;
 
-    const complete = isPicksFullyComplete();
+    const complete = isPicksFullyComplete() || !!cfg.picksComplete;
     const bannerCls = complete ? 'wizard-summary-banner' : 'wizard-summary-banner is-pending';
     const bannerText = complete
       ? `${mxIcon('check-circle', { className: 'mx-icon--ok' })} ${tPick('picks.all_done', 'Alla val klara!')}`
@@ -786,7 +828,7 @@
       </div>`;
     }
 
-    const showFullSummary = complete && step3ShowingSummary;
+    const showFullSummary = complete && step3ShowingSummary && !isEditWalkback;
     el.className =
       'wizard-picks-summary' +
       (complete ? ' is-complete' : '') +
@@ -803,7 +845,6 @@
       </div>`;
       hydrateSummaryPortraits(el);
     } else if (isEditWalkback) {
-      // Redigeringsläge: topp 6 finns kvar — guida bakåt genom wizarden
       const backHint = isEn()
         ? `Your top 6 are kept. Edit holeshot here, or tap Back to change ${cfg.label250} then ${cfg.label450}.`
         : `Dina topp 6 behålls. Justera holeshot här, eller tryck Tillbaka för att ändra ${cfg.label250} och sedan ${cfg.label450}.`;
@@ -813,25 +854,14 @@
     }
 
     if (step3) {
-      step3.classList.toggle('wizard-step--complete', complete);
-      const heroP = step3.querySelector('.wizard-step-hero p');
-      if (heroP) {
-        heroP.textContent = complete && step3ShowingSummary
-          ? tPick('picks.draft_ready', 'Klart! Utkast sparat — lämna in med knappen nedan när du vill.')
-          : isEditWalkback
-            ? (isEn()
-                ? 'Edit holeshot, or go Back to change your top 6.'
-                : 'Justera holeshot, eller gå Tillbaka för att ändra topp 6.')
-          : cfg.isWSX
-            ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
-            : (isEn()
-                ? 'Holeshot + spin a wildcard position (10–20) and pick a 450 rider.'
-                : 'Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.');
-      }
+      step3.classList.toggle('wizard-step--complete', complete && !isEditWalkback);
+      step3.classList.toggle('wizard-step--overview', showFullSummary);
     }
+    updateStep3Hero();
 
     if (forms) {
-      if (complete) {
+      if (showFullSummary) {
+        // Overview: hide holeshot forms — Redigera opens them again
         if (!forms.querySelector('.wizard-adjust-panel')) {
           const panel = document.createElement('details');
           panel.className = 'wizard-adjust-panel';
@@ -843,10 +873,26 @@
           forms.appendChild(panel);
         }
         const panel = forms.querySelector('.wizard-adjust-panel');
-        if (panel) panel.open = isEditWalkback || !step3ShowingSummary;
-        forms.classList.toggle('is-editing', isEditWalkback);
+        if (panel) panel.open = false;
+        forms.classList.remove('is-editing');
+        forms.classList.add('is-collapsed');
+      } else if (isEditWalkback) {
+        if (!forms.querySelector('.wizard-adjust-panel')) {
+          const panel = document.createElement('details');
+          panel.className = 'wizard-adjust-panel';
+          panel.innerHTML =
+            '<summary>' + (isEn() ? 'Adjust holeshot' : 'Justera holeshot') + (cfg.isWSX ? '' : ' & wildcard') + '</summary>';
+          while (forms.firstChild) {
+            panel.appendChild(forms.firstChild);
+          }
+          forms.appendChild(panel);
+        }
+        const panel = forms.querySelector('.wizard-adjust-panel');
+        if (panel) panel.open = true;
+        forms.classList.add('is-editing');
         forms.classList.remove('is-collapsed');
       } else {
+        // First-time holeshot step: keep forms visible (even if just completed)
         const panel = forms.querySelector('.wizard-adjust-panel');
         if (panel) {
           while (panel.firstChild) {
@@ -891,27 +937,27 @@
     bindNav();
     setupWildcardWheel();
 
-    let step = resolveStartStep();
-    const hint = Number(cfg.startStep);
-    if (hint >= 1 && hint <= totalSteps && hint > step) {
-      step = hint;
-    }
     isEditWalkback = false;
-    if (step === 3 && isPicksFullyComplete()) {
+    let step = resolveStartStep();
+    if (cfg.picksComplete || isPicksFullyComplete()) {
+      // Opening with finished picks → overview, never holeshot-first
+      step = 3;
       step3ShowingSummary = true;
-    } else if (step === 3) {
-      step3ShowingSummary = false;
+    } else {
+      // First-time / incomplete: land on first unfinished step (SX1 → SX2 → holeshot)
+      step3ShowingSummary = step !== 3;
     }
     showStep(step, { skipSave: true });
   }
 
   function initAfterDraftLoad() {
-    const step = resolveStartStep();
     isEditWalkback = false;
-    if (step === 3 && isPicksFullyComplete()) {
+    let step = resolveStartStep();
+    if (cfg.picksComplete || isPicksFullyComplete()) {
+      step = 3;
       step3ShowingSummary = true;
-    } else if (step === 3) {
-      step3ShowingSummary = false;
+    } else {
+      step3ShowingSummary = step !== 3;
     }
     showStep(step, { skipSave: true });
     syncWildcardRollLockedState();
@@ -927,9 +973,11 @@
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
     refreshUI();
-    const panel = $('wizard-step-3-forms')?.querySelector('.wizard-adjust-panel');
+    const forms = $('wizard-step-3-forms');
+    forms?.classList.remove('is-collapsed');
+    const panel = forms?.querySelector('.wizard-adjust-panel');
     if (panel) panel.open = true;
-    $('wizard-step-3-forms')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    forms?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     updateNavButtons();
   }
 

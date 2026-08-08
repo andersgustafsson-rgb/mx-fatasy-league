@@ -666,7 +666,7 @@
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-back-2">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-back-3">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -919,19 +919,24 @@
     </div>
   </section>
 
-  <!-- Steg 3: Holeshot + Wildcard -->
-  <section id="wizard-step-3" class="wizard-step{% if initial_wiz_step == 3 %} wizard-step-active{% endif %}{% if initial_picks_status and initial_picks_status.icon == '✅' %} wizard-step--complete{% endif %}" data-step="3"{% if initial_wiz_step != 3 %} hidden{% endif %}>
+  <!-- Steg 3: Holeshot + Wildcard (eller översikt när alla val är klara) -->
+  <section id="wizard-step-3" class="wizard-step{% if initial_wiz_step == 3 %} wizard-step-active{% endif %}{% if initial_picks_status and initial_picks_status.icon == '✅' %} wizard-step--complete wizard-step--overview{% endif %}" data-step="3"{% if initial_wiz_step != 3 %} hidden{% endif %}>
     <header class="wizard-step-hero wizard-step-hero--bonus">
       <img class="wizard-step-hero__icon" src="{{ url_for('static', filename='images/bike_silhouette.svg') }}" alt="">
       <div>
+        {% if initial_picks_status and initial_picks_status.icon == '✅' %}
+        <h2 data-i18n-sv="Översikt — dina val" data-i18n-en="Overview — your picks">Översikt — dina val</h2>
+        <p data-i18n-sv="Klart! Utkast sparat — lämna in med knappen nedan när du vill." data-i18n-en="Done! Draft saved — submit with the button below when ready.">Klart! Utkast sparat — lämna in med knappen nedan när du vill.</p>
+        {% else %}
         <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
         <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
+        {% endif %}
       </div>
     </header>
 
     <div id="wizard-picks-summary" class="wizard-picks-summary" aria-live="polite"></div>
 
-    <div id="wizard-step-3-forms" class="wizard-step-3-forms">
+    <div id="wizard-step-3-forms" class="wizard-step-3-forms{% if initial_picks_status and initial_picks_status.icon == '✅' %} is-collapsed{% endif %}">
     <div class="mt-2">
       <h3 class="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-cyan-400 bg-gray-800 border border-cyan-500 px-3 py-2 rounded-md" data-i18n="picks.holeshot">Gissa Holeshot</h3>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -3668,6 +3673,7 @@ function onPickChange(cls, pos, riderId = null) {
           label250: isWSXSeries ? 'SX2' : '250cc',
           suggestions: ps,
           startStep: initialWizardStep,
+          picksComplete: serverPicksComplete,
         });
       }
 
@@ -3739,7 +3745,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-back-2"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-back-3"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}
