@@ -932,34 +932,32 @@
     if (!root) return;
 
     cfg = options || {};
-    totalSteps = cfg.isWSX ? 3 : 3;
+    totalSteps = 3;
 
     bindNav();
     setupWildcardWheel();
 
     isEditWalkback = false;
-    let step = resolveStartStep();
+    // Incomplete picks always open on step 1 (SX1). Only complete → overview,
+    // and only "Redigera" starts at holeshot. Never resume mid-wizard on holeshot.
     if (cfg.picksComplete || isPicksFullyComplete()) {
-      // Opening with finished picks → overview, never holeshot-first
-      step = 3;
       step3ShowingSummary = true;
+      showStep(3, { skipSave: true });
     } else {
-      // First-time / incomplete: land on first unfinished step (SX1 → SX2 → holeshot)
-      step3ShowingSummary = step !== 3;
+      step3ShowingSummary = false;
+      showStep(1, { skipSave: true });
     }
-    showStep(step, { skipSave: true });
   }
 
   function initAfterDraftLoad() {
     isEditWalkback = false;
-    let step = resolveStartStep();
     if (cfg.picksComplete || isPicksFullyComplete()) {
-      step = 3;
       step3ShowingSummary = true;
+      showStep(3, { skipSave: true });
     } else {
-      step3ShowingSummary = step !== 3;
+      step3ShowingSummary = false;
+      showStep(1, { skipSave: true });
     }
-    showStep(step, { skipSave: true });
     syncWildcardRollLockedState();
     refreshUI();
   }

@@ -666,7 +666,7 @@
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-back-3">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=start-step1-1">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -3649,11 +3649,18 @@ function onPickChange(cls, pos, riderId = null) {
 
       const wizardRoot = document.getElementById('picks-wizard');
       const serverPicksComplete = isMyPicksComplete(initialMyPicks);
+      const serverPickCount =
+        (initialMyPicks?.top6_picks?.length || 0) +
+        (initialMyPicks?.holeshot_picks?.['450cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx1'] ? 1 : 0) +
+        (initialMyPicks?.holeshot_picks?.['250cc'] || initialMyPicks?.holeshot_picks?.['wsx_sx2'] ? 1 : 0) +
+        (initialMyPicks?.wildcard_pick && !isWSXSeries ? 1 : 0);
       let hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
 
-      // Saved server picks beat stale local draft (avoids step-1 flash when all picks are done)
-      if (serverPicksComplete && hasLocalDraft) {
+      // Server is source of truth: drop stale drafts when picks are done OR server has none
+      // (stale top6 drafts were jumping the wizard to holeshot while status said "no picks")
+      if (hasLocalDraft && (serverPicksComplete || serverPickCount === 0)) {
         localStorage.removeItem(`race_picks_${competitionId}`);
+        localStorage.removeItem(`race_picks_wizard_step_${competitionId}`);
         hasLocalDraft = false;
       }
 
@@ -3745,7 +3752,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-back-3"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=start-step1-1"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}

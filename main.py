@@ -16752,15 +16752,23 @@ def _my_picks_api_dict(user_id: int, comp: Competition) -> dict:
 
 
 def _initial_wizard_step(my_picks: dict, *, is_wsx: bool) -> int:
-    """Which wizard step to open (1=450, 2=250, 3=bonus/summary)."""
+    """Which wizard step to open on first paint.
+
+    Incomplete picks always start at step 1 (forward flow).
+    Complete picks open step 3 (overview). Holeshot-first is edit-only in JS.
+    """
     top6 = my_picks.get("top6_picks") or []
     n450 = sum(1 for p in top6 if (p.get("class") or "") in ("450cc", "wsx_sx1"))
     n250 = sum(1 for p in top6 if (p.get("class") or "") in ("250cc", "wsx_sx2"))
-    if n450 < 6:
-        return 1
-    if n250 < 6:
-        return 2
-    return 3
+    hs = my_picks.get("holeshot_picks") or {}
+    hs450 = bool(hs.get("450cc") or hs.get("wsx_sx1"))
+    hs250 = bool(hs.get("250cc") or hs.get("wsx_sx2"))
+    wc_ok = True
+    if not is_wsx:
+        wc_ok = bool(my_picks.get("wildcard_pick")) and my_picks.get("wildcard_pos") is not None
+    if n450 >= 6 and n250 >= 6 and hs450 and hs250 and wc_ok:
+        return 3
+    return 1
 
 
 def _user_picks_status_code(user_id: int | None, comp: Competition | None) -> str:
