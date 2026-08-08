@@ -151,12 +151,16 @@ def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None 
     try:
         from public_url import get_public_base_url
 
-        base_host = get_public_base_url().replace("https://", "").replace("http://", "").rstrip("/")
+        base = get_public_base_url().rstrip("/")
+        base_host = base.replace("https://", "").replace("http://", "").rstrip("/")
     except Exception:
+        base = "https://mx-fantasy.se"
         base_host = "mx-fantasy.se"
     host_line = f"{base_host}/start"
+    invite_url = f"{base}/start"
     if inviter_username:
         host_line += f"?ref={inviter_username}"
+        invite_url += f"?ref={inviter_username}"
 
     top5: list[dict[str, Any]] = []
     try:
@@ -196,10 +200,104 @@ def build_invite_card_data(ref: str | None = None, *, prefer_series: str | None 
         "inviter_name": inviter_name,
         "inviter_username": inviter_username,
         "host_line": host_line,
+        "invite_url": invite_url,
         "has_race": comp is not None,
         "top5": top5,
         "is_wsx_hype": series == "WSX",
     }
+
+
+def _invite_absolute_url(data: dict[str, Any]) -> str:
+    url = (data.get("invite_url") or "").strip()
+    if url.startswith("http"):
+        return url
+    host = (data.get("host_line") or "mx-fantasy.se/start").strip()
+    if host.startswith("http"):
+        return host
+    return f"https://{host.lstrip('/')}"
+
+
+def _make_invite_qr(url: str, *, pixel: int = 220) -> Any:
+    """Return a PIL RGB image with a scannable QR for Stories (no clickable link from iOS share)."""
+    import qrcode
+    from PIL import Image
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=8,
+        border=2,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    raw = qr.make_image(fill_color="#020617", back_color="#ffffff").convert("RGB")
+    return raw.resize((pixel, pixel), Image.Resampling.NEAREST)
+
+
+def _draw_story_link_block(img: Any, draw: Any, data: dict[str, Any], *, margin: int = 56) -> None:
+    """Footer with big URL + QR — Snap/IG Stories from web cannot embed a tappable link."""
+    from social_recap_service import (
+        CYAN,
+        GOLD,
+        WHITE,
+        _draw_styled_text,
+        _load_display_font,
+        _load_font_px,
+        _plain_draw_text,
+    )
+
+    url = _invite_absolute_url(data)
+    display = (data.get("host_line") or url.replace("https://", "").replace("http://", "")).strip()
+    display = _plain_draw_text(display)
+
+    qr_size = 200
+    pad = 22
+    block_h = qr_size + pad * 2 + 8
+    top = H_STORY - block_h - 28
+    left = margin
+    right = W_STORY - margin
+
+    draw.rounded_rectangle(
+        [left, top, right, top + block_h],
+        radius=22,
+        fill=(10, 18, 36),
+        outline=CYAN,
+        width=3,
+    )
+
+    try:
+        qr_img = _make_invite_qr(url, pixel=qr_size)
+        img.paste(qr_img, (right - pad - qr_size, top + pad))
+        # Light frame around QR
+        draw.rectangle(
+            [
+                right - pad - qr_size - 4,
+                top + pad - 4,
+                right - pad + 4,
+                top + pad + qr_size + 4,
+            ],
+            outline=GOLD,
+            width=2,
+        )
+    except Exception:
+        qr_size = 0
+
+    text_right = right - pad - (qr_size + 28 if qr_size else 0)
+    y = top + pad + 8
+    _draw_styled_text(
+        draw, (left + pad, y), "SKANNA ELLER ÖPPNA", _load_font_px(22, bold=True), GOLD, anchor="lt"
+    )
+    y += 36
+    _draw_styled_text(
+        draw, (left + pad, y), "Tippa gratis här:", _load_font_px(26), WHITE, anchor="lt"
+    )
+    y += 40
+    # URL — wrap if long
+    url_font = _load_display_font(28, bold=True)
+    max_chars = 28 if qr_size else 36
+    for line in textwrap.wrap(display, width=max_chars)[:3]:
+        _draw_styled_text(draw, (left + pad, y), line, url_font, CYAN, anchor="lt")
+        y += 34
 
 
 def render_invite_card_png(data: dict[str, Any], *, layout: str = "story") -> bytes:
@@ -383,11 +481,10 @@ def _render_wsx_story_card(data: dict[str, Any]) -> bytes:
     y += btn_h + 40
 
     top5 = data.get("top5") or []
-    if top5 and y < H_STORY - 320:
+    if top5 and y < H_STORY - 420:
         y = _draw_top5_panel(draw, y, top5, margin=margin)
 
-    host = _plain_draw_text(data.get("host_line") or "mx-fantasy.se/start")
-    _draw_styled_text(draw, (W_STORY // 2, H_STORY - 110), host, _load_font_px(22), MUTED, anchor="mt")
+    _draw_story_link_block(img, draw, data, margin=margin)
     _footer(img, draw, H_STORY, bar_h=0)
 
     buf = io.BytesIO()
@@ -537,12 +634,10 @@ def _render_story_card(data: dict[str, Any]) -> bytes:
     y += btn_h + 36
 
     top5 = data.get("top5") or []
-    if top5:
+    if top5 and y < H_STORY - 420:
         y = _draw_top5_panel(draw, y, top5, margin=margin)
 
-    url_f = _load_font_px(22)
-    host = _plain_draw_text(data.get("host_line") or "")
-    _draw_styled_text(draw, (W_STORY // 2, H_STORY - 120), host, url_f, MUTED, anchor="mt")
+    _draw_story_link_block(img, draw, data, margin=margin)
 
     _footer(img, draw, H_STORY, bar_h=8)
 

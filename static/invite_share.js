@@ -187,8 +187,8 @@
           await navigator.share(filesOnly);
           if (status) {
             status.textContent = copied
-              ? 'Välj Snapchat → Story (inte Skicka). Länken är kopierad.'
-              : 'Välj Snapchat → Story (inte Skicka).';
+              ? 'Story: skanna QR i bilden. Länken är också kopierad.'
+              : 'Story: skanna QR / öppna URL:en i bilden.';
           }
           return;
         }
