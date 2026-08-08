@@ -40,6 +40,23 @@
     return p.card_image_url || '';
   }
 
+  function isAppleTouchShare() {
+    const ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    // iPadOS desktop UA
+    return navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+  }
+
+  async function copyTextSafe(text) {
+    if (!text) return false;
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   window.openInviteShare = function openInviteShare(opts) {
     const modal = document.getElementById('inviteShareModal');
     const p = payload(opts);
@@ -49,6 +66,7 @@
     const titleEl = document.getElementById('inviteShareTitle');
     const subtitleEl = document.getElementById('inviteShareSubtitle');
     const status = document.getElementById('inviteShareStatus');
+    const tipEl = document.getElementById('inviteShareIosTip');
     const wsx = !!(opts && opts.wsxHype);
 
     if (titleEl) {
@@ -64,6 +82,9 @@
       } else {
         subtitleEl.textContent = 'Dela race-hype-kortet till Snap/Stories eller skicka länken.';
       }
+    }
+    if (tipEl) {
+      tipEl.hidden = !isAppleTouchShare();
     }
     if (ta) ta.value = p.share_text || '';
     if (linkEl) {
@@ -117,35 +138,70 @@
     return resp.blob();
   }
 
+  /** JPEG often opens Snapchat/IG Stories more reliably than PNG on iOS. */
+  async function fileForStoryShare(blob, baseName) {
+    const preferJpeg = isAppleTouchShare();
+    if (!preferJpeg) {
+      return new File([blob], `${baseName}.png`, { type: blob.type || 'image/png' });
+    }
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0);
+      if (typeof bitmap.close === 'function') bitmap.close();
+      const jpegBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('jpeg failed'))),
+          'image/jpeg',
+          0.92
+        );
+      });
+      return new File([jpegBlob], `${baseName}.jpg`, { type: 'image/jpeg' });
+    } catch (_) {
+      return new File([blob], `${baseName}.png`, { type: blob.type || 'image/png' });
+    }
+  }
+
   window.shareInviteAsImage = async function shareInviteAsImage() {
     const p = payload(window._inviteShareOpts);
     const status = document.getElementById('inviteShareStatus');
     const inviteUrl = (p.invite_url || '').trim();
     const caption = [p.share_body || '', inviteUrl].filter(Boolean).join('\n');
-    const fileName = p._wsxMode ? 'mx-fantasy-wsx-hype.png' : 'mx-fantasy-race.png';
+    const baseName = p._wsxMode ? 'mx-fantasy-wsx-hype' : 'mx-fantasy-race';
     try {
       const blob = await blobFromCardUrl();
-      const file = new File([blob], fileName, { type: 'image/png' });
+      const file = await fileForStoryShare(blob, baseName);
+
+      // iOS + Snapchat: image+URL/text → only "Send to friends".
+      // Stories need a files-only share. Copy link first so it can be pasted.
+      const copied = await copyTextSafe(inviteUrl || caption);
+
       if (navigator.share && navigator.canShare) {
-        const withLink = {
-          title: p.share_title || 'MX Fantasy League',
-          text: caption,
-          url: inviteUrl || undefined,
-          files: [file],
-        };
-        const filesOnly = {
-          title: p.share_title || 'MX Fantasy League',
-          text: caption,
-          files: [file],
-        };
-        if (navigator.canShare(withLink)) {
-          await navigator.share(withLink);
-          if (status) status.textContent = 'Delat med bild + länk!';
-          return;
-        }
+        const filesOnly = { files: [file] };
         if (navigator.canShare(filesOnly)) {
           await navigator.share(filesOnly);
-          if (status) status.textContent = 'Delat! (länken ligger i texten)';
+          if (status) {
+            status.textContent = copied
+              ? 'Välj Snapchat → Story (inte Skicka). Länken är kopierad.'
+              : 'Välj Snapchat → Story (inte Skicka).';
+          }
+          return;
+        }
+
+        // Android / others: try richer payload as fallback
+        const withText = {
+          title: p.share_title || 'MX Fantasy League',
+          text: caption,
+          files: [file],
+        };
+        if (navigator.canShare(withText)) {
+          await navigator.share(withText);
+          if (status) status.textContent = 'Delat!';
           return;
         }
       }
@@ -154,15 +210,17 @@
     }
     try {
       const blob = await blobFromCardUrl();
+      const file = await fileForStoryShare(blob, baseName);
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fileName;
+      a.href = URL.createObjectURL(file);
+      a.download = file.name;
       a.click();
       URL.revokeObjectURL(a.href);
-      if (status) status.textContent = 'Bilden sparades — länken är kopierad om möjligt. Klistra in under Story.';
-      try {
-        if (inviteUrl) await navigator.clipboard.writeText(caption || inviteUrl);
-      } catch (_) {}
+      await copyTextSafe(caption || inviteUrl);
+      if (status) {
+        status.textContent =
+          'Bilden sparades. Öppna Snapchat → Story från Kamerarullen. Länken är kopierad.';
+      }
     } catch (e) {
       if (status) status.textContent = 'Kunde inte dela bilden just nu.';
     }
