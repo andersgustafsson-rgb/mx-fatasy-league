@@ -626,28 +626,102 @@
     flex-shrink: 0;
   }
 
-  /* Desktop: Inför racet (vänster) bredvid wizard-stegen (höger) */
+  /* Mobile: tippa först, Inför racet under (ihopfälld). Desktop: info vänster, wizard höger */
   .race-picks-bonus-layout {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
+  .race-picks-bonus-layout__forms {
+    order: 1;
+  }
+  .race-picks-bonus-layout__prep {
+    order: 2;
+  }
+  .race-prep-mobile-fold {
+    border: 1px solid rgba(71, 85, 105, 0.45);
+    border-radius: 0.75rem;
+    background: rgba(15, 23, 42, 0.65);
+    overflow: hidden;
+  }
+  .race-prep-mobile-fold > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #67e8f9;
+    font-weight: 700;
+    font-size: 0.95rem;
+    background: rgba(17, 24, 39, 0.5);
+  }
+  .race-prep-mobile-fold > summary::-webkit-details-marker { display: none; }
+  .race-prep-mobile-fold > summary::after {
+    content: '+';
+    color: #94a3b8;
+    font-weight: 700;
+    font-size: 1.1rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .race-prep-mobile-fold[open] > summary::after { content: '−'; }
+  .race-prep-mobile-fold__text {
+    min-width: 0;
+  }
+  .race-prep-mobile-fold__title {
+    display: block;
+  }
+  .race-prep-mobile-fold__sub {
+    display: block;
+    margin-top: 0.15rem;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .race-prep-mobile-fold .race-prep-panel {
+    margin-bottom: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+  .race-prep-mobile-fold .race-prep-head {
+    display: none;
+  }
   @media (min-width: 1024px) {
     .race-picks-bonus-layout {
       display: grid;
-      /* Gul markering ≈ ~42% bredd; röd zon = platsen bredvid gissa-stegen */
       grid-template-columns: minmax(300px, 42%) minmax(0, 1fr);
       gap: 1.25rem;
       align-items: start;
     }
     .race-picks-bonus-layout__prep {
+      order: 0;
       position: sticky;
       top: 0.75rem;
       max-height: calc(100vh - 1.5rem);
       overflow-y: auto;
     }
+    .race-picks-bonus-layout__forms {
+      order: 0;
+    }
+    .race-prep-mobile-fold {
+      border: none;
+      background: transparent;
+      overflow: visible;
+    }
+    .race-prep-mobile-fold > summary {
+      display: none;
+    }
     .race-picks-bonus-layout__prep .race-prep-panel {
       margin-bottom: 0;
+      border: 1px solid rgba(71, 85, 105, 0.45);
+      border-radius: 0.75rem;
+      background: rgba(15, 23, 42, 0.65);
+    }
+    .race-prep-mobile-fold .race-prep-head {
+      display: block;
     }
     .race-picks-bonus-layout__prep .race-prep-body {
       display: flex;
@@ -817,7 +891,7 @@
 
     <h2 class="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 text-cyan-400 border-b border-cyan-500 pb-2"{% if competition.series == 'WSX' %} data-i18n="picks.guess_title_wsx"{% else %} data-i18n="picks.guess_title"{% endif %}>{% if competition.series == 'WSX' %}Gissa topp 6 & Holeshot{% else %}Gissa topp 6, Holeshot & Wildcard{% endif %}</h2>
 
-    {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep">{% include 'includes/race_prep_panel.html' %}</aside><div class="race-picks-bonus-layout__forms">{% endif %}
+    {% if _show_prep %}<div class="race-picks-bonus-layout"><aside class="race-picks-bonus-layout__prep"><details class="race-prep-mobile-fold" id="race-prep-mobile-fold"><summary><span class="race-prep-mobile-fold__text"><span class="race-prep-mobile-fold__title" data-i18n="prep.title">Inför racet</span><span class="race-prep-mobile-fold__sub">{{ competition.name }}{% if race_prep_venue %} · {{ race_prep_venue }}{% endif %}</span></span></summary>{% include 'includes/race_prep_panel.html' %}</details></aside><div class="race-picks-bonus-layout__forms">{% endif %}
 
 <div id="picks-wizard-shell" class="picks-wizard-shell is-loading">
   <div id="picks-wizard-loader" class="picks-wizard-loader" role="status" aria-live="polite" aria-busy="true">
@@ -3634,6 +3708,17 @@ function onPickChange(cls, pos, riderId = null) {
     window.markPicksAsSaved = markPicksAsSaved;
     
     document.addEventListener("DOMContentLoaded", () => {
+      const prepFold = document.getElementById('race-prep-mobile-fold');
+      if (prepFold && typeof window.matchMedia === 'function') {
+        const mq = window.matchMedia('(min-width: 1024px)');
+        const syncPrepFold = () => {
+          prepFold.open = mq.matches;
+        };
+        syncPrepFold();
+        if (mq.addEventListener) mq.addEventListener('change', syncPrepFold);
+        else if (mq.addListener) mq.addListener(syncPrepFold);
+      }
+
       const riderClassesForInit = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
       const quickOverview =
         isMyPicksComplete(initialMyPicks) && Number(initialWizardStep) === 3;
