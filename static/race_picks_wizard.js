@@ -9,8 +9,10 @@
   let cfg = {};
   let currentStep = 1;
   let totalSteps = 3;
-  /** Step 3 complete: true = summary overview, false = edit holeshot/wildcard (or walking back to 250/450). */
+  /** Step 3: true = full summary overview, false = focus holeshot/wildcard forms. */
   let step3ShowingSummary = true;
+  /** Only true after "Redigera mina val" — reverse walk holeshot → SX2 → SX1. Never for first-time picks. */
+  let isEditWalkback = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -294,6 +296,7 @@
   }
 
   function showStep3Overview() {
+    isEditWalkback = false;
     step3ShowingSummary = true;
     showStep(3, { skipSave: true });
     if (typeof window.updateSaveButtonVisibility === 'function') {
@@ -327,12 +330,12 @@
       back.textContent = '← Tillbaka';
       back.setAttribute('aria-label', 'Tillbaka till föregående steg');
       back.disabled = currentStep <= 1;
-      // Redigeringsläge: bakåt = holeshot → SX2 → SX1
-      back.classList.toggle('wizard-nav__btn--edit', complete && !step3ShowingSummary);
+      // Only when editing existing picks: bakåt = holeshot → SX2 → SX1
+      back.classList.toggle('wizard-nav__btn--edit', isEditWalkback);
     }
 
     if (label) {
-      if (complete && !step3ShowingSummary) {
+      if (isEditWalkback) {
         if (currentStep === 3) {
           label.textContent = cfg.isWSX
             ? 'Redigera holeshot'
@@ -342,10 +345,6 @@
         } else {
           label.textContent = `Redigera ${cfg.label450}`;
         }
-      } else if (currentStep === 3 && complete) {
-        label.textContent = cfg.isWSX
-          ? 'Redigera holeshot'
-          : 'Redigera holeshot & wildcard';
       } else {
         label.textContent = `Steg ${currentStep} av ${totalSteps}`;
       }
@@ -383,6 +382,7 @@
     if (typeof window.ensureWizardDropdownsReady === 'function') {
       window.ensureWizardDropdownsReady();
     }
+    isEditWalkback = true;
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
     syncBonusSelectorsFromHidden();
@@ -569,7 +569,6 @@
   function bindNav() {
     $('wizard-btn-back')?.addEventListener('click', () => {
       if (currentStep <= 1) return;
-      // Från holeshot-redigering bakåt till SX2/SX1 — behåll valen
       if (currentStep === 3) {
         step3ShowingSummary = false;
       }
@@ -587,7 +586,8 @@
         return;
       }
       if (currentStep === 2) {
-        // Steg 3: fokusera holeshot/wildcard — visa inte topp 6-översikt ovanför
+        // First-time step 3: focus holeshot/wildcard — not edit-walkback
+        isEditWalkback = false;
         step3ShowingSummary = false;
       }
       showStep(currentStep + 1);
@@ -790,7 +790,7 @@
     el.className =
       'wizard-picks-summary' +
       (complete ? ' is-complete' : '') +
-      (showFullSummary ? ' is-overview' : complete ? ' is-edit-hint' : ' is-bonus-focus');
+      (showFullSummary ? ' is-overview' : isEditWalkback ? ' is-edit-hint' : ' is-bonus-focus');
     if (showFullSummary) {
       el.innerHTML = `
       <div class="${bannerCls}">${bannerText}</div>
@@ -802,7 +802,7 @@
         <div class="wizard-summary-extras">${extras}</div>
       </div>`;
       hydrateSummaryPortraits(el);
-    } else if (complete) {
+    } else if (isEditWalkback) {
       // Redigeringsläge: topp 6 finns kvar — guida bakåt genom wizarden
       const backHint = isEn()
         ? `Your top 6 are kept. Edit holeshot here, or tap Back to change ${cfg.label250} then ${cfg.label450}.`
@@ -818,7 +818,7 @@
       if (heroP) {
         heroP.textContent = complete && step3ShowingSummary
           ? tPick('picks.draft_ready', 'Klart! Utkast sparat — lämna in med knappen nedan när du vill.')
-          : complete && !step3ShowingSummary
+          : isEditWalkback
             ? (isEn()
                 ? 'Edit holeshot, or go Back to change your top 6.'
                 : 'Justera holeshot, eller gå Tillbaka för att ändra topp 6.')
@@ -843,8 +843,8 @@
           forms.appendChild(panel);
         }
         const panel = forms.querySelector('.wizard-adjust-panel');
-        if (panel) panel.open = !step3ShowingSummary;
-        forms.classList.toggle('is-editing', !step3ShowingSummary);
+        if (panel) panel.open = isEditWalkback || !step3ShowingSummary;
+        forms.classList.toggle('is-editing', isEditWalkback);
         forms.classList.remove('is-collapsed');
       } else {
         const panel = forms.querySelector('.wizard-adjust-panel');
@@ -896,6 +896,7 @@
     if (hint >= 1 && hint <= totalSteps && hint > step) {
       step = hint;
     }
+    isEditWalkback = false;
     if (step === 3 && isPicksFullyComplete()) {
       step3ShowingSummary = true;
     } else if (step === 3) {
@@ -906,6 +907,7 @@
 
   function initAfterDraftLoad() {
     const step = resolveStartStep();
+    isEditWalkback = false;
     if (step === 3 && isPicksFullyComplete()) {
       step3ShowingSummary = true;
     } else if (step === 3) {
@@ -921,6 +923,7 @@
   }
 
   function openBonusAdjust() {
+    isEditWalkback = true;
     step3ShowingSummary = false;
     showStep(3, { skipSave: true });
     refreshUI();
