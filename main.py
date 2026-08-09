@@ -8092,6 +8092,38 @@ def get_rider_spotlight():
         return jsonify({"available": False, "error": str(e)})
 
 
+# Common Swedish/English given names that are typically female (for fun UI labels).
+_FEMALE_GIVEN_NAMES = frozenset(
+    {
+        "ida", "emma", "anna", "sara", "sarah", "elin", "elina", "ellen", "ella",
+        "alice", "alicia", "amanda", "andrea", "anita", "annika", "astrid", "beata",
+        "camilla", "carolina", "caroline", "cecilia", "charlotte", "clara", "ebba",
+        "elinor", "elisabeth", "elise", "elsa", "emilia", "emily", "emmy", "erica",
+        "erika", "eva", "felicitas", "frida", "greta", "hanna", "hannah", "helena",
+        "helene", "inga", "ingrid", "isabelle", "isabella", "jennifer", "jenny",
+        "jessica", "johanna", "josefin", "josefina", "julia", "julie", "karin",
+        "karolina", "katarina", "katie", "katrine", "klara", "kristin", "kristina",
+        "lena", "linda", "lisa", "liv", "lotte", "louise", "lovisa", "madeleine",
+        "maja", "malin", "maria", "marie", "marina", "marlene", "matilda", "mia",
+        "moa", "monica", "nadja", "natalie", "natasja", "nicole", "nina", "nora",
+        "olivia", "pernilla", "petra", "rebecca", "rebecka", "ronja", "saga",
+        "sandra", "sanna", "sofia", "sophie", "stina", "susanne", "therese",
+        "tina", "tove", "ulrika", "vanessa", "vera", "viktoria", "vilma", "wilma",
+        "yvonne", "asa", "åsa",
+    }
+)
+
+
+def _likely_female_given_name(display_name: str | None) -> bool:
+    """Heuristic: first token of display name looks like a common female given name."""
+    raw = (display_name or "").strip()
+    if not raw:
+        return False
+    first = raw.split()[0]
+    key = first.casefold().replace("é", "e").replace("è", "e")
+    return key in _FEMALE_GIVEN_NAMES
+
+
 @app.get("/get_weekly_fun_stats")
 def get_weekly_fun_stats():
     """Get fun weekly statistics like rocket, anchor, perfect picks, etc.
@@ -8326,7 +8358,7 @@ def get_weekly_fun_stats():
         if holeshot_stats:
             holeshot_master = max(holeshot_stats.values(), key=lambda x: x['total_holeshot_points'])
 
-        # WSX har ingen wildcard — visa istället "Rundans Kung" (högst poäng senaste avklarade WSX-rundan)
+        # WSX har ingen wildcard — visa istället "Rundans Kung/Queen" (högst poäng senaste avklarade WSX-rundan)
         round_king = None
         if is_wsx_mode and recent_with_results:
             recent_comps_sorted = sorted(
@@ -8355,16 +8387,20 @@ def get_weekly_fun_stats():
                 if best and best_pts > 0:
                     ru = User.query.get(int(best.user_id))
                     if ru:
+                        display = getattr(ru, "display_name", None) or ru.username
+                        is_queen = _likely_female_given_name(display)
                         round_king = {
                             "user_id": int(ru.id),
                             "username": ru.username,
-                            "display_name": getattr(ru, "display_name", None) or ru.username,
+                            "display_name": display,
                             "round_points": best_pts,
                             "competition_id": int(latest.id),
                             "competition_name": latest.name,
                             "event_date": latest.event_date.isoformat()
                             if latest.event_date
                             else None,
+                            "is_queen": is_queen,
+                            "title": "Rundans Queen" if is_queen else "Rundans Kung",
                         }
 
         from flask import make_response

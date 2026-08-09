@@ -532,6 +532,15 @@
       border-color: rgba(167, 139, 250, 0.35);
     }
     .home-weekly-tile--king .home-inner-tile__title { color: #ddd6fe; }
+    .home-weekly-tile--queen {
+      border-top: 2px solid #f9a8d4;
+    }
+    .home-weekly-tile--queen .home-inner-tile__icon {
+      color: #f9a8d4;
+      background: rgba(244, 114, 182, 0.12);
+      border-color: rgba(244, 114, 182, 0.35);
+    }
+    .home-weekly-tile--queen .home-inner-tile__title { color: #fbcfe8; }
     .home-inner-tile__title {
       font-size: 0.65rem;
       font-weight: 700;
@@ -3912,17 +3921,19 @@
             data.holeshot_master && data.holeshot_master.user_id,
             'holeshot'
           );
-          // WSX: ingen wildcard — visa Rundans Kung istället
+          // WSX: ingen wildcard — visa Rundans Kung/Queen istället
           if (isWSX) {
             const rk = data.round_king;
+            const rkTitle = (rk && rk.title) ? rk.title : 'Rundans Kung';
+            const rkVariant = (rk && rk.is_queen) ? 'queen' : 'king';
             html += weeklyStatTile(
-              svgCrown, 'Rundans Kung', rk,
+              svgCrown, rkTitle, rk,
               rk ? [
                 rk.round_points + 'p',
                 rk.competition_name || 'Senaste runda'
               ] : [],
               rk && rk.user_id,
-              'king'
+              rkVariant
             );
           }
         }
