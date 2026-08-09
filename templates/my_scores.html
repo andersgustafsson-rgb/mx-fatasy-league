@@ -29,7 +29,7 @@
             {% if viewing_user %}
               Poänghistorik · {{ viewing_user }}
             {% elif series_filter == 'WSX' %}
-              Mina poäng · WSX
+              Mina poäng · WSX{% if wsx_year %} {{ wsx_year }}{% endif %}
             {% elif series_filter in ('SX', 'MX', 'SMX') %}
               Mina poäng · {{ series_filter }}
             {% else %}
@@ -38,7 +38,7 @@
           </h1>
           <p class="text-slate-200/90 text-sm sm:text-base mt-2 max-w-2xl">
             {% if series_filter == 'WSX' %}
-              Endast World Supercross — SX/MX/SMX visas inte här.
+              Endast World Supercross{% if wsx_year %} {{ wsx_year }}{% endif %} — samma säsong som highscoren. SX/MX/SMX visas inte här.
             {% else %}
               Din poäng per tävling, plus snabb filtrering. Klicka på en körd tävling för att se exakt poängfördelning.
             {% endif %}

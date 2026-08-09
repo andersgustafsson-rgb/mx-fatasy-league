@@ -8998,19 +8998,38 @@ def create_season_team():
         print(f"Error creating season team: {e}")
         return jsonify({"success": False, "message": f"Fel: {str(e)}"}), 500
 
-@app.route("/my_scores")
-def my_scores():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-    
-    # Rollback any existing transaction to avoid "aborted transaction" errors
-    db.session.rollback()
-    
-    uid = session["user_id"]
+def _parse_my_scores_series_scope() -> tuple[str, int | None]:
+    """Series scope for Mina poäng. WSX defaults to active season year (not all years)."""
     series_filter = (request.args.get("series") or "").strip().upper()
     if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
         series_filter = ""
+    wsx_year: int | None = None
+    if series_filter == "WSX":
+        year_raw = (request.args.get("year") or "").strip().lower()
+        if year_raw == "all":
+            wsx_year = None
+        elif year_raw.isdigit():
+            wsx_year = int(year_raw)
+        else:
+            wsx_year = _active_wsx_season_year()
+    return series_filter, wsx_year
 
+
+def _filter_my_score_rows(rows, series_filter: str, wsx_year: int | None):
+    """Apply series/season filter — WSX uses same season scope as highscore."""
+    if series_filter == "WSX":
+        if wsx_year is None:
+            return [r for r in rows if (r.series or "").upper() == "WSX"]
+        allowed = {int(c.id) for c in _wsx_competitions_for_year(int(wsx_year))}
+        return [r for r in rows if int(r.competition_id) in allowed]
+    if series_filter == "AMA":
+        return [r for r in rows if (r.series or "").upper() != "WSX"]
+    if series_filter:
+        return [r for r in rows if (r.series or "").upper() == series_filter]
+    return rows
+
+
+def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tuple[list[dict], int]:
     rows = (
         db.session.query(
             Competition.id.label("competition_id"),
@@ -9022,92 +9041,24 @@ def my_scores():
             CompetitionScore.holeshot_points,
             CompetitionScore.wildcard_points,
         )
-        .outerjoin(CompetitionScore, (Competition.id == CompetitionScore.competition_id) & (CompetitionScore.user_id == uid))
-        .order_by(Competition.event_date.asc().nulls_last())
-        .all()
-    )
-
-    if series_filter == "WSX":
-        rows = [r for r in rows if (r.series or "").upper() == "WSX"]
-    elif series_filter == "AMA":
-        rows = [r for r in rows if (r.series or "").upper() != "WSX"]
-    elif series_filter:
-        rows = [r for r in rows if (r.series or "").upper() == series_filter]
-
-    # Calculate total points
-    total_points = sum((r.total_points or 0) for r in rows)
-    
-    # Check which competitions have results (are completed)
-    scores = []
-    for r in rows:
-        # Check if this competition has any results
-        has_results = db.session.query(CompetitionResult).filter_by(competition_id=r.competition_id).first() is not None
-        
-        scores.append({
-            "competition_id": r.competition_id,
-            "name": r.name,
-            "series": r.series,
-            "event_date": r.event_date.strftime("%Y-%m-%d") if r.event_date else "",
-            "total_points": r.total_points or 0,
-            "race_points": r.race_points or 0,
-            "holeshot_points": r.holeshot_points or 0,
-            "wildcard_points": r.wildcard_points or 0,
-            "has_results": has_results,  # New field to indicate if race is completed
-        })
-
-    return render_template(
-        "my_scores.html",
-        scores=scores,
-        total_points=total_points,
-        viewing_user=None,
-        series_filter=series_filter or "all",
-    )
-
-@app.route("/user/<string:username>/scores")
-def user_scores_page(username: str):
-    """Show score history for a specific user"""
-    user = User.query.filter_by(username=username).first_or_404()
-    
-    # Rollback any existing transaction to avoid "aborted transaction" errors
-    db.session.rollback()
-
-    series_filter = (request.args.get("series") or "").strip().upper()
-    if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
-        series_filter = ""
-    
-    # Getting user scores
-    rows = (
-        db.session.query(
-            Competition.id.label("competition_id"),
-            Competition.name,
-            Competition.series,
-            Competition.event_date,
-            CompetitionScore.total_points,
-            CompetitionScore.race_points,
-            CompetitionScore.holeshot_points,
-            CompetitionScore.wildcard_points,
+        .outerjoin(
+            CompetitionScore,
+            (Competition.id == CompetitionScore.competition_id)
+            & (CompetitionScore.user_id == uid),
         )
-        .outerjoin(CompetitionScore, (Competition.id == CompetitionScore.competition_id) & (CompetitionScore.user_id == user.id))
         .order_by(Competition.event_date.asc().nulls_last())
         .all()
     )
-
-    if series_filter == "WSX":
-        rows = [r for r in rows if (r.series or "").upper() == "WSX"]
-    elif series_filter == "AMA":
-        rows = [r for r in rows if (r.series or "").upper() != "WSX"]
-    elif series_filter:
-        rows = [r for r in rows if (r.series or "").upper() == series_filter]
-
-    # Calculate total points
+    rows = _filter_my_score_rows(rows, series_filter, wsx_year)
     total_points = sum((r.total_points or 0) for r in rows)
-    
-    # Check which competitions have results (are completed)
     scores = []
     for r in rows:
-        # Check if this competition has any results
-        has_results = db.session.query(CompetitionResult).filter_by(competition_id=r.competition_id).first() is not None
-        
+        has_results = (
+            db.session.query(CompetitionResult)
+            .filter_by(competition_id=r.competition_id)
+            .first()
+            is not None
+        )
         scores.append({
             "competition_id": r.competition_id,
             "name": r.name,
@@ -9119,6 +9070,40 @@ def user_scores_page(username: str):
             "wildcard_points": r.wildcard_points or 0,
             "has_results": has_results,
         })
+    return scores, total_points
+
+
+@app.route("/my_scores")
+def my_scores():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+    
+    uid = session["user_id"]
+    series_filter, wsx_year = _parse_my_scores_series_scope()
+    scores, total_points = _my_scores_payload(uid, series_filter, wsx_year)
+
+    return render_template(
+        "my_scores.html",
+        scores=scores,
+        total_points=total_points,
+        viewing_user=None,
+        series_filter=series_filter or "all",
+        wsx_year=wsx_year,
+    )
+
+@app.route("/user/<string:username>/scores")
+def user_scores_page(username: str):
+    """Show score history for a specific user"""
+    user = User.query.filter_by(username=username).first_or_404()
+    
+    # Rollback any existing transaction to avoid "aborted transaction" errors
+    db.session.rollback()
+
+    series_filter, wsx_year = _parse_my_scores_series_scope()
+    scores, total_points = _my_scores_payload(user.id, series_filter, wsx_year)
 
     return render_template(
         "my_scores.html",
@@ -9126,6 +9111,7 @@ def user_scores_page(username: str):
         total_points=total_points,
         viewing_user=username,
         series_filter=series_filter or "all",
+        wsx_year=wsx_year,
     )
 
 
@@ -16545,18 +16531,11 @@ def race_results_page():
 
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
         if series_filter == "WSX":
-            competitions = [c for c in competitions if (c.series or "").upper() == "WSX"]
-            # Prefer active WSX season year when available (avoid empty 2026 GP over filled 2025)
+            # Same season scope as WSX highscore / Mina poäng (series_id + year)
             try:
-                year = _active_wsx_season_year()
-                year_comps = [
-                    c for c in competitions
-                    if c.event_date and int(c.event_date.year) == int(year)
-                ]
-                if year_comps:
-                    competitions = year_comps
+                competitions = _wsx_competitions_for_year(_active_wsx_season_year())
             except Exception:
-                pass
+                competitions = [c for c in competitions if (c.series or "").upper() == "WSX"]
         elif series_filter == "AMA":
             competitions = [c for c in competitions if (c.series or "").upper() != "WSX"]
         elif series_filter:
