@@ -5148,9 +5148,34 @@ def _wsx_portrait_slug(name: str | None) -> str:
 
 
 # Historical typos / alt spellings in DB → official roster name (portraits + display).
+# Also used when matching official WSX.com results (Michael Alessi, Crockett Myers, …).
 _WSX_NAME_ALIASES = {
     "Jason Andersson": "Jason Anderson",
     "Crockett Myers": "Crockett Meyers",
+    "Michael Alessi": "Mike Alessi",
+    "Mike Alesssi": "Mike Alessi",
+}
+
+# Common first-name variants for results matching (normalized).
+_FIRST_NAME_ALIASES = {
+    "michael": {"mike", "michael", "mick"},
+    "mike": {"mike", "michael", "mick"},
+    "william": {"will", "william", "billy"},
+    "will": {"will", "william"},
+    "robert": {"rob", "robert", "bobby"},
+    "rob": {"rob", "robert"},
+    "james": {"jim", "james", "jimmy"},
+    "jim": {"jim", "james", "jimmy"},
+    "joseph": {"joe", "joseph", "joey"},
+    "joe": {"joe", "joseph", "joey"},
+    "christopher": {"chris", "christopher"},
+    "chris": {"chris", "christopher"},
+    "alexander": {"alex", "alexander"},
+    "alex": {"alex", "alexander"},
+    "nicholas": {"nick", "nicholas"},
+    "nick": {"nick", "nicholas"},
+    "thomas": {"tom", "thomas", "tommy"},
+    "tom": {"tom", "thomas", "tommy"},
 }
 
 
@@ -15652,25 +15677,52 @@ def bulk_import_results():
         return jsonify({"error": str(e)}), 500
 
 
-def _match_rider_for_results_import(rider_name: str, class_name: str):
-    """Same matching strategies as bulk_preview/import."""
-    target_norm = _normalize_name(rider_name)
-    rider = Rider.query.filter(
-        Rider.name.ilike(rider_name),
-        Rider.class_name == class_name,
-    ).first()
-    if not rider:
+def _match_rider_for_results_import(
+    rider_name: str,
+    class_name: str,
+    *,
+    rider_number: int | None = None,
+):
+    """Match result row to Rider — aliases, number, and first-name variants."""
+    raw_name = (rider_name or "").strip()
+    if not raw_name and rider_number is None:
+        return None
+
+    # Prefer known WSX alt spellings (Michael Alessi → Mike Alessi, Myers → Meyers)
+    name_candidates = []
+    if raw_name:
+        name_candidates.append(raw_name)
+        canon = _canonical_wsx_rider_name(raw_name)
+        if canon and canon not in name_candidates:
+            name_candidates.append(canon)
+        # Reverse: if result uses official name but DB still has typo
+        for typo, official in _WSX_NAME_ALIASES.items():
+            if official == raw_name and typo not in name_candidates:
+                name_candidates.append(typo)
+            if official == canon and typo not in name_candidates:
+                name_candidates.append(typo)
+
+    for candidate in name_candidates:
+        target_norm = _normalize_name(candidate)
         rider = Rider.query.filter(
-            Rider.name.contains(rider_name),
+            Rider.name.ilike(candidate),
             Rider.class_name == class_name,
         ).first()
-    if not rider:
+        if rider:
+            return rider
         rider = Rider.query.filter(
-            Rider.name.like(f"%{rider_name}%"),
+            Rider.name.contains(candidate),
             Rider.class_name == class_name,
         ).first()
-    if not rider:
-        name_parts = rider_name.split()
+        if rider:
+            return rider
+        rider = Rider.query.filter(
+            Rider.name.like(f"%{candidate}%"),
+            Rider.class_name == class_name,
+        ).first()
+        if rider:
+            return rider
+        name_parts = candidate.split()
         if len(name_parts) >= 2:
             first_name = name_parts[0]
             last_name = name_parts[-1]
@@ -15678,20 +15730,77 @@ def _match_rider_for_results_import(rider_name: str, class_name: str):
                 Rider.name.like(f"%{first_name}%{last_name}%"),
                 Rider.class_name == class_name,
             ).first()
-    if not rider:
+            if rider:
+                return rider
         candidates = Rider.query.filter(Rider.class_name == class_name).all()
         for cand in candidates:
             if _normalize_name(cand.name) == target_norm:
-                rider = cand
-                break
-    return rider
+                return cand
+
+    # Number match within class (WSX cards include race number)
+    if rider_number is not None:
+        try:
+            num = int(rider_number)
+        except (TypeError, ValueError):
+            num = None
+        if num is not None:
+            by_num = (
+                Rider.query.filter(
+                    Rider.class_name == class_name,
+                    Rider.rider_number == num,
+                ).all()
+            )
+            if len(by_num) == 1:
+                return by_num[0]
+            if len(by_num) > 1 and raw_name:
+                last = raw_name.split()[-1].lower()
+                for cand in by_num:
+                    if last and last in (cand.name or "").lower():
+                        return cand
+                # Myers/Meyers soft last-name compare
+                for cand in by_num:
+                    cand_last = (cand.name or "").split()[-1].lower()
+                    if _normalize_name(cand_last) == _normalize_name(last):
+                        return cand
+                    if {cand_last, last} <= {"myers", "meyers"}:
+                        return cand
+
+    # Last name + first-name nickname variants within class
+    if raw_name:
+        parts = raw_name.split()
+        if len(parts) >= 2:
+            first_n = _normalize_name(parts[0])
+            last_n = _normalize_name(parts[-1])
+            first_opts = _FIRST_NAME_ALIASES.get(first_n, {first_n})
+            # Myers <-> Meyers
+            last_opts = {last_n}
+            if last_n in {"myers", "meyers"}:
+                last_opts |= {"myers", "meyers"}
+            class_riders = Rider.query.filter(Rider.class_name == class_name).all()
+            hits = []
+            for cand in class_riders:
+                cparts = (cand.name or "").split()
+                if len(cparts) < 2:
+                    continue
+                c_first = _normalize_name(cparts[0])
+                c_last = _normalize_name(cparts[-1])
+                if c_last in last_opts and c_first in first_opts:
+                    hits.append(cand)
+            if len(hits) == 1:
+                return hits[0]
+
+    return None
 
 
 def _preview_wsx_official_class_rows(raw_rows: list, class_name: str) -> tuple[list, list]:
     rows = []
     missing = []
     for row in raw_rows:
-        rider = _match_rider_for_results_import(row["rider_name"], class_name)
+        rider = _match_rider_for_results_import(
+            row["rider_name"],
+            class_name,
+            rider_number=row.get("rider_number"),
+        )
         item = {
             "position": row["position"],
             "rider_name": row["rider_name"],
