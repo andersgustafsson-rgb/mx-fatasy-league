@@ -1501,19 +1501,20 @@ def _paste_circle_avatar(base, cx: int, cy: int, radius: int, rider_id: int | No
     rd = ImageDraw.Draw(ring)
     rd.ellipse([0, 0, radius * 2 + 7, radius * 2 + 7], fill=(*CYAN, 180))
 
-    inner = Image.new("RGBA", (radius * 2, radius * 2), (0, 0, 0, 0))
-    idraw = ImageDraw.Draw(inner)
-    thumb = _load_rider_thumb(rider_id, radius * 2) if rider_id else None
+    d = radius * 2
+    inner = Image.new("RGBA", (d, d), (0, 0, 0, 0))
+    thumb = _load_rider_thumb(rider_id, d * 2) if rider_id else None
     if thumb:
-        mask = Image.new("L", (radius * 2, radius * 2), 0)
-        ImageDraw.Draw(mask).ellipse([0, 0, radius * 2 - 1, radius * 2 - 1], fill=255)
-        inner.paste(thumb, ((radius * 2 - thumb.width) // 2, (radius * 2 - thumb.height) // 2), thumb)
+        thumb = _cover_crop_square(thumb.convert("RGBA"), d, face_bias=-0.10)
+        mask = Image.new("L", (d, d), 0)
+        ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
+        inner.paste(thumb, (0, 0), thumb)
         inner.putalpha(mask)
     else:
-        fallback = _make_initials_avatar(str(initials), int(rider_id or 0), radius * 2)
+        fallback = _make_initials_avatar(str(initials), int(rider_id or 0), d)
         inner.paste(
             fallback,
-            ((radius * 2 - fallback.width) // 2, (radius * 2 - fallback.height) // 2),
+            ((d - fallback.width) // 2, (d - fallback.height) // 2),
             fallback,
         )
 
@@ -2811,7 +2812,9 @@ def _scale_recap_circle(
 
 
 def _cover_crop_square(img, size: int, *, face_bias: float = 0.1):
-    """Fyll en kvadrat (cover) — porträtt zoomas in istället för letterbox."""
+    """Fyll en kvadrat (cover). Positiv face_bias = mer topp (ansikte uppåt);
+    negativ = skjut ner ansiktet i ringen.
+    """
     from PIL import Image
 
     w, h = img.size
@@ -3203,7 +3206,8 @@ def _render_recap_graphic_from_template(data: dict[str, Any]) -> bytes:
                         rider_id=entry.get("rider_id"),
                         display_name=entry.get("name") or "?",
                         initials=(entry.get("short_name") or "?")[:2],
-                        face_bias=0.05,
+                        # WSX/AMA headshots sitter ofta högt — skjut ner lite i ringen
+                        face_bias=-0.10,
                     )
             name_slots = {int(n["pos"]): n for n in panel.get("names") or []}
             for av in panel["avatars"]:
