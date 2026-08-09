@@ -14,13 +14,12 @@
       const pts = opts.points;
       const series = (opts.series || '').toUpperCase();
       body =
-        `🏁 ${raceName} — resultaten är inne!\n` +
+        `🌙 ${raceName} — min kväll i MX Fantasy!\n` +
         (pts != null ? `Jag landade på ${pts}p` + (series ? ` (${series})` : '') + '.\n' : '') +
         (uname ? `Kör som ${uname} på mx-fantasy.se` : 'Tippa gratis på mx-fantasy.se');
-      title = `${raceName} — race-resultat · MX Fantasy`;
+      title = `${raceName} — Din kväll · MX Fantasy`;
       card =
-        `/api/race_recap.png?competition_id=${encodeURIComponent(opts.competitionId)}` +
-        `&layout=facebook&part=graphic`;
+        `/api/din_kvall.png?competition_id=${encodeURIComponent(opts.competitionId)}`;
     } else if (wsx) {
       body = base.wsx_share_body || (
         `🔥 WSX 2026 startar — Canadian GP!\nTippa World Supercross gratis på mx-fantasy.se\n` +
@@ -86,7 +85,7 @@
     const raceRecap = !!(opts && opts.raceRecap && opts.competitionId);
 
     if (eyebrowEl) {
-      eyebrowEl.textContent = raceRecap ? 'Race-resultat' : (wsx ? 'WSX-hype' : 'Race-hype');
+      eyebrowEl.textContent = raceRecap ? 'Din kväll' : (wsx ? 'WSX-hype' : 'Race-hype');
     }
     if (titleEl) {
       if (raceRecap) titleEl.textContent = 'Dela din kväll';
@@ -96,7 +95,7 @@
     }
     if (subtitleEl) {
       if (raceRecap) {
-        subtitleEl.textContent = 'Race-resultatkortet — dela till Snap/Stories eller ladda ner bilden.';
+        subtitleEl.textContent = 'Ditt personliga kvällskort — poäng, plats och highlights till Snap/Stories.';
       } else if (wsx) {
         subtitleEl.textContent = 'Story-kort (9:16) — Snap, Instagram Stories eller stillbild i Reels.';
       } else if (opts && opts.afterPicks) {
@@ -117,7 +116,7 @@
       const src = cardUrl(opts);
       if (src) {
         preview.src = src + (src.includes('?') ? '&' : '?') + '_=' + Date.now();
-        preview.alt = raceRecap ? 'Race-resultat för delning' : 'Race-hype kort för delning';
+        preview.alt = raceRecap ? 'Din kväll-kort för delning' : 'Race-hype kort för delning';
         preview.classList.remove('hidden');
       }
     }
@@ -196,7 +195,7 @@
     const inviteUrl = (p.invite_url || '').trim();
     const caption = [p.share_body || '', inviteUrl].filter(Boolean).join('\n');
     const baseName = p._raceRecapMode
-      ? 'mx-fantasy-race-recap'
+      ? 'mx-fantasy-din-kvall'
       : (p._wsxMode ? 'mx-fantasy-wsx-hype' : 'mx-fantasy-race');
     try {
       const blob = await blobFromCardUrl();

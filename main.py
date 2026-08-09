@@ -18798,7 +18798,7 @@ def api_race_recap():
 
 @app.get("/api/race_recap.png")
 def api_race_recap_png():
-    """Shareable race-results graphic for «Dela din kväll» (not invite/hype)."""
+    """Public race-results graphic (admin-style race recap) for a competition."""
     from flask import Response
 
     if "user_id" not in session:
@@ -18808,7 +18808,6 @@ def api_race_recap_png():
     if not comp_id:
         return Response(status=400)
 
-    # Must have played this race (or at least have a score row)
     if _user_competition_points(uid, int(comp_id)) is None:
         return Response(status=403)
 
@@ -18842,6 +18841,42 @@ def api_race_recap_png():
         return Response(status=404)
     except Exception as e:
         print(f"api_race_recap_png failed: {e}")
+        return Response(status=500)
+
+
+@app.get("/api/din_kvall.png")
+def api_din_kvall_png():
+    """Personal «Din kväll» share card — not the public race-recap graphic."""
+    from flask import Response
+
+    if "user_id" not in session:
+        return Response(status=401)
+    uid = int(session["user_id"])
+    comp_id = request.args.get("competition_id", type=int)
+    try:
+        _ensure_race_recap_table()
+        data = _build_personal_race_recap(uid, competition_id=comp_id)
+        if not data or not data.get("available"):
+            return Response(status=404)
+        user = User.query.get(uid)
+        data = {
+            **data,
+            "username": (user.username if user else "") or session.get("username") or "",
+            "display_name": (
+                (getattr(user, "display_name", None) if user else None)
+                or (user.username if user else None)
+                or session.get("username")
+                or ""
+            ),
+        }
+        from invite_card_service import render_din_kvall_card_png
+
+        png_bytes = render_din_kvall_card_png(data)
+        resp = Response(png_bytes, mimetype="image/png")
+        resp.headers["Cache-Control"] = "private, max-age=60"
+        return resp
+    except Exception as e:
+        print(f"api_din_kvall_png failed: {e}")
         return Response(status=500)
 
 

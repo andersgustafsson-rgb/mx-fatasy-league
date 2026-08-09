@@ -1505,7 +1505,9 @@ def _paste_circle_avatar(base, cx: int, cy: int, radius: int, rider_id: int | No
     inner = Image.new("RGBA", (d, d), (0, 0, 0, 0))
     thumb = _load_rider_thumb(rider_id, d * 2) if rider_id else None
     if thumb:
-        thumb = _cover_crop_square(thumb.convert("RGBA"), d, face_bias=-0.10)
+        thumb = _cover_crop_square(
+            thumb.convert("RGBA"), d, face_bias=0.22, zoom=1.28
+        )
         mask = Image.new("L", (d, d), 0)
         ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
         inner.paste(thumb, (0, 0), thumb)
@@ -2811,19 +2813,23 @@ def _scale_recap_circle(
     )
 
 
-def _cover_crop_square(img, size: int, *, face_bias: float = 0.1):
-    """Fyll en kvadrat (cover). Positiv face_bias = mer topp (ansikte uppåt);
-    negativ = skjut ner ansiktet i ringen.
+def _cover_crop_square(img, size: int, *, face_bias: float = 0.1, zoom: float = 1.0):
+    """Fyll en kvadrat (cover).
+
+    Positiv face_bias = favorisera bildens topp (ansikte syns bättre i ringen).
+    zoom > 1 = zooma in så huvudet fyller mer av cirkeln.
     """
     from PIL import Image
 
     w, h = img.size
     if w < 1 or h < 1:
         return img
-    scale = max(size / w, size / h)
+    z = max(1.0, float(zoom or 1.0))
+    scale = max(size / w, size / h) * z
     nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
     img = img.resize((nw, nh), Image.Resampling.LANCZOS)
     left = max(0, (nw - size) // 2)
+    # Positive bias pulls crop toward top of photo (helmet/face into frame center)
     top = max(0, (nh - size) // 2 - int(size * face_bias))
     left = min(left, max(0, nw - size))
     top = min(top, max(0, nh - size))
@@ -2841,6 +2847,7 @@ def _paste_plain_circle_avatar(
     display_name: str = "?",
     initials: str = "?",
     face_bias: float = 0.1,
+    zoom: float = 1.0,
 ) -> None:
     """Cirkulär avatar utan ring — mallen har redan ram."""
     from PIL import Image, ImageDraw
@@ -2855,7 +2862,9 @@ def _paste_plain_circle_avatar(
     if thumb is None:
         thumb = _make_initials_avatar(display_name or initials, int(user_id or rider_id or 0), d)
     else:
-        thumb = _cover_crop_square(thumb.convert("RGBA"), d, face_bias=face_bias)
+        thumb = _cover_crop_square(
+            thumb.convert("RGBA"), d, face_bias=face_bias, zoom=zoom
+        )
 
     mask = Image.new("L", (d, d), 0)
     ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
@@ -3206,8 +3215,9 @@ def _render_recap_graphic_from_template(data: dict[str, Any]) -> bytes:
                         rider_id=entry.get("rider_id"),
                         display_name=entry.get("name") or "?",
                         initials=(entry.get("short_name") or "?")[:2],
-                        # WSX/AMA headshots sitter ofta högt — skjut ner lite i ringen
-                        face_bias=-0.10,
+                        # Headshots: favor top + zoom so helmet/face fills the ring
+                        face_bias=0.22,
+                        zoom=1.28,
                     )
             name_slots = {int(n["pos"]): n for n in panel.get("names") or []}
             for av in panel["avatars"]:

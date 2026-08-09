@@ -787,3 +787,163 @@ def _render_og_card(data: dict[str, Any]) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
+
+
+def render_din_kvall_card_png(data: dict[str, Any]) -> bytes:
+    """Personal «Din kväll» share card (9:16) — not the public race-recap graphic."""
+    from PIL import Image, ImageDraw
+
+    from social_recap_service import (
+        CYAN,
+        GOLD,
+        MUTED,
+        WHITE,
+        _draw_styled_text,
+        _font_height,
+        _load_brand_logo,
+        _load_display_font,
+        _load_font_px,
+        _plain_draw_text,
+    )
+
+    bg_top = (10, 16, 36)
+    bg_bot = (6, 10, 22)
+    panel = (16, 24, 48)
+    panel_edge = (56, 90, 140)
+    amber = (251, 191, 36)
+
+    img = Image.new("RGB", (W_STORY, H_STORY), bg_bot)
+    px = img.load()
+    for y in range(H_STORY):
+        t = y / max(H_STORY - 1, 1)
+        r = int(bg_top[0] * (1 - t) + bg_bot[0] * t)
+        g = int(bg_top[1] * (1 - t) + bg_bot[1] * t)
+        b = int(bg_top[2] * (1 - t) + bg_bot[2] * t)
+        for x in range(W_STORY):
+            px[x, y] = (r, g, b)
+    draw = ImageDraw.Draw(img)
+
+    margin = 56
+    draw.rectangle([0, 0, W_STORY, 12], fill=CYAN)
+    draw.rectangle([0, H_STORY - 12, W_STORY, H_STORY], fill=amber)
+
+    y = 52
+    logo = _load_brand_logo(100)
+    if logo:
+        img.paste(logo, (margin, y), logo)
+    brand_f = _load_display_font(28, bold=True)
+    _draw_styled_text(
+        draw, (margin + 120, y + 22), "MX FANTASY", brand_f, CYAN, anchor="lm"
+    )
+    _draw_styled_text(
+        draw, (margin + 120, y + 58), "DIN KVÄLL", _load_font_px(22, bold=True), amber, anchor="lm"
+    )
+    y += 140
+
+    race = _plain_draw_text(data.get("race_name") or "Race")
+    series = _plain_draw_text((data.get("series") or "").upper())
+    race_f = _load_display_font(64, bold=True)
+    for size in (64, 56, 48, 40):
+        race_f = _load_display_font(size, bold=True)
+        lines = textwrap.wrap(race.upper(), width=16)
+        if len(lines) <= 2:
+            break
+    line_h = _font_height(race_f, "Ay") + 8
+    for line in lines[:2]:
+        _draw_styled_text(
+            draw, (W_STORY // 2, y), line, race_f, WHITE, anchor="mt",
+            stroke=(8, 12, 28), stroke_width=3,
+        )
+        y += line_h
+    if series:
+        _draw_styled_text(
+            draw, (W_STORY // 2, y + 6), series, _load_font_px(28, bold=True), GOLD, anchor="mt"
+        )
+        y += 48
+    else:
+        y += 20
+
+    panel_y1 = y + 10
+    panel_y2 = panel_y1 + 340
+    draw.rounded_rectangle(
+        [margin, panel_y1, W_STORY - margin, panel_y2],
+        radius=28, fill=panel, outline=panel_edge, width=2,
+    )
+    pts = data.get("points")
+    pts_txt = f"{int(pts)}p" if pts is not None else "—"
+    _draw_styled_text(
+        draw, (W_STORY // 2, panel_y1 + 36), "DINA POÄNG", _load_font_px(24, bold=True), MUTED, anchor="mt"
+    )
+    _draw_styled_text(
+        draw, (W_STORY // 2, panel_y1 + 90), pts_txt, _load_display_font(96, bold=True), amber, anchor="mt"
+    )
+
+    rank = data.get("race_rank")
+    field = data.get("field_size")
+    rank_txt = f"#{rank}" if rank is not None else "—"
+    if field:
+        rank_txt = f"{rank_txt} av {field}"
+    vs = _plain_draw_text(data.get("vs_avg_label") or "")
+    delta = _plain_draw_text(data.get("season_delta_label") or "")
+
+    col_y = panel_y1 + 220
+    mid = W_STORY // 2
+    _draw_styled_text(draw, (mid - 220, col_y), "PLATS", _load_font_px(20, bold=True), MUTED, anchor="mt")
+    _draw_styled_text(draw, (mid - 220, col_y + 36), rank_txt, _load_font_px(36, bold=True), WHITE, anchor="mt")
+    if vs:
+        _draw_styled_text(draw, (mid + 220, col_y), "VS SNITT", _load_font_px(20, bold=True), MUTED, anchor="mt")
+        _draw_styled_text(draw, (mid + 220, col_y + 36), vs, _load_font_px(32, bold=True), CYAN, anchor="mt")
+    elif delta:
+        _draw_styled_text(draw, (mid + 220, col_y), "SÄSONG", _load_font_px(20, bold=True), MUTED, anchor="mt")
+        _draw_styled_text(draw, (mid + 220, col_y + 36), delta, _load_font_px(32, bold=True), CYAN, anchor="mt")
+
+    y = panel_y2 + 36
+
+    highlights = list(data.get("highlights") or [])[:3]
+    if highlights:
+        _draw_styled_text(
+            draw, (margin, y), "HIGHLIGHTS", _load_font_px(22, bold=True), MUTED, anchor="lt"
+        )
+        y += 40
+        for h in highlights:
+            text = _plain_draw_text((h.get("text") if isinstance(h, dict) else h) or "")
+            if not text:
+                continue
+            box_h = 78
+            draw.rounded_rectangle(
+                [margin, y, W_STORY - margin, y + box_h],
+                radius=18, fill=(14, 20, 40), outline=(40, 60, 90), width=1,
+            )
+            wrapped = textwrap.wrap(text, width=34)[:2]
+            ty = y + 16
+            for line in wrapped:
+                _draw_styled_text(
+                    draw, (margin + 28, ty), line, _load_font_px(26, bold=True), WHITE, anchor="lt"
+                )
+                ty += 30
+            y += box_h + 14
+
+    rival = _plain_draw_text(data.get("rival_line") or "")
+    if rival:
+        y += 8
+        draw.rounded_rectangle(
+            [margin, y, W_STORY - margin, y + 100],
+            radius=18, fill=(28, 18, 12), outline=(120, 70, 30), width=2,
+        )
+        for i, line in enumerate(textwrap.wrap(rival, width=32)[:2]):
+            _draw_styled_text(
+                draw, (W_STORY // 2, y + 28 + i * 32), line,
+                _load_font_px(26, bold=True), amber, anchor="mt",
+            )
+
+    uname = _plain_draw_text(data.get("display_name") or data.get("username") or "")
+    if uname:
+        label = uname if uname.startswith("@") else f"@{uname}"
+        _draw_styled_text(
+            draw, (W_STORY // 2, H_STORY - 70), label,
+            _load_font_px(28, bold=True), MUTED, anchor="mb",
+        )
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
