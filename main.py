@@ -15652,6 +15652,259 @@ def bulk_import_results():
         return jsonify({"error": str(e)}), 500
 
 
+def _match_rider_for_results_import(rider_name: str, class_name: str):
+    """Same matching strategies as bulk_preview/import."""
+    target_norm = _normalize_name(rider_name)
+    rider = Rider.query.filter(
+        Rider.name.ilike(rider_name),
+        Rider.class_name == class_name,
+    ).first()
+    if not rider:
+        rider = Rider.query.filter(
+            Rider.name.contains(rider_name),
+            Rider.class_name == class_name,
+        ).first()
+    if not rider:
+        rider = Rider.query.filter(
+            Rider.name.like(f"%{rider_name}%"),
+            Rider.class_name == class_name,
+        ).first()
+    if not rider:
+        name_parts = rider_name.split()
+        if len(name_parts) >= 2:
+            first_name = name_parts[0]
+            last_name = name_parts[-1]
+            rider = Rider.query.filter(
+                Rider.name.like(f"%{first_name}%{last_name}%"),
+                Rider.class_name == class_name,
+            ).first()
+    if not rider:
+        candidates = Rider.query.filter(Rider.class_name == class_name).all()
+        for cand in candidates:
+            if _normalize_name(cand.name) == target_norm:
+                rider = cand
+                break
+    return rider
+
+
+def _preview_wsx_official_class_rows(raw_rows: list, class_name: str) -> tuple[list, list]:
+    rows = []
+    missing = []
+    for row in raw_rows:
+        rider = _match_rider_for_results_import(row["rider_name"], class_name)
+        item = {
+            "position": row["position"],
+            "rider_name": row["rider_name"],
+            "rider_number": row.get("rider_number"),
+            "team": row.get("team"),
+            "points": row.get("points"),
+            "race_1": row.get("race_1"),
+            "race_2": row.get("race_2"),
+            "race_3": row.get("race_3"),
+            "found_in_db": rider is not None,
+            "rider_id": rider.id if rider else None,
+            "db_rider_name": rider.name if rider else None,
+            "class_name": class_name,
+        }
+        rows.append(item)
+        if not rider:
+            missing.append(
+                {
+                    "position": row["position"],
+                    "rider_name": row["rider_name"],
+                    "rider_number": row.get("rider_number"),
+                }
+            )
+    return rows, missing
+
+
+@app.post("/fetch_wsx_official_results")
+def fetch_wsx_official_results():
+    """Hämta official WSX results + preview (skriver INTE till DB)."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        from wsx_official_results_fetch import (
+            WSX_OFFICIAL_RESULTS_URL,
+            fetch_wsx_official_results as _fetch,
+            match_event_to_competition_name,
+            rows_to_paste_text,
+        )
+
+        data = request.get_json(force=True) or {}
+        competition_id = data.get("competition_id")
+        event_index = data.get("event_index")
+        url = (data.get("url") or "").strip() or None
+
+        competition = None
+        if competition_id:
+            competition = Competition.query.get(competition_id)
+            if not competition:
+                return jsonify({"error": "Competition not found"}), 404
+            if (competition.series or "").upper() != "WSX":
+                return jsonify({"error": "Välj en WSX-tävling"}), 400
+
+        fetched = _fetch(url)
+        events = fetched["events"]
+        event_summaries = [
+            {
+                "index": ev["index"],
+                "title": ev["title"],
+                "round": ev.get("round"),
+                "date": ev.get("date"),
+                "location": ev.get("location"),
+                "sx1_count": ev.get("sx1_count", 0),
+                "sx2_count": ev.get("sx2_count", 0),
+            }
+            for ev in events
+        ]
+
+        if event_index is None and competition is not None:
+            event_index = match_event_to_competition_name(events, competition.name or "")
+        if event_index is None:
+            event_index = 0
+        try:
+            event_index = int(event_index)
+        except (TypeError, ValueError):
+            return jsonify({"error": "Ogiltigt event_index"}), 400
+        if event_index < 0 or event_index >= len(events):
+            return jsonify({"error": "event_index utanför listan"}), 400
+
+        selected = events[event_index]
+        sx1_rows, sx1_missing = _preview_wsx_official_class_rows(
+            selected.get("sx1") or [], "wsx_sx1"
+        )
+        sx2_rows, sx2_missing = _preview_wsx_official_class_rows(
+            selected.get("sx2") or [], "wsx_sx2"
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "source_url": fetched.get("source_url") or WSX_OFFICIAL_RESULTS_URL,
+                "events": event_summaries,
+                "selected_event_index": event_index,
+                "selected_event": {
+                    "title": selected.get("title"),
+                    "round": selected.get("round"),
+                    "date": selected.get("date"),
+                    "location": selected.get("location"),
+                },
+                "competition_id": competition.id if competition else None,
+                "competition_name": competition.name if competition else None,
+                "sx1": {
+                    "class_name": "wsx_sx1",
+                    "rows": sx1_rows,
+                    "missing_riders": sx1_missing,
+                    "paste_text": rows_to_paste_text(selected.get("sx1") or []),
+                },
+                "sx2": {
+                    "class_name": "wsx_sx2",
+                    "rows": sx2_rows,
+                    "missing_riders": sx2_missing,
+                    "paste_text": rows_to_paste_text(selected.get("sx2") or []),
+                },
+            }
+        )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/import_wsx_official_results")
+def import_wsx_official_results():
+    """Importera tidigare previewade WSX-rader (kräver rider_id). Skriver till DB."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    _ensure_competition_result_moto_columns()
+    try:
+        data = request.get_json(force=True) or {}
+        competition_id = data.get("competition_id")
+        classes = data.get("classes") or {}
+        if not competition_id:
+            return jsonify({"error": "competition_id krävs"}), 400
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 404
+        if (competition.series or "").upper() != "WSX":
+            return jsonify({"error": "Välj en WSX-tävling"}), 400
+
+        imported_total = 0
+        skipped_total = []
+        per_class = {}
+
+        for class_name in ("wsx_sx1", "wsx_sx2"):
+            rows = classes.get(class_name) or []
+            if not rows:
+                continue
+            imported = 0
+            skipped = []
+            for row in rows:
+                rider_id = row.get("rider_id")
+                position = row.get("position")
+                if not rider_id or position is None:
+                    skipped.append(row)
+                    continue
+                rider = Rider.query.get(int(rider_id))
+                if not rider or (rider.class_name or "") != class_name:
+                    # Soft fallback: try name match if id stale
+                    name = (row.get("rider_name") or "").strip()
+                    rider = (
+                        _match_rider_for_results_import(name, class_name) if name else None
+                    )
+                if not rider:
+                    skipped.append(row)
+                    continue
+                existing = CompetitionResult.query.filter_by(
+                    competition_id=competition_id,
+                    rider_id=rider.id,
+                ).first()
+                if existing:
+                    existing.position = int(position)
+                    existing.class_name = class_name
+                else:
+                    db.session.add(
+                        CompetitionResult(
+                            competition_id=competition_id,
+                            rider_id=rider.id,
+                            position=int(position),
+                            class_name=class_name,
+                        )
+                    )
+                imported += 1
+            per_class[class_name] = {"imported": imported, "skipped": skipped}
+            imported_total += imported
+            skipped_total.extend(skipped)
+
+        if imported_total == 0:
+            db.session.rollback()
+            return jsonify(
+                {
+                    "error": "Inga rader att importera (saknar matchade rider_id). Kör preview igen.",
+                    "per_class": per_class,
+                }
+            ), 400
+
+        db.session.commit()
+        try:
+            calculate_scores(int(competition_id))
+        except Exception:
+            pass
+
+        return jsonify(
+            {
+                "success": True,
+                "imported": imported_total,
+                "skipped": skipped_total,
+                "per_class": per_class,
+            }
+        )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.post("/clear_competition_class_results")
 def clear_competition_class_results():
     """Remove imported results for one class only (e.g. wrong RacerX import). Keeps picks."""

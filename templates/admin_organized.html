@@ -496,6 +496,85 @@
                     </div>
                 </div>
 
+                <!-- Official WSX.com results -->
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-white mb-3">🌐 Official WSX.com Results</h3>
+                    <div class="bg-gray-800 rounded-lg p-4 border border-orange-700/40">
+                        <p class="text-gray-300 mb-4">
+                            Hämta overall från
+                            <a href="https://worldsupercrosschampionship.com/results/" target="_blank" rel="noopener" class="text-cyan-400 underline">worldsupercrosschampionship.com/results</a>.
+                            <strong class="text-yellow-300">Inget sparas förrän du klickar Importera preview.</strong>
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Competition</label>
+                                <select id="wsx-official-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                                    <option value="">Loading...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Event på WSX.com</label>
+                                <select id="wsx-official-event" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" disabled>
+                                    <option value="">Hämta först…</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end flex-wrap gap-2">
+                                <button type="button" onclick="wsxOfficialFetchPreview()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">👁️ Hämta &amp; Preview</button>
+                                <button type="button" id="wsx-official-import-btn" onclick="wsxOfficialImportPreview()" class="btn-warning px-4 py-2 rounded-lg opacity-50 cursor-not-allowed" disabled>📥 Importera preview</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-300 mb-2">URL (valfritt)</label>
+                            <input id="wsx-official-url" type="url" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white" value="https://worldsupercrosschampionship.com/results/" placeholder="https://worldsupercrosschampionship.com/results/">
+                        </div>
+                        <p id="wsx-official-status" class="text-sm mb-3 text-gray-400">Välj WSX-tävling → Hämta &amp; Preview → kontrollera matchning → Importera.</p>
+                        <div id="wsx-official-preview" class="hidden space-y-4">
+                            <div class="flex flex-wrap gap-3 text-sm">
+                                <label class="inline-flex items-center gap-2 text-gray-200"><input type="checkbox" id="wsx-official-import-sx1" checked class="rounded"> Importera SX1</label>
+                                <label class="inline-flex items-center gap-2 text-gray-200"><input type="checkbox" id="wsx-official-import-sx2" checked class="rounded"> Importera SX2</label>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="text-orange-300 font-semibold mb-2">SX1 preview</h4>
+                                    <div class="overflow-x-auto max-h-80 overflow-y-auto border border-gray-700 rounded">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-gray-900 text-gray-300 sticky top-0">
+                                                <tr>
+                                                    <th class="px-2 py-1 text-left">Pos</th>
+                                                    <th class="px-2 py-1 text-left">#</th>
+                                                    <th class="px-2 py-1 text-left">Namn</th>
+                                                    <th class="px-2 py-1 text-left">Pts</th>
+                                                    <th class="px-2 py-1 text-left">Match</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wsx-official-sx1-rows" class="text-gray-200"></tbody>
+                                        </table>
+                                    </div>
+                                    <p id="wsx-official-sx1-missing" class="mt-2 hidden text-yellow-200 text-xs"></p>
+                                </div>
+                                <div>
+                                    <h4 class="text-cyan-300 font-semibold mb-2">SX2 preview</h4>
+                                    <div class="overflow-x-auto max-h-80 overflow-y-auto border border-gray-700 rounded">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-gray-900 text-gray-300 sticky top-0">
+                                                <tr>
+                                                    <th class="px-2 py-1 text-left">Pos</th>
+                                                    <th class="px-2 py-1 text-left">#</th>
+                                                    <th class="px-2 py-1 text-left">Namn</th>
+                                                    <th class="px-2 py-1 text-left">Pts</th>
+                                                    <th class="px-2 py-1 text-left">Match</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="wsx-official-sx2-rows" class="text-gray-200"></tbody>
+                                        </table>
+                                    </div>
+                                    <p id="wsx-official-sx2-missing" class="mt-2 hidden text-yellow-200 text-xs"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- RacerX / Bulk WSX -->
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">📋 Bulk / Racer X (WSX)</h3>
@@ -3802,16 +3881,21 @@
         async function loadWsxBulkCompetitions() {
             try {
                 const data = await fetchCompetitionsForImportShared('WSX');
-                const select = document.getElementById('wsx-bulk-competition');
-                if (!select) return;
-                select.innerHTML = '<option value="">Välj WSX-tävling...</option>';
-                (data.competitions || []).forEach(comp => {
-                    const opt = document.createElement('option');
-                    opt.value = comp.id;
-                    opt.textContent = comp.name;
-                    select.appendChild(opt);
+                const selects = [
+                    document.getElementById('wsx-bulk-competition'),
+                    document.getElementById('wsx-official-competition'),
+                ].filter(Boolean);
+                selects.forEach((select) => {
+                    select.innerHTML = '<option value="">Välj WSX-tävling...</option>';
+                    (data.competitions || []).forEach(comp => {
+                        const opt = document.createElement('option');
+                        opt.value = comp.id;
+                        opt.textContent = comp.name;
+                        select.appendChild(opt);
+                    });
                 });
-                if (!select.dataset.racerxListeners) {
+                const select = document.getElementById('wsx-bulk-competition');
+                if (select && !select.dataset.racerxListeners) {
                     select.dataset.racerxListeners = '1';
                     select.addEventListener('change', wsxBulkSuggestRacerxUrl);
                     document.getElementById('wsx-bulk-class')?.addEventListener('change', wsxBulkSuggestRacerxUrl);
@@ -3825,9 +3909,229 @@
                         });
                     }
                 }
+                const officialSel = document.getElementById('wsx-official-competition');
+                if (officialSel && !officialSel.dataset.officialListeners) {
+                    officialSel.dataset.officialListeners = '1';
+                    officialSel.addEventListener('change', () => {
+                        window._wsxOfficialPreview = null;
+                        wsxOfficialSetImportEnabled(false);
+                        document.getElementById('wsx-official-preview')?.classList.add('hidden');
+                        const st = document.getElementById('wsx-official-status');
+                        if (st) st.textContent = 'Tävling bytt — kör Hämta & Preview igen.';
+                    });
+                }
+                const eventSel = document.getElementById('wsx-official-event');
+                if (eventSel && !eventSel.dataset.officialListeners) {
+                    eventSel.dataset.officialListeners = '1';
+                    eventSel.addEventListener('change', () => {
+                        if (window._wsxOfficialPreview) {
+                            wsxOfficialFetchPreview({ reuseEvents: true });
+                        }
+                    });
+                }
                 wsxBulkSuggestRacerxUrl();
             } catch (e) {
                 console.error('WSX bulk competitions load error', e);
+            }
+        }
+
+        function wsxOfficialSetImportEnabled(on) {
+            const btn = document.getElementById('wsx-official-import-btn');
+            if (!btn) return;
+            btn.disabled = !on;
+            btn.classList.toggle('opacity-50', !on);
+            btn.classList.toggle('cursor-not-allowed', !on);
+        }
+
+        function wsxOfficialFillEventSelect(events, selectedIndex) {
+            const sel = document.getElementById('wsx-official-event');
+            if (!sel) return;
+            sel.disabled = false;
+            sel.innerHTML = '';
+            (events || []).forEach((ev) => {
+                const opt = document.createElement('option');
+                opt.value = String(ev.index);
+                const bits = [ev.title, ev.round, ev.date].filter(Boolean);
+                opt.textContent = `${bits.join(' · ')} (SX1:${ev.sx1_count || 0} SX2:${ev.sx2_count || 0})`;
+                sel.appendChild(opt);
+            });
+            if (selectedIndex != null) sel.value = String(selectedIndex);
+        }
+
+        function wsxOfficialRenderClassTable(tbodyId, missingId, payload) {
+            const tbody = document.getElementById(tbodyId);
+            const missingEl = document.getElementById(missingId);
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const rows = (payload && payload.rows) || [];
+            rows.forEach((r) => {
+                const tr = document.createElement('tr');
+                const label = r.found_in_db && r.db_rider_name && r.db_rider_name !== r.rider_name
+                    ? `${r.rider_name} → ${r.db_rider_name}`
+                    : r.rider_name;
+                tr.innerHTML = `<td class="px-2 py-1">${r.position}</td>
+                    <td class="px-2 py-1">${r.rider_number ?? ''}</td>
+                    <td class="px-2 py-1">${label}</td>
+                    <td class="px-2 py-1">${r.points ?? ''}</td>
+                    <td class="px-2 py-1">${r.found_in_db ? '✅' : '❌'}</td>`;
+                tbody.appendChild(tr);
+            });
+            if (missingEl) {
+                const miss = (payload && payload.missing_riders) || [];
+                if (miss.length) {
+                    missingEl.classList.remove('hidden');
+                    missingEl.textContent = `Saknas i DB (${miss.length}): ` + miss.map((m) => m.rider_name).join(', ');
+                } else {
+                    missingEl.classList.add('hidden');
+                    missingEl.textContent = '';
+                }
+            }
+        }
+
+        async function wsxOfficialFetchPreview(opts = {}) {
+            const competitionId = document.getElementById('wsx-official-competition')?.value;
+            const statusEl = document.getElementById('wsx-official-status');
+            const url = (document.getElementById('wsx-official-url')?.value || '').trim();
+            if (!competitionId) {
+                alert('Välj WSX-tävling först.');
+                return;
+            }
+            let eventIndex = document.getElementById('wsx-official-event')?.value;
+            if (!opts.reuseEvents) eventIndex = undefined;
+            else if (eventIndex === '') eventIndex = undefined;
+
+            if (statusEl) {
+                statusEl.className = 'text-sm mb-3 text-cyan-300';
+                statusEl.textContent = 'Hämtar från WSX.com (sparar inget)…';
+            }
+            wsxOfficialSetImportEnabled(false);
+            try {
+                const body = {
+                    competition_id: Number(competitionId),
+                    url: url || undefined,
+                };
+                if (eventIndex != null && eventIndex !== '') {
+                    body.event_index = Number(eventIndex);
+                }
+                const res = await fetch('/fetch_wsx_official_results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    if (statusEl) {
+                        statusEl.className = 'text-sm mb-3 text-red-400';
+                        statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel');
+                    }
+                    return;
+                }
+                window._wsxOfficialPreview = data;
+                wsxOfficialFillEventSelect(data.events || [], data.selected_event_index);
+                wsxOfficialRenderClassTable('wsx-official-sx1-rows', 'wsx-official-sx1-missing', data.sx1);
+                wsxOfficialRenderClassTable('wsx-official-sx2-rows', 'wsx-official-sx2-missing', data.sx2);
+                document.getElementById('wsx-official-preview')?.classList.remove('hidden');
+
+                const sx1Ok = (data.sx1?.rows || []).filter((r) => r.found_in_db).length;
+                const sx2Ok = (data.sx2?.rows || []).filter((r) => r.found_in_db).length;
+                const sx1Miss = (data.sx1?.missing_riders || []).length;
+                const sx2Miss = (data.sx2?.missing_riders || []).length;
+                const ev = data.selected_event || {};
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-green-400';
+                    statusEl.textContent =
+                        `Preview: ${ev.title || 'event'} — SX1 ${sx1Ok} matchade` +
+                        (sx1Miss ? ` (${sx1Miss} saknas)` : '') +
+                        `, SX2 ${sx2Ok} matchade` +
+                        (sx2Miss ? ` (${sx2Miss} saknas)` : '') +
+                        '. Inget sparat ännu.';
+                }
+                wsxOfficialSetImportEnabled(sx1Ok + sx2Ok > 0);
+
+                // Also fill classic paste boxes for transparency / fallback edit
+                const paste = document.getElementById('wsx-bulk-paste');
+                const bulkClass = document.getElementById('wsx-bulk-class')?.value || 'wsx_sx1';
+                if (paste) {
+                    paste.value = bulkClass === 'wsx_sx2'
+                        ? (data.sx2?.paste_text || '')
+                        : (data.sx1?.paste_text || '');
+                }
+                const bulkComp = document.getElementById('wsx-bulk-competition');
+                if (bulkComp && competitionId) bulkComp.value = competitionId;
+            } catch (e) {
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-red-400';
+                    statusEl.textContent = 'Fel: ' + (e.message || e);
+                }
+            }
+        }
+
+        async function wsxOfficialImportPreview() {
+            const preview = window._wsxOfficialPreview;
+            const competitionId = document.getElementById('wsx-official-competition')?.value;
+            const statusEl = document.getElementById('wsx-official-status');
+            if (!preview || !competitionId) {
+                alert('Kör Hämta & Preview först.');
+                return;
+            }
+            const doSx1 = document.getElementById('wsx-official-import-sx1')?.checked;
+            const doSx2 = document.getElementById('wsx-official-import-sx2')?.checked;
+            const classes = {};
+            if (doSx1) {
+                classes.wsx_sx1 = (preview.sx1?.rows || []).filter((r) => r.found_in_db && r.rider_id);
+            }
+            if (doSx2) {
+                classes.wsx_sx2 = (preview.sx2?.rows || []).filter((r) => r.found_in_db && r.rider_id);
+            }
+            const n1 = (classes.wsx_sx1 || []).length;
+            const n2 = (classes.wsx_sx2 || []).length;
+            if (!n1 && !n2) {
+                alert('Inga matchade rader att importera. Kryssa i SX1/SX2 och se till att preview har ✅.');
+                return;
+            }
+            const evTitle = preview.selected_event?.title || 'event';
+            if (!confirm(
+                `Importera official WSX-resultat för ${evTitle}?\n\n` +
+                `SX1: ${n1} rader\nSX2: ${n2} rader\n\n` +
+                `Detta uppdaterar/ersätter positioner för valda klasser.`
+            )) return;
+
+            if (statusEl) {
+                statusEl.className = 'text-sm mb-3 text-cyan-300';
+                statusEl.textContent = 'Importerar preview…';
+            }
+            try {
+                const res = await fetch('/import_wsx_official_results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        competition_id: Number(competitionId),
+                        classes,
+                    }),
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    if (statusEl) {
+                        statusEl.className = 'text-sm mb-3 text-red-400';
+                        statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel');
+                    }
+                    alert('❌ ' + (data.error || 'Import misslyckades'));
+                    return;
+                }
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-green-400';
+                    statusEl.textContent =
+                        `Importerat ${data.imported} rader` +
+                        ((data.skipped || []).length ? ` (skippade ${(data.skipped || []).length})` : '') +
+                        '.';
+                }
+                alert(`✅ Importerat: ${data.imported}. Skippade: ${(data.skipped || []).length}.`);
+                if (typeof refreshWsxExistingResults === 'function') refreshWsxExistingResults();
+            } catch (e) {
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-red-400';
+                    statusEl.textContent = 'Fel: ' + (e.message || e);
+                }
             }
         }
 
