@@ -548,7 +548,7 @@
       {% if series.name and 'WSX' not in series.name %}
       <a href="/season_team_page" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('users') }}</span> Säsongsteam</a>
       {% endif %}
-      <a href="/my_scores" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
+      <a href="/my_scores{% if series.name and 'WSX' in series.name %}?series=WSX{% endif %}" class="sp-action"><span class="mx-heading-icon">{{ mx_icon('chart') }}</span> Mina poäng</a>
     </nav>
   </main>
 
