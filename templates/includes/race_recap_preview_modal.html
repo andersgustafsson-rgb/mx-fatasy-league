@@ -389,11 +389,24 @@
   window.closeRaceRecapPreview = window.closeRaceRecap;
 
   document.getElementById('raceRecapShareBtn')?.addEventListener('click', function () {
-    if (typeof window.openInviteShare === 'function') {
-      window.openInviteShare({ afterPicks: true });
+    if (!current || !current.competition_id) {
+      alert('Inget race att dela just nu.');
       return;
     }
-    alert('Dela-kortet kommer snart — stäng och använd «Bjud in vänner» under tiden.');
+    if (typeof window.openInviteShare !== 'function') {
+      alert('Dela-kortet kommer snart — stäng och använd «Bjud in vänner» under tiden.');
+      return;
+    }
+    var opts = {
+      raceRecap: true,
+      competitionId: current.competition_id,
+      raceName: current.race_name,
+      points: current.points,
+      series: current.series,
+    };
+    // Stäng Din kväll så bara resultat-delningen syns (inte hype-kortet).
+    window.closeRaceRecap();
+    window.openInviteShare(opts);
   });
 
   document.addEventListener('DOMContentLoaded', function () {

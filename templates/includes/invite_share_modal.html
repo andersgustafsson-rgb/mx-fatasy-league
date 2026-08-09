@@ -1,7 +1,7 @@
 <script>
   window.MXInviteShare = {{ invite_share | tojson }};
 </script>
-<script src="{{ url_for('static', filename='invite_share.js') }}?v=snap-story-qr-1"></script>
+<script src="{{ url_for('static', filename='invite_share.js') }}?v=race-recap-share-1"></script>
 <style>
   /* Share-modal: måste få plats i smal viewport (max-width får aldrig bli bredare än skärmen) */
   #inviteShareModal {
@@ -69,7 +69,7 @@
   <div class="invite-share-sheet" role="dialog" aria-modal="true" aria-labelledby="inviteShareTitle">
     <div class="flex items-start justify-between gap-2 mb-2 shrink-0">
       <div class="min-w-0">
-        <p class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Race-hype</p>
+        <p id="inviteShareEyebrow" class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Race-hype</p>
         <h2 id="inviteShareTitle" class="text-base sm:text-lg font-extrabold text-white leading-tight">Bjud in en kompis</h2>
         <p id="inviteShareSubtitle" class="text-[11px] sm:text-xs text-slate-400 mt-0.5 leading-snug">Dela race-hype-kortet till Snap/Stories eller skicka länken.</p>
         <p id="inviteShareIosTip" hidden class="text-[10px] sm:text-[11px] text-amber-300/90 mt-1 leading-snug">iPhone: Snapchat tillåter ingen klickbar länk från webben. Kortet har <strong>QR + URL</strong> — välj <strong>Snapchat → Story</strong>.</p>

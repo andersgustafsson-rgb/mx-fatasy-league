@@ -18648,6 +18648,55 @@ def api_race_recap():
         return jsonify({"available": False, "error": "failed"}), 500
 
 
+@app.get("/api/race_recap.png")
+def api_race_recap_png():
+    """Shareable race-results graphic for «Dela din kväll» (not invite/hype)."""
+    from flask import Response
+
+    if "user_id" not in session:
+        return Response(status=401)
+    uid = int(session["user_id"])
+    comp_id = request.args.get("competition_id", type=int)
+    if not comp_id:
+        return Response(status=400)
+
+    # Must have played this race (or at least have a score row)
+    if _user_competition_points(uid, int(comp_id)) is None:
+        return Response(status=403)
+
+    layout = (request.args.get("layout") or "facebook").lower()
+    if layout == "feed":
+        layout = "facebook"
+    if layout not in ("facebook", "portrait", "story"):
+        layout = "facebook"
+    part = (request.args.get("part") or "graphic").lower()
+    if part not in ("graphic", "stats"):
+        part = "graphic"
+
+    try:
+        from social_recap_service import build_social_recap_data, render_social_recap_png
+
+        data = build_social_recap_data(
+            int(comp_id),
+            race_top=5,
+            season_top=5,
+            include_race=True,
+            include_weekly=False,
+            include_season_snippet=False,
+            include_facts=False,
+            include_rider_podium=True,
+        )
+        png_bytes = render_social_recap_png(data, layout=layout, part=part)
+        resp = Response(png_bytes, mimetype="image/png")
+        resp.headers["Cache-Control"] = "private, max-age=120"
+        return resp
+    except ValueError:
+        return Response(status=404)
+    except Exception as e:
+        print(f"api_race_recap_png failed: {e}")
+        return Response(status=500)
+
+
 @app.post("/api/race_recap/seen")
 def api_race_recap_seen():
     """Mark Din kväll as seen for a competition."""
