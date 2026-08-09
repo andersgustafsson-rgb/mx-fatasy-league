@@ -14750,56 +14750,76 @@ def submit_results():
 
 @app.post("/admin/update_holeshot")
 def update_holeshot():
-    """Update only holeshot results for a competition"""
+    """Update only holeshot results for a competition (AMA 450/250 or WSX SX1/SX2)."""
     if not is_admin_user():
         return redirect(url_for("login"))
     
     comp_id = request.form.get("competition_id", type=int)
+    next_section = (request.form.get("next_section") or "").strip()
+    redirect_url = url_for("admin_page")
+    if next_section == "wsx-results":
+        redirect_url = url_for("admin_page", section="wsx-results")
+
     if not comp_id:
         flash("Du måste välja tävling.", "error")
-        return redirect(url_for("admin_page"))
+        return redirect(redirect_url)
     
     hs_450 = request.form.get("holeshot_450", type=int)
     hs_250 = request.form.get("holeshot_250", type=int)
+
+    competition = Competition.query.get(comp_id)
+    is_wsx = bool(competition and (competition.series or "") == "WSX")
+    hs_class_450 = "wsx_sx1" if is_wsx else "450cc"
+    hs_class_250 = "wsx_sx2" if is_wsx else "250cc"
+    hs_aliases_450 = ["450cc", "wsx_sx1"]
+    hs_aliases_250 = ["250cc", "wsx_sx2"]
     
     try:
-        # Update or add 450cc holeshot
+        # Update or add primary-class holeshot (450cc / SX1)
         if hs_450:
-            existing_hs_450 = HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="450cc"
+            existing_hs_450 = HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(hs_aliases_450),
             ).first()
             if existing_hs_450:
                 existing_hs_450.rider_id = hs_450
-                print(f"DEBUG: Updated 450cc holeshot to rider {hs_450}")
+                existing_hs_450.class_name = hs_class_450
+                print(f"DEBUG: Updated {hs_class_450} holeshot to rider {hs_450}")
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_450, class_name="450cc"))
-                print(f"DEBUG: Added 450cc holeshot for rider {hs_450}")
+                db.session.add(
+                    HoleshotResult(
+                        competition_id=comp_id, rider_id=hs_450, class_name=hs_class_450
+                    )
+                )
+                print(f"DEBUG: Added {hs_class_450} holeshot for rider {hs_450}")
         else:
-            # Remove 450cc holeshot if empty
-            HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="450cc"
-            ).delete()
+            HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(hs_aliases_450),
+            ).delete(synchronize_session=False)
         
-        # Update or add 250cc holeshot
+        # Update or add secondary-class holeshot (250cc / SX2)
         if hs_250:
-            existing_hs_250 = HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="250cc"
+            existing_hs_250 = HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(hs_aliases_250),
             ).first()
             if existing_hs_250:
                 existing_hs_250.rider_id = hs_250
-                print(f"DEBUG: Updated 250cc holeshot to rider {hs_250}")
+                existing_hs_250.class_name = hs_class_250
+                print(f"DEBUG: Updated {hs_class_250} holeshot to rider {hs_250}")
             else:
-                db.session.add(HoleshotResult(competition_id=comp_id, rider_id=hs_250, class_name="250cc"))
-                print(f"DEBUG: Added 250cc holeshot for rider {hs_250}")
+                db.session.add(
+                    HoleshotResult(
+                        competition_id=comp_id, rider_id=hs_250, class_name=hs_class_250
+                    )
+                )
+                print(f"DEBUG: Added {hs_class_250} holeshot for rider {hs_250}")
         else:
-            # Remove 250cc holeshot if empty
-            HoleshotResult.query.filter_by(
-                competition_id=comp_id,
-                class_name="250cc"
-            ).delete()
+            HoleshotResult.query.filter(
+                HoleshotResult.competition_id == comp_id,
+                HoleshotResult.class_name.in_(hs_aliases_250),
+            ).delete(synchronize_session=False)
         
         db.session.commit()
         
@@ -14812,7 +14832,7 @@ def update_holeshot():
         print(f"Error updating holeshot: {e}")
         flash(f"Fel vid uppdatering av holeshot: {str(e)}", "error")
     
-    return redirect(url_for("admin_page"))
+    return redirect(redirect_url)
 
 
 @app.post("/admin/archive_wsx_and_reset_points")
@@ -15957,10 +15977,16 @@ def import_wsx_official_results():
                     continue
                 rider = Rider.query.get(int(rider_id))
                 if not rider or (rider.class_name or "") != class_name:
-                    # Soft fallback: try name match if id stale
+                    # Soft fallback: try name/number match if id stale
                     name = (row.get("rider_name") or "").strip()
                     rider = (
-                        _match_rider_for_results_import(name, class_name) if name else None
+                        _match_rider_for_results_import(
+                            name,
+                            class_name,
+                            rider_number=row.get("rider_number"),
+                        )
+                        if name or row.get("rider_number") is not None
+                        else None
                     )
                 if not rider:
                     skipped.append(row)
