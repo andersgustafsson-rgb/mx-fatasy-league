@@ -1505,9 +1505,7 @@ def _paste_circle_avatar(base, cx: int, cy: int, radius: int, rider_id: int | No
     inner = Image.new("RGBA", (d, d), (0, 0, 0, 0))
     thumb = _load_rider_thumb(rider_id, d * 2) if rider_id else None
     if thumb:
-        thumb = _cover_crop_square(
-            thumb.convert("RGBA"), d, face_bias=0.22, zoom=1.28
-        )
+        thumb = _rider_podium_avatar_crop(thumb.convert("RGBA"), d, down_shift=0.32)
         mask = Image.new("L", (d, d), 0)
         ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
         inner.paste(thumb, (0, 0), thumb)
@@ -2836,6 +2834,50 @@ def _cover_crop_square(img, size: int, *, face_bias: float = 0.1, zoom: float = 
     return img.crop((left, top, left + size, top + size))
 
 
+def _rider_podium_avatar_crop(img, size: int, *, down_shift: float = 0.30):
+    """
+    Crop rider headshot for podium rings.
+
+    Rider photos are usually framed with the helmet near the top edge; a plain
+    cover crop therefore clips the crown. We pin to the top of the source, avoid
+    aggressive zoom, then shift the bitmap down in the ring so the face sits
+    lower (more headroom above the helmet).
+    """
+    from PIL import Image
+
+    w, h = img.size
+    if w < 1 or h < 1:
+        return img
+    # Cover without extra zoom — zoom was clipping helmets after circular mask
+    scale = max(size / float(w), size / float(h))
+    nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+    scaled = img.resize((nw, nh), Image.Resampling.LANCZOS)
+    left = max(0, (nw - size) // 2)
+    # Flush to top of photo so hair/helmet is included before we shift down in-ring
+    top = 0
+    left = min(left, max(0, nw - size))
+    if nh >= size:
+        square = scaled.crop((left, top, left + size, top + size))
+    else:
+        square = Image.new("RGBA", (size, size), (18, 22, 40, 255))
+        square.paste(scaled, (left, max(0, (size - nh) // 2)), scaled if scaled.mode == "RGBA" else None)
+
+    if square.mode != "RGBA":
+        square = square.convert("RGBA")
+
+    # Allow up to ~42% down-shift — previous 18–33% still left crowns clipped
+    max_shift = max(1, int(size * 0.42))
+    shift = max(0, min(int(size * max(0.0, float(down_shift))), max_shift))
+    if shift <= 0:
+        return square
+
+    # Move portrait down inside the ring; fill the freed top with dark bg
+    out = Image.new("RGBA", (size, size), (14, 18, 34, 255))
+    kept = square.crop((0, 0, size, size - shift))
+    out.paste(kept, (0, shift), kept)
+    return out
+
+
 def _paste_plain_circle_avatar(
     base,
     cx: int,
@@ -2848,6 +2890,7 @@ def _paste_plain_circle_avatar(
     initials: str = "?",
     face_bias: float = 0.1,
     zoom: float = 1.0,
+    rider_face: bool = False,
 ) -> None:
     """Cirkulär avatar utan ring — mallen har redan ram."""
     from PIL import Image, ImageDraw
@@ -2862,9 +2905,12 @@ def _paste_plain_circle_avatar(
     if thumb is None:
         thumb = _make_initials_avatar(display_name or initials, int(user_id or rider_id or 0), d)
     else:
-        thumb = _cover_crop_square(
-            thumb.convert("RGBA"), d, face_bias=face_bias, zoom=zoom
-        )
+        if rider_face or rider_id:
+            thumb = _rider_podium_avatar_crop(thumb.convert("RGBA"), d, down_shift=0.32)
+        else:
+            thumb = _cover_crop_square(
+                thumb.convert("RGBA"), d, face_bias=face_bias, zoom=zoom
+            )
 
     mask = Image.new("L", (d, d), 0)
     ImageDraw.Draw(mask).ellipse([0, 0, d - 1, d - 1], fill=255)
@@ -3215,9 +3261,7 @@ def _render_recap_graphic_from_template(data: dict[str, Any]) -> bytes:
                         rider_id=entry.get("rider_id"),
                         display_name=entry.get("name") or "?",
                         initials=(entry.get("short_name") or "?")[:2],
-                        # Headshots: favor top + zoom so helmet/face fills the ring
-                        face_bias=0.22,
-                        zoom=1.28,
+                        rider_face=True,
                     )
             name_slots = {int(n["pos"]): n for n in panel.get("names") or []}
             for av in panel["avatars"]:

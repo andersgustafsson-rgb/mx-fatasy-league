@@ -1113,6 +1113,20 @@
                     <p class="text-xs text-gray-500 mt-4">Meddelanden sparas i Pit Lane (Race Control) så spelare kan läsa dem igen. Aktiva meddelanden skickar även e-post till alla spelare med registrerad e-post (kräver GMAIL_PASSWORD på servern).</p>
                 </div>
 
+                <div class="mt-8 bg-gray-800 rounded-lg p-4 border border-amber-700/30">
+                    <h3 class="text-xl font-semibold text-amber-300 mb-2">🌙 Din kväll — återställning</h3>
+                    <p class="text-gray-300 text-sm mb-4">
+                        Nollställer så att <strong class="text-white">Din kväll</strong>-popupen (och Dela din kväll) visas igen för alla spelare.
+                        Bra när du vill testa efter ändringar.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="button" onclick="resetDinKvallPopup()" class="btn-warning px-5 py-2.5 rounded-lg">
+                            ↺ Återställ Din kväll
+                        </button>
+                        <span id="din-kvall-reset-status" class="text-sm text-gray-400"></span>
+                    </div>
+                </div>
+
                 <div class="mt-8 bg-gray-800 rounded-lg p-4">
                     <h3 class="text-xl font-semibold text-white mb-3">📱 Race Recap Studio</h3>
                     <p class="text-gray-300 mb-4">Skapa delningsbild (PNG) och Facebook-text efter race — topp-listor + fältfakta från alla tipsare.</p>
@@ -2352,6 +2366,28 @@
         // Initialize page
         // Manual results client-side validation (duplicate blocking, partial entries accepted)
         // Announcement functions
+        async function resetDinKvallPopup() {
+            const status = document.getElementById('din-kvall-reset-status');
+            if (!confirm('Återställ Din kväll för alla spelare? Popupen visas igen vid nästa besök.')) return;
+            if (status) status.textContent = 'Återställer…';
+            try {
+                const res = await fetch('/admin/reset_din_kvall', { method: 'POST', credentials: 'same-origin' });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || res.statusText || 'Fel');
+                }
+                if (status) {
+                    status.textContent = `✅ Klart — nollställde ${data.cleared_dismissals || 0} dismissals (token ${data.token || '—'})`;
+                    status.className = 'text-sm text-emerald-300';
+                }
+            } catch (e) {
+                if (status) {
+                    status.textContent = '❌ ' + (e.message || e);
+                    status.className = 'text-sm text-red-300';
+                }
+            }
+        }
+
         async function saveAnnouncement() {
             const message = document.getElementById('announcement-message').value.trim();
             const priority = document.getElementById('announcement-priority').value;

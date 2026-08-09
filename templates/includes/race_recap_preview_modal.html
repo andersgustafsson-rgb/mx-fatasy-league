@@ -222,11 +222,10 @@
   };
 
   var current = null;
-  // Bump when Din kväll must reappear after a share/UI bug fix.
-  var SEEN_KEY = 'mx_race_recap_seen_v2_' + String(window.currentUsername || 'anon').toLowerCase();
-  var SESSION_LOCK = 'mx_race_recap_session_lock_v2';
-  var RESHOW_TOKEN = 'share-fix-v1-2026-08-09';
-  var RESHOW_TOKEN_KEY = 'mx_race_recap_reshow_token';
+  var SEEN_KEY = 'mx_race_recap_seen_v3_' + String(window.currentUsername || 'anon').toLowerCase();
+  var SESSION_LOCK = 'mx_race_recap_session_lock_v3';
+  var RESHOW_TOKEN_KEY = 'mx_race_recap_reshow_token_v3';
+  var serverReshowToken = null;
 
   function seenLocal() {
     try {
@@ -274,7 +273,7 @@
   function alreadySeen(competitionId) {
     if (!competitionId) return true;
     try {
-      if (localStorage.getItem(RESHOW_TOKEN_KEY) !== RESHOW_TOKEN) {
+      if (serverReshowToken && localStorage.getItem(RESHOW_TOKEN_KEY) !== String(serverReshowToken)) {
         return false;
       }
     } catch (e) {}
@@ -289,7 +288,9 @@
   function markSeen(competitionId) {
     if (!competitionId) return;
     try {
-      localStorage.setItem(RESHOW_TOKEN_KEY, RESHOW_TOKEN);
+      if (serverReshowToken) {
+        localStorage.setItem(RESHOW_TOKEN_KEY, String(serverReshowToken));
+      }
     } catch (e) {}
     markSeenLocal(competitionId);
     markSeenServer(competitionId);
@@ -434,7 +435,11 @@
       fetch('/api/race_recap', { credentials: 'same-origin' })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          if (!data || !data.available || !data.competition_id) return;
+          if (!data) return;
+          if (data.reshow_token) {
+            serverReshowToken = String(data.reshow_token);
+          }
+          if (!data.available || !data.competition_id) return;
           if (alreadySeen(data.competition_id)) return;
           window.openRaceRecap(data);
         })

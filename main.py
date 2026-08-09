@@ -18707,21 +18707,42 @@ def _ensure_race_recap_table() -> None:
     except Exception as e:
         db.session.rollback()
         print(f"race_recap ensure table: {e}")
-    _maybe_reshow_race_recap_after_share_fix()
+    _ensure_app_runtime_flags_table()
+    _maybe_auto_reshow_din_kvall_once()
 
 
-def _maybe_reshow_race_recap_after_share_fix() -> None:
-    """
-    One-time: clear Din kväll dismissals for Canadian GP so the popup can show again
-    after «Dela din kväll» wrongly opened the Unadilla hype card.
-    """
-    flag = "reshow_din_kvall_after_share_bug_2026_08_09"
+def _maybe_auto_reshow_din_kvall_once() -> None:
+    """One-shot after share/crop fixes: clear dismissals so Din kväll can be re-tested."""
+    marker = "din_kvall_auto_reshow_20260809_face_v2"
+    try:
+        row = db.session.execute(
+            db.text("SELECT 1 FROM app_runtime_flags WHERE flag_key = :k LIMIT 1"),
+            {"k": marker},
+        ).first()
+        if row:
+            return
+        _bump_din_kvall_reshow(clear_all_dismissals=True)
+        db.session.execute(
+            db.text(
+                "INSERT INTO app_runtime_flags (flag_key, flag_value, set_at) "
+                "VALUES (:k, '1', CURRENT_TIMESTAMP)"
+            ),
+            {"k": marker},
+        )
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"auto reshow din kvall skipped: {e}")
+
+
+def _ensure_app_runtime_flags_table() -> None:
     try:
         db.session.execute(
             db.text(
                 """
                 CREATE TABLE IF NOT EXISTS app_runtime_flags (
                     flag_key VARCHAR(120) PRIMARY KEY,
+                    flag_value TEXT,
                     set_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """
@@ -18730,51 +18751,98 @@ def _maybe_reshow_race_recap_after_share_fix() -> None:
         db.session.commit()
     except Exception:
         db.session.rollback()
-
     try:
-        exists = db.session.execute(
-            db.text("SELECT 1 FROM app_runtime_flags WHERE flag_key = :k LIMIT 1"),
-            {"k": flag},
-        ).first()
-        if exists:
-            return
-
-        comps = (
-            Competition.query.filter(
-                Competition.series == "WSX",
-                Competition.name.ilike("%Canadian%"),
-            ).all()
-        )
-        # Also any recent completed WSX race (in case name variants)
-        try:
-            recent = _completed_competitions_for_recap(limit=6)
-            for c in recent:
-                if (getattr(c, "series", None) or "").upper() == "WSX" and int(c.id) not in {
-                    int(x.id) for x in comps
-                }:
-                    comps.append(c)
-        except Exception:
-            pass
-        ids = [int(c.id) for c in comps]
-        deleted = 0
-        if ids:
-            deleted = (
-                UserRaceRecapDismissal.query.filter(
-                    UserRaceRecapDismissal.competition_id.in_(ids)
-                ).delete(synchronize_session=False)
+        # Older installs may lack flag_value
+        bind = db.session.get_bind()
+        dialect = (bind.dialect.name if bind is not None else "") or ""
+        if dialect == "sqlite":
+            cols = {
+                r[1]
+                for r in db.session.execute(db.text("PRAGMA table_info(app_runtime_flags)")).fetchall()
+            }
+            if "flag_value" not in cols:
+                db.session.execute(db.text("ALTER TABLE app_runtime_flags ADD COLUMN flag_value TEXT"))
+                db.session.commit()
+        else:
+            db.session.execute(
+                db.text("ALTER TABLE app_runtime_flags ADD COLUMN IF NOT EXISTS flag_value TEXT")
             )
-        db.session.execute(
-            db.text("INSERT INTO app_runtime_flags (flag_key) VALUES (:k)"),
-            {"k": flag},
-        )
-        db.session.commit()
-        print(
-            f"[RACE-RECAP] Re-show Din kväll: cleared {deleted} dismissals "
-            f"for Canadian GP ids={ids}"
-        )
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def _get_din_kvall_reshow_token() -> str:
+    _ensure_app_runtime_flags_table()
+    try:
+        row = db.session.execute(
+            db.text(
+                "SELECT flag_value, set_at FROM app_runtime_flags "
+                "WHERE flag_key = 'din_kvall_reshow_token' LIMIT 1"
+            )
+        ).first()
+        if not row:
+            return "0"
+        val = (row[0] or "").strip()
+        if val:
+            return val
+        return str(row[1] or "0")
+    except Exception:
+        db.session.rollback()
+        return "0"
+
+
+def _bump_din_kvall_reshow(*, clear_all_dismissals: bool = True) -> dict:
+    """Admin: force Din kväll popup to show again for everyone."""
+    from datetime import datetime as _dt
+    import secrets
+
+    _ensure_app_runtime_flags_table()
+    token = _dt.utcnow().strftime("%Y%m%d%H%M%S") + "-" + secrets.token_hex(3)
+    deleted = 0
+    if clear_all_dismissals:
+        deleted = UserRaceRecapDismissal.query.delete(synchronize_session=False)
+    db.session.execute(
+        db.text("DELETE FROM app_runtime_flags WHERE flag_key = 'din_kvall_reshow_token'")
+    )
+    db.session.execute(
+        db.text(
+            "INSERT INTO app_runtime_flags (flag_key, flag_value, set_at) "
+            "VALUES ('din_kvall_reshow_token', :v, CURRENT_TIMESTAMP)"
+        ),
+        {"v": token},
+    )
+    db.session.commit()
+    return {"token": token, "cleared_dismissals": int(deleted or 0)}
+
+
+@app.post("/admin/reset_din_kvall")
+def admin_reset_din_kvall():
+    """Clear Din kväll seen-state so the popup can be tested again."""
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        result = _bump_din_kvall_reshow(clear_all_dismissals=True)
+        return jsonify({"success": True, **result})
     except Exception as e:
         db.session.rollback()
-        print(f"[RACE-RECAP] re-show reset failed: {e}")
+        print(f"admin_reset_din_kvall failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.get("/admin/din_kvall_status")
+def admin_din_kvall_status():
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    try:
+        n = UserRaceRecapDismissal.query.count()
+        return jsonify({
+            "success": True,
+            "reshow_token": _get_din_kvall_reshow_token(),
+            "dismissals": int(n),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.get("/api/race_recap")
@@ -18787,8 +18855,10 @@ def api_race_recap():
     try:
         _ensure_race_recap_table()
         data = _build_personal_race_recap(uid, competition_id=comp_id)
+        token = _get_din_kvall_reshow_token()
         if not data:
-            return jsonify({"available": False})
+            return jsonify({"available": False, "reshow_token": token})
+        data = {**data, "reshow_token": token}
         return jsonify(data)
     except Exception as e:
         db.session.rollback()
