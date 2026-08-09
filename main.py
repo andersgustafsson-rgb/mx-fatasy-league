@@ -18707,6 +18707,74 @@ def _ensure_race_recap_table() -> None:
     except Exception as e:
         db.session.rollback()
         print(f"race_recap ensure table: {e}")
+    _maybe_reshow_race_recap_after_share_fix()
+
+
+def _maybe_reshow_race_recap_after_share_fix() -> None:
+    """
+    One-time: clear Din kväll dismissals for Canadian GP so the popup can show again
+    after «Dela din kväll» wrongly opened the Unadilla hype card.
+    """
+    flag = "reshow_din_kvall_after_share_bug_2026_08_09"
+    try:
+        db.session.execute(
+            db.text(
+                """
+                CREATE TABLE IF NOT EXISTS app_runtime_flags (
+                    flag_key VARCHAR(120) PRIMARY KEY,
+                    set_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        )
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    try:
+        exists = db.session.execute(
+            db.text("SELECT 1 FROM app_runtime_flags WHERE flag_key = :k LIMIT 1"),
+            {"k": flag},
+        ).first()
+        if exists:
+            return
+
+        comps = (
+            Competition.query.filter(
+                Competition.series == "WSX",
+                Competition.name.ilike("%Canadian%"),
+            ).all()
+        )
+        # Also any recent completed WSX race (in case name variants)
+        try:
+            recent = _completed_competitions_for_recap(limit=6)
+            for c in recent:
+                if (getattr(c, "series", None) or "").upper() == "WSX" and int(c.id) not in {
+                    int(x.id) for x in comps
+                }:
+                    comps.append(c)
+        except Exception:
+            pass
+        ids = [int(c.id) for c in comps]
+        deleted = 0
+        if ids:
+            deleted = (
+                UserRaceRecapDismissal.query.filter(
+                    UserRaceRecapDismissal.competition_id.in_(ids)
+                ).delete(synchronize_session=False)
+            )
+        db.session.execute(
+            db.text("INSERT INTO app_runtime_flags (flag_key) VALUES (:k)"),
+            {"k": flag},
+        )
+        db.session.commit()
+        print(
+            f"[RACE-RECAP] Re-show Din kväll: cleared {deleted} dismissals "
+            f"for Canadian GP ids={ids}"
+        )
+    except Exception as e:
+        db.session.rollback()
+        print(f"[RACE-RECAP] re-show reset failed: {e}")
 
 
 @app.get("/api/race_recap")
@@ -24931,6 +24999,12 @@ def init_database():
                     print(f"Repaired {repaired} known race-result anomaly rows")
             except Exception as e:
                 print(f"Warning: Could not repair known race-result anomalies: {e}")
+                db.session.rollback()
+
+            try:
+                _ensure_race_recap_table()
+            except Exception as e:
+                print(f"Warning: race_recap ensure/reset failed: {e}")
                 db.session.rollback()
             
             # Only create test data if database is completely empty AND we're in development
