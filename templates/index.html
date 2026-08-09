@@ -2676,14 +2676,14 @@
                     <span class="home-inner-tile__label" data-i18n="home.season_team">Säsongsteam</span>
                   </a>
 
-                  <a href="{{ url_for('race_results_page') }}" class="home-inner-tile home-action-tile--results">
+                  <a href="{{ url_for('race_results_page') }}" id="quick-action-race-results" class="home-inner-tile home-action-tile--results">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
                     </span>
                     <span class="home-inner-tile__label" data-i18n="home.race_results">Race Resultat</span>
                   </a>
 
-                  <a href="{{ url_for('my_scores') }}" class="home-inner-tile home-action-tile--scores">
+                  <a href="{{ url_for('my_scores') }}" id="quick-action-my-scores" class="home-inner-tile home-action-tile--scores">
                     <span class="home-inner-tile__icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h2a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4"/><path d="M7 4H5a2 2 0 0 0-2 2v1a4 4 0 0 0 4 4"/></svg>
                     </span>
@@ -4037,6 +4037,14 @@
 
     function updateAmaOnlyHomeUi() {
       const isWSX = homeSelectedSeries === 'WSX';
+      const seriesQ = homeSelectedSeries
+        ? `?series=${encodeURIComponent(homeSelectedSeries)}`
+        : '';
+      const resultsLink = document.getElementById('quick-action-race-results');
+      if (resultsLink) resultsLink.href = '/race_results' + seriesQ;
+      const scoresLink = document.getElementById('quick-action-my-scores');
+      if (scoresLink) scoresLink.href = '/my_scores' + seriesQ;
+
       const teamTile = document.getElementById('quick-action-season-team');
       if (teamTile) {
         teamTile.classList.toggle('home-inner-tile--muted', isWSX);

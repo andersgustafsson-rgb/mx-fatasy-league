@@ -28,12 +28,20 @@
           <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-lg truncate">
             {% if viewing_user %}
               Poänghistorik · {{ viewing_user }}
+            {% elif series_filter == 'WSX' %}
+              Mina poäng · WSX
+            {% elif series_filter in ('SX', 'MX', 'SMX') %}
+              Mina poäng · {{ series_filter }}
             {% else %}
               Mina poäng
             {% endif %}
           </h1>
           <p class="text-slate-200/90 text-sm sm:text-base mt-2 max-w-2xl">
-            Din poäng per tävling, plus snabb filtrering. Klicka på en körd tävling för att se exakt poängfördelning.
+            {% if series_filter == 'WSX' %}
+              Endast World Supercross — SX/MX/SMX visas inte här.
+            {% else %}
+              Din poäng per tävling, plus snabb filtrering. Klicka på en körd tävling för att se exakt poängfördelning.
+            {% endif %}
           </p>
         </div>
         <a href="{% if viewing_user %}{{ url_for('user_stats_page', username=viewing_user) }}{% else %}{{ url_for('index') }}{% endif %}"
@@ -55,10 +63,20 @@
         <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
           <div class="text-slate-400 text-xs font-bold tracking-wider uppercase">Seriepoäng</div>
           <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
-            <div class="flex items-center justify-between gap-2"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
-            <div class="flex items-center justify-between gap-2"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
-            <div class="flex items-center justify-between gap-2"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
-            <div class="flex items-center justify-between gap-2"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
+            {% if series_filter == 'WSX' %}
+              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
+            {% elif series_filter == 'SX' %}
+              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
+            {% elif series_filter == 'MX' %}
+              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
+            {% elif series_filter == 'SMX' %}
+              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
+            {% else %}
+              <div class="flex items-center justify-between gap-2"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
+              <div class="flex items-center justify-between gap-2"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
+              <div class="flex items-center justify-between gap-2"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
+              <div class="flex items-center justify-between gap-2"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
+            {% endif %}
           </div>
         </div>
         <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
@@ -93,11 +111,18 @@
               <div class="flex gap-2">
                 <select id="series-filter"
                         class="bg-slate-950/40 border border-slate-700/60 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
-                  <option value="all">Alla serier</option>
-                  <option value="WSX">WSX</option>
-                  <option value="SX">SX</option>
-                  <option value="MX">MX</option>
-                  <option value="SMX">SMX</option>
+                  {% if series_filter == 'WSX' %}
+                    <option value="WSX" selected>WSX</option>
+                  {% elif series_filter in ('SX', 'MX', 'SMX') %}
+                    <option value="{{ series_filter }}" selected>{{ series_filter }}</option>
+                    <option value="all">Alla serier</option>
+                  {% else %}
+                    <option value="all" {% if series_filter == 'all' %}selected{% endif %}>Alla serier</option>
+                    <option value="WSX">WSX</option>
+                    <option value="SX">SX</option>
+                    <option value="MX">MX</option>
+                    <option value="SMX">SMX</option>
+                  {% endif %}
                 </select>
                 <select id="status-filter"
                         class="bg-slate-950/40 border border-slate-700/60 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
@@ -234,6 +259,7 @@
 
   <script>
     const viewingUser = {% if viewing_user %}'{{ viewing_user }}'{% else %}null{% endif %};
+    const initialSeriesFilter = {{ (series_filter or 'all') | tojson }};
 
     function applyFilters() {
       const q = (document.getElementById("score-search")?.value || "").trim().toLowerCase();
@@ -270,7 +296,9 @@
       const series = document.getElementById("series-filter");
       const status = document.getElementById("status-filter");
       if (q) q.value = "";
-      if (series) series.value = "all";
+      // Keep locked series scope (e.g. ?series=WSX) — do not reintroduce SMX/SX
+      if (series && series.options.length > 1) series.value = "all";
+      else if (series && initialSeriesFilter && initialSeriesFilter !== "all") series.value = initialSeriesFilter;
       if (status) status.value = "all";
       applyFilters();
     }
@@ -415,8 +443,11 @@
       if (!listEl) return;
 
       let html = "";
-      html += renderSection("450cc — dina placeringar", sec.picks_450, renderPickRow);
-      html += renderSection("250cc — dina placeringar", sec.picks_250, renderPickRow);
+      const labels = data.labels || {};
+      const primaryLabel = labels.primary || "450cc";
+      const secondaryLabel = labels.secondary || "250cc";
+      html += renderSection(primaryLabel + " — dina placeringar", sec.picks_450, renderPickRow);
+      html += renderSection(secondaryLabel + " — dina placeringar", sec.picks_250, renderPickRow);
       if (sec.holeshot && sec.holeshot.length) {
         html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Holeshot</h4><div class=\"space-y-2\">";
         sec.holeshot.forEach((r) => { html += renderSimpleRow(r); });
@@ -496,9 +527,10 @@
         const params = new URLSearchParams(window.location.search || "");
         const focus = params.get("focus");
         if (focus) {
-          // Ensure the row isn't filtered out
+          // Ensure the row isn't filtered out (keep locked series scope)
           if (q) q.value = "";
-          if (series) series.value = "all";
+          if (series && series.options.length > 1) series.value = "all";
+          else if (series && initialSeriesFilter && initialSeriesFilter !== "all") series.value = initialSeriesFilter;
           if (status) status.value = "all";
           applyFilters();
 

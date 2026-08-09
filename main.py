@@ -9007,7 +9007,9 @@ def my_scores():
     db.session.rollback()
     
     uid = session["user_id"]
-    # Getting user scores
+    series_filter = (request.args.get("series") or "").strip().upper()
+    if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
+        series_filter = ""
 
     rows = (
         db.session.query(
@@ -9024,6 +9026,13 @@ def my_scores():
         .order_by(Competition.event_date.asc().nulls_last())
         .all()
     )
+
+    if series_filter == "WSX":
+        rows = [r for r in rows if (r.series or "").upper() == "WSX"]
+    elif series_filter == "AMA":
+        rows = [r for r in rows if (r.series or "").upper() != "WSX"]
+    elif series_filter:
+        rows = [r for r in rows if (r.series or "").upper() == series_filter]
 
     # Calculate total points
     total_points = sum((r.total_points or 0) for r in rows)
@@ -9046,7 +9055,13 @@ def my_scores():
             "has_results": has_results,  # New field to indicate if race is completed
         })
 
-    return render_template("my_scores.html", scores=scores, total_points=total_points, viewing_user=None)
+    return render_template(
+        "my_scores.html",
+        scores=scores,
+        total_points=total_points,
+        viewing_user=None,
+        series_filter=series_filter or "all",
+    )
 
 @app.route("/user/<string:username>/scores")
 def user_scores_page(username: str):
@@ -9055,6 +9070,10 @@ def user_scores_page(username: str):
     
     # Rollback any existing transaction to avoid "aborted transaction" errors
     db.session.rollback()
+
+    series_filter = (request.args.get("series") or "").strip().upper()
+    if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
+        series_filter = ""
     
     # Getting user scores
     rows = (
@@ -9072,6 +9091,13 @@ def user_scores_page(username: str):
         .order_by(Competition.event_date.asc().nulls_last())
         .all()
     )
+
+    if series_filter == "WSX":
+        rows = [r for r in rows if (r.series or "").upper() == "WSX"]
+    elif series_filter == "AMA":
+        rows = [r for r in rows if (r.series or "").upper() != "WSX"]
+    elif series_filter:
+        rows = [r for r in rows if (r.series or "").upper() == series_filter]
 
     # Calculate total points
     total_points = sum((r.total_points or 0) for r in rows)
@@ -9094,7 +9120,13 @@ def user_scores_page(username: str):
             "has_results": has_results,
         })
 
-    return render_template("my_scores.html", scores=scores, total_points=total_points, viewing_user=username)
+    return render_template(
+        "my_scores.html",
+        scores=scores,
+        total_points=total_points,
+        viewing_user=username,
+        series_filter=series_filter or "all",
+    )
 
 
 @app.route("/finished_series")
@@ -16507,7 +16539,29 @@ def race_results_page():
                 "show_smx_section": False,
             }
 
+        series_filter = (request.args.get("series") or "").strip().upper()
+        if series_filter not in ("WSX", "SX", "MX", "SMX", "AMA"):
+            series_filter = ""
+
         competitions = Competition.query.order_by(Competition.event_date.asc()).all()
+        if series_filter == "WSX":
+            competitions = [c for c in competitions if (c.series or "").upper() == "WSX"]
+            # Prefer active WSX season year when available (avoid empty 2026 GP over filled 2025)
+            try:
+                year = _active_wsx_season_year()
+                year_comps = [
+                    c for c in competitions
+                    if c.event_date and int(c.event_date.year) == int(year)
+                ]
+                if year_comps:
+                    competitions = year_comps
+            except Exception:
+                pass
+        elif series_filter == "AMA":
+            competitions = [c for c in competitions if (c.series or "").upper() != "WSX"]
+        elif series_filter:
+            competitions = [c for c in competitions if (c.series or "").upper() == series_filter]
+
         competition_results: dict[int, dict] = {
             int(c.id): {"results": [], "holeshots": []} for c in competitions
         }
@@ -16580,7 +16634,19 @@ def race_results_page():
                 )
 
                 if comp.series == "WSX":
-                    display_class = result.class_name
+                    display_class = (result.class_name or "").strip().lower()
+                    if display_class in ("450cc", "450", "sx1"):
+                        display_class = "wsx_sx1"
+                    elif display_class in ("250cc", "250", "sx2"):
+                        display_class = "wsx_sx2"
+                    elif not display_class:
+                        rc = (getattr(result, "rider_current_class", None) or "").strip().lower()
+                        if rc in ("wsx_sx1", "450cc"):
+                            display_class = "wsx_sx1"
+                        elif rc in ("wsx_sx2", "250cc"):
+                            display_class = "wsx_sx2"
+                        else:
+                            display_class = rc or result.class_name
                 else:
                     display_class = _standing_class_and_coast(
                         result, comp, result, promoted_250_coasts
@@ -16681,6 +16747,7 @@ def race_results_page():
             competition_results=competition_results,
             latest_competition_id=latest_competition_id,
             championship_totals=championship_totals,
+            series_filter=series_filter or "all",
             username=session.get("username", "Gäst"),
             is_logged_in="user_id" in session,
         )
@@ -18127,12 +18194,16 @@ def _build_race_results_detail(
     picks_250: list[dict] = []
     other_lines: list[dict] = []
     race_points = 0
+    is_wsx = bool(comp and (getattr(comp, "series", None) or "").upper() == "WSX")
 
     for p in picks:
         rider = Rider.query.get(p.rider_id)
         rider_name = rider.name if rider else f"Förare #{p.rider_id}"
         cls = (rider.class_name if rider else "") or ""
+        # Prefer result row class for WSX (wsx_sx1/wsx_sx2) when rider row is stale
         act = actual_by_rider.get(p.rider_id)
+        result_cls = (getattr(act, "class_name", None) or "").strip() if act else ""
+        bucket_cls = result_cls or cls
         if not act:
             other_lines.append(
                 {
@@ -18168,9 +18239,9 @@ def _build_race_results_detail(
             "diff": int(diff),
             "hint": hint,
         }
-        if cls == "450cc":
+        if bucket_cls in ("450cc", "wsx_sx1", "sx1"):
             picks_450.append(row)
-        elif cls == "250cc":
+        elif bucket_cls in ("250cc", "wsx_sx2", "sx2"):
             picks_250.append(row)
         else:
             other_lines.append(row)
@@ -18203,7 +18274,10 @@ def _build_race_results_detail(
         act = holo_by_class.get(bucket)
         rider = Rider.query.get(hp.rider_id)
         rider_name = rider.name if rider else f"Förare #{hp.rider_id}"
-        label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
+        if is_wsx:
+            label = "SX1" if bucket == "450cc" else "SX2" if bucket == "250cc" else (hp.class_name or "Holeshot")
+        else:
+            label = "450cc" if bucket == "450cc" else "250cc" if bucket == "250cc" else (hp.class_name or "Holeshot")
 
         actual_rider_name = None
         if act and act.rider_id:
@@ -18251,22 +18325,24 @@ def _build_race_results_detail(
 
     if holeshot_450_correct and holeshot_250_correct:
         holeshot_points = 25
+        label_450 = "SX1" if is_wsx else "450cc"
+        label_250 = "SX2" if is_wsx else "250cc"
         holeshot_rows = [
             {
                 "kind": "holeshot",
                 "status": "correct",
-                "label": "450cc",
+                "label": label_450,
                 "rider_name": holeshot_450_name or "—",
                 "points": 10,
-                "hint": "Rätt holeshot 450",
+                "hint": f"Rätt holeshot {label_450}",
             },
             {
                 "kind": "holeshot",
                 "status": "correct",
-                "label": "250cc",
+                "label": label_250,
                 "rider_name": holeshot_250_name or "—",
                 "points": 10,
-                "hint": "Rätt holeshot 250",
+                "hint": f"Rätt holeshot {label_250}",
             },
             {
                 "kind": "bonus",
@@ -18281,7 +18357,7 @@ def _build_race_results_detail(
 
     wildcard_rows: list[dict] = []
     wildcard_points = 0
-    wc = WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
+    wc = None if is_wsx else WildcardPick.query.filter_by(user_id=user_id, competition_id=competition_id).first()
     if wc:
         actual_450cc = []
         for r in actual:
@@ -18376,6 +18452,10 @@ def _build_race_results_detail(
             "holeshot": holeshot_rows,
             "wildcard": wildcard_rows,
             "other": other_lines,
+        },
+        "labels": {
+            "primary": "SX1" if is_wsx else "450cc",
+            "secondary": "SX2" if is_wsx else "250cc",
         },
         "breakdown": breakdown,
     }
