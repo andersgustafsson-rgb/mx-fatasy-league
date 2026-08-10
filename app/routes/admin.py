@@ -585,6 +585,24 @@ def social_recap_png():
 		resp = Response(png_bytes, mimetype="image/png")
 		resp.headers["Cache-Control"] = "no-store, max-age=0, must-revalidate"
 		try:
+			import re
+			from urllib.parse import quote
+
+			race = str(data.get("competition_name") or data.get("race_name") or "race")
+			slug = re.sub(r"[^a-zA-Z0-9]+", "-", race).strip("-").lower()[:60] or "race"
+			suffix = ""
+			if layout == "facebook":
+				if part == "stats":
+					suffix = "-statistik"
+				elif part == "graphic":
+					suffix = "-resultat"
+			fname = f"mx-recap-{slug}{suffix}.png"
+			resp.headers["Content-Disposition"] = (
+				f'inline; filename="{fname}"; filename*=UTF-8\'\'{quote(fname)}'
+			)
+		except Exception:
+			pass
+		try:
 			from social_recap_service import (
 				RECAP_RENDERER_REV,
 				RECAP_TEMPLATE_GRAPHIC,

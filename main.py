@@ -18595,15 +18595,35 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
 
     season_rank = None
     season_delta_label = None
-    board = []
+    season_board_title = "Säsongstoppen"
+    season_top: list[dict] = []
+    board: list[dict] = []
+    series = (chosen.series or "").upper() or None
     try:
-        board = calculate_leaderboard_deltas()
+        from social_recap_service import _season_top_snippet, _season_snippet_title
+
+        season_top = _season_top_snippet(5, comp=chosen)
+        season_board_title = _season_snippet_title(chosen)
+        if series == "WSX":
+            from models import Series as SeriesModel
+
+            year = _active_wsx_season_year()
+            try:
+                if getattr(chosen, "series_id", None):
+                    srow = SeriesModel.query.get(int(chosen.series_id))
+                    if srow and srow.year:
+                        year = int(srow.year)
+            except Exception:
+                pass
+            board = fantasy_wsx_leaderboard_for_year(int(year))
+        else:
+            board = calculate_leaderboard_deltas()
+
         for row in board:
             if int(row.get("user_id") or 0) == int(user_id):
                 season_rank = row.get("rank")
                 try:
                     d = int(row.get("delta") or 0)
-                    # delta = current_rank - baseline_rank → negativ = klättrat
                     if d < 0:
                         season_delta_label = f"↑ {abs(d)} platser"
                     elif d > 0:
@@ -18615,8 +18635,31 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
                 break
     except Exception:
         board = []
+        season_top = []
 
     highlights = _personal_race_recap_highlights(user_id, int(chosen.id))
+
+    # Weekly badges for THIS user (raket / ankare / kung·queen …)
+    weekly_badges: list[dict] = []
+    try:
+        from social_recap_service import _get_weekly_highlights, _race_leaderboard
+
+        race_lb = _race_leaderboard(int(chosen.id), 5)
+        cards = _get_weekly_highlights(int(chosen.id), race_lb)
+        for card in cards or []:
+            if int(card.get("user_id") or 0) != int(user_id):
+                continue
+            weekly_badges.append(
+                {
+                    "kind": card.get("kind") or card.get("icon") or "",
+                    "title": card.get("title") or "",
+                    "detail": card.get("detail") or "",
+                    "is_queen": bool(card.get("is_queen")),
+                    "icon": card.get("icon") or card.get("kind") or "",
+                }
+            )
+    except Exception:
+        weekly_badges = []
 
     rival_line = None
     try:
@@ -18645,9 +18688,9 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
     except Exception:
         rival_line = None
 
-    series = (chosen.series or "").upper() or None
     return {
         "available": True,
+        "user_id": int(user_id),
         "competition_id": int(chosen.id),
         "race_name": chosen.name or "Race",
         "series": series,
@@ -18658,6 +18701,9 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
         "vs_avg_label": vs_avg_label,
         "season_rank": season_rank,
         "season_delta_label": season_delta_label,
+        "season_board_title": season_board_title,
+        "season_top": season_top,
+        "weekly_badges": weekly_badges,
         "highlights": highlights,
         "rival_line": rival_line,
     }

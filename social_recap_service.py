@@ -276,15 +276,20 @@ def _comp_ids_for_recap_week(comp: Competition | None) -> list[int]:
 
     if not comp:
         return []
+    series = (getattr(comp, "series", None) or "").upper()
     if comp.event_date:
         end = comp.event_date
         start = end - timedelta(days=6)
-        recent = Competition.query.filter(
+        q = Competition.query.filter(
             Competition.event_date.isnot(None),
             Competition.event_date >= start,
             Competition.event_date <= end,
-            db.or_(Competition.series.is_(None), Competition.series != "WSX"),
-        ).all()
+        )
+        if series == "WSX":
+            q = q.filter(Competition.series == "WSX")
+        else:
+            q = q.filter(db.or_(Competition.series.is_(None), Competition.series != "WSX"))
+        recent = q.all()
         ids = [int(c.id) for c in recent]
         if int(comp.id) not in ids:
             ids.append(int(comp.id))
@@ -415,16 +420,36 @@ def _get_weekly_highlights(
     competition_id: int,
     race_leaderboard: list[dict] | None = None,
 ) -> list[dict[str, Any]]:
-    """Veckans raket, ankare, perfekt gissning, holeshot — vecka kring vald tävling."""
-    from datetime import timedelta
-    from main import calculate_leaderboard_deltas, aggregate_weekly_holeshot_points_from_picks
+    """Veckans raket, ankare, rundans kung/queen, holeshot — vecka kring vald tävling."""
+    from main import (
+        calculate_leaderboard_deltas,
+        calculate_wsx_leaderboard_deltas,
+        aggregate_weekly_holeshot_points_from_picks,
+        _active_wsx_season_year,
+    )
+    from models import Series as SeriesModel
 
     comp = Competition.query.get(competition_id)
     comp_ids = _comp_ids_for_recap_week(comp)
     if not comp_ids:
         return _fallback_race_highlights(competition_id, race_leaderboard)
 
-    leaderboard_data = calculate_leaderboard_deltas()
+    series = (getattr(comp, "series", None) or "").upper() if comp else ""
+    if series == "WSX":
+        year = _active_wsx_season_year()
+        try:
+            if comp is not None and getattr(comp, "series_id", None):
+                srow = SeriesModel.query.get(int(comp.series_id))
+                if srow and srow.year:
+                    year = int(srow.year)
+        except Exception:
+            pass
+        leaderboard_data = calculate_wsx_leaderboard_deltas(
+            year=int(year),
+            recent_comp_ids=set(comp_ids),
+        )
+    else:
+        leaderboard_data = calculate_leaderboard_deltas()
     weekly_pts: dict[int, int] = defaultdict(int)
     scores = CompetitionScore.query.filter(CompetitionScore.competition_id.in_(comp_ids)).all()
     by_uc: dict[tuple[int, int], CompetitionScore] = {}

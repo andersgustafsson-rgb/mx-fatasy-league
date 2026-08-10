@@ -790,7 +790,7 @@ def _render_og_card(data: dict[str, Any]) -> bytes:
 
 
 def render_din_kvall_card_png(data: dict[str, Any]) -> bytes:
-    """Personal «Din kväll» share card (9:16) — not the public race-recap graphic."""
+    """Personal «Din kväll» share card (9:16) — same broadcast theme as Race Recap list."""
     from PIL import Image, ImageDraw
 
     from social_recap_service import (
@@ -798,152 +798,415 @@ def render_din_kvall_card_png(data: dict[str, Any]) -> bytes:
         GOLD,
         MUTED,
         WHITE,
-        _draw_styled_text,
-        _font_height,
-        _load_brand_logo,
-        _load_display_font,
+        _list_draw_atmosphere,
+        _list_draw_kind_icon,
+        _list_kind_colors,
+        _list_paste,
+        _list_series_theme,
         _load_font_px,
+        _load_motoaction_logo,
+        _load_mx_fantasy_logo,
         _plain_draw_text,
+        _short_user_name,
     )
 
-    bg_top = (10, 16, 36)
-    bg_bot = (6, 10, 22)
-    panel = (16, 24, 48)
-    panel_edge = (56, 90, 140)
-    amber = (251, 191, 36)
-
-    img = Image.new("RGB", (W_STORY, H_STORY), bg_bot)
-    px = img.load()
-    for y in range(H_STORY):
-        t = y / max(H_STORY - 1, 1)
-        r = int(bg_top[0] * (1 - t) + bg_bot[0] * t)
-        g = int(bg_top[1] * (1 - t) + bg_bot[1] * t)
-        b = int(bg_top[2] * (1 - t) + bg_bot[2] * t)
-        for x in range(W_STORY):
-            px[x, y] = (r, g, b)
+    theme = _list_series_theme(data.get("series"))
+    accent = theme["accent"]
+    W, H = W_STORY, H_STORY
+    footer_reserve = 140
+    img = Image.new("RGBA", (W, H), (8, 15, 35, 255))
+    _list_draw_atmosphere(img, theme)
     draw = ImageDraw.Draw(img)
+    margin = 48
+    me_uid = int(data.get("user_id") or 0)
 
-    margin = 56
-    draw.rectangle([0, 0, W_STORY, 12], fill=CYAN)
-    draw.rectangle([0, H_STORY - 12, W_STORY, H_STORY], fill=amber)
-
-    y = 52
-    logo = _load_brand_logo(100)
-    if logo:
-        img.paste(logo, (margin, y), logo)
-    brand_f = _load_display_font(28, bold=True)
-    _draw_styled_text(
-        draw, (margin + 120, y + 22), "MX FANTASY", brand_f, CYAN, anchor="lm"
-    )
-    _draw_styled_text(
-        draw, (margin + 120, y + 58), "DIN KVÄLL", _load_font_px(22, bold=True), amber, anchor="lm"
-    )
-    y += 140
-
-    race = _plain_draw_text(data.get("race_name") or "Race")
-    series = _plain_draw_text((data.get("series") or "").upper())
-    race_f = _load_display_font(64, bold=True)
-    for size in (64, 56, 48, 40):
-        race_f = _load_display_font(size, bold=True)
-        lines = textwrap.wrap(race.upper(), width=16)
-        if len(lines) <= 2:
-            break
-    line_h = _font_height(race_f, "Ay") + 8
-    for line in lines[:2]:
-        _draw_styled_text(
-            draw, (W_STORY // 2, y), line, race_f, WHITE, anchor="mt",
-            stroke=(8, 12, 28), stroke_width=3,
-        )
-        y += line_h
-    if series:
-        _draw_styled_text(
-            draw, (W_STORY // 2, y + 6), series, _load_font_px(28, bold=True), GOLD, anchor="mt"
-        )
-        y += 48
+    # Header logos
+    mx_logo = _load_mx_fantasy_logo(88)
+    y = 40
+    if mx_logo is not None:
+        _list_paste(img, mx_logo, margin, y)
+        brand_x = margin + mx_logo.width + 16
     else:
-        y += 20
+        brand_x = margin
+        draw.text(
+            (margin, y + 24),
+            "MX FANTASY",
+            font=_load_font_px(32, bold=True),
+            fill=accent,
+            anchor="lm",
+        )
+        brand_x = margin + 220
 
-    panel_y1 = y + 10
-    panel_y2 = panel_y1 + 340
+    pill = "DIN KVÄLL"
+    pf = _load_font_px(18, bold=True)
+    pw = int(draw.textlength(pill, font=pf)) + 28
+    ph = 34
     draw.rounded_rectangle(
-        [margin, panel_y1, W_STORY - margin, panel_y2],
-        radius=28, fill=panel, outline=panel_edge, width=2,
+        [brand_x, y + 22, brand_x + pw, y + 22 + ph],
+        radius=17,
+        fill=(248, 250, 252, 235),
     )
+    draw.text(
+        (brand_x + pw // 2, y + 22 + ph // 2),
+        pill,
+        font=pf,
+        fill=(15, 23, 42),
+        anchor="mm",
+    )
+
+    sb = theme.get("badge") or (data.get("series") or "MX")
+    sbf = _load_font_px(16, bold=True)
+    sbw = int(draw.textlength(str(sb), font=sbf)) + 24
+    sx0 = brand_x + pw + 12
+    draw.rounded_rectangle(
+        [sx0, y + 22, sx0 + sbw, y + 22 + ph],
+        radius=17,
+        outline=accent,
+        width=2,
+    )
+    draw.text(
+        (sx0 + sbw // 2, y + 22 + ph // 2),
+        str(sb),
+        font=sbf,
+        fill=accent,
+        anchor="mm",
+    )
+
+    y = 148
+    draw.rectangle([margin, y, W - margin, y + 4], fill=accent)
+    y += 24
+
+    race = _plain_draw_text(data.get("race_name") or "Race").upper()
+    race_f = _load_font_px(44, bold=True)
+    for size in range(44, 26, -2):
+        race_f = _load_font_px(size, bold=True)
+        if draw.textlength(race, font=race_f) <= (W - margin * 2):
+            break
+    draw.text((W // 2, y), race, font=race_f, fill=WHITE, anchor="mt")
+    y += 52
+
+    uname = _plain_draw_text(data.get("display_name") or data.get("username") or "")
+    if uname:
+        label = uname if uname.startswith("@") else f"@{uname}"
+        draw.text(
+            (W // 2, y),
+            label,
+            font=_load_font_px(22, bold=True),
+            fill=MUTED,
+            anchor="mt",
+        )
+        y += 36
+    else:
+        draw.text(
+            (W // 2, y),
+            theme.get("tagline") or "MX Fantasy · Din kväll",
+            font=_load_font_px(16),
+            fill=MUTED,
+            anchor="mt",
+        )
+        y += 32
+
+    # Big points panel
+    panel_h = 200
+    plate = Image.new("RGBA", (W - margin * 2, panel_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle(
+        [0, 0, W - margin * 2 - 1, panel_h - 1],
+        radius=18,
+        fill=(12, 18, 34, 230),
+        outline=accent + (200,),
+        width=2,
+    )
+    pd.rectangle([0, 0, W - margin * 2 - 1, 8], fill=accent + (255,))
+    img.alpha_composite(plate, (margin, y))
+
     pts = data.get("points")
-    pts_txt = f"{int(pts)}p" if pts is not None else "—"
-    _draw_styled_text(
-        draw, (W_STORY // 2, panel_y1 + 36), "DINA POÄNG", _load_font_px(24, bold=True), MUTED, anchor="mt"
+    pts_txt = f"{int(pts)} p" if pts is not None else "—"
+    draw.text(
+        (W // 2, y + 32),
+        "DINA POÄNG",
+        font=_load_font_px(20, bold=True),
+        fill=MUTED,
+        anchor="mt",
     )
-    _draw_styled_text(
-        draw, (W_STORY // 2, panel_y1 + 90), pts_txt, _load_display_font(96, bold=True), amber, anchor="mt"
+    draw.text(
+        (W // 2, y + 72),
+        pts_txt,
+        font=_load_font_px(68, bold=True),
+        fill=GOLD,
+        anchor="mt",
     )
 
     rank = data.get("race_rank")
     field = data.get("field_size")
     rank_txt = f"#{rank}" if rank is not None else "—"
     if field:
-        rank_txt = f"{rank_txt} av {field}"
+        rank_txt = f"{rank_txt} / {field}"
     vs = _plain_draw_text(data.get("vs_avg_label") or "")
-    delta = _plain_draw_text(data.get("season_delta_label") or "")
+    season_rank = data.get("season_rank")
+    season_delta = _plain_draw_text(data.get("season_delta_label") or "")
 
-    col_y = panel_y1 + 220
-    mid = W_STORY // 2
-    _draw_styled_text(draw, (mid - 220, col_y), "PLATS", _load_font_px(20, bold=True), MUTED, anchor="mt")
-    _draw_styled_text(draw, (mid - 220, col_y + 36), rank_txt, _load_font_px(36, bold=True), WHITE, anchor="mt")
-    if vs:
-        _draw_styled_text(draw, (mid + 220, col_y), "VS SNITT", _load_font_px(20, bold=True), MUTED, anchor="mt")
-        _draw_styled_text(draw, (mid + 220, col_y + 36), vs, _load_font_px(32, bold=True), CYAN, anchor="mt")
-    elif delta:
-        _draw_styled_text(draw, (mid + 220, col_y), "SÄSONG", _load_font_px(20, bold=True), MUTED, anchor="mt")
-        _draw_styled_text(draw, (mid + 220, col_y + 36), delta, _load_font_px(32, bold=True), CYAN, anchor="mt")
+    col_y = y + 152
+    draw.text(
+        (margin + 40, col_y),
+        "PLATS",
+        font=_load_font_px(14, bold=True),
+        fill=MUTED,
+        anchor="lt",
+    )
+    draw.text(
+        (margin + 40, col_y + 24),
+        rank_txt,
+        font=_load_font_px(26, bold=True),
+        fill=WHITE,
+        anchor="lt",
+    )
+    right_label = "SÄSONG"
+    right_val = f"#{season_rank}" if season_rank is not None else (vs or "—")
+    if season_delta and season_rank is not None:
+        right_val = f"#{season_rank}  {season_delta}"
+    elif vs and season_rank is None:
+        right_label = "VS SNITT"
+        right_val = vs
+    draw.text(
+        (W - margin - 40, col_y),
+        right_label,
+        font=_load_font_px(14, bold=True),
+        fill=MUTED,
+        anchor="rt",
+    )
+    draw.text(
+        (W - margin - 40, col_y + 24),
+        right_val,
+        font=_load_font_px(24, bold=True),
+        fill=CYAN,
+        anchor="rt",
+    )
+    y += panel_h + 24
 
-    y = panel_y2 + 36
-
-    highlights = list(data.get("highlights") or [])[:3]
-    if highlights:
-        _draw_styled_text(
-            draw, (margin, y), "HIGHLIGHTS", _load_font_px(22, bold=True), MUTED, anchor="lt"
+    # Weekly badges (raket / ankare / kung·queen)
+    badges = list(data.get("weekly_badges") or [])[:2]
+    if badges and y < H - footer_reserve - 120:
+        draw.rectangle([margin, y, margin + 8, y + 26], fill=accent)
+        draw.text(
+            (margin + 18, y + 13),
+            "DU TOG HEM",
+            font=_load_font_px(20, bold=True),
+            fill=WHITE,
+            anchor="lm",
         )
-        y += 40
+        y += 38
+        for badge in badges:
+            if y >= H - footer_reserve - 90:
+                break
+            color = _list_kind_colors(badge, accent)
+            bh = 80
+            card = Image.new("RGBA", (W - margin * 2, bh), (0, 0, 0, 0))
+            cd = ImageDraw.Draw(card)
+            cd.rounded_rectangle(
+                [0, 0, W - margin * 2 - 1, bh - 1],
+                radius=14,
+                fill=(12, 18, 34, 220),
+                outline=color + (210,),
+                width=2,
+            )
+            cd.rectangle([0, 0, 8, bh - 1], fill=color + (255,))
+            img.alpha_composite(card, (margin, y))
+            icx, icy = margin + 48, y + bh // 2
+            draw.ellipse(
+                [icx - 22, icy - 22, icx + 22, icy + 22],
+                fill=(8, 15, 35),
+                outline=color,
+                width=2,
+            )
+            _list_draw_kind_icon(
+                draw,
+                str(badge.get("kind") or badge.get("icon") or ""),
+                icx,
+                icy,
+                26,
+                color,
+                is_queen=bool(badge.get("is_queen")),
+            )
+            draw.text(
+                (margin + 84, y + 20),
+                str(badge.get("title") or "").upper()[:28],
+                font=_load_font_px(15, bold=True),
+                fill=color,
+                anchor="lm",
+            )
+            draw.text(
+                (margin + 84, y + 48),
+                _plain_draw_text(badge.get("detail") or "Bra jobbat!")[:40],
+                font=_load_font_px(18, bold=True),
+                fill=WHITE,
+                anchor="lm",
+            )
+            y += bh + 10
+        y += 6
+
+    # Personal highlights only if no weekly badge (avoid overcrowding)
+    highlights = list(data.get("highlights") or [])[:2] if not badges else []
+    if highlights and y < H - footer_reserve - 100:
+        draw.rectangle([margin, y, margin + 8, y + 26], fill=GOLD)
+        draw.text(
+            (margin + 18, y + 13),
+            "HIGHLIGHTS",
+            font=_load_font_px(20, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        y += 38
         for h in highlights:
+            if y >= H - footer_reserve - 70:
+                break
             text = _plain_draw_text((h.get("text") if isinstance(h, dict) else h) or "")
             if not text:
                 continue
-            box_h = 78
-            draw.rounded_rectangle(
-                [margin, y, W_STORY - margin, y + box_h],
-                radius=18, fill=(14, 20, 40), outline=(40, 60, 90), width=1,
+            bh = 58
+            plate = Image.new("RGBA", (W - margin * 2, bh), (0, 0, 0, 0))
+            pd = ImageDraw.Draw(plate)
+            pd.rounded_rectangle(
+                [0, 0, W - margin * 2 - 1, bh - 1],
+                radius=12,
+                fill=(12, 18, 34, 210),
+                outline=(51, 65, 85, 160),
+                width=1,
             )
-            wrapped = textwrap.wrap(text, width=34)[:2]
-            ty = y + 16
-            for line in wrapped:
-                _draw_styled_text(
-                    draw, (margin + 28, ty), line, _load_font_px(26, bold=True), WHITE, anchor="lt"
+            img.alpha_composite(plate, (margin, y))
+            draw.text(
+                (margin + 22, y + bh // 2),
+                text[:52],
+                font=_load_font_px(18, bold=True),
+                fill=WHITE,
+                anchor="lm",
+            )
+            y += bh + 8
+        y += 4
+
+    # Series highscore top 5 (WSX / SMX / AMA depending on race)
+    season_top = list(data.get("season_top") or [])[:5]
+    if season_top and y < H - footer_reserve - 80:
+        title = (data.get("season_board_title") or "Säsongstoppen").upper()
+        draw.rectangle([margin, y, margin + 8, y + 26], fill=GOLD)
+        draw.text(
+            (margin + 18, y + 13),
+            title,
+            font=_load_font_px(18, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        y += 36
+        for i, row in enumerate(season_top):
+            if y >= H - footer_reserve - 52:
+                break
+            rank_n = int(row.get("rank") or (i + 1))
+            name = _short_user_name(row.get("display_name") or row.get("username") or "?")
+            pts_row = int(row.get("points") or 0)
+            is_me = me_uid and int(row.get("user_id") or 0) == me_uid
+            bh = 48
+            plate = Image.new("RGBA", (W - margin * 2, bh), (0, 0, 0, 0))
+            pd = ImageDraw.Draw(plate)
+            fill = (30, 58, 80, 230) if is_me else (12, 18, 34, 210)
+            pd.rounded_rectangle(
+                [0, 0, W - margin * 2 - 1, bh - 1],
+                radius=10,
+                fill=fill,
+                outline=(accent + (200,)) if is_me else (51, 65, 85, 140),
+                width=2 if is_me else 1,
+            )
+            bar = (
+                GOLD
+                if rank_n == 1
+                else (
+                    (203, 213, 225)
+                    if rank_n == 2
+                    else ((217, 119, 6) if rank_n == 3 else accent)
                 )
-                ty += 30
-            y += box_h + 14
+            )
+            pd.rectangle([0, 0, 7, bh - 1], fill=bar + (255,))
+            img.alpha_composite(plate, (margin, y))
+            draw.text(
+                (margin + 20, y + bh // 2),
+                f"{rank_n:02d}",
+                font=_load_font_px(20, bold=True),
+                fill=bar if rank_n <= 3 else WHITE,
+                anchor="lm",
+            )
+            draw.text(
+                (margin + 72, y + bh // 2),
+                name + ("  ← du" if is_me else ""),
+                font=_load_font_px(18, bold=True),
+                fill=WHITE,
+                anchor="lm",
+            )
+            draw.text(
+                (W - margin - 20, y + bh // 2),
+                f"{pts_row} p",
+                font=_load_font_px(18, bold=True),
+                fill=CYAN,
+                anchor="rm",
+            )
+            y += bh + 6
 
     rival = _plain_draw_text(data.get("rival_line") or "")
-    if rival:
-        y += 8
-        draw.rounded_rectangle(
-            [margin, y, W_STORY - margin, y + 100],
-            radius=18, fill=(28, 18, 12), outline=(120, 70, 30), width=2,
+    if rival and y < H - footer_reserve - 80:
+        y += 6
+        bh = 64
+        plate = Image.new("RGBA", (W - margin * 2, bh), (0, 0, 0, 0))
+        pd = ImageDraw.Draw(plate)
+        pd.rounded_rectangle(
+            [0, 0, W - margin * 2 - 1, bh - 1],
+            radius=12,
+            fill=(40, 24, 12, 230),
+            outline=(217, 119, 6, 200),
+            width=2,
         )
-        for i, line in enumerate(textwrap.wrap(rival, width=32)[:2]):
-            _draw_styled_text(
-                draw, (W_STORY // 2, y + 28 + i * 32), line,
-                _load_font_px(26, bold=True), amber, anchor="mt",
+        img.alpha_composite(plate, (margin, y))
+        for i, line in enumerate(textwrap.wrap(rival, width=38)[:2]):
+            draw.text(
+                (W // 2, y + 18 + i * 24),
+                line,
+                font=_load_font_px(18, bold=True),
+                fill=GOLD,
+                anchor="mt",
             )
 
-    uname = _plain_draw_text(data.get("display_name") or data.get("username") or "")
-    if uname:
-        label = uname if uname.startswith("@") else f"@{uname}"
-        _draw_styled_text(
-            draw, (W_STORY // 2, H_STORY - 70), label,
-            _load_font_px(28, bold=True), MUTED, anchor="mb",
+    # Footer
+    footer_top = H - 118
+    promo_h = 56
+    promo = Image.new("RGBA", (W - margin * 2, promo_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(promo)
+    pd.rounded_rectangle(
+        [0, 0, W - margin * 2 - 1, promo_h - 1],
+        radius=12,
+        fill=(8, 15, 35, 230),
+        outline=accent + (180,),
+        width=2,
+    )
+    img.alpha_composite(promo, (margin, footer_top))
+    foot_logo = _load_mx_fantasy_logo(40)
+    tx = margin + 14
+    if foot_logo is not None:
+        _list_paste(img, foot_logo, tx, footer_top + (promo_h - foot_logo.height) // 2)
+        tx += foot_logo.width + 12
+    draw.text(
+        (tx, footer_top + promo_h // 2),
+        "mx-fantasy.se",
+        font=_load_font_px(18, bold=True),
+        fill=WHITE,
+        anchor="lm",
+    )
+    ma = _load_motoaction_logo(34)
+    if ma is not None:
+        _list_paste(
+            img,
+            ma,
+            W - margin - 14 - ma.width,
+            footer_top + (promo_h - ma.height) // 2,
         )
+    draw.rectangle([0, H - 6, W, H], fill=accent)
 
     buf = io.BytesIO()
-    img.save(buf, format="PNG", optimize=True)
+    img.convert("RGB").save(buf, format="PNG", optimize=True)
     return buf.getvalue()

@@ -238,6 +238,27 @@
             return p;
         }
 
+        function recapDownloadBase() {
+            const opt = compSelect.options[compSelect.selectedIndex];
+            let name = (opt && opt.textContent) || 'race';
+            name = name.split('·')[0].trim();
+            name = name
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-zA-Z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .toLowerCase()
+                .slice(0, 60);
+            return 'mx-recap-' + (name || 'race');
+        }
+
+        function setRecapDownloadNames() {
+            const base = recapDownloadBase();
+            btnDownloadGraphic.download = base + '-resultat.png';
+            btnDownloadStats.download = base + '-statistik.png';
+            btnDownload.download = base + '.png';
+        }
+
         async function loadCompetitions() {
             try {
                 const res = await fetch('/get_competitions_for_import');
@@ -299,6 +320,7 @@
                     }
                     btnDownloadGraphic.href = gUrl;
                     btnDownloadStats.href = sUrl;
+                    setRecapDownloadNames();
                     statusMsg.textContent = 'Klar. 2 bilder: resultatlista ~1620×1080 + statistik. ' + lastRecapEngine;
                 } else {
                     dualPreview.classList.add('hidden');
@@ -316,6 +338,7 @@
                     }
                     btnDownload.href = pngUrl;
                     btnDownload.classList.remove('opacity-50', 'pointer-events-none');
+                    setRecapDownloadNames();
                     const fmt = lay === 'story' ? '1080×1920' : '1080×variabel';
                     statusMsg.textContent = 'Klar. Export: ' + fmt + ' px.';
                 }
