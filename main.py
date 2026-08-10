@@ -16673,6 +16673,14 @@ def compute_series_championship_totals():
     rider_meta = {}
     promoted_250_coasts = _promoted_250_coast_by_name()
 
+    # Race results / live standings: only the active WSX season.
+    # Older WSX years live under Färdiga serier.
+    wsx_year = _active_wsx_season_year()
+    try:
+        wsx_comp_ids = {int(c.id) for c in _wsx_competitions_for_year(wsx_year)}
+    except Exception:
+        wsx_comp_ids = set()
+
     rows = (
         db.session.query(CompetitionResult, Competition, Rider)
         .join(Competition, Competition.id == CompetitionResult.competition_id)
@@ -16683,6 +16691,8 @@ def compute_series_championship_totals():
     for cr, comp, rider in rows:
         s = str(comp.series).strip() if comp.series is not None else ""
         if s not in ("WSX", "SX", "MX", "SMX"):
+            continue
+        if s == "WSX" and wsx_comp_ids and int(comp.id) not in wsx_comp_ids:
             continue
 
         if s == "WSX":
@@ -16762,7 +16772,8 @@ def compute_series_championship_totals():
         ),
     }
     wsx = {
-        "label": "WSX (World Supercross)",
+        "label": f"WSX {wsx_year}",
+        "year": wsx_year,
         "sx1": top_list("wsx", "wsx_sx1"),
         "sx2": top_list("wsx", "wsx_sx2"),
     }

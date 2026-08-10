@@ -405,7 +405,8 @@
     {% if wsx.get('sx1') or wsx.get('sx2') %}
     <section class="mb-10 rounded-2xl border border-amber-700/35 bg-slate-800/35 overflow-hidden shadow-xl">
       <div class="px-4 sm:px-6 py-4 bg-gradient-to-r from-slate-900/80 to-slate-800/50 border-b border-slate-600/40">
-        <h2 class="text-lg sm:text-xl font-bold text-amber-200">WSX · säsongspoäng</h2>
+        <h2 class="text-lg sm:text-xl font-bold text-amber-200">{{ wsx.get('label', 'WSX') }} · säsongspoäng</h2>
+        <p class="text-slate-400 text-xs mt-1">Aktuell säsong — äldre WSX finns under Färdiga serier.</p>
       </div>
       <div class="p-4 sm:p-6">
         {{ standings_wsx_picker('wsx', 'wsx', wsx.get('label'), wsx.get('sx1'), wsx.get('sx2')) }}
