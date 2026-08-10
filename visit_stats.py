@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 from flask import Request, Response, g, has_request_context, session
 from sqlalchemy.exc import IntegrityError
 
-from models import DailySiteStats, DailyVisitorSighting, db
+from models import DailySiteStats, DailyVisitorSighting, User, db
 
 COOKIE_NAME = "mx_vid"
 COOKIE_MAX_AGE = 60 * 60 * 24 * 400  # ~13 months
@@ -279,6 +279,39 @@ def attach_visitor_cookie(response: Response, visitor_id: str) -> Response:
     return response
 
 
+def _signup_stats(start: date, end: date) -> tuple[dict[str, int], list[dict[str, Any]]]:
+    """Count new accounts per Stockholm calendar day; list today's signups."""
+    tz = ZoneInfo("Europe/Stockholm")
+    # created_at is stored as naive UTC — pad the window for timezone skew.
+    window_start = datetime.combine(start - timedelta(days=1), datetime.min.time())
+    window_end = datetime.combine(end + timedelta(days=1), datetime.max.time())
+    users = (
+        User.query.filter(
+            User.created_at.isnot(None),
+            User.created_at >= window_start,
+            User.created_at <= window_end,
+        )
+        .order_by(User.created_at.desc())
+        .all()
+    )
+    counts: dict[str, int] = {}
+    today_users: list[dict[str, Any]] = []
+    for u in users:
+        ca = u.created_at
+        if ca is None:
+            continue
+        if ca.tzinfo is None:
+            ca = ca.replace(tzinfo=ZoneInfo("UTC"))
+        local_day = ca.astimezone(tz).date()
+        if local_day < start or local_day > end:
+            continue
+        key = local_day.isoformat()
+        counts[key] = counts.get(key, 0) + 1
+        if local_day == end:
+            today_users.append({"id": u.id, "username": u.username})
+    return counts, today_users
+
+
 def get_visit_summary(days: int = 14) -> dict[str, Any]:
     _ensure_table()
     days = max(1, min(int(days or 14), 90))
@@ -289,11 +322,13 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
         .order_by(DailySiteStats.day.desc())
         .all()
     )
+    signup_counts, today_signups = _signup_stats(start, end)
     by_day = {
         r.day.isoformat(): {
             "day": r.day.isoformat(),
             "pageviews": int(r.pageviews or 0),
             "unique_visitors": int(r.unique_visitors or 0),
+            "new_signups": int(signup_counts.get(r.day.isoformat(), 0)),
         }
         for r in rows
     }
@@ -304,12 +339,27 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
         series.append(
             by_day.get(
                 key,
-                {"day": key, "pageviews": 0, "unique_visitors": 0},
+                {
+                    "day": key,
+                    "pageviews": 0,
+                    "unique_visitors": 0,
+                    "new_signups": int(signup_counts.get(key, 0)),
+                },
             )
         )
         cursor -= timedelta(days=1)
 
-    today = by_day.get(end.isoformat(), {"day": end.isoformat(), "pageviews": 0, "unique_visitors": 0})
+    today = by_day.get(
+        end.isoformat(),
+        {
+            "day": end.isoformat(),
+            "pageviews": 0,
+            "unique_visitors": 0,
+            "new_signups": int(signup_counts.get(end.isoformat(), 0)),
+        },
+    )
+    today["new_signups"] = int(signup_counts.get(end.isoformat(), 0))
+    today["new_signup_users"] = today_signups
     last7 = series[:7]
 
     peak_row = (
@@ -332,6 +382,7 @@ def get_visit_summary(days: int = 14) -> dict[str, Any]:
         "last_7_days": {
             "pageviews": sum(d["pageviews"] for d in last7),
             "unique_visitors": sum(d["unique_visitors"] for d in last7),
+            "new_signups": sum(int(d.get("new_signups") or 0) for d in last7),
         },
         "days": series,
     }

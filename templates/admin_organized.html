@@ -110,6 +110,11 @@
                 <span class="font-semibold text-cyan-400">Besökare</span>
                 <span><span class="text-white font-bold text-lg" id="visit-today-uv">–</span> unika idag</span>
                 <span class="text-gray-500">·</span>
+                <span><span class="text-emerald-300 font-bold text-lg" id="visit-today-signups">–</span> nya konton</span>
+                <span class="text-gray-500 text-xs" id="visit-today-signup-names"></span>
+                <span class="text-gray-500">·</span>
+                <span class="text-gray-300">7d: <span class="text-white font-semibold" id="visit-week-signups">–</span> nya</span>
+                <span class="text-gray-500">·</span>
                 <span class="text-gray-300">Rekord: <span class="text-white font-semibold" id="visit-peak-uv">–</span> <span class="text-gray-500" id="visit-peak-day"></span></span>
                 <span class="text-gray-600 text-xs w-full sm:w-auto">Bara speletsidor · ej personal/kundmail/bots</span>
             </div>
@@ -2438,8 +2443,20 @@
                 if (!response.ok || !data.ok) return;
                 const t = data.today || {};
                 const peak = data.peak || null;
+                const week = data.last_7_days || {};
                 const uvEl = document.getElementById('visit-today-uv');
                 if (uvEl) uvEl.textContent = String(t.unique_visitors ?? 0);
+                const signupEl = document.getElementById('visit-today-signups');
+                if (signupEl) signupEl.textContent = String(t.new_signups ?? 0);
+                const signupNames = document.getElementById('visit-today-signup-names');
+                if (signupNames) {
+                    const names = (t.new_signup_users || [])
+                        .map((u) => u.username)
+                        .filter(Boolean);
+                    signupNames.textContent = names.length ? `(${names.join(', ')})` : '';
+                }
+                const weekSignupEl = document.getElementById('visit-week-signups');
+                if (weekSignupEl) weekSignupEl.textContent = String(week.new_signups ?? 0);
                 const peakUv = document.getElementById('visit-peak-uv');
                 const peakDay = document.getElementById('visit-peak-day');
                 if (peak && peak.unique_visitors) {
