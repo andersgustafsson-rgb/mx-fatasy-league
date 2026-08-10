@@ -1492,8 +1492,10 @@ function perDayHoursFromRow(row, hourCols) {
  * En rad ger timmar, kalenderdagar (inom vald månad / intervall) och antal tillfällen (1 om raden räknas).
  * Klockrader: 1 dag + 1 tillfälle när timmar räknas in.
  */
-function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtOverride = null) {
-  const filt = filtOverride || getUiMonthYearFilter();
+function rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filtOverride) {
+  // Viktigt: explicit null betyder «ingen månadsfilter» (månadsmall Jan–Jul).
+  // `filtOverride || getUi…` skulle annars falla tillbaka till UI-månaden.
+  const filt = arguments.length >= 5 ? filtOverride : getUiMonthYearFilter();
 
   let d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
   let d1 = colDatumTom ? parseIsoDate(row[colDatumTom]) : null;
