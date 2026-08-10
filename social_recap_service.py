@@ -248,22 +248,67 @@ def _comp_ids_for_recap_week(comp: Competition | None) -> list[int]:
     return [int(comp.id)]
 
 
+def _recap_is_queen_name(display_name: str | None) -> bool:
+    try:
+        from main import _likely_female_given_name
+
+        return bool(_likely_female_given_name(display_name))
+    except Exception:
+        return False
+
+
+def _round_king_card(competition_id: int, race_leaderboard: list[dict] | None = None) -> dict[str, Any] | None:
+    """Rundans Kung/Queen — högst poäng på just den här tävlingen."""
+    top = None
+    if race_leaderboard:
+        top = race_leaderboard[0]
+    else:
+        scores = CompetitionScore.query.filter_by(competition_id=competition_id).all()
+        by_user: dict[int, CompetitionScore] = {}
+        for s in scores:
+            uid = int(s.user_id)
+            prev = by_user.get(uid)
+            if prev is None or int(s.score_id or 0) > int(prev.score_id or 0):
+                by_user[uid] = s
+        best = None
+        best_pts = -1
+        for uid, s in by_user.items():
+            pts = int(s.total_points or 0)
+            if pts > best_pts:
+                best_pts = pts
+                best = s
+        if best and best_pts > 0:
+            u = User.query.get(int(best.user_id))
+            if u:
+                top = {
+                    "user_id": int(u.id),
+                    "display_name": _display_name(u),
+                    "points": best_pts,
+                }
+    if not top or not top.get("user_id"):
+        return None
+    name = top.get("display_name") or "?"
+    is_queen = _recap_is_queen_name(name)
+    pts = int(top.get("points") or 0)
+    return {
+        "kind": "round_king",
+        "icon": "crown",
+        "is_queen": is_queen,
+        "title": "Rundans Queen" if is_queen else "Rundans Kung",
+        "user_id": int(top["user_id"]),
+        "display_name": name,
+        "detail": f"{pts} p denna tävling",
+    }
+
+
 def _fallback_race_highlights(
     competition_id: int, race_leaderboard: list[dict] | None
 ) -> list[dict[str, Any]]:
     """Minst en prestation från själva tävlingen om veckofönstret saknar data."""
     cards: list[dict[str, Any]] = []
-    if race_leaderboard:
-        top = race_leaderboard[0]
-        cards.append(
-            {
-                "icon": "🏆",
-                "title": "Tävlingsvinnare",
-                "user_id": top.get("user_id"),
-                "display_name": top.get("display_name") or "?",
-                "detail": f"{int(top.get('points', 0))} p denna tävling",
-            }
-        )
+    rk = _round_king_card(competition_id, race_leaderboard)
+    if rk:
+        cards.append(rk)
     picks_raw = RacePick.query.filter_by(competition_id=competition_id).all()
     by_pick: dict[tuple, RacePick] = {}
     for p in picks_raw:
@@ -288,7 +333,8 @@ def _fallback_race_highlights(
         best = max(perfect_stats.values(), key=lambda x: x["count"])
         cards.append(
             {
-                "icon": "🎯",
+                "kind": "perfect",
+                "icon": "target",
                 "title": "Perfekt gissning",
                 "user_id": best["user_id"],
                 "display_name": best["display_name"],
@@ -303,12 +349,16 @@ def _fallback_race_highlights(
             uid, pts = max(hs.items(), key=lambda x: x[1])
             u = User.query.get(int(uid))
             if u and pts:
+                name = _display_name(u)
+                is_queen = _recap_is_queen_name(name)
                 cards.append(
                     {
-                        "icon": "🏁",
-                        "title": "Holeshot-kung",
+                        "kind": "holeshot",
+                        "icon": "flag",
+                        "is_queen": is_queen,
+                        "title": "Holeshot-queen" if is_queen else "Holeshot-kung",
                         "user_id": int(uid),
-                        "display_name": _display_name(u),
+                        "display_name": name,
                         "detail": f"{int(pts)} p · holeshot",
                     }
                 )
@@ -404,7 +454,8 @@ def _get_weekly_highlights(
     if rocket:
         cards.append(
             {
-                "icon": "🚀",
+                "kind": "rocket",
+                "icon": "rocket",
                 "title": "Veckans raket",
                 **rocket,
             }
@@ -413,11 +464,16 @@ def _get_weekly_highlights(
     if anchor:
         cards.append(
             {
-                "icon": "⚓",
+                "kind": "anchor",
+                "icon": "anchor",
                 "title": "Veckans ankare",
                 **anchor,
             }
         )
+
+    rk = _round_king_card(competition_id, race_leaderboard)
+    if rk:
+        cards.append(rk)
 
     picks_raw = RacePick.query.filter(RacePick.competition_id.in_(comp_ids)).all()
     by_pick: dict[tuple, RacePick] = {}
@@ -443,11 +499,12 @@ def _get_weekly_highlights(
                 u = User.query.get(uid)
                 perfect_stats[uid] = {"user_id": uid, "display_name": _display_name(u), "count": 0}
             perfect_stats[uid]["count"] += 1
-    if perfect_stats:
+    if perfect_stats and len(cards) < 4:
         best = max(perfect_stats.values(), key=lambda x: x["count"])
         cards.append(
             {
-                "icon": "🎯",
+                "kind": "perfect",
+                "icon": "target",
                 "title": "Perfekt gissning",
                 "user_id": best["user_id"],
                 "display_name": best["display_name"],
@@ -456,16 +513,20 @@ def _get_weekly_highlights(
         )
 
     hs_totals = aggregate_weekly_holeshot_points_from_picks(comp_ids)
-    if hs_totals:
+    if hs_totals and len(cards) < 4:
         uid, pts = max(hs_totals.items(), key=lambda x: x[1])
         u = User.query.get(int(uid))
         if u and pts:
+            name = _display_name(u)
+            is_queen = _recap_is_queen_name(name)
             cards.append(
                 {
-                    "icon": "🏁",
-                    "title": "Holeshot-kung",
+                    "kind": "holeshot",
+                    "icon": "flag",
+                    "is_queen": is_queen,
+                    "title": "Holeshot-queen" if is_queen else "Holeshot-kung",
                     "user_id": int(uid),
-                    "display_name": _display_name(u),
+                    "display_name": name,
                     "detail": f"{int(pts)} p · holeshot",
                 }
             )
@@ -569,6 +630,7 @@ def _rider_podium(
                 "name": r.name,
                 "short_name": _short_rider_name(r.name),
                 "number": num,
+                "bike_brand": (getattr(r, "bike_brand", None) or "").strip() or None,
                 "label": f"#{num} {r.name}" if num else r.name,
             }
         )
@@ -675,9 +737,12 @@ def _compute_fun_facts(comp: Competition, competition_id: int) -> list[dict[str,
     if picker_n <= 0:
         return [{"id": "no_picks", "text": "Inga tips inlämnade för detta race ännu."}]
 
-    candidates: list[dict[str, str]] = [
-        {"id": "picker_count", "group": "meta", "text": f"{picker_n} spelare lämnade tips"}
-    ]
+    candidates: list[dict[str, str]] = []
+    # Only interesting at scale — skip the "12 spelare lämnade tips" vibe
+    if picker_n >= 300:
+        candidates.append(
+            {"id": "picker_count", "group": "meta", "text": f"{picker_n} spelare lämnade tips"}
+        )
 
     riders = {r.id: r for r in rider_query_for_list_ui().all()}
     actual = _actual_positions(competition_id)
@@ -927,11 +992,13 @@ def build_social_recap_data(
     }
 
     if include_rider_podium and has_results:
+        # List graphic: tippa topp 6 per klass
+        rider_limit = 6
         data["rider_podium_primary"] = _rider_podium(
-            comp, competition_id, (cfg["primary"][0],), limit=3
+            comp, competition_id, (cfg["primary"][0],), limit=rider_limit
         )
         data["rider_podium_secondary"] = _rider_podium(
-            comp, competition_id, (cfg["secondary"][0],), limit=3
+            comp, competition_id, (cfg["secondary"][0],), limit=rider_limit
         )
     else:
         data["rider_podium_primary"] = []
@@ -2263,15 +2330,12 @@ RECAP_LAYOUT_HYBRID = _ROOT / "static" / "recap_templates" / "layout_hybrid.json
 
 
 def _recap_engine_preference() -> str:
-    """hybrid | template | fallback — env RECAP_ENGINE overrides auto."""
+    """list | hybrid | template | fallback — env RECAP_ENGINE overrides auto."""
     raw = (os.getenv("RECAP_ENGINE") or "").strip().lower()
-    if raw in ("hybrid", "template", "fallback"):
+    if raw in ("list", "hybrid", "template", "fallback"):
         return raw
-    if RECAP_LAYOUT_HYBRID.is_file() and RECAP_TEMPLATE_GRAPHIC.is_file():
-        return "hybrid"
-    if _recap_legacy_templates_ready():
-        return "template"
-    return "fallback"
+    # Default: broadcast-style results list (no podium-template calibration)
+    return "list"
 
 
 def _recap_legacy_templates_ready() -> bool:
@@ -2283,8 +2347,8 @@ def _recap_legacy_templates_ready() -> bool:
 
 
 def _recap_templates_ready() -> bool:
-    """True when any branded graphic path can run (hybrid or legacy template)."""
-    return _recap_engine_preference() in ("hybrid", "template")
+    """True when a branded graphic path can run."""
+    return _recap_engine_preference() in ("list", "hybrid", "template")
 
 
 def _load_recap_slots() -> dict[str, Any]:
@@ -2416,7 +2480,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "40-hybrid"
+RECAP_RENDERER_REV = "45-list-stats"
 
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm). Legacy template only.
@@ -3767,10 +3831,593 @@ def _footer(img, draw, final_h: int, *, bar_h: int = 6) -> None:
     draw.rectangle([0, strip_top, cw, final_h], fill=CYAN)
 
 
+def _load_logo_fit(path: Path, *, max_w: int, max_h: int):
+    from PIL import Image
+
+    if not path.is_file():
+        return None
+    try:
+        img = Image.open(path).convert("RGBA")
+        img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+        return img
+    except Exception:
+        return None
+
+
+def _load_mx_fantasy_logo(max_h: int = 72):
+    for rel in (
+        "static/images/mx_fantasy_logo.png",
+        "static/icons/mx_fantasy_app_icon_512.png",
+        "static/images/mx_fantasy_favicon.png",
+    ):
+        logo = _load_logo_fit(_ROOT / rel, max_w=max_h * 3, max_h=max_h)
+        if logo is not None:
+            return logo
+    return _load_brand_logo(max_h)
+
+
+def _load_motoaction_logo(max_h: int = 56):
+    """Full MotAction wordmark (mark + text), fallback to icon-only mark."""
+    for rel in (
+        "static/images/motoaction_logo.png",
+        "static/images/motoaction_mark.png",
+    ):
+        logo = _load_logo_fit(_ROOT / rel, max_w=max_h * 6, max_h=max_h)
+        if logo is not None:
+            return logo
+    return None
+
+
+def _load_motoaction_mark(max_h: int = 56):
+    return _load_motoaction_logo(max_h)
+
+
+def _load_bike_brand_logo(brand: str | None, size: int = 28):
+    if not brand:
+        return None
+    key = re.sub(r"[^a-z0-9]+", "", brand.strip().lower())
+    aliases = {
+        "gasgas": "gasgas",
+        "gas gas": "gasgas",
+        "husky": "husqvarna",
+        "stark": "stark",
+        "beta": "beta",
+    }
+    key = aliases.get(brand.strip().lower(), key)
+    return _load_logo_fit(
+        _ROOT / "static" / "brand_logos" / f"{key}.png",
+        max_w=size,
+        max_h=size,
+    )
+
+
+_BIKE_BRAND_ACCENT: dict[str, tuple[int, int, int]] = {
+    "honda": (220, 38, 38),
+    "yamaha": (37, 99, 235),
+    "kawasaki": (22, 163, 74),
+    "ktm": (234, 88, 12),
+    "husqvarna": (234, 179, 8),
+    "gasgas": (239, 68, 68),
+    "suzuki": (59, 130, 246),
+    "triumph": (226, 232, 240),
+    "ducati": (185, 28, 28),
+    "stark": (168, 85, 247),
+    "beta": (239, 68, 68),
+}
+
+
+def _bike_brand_accent(brand: str | None) -> tuple[int, int, int]:
+    if not brand:
+        return CYAN_DIM
+    key = re.sub(r"[^a-z0-9]+", "", brand.strip().lower())
+    return _BIKE_BRAND_ACCENT.get(key, CYAN_DIM)
+
+
+def _list_series_theme(series: str | None) -> dict[str, Any]:
+    s = (series or "").upper()
+    if s == "WSX":
+        return {
+            "accent": (251, 146, 60),       # blazing orange
+            "accent_dim": (154, 52, 18),
+            "badge": "WSX",
+            "tagline": "World Supercross · Fantasy Recap",
+            "panel": (24, 24, 27),
+        }
+    if s == "SMX":
+        return {
+            "accent": (248, 113, 113),
+            "accent_dim": (127, 29, 29),
+            "badge": "SMX",
+            "tagline": "SuperMotocross · Fantasy Recap",
+            "panel": (30, 27, 40),
+        }
+    if s == "SX":
+        return {
+            "accent": (250, 204, 21),
+            "accent_dim": (161, 98, 7),
+            "badge": "SX",
+            "tagline": "AMA Supercross · Fantasy Recap",
+            "panel": (24, 30, 48),
+        }
+    if s == "MX":
+        return {
+            "accent": (52, 211, 153),
+            "accent_dim": (6, 95, 70),
+            "badge": "MX",
+            "tagline": "AMA Motocross · Fantasy Recap",
+            "panel": (20, 36, 40),
+        }
+    return {
+        "accent": CYAN,
+        "accent_dim": CYAN_DIM,
+        "badge": s or "MX",
+        "tagline": "MX Fantasy · Race Recap",
+        "panel": PANEL,
+    }
+
+
+def _list_draw_atmosphere(img, theme: dict[str, Any]) -> None:
+    """Dark gradient + diagonal slash + light grit — broadcast HUD vibe."""
+    from PIL import Image, ImageDraw
+    import random
+
+    _draw_vertical_gradient(img)
+    w, h = img.size
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    accent = theme["accent"] + (55,)
+    # Big diagonal slash behind content
+    od.polygon(
+        [(int(w * 0.55), 0), (w, 0), (w, int(h * 0.42)), (int(w * 0.35), int(h * 0.55))],
+        fill=accent,
+    )
+    od.polygon(
+        [(0, int(h * 0.72)), (int(w * 0.4), int(h * 0.62)), (int(w * 0.28), h), (0, h)],
+        fill=theme["accent"] + (28,),
+    )
+    # Subtle noise
+    rng = random.Random(7)
+    px = overlay.load()
+    for _ in range(1800):
+        x, y = rng.randint(0, w - 1), rng.randint(0, h - 1)
+        a = rng.randint(8, 28)
+        px[x, y] = (255, 255, 255, a)
+    img.alpha_composite(overlay)
+
+
+def _list_medal_fill(pos: int) -> tuple[int, int, int]:
+    if pos == 1:
+        return GOLD
+    if pos == 2:
+        return SILVER
+    if pos == 3:
+        return BRONZE
+    return MUTED
+
+
+def _list_paste(base, logo, x: int, y: int) -> None:
+    if logo is None:
+        return
+    base.paste(logo, (x, y), logo if logo.mode == "RGBA" else None)
+
+
+def _list_image_is_cutout(img) -> bool:
+    """True for transparent PNG cutouts (RacerX-style) — same idea as race picks."""
+    if img.mode != "RGBA":
+        return False
+    alpha = img.getchannel("A")
+    # Sample corners: cutouts are transparent outside the rider
+    w, h = img.size
+    if w < 8 or h < 8:
+        return False
+    corners = [
+        alpha.getpixel((2, 2)),
+        alpha.getpixel((w - 3, 2)),
+        alpha.getpixel((2, h - 3)),
+        alpha.getpixel((w - 3, h - 3)),
+    ]
+    return sum(1 for a in corners if a < 40) >= 3
+
+
+def _list_prepare_rider_thumb(rider_id: int | None, size: int):
+    """
+    Same framing as race picks:
+    - photos → cover + face bias ~18% from top
+    - cutouts → contain (no aggressive crop)
+    No podium down-shift, no metal ring.
+    """
+    from PIL import Image
+
+    if not rider_id:
+        return None
+    raw = _load_rider_thumb(int(rider_id), size * 3)
+    if raw is None:
+        return None
+    img = raw.convert("RGBA")
+    if _list_image_is_cutout(img):
+        # contain + slight scale-up like .portrait-cutout
+        scale = min(size / img.width, size / img.height) * 1.12
+        nw, nh = max(1, int(img.width * scale)), max(1, int(img.height * scale))
+        scaled = img.resize((nw, nh), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGBA", (size, size), (17, 24, 39, 255))
+        canvas.paste(scaled, ((size - nw) // 2, (size - nh) // 2), scaled)
+        return canvas
+    # photos: cover with object-position ~ center 18%
+    return _cover_crop_square(img, size, face_bias=0.18, zoom=1.0)
+
+
+def _list_paste_rider_thumb(base, x: int, y: int, size: int, entry: dict[str, Any]) -> None:
+    """Rounded thumb like race picks (.preview-img), not a podium medal ring."""
+    from PIL import Image, ImageDraw
+
+    thumb = _list_prepare_rider_thumb(entry.get("rider_id"), size)
+    if thumb is None:
+        # Fallback initials disc — only when no photo
+        thumb = _make_initials_avatar(
+            entry.get("short_name") or entry.get("name") or "?",
+            int(entry.get("rider_id") or 0),
+            size,
+        )
+
+    mask = Image.new("L", (size, size), 0)
+    ImageDraw.Draw(mask).ellipse([0, 0, size - 1, size - 1], fill=255)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(thumb, (0, 0), thumb if thumb.mode == "RGBA" else None)
+    out.putalpha(mask)
+
+    # Thin gray ring like race picks border — not gold/silver metal
+    ring = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    rd = ImageDraw.Draw(ring)
+    rd.ellipse([0, 0, size - 1, size - 1], outline=(107, 114, 128, 220), width=max(2, size // 28))
+    base.paste(out, (x, y), out)
+    base.paste(ring, (x, y), ring)
+
+
+def _list_draw_result_row(
+    base,
+    draw,
+    *,
+    x0: int,
+    y0: int,
+    width: int,
+    row_h: int,
+    entry: dict[str, Any],
+    accent: tuple[int, int, int],
+) -> None:
+    from PIL import Image, ImageDraw
+
+    pos = int(entry.get("position") or entry.get("pos") or 0)
+    name = entry.get("short_name") or entry.get("name") or "—"
+    num = entry.get("number")
+    brand = entry.get("bike_brand")
+    brand_col = _bike_brand_accent(brand)
+
+    # Row plate
+    plate = Image.new("RGBA", (width, row_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle(
+        [0, 0, width - 1, row_h - 1],
+        radius=10,
+        fill=(12, 18, 34, 210),
+        outline=PANEL_EDGE + (160,),
+        width=1,
+    )
+    # Left accent bar (medal for top 3, else brand)
+    bar = _list_medal_fill(pos) if pos <= 3 else brand_col
+    pd.rectangle([0, 0, 7, row_h - 1], fill=bar + (255,))
+    base.alpha_composite(plate, (x0, y0))
+
+    rank_f = _load_font_px(28 if pos <= 3 else 24, bold=True)
+    draw.text(
+        (x0 + 20, y0 + row_h // 2),
+        f"{pos:02d}",
+        font=rank_f,
+        fill=_list_medal_fill(pos) if pos <= 3 else WHITE,
+        anchor="lm",
+    )
+
+    thumb_size = max(40, row_h - 14)
+    thumb_x = x0 + 66
+    thumb_y = y0 + (row_h - thumb_size) // 2
+    _list_paste_rider_thumb(base, thumb_x, thumb_y, thumb_size, entry)
+
+    label = f"#{num}  {name}" if num else name
+    name_f = _load_font_px(22 if pos <= 3 else 20, bold=True)
+    draw.text(
+        (thumb_x + thumb_size + 12, y0 + row_h // 2),
+        label,
+        font=name_f,
+        fill=WHITE,
+        anchor="lm",
+    )
+
+    # Bike brand logo (right)
+    logo = _load_bike_brand_logo(brand, size=max(22, row_h // 2))
+    if logo is not None:
+        _list_paste(base, logo, x0 + width - logo.width - 14, y0 + (row_h - logo.height) // 2)
+    elif brand:
+        bf = _load_font_px(14, bold=True)
+        draw.text(
+            (x0 + width - 14, y0 + row_h // 2),
+            brand.upper()[:10],
+            font=bf,
+            fill=brand_col,
+            anchor="rm",
+        )
+
+
+def _list_draw_fantasy_row(
+    base,
+    draw,
+    *,
+    x0: int,
+    y0: int,
+    width: int,
+    row_h: int,
+    row: dict[str, Any],
+) -> None:
+    from PIL import Image, ImageDraw
+
+    rank = int(row.get("rank") or 0)
+    name = _short_user_name(row.get("display_name") or row.get("username") or "?")
+    pts = int(row.get("points") or 0)
+
+    plate = Image.new("RGBA", (width, row_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle(
+        [0, 0, width - 1, row_h - 1],
+        radius=10,
+        fill=(12, 18, 34, 210),
+        outline=PANEL_EDGE + (140,),
+        width=1,
+    )
+    bar = _list_medal_fill(rank) if rank <= 3 else CYAN_DIM
+    pd.rectangle([0, 0, 7, row_h - 1], fill=bar + (255,))
+    base.alpha_composite(plate, (x0, y0))
+
+    draw.text(
+        (x0 + 22, y0 + row_h // 2),
+        f"{rank:02d}",
+        font=_load_font_px(24, bold=True),
+        fill=_list_medal_fill(rank) if rank <= 3 else WHITE,
+        anchor="lm",
+    )
+    draw.text(
+        (x0 + 78, y0 + row_h // 2),
+        name,
+        font=_load_font_px(20, bold=True),
+        fill=WHITE,
+        anchor="lm",
+    )
+    draw.text(
+        (x0 + width - 16, y0 + row_h // 2),
+        f"{pts} p",
+        font=_load_font_px(20, bold=True),
+        fill=CYAN,
+        anchor="rm",
+    )
+
+
+def _render_recap_graphic_list(data: dict[str, Any]) -> bytes:
+    """
+    Broadcast-style results list (no podium rings).
+    Includes series theme, MX Fantasy promo, MotAction branding.
+    """
+    from PIL import Image, ImageDraw
+
+    theme = _list_series_theme(data.get("series"))
+    accent = theme["accent"]
+    # Taller canvas so tippa topp 6 + fantasy + footer fit cleanly
+    W, H = W_FB, 1180
+    img = Image.new("RGBA", (W, H), BG_TOP + (255,))
+    _list_draw_atmosphere(img, theme)
+    draw = ImageDraw.Draw(img)
+    mods = data.get("modules") or {}
+    labels = data.get("class_labels") or {}
+
+    margin = 40
+    # ── Header ──────────────────────────────────────────────
+    mx_logo = _load_mx_fantasy_logo(92)
+    if mx_logo is not None:
+        _list_paste(img, mx_logo, margin, 22)
+        brand_right = margin + mx_logo.width + 18
+    else:
+        brand_right = margin
+        draw.text(
+            (margin, 48), "MX FANTASY",
+            font=_load_font_px(36, bold=True), fill=accent, anchor="lm",
+        )
+        brand_right = margin + 220
+
+    # RACE RECAP pill
+    pill = "RACE RECAP"
+    pf = _load_font_px(18, bold=True)
+    pw = int(draw.textlength(pill, font=pf)) + 28
+    ph = 34
+    px0, py0 = brand_right, 52
+    draw.rounded_rectangle(
+        [px0, py0, px0 + pw, py0 + ph],
+        radius=17,
+        fill=(248, 250, 252, 235),
+    )
+    draw.text((px0 + pw // 2, py0 + ph // 2), pill, font=pf, fill=(15, 23, 42), anchor="mm")
+
+    # Series badge
+    sb = theme["badge"]
+    sbf = _load_font_px(16, bold=True)
+    sbw = int(draw.textlength(sb, font=sbf)) + 24
+    sx0 = px0 + pw + 12
+    draw.rounded_rectangle(
+        [sx0, py0, sx0 + sbw, py0 + ph],
+        radius=17,
+        outline=accent,
+        width=2,
+    )
+    draw.text((sx0 + sbw // 2, py0 + ph // 2), sb, font=sbf, fill=accent, anchor="mm")
+
+    # Event title (right)
+    title = _recap_race_title_text(data)
+    title_px = 26
+    tf = _load_font_px(title_px, bold=True)
+    max_title_w = max(120, W - margin - 40 - (sx0 + sbw))
+    while title_px > 16 and draw.textlength(title, font=tf) > max_title_w:
+        title_px -= 2
+        tf = _load_font_px(title_px, bold=True)
+    draw.text((W - margin, 64), title, font=tf, fill=WHITE, anchor="rm")
+    draw.text(
+        (W - margin, 92),
+        theme["tagline"],
+        font=_load_font_px(14, bold=False),
+        fill=MUTED,
+        anchor="rm",
+    )
+
+    # Accent underline
+    draw.rectangle([margin, 122, W - margin, 126], fill=accent)
+
+    # ── Class columns ───────────────────────────────────────
+    y = 146
+    gap = 20
+    col_w = (W - margin * 2 - gap) // 2
+    row_h = 58
+    row_gap = 6
+    primary = (data.get("rider_podium_primary") or [])[:6]
+    secondary = (data.get("rider_podium_secondary") or [])[:6]
+
+    def draw_class_column(x: int, title_txt: str, rows: list[dict]) -> int:
+        # Column header with slash bar
+        draw.rectangle([x, y, x + 8, y + 32], fill=accent)
+        draw.text(
+            (x + 18, y + 16),
+            title_txt.upper(),
+            font=_load_font_px(26, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        yy = y + 44
+        if not rows:
+            draw.text(
+                (x + 8, yy + 20),
+                "Inga resultat ännu",
+                font=_load_font_px(18),
+                fill=MUTED,
+                anchor="lm",
+            )
+            return yy + 50
+        for entry in rows:
+            _list_draw_result_row(
+                img, draw,
+                x0=x, y0=yy, width=col_w, row_h=row_h,
+                entry=entry, accent=accent,
+            )
+            yy += row_h + row_gap
+        return yy
+
+    if mods.get("rider_podium") and data.get("has_results"):
+        y1 = draw_class_column(
+            margin,
+            labels.get("primary") or "450",
+            primary,
+        )
+        y2 = draw_class_column(
+            margin + col_w + gap,
+            labels.get("secondary") or "250",
+            secondary,
+        )
+        y = max(y1, y2) + 18
+    else:
+        y = 200
+
+    # ── Fantasy strip ───────────────────────────────────────
+    if mods.get("race") and data.get("race_leaderboard"):
+        draw.rectangle([margin, y, margin + 8, y + 28], fill=GOLD)
+        draw.text(
+            (margin + 18, y + 14),
+            "FANTASY — DENNA TÄVLING",
+            font=_load_font_px(22, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        y += 40
+        lb = (data.get("race_leaderboard") or [])[:5]
+        # 3+2 layout: top3 full width-ish in one row of cards? Use stacked rows full width for clarity
+        f_row_h = 52
+        for row in lb:
+            _list_draw_fantasy_row(
+                img, draw,
+                x0=margin, y0=y, width=W - margin * 2, row_h=f_row_h,
+                row=row,
+            )
+            y += f_row_h + 6
+
+    # ── Promo + MotAction footer ────────────────────────────
+    footer_top = H - 126
+    promo_h = 62
+    promo = Image.new("RGBA", (W - margin * 2, promo_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(promo)
+    pd.rounded_rectangle(
+        [0, 0, W - margin * 2 - 1, promo_h - 1],
+        radius=12,
+        fill=(8, 15, 35, 230),
+        outline=accent + (180,),
+        width=2,
+    )
+    img.alpha_composite(promo, (margin, footer_top))
+
+    promo_logo = _load_mx_fantasy_logo(50)
+    tx = margin + 16
+    if promo_logo is not None:
+        _list_paste(img, promo_logo, tx, footer_top + (promo_h - promo_logo.height) // 2)
+        tx += promo_logo.width + 14
+    draw.text(
+        (tx, footer_top + promo_h // 2),
+        "Spela MX Fantasy  ·  mx-fantasy.se",
+        font=_load_font_px(22, bold=True),
+        fill=WHITE,
+        anchor="lm",
+    )
+
+    # Full MotAction logo (mark + wordmark)
+    ma = _load_motoaction_logo(44)
+    ma_x = W - margin - 16
+    if ma is not None:
+        ma_x -= ma.width
+        _list_paste(img, ma, ma_x, footer_top + (promo_h - ma.height) // 2)
+        draw.text(
+            (ma_x - 12, footer_top + promo_h // 2),
+            "Powered by",
+            font=_load_font_px(15, bold=False),
+            fill=MUTED,
+            anchor="rm",
+        )
+    else:
+        draw.text(
+            (ma_x, footer_top + promo_h // 2),
+            "Powered by MotoAction.se",
+            font=_load_font_px(16, bold=False),
+            fill=MUTED,
+            anchor="rm",
+        )
+
+    # Accent bottom strip
+    draw.rectangle([0, H - 6, W, H], fill=accent)
+
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
-    """Bild 1 — grafik: header, förarpall, fantasy-podium."""
+    """Bild 1 — grafik: resultatlista (default) eller legacy podium-mall."""
     engine = _recap_engine_preference()
-    if engine == "hybrid":
+    if engine == "list":
+        try:
+            return _render_recap_graphic_list(data)
+        except Exception as exc:
+            print(f"recap list failed, falling back: {exc}")
+            if _recap_legacy_templates_ready():
+                return _render_recap_graphic_from_template(data)
+    elif engine == "hybrid":
         try:
             return _render_recap_graphic_hybrid(data)
         except Exception as exc:
@@ -3830,9 +4477,380 @@ def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
     return buf.getvalue()
 
 
+def _list_kind_colors(card: dict[str, Any], accent: tuple[int, int, int]) -> tuple[int, int, int]:
+    kind = (card.get("kind") or card.get("icon") or "").lower()
+    if kind in ("round_king", "crown"):
+        return (244, 114, 182) if card.get("is_queen") else GOLD  # pink queen / gold king
+    if kind in ("anchor",):
+        return (96, 165, 250)  # steel blue
+    if kind in ("rocket",):
+        return ACCENT_ORANGE
+    if kind in ("holeshot", "flag"):
+        return (244, 114, 182) if card.get("is_queen") else GREEN
+    if kind in ("perfect", "target"):
+        return CYAN
+    return accent
+
+
+def _list_draw_kind_icon(
+    draw,
+    kind: str,
+    cx: int,
+    cy: int,
+    size: int,
+    color: tuple[int, int, int],
+    *,
+    is_queen: bool = False,
+) -> None:
+    """Simple geometric icons (reliable vs emoji fonts)."""
+    k = (kind or "").lower()
+    s = max(10, size // 2)
+
+    if k in ("anchor",):
+        # Stem + ring + arms
+        draw.ellipse([cx - s // 3, cy - s + 2, cx + s // 3, cy - s // 2], outline=color, width=3)
+        draw.line([(cx, cy - s // 2), (cx, cy + s - 2)], fill=color, width=3)
+        draw.arc([cx - s, cy, cx + s, cy + s], 200, 340, fill=color, width=3)
+        draw.line([(cx - s + 2, cy + s // 3), (cx + s - 2, cy + s // 3)], fill=color, width=3)
+        return
+
+    if k in ("rocket",):
+        draw.polygon(
+            [(cx, cy - s), (cx + s // 2, cy + s // 3), (cx - s // 2, cy + s // 3)],
+            fill=color,
+        )
+        draw.polygon(
+            [(cx - s // 2, cy + s // 3), (cx - s, cy + s), (cx - s // 6, cy + s // 2)],
+            fill=color,
+        )
+        draw.polygon(
+            [(cx + s // 2, cy + s // 3), (cx + s, cy + s), (cx + s // 6, cy + s // 2)],
+            fill=color,
+        )
+        return
+
+    if k in ("crown", "round_king"):
+        # 3-point crown; queen gets softer pink already via color
+        y0 = cy - s // 2
+        draw.polygon(
+            [
+                (cx - s, cy + s // 2),
+                (cx - s, y0 + 4),
+                (cx - s // 2, cy - s // 6),
+                (cx, y0 - 2),
+                (cx + s // 2, cy - s // 6),
+                (cx + s, y0 + 4),
+                (cx + s, cy + s // 2),
+            ],
+            fill=color,
+        )
+        draw.rectangle([cx - s, cy + s // 3, cx + s, cy + s // 2 + 2], fill=color)
+        return
+
+    if k in ("flag", "holeshot"):
+        draw.line([(cx - s // 2, cy - s), (cx - s // 2, cy + s)], fill=color, width=3)
+        draw.polygon(
+            [
+                (cx - s // 2, cy - s),
+                (cx + s, cy - s // 2),
+                (cx - s // 2, cy),
+            ],
+            fill=color,
+        )
+        return
+
+    if k in ("target", "perfect"):
+        draw.ellipse([cx - s, cy - s, cx + s, cy + s], outline=color, width=3)
+        draw.ellipse([cx - s // 2, cy - s // 2, cx + s // 2, cy + s // 2], outline=color, width=2)
+        draw.ellipse([cx - 3, cy - 3, cx + 3, cy + 3], fill=color)
+        return
+
+    # fallback: filled disc
+    draw.ellipse([cx - s, cy - s, cx + s, cy + s], fill=color)
+
+
+def _list_draw_weekly_card(
+    base,
+    draw,
+    *,
+    x0: int,
+    y0: int,
+    width: int,
+    height: int,
+    card: dict[str, Any],
+    accent: tuple[int, int, int],
+) -> None:
+    from PIL import Image, ImageDraw
+
+    color = _list_kind_colors(card, accent)
+    plate = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(plate)
+    pd.rounded_rectangle(
+        [0, 0, width - 1, height - 1],
+        radius=14,
+        fill=(12, 18, 34, 220),
+        outline=color + (200,),
+        width=2,
+    )
+    # Accent bar top
+    pd.rectangle([0, 0, width - 1, 6], fill=color + (255,))
+    base.alpha_composite(plate, (x0, y0))
+
+    kind = str(card.get("kind") or card.get("icon") or "")
+    icon_cx, icon_cy = x0 + 36, y0 + 38
+    # Icon chip
+    draw.ellipse(
+        [icon_cx - 22, icon_cy - 22, icon_cx + 22, icon_cy + 22],
+        fill=(8, 15, 35, 255),
+        outline=color,
+        width=2,
+    )
+    _list_draw_kind_icon(
+        draw, kind, icon_cx, icon_cy, 28, color,
+        is_queen=bool(card.get("is_queen")),
+    )
+
+    title = card.get("title") or "—"
+    name = _short_user_name(card.get("display_name") or "?")
+    detail = card.get("detail") or ""
+    draw.text(
+        (x0 + 70, y0 + 22),
+        title.upper(),
+        font=_load_font_px(15, bold=True),
+        fill=color,
+        anchor="lm",
+    )
+    draw.text(
+        (x0 + 70, y0 + 48),
+        name,
+        font=_load_font_px(24, bold=True),
+        fill=WHITE,
+        anchor="lm",
+    )
+    draw.text(
+        (x0 + 70, y0 + height - 18),
+        detail,
+        font=_load_font_px(16, bold=False),
+        fill=MUTED,
+        anchor="lm",
+    )
+
+
+def _render_recap_stats_list(data: dict[str, Any]) -> bytes:
+    """Bild 2 — samma list/broadcast-modell som bild 1."""
+    from PIL import Image, ImageDraw
+
+    theme = _list_series_theme(data.get("series"))
+    accent = theme["accent"]
+    W, H = W_FB, 1180
+    img = Image.new("RGBA", (W, H), BG_TOP + (255,))
+    _list_draw_atmosphere(img, theme)
+    draw = ImageDraw.Draw(img)
+    mods = data.get("modules") or {}
+    margin = 40
+
+    # Header (match graphic)
+    mx_logo = _load_mx_fantasy_logo(92)
+    if mx_logo is not None:
+        _list_paste(img, mx_logo, margin, 22)
+        brand_right = margin + mx_logo.width + 18
+    else:
+        brand_right = margin + 220
+        draw.text((margin, 48), "MX FANTASY", font=_load_font_px(36, bold=True), fill=accent, anchor="lm")
+
+    pill = "RACE STATS"
+    pf = _load_font_px(18, bold=True)
+    pw = int(draw.textlength(pill, font=pf)) + 28
+    ph = 34
+    px0, py0 = brand_right, 52
+    draw.rounded_rectangle([px0, py0, px0 + pw, py0 + ph], radius=17, fill=(248, 250, 252, 235))
+    draw.text((px0 + pw // 2, py0 + ph // 2), pill, font=pf, fill=(15, 23, 42), anchor="mm")
+
+    sb = theme["badge"]
+    sbf = _load_font_px(16, bold=True)
+    sbw = int(draw.textlength(sb, font=sbf)) + 24
+    sx0 = px0 + pw + 12
+    draw.rounded_rectangle([sx0, py0, sx0 + sbw, py0 + ph], radius=17, outline=accent, width=2)
+    draw.text((sx0 + sbw // 2, py0 + ph // 2), sb, font=sbf, fill=accent, anchor="mm")
+
+    title = _recap_race_title_text(data)
+    title_px = 26
+    tf = _load_font_px(title_px, bold=True)
+    max_title_w = max(120, W - margin - 40 - (sx0 + sbw))
+    while title_px > 16 and draw.textlength(title, font=tf) > max_title_w:
+        title_px -= 2
+        tf = _load_font_px(title_px, bold=True)
+    draw.text((W - margin, 64), title, font=tf, fill=WHITE, anchor="rm")
+    draw.text(
+        (W - margin, 92),
+        "Veckans highlights · säsong · fältfakta",
+        font=_load_font_px(14),
+        fill=MUTED,
+        anchor="rm",
+    )
+    draw.rectangle([margin, 122, W - margin, 126], fill=accent)
+
+    y = 146
+
+    # Weekly 2×2
+    if mods.get("weekly"):
+        cards = (data.get("weekly_highlights") or [])[:4]
+        if cards:
+            draw.rectangle([margin, y, margin + 8, y + 28], fill=accent)
+            draw.text(
+                (margin + 18, y + 14),
+                "VECKANS PRESTATIONER",
+                font=_load_font_px(22, bold=True),
+                fill=WHITE,
+                anchor="lm",
+            )
+            y += 42
+            gap = 14
+            card_w = (W - margin * 2 - gap) // 2
+            card_h = 108
+            for i, card in enumerate(cards):
+                col = i % 2
+                row = i // 2
+                _list_draw_weekly_card(
+                    img, draw,
+                    x0=margin + col * (card_w + gap),
+                    y0=y + row * (card_h + gap),
+                    width=card_w,
+                    height=card_h,
+                    card=card,
+                    accent=accent,
+                )
+            rows_n = (len(cards) + 1) // 2
+            y += rows_n * (card_h + gap) + 10
+
+    # Season top
+    if mods.get("season_snippet") and data.get("season_top_snippet"):
+        draw.rectangle([margin, y, margin + 8, y + 28], fill=GOLD)
+        draw.text(
+            (margin + 18, y + 14),
+            "SÄSONGSTOPPEN",
+            font=_load_font_px(22, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        y += 40
+        f_row_h = 48
+        for i, row in enumerate((data.get("season_top_snippet") or [])[:5]):
+            # Normalize to fantasy-row shape
+            entry = {
+                "rank": int(row.get("rank") or (i + 1)),
+                "display_name": row.get("display_name") or row.get("username") or "?",
+                "user_id": row.get("user_id"),
+                "points": int(row.get("points") or 0),
+            }
+            _list_draw_fantasy_row(
+                img, draw,
+                x0=margin, y0=y, width=W - margin * 2, row_h=f_row_h,
+                row=entry,
+            )
+            y += f_row_h + 6
+        y += 8
+
+    # Facts
+    if mods.get("facts") and data.get("fun_facts"):
+        draw.rectangle([margin, y, margin + 8, y + 28], fill=CYAN)
+        draw.text(
+            (margin + 18, y + 14),
+            "FÄLTFAKTA",
+            font=_load_font_px(22, bold=True),
+            fill=WHITE,
+            anchor="lm",
+        )
+        y += 40
+        for fact in (data.get("fun_facts") or [])[:3]:
+            text = (fact.get("text") if isinstance(fact, dict) else str(fact)) or ""
+            if not text:
+                continue
+            box_h = 44
+            plate = Image.new("RGBA", (W - margin * 2, box_h), (0, 0, 0, 0))
+            pd = ImageDraw.Draw(plate)
+            pd.rounded_rectangle(
+                [0, 0, W - margin * 2 - 1, box_h - 1],
+                radius=10,
+                fill=(12, 18, 34, 210),
+                outline=PANEL_EDGE + (140,),
+                width=1,
+            )
+            pd.rectangle([0, 0, 7, box_h - 1], fill=CYAN + (255,))
+            img.alpha_composite(plate, (margin, y))
+            draw.text(
+                (margin + 22, y + box_h // 2),
+                text,
+                font=_load_font_px(17, bold=False),
+                fill=WHITE,
+                anchor="lm",
+            )
+            y += box_h + 8
+
+    # Footer — same promo bar as graphic
+    footer_top = H - 126
+    promo_h = 62
+    promo = Image.new("RGBA", (W - margin * 2, promo_h), (0, 0, 0, 0))
+    pd = ImageDraw.Draw(promo)
+    pd.rounded_rectangle(
+        [0, 0, W - margin * 2 - 1, promo_h - 1],
+        radius=12,
+        fill=(8, 15, 35, 230),
+        outline=accent + (180,),
+        width=2,
+    )
+    img.alpha_composite(promo, (margin, footer_top))
+
+    promo_logo = _load_mx_fantasy_logo(50)
+    tx = margin + 16
+    if promo_logo is not None:
+        _list_paste(img, promo_logo, tx, footer_top + (promo_h - promo_logo.height) // 2)
+        tx += promo_logo.width + 14
+    draw.text(
+        (tx, footer_top + promo_h // 2),
+        "Spela MX Fantasy  ·  mx-fantasy.se",
+        font=_load_font_px(22, bold=True),
+        fill=WHITE,
+        anchor="lm",
+    )
+    ma = _load_motoaction_logo(44)
+    ma_x = W - margin - 16
+    if ma is not None:
+        ma_x -= ma.width
+        _list_paste(img, ma, ma_x, footer_top + (promo_h - ma.height) // 2)
+        draw.text(
+            (ma_x - 12, footer_top + promo_h // 2),
+            "Powered by",
+            font=_load_font_px(15),
+            fill=MUTED,
+            anchor="rm",
+        )
+    else:
+        draw.text(
+            (ma_x, footer_top + promo_h // 2),
+            "Powered by MotoAction.se",
+            font=_load_font_px(16),
+            fill=MUTED,
+            anchor="rm",
+        )
+    draw.rectangle([0, H - 6, W, H], fill=accent)
+
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
+
+
 def _render_recap_stats_png(data: dict[str, Any]) -> bytes:
     """Bild 2 — statistik: veckan, säsong, fältfakta."""
-    if _recap_templates_ready():
+    engine = _recap_engine_preference()
+    if engine == "list":
+        try:
+            return _render_recap_stats_list(data)
+        except Exception as exc:
+            print(f"recap stats list failed, falling back: {exc}")
+            if _recap_legacy_templates_ready():
+                return _render_recap_stats_from_template(data)
+    elif _recap_legacy_templates_ready():
         return _render_recap_stats_from_template(data)
 
     from PIL import Image, ImageDraw
