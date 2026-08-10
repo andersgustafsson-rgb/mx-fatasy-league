@@ -1313,6 +1313,7 @@ _WSX_2026_ROSTER = [
     ("Mike Alessi", "wsx_sx1", 800, "Honda", "MotoConcepts Racing"),  # Canadian GP
     ("Dean Wilson", "wsx_sx1", 15, "Honda", "Fire Power Honda / KMG"),
     ("Christian Craig", "wsx_sx1", 28, "Honda", "Fire Power Honda / KMG"),
+    ("Cameron McAdoo", "wsx_sx1", 142, "Honda", "KMG"),  # Canadian GP — SX1 (not SX2)
     ("Vince Friese", "wsx_sx1", 719, "Stark", "Stark Racing"),
     ("Jorge Zaragoza", "wsx_sx1", 99, "Stark", "Stark Racing"),
     ("Greg Aranda", "wsx_sx1", 20, "KTM", "595 Racing"),
@@ -1331,7 +1332,6 @@ _WSX_2026_ROSTER = [
     ("Jack Chambers", "wsx_sx2", 69, "Kawasaki", "Venum Bud Racing Kawasaki"),
     ("Ryan Breece", "wsx_sx2", 200, "Honda", "MotoConcepts Racing"),
     ("Robbie Wageman", "wsx_sx2", 237, "Honda", "MotoConcepts Racing"),
-    ("Cameron McAdoo", "wsx_sx2", 142, "Honda", "KMG"),
     ("Brodie Connolly", "wsx_sx2", 88, "Honda", "KMG"),
     ("Michael Hicks", "wsx_sx2", 460, "Stark", "Stark Racing"),
     ("Brian Hsu", "wsx_sx2", 81, "Stark", "Stark Racing"),
@@ -1358,6 +1358,7 @@ _WSX_CANADIAN_GP_SX1 = {
     "Mike Alessi",
     "Dean Wilson",
     "Christian Craig",
+    "Cameron McAdoo",
     "Vince Friese",
     "Jorge Zaragoza",
     "Greg Aranda",
@@ -1374,7 +1375,6 @@ _WSX_CANADIAN_GP_SX2 = {
     "Jack Chambers",
     "Ryan Breece",
     "Robbie Wageman",
-    "Cameron McAdoo",
     "Brodie Connolly",
     "Michael Hicks",
     "Brian Hsu",
