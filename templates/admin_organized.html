@@ -544,6 +544,7 @@
                             Hämta overall från
                             <a href="https://worldsupercrosschampionship.com/results/" target="_blank" rel="noopener" class="text-cyan-400 underline">worldsupercrosschampionship.com/results</a>.
                             <strong class="text-yellow-300">Inget sparas förrän du klickar Importera preview.</strong>
+                            <span class="text-gray-400"> «Hämta &amp; ersätt allt» synkar roster, rensar SX1/SX2 och skriver in official WSX.com på en gång.</span>
                         </p>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div>
@@ -561,6 +562,7 @@
                             <div class="flex items-end flex-wrap gap-2">
                                 <button type="button" onclick="wsxOfficialFetchPreview()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold">👁️ Hämta &amp; Preview</button>
                                 <button type="button" id="wsx-official-import-btn" onclick="wsxOfficialImportPreview()" class="btn-warning px-4 py-2 rounded-lg opacity-50 cursor-not-allowed" disabled>📥 Importera preview</button>
+                                <button type="button" onclick="wsxOfficialSyncReplace()" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold">⚡ Hämta &amp; ersätt allt</button>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -4257,7 +4259,7 @@
             if (!confirm(
                 `Importera official WSX-resultat för ${evTitle}?\n\n` +
                 `SX1: ${n1} rader\nSX2: ${n2} rader\n\n` +
-                `Detta uppdaterar/ersätter positioner för valda klasser.`
+                `Detta RENSAR gamla resultat i valda klasser och skriver in nya (poäng räknas om).`
             )) return;
 
             if (statusEl) {
@@ -4271,6 +4273,7 @@
                     body: JSON.stringify({
                         competition_id: Number(competitionId),
                         classes,
+                        replace: true,
                     }),
                 });
                 const data = await res.json();
@@ -4286,10 +4289,69 @@
                     statusEl.className = 'text-sm mb-3 text-green-400';
                     statusEl.textContent =
                         `Importerat ${data.imported} rader` +
+                        (data.cleared ? ` (rensade ${data.cleared})` : '') +
                         ((data.skipped || []).length ? ` (skippade ${(data.skipped || []).length})` : '') +
                         '.';
                 }
-                alert(`✅ Importerat: ${data.imported}. Skippade: ${(data.skipped || []).length}.`);
+                alert(`✅ Importerat: ${data.imported}. Rensade: ${data.cleared || 0}. Skippade: ${(data.skipped || []).length}.`);
+                if (typeof refreshWsxExistingResults === 'function') refreshWsxExistingResults();
+            } catch (e) {
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-red-400';
+                    statusEl.textContent = 'Fel: ' + (e.message || e);
+                }
+            }
+        }
+
+        async function wsxOfficialSyncReplace() {
+            const competitionId = document.getElementById('wsx-official-competition')?.value;
+            const statusEl = document.getElementById('wsx-official-status');
+            const url = (document.getElementById('wsx-official-url')?.value || '').trim();
+            if (!competitionId) {
+                alert('Välj WSX-tävling först.');
+                return;
+            }
+            const label = document.getElementById('wsx-official-competition')?.selectedOptions?.[0]?.textContent || 'tävlingen';
+            if (!confirm(
+                `Hämta official WSX.com och ERSÄTT alla SX1/SX2-resultat för:\n\n${label}\n\n` +
+                `Detta uppdaterar även roster (klass/nummer) och räknar om poäng.`
+            )) return;
+            if (statusEl) {
+                statusEl.className = 'text-sm mb-3 text-cyan-300';
+                statusEl.textContent = 'Synkar från WSX.com…';
+            }
+            try {
+                const res = await fetch('/sync_wsx_official_results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        competition_id: Number(competitionId),
+                        url: url || undefined,
+                    }),
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    if (statusEl) {
+                        statusEl.className = 'text-sm mb-3 text-red-400';
+                        statusEl.textContent = 'Fel: ' + (data.error || 'Okänt fel');
+                    }
+                    const miss = (data.missing_riders || []).map((m) => m.rider_name).filter(Boolean);
+                    alert('❌ ' + (data.error || 'Sync misslyckades') + (miss.length ? `\nSaknas: ${miss.join(', ')}` : ''));
+                    return;
+                }
+                const title = data.selected_event?.title || 'event';
+                const missN = (data.missing_riders || []).length;
+                if (statusEl) {
+                    statusEl.className = 'text-sm mb-3 text-green-400';
+                    statusEl.textContent =
+                        `Synkat ${title}: ${data.imported} inlagda, rensade ${data.cleared || 0}` +
+                        (missN ? `, ${missN} saknas i DB` : '') +
+                        '.';
+                }
+                alert(
+                    `✅ ${title}\nImporterat: ${data.imported}\nRensade: ${data.cleared || 0}\nSkippade: ${(data.skipped || []).length}` +
+                    (missN ? `\nSaknas: ${(data.missing_riders || []).map((m) => m.rider_name).join(', ')}` : '')
+                );
                 if (typeof refreshWsxExistingResults === 'function') refreshWsxExistingResults();
             } catch (e) {
                 if (statusEl) {

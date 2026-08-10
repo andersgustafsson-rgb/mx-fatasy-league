@@ -1301,7 +1301,7 @@ def ensure_wsx_2026(*, deactivate_2025: bool = True) -> dict:
 # price is a placeholder — WSX is tippa-only (no season-team).
 _WSX_2026_ROSTER = [
     # --- SX1 (Calgary line-up + season riders who may return later) ---
-    ("Jason Anderson", "wsx_sx1", 1, "Suzuki", "Pipes Motorsport Group"),
+    ("Jason Anderson", "wsx_sx1", 21, "Suzuki", "Pipes Motorsport Group"),
     ("Colt Nichols", "wsx_sx1", 45, "Suzuki", "Pipes Motorsport Group"),
     ("Jordi Tixier", "wsx_sx1", 911, "Yamaha", "Team GSM"),
     ("Maxime Desprey", "wsx_sx1", 141, "Yamaha", "Team GSM"),
@@ -1334,8 +1334,8 @@ _WSX_2026_ROSTER = [
     ("Cameron McAdoo", "wsx_sx2", 142, "Honda", "KMG"),
     ("Brodie Connolly", "wsx_sx2", 88, "Honda", "KMG"),
     ("Michael Hicks", "wsx_sx2", 460, "Stark", "Stark Racing"),
-    ("Brian Hsu", "wsx_sx2", 81, "Stark", "Stark Racing"),
-    ("Nico Koch", "wsx_sx2", 260, "KTM", "595 Racing"),
+    ("Brian Hsu", "wsx_sx2", 84, "Stark", "Stark Racing"),
+    ("Nico Koch", "wsx_sx2", 262, "KTM", "595 Racing"),
     ("Luke Fauser", "wsx_sx2", 462, "KTM", "595 Racing"),
     # Season / later rounds (OUT for Calgary if not on gate)
     ("Shane McElrath", "wsx_sx2", 12, "Honda", "Quad Lock Honda"),
@@ -15997,14 +15997,22 @@ def fetch_wsx_official_results():
 
 @app.post("/import_wsx_official_results")
 def import_wsx_official_results():
-    """Importera tidigare previewade WSX-rader (kräver rider_id). Skriver till DB."""
+    """Importera tidigare previewade WSX-rader. Ersätter valda klassers resultat."""
     if not is_admin_user():
         return jsonify({"error": "admin_only"}), 403
     _ensure_competition_result_moto_columns()
     try:
+        # Roster/klass måste stämma innan matchning (t.ex. McAdoo SX2).
+        try:
+            ensure_wsx_2026_roster()
+        except Exception as roster_err:
+            print(f"[WSX-IMPORT] roster ensure skipped: {roster_err}")
+            db.session.rollback()
+
         data = request.get_json(force=True) or {}
         competition_id = data.get("competition_id")
         classes = data.get("classes") or {}
+        replace = data.get("replace", True)
         if not competition_id:
             return jsonify({"error": "competition_id krävs"}), 400
         competition = Competition.query.get(competition_id)
@@ -16015,32 +16023,50 @@ def import_wsx_official_results():
 
         imported_total = 0
         skipped_total = []
+        cleared_total = 0
         per_class = {}
 
         for class_name in ("wsx_sx1", "wsx_sx2"):
             rows = classes.get(class_name) or []
             if not rows:
                 continue
+
+            cleared = 0
+            if replace:
+                existing_rows = (
+                    db.session.query(CompetitionResult, Rider)
+                    .join(Rider, Rider.id == CompetitionResult.rider_id)
+                    .filter(CompetitionResult.competition_id == competition_id)
+                    .all()
+                )
+                for result, rider in existing_rows:
+                    result_class = _normalize_result_class(
+                        getattr(result, "class_name", None), rider.class_name
+                    )
+                    if result_class == class_name:
+                        db.session.delete(result)
+                        cleared += 1
+                cleared_total += cleared
+
             imported = 0
             skipped = []
             for row in rows:
-                rider_id = row.get("rider_id")
                 position = row.get("position")
-                if not rider_id or position is None:
+                if position is None:
                     skipped.append(row)
                     continue
-                rider = Rider.query.get(int(rider_id))
-                if not rider or (rider.class_name or "") != class_name:
-                    # Soft fallback: try name/number match if id stale
-                    name = (row.get("rider_name") or "").strip()
-                    rider = (
-                        _match_rider_for_results_import(
-                            name,
-                            class_name,
-                            rider_number=row.get("rider_number"),
-                        )
-                        if name or row.get("rider_number") is not None
-                        else None
+                name = (row.get("rider_name") or "").strip()
+                rider = None
+                rider_id = row.get("rider_id")
+                if rider_id:
+                    rider = Rider.query.get(int(rider_id))
+                    if rider and (rider.class_name or "") != class_name:
+                        rider = None
+                if not rider:
+                    rider = _match_rider_for_results_import(
+                        name,
+                        class_name,
+                        rider_number=row.get("rider_number"),
                     )
                 if not rider:
                     skipped.append(row)
@@ -16062,7 +16088,11 @@ def import_wsx_official_results():
                         )
                     )
                 imported += 1
-            per_class[class_name] = {"imported": imported, "skipped": skipped}
+            per_class[class_name] = {
+                "imported": imported,
+                "skipped": skipped,
+                "cleared": cleared,
+            }
             imported_total += imported
             skipped_total.extend(skipped)
 
@@ -16085,10 +16115,177 @@ def import_wsx_official_results():
             {
                 "success": True,
                 "imported": imported_total,
+                "cleared": cleared_total,
                 "skipped": skipped_total,
                 "per_class": per_class,
             }
         )
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.post("/sync_wsx_official_results")
+def sync_wsx_official_results():
+    """
+    One-shot: ensure roster → fetch official WSX.com → replace SX1/SX2 results → recalc.
+    """
+    if not is_admin_user():
+        return jsonify({"error": "admin_only"}), 403
+    _ensure_competition_result_moto_columns()
+    try:
+        from wsx_official_results_fetch import (
+            WSX_OFFICIAL_RESULTS_URL,
+            fetch_wsx_official_results as _fetch,
+            match_event_to_competition_name,
+        )
+
+        data = request.get_json(force=True) or {}
+        competition_id = data.get("competition_id")
+        url = (data.get("url") or "").strip() or None
+        event_index = data.get("event_index")
+        if not competition_id:
+            return jsonify({"error": "competition_id krävs"}), 400
+
+        competition = Competition.query.get(competition_id)
+        if not competition:
+            return jsonify({"error": "Competition not found"}), 404
+        if (competition.series or "").upper() != "WSX":
+            return jsonify({"error": "Välj en WSX-tävling"}), 400
+
+        try:
+            roster_info = ensure_wsx_2026_roster()
+        except Exception as roster_err:
+            db.session.rollback()
+            return jsonify({"error": f"Roster-update misslyckades: {roster_err}"}), 500
+
+        # Calgary gate OUT/IN sync when importing Canadian GP
+        entry_info = None
+        if (competition.name or "").strip().lower() == "canadian gp":
+            try:
+                entry_info = sync_wsx_canadian_gp_entry_list()
+            except Exception as entry_err:
+                db.session.rollback()
+                print(f"[WSX-SYNC] canadian entry sync skipped: {entry_err}")
+
+        fetched = _fetch(url)
+        events = fetched["events"]
+        if event_index is None:
+            event_index = match_event_to_competition_name(events, competition.name or "")
+        if event_index is None:
+            event_index = 0
+        event_index = int(event_index)
+        if event_index < 0 or event_index >= len(events):
+            return jsonify({"error": "event_index utanför listan"}), 400
+
+        selected = events[event_index]
+        classes_payload = {}
+        missing_all = []
+        for class_name, key in (("wsx_sx1", "sx1"), ("wsx_sx2", "sx2")):
+            preview_rows, missing = _preview_wsx_official_class_rows(
+                selected.get(key) or [], class_name
+            )
+            classes_payload[class_name] = [
+                r for r in preview_rows if r.get("found_in_db") and r.get("rider_id")
+            ]
+            missing_all.extend(missing)
+
+        # Inline replace-import (same as import_wsx_official_results)
+        imported_total = 0
+        cleared_total = 0
+        skipped_total = []
+        per_class = {}
+        for class_name in ("wsx_sx1", "wsx_sx2"):
+            rows = classes_payload.get(class_name) or []
+            if not rows:
+                continue
+            existing_rows = (
+                db.session.query(CompetitionResult, Rider)
+                .join(Rider, Rider.id == CompetitionResult.rider_id)
+                .filter(CompetitionResult.competition_id == competition_id)
+                .all()
+            )
+            cleared = 0
+            for result, rider in existing_rows:
+                result_class = _normalize_result_class(
+                    getattr(result, "class_name", None), rider.class_name
+                )
+                if result_class == class_name:
+                    db.session.delete(result)
+                    cleared += 1
+            cleared_total += cleared
+
+            imported = 0
+            skipped = []
+            for row in rows:
+                position = row.get("position")
+                if position is None:
+                    skipped.append(row)
+                    continue
+                rider = Rider.query.get(int(row["rider_id"])) if row.get("rider_id") else None
+                if not rider or (rider.class_name or "") != class_name:
+                    rider = _match_rider_for_results_import(
+                        row.get("rider_name") or "",
+                        class_name,
+                        rider_number=row.get("rider_number"),
+                    )
+                if not rider:
+                    skipped.append(row)
+                    continue
+                db.session.add(
+                    CompetitionResult(
+                        competition_id=competition_id,
+                        rider_id=rider.id,
+                        position=int(position),
+                        class_name=class_name,
+                    )
+                )
+                imported += 1
+            per_class[class_name] = {
+                "imported": imported,
+                "skipped": skipped,
+                "cleared": cleared,
+            }
+            imported_total += imported
+            skipped_total.extend(skipped)
+
+        if imported_total == 0:
+            db.session.rollback()
+            return jsonify(
+                {
+                    "error": "Inga matchade förare att importera.",
+                    "missing_riders": missing_all,
+                    "roster": roster_info,
+                }
+            ), 400
+
+        db.session.commit()
+        try:
+            calculate_scores(int(competition_id))
+        except Exception:
+            pass
+
+        return jsonify(
+            {
+                "success": True,
+                "source_url": fetched.get("source_url") or WSX_OFFICIAL_RESULTS_URL,
+                "selected_event": {
+                    "title": selected.get("title"),
+                    "round": selected.get("round"),
+                    "date": selected.get("date"),
+                },
+                "imported": imported_total,
+                "cleared": cleared_total,
+                "skipped": skipped_total,
+                "missing_riders": missing_all,
+                "per_class": per_class,
+                "roster": roster_info,
+                "canadian_gp_entry": entry_info,
+            }
+        )
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
