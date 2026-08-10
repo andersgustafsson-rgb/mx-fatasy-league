@@ -2664,10 +2664,37 @@ function getMonthYearLabel() {
   return `${month} ${year}`;
 }
 
+/** Fullständigt månadsnamn (Januari …) från 1–12. */
+function monthLabelFull(month1to12) {
+  return SWEDISH_MONTHS[month1to12 - 1] || "?";
+}
+
+/**
+ * Hitta första/sista månad med timmar i hoursByMonth (Map 1..12 → hours).
+ * Returnerar t.ex. «Januari–Juli 2026» eller null.
+ */
+function monthSpanLabelFromHoursByMonth(hoursByMonth, yearHint) {
+  if (!(hoursByMonth instanceof Map) || !hoursByMonth.size) return null;
+  const months = [];
+  for (const [m1, h] of hoursByMonth.entries()) {
+    if (Number(h) > 0) months.push(Number(m1));
+  }
+  if (!months.length) return null;
+  months.sort((a, b) => a - b);
+  const y =
+    (Number.isFinite(Number(yearHint)) && Number(yearHint)) ||
+    Number(cleanStr(els.yearInput?.value)) ||
+    new Date().getFullYear();
+  const a = monthLabelFull(months[0]);
+  const b = monthLabelFull(months[months.length - 1]);
+  if (months.length === 1) return `${a} ${y}`;
+  // List contiguous span as A–B; if gaps, still show first–last (tydligast för kundmall).
+  return `${a}–${b} ${y}`;
+}
+
 function getSelectedEmployeeName(totals) {
   const v = cleanStr(els.employeeInput?.value);
   if (!v) return null;
-  // only accept exact match against known names to avoid accidental filtering
   for (const name of totals.keys()) {
     if (cleanStr(name).toLowerCase() === v.toLowerCase()) return name;
   }
@@ -2675,18 +2702,19 @@ function getSelectedEmployeeName(totals) {
 }
 
 function buildTitleText(state) {
-  const base = cleanStr(els.titleInput?.value) || getMonthYearLabel();
+  const custom = cleanStr(els.titleInput?.value);
+  const span = monthSpanLabelFromHoursByMonth(state?.hoursByMonth, cleanStr(els.yearInput?.value));
+  const base = custom || span || getMonthYearLabel();
   const employee = state.employeeName ? ` — ${state.employeeName}` : "";
-  const selected = [...state.selectedStatuses];
+  const selected = [...(state.selectedStatuses || [])];
   const allCount =
     state.mergedSourceSplit && state.baseStatuses?.length
       ? state.baseStatuses.length
-      : state.statuses.length;
+      : (state.statuses || []).length;
   let filt = "";
   if (selected.length === 0) {
     filt = " — (inga statusar)";
-  } else if (selected.length !== allCount) {
-    // Keep it readable; list a few statuses, then count.
+  } else if (allCount > 0 && selected.length !== allCount) {
     const shown = selected.slice(0, 3).join(", ");
     const more = selected.length > 3 ? ` (+${selected.length - 3})` : "";
     filt = ` — ${shown}${more}`;
@@ -2900,32 +2928,41 @@ function renderSummaryStats(sortedPeople, state) {
     for (const [m1, h] of byMonth.entries()) {
       if (h > peakHours) {
         peakHours = h;
-        peakLabel = monthLabelShort(m1);
+        peakLabel = monthLabelFull(m1);
       }
     }
   }
+  const span = monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value));
 
   const cards = [
+    { label: "Period", value: span || getMonthYearLabel() },
     { label: "Totalt timmar", value: `${fmtHoursSv(total)} h` },
     { label: "Personer", value: String(people) },
     {
       label: "Flest timmar",
-      value: top ? `${top.name.split(" ")[0]}…` : "—",
+      value: top ? top.name : "—",
       sub: top ? `${fmtHoursSv(top.sum)} h` : "",
       title: top ? `${top.name}: ${fmtHoursSv(top.sum)} h` : "",
     },
-    {
-      label: "Högsta månad",
-      value: peakHours > 0 ? peakLabel : "—",
-      sub: peakHours > 0 ? `${fmtHoursSv(peakHours)} h` : "saknar månadsdata",
-    },
   ];
+  if (peakHours > 0) {
+    cards.push({
+      label: "Högsta månad",
+      value: peakLabel,
+      sub: `${fmtHoursSv(peakHours)} h`,
+    });
+  }
 
   box.classList.remove("hidden");
+  // 5 kort: 2+3 på mobil / 5 på desktop när period finns
+  box.className =
+    peakHours > 0
+      ? "mt-3 grid grid-cols-2 md:grid-cols-5 gap-2"
+      : "mt-3 grid grid-cols-2 md:grid-cols-4 gap-2";
   box.innerHTML = "";
   for (const c of cards) {
     const el = document.createElement("div");
-    el.className = "rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2";
+    el.className = "rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2 min-w-0";
     if (c.title) el.title = c.title;
     el.innerHTML =
       `<div class="text-[10px] uppercase tracking-wide text-slate-500">${c.label}</div>` +
@@ -3654,8 +3691,14 @@ function regenerateFromText(text, selectedOverride) {
     // Liggande + slides är läsbart när många namn; summering visar totalt/topp/månad.
     if (els.orientationSelect) els.orientationSelect.value = "horizontal";
     if (els.verticalNamesSelect) els.verticalNamesSelect.value = "all";
-    if (els.namesPerSlideSelect && !els.namesPerSlideSelect.value) {
+    if (els.namesPerSlideSelect && (!els.namesPerSlideSelect.value || els.namesPerSlideSelect.value === "0")) {
       els.namesPerSlideSelect.value = "18";
+    }
+    // Fyll rubrik med period om användaren inte skrivit egen.
+    if (els.titleInput && !cleanStr(els.titleInput.value)) {
+      const yHint = cleanStr(els.yearInput?.value) || String(new Date().getFullYear());
+      // hoursByMonth beräknas strax under — sätt efter
+      window.__tidrapport_pending_period_title = true;
     }
   }
 
@@ -3742,6 +3785,11 @@ function regenerateFromText(text, selectedOverride) {
   const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
   const layout = cleanStr(els.layoutSelect?.value) || "side";
   const hoursByMonth = computeHoursByMonthFromPaste(text);
+  if (window.__tidrapport_pending_period_title && els.titleInput && !cleanStr(els.titleInput.value)) {
+    const span = monthSpanLabelFromHoursByMonth(hoursByMonth, cleanStr(els.yearInput?.value));
+    if (span) els.titleInput.value = span;
+  }
+  window.__tidrapport_pending_period_title = false;
   window.__tidrapport_state = {
     totals,
     totalsDays: totalsDays instanceof Map ? totalsDays : new Map(),
