@@ -230,6 +230,35 @@
             Tips: kopiera från Excel eller Google Sheets — tabb-separerat brukar fungera direkt. Vissa beslutslistor klistras en kolumn i taget (rubriker under varandra); då ska blocket börja exakt med «Namn» på första raden. Välj månad/år så klipps långa datumintervall till rätt månad. «Omf» i listan är frånvarons omfattning per dag — för dagdel används heltids veckoarvode (t.ex. 36,33 h) delat på arbetsdagar; personlig tjänstgöringsgrad finns oftast inte i exporten (justera vid behov mot Visma).
           </p>
 
+          <details class="mt-3 rounded-xl border border-teal-900/50 bg-teal-950/20">
+            <summary class="cursor-pointer list-none px-4 py-3 rounded-xl hover:bg-teal-950/40 marker:content-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-3">
+              <span>
+                <span class="block text-sm font-semibold text-teal-100">Månadsmall (enkel) — för kunder utan stämpelklocka</span>
+                <span class="block text-[11px] text-slate-400 mt-0.5">En rad per person, timmar per månad. Ladda ner mall → fyll i → klistra in här.</span>
+              </span>
+              <span class="shrink-0 text-slate-500 text-xs" aria-hidden="true">▼</span>
+            </summary>
+            <div class="px-4 pb-4 pt-0 border-t border-teal-900/40 space-y-3">
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Kolumner: <span class="font-mono text-teal-200">År</span>, <span class="font-mono text-teal-200">Namn</span>,
+                <span class="font-mono text-teal-200">Januari … December</span>, valfritt <span class="font-mono text-teal-200">Orsak</span>
+                (t.ex. KVX). Tom cell = ingen tid den månaden. Diagrammet visar alla personer stående med timmar på staplarna.
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <a
+                  href="{{ url_for('static', filename='tidrapport/manadsmall_timmar.xlsx') }}"
+                  class="inline-flex items-center px-3 py-2 rounded-lg bg-teal-700 hover:bg-teal-600 text-sm font-semibold text-white"
+                  download
+                >Ladda ner Excel-mall</a>
+                <a
+                  href="{{ url_for('static', filename='tidrapport/manadsmall_timmar.csv') }}"
+                  class="inline-flex items-center px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm font-medium border border-slate-600 text-slate-100"
+                  download
+                >Ladda ner CSV</a>
+              </div>
+            </div>
+          </details>
+
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <button type="button" id="btnGenerate" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-base font-semibold shadow-md shadow-emerald-900/30">
               Skapa / uppdatera diagram
@@ -724,7 +753,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=manadsmall-1"></script>
 </body>
 </html>
 

@@ -1734,6 +1734,9 @@ function tryParseVerticalBeslutslista(raw) {
 
 function parseTable(text) {
   const raw = String(text ?? "").replace(/^\uFEFF/, "");
+  const monthTpl = tryParseMonthHoursTemplate(raw);
+  if (monthTpl?.headers?.length && monthTpl.rows?.length) return monthTpl;
+
   const vert = tryParseVerticalBeslutslista(raw);
   if (vert?.headers?.length && vert.rows?.length) return vert;
 
@@ -1757,6 +1760,139 @@ function parseTable(text) {
   const delim = lineDelimFromContent(lines[0]);
   const headers = trimTrailingEmptyCells(splitCellsForTable(lines[0], delim));
   return buildTableFromHeaderRow(lines, 0, delim, headers);
+}
+
+/**
+ * Enkel kundmall: Namn + månadskolumner (Januari… / Jan…) → expanderas till Tidrapport-rader.
+ * Valfritt: År, Orsak/Projekt/Kund.
+ */
+function monthHeaderToNumber(raw) {
+  const s = normHeader(raw).replace(/\.$/, "");
+  if (!s) return null;
+  const full = {
+    januari: 1,
+    februari: 2,
+    mars: 3,
+    april: 4,
+    maj: 5,
+    juni: 6,
+    juli: 7,
+    augusti: 8,
+    september: 9,
+    oktober: 10,
+    november: 11,
+    december: 12,
+  };
+  if (full[s] != null) return full[s];
+  const abbr = {
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    maj: 5,
+    jun: 6,
+    jul: 7,
+    aug: 8,
+    sep: 9,
+    sept: 9,
+    okt: 10,
+    oct: 10,
+    nov: 11,
+    dec: 12,
+  };
+  if (abbr[s] != null) return abbr[s];
+  // 01 / 1 / 2026-01
+  const ym = s.match(/^(?:20\d{2}[-/])?(\d{1,2})$/);
+  if (ym) {
+    const n = Number(ym[1]);
+    if (n >= 1 && n <= 12) return n;
+  }
+  return null;
+}
+
+function tryParseMonthHoursTemplate(raw) {
+  const lines = splitRows(String(raw ?? ""));
+  if (lines.length < 2) return null;
+
+  const delims = ["\t", ";", ","];
+  let best = null;
+
+  for (let start = 0; start < Math.min(lines.length, 8); start += 1) {
+    for (const delim of delims) {
+      const headers = trimTrailingEmptyCells(splitCellsForTable(lines[start], delim));
+      if (headers.length < 3) continue;
+      const colName = pickCol(headers, ["Namn", "Name"]);
+      if (!colName) continue;
+
+      const monthCols = []; // { header, month1to12 }
+      const usedMonths = new Set();
+      for (const h of headers) {
+        if (normHeader(h) === normHeader(colName)) continue;
+        if (["år", "year", "orsak", "status", "typ", "projekt", "kund", "kommentar", "comment"].includes(normHeader(h))) {
+          continue;
+        }
+        const m = monthHeaderToNumber(h);
+        if (m == null || usedMonths.has(m)) continue;
+        usedMonths.add(m);
+        monthCols.push({ header: h, month: m });
+      }
+      if (monthCols.length < 2) continue;
+      best = { start, delim, headers, colName, monthCols };
+      break;
+    }
+    if (best) break;
+  }
+  if (!best) return null;
+
+  const { start, delim, headers, colName, monthCols } = best;
+  const colYear = pickCol(headers, ["År", "Year"]);
+  const colOrsak = pickCol(headers, [...ORSAK_HEADER_ALIASES, "Projekt", "Kund"]);
+
+  const uiYear = (() => {
+    const y = Number(cleanStr(els.yearInput?.value));
+    return Number.isFinite(y) && y >= 2000 && y <= 2100 ? y : new Date().getFullYear();
+  })();
+
+  const outHeaders = ["Namn", "Tim/dag", "Orsak", "Datum Fom", "Datum Tom"];
+  const outRows = [];
+
+  for (let i = start + 1; i < lines.length; i += 1) {
+    const parts = splitCellsForTable(lines[i], delim);
+    while (parts.length < headers.length) parts.push("");
+    const row = {};
+    for (let c = 0; c < headers.length; c += 1) row[headers[c]] = parts[c] ?? "";
+
+    const name = cleanStr(row[colName]);
+    if (!name) continue;
+    // hoppa över exempelrad i tom mall om namnet är placeholder
+    if (/^exempel\b/i.test(name) && monthCols.every(({ header }) => !parseHourNumber(row[header]))) {
+      continue;
+    }
+
+    let year = uiYear;
+    if (colYear) {
+      const yRaw = cleanStr(row[colYear]);
+      const yNum = Number(yRaw);
+      if (Number.isFinite(yNum) && yNum >= 2000 && yNum <= 2100) year = yNum;
+    }
+    const orsak = cleanStr(colOrsak ? row[colOrsak] : "") || "Månadsmall";
+
+    for (const { header, month } of monthCols) {
+      const h = parseHourNumber(row[header]);
+      if (!(h > 0)) continue;
+      const d = `${year}-${String(month).padStart(2, "0")}-01`;
+      outRows.push({
+        Namn: name,
+        "Tim/dag": String(round2(h)),
+        Orsak: orsak,
+        "Datum Fom": d,
+        "Datum Tom": d,
+      });
+    }
+  }
+
+  if (!outRows.length) return null;
+  return { headers: outHeaders, rows: outRows, fromMonthTemplate: true };
 }
 
 function pickCol(headers, wanted) {
@@ -1788,7 +1924,7 @@ function validateHeadersForAggregate(headers) {
   return errors;
 }
 
-function aggregateParsed(headers, rows) {
+function aggregateParsed(headers, rows, opts = null) {
   const emptyMeta = {
     seriesMeta: null,
     mergedSourceSplit: false,
@@ -1830,7 +1966,8 @@ function aggregateParsed(headers, rows) {
   const debugSamples = [];
   const DEBUG_LIMIT = 5;
 
-  const filt = getUiMonthYearFilter();
+  // Månadsmall: räkna alla månader i filen (UI-månad används bara som tip/år för mall utan År-kolumn).
+  const filt = opts?.ignoreMonthFilter ? null : getUiMonthYearFilter();
   const isSickLikeStatus = (s) => {
     const low = cleanStr(s).toLowerCase();
     return low.includes("sjuk") || low.includes("sj/") || low.startsWith("sj");
@@ -1939,7 +2076,7 @@ function aggregateParsed(headers, rows) {
       skippedNoName += 1;
       continue;
     }
-    const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom);
+    const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, filt);
     if (b.hours === 0 && b.days === 0 && b.occ === 0) continue;
     if (b.hours == null || (!(Number(b.hours) > 0) && !(Number(b.days) > 0) && !(Number(b.occ) > 0))) {
       skippedNoTime += 1;
@@ -2027,7 +2164,8 @@ function aggregateParsed(headers, rows) {
 }
 
 function aggregate(text) {
-  const { headers, rows } = parseTable(text);
+  const parsed = parseTable(text);
+  const { headers, rows } = parsed;
   if (!headers.length) {
     return {
       totals: new Map(),
@@ -2040,9 +2178,14 @@ function aggregate(text) {
       mergedSourceSplit: false,
       baseStatuses: null,
       mergeSourceOrder: null,
+      fromMonthTemplate: false,
     };
   }
-  return aggregateParsed(headers, rows);
+  const result = aggregateParsed(headers, rows, {
+    ignoreMonthFilter: !!parsed.fromMonthTemplate,
+  });
+  result.fromMonthTemplate = !!parsed.fromMonthTemplate;
+  return result;
 }
 
 function remapRowToBaseHeaders(row, sourceHeaders, baseHeaders) {
@@ -3300,7 +3443,14 @@ function regenerateFromText(text, selectedOverride) {
     baseStatuses,
     mergeSourceOrder,
     debug,
+    fromMonthTemplate,
   } = agg;
+
+  if (fromMonthTemplate) {
+    // Visa alla personer stående med timetiketter — det är huvudsyftet med mallen.
+    if (els.orientationSelect) els.orientationSelect.value = "vertical";
+    if (els.verticalNamesSelect) els.verticalNamesSelect.value = "all";
+  }
 
   if (stats && stats.usedRows === 0) {
     const samples = debug?.debugSamples || [];
@@ -3411,6 +3561,12 @@ function regenerateFromText(text, selectedOverride) {
   }
   buildStatusFilters(filterStatuses, selectedStatuses);
   safeRenderAll(window.__tidrapport_state);
+  if (fromMonthTemplate && els.statusText) {
+    const cur = els.statusText.textContent || "";
+    els.statusText.textContent = cur.startsWith("Månadsmall")
+      ? cur
+      : `Månadsmall · ${cur} · Tips: «Helår: per månad» för Jan–Dec-staplar.`;
+  }
 }
 
 els.btnGenerate.addEventListener("click", () => {
