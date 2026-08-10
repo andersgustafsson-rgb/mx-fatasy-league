@@ -2910,19 +2910,13 @@ function computeHoursByMonthFromPaste(text) {
   return byMonth;
 }
 
-function renderSummaryStats(sortedPeople, state) {
-  const box = els.chartSummaryStats;
-  if (!box) return;
-  if (!sortedPeople?.length) {
-    box.classList.add("hidden");
-    box.innerHTML = "";
-    return;
-  }
+function computeSummaryFromPeople(sortedPeople, state) {
+  if (!sortedPeople?.length) return null;
   const total = sortedPeople.reduce((acc, p) => acc + (p.sum || 0), 0);
   const people = sortedPeople.length;
   const top = sortedPeople[0];
   const byMonth = state?.hoursByMonth instanceof Map ? state.hoursByMonth : null;
-  let peakLabel = "—";
+  let peakLabel = "";
   let peakHours = 0;
   if (byMonth && byMonth.size) {
     for (const [m1, h] of byMonth.entries()) {
@@ -2932,31 +2926,51 @@ function renderSummaryStats(sortedPeople, state) {
       }
     }
   }
-  const span = monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value));
+  const period =
+    monthSpanLabelFromHoursByMonth(byMonth, cleanStr(els.yearInput?.value)) || getMonthYearLabel();
+  return {
+    period,
+    total,
+    people,
+    topName: top?.name || "",
+    topHours: top?.sum || 0,
+    peakLabel,
+    peakHours,
+  };
+}
 
+function renderSummaryStats(sortedPeople, state) {
+  const box = els.chartSummaryStats;
+  if (!box) return;
+  const summary = computeSummaryFromPeople(sortedPeople, state);
+  if (state) state.lastSummary = summary;
+  if (!summary) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
   const cards = [
-    { label: "Period", value: span || getMonthYearLabel() },
-    { label: "Totalt timmar", value: `${fmtHoursSv(total)} h` },
-    { label: "Personer", value: String(people) },
+    { label: "Period", value: summary.period },
+    { label: "Totalt timmar", value: `${fmtHoursSv(summary.total)} h` },
+    { label: "Personer", value: String(summary.people) },
     {
       label: "Flest timmar",
-      value: top ? top.name : "—",
-      sub: top ? `${fmtHoursSv(top.sum)} h` : "",
-      title: top ? `${top.name}: ${fmtHoursSv(top.sum)} h` : "",
+      value: summary.topName || "—",
+      sub: summary.topName ? `${fmtHoursSv(summary.topHours)} h` : "",
+      title: summary.topName ? `${summary.topName}: ${fmtHoursSv(summary.topHours)} h` : "",
     },
   ];
-  if (peakHours > 0) {
+  if (summary.peakHours > 0) {
     cards.push({
       label: "Högsta månad",
-      value: peakLabel,
-      sub: `${fmtHoursSv(peakHours)} h`,
+      value: summary.peakLabel,
+      sub: `${fmtHoursSv(summary.peakHours)} h`,
     });
   }
 
   box.classList.remove("hidden");
-  // 5 kort: 2+3 på mobil / 5 på desktop när period finns
   box.className =
-    peakHours > 0
+    summary.peakHours > 0
       ? "mt-3 grid grid-cols-2 md:grid-cols-5 gap-2"
       : "mt-3 grid grid-cols-2 md:grid-cols-4 gap-2";
   box.innerHTML = "";
@@ -2972,6 +2986,129 @@ function renderSummaryStats(sortedPeople, state) {
         : "");
     box.appendChild(el);
   }
+}
+
+/** Bygg PNG med summeringsrad (period, totalt, personer …) ovanför diagrammet. */
+function exportChartPngDataUrl(chartInstance, state, slideMeta) {
+  const chartUrl = chartInstance.toBase64Image("image/png", 1);
+  const summary = state?.lastSummary || null;
+  const title = buildTitleText(state || { statuses: [], selectedStatuses: new Set(), employeeName: null });
+  const slideLine =
+    slideMeta && slideMeta.slideCount > 1
+      ? `Sida ${slideMeta.slideIndex + 1} / ${slideMeta.slideCount}`
+      : "";
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const pad = 28;
+      const headerH = summary ? 118 : 56;
+      const W = Math.max(img.width, 900);
+      const H = headerH + img.height + pad;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      // bakgrund
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, 0, W, H);
+
+      // titel
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "bold 22px system-ui, Segoe UI, sans-serif";
+      ctx.fillText(String(title || "Tidrapport").slice(0, 90), pad, 34);
+
+      if (slideLine) {
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "14px system-ui, Segoe UI, sans-serif";
+        ctx.fillText(slideLine, W - pad - ctx.measureText(slideLine).width, 34);
+      }
+
+      if (summary) {
+        const cards = [
+          { label: "PERIOD", value: summary.period },
+          { label: "TOTALT", value: `${fmtHoursSv(summary.total)} h` },
+          { label: "PERSONER", value: String(summary.people) },
+          {
+            label: "FLEST",
+            value: summary.topName
+              ? `${summary.topName.split(" ").slice(0, 2).join(" ")} ${fmtHoursSv(summary.topHours)} h`
+              : "—",
+          },
+        ];
+        if (summary.peakHours > 0) {
+          cards.push({
+            label: "HÖGSTA MÅNAD",
+            value: `${summary.peakLabel} ${fmtHoursSv(summary.peakHours)} h`,
+          });
+        }
+        const gap = 12;
+        const cardW = (W - pad * 2 - gap * (cards.length - 1)) / cards.length;
+        const cardY = 48;
+        const cardH = 56;
+        cards.forEach((card, i) => {
+          const x = pad + i * (cardW + gap);
+          ctx.fillStyle = "#1e293b";
+          ctx.strokeStyle = "#334155";
+          ctx.lineWidth = 1;
+          roundRectPath(ctx, x, cardY, cardW, cardH, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "bold 11px system-ui, Segoe UI, sans-serif";
+          ctx.fillText(card.label, x + 12, cardY + 18);
+          ctx.fillStyle = "#f1f5f9";
+          ctx.font = "bold 15px system-ui, Segoe UI, sans-serif";
+          const val = String(card.value);
+          // trim if needed
+          let draw = val;
+          while (ctx.measureText(draw).width > cardW - 24 && draw.length > 4) {
+            draw = draw.slice(0, -2);
+          }
+          if (draw !== val) draw = `${draw}…`;
+          ctx.fillText(draw, x + 12, cardY + 42);
+        });
+      }
+
+      // diagram under header (centrera om canvas bredare)
+      const dx = Math.max(0, (W - img.width) / 2);
+      ctx.drawImage(img, dx, headerH);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(chartUrl);
+    img.src = chartUrl;
+  });
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function downloadDataUrl(url, filename) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+}
+
+function safePngFilename(state, slideMeta) {
+  const slideSuffix =
+    slideMeta && slideMeta.slideCount > 1
+      ? `_sida${slideMeta.slideIndex + 1}av${slideMeta.slideCount}`
+      : "";
+  const safeTitle = (buildTitleText(state || { statuses: [], selectedStatuses: new Set(), employeeName: null }) || "tidrapport")
+    .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 80);
+  return `${safeTitle || "tidrapport"}${slideSuffix}_${new Date().toISOString().slice(0, 10)}.png`;
 }
 
 function renderColorLegend(datasets) {
@@ -4201,23 +4338,12 @@ els.btnApplyMerge?.addEventListener("click", () => {
   setMergeFeedback(ok, "ok");
 });
 
-els.btnDownload.addEventListener("click", () => {
+els.btnDownload.addEventListener("click", async () => {
+  const st = window.__tidrapport_state;
   const c = ensureChart();
-  const url = c.toBase64Image("image/png", 1);
-  const a = document.createElement("a");
-  a.href = url;
   const slideMeta = window.__tidrapport_slide_meta;
-  const slideSuffix =
-    slideMeta && slideMeta.slideCount > 1
-      ? `_sida${slideMeta.slideIndex + 1}av${slideMeta.slideCount}`
-      : "";
-  const safeTitle = (buildTitleText(window.__tidrapport_state || { statuses: [], selectedStatuses: [], employeeName: null }) || "tidrapport")
-    .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .slice(0, 80);
-  a.download = `${safeTitle || "tidrapport"}${slideSuffix}_${new Date().toISOString().slice(0, 10)}.png`;
-  a.click();
+  const url = await exportChartPngDataUrl(c, st, slideMeta);
+  downloadDataUrl(url, safePngFilename(st, slideMeta));
 });
 
 function goChartSlide(delta) {
@@ -4246,28 +4372,20 @@ els.btnDownloadAllSlides?.addEventListener("click", async () => {
   const meta = window.__tidrapport_slide_meta;
   if (!st || !meta || meta.slideCount <= 1) return;
   const start = meta.slideIndex || 0;
-  const safeTitle = (buildTitleText(st) || "tidrapport")
-    .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
-    .trim()
-    .replace(/\s+/g, "_")
-    .slice(0, 60);
-  const day = new Date().toISOString().slice(0, 10);
   for (let i = 0; i < meta.slideCount; i += 1) {
     st.chartSlideIndex = i;
     safeRenderAll(st);
     await new Promise((r) => setTimeout(r, 120));
     const c = ensureChart();
-    const url = c.toBase64Image("image/png", 1);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${safeTitle || "tidrapport"}_sida${i + 1}av${meta.slideCount}_${day}.png`;
-    a.click();
+    const slideMeta = window.__tidrapport_slide_meta;
+    const url = await exportChartPngDataUrl(c, st, slideMeta);
+    downloadDataUrl(url, safePngFilename(st, slideMeta));
     await new Promise((r) => setTimeout(r, 180));
   }
   st.chartSlideIndex = start;
   safeRenderAll(st);
   if (els.statusText) {
-    els.statusText.textContent = `Laddade ner ${meta.slideCount} PNG-sidor.`;
+    els.statusText.textContent = `Laddade ner ${meta.slideCount} PNG-sidor (med summering).`;
   }
 });
 
