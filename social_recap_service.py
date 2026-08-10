@@ -2259,7 +2259,22 @@ def _draw_fb_season_strip(
 RECAP_TEMPLATE_GRAPHIC = _ROOT / "static" / "recap_templates" / "recap_fb_graphic.png"
 RECAP_TEMPLATE_STATS = _ROOT / "static" / "recap_templates" / "recap_fb_stats.png"
 RECAP_SLOTS_JSON = _ROOT / "static" / "recap_templates" / "slots.json"
-def _recap_templates_ready() -> bool:
+RECAP_LAYOUT_HYBRID = _ROOT / "static" / "recap_templates" / "layout_hybrid.json"
+
+
+def _recap_engine_preference() -> str:
+    """hybrid | template | fallback — env RECAP_ENGINE overrides auto."""
+    raw = (os.getenv("RECAP_ENGINE") or "").strip().lower()
+    if raw in ("hybrid", "template", "fallback"):
+        return raw
+    if RECAP_LAYOUT_HYBRID.is_file() and RECAP_TEMPLATE_GRAPHIC.is_file():
+        return "hybrid"
+    if _recap_legacy_templates_ready():
+        return "template"
+    return "fallback"
+
+
+def _recap_legacy_templates_ready() -> bool:
     return (
         RECAP_TEMPLATE_GRAPHIC.is_file()
         and RECAP_TEMPLATE_STATS.is_file()
@@ -2267,8 +2282,18 @@ def _recap_templates_ready() -> bool:
     )
 
 
+def _recap_templates_ready() -> bool:
+    """True when any branded graphic path can run (hybrid or legacy template)."""
+    return _recap_engine_preference() in ("hybrid", "template")
+
+
 def _load_recap_slots() -> dict[str, Any]:
     with open(RECAP_SLOTS_JSON, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_recap_hybrid_layout() -> dict[str, Any]:
+    with open(RECAP_LAYOUT_HYBRID, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -2391,9 +2416,10 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "33"
+RECAP_RENDERER_REV = "40-hybrid"
 
-# Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm).
+
+# Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm). Legacy template only.
 _RECAP_RIDER_NAME_Y_SHIFT = 40
 
 
@@ -2720,7 +2746,7 @@ def _clean_recap_template_artifacts(base) -> None:
 
 
 def recap_renderer_engine() -> str:
-    return "template" if _recap_templates_ready() else "fallback"
+    return _recap_engine_preference()
 
 
 def _recap_panel_fill_color(base, x0: int, y0: int, x1: int, y1: int) -> tuple:
@@ -3201,8 +3227,12 @@ def _recap_race_title_text(data: dict[str, Any]) -> str:
 
 def _podium_entry_by_pos(podium: list[dict], pos: int) -> dict | None:
     for p in podium or []:
-        if int(p.get("position", 0)) == pos:
-            return p
+        raw = p.get("position", p.get("pos", 0))
+        try:
+            if int(raw) == pos:
+                return p
+        except (TypeError, ValueError):
+            continue
     return None
 
 
@@ -3219,6 +3249,279 @@ def _resize_recap_template(img, out_w: int) -> Any:
     tw, th = img.size
     out_h = max(1, int(round(th * out_w / tw)))
     return img.resize((out_w, out_h), Image.Resampling.LANCZOS)
+
+
+def _hybrid_px(frac: float, total: int) -> int:
+    return int(round(float(frac) * total))
+
+
+def _hybrid_circle(slot: dict[str, Any], w: int, h: int) -> tuple[int, int, int]:
+    return (
+        _hybrid_px(slot["cx"], w),
+        _hybrid_px(slot["cy"], h),
+        max(8, _hybrid_px(slot["r"], w)),
+    )
+
+
+def _hybrid_box(slot: dict[str, Any], w: int, h: int) -> tuple[int, int, int, int]:
+    x0 = _hybrid_px(slot["x"], w)
+    y0 = _hybrid_px(slot["y"], h)
+    x1 = x0 + max(10, _hybrid_px(slot["w"], w))
+    y1 = y0 + max(10, _hybrid_px(slot["h"], h))
+    return x0, y0, x1, y1
+
+
+def _hybrid_medal_color(pos: int) -> tuple[int, int, int]:
+    if pos == 1:
+        return GOLD
+    if pos == 2:
+        return SILVER
+    if pos == 3:
+        return BRONZE
+    return CYAN
+
+
+def _hybrid_cover_circle(base, cx: int, cy: int, r: int, *, pad: int = 10) -> None:
+    """Täck mallens inbakade grå cirkel så vår kodade ring kan styra alignment."""
+    import math
+    from PIL import ImageDraw
+
+    sample_r = max(r + pad + 6, r + 12)
+    samples = []
+    for ang in (20, 45, 70, 110, 135, 160, 200, 250, 290, 330):
+        sx = int(cx + sample_r * math.cos(math.radians(ang)))
+        sy = int(cy + sample_r * math.sin(math.radians(ang)))
+        if 0 <= sx < base.size[0] and 0 <= sy < base.size[1]:
+            p = base.getpixel((sx, sy))
+            if isinstance(p, tuple) and len(p) >= 3:
+                samples.append(p[:3])
+    if samples:
+        fill = tuple(int(sum(c[i] for c in samples) / len(samples)) for i in range(3))
+    else:
+        fill = (16, 24, 42)
+    draw = ImageDraw.Draw(base)
+    rr = r + pad
+    draw.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=fill + (255,))
+
+
+def _hybrid_draw_ring(base, cx: int, cy: int, r: int, color: tuple[int, int, int]) -> int:
+    """Rita medaljring; returnerar inner-radius för avatar."""
+    from PIL import ImageDraw
+
+    ring_w = max(4, r // 10)
+    outer = r + ring_w
+    draw = ImageDraw.Draw(base)
+    draw.ellipse(
+        [cx - outer, cy - outer, cx + outer, cy + outer],
+        fill=color + (255,),
+    )
+    draw.ellipse(
+        [cx - r, cy - r, cx + r, cy + r],
+        fill=(14, 18, 34, 255),
+    )
+    return r - max(1, ring_w // 4)
+
+
+def _hybrid_name_box(
+    cx: int,
+    cy: int,
+    r: int,
+    *,
+    gap_below_r: float,
+    width_r: float,
+    height_r: float,
+) -> tuple[int, int, int, int]:
+    """Namnplatta alltid centrerad under avataren — kan inte glida i x."""
+    gap = max(6, int(round(r * float(gap_below_r))))
+    bw = max(40, int(round(r * float(width_r))))
+    bh = max(18, int(round(r * float(height_r))))
+    y0 = cy + r + gap
+    return cx - bw // 2, y0, cx + bw // 2, y0 + bh
+
+
+def _hybrid_draw_nameplate(
+    base,
+    draw,
+    box: tuple[int, int, int, int],
+    text: str,
+    *,
+    plate_fill: tuple[int, ...] = (12, 18, 34, 220),
+    max_px: int = 22,
+    min_px: int = 12,
+) -> None:
+    from PIL import Image, ImageDraw
+
+    x0, y0, x1, y1 = box
+    fill = tuple(plate_fill[:3]) if len(plate_fill) >= 3 else (12, 18, 34)
+    alpha = plate_fill[3] if len(plate_fill) > 3 else 220
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    od.rounded_rectangle(
+        [x0, y0, x1, y1],
+        radius=max(4, (y1 - y0) // 3),
+        fill=fill + (alpha,),
+    )
+    base.alpha_composite(overlay)
+    _draw_text_in_box(
+        draw, box, text,
+        max_px=max_px, min_px=min_px, pad_x=6, pad_y=0, fill=WHITE,
+    )
+
+
+def _hybrid_place_avatar(
+    base,
+    *,
+    cx: int,
+    cy: int,
+    r: int,
+    medal_pos: int,
+    rider_id: int | None = None,
+    user_id: int | None = None,
+    display_name: str = "?",
+    initials: str = "?",
+    rider_face: bool = False,
+) -> None:
+    _hybrid_cover_circle(base, cx, cy, r, pad=12)
+    inner_r = _hybrid_draw_ring(base, cx, cy, r, _hybrid_medal_color(medal_pos))
+    _paste_plain_circle_avatar(
+        base, cx, cy, inner_r,
+        rider_id=rider_id,
+        user_id=user_id,
+        display_name=display_name,
+        initials=initials,
+        rider_face=rider_face,
+    )
+
+
+def _render_recap_graphic_hybrid(data: dict[str, Any]) -> bytes:
+    """
+    Hybrid B: bakgrunds-PNG + kodade komponenter (ring, avatar, namnplatta).
+    Layout i layout_hybrid.json (andelar 0–1) — namn alltid centrerat under avatar.
+    """
+    from PIL import Image, ImageDraw
+
+    layout = _load_recap_hybrid_layout()["graphic"]
+    base = Image.open(RECAP_TEMPLATE_GRAPHIC).convert("RGBA")
+    out_w, out_h = base.size
+    _clean_recap_template_artifacts(base)
+    draw = ImageDraw.Draw(base)
+    mods = data.get("modules") or {}
+
+    brand = layout.get("brand_logo")
+    if brand:
+        cx, cy, r = _hybrid_circle(brand, out_w, out_h)
+        # reuse existing brand paste via absolute slot shape
+        _paste_recap_brand_logo_in_circle(
+            base,
+            {"cx": cx, "cy": cy, "r": r},
+            out_w, out_h, out_w, out_h,
+        )
+
+    title_box = _hybrid_box(layout["race_title"], out_w, out_h)
+    _draw_text_in_box(
+        draw, title_box, _recap_race_title_text(data),
+        max_px=32, min_px=20, pad_y=1,
+    )
+
+    for key, hdr in (layout.get("class_headers") or {}).items():
+        box = _hybrid_box(hdr, out_w, out_h)
+        x0, y0, x1, y1 = box
+        _wipe_recap_header_text_band(base, x0, y0, x1, y1)
+        _draw_text_in_box(
+            draw, box, _recap_class_header_label(data, key),
+            bold=True, max_px=46, min_px=24, fill=WHITE,
+        )
+
+    name_style = layout.get("podium_name") or {}
+    if mods.get("rider_podium") and data.get("has_results"):
+        for _panel_key, panel in (layout.get("podiums") or {}).items():
+            podium = data.get(panel.get("data_key") or "") or []
+            places = list(panel.get("places") or [])
+            uniform_r = max((float(p["r"]) for p in places), default=0.04)
+            for raw in places:
+                place = {**raw, "r": uniform_r}
+                pos = int(place["pos"])
+                entry = _podium_entry_by_pos(podium, pos)
+                if not entry:
+                    continue
+                cx, cy, r = _hybrid_circle(place, out_w, out_h)
+                label = entry.get("short_name") or entry.get("name") or "—"
+                if entry.get("number"):
+                    label = f"#{entry['number']} {label}"
+                _hybrid_place_avatar(
+                    base,
+                    cx=cx, cy=cy, r=r,
+                    medal_pos=pos,
+                    rider_id=entry.get("rider_id"),
+                    display_name=entry.get("name") or "?",
+                    initials=(entry.get("short_name") or "?")[:2],
+                    rider_face=True,
+                )
+                box = _hybrid_name_box(
+                    cx, cy, r,
+                    gap_below_r=float(name_style.get("gap_below_r", 0.55)),
+                    width_r=float(name_style.get("width_r", 2.55)),
+                    height_r=float(name_style.get("height_r", 0.52)),
+                )
+                _hybrid_draw_nameplate(
+                    base, draw, box, label,
+                    plate_fill=tuple(name_style.get("plate_fill") or (12, 18, 34, 220)),
+                    max_px=22, min_px=11,
+                )
+
+    if mods.get("race") and data.get("race_leaderboard"):
+        lb = data["race_leaderboard"]
+        fantasy = layout.get("fantasy") or {}
+        f_name = fantasy.get("name") or {}
+        for place in fantasy.get("places") or []:
+            pos = int(place["pos"])
+            row = _leaderboard_by_rank(lb, pos)
+            if not row:
+                continue
+            cx, cy, r = _hybrid_circle(place, out_w, out_h)
+            _hybrid_place_avatar(
+                base,
+                cx=cx, cy=cy, r=r,
+                medal_pos=pos,
+                user_id=row.get("user_id"),
+                display_name=row.get("display_name") or "?",
+            )
+            box = _hybrid_name_box(
+                cx, cy, r,
+                gap_below_r=float(f_name.get("gap_below_r", 0.42)),
+                width_r=float(f_name.get("width_r", 2.7)),
+                height_r=float(f_name.get("height_r", 0.48)),
+            )
+            _hybrid_draw_nameplate(
+                base, draw, box,
+                _short_user_name(row.get("display_name") or "?"),
+                plate_fill=tuple(f_name.get("plate_fill") or (12, 18, 34, 220)),
+                max_px=24, min_px=12,
+            )
+        for extra in fantasy.get("extras") or []:
+            rank = int(extra["rank"])
+            row = _leaderboard_by_rank(lb, rank)
+            if not row:
+                continue
+            cx, cy, r = _hybrid_circle(extra, out_w, out_h)
+            _hybrid_place_avatar(
+                base,
+                cx=cx, cy=cy, r=r,
+                medal_pos=rank if rank <= 3 else 0,
+                user_id=row.get("user_id"),
+                display_name=row.get("display_name") or "?",
+            )
+            box = _hybrid_box(extra["text"], out_w, out_h)
+            pts = int(row.get("points", 0))
+            line = f"{rank}. {_short_user_name(row.get('display_name') or '?')}  ·  {pts} p"
+            _draw_text_in_box(
+                draw, box, line,
+                align="left", max_px=28, min_px=16, fill=WHITE, pad_y=1,
+            )
+
+    buf = io.BytesIO()
+    base.convert("RGB").save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
 
 def _render_recap_graphic_from_template(data: dict[str, Any]) -> bytes:
@@ -3466,7 +3769,15 @@ def _footer(img, draw, final_h: int, *, bar_h: int = 6) -> None:
 
 def _render_recap_graphic_png(data: dict[str, Any]) -> bytes:
     """Bild 1 — grafik: header, förarpall, fantasy-podium."""
-    if _recap_templates_ready():
+    engine = _recap_engine_preference()
+    if engine == "hybrid":
+        try:
+            return _render_recap_graphic_hybrid(data)
+        except Exception as exc:
+            print(f"recap hybrid failed, falling back to template: {exc}")
+            if _recap_legacy_templates_ready():
+                return _render_recap_graphic_from_template(data)
+    elif engine == "template" and _recap_legacy_templates_ready():
         return _render_recap_graphic_from_template(data)
 
     from PIL import Image, ImageDraw

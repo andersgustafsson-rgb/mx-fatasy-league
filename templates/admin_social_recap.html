@@ -193,7 +193,9 @@
             const series = res.headers.get('X-Recap-Series') || '?';
             if (which === 'g') {
                 lastRecapEngine = 'Motor: ' + engine + ', rev ' + rev + ', series=' + series;
-                if (engine === 'fallback') {
+                if (engine === 'hybrid') {
+                    lastRecapEngine += ' — hybrid (bakgrund + kodade komponenter)';
+                } else if (engine === 'fallback') {
                     lastRecapEngine += ' — saknar mall-PNG (lägg recap_fb_graphic.png i static/recap_templates/)';
                 }
             }
