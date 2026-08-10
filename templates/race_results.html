@@ -136,6 +136,11 @@
     .standings-tab.ring-active-mx { box-shadow: 0 0 0 2px rgb(52 211 153 / 0.55); }
     .standings-tab.ring-active-smx { box-shadow: 0 0 0 2px rgb(167 139 250 / 0.55); }
     .standings-tab.ring-active-wsx { box-shadow: 0 0 0 2px rgb(251 191 36 / 0.55); }
+    /* WSX/standing cards are often full-body — bias crop toward the head */
+    .standings-avatar-img {
+      object-fit: cover;
+      object-position: center 14%;
+    }
   </style>
 <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
 </head>
@@ -246,6 +251,7 @@
         {% set src = rider_image_src(r) %}
         {% if src %}
           <img class="standings-avatar-img w-10 h-10 rounded-full object-cover border border-slate-600 shrink-0 block bg-slate-800" src="{{ src }}" alt=""
+               style="object-position: center 14%;"
                onerror="this.style.display='none'; var s=this.nextElementSibling; if(s) s.classList.remove('hidden');">
           <span class="standings-avatar-fallback hidden inline-flex w-10 h-10 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300">#{{ r.rider_number or '?' }}</span>
         {% else %}
@@ -707,6 +713,7 @@
                           <img src="{{ hs_src }}"
                                alt="{{ holeshot.rider_name }}"
                                class="w-12 h-12 rounded-full object-cover border-2 border-amber-400/80"
+                               style="object-position: center 14%;"
                                onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden');">
                           <div class="w-12 h-12 rounded-full bg-slate-700 hidden flex items-center justify-center text-xs font-bold text-amber-200">#{{ holeshot.rider_number }}</div>
                         {% else %}
