@@ -421,6 +421,15 @@
                 </select>
               </div>
               <div>
+                <label class="block text-xs text-slate-300 mb-1" for="namesPerSlideSelect">Namn per sida (slides)</label>
+                <select id="namesPerSlideSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm" title="Delar upp diagrammet i flera sidor när det är många namn.">
+                  <option value="15">15 namn / sida</option>
+                  <option value="18" selected>18 namn / sida</option>
+                  <option value="25">25 namn / sida</option>
+                  <option value="0">Ingen uppdelning (allt på en gång)</option>
+                </select>
+              </div>
+              <div>
                 <label class="block text-xs text-slate-300 mb-1" for="layoutSelect">Var diagrammet sitter</label>
                 <select id="layoutSelect" class="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm">
                   <option value="side">Bredvid inmatning (två kolumner)</option>
@@ -433,12 +442,19 @@
       </section>
 
       <section class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
           <h2 class="text-lg font-semibold">Diagram</h2>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <div id="chartSlideControls" class="hidden items-center gap-1.5">
+              <button type="button" id="btnSlidePrev" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Föregående sida">◀</button>
+              <span id="chartSlideLabel" class="text-xs text-slate-300 tabular-nums min-w-[5.5rem] text-center">Sida 1/1</span>
+              <button type="button" id="btnSlideNext" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Nästa sida">▶</button>
+            </div>
             <button id="btnDownload" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm">Spara PNG</button>
+            <button id="btnDownloadAllSlides" class="hidden px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm border border-slate-600" title="Laddar ner en PNG per sida">Spara alla sidor</button>
           </div>
         </div>
+        <div id="chartSummaryStats" class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 hidden"></div>
         <div class="mt-2 text-xs text-slate-400" id="titlePreview"></div>
         <div class="mt-2" id="colorLegend"></div>
         <div class="mt-3 bg-slate-950 border border-slate-800 rounded-xl p-3">
@@ -753,7 +769,7 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=manadsmall-1"></script>
+  <script src="{{ url_for('static', filename='tidrapport.js') }}?v=slides-summary-1"></script>
 </body>
 </html>
 

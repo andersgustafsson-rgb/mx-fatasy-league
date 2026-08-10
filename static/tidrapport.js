@@ -122,6 +122,13 @@ const els = {
   pasteInput: document.getElementById("pasteInput"),
   btnGenerate: document.getElementById("btnGenerate"),
   btnDownload: document.getElementById("btnDownload"),
+  btnDownloadAllSlides: document.getElementById("btnDownloadAllSlides"),
+  chartSlideControls: document.getElementById("chartSlideControls"),
+  chartSlideLabel: document.getElementById("chartSlideLabel"),
+  btnSlidePrev: document.getElementById("btnSlidePrev"),
+  btnSlideNext: document.getElementById("btnSlideNext"),
+  chartSummaryStats: document.getElementById("chartSummaryStats"),
+  namesPerSlideSelect: document.getElementById("namesPerSlideSelect"),
   btnClear: document.getElementById("btnClear"),
   btnClearNearGenerate: document.getElementById("btnClearNearGenerate"),
   btnAll: document.getElementById("btnAll"),
@@ -2772,12 +2779,162 @@ function applyOrientation(mode, opts = {}) {
 function limitForVerticalIfNeeded(mode, sortedPeople, hasEmployeeFilter, verticalLimit) {
   if (mode !== "vertical") return sortedPeople;
   if (hasEmployeeFilter) return sortedPeople;
+  // Slides hanterar uppdelning — vid «all» begränsar vi inte här.
   if (verticalLimit === "all") return sortedPeople;
   const maxN = Number(verticalLimit || 20);
   const MAX = Number.isFinite(maxN) ? maxN : 20;
   if (sortedPeople.length <= MAX) return sortedPeople;
-  els.statusText.textContent = `${els.statusText.textContent} • Stående: visar Top ${MAX}`;
   return sortedPeople.slice(0, MAX);
+}
+
+function getNamesPerSlide() {
+  const n = Number(cleanStr(els.namesPerSlideSelect?.value));
+  if (!Number.isFinite(n) || n <= 0) return 0; // 0 = ingen uppdelning
+  return Math.max(5, Math.min(100, Math.floor(n)));
+}
+
+function getSlidePeople(sortedPeople, state) {
+  const per = getNamesPerSlide();
+  const total = sortedPeople.length;
+  if (!per || total <= per) {
+    return {
+      people: sortedPeople,
+      slideIndex: 0,
+      slideCount: 1,
+      perSlide: per || total,
+      totalNames: total,
+    };
+  }
+  const slideCount = Math.ceil(total / per);
+  let slideIndex = Number(state?.chartSlideIndex || 0);
+  if (!Number.isFinite(slideIndex) || slideIndex < 0) slideIndex = 0;
+  if (slideIndex >= slideCount) slideIndex = slideCount - 1;
+  const start = slideIndex * per;
+  return {
+    people: sortedPeople.slice(start, start + per),
+    slideIndex,
+    slideCount,
+    perSlide: per,
+    totalNames: total,
+  };
+}
+
+function updateSlideControls(slideMeta) {
+  const multi = slideMeta && slideMeta.slideCount > 1;
+  if (els.chartSlideControls) {
+    els.chartSlideControls.classList.toggle("hidden", !multi);
+    els.chartSlideControls.classList.toggle("flex", !!multi);
+  }
+  if (els.btnDownloadAllSlides) {
+    els.btnDownloadAllSlides.classList.toggle("hidden", !multi);
+  }
+  if (els.chartSlideLabel && slideMeta) {
+    els.chartSlideLabel.textContent = multi
+      ? `Sida ${slideMeta.slideIndex + 1}/${slideMeta.slideCount}`
+      : "Sida 1/1";
+  }
+  if (els.btnSlidePrev) els.btnSlidePrev.disabled = !multi || slideMeta.slideIndex <= 0;
+  if (els.btnSlideNext) {
+    els.btnSlideNext.disabled = !multi || slideMeta.slideIndex >= slideMeta.slideCount - 1;
+  }
+}
+
+function fmtHoursSv(n) {
+  return round2(n).toLocaleString("sv-SE", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
+
+/**
+ * Bygg månadssummor från inklistrad text (för «högsta månad» i summeringen).
+ */
+function computeHoursByMonthFromPaste(text) {
+  const byMonth = new Map(); // 1..12 -> hours
+  try {
+    const { headers, rows } = parseTable(text);
+    if (!headers?.length || !rows?.length) return byMonth;
+    const colDatumFom = pickCol(headers, ["Datum Fom", "Datum Från", "Datum From", "Från datum", "Datum"]);
+    const colDatumTom = pickCol(headers, ["Datum Tom", "Datum Till", "Datum To", "Till datum"]);
+    const colTimDag = pickCol(headers, ["Tim/dag", "Tim dag", "Timmar/dag", "Hours/day", "Hours per day"]);
+    const colOmf = pickCol(headers, ["Omf", "Omfattning"]);
+    const colFom = pickCol(headers, ["Kl Fom", "Kl. Fom", "Från", "From", "Fom", "F.o.m"]);
+    const colTom = pickCol(headers, ["Kl Tom", "Kl. Tom", "Till", "To", "Tom"]);
+    const colRast = pickCol(headers, ["Rast", "Kl rast", "Break"]);
+    const hourCols = { colFom, colTom, colRast, colTimDag, colOmf };
+    for (const row of rows) {
+      for (let m1 = 1; m1 <= 12; m1 += 1) {
+        // Om raden har datum: räkna bara den månaden. Utan datum: hoppa.
+        const d0 = colDatumFom ? parseIsoDate(row[colDatumFom]) : null;
+        if (!d0) continue;
+        const y = d0.getFullYear();
+        const b = rowContributionBreakdown(row, hourCols, colDatumFom, colDatumTom, {
+          year: y,
+          month: m1,
+        });
+        if (!(Number(b.hours) > 0)) continue;
+        byMonth.set(m1, (byMonth.get(m1) || 0) + b.hours);
+      }
+    }
+  } catch (e) {
+    console.warn("computeHoursByMonthFromPaste", e);
+  }
+  return byMonth;
+}
+
+function renderSummaryStats(sortedPeople, state) {
+  const box = els.chartSummaryStats;
+  if (!box) return;
+  if (!sortedPeople?.length) {
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+  const total = sortedPeople.reduce((acc, p) => acc + (p.sum || 0), 0);
+  const people = sortedPeople.length;
+  const top = sortedPeople[0];
+  const byMonth = state?.hoursByMonth instanceof Map ? state.hoursByMonth : null;
+  let peakLabel = "—";
+  let peakHours = 0;
+  if (byMonth && byMonth.size) {
+    for (const [m1, h] of byMonth.entries()) {
+      if (h > peakHours) {
+        peakHours = h;
+        peakLabel = monthLabelShort(m1);
+      }
+    }
+  }
+
+  const cards = [
+    { label: "Totalt timmar", value: `${fmtHoursSv(total)} h` },
+    { label: "Personer", value: String(people) },
+    {
+      label: "Flest timmar",
+      value: top ? `${top.name.split(" ")[0]}…` : "—",
+      sub: top ? `${fmtHoursSv(top.sum)} h` : "",
+      title: top ? `${top.name}: ${fmtHoursSv(top.sum)} h` : "",
+    },
+    {
+      label: "Högsta månad",
+      value: peakHours > 0 ? peakLabel : "—",
+      sub: peakHours > 0 ? `${fmtHoursSv(peakHours)} h` : "saknar månadsdata",
+    },
+  ];
+
+  box.classList.remove("hidden");
+  box.innerHTML = "";
+  for (const c of cards) {
+    const el = document.createElement("div");
+    el.className = "rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2";
+    if (c.title) el.title = c.title;
+    el.innerHTML =
+      `<div class="text-[10px] uppercase tracking-wide text-slate-500">${c.label}</div>` +
+      `<div class="text-sm font-semibold text-slate-100 tabular-nums truncate">${c.value}</div>` +
+      (c.sub
+        ? `<div class="text-[11px] text-slate-400 tabular-nums truncate">${c.sub}</div>`
+        : "");
+    box.appendChild(el);
+  }
 }
 
 function renderColorLegend(datasets) {
@@ -2996,7 +3153,11 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
     !!state?.employeeName,
     state?.verticalNames || "20"
   );
-  const labels = limitedPeople.map((p) => p.name);
+  const slideMeta = getSlidePeople(limitedPeople, state);
+  if (state) state.chartSlideIndex = slideMeta.slideIndex;
+  updateSlideControls(slideMeta);
+  const pagePeople = slideMeta.people;
+  const labels = pagePeople.map((p) => p.name);
 
   if (useMergedGrouped && mode === "horizontal") {
     const nk = sourceOrder.length;
@@ -3091,6 +3252,9 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
     if (titleSuffix) titleText = `${titleText} — ${titleSuffix}`;
     else if (measure === "days") titleText = `${titleText} · Kalenderdagar (vald månad)`;
     else if (measure === "occasions") titleText = `${titleText} · Antal tillfällen (rader)`;
+    if (slideMeta.slideCount > 1) {
+      titleText = `${titleText} · Sida ${slideMeta.slideIndex + 1}/${slideMeta.slideCount}`;
+    }
     c.options.plugins.title.text = titleText;
     if (els.titlePreview) els.titlePreview.textContent = previewNote != null ? previewNote : titleText;
   }
@@ -3098,6 +3262,7 @@ function renderChart(totals, statuses, selectedStatuses, sortedPeople, chartOpts
   applyOrientation(mode, { verticalLimit: state?.verticalNames || "20" });
   c.update();
   window.__chart_kind = "normal";
+  window.__tidrapport_slide_meta = slideMeta;
 }
 
 function getForecastParams() {
@@ -3347,6 +3512,45 @@ function renderAll(state) {
     }
 
     renderMonthChart(monthTotals, statuses, selectedStatuses, year, measure);
+    updateSlideControls({ slideIndex: 0, slideCount: 1, perSlide: 0, totalNames: 0 });
+    if (els.chartSummaryStats) {
+      // Månadsläge: visa totalt + högsta månad
+      let peakM = 0;
+      let peakH = 0;
+      let totalH = 0;
+      for (let m1 = 1; m1 <= 12; m1 += 1) {
+        const by = monthTotals.get(m1) || new Map();
+        let sum = 0;
+        for (const st of selectedStatuses) sum += by.get(st) || 0;
+        totalH += sum;
+        if (sum > peakH) {
+          peakH = sum;
+          peakM = m1;
+        }
+      }
+      els.chartSummaryStats.classList.remove("hidden");
+      els.chartSummaryStats.innerHTML = "";
+      const cards = [
+        { label: "Totalt", value: measure === "hours" ? `${fmtHoursSv(totalH)} h` : String(Math.round(totalH)) },
+        { label: "Månader med data", value: String([...monthTotals.keys()].filter((m) => {
+          const by = monthTotals.get(m) || new Map();
+          let s = 0;
+          for (const st of selectedStatuses) s += by.get(st) || 0;
+          return s > 0;
+        }).length) },
+        { label: "Högsta månad", value: peakM ? monthLabelShort(peakM) : "—", sub: peakH ? (measure === "hours" ? `${fmtHoursSv(peakH)} h` : String(Math.round(peakH))) : "" },
+        { label: "År", value: String(year) },
+      ];
+      for (const c of cards) {
+        const el = document.createElement("div");
+        el.className = "rounded-lg border border-slate-700 bg-slate-950/70 px-3 py-2";
+        el.innerHTML =
+          `<div class="text-[10px] uppercase tracking-wide text-slate-500">${c.label}</div>` +
+          `<div class="text-sm font-semibold text-slate-100 tabular-nums truncate">${c.value}</div>` +
+          (c.sub ? `<div class="text-[11px] text-slate-400 tabular-nums">${c.sub}</div>` : "");
+        els.chartSummaryStats.appendChild(el);
+      }
+    }
     els.statusText.textContent = `Helår ${year} • Statusar: ${statuses.length} • Visar: ${selectedStatuses.size}`;
     return;
   }
@@ -3365,6 +3569,7 @@ function renderAll(state) {
   const totalSum = sortedPeople.reduce((acc, r) => acc + (r.sum || 0), 0);
   renderTable(sortedPeople);
   setTableHeaderTotalsNormal(totalSum);
+  renderSummaryStats(sortedPeople, state);
   renderChart(chartData, statuses, selectedStatuses, chartPeople, { measure });
 
   const totalNames = totals.size;
@@ -3375,18 +3580,17 @@ function renderAll(state) {
     ? ` • Rader: ${stats.usedRows}/${stats.rawRows} (skip: tid=${stats.skippedNoTime}, namn=${stats.skippedNoName})`
     : "";
   const emp = state.employeeName ? ` • Anställd: ${state.employeeName}` : "";
-  const chartOrient = state.orientation || "horizontal";
-  const limit = state.verticalNames || "20";
-  const shownNames = chartOrient === "vertical" && !state.employeeName
-    ? (limit === "all" ? totalsView.size : Math.min(totalsView.size, Number(limit || 20)))
-    : totalsView.size;
-  const shownText = chartOrient === "vertical" && !state.employeeName ? ` • Visar namn: ${shownNames}/${totalsView.size}` : "";
+  const slideMeta = window.__tidrapport_slide_meta;
+  const slideText =
+    slideMeta && slideMeta.slideCount > 1
+      ? ` • Sida ${slideMeta.slideIndex + 1}/${slideMeta.slideCount} (${slideMeta.perSlide} namn/sida)`
+      : "";
   const nSrc = state.mergeSourceOrder?.length || 0;
   const mergeHint = state.mergedSourceSplit
     ? ` · Samlat: ${nSrc} staplar sida-vid-sida per person · ${totalStatusKinds} orsak-typer i filter · kort månad på stapeln.`
     : "";
   const chartNote = chartEnabled && chartPeople.length === 0 ? " • Diagram: 0 markerade namn" : "";
-  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${shownText}${statsText}${mergeHint}${chartNote}`;
+  els.statusText.textContent = `Namn: ${totalNames} • Statusar: ${totalStatusKinds} • Visar: ${selectedStatuses.size}${emp}${slideText}${statsText}${mergeHint}${chartNote}`;
 }
 
 function regenerateFromText(text, selectedOverride) {
@@ -3447,9 +3651,12 @@ function regenerateFromText(text, selectedOverride) {
   } = agg;
 
   if (fromMonthTemplate) {
-    // Visa alla personer stående med timetiketter — det är huvudsyftet med mallen.
-    if (els.orientationSelect) els.orientationSelect.value = "vertical";
+    // Liggande + slides är läsbart när många namn; summering visar totalt/topp/månad.
+    if (els.orientationSelect) els.orientationSelect.value = "horizontal";
     if (els.verticalNamesSelect) els.verticalNamesSelect.value = "all";
+    if (els.namesPerSlideSelect && !els.namesPerSlideSelect.value) {
+      els.namesPerSlideSelect.value = "18";
+    }
   }
 
   if (stats && stats.usedRows === 0) {
@@ -3534,6 +3741,7 @@ function regenerateFromText(text, selectedOverride) {
   const orientation = cleanStr(els.orientationSelect?.value) || "horizontal";
   const verticalNames = cleanStr(els.verticalNamesSelect?.value) || "20";
   const layout = cleanStr(els.layoutSelect?.value) || "side";
+  const hoursByMonth = computeHoursByMonthFromPaste(text);
   window.__tidrapport_state = {
     totals,
     totalsDays: totalsDays instanceof Map ? totalsDays : new Map(),
@@ -3549,6 +3757,9 @@ function regenerateFromText(text, selectedOverride) {
     mergedSourceSplit: !!mergedSourceSplit,
     baseStatuses,
     mergeSourceOrder,
+    hoursByMonth,
+    chartSlideIndex: 0,
+    fromMonthTemplate: !!fromMonthTemplate,
   };
   // update datalist with names
   if (els.employeeList) {
@@ -3947,13 +4158,69 @@ els.btnDownload.addEventListener("click", () => {
   const url = c.toBase64Image("image/png", 1);
   const a = document.createElement("a");
   a.href = url;
+  const slideMeta = window.__tidrapport_slide_meta;
+  const slideSuffix =
+    slideMeta && slideMeta.slideCount > 1
+      ? `_sida${slideMeta.slideIndex + 1}av${slideMeta.slideCount}`
+      : "";
   const safeTitle = (buildTitleText(window.__tidrapport_state || { statuses: [], selectedStatuses: [], employeeName: null }) || "tidrapport")
     .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
     .trim()
     .replace(/\s+/g, "_")
     .slice(0, 80);
-  a.download = `${safeTitle || "tidrapport"}_${new Date().toISOString().slice(0, 10)}.png`;
+  a.download = `${safeTitle || "tidrapport"}${slideSuffix}_${new Date().toISOString().slice(0, 10)}.png`;
   a.click();
+});
+
+function goChartSlide(delta) {
+  const st = window.__tidrapport_state;
+  if (!st) return;
+  const meta = window.__tidrapport_slide_meta;
+  if (!meta || meta.slideCount <= 1) return;
+  const next = Math.max(0, Math.min(meta.slideCount - 1, (meta.slideIndex || 0) + delta));
+  if (next === meta.slideIndex) return;
+  st.chartSlideIndex = next;
+  safeRenderAll(st);
+}
+
+els.btnSlidePrev?.addEventListener("click", () => goChartSlide(-1));
+els.btnSlideNext?.addEventListener("click", () => goChartSlide(1));
+
+els.namesPerSlideSelect?.addEventListener("change", () => {
+  const st = window.__tidrapport_state;
+  if (!st) return;
+  st.chartSlideIndex = 0;
+  safeRenderAll(st);
+});
+
+els.btnDownloadAllSlides?.addEventListener("click", async () => {
+  const st = window.__tidrapport_state;
+  const meta = window.__tidrapport_slide_meta;
+  if (!st || !meta || meta.slideCount <= 1) return;
+  const start = meta.slideIndex || 0;
+  const safeTitle = (buildTitleText(st) || "tidrapport")
+    .replace(/[^\w\s\-ÅÄÖåäö]/g, "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .slice(0, 60);
+  const day = new Date().toISOString().slice(0, 10);
+  for (let i = 0; i < meta.slideCount; i += 1) {
+    st.chartSlideIndex = i;
+    safeRenderAll(st);
+    await new Promise((r) => setTimeout(r, 120));
+    const c = ensureChart();
+    const url = c.toBase64Image("image/png", 1);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeTitle || "tidrapport"}_sida${i + 1}av${meta.slideCount}_${day}.png`;
+    a.click();
+    await new Promise((r) => setTimeout(r, 180));
+  }
+  st.chartSlideIndex = start;
+  safeRenderAll(st);
+  if (els.statusText) {
+    els.statusText.textContent = `Laddade ner ${meta.slideCount} PNG-sidor.`;
+  }
 });
 
 // Boot: rensa gamla sparade månader (localStorage) och visa tomt läge
