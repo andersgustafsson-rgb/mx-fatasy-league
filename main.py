@@ -1622,13 +1622,35 @@ def _merge_wsx_name_aliases() -> dict:
                 Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
             ).all()
         )
+        # Also catch case-only variants (Cameron Mcadoo vs Cameron McAdoo)
+        if not typo_rows:
+            typo_rows = (
+                Rider.query.filter(
+                    Rider.name.ilike(typo),
+                    Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+                )
+                .all()
+            )
+            typo_rows = [r for r in typo_rows if (r.name or "") != canon]
         for row in typo_rows:
             keeper = Rider.query.filter_by(
                 name=canon, class_name=row.class_name
             ).first()
             if keeper is None:
+                keeper = (
+                    Rider.query.filter(
+                        Rider.name.ilike(canon),
+                        Rider.class_name == row.class_name,
+                    ).first()
+                )
+            if keeper is None:
                 row.name = canon
                 merged += 1
+                continue
+            if int(keeper.id) == int(row.id):
+                if (row.name or "") != canon:
+                    row.name = canon
+                    merged += 1
                 continue
             remapped += _remap_wsx_rider_refs(int(row.id), int(keeper.id))
             db.session.delete(row)
@@ -1759,35 +1781,66 @@ def ensure_wsx_2026_roster() -> dict:
     for name, class_name, number, brand, team in _WSX_2026_ROSTER:
         rider = Rider.query.filter_by(name=name, class_name=class_name).first()
         if rider is None:
-            # Same person may already exist in the other WSX class
-            other = (
+            # Case / spelling variants already in DB (e.g. Cameron Mcadoo)
+            canon = _canonical_wsx_rider_name(name) or name
+            rider = (
                 Rider.query.filter(
-                    Rider.name == name,
-                    Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+                    Rider.name.ilike(name),
+                    Rider.class_name == class_name,
                 ).first()
             )
-            if other:
-                other.class_name = class_name
-                rider = other
-                reclassed += 1
-            else:
-                wsx_rel = _wsx_static_portrait_rel(name)
-                rider = Rider(
-                    name=name,
-                    class_name=class_name,
-                    rider_number=number,
-                    bike_brand=brand or None,
-                    manufacturer=brand or None,
-                    team=team or None,
-                    price=100000,
-                    series_participation="wsx",
-                    image_url=wsx_rel,
+            if rider is None and canon != name:
+                rider = (
+                    Rider.query.filter(
+                        Rider.name.ilike(canon),
+                        Rider.class_name == class_name,
+                    ).first()
                 )
-                db.session.add(rider)
-                created += 1
-                continue
+            if rider is not None:
+                if (rider.name or "") != name:
+                    rider.name = name
+                    reclassed += 1
+            else:
+                # Same person may already exist in the other WSX class
+                other = (
+                    Rider.query.filter(
+                        Rider.name == name,
+                        Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+                    ).first()
+                )
+                if other is None:
+                    other = (
+                        Rider.query.filter(
+                            Rider.name.ilike(name),
+                            Rider.class_name.in_(("wsx_sx1", "wsx_sx2")),
+                        ).first()
+                    )
+                if other:
+                    other.class_name = class_name
+                    other.name = name
+                    rider = other
+                    reclassed += 1
+                else:
+                    wsx_rel = _wsx_static_portrait_rel(name)
+                    rider = Rider(
+                        name=name,
+                        class_name=class_name,
+                        rider_number=number,
+                        bike_brand=brand or None,
+                        manufacturer=brand or None,
+                        team=team or None,
+                        price=100000,
+                        series_participation="wsx",
+                        image_url=wsx_rel,
+                    )
+                    db.session.add(rider)
+                    created += 1
+                    continue
 
         changed = False
+        if (rider.name or "") != name:
+            rider.name = name
+            changed = True
         if number is not None and rider.rider_number != number:
             rider.rider_number = number
             changed = True
@@ -5154,6 +5207,7 @@ _WSX_NAME_ALIASES = {
     "Crockett Myers": "Crockett Meyers",
     "Michael Alessi": "Mike Alessi",
     "Mike Alesssi": "Mike Alessi",
+    "Cameron Mcadoo": "Cameron McAdoo",
 }
 
 # Common first-name variants for results matching (normalized).
@@ -15995,6 +16049,69 @@ def fetch_wsx_official_results():
         return jsonify({"error": str(e)}), 500
 
 
+def _clear_wsx_competition_results(competition_id: int, class_names: set[str] | None = None) -> int:
+    """Delete WSX result rows for a competition. If class_names is None, delete all."""
+    rows = (
+        db.session.query(CompetitionResult, Rider)
+        .outerjoin(Rider, Rider.id == CompetitionResult.rider_id)
+        .filter(CompetitionResult.competition_id == int(competition_id))
+        .all()
+    )
+    deleted = 0
+    for result, rider in rows:
+        if class_names is None:
+            db.session.delete(result)
+            deleted += 1
+            continue
+        result_class = _normalize_result_class(
+            getattr(result, "class_name", None),
+            getattr(rider, "class_name", None) if rider else None,
+        )
+        rider_class = (getattr(rider, "class_name", None) or "").strip() if rider else ""
+        if result_class in class_names or rider_class in class_names:
+            db.session.delete(result)
+            deleted += 1
+            continue
+        # Orphan / odd class labels still tied to this WSX round
+        raw = (getattr(result, "class_name", None) or "").strip().lower()
+        if raw in {"sx1", "sx2", "450cc", "250cc", "wsx_sx1", "wsx_sx2"} and (
+            ("wsx_sx1" in class_names and raw in {"sx1", "450cc", "wsx_sx1"})
+            or ("wsx_sx2" in class_names and raw in {"sx2", "250cc", "wsx_sx2"})
+        ):
+            db.session.delete(result)
+            deleted += 1
+    return deleted
+
+
+def _upsert_wsx_result_row(
+    *,
+    competition_id: int,
+    rider: Rider,
+    class_name: str,
+    position: int,
+    rider_points: int | None = None,
+) -> None:
+    existing = CompetitionResult.query.filter_by(
+        competition_id=competition_id,
+        rider_id=rider.id,
+    ).first()
+    if existing:
+        existing.position = int(position)
+        existing.class_name = class_name
+        if rider_points is not None and hasattr(existing, "rider_points"):
+            existing.rider_points = int(rider_points)
+    else:
+        kwargs = {
+            "competition_id": competition_id,
+            "rider_id": rider.id,
+            "position": int(position),
+            "class_name": class_name,
+        }
+        if rider_points is not None:
+            kwargs["rider_points"] = int(rider_points)
+        db.session.add(CompetitionResult(**kwargs))
+
+
 @app.post("/import_wsx_official_results")
 def import_wsx_official_results():
     """Importera tidigare previewade WSX-rader. Ersätter valda klassers resultat."""
@@ -16026,27 +16143,20 @@ def import_wsx_official_results():
         cleared_total = 0
         per_class = {}
 
+        active_classes = {
+            cn for cn in ("wsx_sx1", "wsx_sx2") if classes.get(cn)
+        }
+        if replace and active_classes:
+            # Nuke selected classes completely (incl. orphans/dupes) before write.
+            cleared_total = _clear_wsx_competition_results(
+                int(competition_id), active_classes
+            )
+            db.session.flush()
+
         for class_name in ("wsx_sx1", "wsx_sx2"):
             rows = classes.get(class_name) or []
             if not rows:
                 continue
-
-            cleared = 0
-            if replace:
-                existing_rows = (
-                    db.session.query(CompetitionResult, Rider)
-                    .join(Rider, Rider.id == CompetitionResult.rider_id)
-                    .filter(CompetitionResult.competition_id == competition_id)
-                    .all()
-                )
-                for result, rider in existing_rows:
-                    result_class = _normalize_result_class(
-                        getattr(result, "class_name", None), rider.class_name
-                    )
-                    if result_class == class_name:
-                        db.session.delete(result)
-                        cleared += 1
-                cleared_total += cleared
 
             imported = 0
             skipped = []
@@ -16071,27 +16181,23 @@ def import_wsx_official_results():
                 if not rider:
                     skipped.append(row)
                     continue
-                existing = CompetitionResult.query.filter_by(
-                    competition_id=competition_id,
-                    rider_id=rider.id,
-                ).first()
-                if existing:
-                    existing.position = int(position)
-                    existing.class_name = class_name
-                else:
-                    db.session.add(
-                        CompetitionResult(
-                            competition_id=competition_id,
-                            rider_id=rider.id,
-                            position=int(position),
-                            class_name=class_name,
-                        )
-                    )
+                pts = row.get("points")
+                try:
+                    pts_i = int(pts) if pts is not None else None
+                except (TypeError, ValueError):
+                    pts_i = None
+                _upsert_wsx_result_row(
+                    competition_id=int(competition_id),
+                    rider=rider,
+                    class_name=class_name,
+                    position=int(position),
+                    rider_points=pts_i,
+                )
                 imported += 1
             per_class[class_name] = {
                 "imported": imported,
                 "skipped": skipped,
-                "cleared": cleared,
+                "cleared": cleared_total if class_name in active_classes else 0,
             }
             imported_total += imported
             skipped_total.extend(skipped)
@@ -16190,31 +16296,15 @@ def sync_wsx_official_results():
             ]
             missing_all.extend(missing)
 
-        # Inline replace-import (same as import_wsx_official_results)
+        # Always wipe ALL results for this WSX round (kills 2x duplicates).
+        cleared_total = _clear_wsx_competition_results(int(competition_id), None)
+        db.session.flush()
+
         imported_total = 0
-        cleared_total = 0
         skipped_total = []
         per_class = {}
         for class_name in ("wsx_sx1", "wsx_sx2"):
             rows = classes_payload.get(class_name) or []
-            if not rows:
-                continue
-            existing_rows = (
-                db.session.query(CompetitionResult, Rider)
-                .join(Rider, Rider.id == CompetitionResult.rider_id)
-                .filter(CompetitionResult.competition_id == competition_id)
-                .all()
-            )
-            cleared = 0
-            for result, rider in existing_rows:
-                result_class = _normalize_result_class(
-                    getattr(result, "class_name", None), rider.class_name
-                )
-                if result_class == class_name:
-                    db.session.delete(result)
-                    cleared += 1
-            cleared_total += cleared
-
             imported = 0
             skipped = []
             for row in rows:
@@ -16232,19 +16322,23 @@ def sync_wsx_official_results():
                 if not rider:
                     skipped.append(row)
                     continue
-                db.session.add(
-                    CompetitionResult(
-                        competition_id=competition_id,
-                        rider_id=rider.id,
-                        position=int(position),
-                        class_name=class_name,
-                    )
+                pts = row.get("points")
+                try:
+                    pts_i = int(pts) if pts is not None else None
+                except (TypeError, ValueError):
+                    pts_i = None
+                _upsert_wsx_result_row(
+                    competition_id=int(competition_id),
+                    rider=rider,
+                    class_name=class_name,
+                    position=int(position),
+                    rider_points=pts_i,
                 )
                 imported += 1
             per_class[class_name] = {
                 "imported": imported,
                 "skipped": skipped,
-                "cleared": cleared,
+                "cleared": cleared_total,
             }
             imported_total += imported
             skipped_total.extend(skipped)
