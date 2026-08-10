@@ -209,10 +209,47 @@ def _race_leaderboard(competition_id: int, limit: int) -> list[dict[str, Any]]:
     return rows[: max(1, limit)]
 
 
-def _season_top_snippet(limit: int = 5) -> list[dict[str, Any]]:
+def _season_top_snippet(
+    limit: int = 5,
+    *,
+    comp: Competition | None = None,
+) -> list[dict[str, Any]]:
+    """Season fantasy highscore — WSX races use WSX season board only."""
+    series = (getattr(comp, "series", None) or "").upper() if comp else ""
+    out: list[dict[str, Any]] = []
+
+    if series == "WSX":
+        from main import (
+            fantasy_wsx_leaderboard_for_year,
+            _active_wsx_season_year,
+        )
+        from models import Series as SeriesModel
+
+        year = _active_wsx_season_year()
+        try:
+            if comp is not None and getattr(comp, "series_id", None):
+                srow = SeriesModel.query.get(int(comp.series_id))
+                if srow and srow.year:
+                    year = int(srow.year)
+            elif comp is not None and comp.event_date:
+                year = int(comp.event_date.year)
+        except Exception:
+            pass
+        rows = fantasy_wsx_leaderboard_for_year(int(year))
+        for i, row in enumerate(rows[: max(1, limit)]):
+            item = {
+                "user_id": row["user_id"],
+                "username": row.get("username") or "?",
+                "display_name": row.get("display_name") or row.get("username") or "?",
+                "points": int(row.get("total_points") or 0),
+                "rank": _leaderboard_rank(row, i + 1),
+            }
+            _attach_user_meta(item)
+            out.append(item)
+        return out
+
     from main import calculate_leaderboard_deltas
 
-    out = []
     for i, row in enumerate(calculate_leaderboard_deltas()[: max(1, limit)]):
         item = {
             "user_id": row["user_id"],
@@ -224,6 +261,13 @@ def _season_top_snippet(limit: int = 5) -> list[dict[str, Any]]:
         _attach_user_meta(item)
         out.append(item)
     return out
+
+
+def _season_snippet_title(comp: Competition | None = None) -> str:
+    series = (getattr(comp, "series", None) or "").upper() if comp else ""
+    if series == "WSX":
+        return "WSX SÄSONGSTOPPEN"
+    return "SÄSONGSTOPPEN"
 
 
 def _comp_ids_for_recap_week(comp: Competition | None) -> list[int]:
@@ -1017,9 +1061,11 @@ def build_social_recap_data(
         data["weekly_highlights"] = []
 
     if include_season_snippet:
-        data["season_top_snippet"] = _season_top_snippet(data["season_top"])
+        data["season_top_snippet"] = _season_top_snippet(data["season_top"], comp=comp)
+        data["season_snippet_title"] = _season_snippet_title(comp)
     else:
         data["season_top_snippet"] = []
+        data["season_snippet_title"] = _season_snippet_title(comp)
 
     if include_facts:
         data["fun_facts"] = _compute_fun_facts(comp, competition_id)
@@ -1062,7 +1108,8 @@ def build_facebook_caption(data: dict[str, Any]) -> str:
 
     snippet = data.get("season_top_snippet") or []
     if data.get("modules", {}).get("season_snippet") and snippet:
-        lines.append("📊 Säsongstoppen:")
+        title = data.get("season_snippet_title") or "Säsongstoppen"
+        lines.append(f"📊 {title}:")
         for row in snippet:
             rk = row.get("rank", "?")
             nm = row.get("display_name") or "?"
@@ -2019,7 +2066,8 @@ def _draw_season_top_snippet(
     right = x1 if x1 is not None else cw - _sz(36)
     title_h = 64 if large else _sz(52)
     panel_h = title_h + list_top_pad + len(rows) * row_h + (12 if large else _sz(8))
-    _draw_panel(draw, (margin, y0, right, y0 + panel_h), "Säsongstoppen", large=large)
+    panel_title = data.get("season_snippet_title") or "Säsongstoppen"
+    _draw_panel(draw, (margin, y0, right, y0 + panel_h), panel_title, large=large)
     av = 30 if large else _sz(26)
     av_x = margin + (58 if large else _sz(56))
     rank_x = av_x + av + 4 + 16
@@ -2480,7 +2528,7 @@ _RECAP_ARTIFACT_INPAINT = [
     {"x0": 2032, "y0": 1000, "x1": 2125, "y1": 1072},
     {"x0": 2040, "y0": 1290, "x1": 2155, "y1": 1375},
 ]
-RECAP_RENDERER_REV = "45-list-stats"
+RECAP_RENDERER_REV = "46-wsx-season"
 
 
 # Pallnamn (#96 H. Lawrence …) — ned i namnplattan (~0,5 cm). Legacy template only.
@@ -4725,10 +4773,11 @@ def _render_recap_stats_list(data: dict[str, Any]) -> bytes:
 
     # Season top
     if mods.get("season_snippet") and data.get("season_top_snippet"):
+        season_title = (data.get("season_snippet_title") or "SÄSONGSTOPPEN").upper()
         draw.rectangle([margin, y, margin + 8, y + 28], fill=GOLD)
         draw.text(
             (margin + 18, y + 14),
-            "SÄSONGSTOPPEN",
+            season_title,
             font=_load_font_px(22, bold=True),
             fill=WHITE,
             anchor="lm",
