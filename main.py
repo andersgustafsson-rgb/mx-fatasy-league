@@ -18456,6 +18456,52 @@ def _completed_competitions_for_recap(limit: int | None = 8) -> list[Competition
     return q.all()
 
 
+def _competition_is_older_or_same(comp: Competition, anchor: Competition) -> bool:
+    """True if comp is the anchor or chronologically older."""
+    if int(comp.id) == int(anchor.id):
+        return True
+    a_date = getattr(anchor, "event_date", None)
+    c_date = getattr(comp, "event_date", None)
+    if a_date and c_date:
+        if c_date < a_date:
+            return True
+        if c_date > a_date:
+            return False
+        return int(comp.id) <= int(anchor.id)
+    return int(comp.id) <= int(anchor.id)
+
+
+def _dismiss_din_kvall_for_user(
+    user_id: int,
+    anchor: Competition,
+    *,
+    include_anchor: bool = True,
+) -> int:
+    """
+    Mark Din kväll seen for the anchor race and (by default) all older completed races.
+    Prevents a queue of old popups (Millville → Southwick → …) after a reset.
+    """
+    existing = {
+        int(r.competition_id)
+        for r in UserRaceRecapDismissal.query.filter_by(user_id=int(user_id)).all()
+    }
+    added = 0
+    for comp in _completed_competitions_for_recap(limit=40):
+        if not _competition_is_older_or_same(comp, anchor):
+            continue
+        if not include_anchor and int(comp.id) == int(anchor.id):
+            continue
+        cid = int(comp.id)
+        if cid in existing:
+            continue
+        db.session.add(UserRaceRecapDismissal(user_id=int(user_id), competition_id=cid))
+        existing.add(cid)
+        added += 1
+    if added:
+        db.session.commit()
+    return added
+
+
 def _competition_race_ranks(competition_id: int) -> dict[int, dict]:
     """user_id -> {rank, points, field_size, avg_points} for one race."""
     rows = (
@@ -18538,7 +18584,8 @@ def _personal_race_recap_highlights(user_id: int, competition_id: int) -> list[d
 def _build_personal_race_recap(user_id: int, competition_id: int | None = None) -> dict | None:
     """Payload for Din kväll popup. None if nothing eligible."""
     today = get_today()
-    max_age_days = 35  # visa senaste avslutade race inom denna tid (en gång)
+    # Endast färskt race — äldre ska inte köas upp efter dismiss/reset.
+    max_age_days = 12
 
     if competition_id:
         comp = Competition.query.get(competition_id)
@@ -18557,25 +18604,47 @@ def _build_personal_race_recap(user_id: int, competition_id: int | None = None) 
 
     chosen = None
     my_points = None
-    for comp in comps:
-        cid = int(comp.id)
-        if competition_id is None and cid in dismissed_ids:
-            continue
-        if (
-            competition_id is None
-            and comp.event_date
-            and (today - comp.event_date).days > max_age_days
-        ):
-            continue
-        pts = _user_competition_points(user_id, cid)
-        if pts is None:
-            continue
-        chosen = comp
-        my_points = pts
-        break
+
+    if competition_id is not None:
+        # Explicit race (dela-kort / PNG) — tillåt även om redan dismissed.
+        for comp in comps:
+            pts = _user_competition_points(user_id, int(comp.id))
+            if pts is None:
+                continue
+            chosen = comp
+            my_points = pts
+            break
+    else:
+        # Popup: endast det senaste raceet användaren tippat inom fönstret.
+        # Om det redan är stängt → visa inget (köa inte Millville→Southwick→…).
+        newest = None
+        newest_pts = None
+        for comp in comps:
+            if (
+                comp.event_date
+                and (today - comp.event_date).days > max_age_days
+            ):
+                continue
+            pts = _user_competition_points(user_id, int(comp.id))
+            if pts is None:
+                continue
+            newest = comp
+            newest_pts = pts
+            break
+        if newest is not None and int(newest.id) not in dismissed_ids:
+            chosen = newest
+            my_points = newest_pts
 
     if not chosen or my_points is None:
         return None
+
+    # Auto-path: stäng äldre race tyst så de aldrig poppar efter denna.
+    if competition_id is None:
+        try:
+            _dismiss_din_kvall_for_user(user_id, chosen, include_anchor=False)
+        except Exception as e:
+            db.session.rollback()
+            print(f"din_kvall auto-dismiss older failed: {e}")
 
     ranks = _competition_race_ranks(int(chosen.id))
     me = ranks.get(int(user_id)) or {}
@@ -18977,7 +19046,7 @@ def api_din_kvall_png():
 
 @app.post("/api/race_recap/seen")
 def api_race_recap_seen():
-    """Mark Din kväll as seen for a competition."""
+    """Mark Din kväll as seen for a competition (and all older races)."""
     if "user_id" not in session:
         return jsonify({"ok": False, "error": "not_logged_in"}), 401
     uid = int(session["user_id"])
@@ -18989,13 +19058,11 @@ def api_race_recap_seen():
         return jsonify({"ok": False, "error": "missing_competition_id"}), 400
     try:
         _ensure_race_recap_table()
-        existing = UserRaceRecapDismissal.query.filter_by(
-            user_id=uid, competition_id=comp_id
-        ).first()
-        if not existing:
-            db.session.add(UserRaceRecapDismissal(user_id=uid, competition_id=comp_id))
-            db.session.commit()
-        return jsonify({"ok": True})
+        comp = Competition.query.get(comp_id)
+        if not comp:
+            return jsonify({"ok": False, "error": "not_found"}), 404
+        added = _dismiss_din_kvall_for_user(uid, comp, include_anchor=True)
+        return jsonify({"ok": True, "dismissed": int(added)})
     except Exception as e:
         db.session.rollback()
         print(f"api_race_recap_seen error: {e}")

@@ -272,9 +272,14 @@
 
   function alreadySeen(competitionId) {
     if (!competitionId) return true;
+    // Ny reshow-token: rensa lokal lista EN gång, ignorera inte allt för alltid.
     try {
-      if (serverReshowToken && localStorage.getItem(RESHOW_TOKEN_KEY) !== String(serverReshowToken)) {
-        return false;
+      if (serverReshowToken) {
+        var stored = localStorage.getItem(RESHOW_TOKEN_KEY);
+        if (stored !== String(serverReshowToken)) {
+          localStorage.setItem(SEEN_KEY, JSON.stringify([]));
+          localStorage.setItem(RESHOW_TOKEN_KEY, String(serverReshowToken));
+        }
       }
     } catch (e) {}
     var id = String(competitionId);
