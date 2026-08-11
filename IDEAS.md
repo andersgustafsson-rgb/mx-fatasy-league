@@ -13,7 +13,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
 | 4 | **SEO / “citerbara” tippa-sidor** | Gjort (v3) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`, **`/tippa-smx`**, **`/tippa-wsx`** + sitemap/llms.txt. |
 | 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
-| 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Seed + reset:** top 20 från SX+MX → startpoäng 25/22/20/18…/#20=2; wild cards 0. SMX-ställning = seed + playoff 1×/2×/3× (inte full SX+MX-carry). Valfritt: arkivera MX fantasy, fixa serie-`end_date` (Ironman 29 aug / Final 26 sep). Källa: [about-smx](https://www.supermotocross.com/about-smx/) + [playoffs](https://www.supermotocross.com/playoffs/). |
+| 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Tippoäng:** samma highscore rullar vidare (ingen nollställning). SMX-rundor multipliceras **1× / 2× / 3×** (Playoff 1/2/Final) på race+HS+WC — lika för alla. **Förar-ställning (senare):** seed + reset för SMX-titel separat från tipp-highscore. Valfritt: arkivera MX fantasy-historik, fixa serie-`end_date`. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 
 ---

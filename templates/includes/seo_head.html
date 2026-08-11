@@ -4,7 +4,7 @@
 {% set _path = seo_path|default('/', true) %}
 {% set _base = public_base_url|default(request.url_root.rstrip('/'), true) %}
 {% set _url = _base ~ _path %}
-{% set _img = seo_image|default(_base ~ url_for('static', filename='images/mx_fantasy_logo.png'), true) %}
+{% set _img = seo_image|default(_base ~ url_for('static', filename='images/og_default.jpg'), true) %}
 {% set _keywords = seo_keywords|default('fantasy motocross, fantasy mx, mx spel, tippa motocross, tippa supercross, tippa mx, motocross tippning, supercross fantasy, mx fantasy sverige, SMX fantasy, WSX fantasy, gratis fantasy sport, motocross spel online, fantasy racing, MX Fantasy League', true) %}
 <title>{{ _title }}</title>
 <meta name="description" content="{{ _desc }}">
@@ -18,6 +18,9 @@
 <meta property="og:description" content="{{ _desc }}">
 <meta property="og:url" content="{{ _url }}">
 <meta property="og:image" content="{{ _img }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ _title }}">
 <meta name="twitter:description" content="{{ _desc }}">
