@@ -22,6 +22,28 @@ MX_NAME_MATCH_TOKENS: dict[str, list[str]] = {
     "Ironman National": ["ironman"],
 }
 
+# Official 2026 SMX playoff maps from supermotocross.com/playoffs/
+SMX_TRACKMAP_FILES: dict[str, list[str]] = {
+    "SMX Playoff 1": [
+        "trackmaps/smx/smx_playoff1_columbus.jpg",
+        "trackmaps/smx/smx_playoff1_columbus_poster.jpg",
+    ],
+    "SMX Playoff 2": [
+        "trackmaps/smx/smx_playoff2_carson.jpg",
+        "trackmaps/smx/smx_playoff2_carson_poster.jpg",
+    ],
+    "SMX Final": [
+        "trackmaps/smx/smx_final_ridgedale.jpg",
+        "trackmaps/smx/smx_final_ridgedale_poster.jpg",
+    ],
+}
+
+SMX_VENUE_LABELS: dict[str, str] = {
+    "SMX Playoff 1": "Historic Crew Stadium · Columbus, OH · 12 sep",
+    "SMX Playoff 2": "Dignity Health Sports Park · Carson, CA · 19 sep",
+    "SMX Final": "Thunder Ridge Nature Arena · Ridgedale, MO · 26 sep",
+}
+
 # URL-safe path first (Render/nginx struggle with spaces in static paths)
 MX_TRACKMAP_DIR_CANDIDATES = (
     Path("static/trackmaps/pro_motocross"),
@@ -91,6 +113,25 @@ def _score_file(fname: str, tokens: Sequence[str]) -> int:
         elif stem in t:
             best = max(best, 60)
     return best
+
+
+def is_smx_competition(competition) -> bool:
+    series = (getattr(competition, "series", None) or "").strip().upper()
+    if series == "SMX":
+        return True
+    name = (getattr(competition, "name", None) or "").strip()
+    return name in SMX_TRACKMAP_FILES
+
+
+def resolve_smx_trackmap_urls(competition_name: str) -> List[str]:
+    """Static-relative paths for SMX Playoff/Final maps (local files under trackmaps/smx/)."""
+    name = (competition_name or "").strip()
+    files = SMX_TRACKMAP_FILES.get(name) or []
+    out: list[str] = []
+    for rel in files:
+        if (Path("static") / rel).is_file():
+            out.append(rel)
+    return out
 
 
 def is_mx_competition(competition) -> bool:
@@ -168,6 +209,14 @@ def race_background_static_url(competition) -> Optional[str]:
         urls = resolve_mx_trackmap_urls(name)
         return urls[0] if urls else None
 
+    if is_smx_competition(competition):
+        urls = resolve_smx_trackmap_urls(name)
+        # Prefer track map over poster for race background
+        for u in urls:
+            if "poster" not in u:
+                return u
+        return urls[0] if urls else None
+
     slug = (
         name.lower()
         .replace(" ", "")
@@ -236,7 +285,7 @@ def as_trackmap_image_objects(urls: Sequence[str]) -> list[SimpleNamespace]:
 
 def get_trackmaps_for_competition(competition) -> list:
     """
-    DB CompetitionImage rows first; for MX series fall back to pro motocross folder.
+    DB CompetitionImage rows first; for MX/SMX fall back to static trackmap folders.
     """
     from models import CompetitionImage
 
@@ -269,6 +318,10 @@ def get_trackmaps_for_competition(competition) -> list:
     if valid_db:
         return valid_db
 
+    if is_smx_competition(competition):
+        urls = resolve_smx_trackmap_urls(competition.name or "")
+        return as_trackmap_image_objects(urls)
+
     if not is_mx_competition(competition):
         return []
 
@@ -291,6 +344,22 @@ def get_picks_good_to_know(competition) -> list[str]:
                 "Deadline är 2 timmar före start — spara picks i tid.",
             ]
         )
+        return tips
+
+    if is_smx_competition(competition):
+        name = (getattr(competition, "name", None) or "").strip()
+        venue = SMX_VENUE_LABELS.get(name, "")
+        mult = getattr(competition, "point_multiplier", None) or 1.0
+        tips.extend(
+            [
+                "SMX Playoffs: två moto + overall (Olympic scoring) — tippa overall-placering.",
+                f"Poängmultiplikator denna runda: {mult:g}× (Playoff 1 = 1×, Playoff 2 = 2×, Final = 3×).",
+                "Top 20 från kombinerad SX+MX är seedade; wild cards startar på 0 i SMX-titeln.",
+                "Deadline är 2 timmar före start — spara picks i tid.",
+            ]
+        )
+        if venue:
+            tips.insert(0, venue)
         return tips
 
     if series == "WSX":

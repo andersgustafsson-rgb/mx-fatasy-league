@@ -13,6 +13,8 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 3 | **PWA-banner bara på mobil** | Inte beslutat | Syns på desktop via Chrome “Installera”. Frågat om begränsa till mobil — ej svarat. |
 | 4 | **SEO / “citerbara” `/om` + `/manual` + tippa-sidor** | Gjort (v2) | `/om`, `/manual`, `/tippa-supercross`, `/tippa-motocross`. SMX/WSX-sidor kan läggas till senare. |
 | 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
+| 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Seed + reset:** top 20 från SX+MX → startpoäng 25/22/20/18…/#20=2; wild cards 0. SMX-ställning = seed + playoff 1×/2×/3× (inte full SX+MX-carry). Valfritt: arkivera MX fantasy, fixa serie-`end_date` (Ironman 29 aug / Final 26 sep). Källa: [about-smx](https://www.supermotocross.com/about-smx/) + [playoffs](https://www.supermotocross.com/playoffs/). |
+| 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 
 ---
 
@@ -46,6 +48,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 - Gemini “blockerad för AI-botar”: **nej** — `robots.txt` tillåter crawl. Skillnad mot fantasy.mxsm.se ≈ känt **MXSM**-varumärke + mer indexerat innehåll.
 - Cursor Agents-chatten har delvis eget tema (följer inte alltid editor-temat).
 - Jobbets DNS kan cacha NXDOMAIN länge — testa med mobildata vid domänbyten.
+- **SMX 2026 playoffs** ([playoffs](https://www.supermotocross.com/playoffs/)): Playoff 1 Columbus Historic Crew Stadium 12 sep · Playoff 2 Carson Dignity Health Sports Park 19 sep · Final Ridgedale Thunder Ridge 26 sep. Track maps + venue posters publicerade.
 
 ---
 
