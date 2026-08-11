@@ -616,6 +616,8 @@ def _llms_txt_body(base: str) -> str:
         f"- [Om spelet]({base}/om): vad MX Fantasy League är, hur tippning fungerar, FAQ\n"
         f"- [Tippa supercross]({base}/tippa-supercross): tippa AMA Supercross / SX gratis\n"
         f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
+        f"- [Tippa SMX]({base}/tippa-smx): tippa SuperMotocross Playoffs / Final gratis\n"
+        f"- [Tippa WSX]({base}/tippa-wsx): tippa World Supercross (SX1/SX2) gratis\n"
         f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
         f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
         f"- [Registrera]({base}/register): gratis konto\n"
@@ -672,6 +674,8 @@ def sitemap_xml():
         ("/om", "weekly", "0.95"),
         ("/tippa-supercross", "weekly", "0.9"),
         ("/tippa-motocross", "weekly", "0.9"),
+        ("/tippa-smx", "weekly", "0.9"),
+        ("/tippa-wsx", "weekly", "0.9"),
         ("/start", "weekly", "0.9"),
         ("/manual", "monthly", "0.85"),
         ("/llms.txt", "monthly", "0.4"),
@@ -799,6 +803,16 @@ def _tippa_supercross_page_data() -> dict:
                 "label": "Tippa Motocross (MX)",
                 "blurb": "utomhus-Pro Motocross, heat och overall",
             },
+            {
+                "href": "/tippa-smx",
+                "label": "Tippa SMX (Playoffs)",
+                "blurb": "SuperMotocross slutspel 1×/2×/3×",
+            },
+            {
+                "href": "/tippa-wsx",
+                "label": "Tippa WSX",
+                "blurb": "World Supercross Championship",
+            },
         ],
     }
 
@@ -880,6 +894,203 @@ def _tippa_motocross_page_data() -> dict:
                 "label": "Tippa Supercross (SX)",
                 "blurb": "amerikansk arenasupercross",
             },
+            {
+                "href": "/tippa-smx",
+                "label": "Tippa SMX (Playoffs)",
+                "blurb": "SuperMotocross slutspel efter SX+MX",
+            },
+            {
+                "href": "/tippa-wsx",
+                "label": "Tippa WSX",
+                "blurb": "World Supercross Championship",
+            },
+        ],
+    }
+
+
+def _tippa_smx_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag SMX / SuperMotocross?",
+            "a": "Skapa gratis konto på mx-fantasy.se, välj SMX Finals när slutspelet är aktivt, öppna Playoff 1, Playoff 2 eller Finalen och tippa topp 6, holeshot och wildcard innan deadline.",
+            "a_plain": "Skapa gratis konto på mx-fantasy.se, välj SMX Finals när slutspelet är aktivt, öppna Playoff 1, Playoff 2 eller Finalen och tippa topp 6, holeshot och wildcard innan deadline.",
+        },
+        {
+            "q": "Vad är skillnaden mellan SX, MX och SMX?",
+            "a": "Supercross (SX) är arena, Pro Motocross (MX) är utomhus. SMX är slutspelet efter SX+MX: tre rundor där toppryttare från den kombinerade säsongen gör upp om SMX-titeln.",
+            "a_plain": "Supercross (SX) är arena, Pro Motocross (MX) är utomhus. SMX är slutspelet efter SX+MX: tre rundor där toppryttare från den kombinerade säsongen gör upp om SMX-titeln.",
+        },
+        {
+            "q": "Vad betyder 1×, 2× och 3× i SMX?",
+            "a": "Playoff 1 ger normala poäng (1×), Playoff 2 dubbla (2×) och SMX Final trippla (3×). I fantasy påverkar multiplikatorn hur mycket race-resultatet väger i tippspelet beroende på hur poängen är uppsatta för den tävlingen.",
+            "a_plain": "Playoff 1 ger normala poäng (1×), Playoff 2 dubbla (2×) och SMX Final trippla (3×). I fantasy påverkar multiplikatorn hur mycket race-resultatet väger i tippspelet beroende på hur poängen är uppsatta för den tävlingen.",
+        },
+        {
+            "q": "Kostar det att tippa SMX?",
+            "a": "Nej. Konto, tips, ligor och leaderboard är gratis. Ingen betting — bara fantasypoäng.",
+            "a_plain": "Nej. Konto, tips, ligor och leaderboard är gratis. Ingen betting — bara fantasypoäng.",
+        },
+        {
+            "q": "När är SMX Playoffs 2026?",
+            "a": "Enligt kalendern: Playoff 1 Columbus 12 september, Playoff 2 Carson/LA 19 september, Final Ridgedale 26 september. Se alltid datum och deadline i appen.",
+            "a_plain": "Enligt kalendern: Playoff 1 Columbus 12 september, Playoff 2 Carson/LA 19 september, Final Ridgedale 26 september. Se alltid datum och deadline i appen.",
+        },
+        {
+            "q": "Kan man tippa både 450 och 250 i SMX?",
+            "a": "Ja. Du tippar topp 6 i klasserna som gäller för racehelgen, plus holeshot och wildcard enligt spelets setup.",
+            "a_plain": "Ja. Du tippar topp 6 i klasserna som gäller för racehelgen, plus holeshot och wildcard enligt spelets setup.",
+        },
+    ]
+    return {
+        "path": "/tippa-smx",
+        "series_short": "SMX",
+        "breadcrumb_name": "Tippa SMX",
+        "seo_title": "Tippa SMX / SuperMotocross — gratis fantasy SMX-spel | MX Fantasy League",
+        "seo_description": (
+            "Hur tippar man SuperMotocross (SMX) online? Gratis fantasy SMX-spel i MX Fantasy League: "
+            "Playoff 1–2 och Final — topp 6, holeshot och wildcard utan betting."
+        ),
+        "seo_keywords": (
+            "tippa smx, tippa supermotocross, fantasy smx, supermotocross fantasy, "
+            "smx playoffs tippning, smx final fantasy, tippa smx sverige, "
+            "gratis fantasy supermotocross, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag SMX / SuperMotocross?",
+        "lead": (
+            "Vill du tippa SuperMotocross (SMX) online? I MX Fantasy League tippar du "
+            "Playoff 1, Playoff 2 och SMX Final — gratis fantasy utan betting, på mx-fantasy.se."
+        ),
+        "what_title": "Vad är tippa SMX / fantasy SuperMotocross?",
+        "what_paragraphs": [
+            (
+                "SMX World Championship är slutspelet efter AMA Supercross och Pro Motocross: "
+                "tre racehelger där de bästa från den kombinerade säsongen gör upp. "
+                "Playoff 2 ger dubbla poäng och Finalen trippla i den officiella SMX-titeln."
+            ),
+            (
+                "I MX Fantasy League tippar du inför varje SMX-runda precis som i SX/MX: "
+                "topp 6, holeshot och wildcard. Perfekt om du följer hela amerikanska säsongen "
+                "och vill ha ett smx-spel på svenska."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> på mx-fantasy.se — gratis.",
+            "<strong class=\"text-white\">Välj SMX Finals</strong> när slutspelet är igång (efter Pro Motocross).",
+            "<strong class=\"text-white\">Öppna Playoff 1, 2 eller Finalen</strong> och tippa topp 6.",
+            "<strong class=\"text-white\">Lägg holeshot och wildcard</strong> innan deadline (ofta 2 h före start).",
+            "<strong class=\"text-white\">Följ poängen</strong> — Finalen väger tyngst (3×).",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": [
+            {
+                "href": "/tippa-supercross",
+                "label": "Tippa Supercross (SX)",
+                "blurb": "arenaserien som bygger mot SMX",
+            },
+            {
+                "href": "/tippa-motocross",
+                "label": "Tippa Motocross (MX)",
+                "blurb": "utomhus-nationals före slutspelet",
+            },
+            {
+                "href": "/tippa-wsx",
+                "label": "Tippa WSX",
+                "blurb": "World Supercross Championship",
+            },
+        ],
+    }
+
+
+def _tippa_wsx_page_data() -> dict:
+    faq = [
+        {
+            "q": "Hur tippar jag WSX / World Supercross?",
+            "a": "Skapa gratis konto, välj serien WSX, öppna nästa GP (t.ex. Canadian GP) och tippa topp 6 i SX1 och SX2 plus holeshot innan deadline.",
+            "a_plain": "Skapa gratis konto, välj serien WSX, öppna nästa GP (t.ex. Canadian GP) och tippa topp 6 i SX1 och SX2 plus holeshot innan deadline.",
+        },
+        {
+            "q": "Vad är WSX jämfört med AMA Supercross?",
+            "a": "WSX (World Supercross Championship) är FIM:s världscup med internationella GP-rundor och klasserna SX1/SX2. AMA Supercross är den amerikanska arenaserien. I appen tippar du dem som separata serier.",
+            "a_plain": "WSX (World Supercross Championship) är FIM:s världscup med internationella GP-rundor och klasserna SX1/SX2. AMA Supercross är den amerikanska arenaserien. I appen tippar du dem som separata serier.",
+        },
+        {
+            "q": "Finns wildcard i WSX-tippningen?",
+            "a": "WSX i MX Fantasy är tippa-only för SX1 och SX2 (topp 6 + holeshot). Wildcard-omgången som i SX/MX används inte på samma sätt — se setup i appen per race.",
+            "a_plain": "WSX i MX Fantasy är tippa-only för SX1 och SX2 (topp 6 + holeshot). Wildcard-omgången som i SX/MX används inte på samma sätt — se setup i appen per race.",
+        },
+        {
+            "q": "Kostar det att tippa World Supercross?",
+            "a": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+            "a_plain": "Nej. Gratis konto, tips och leaderboard — ingen betting.",
+        },
+        {
+            "q": "När måste WSX-tipsen vara inne?",
+            "a": "Normalt två timmar före start. Kolla alltid deadline i appen för just det GP:t (tidszonen kan skilja mellan länder).",
+            "a_plain": "Normalt två timmar före start. Kolla alltid deadline i appen för just det GP:t (tidszonen kan skilja mellan länder).",
+        },
+        {
+            "q": "Kan man tippa WSX på svenska?",
+            "a": "Ja — MX Fantasy League har SV/EN i appen och den här guiden förklarar hur du tippar WSX hos oss.",
+            "a_plain": "Ja — MX Fantasy League har SV/EN i appen och den här guiden förklarar hur du tippar WSX hos oss.",
+        },
+    ]
+    return {
+        "path": "/tippa-wsx",
+        "series_short": "WSX",
+        "breadcrumb_name": "Tippa WSX",
+        "seo_title": "Tippa WSX / World Supercross — gratis fantasy WSX-spel | MX Fantasy League",
+        "seo_description": (
+            "Hur tippar man World Supercross (WSX) online? Gratis fantasy WSX-spel i MX Fantasy League: "
+            "tippa SX1 och SX2 topp 6 + holeshot — utan betting."
+        ),
+        "seo_keywords": (
+            "tippa wsx, tippa world supercross, fantasy wsx, world supercross fantasy, "
+            "wsx tippning, tippa sx1 sx2, fim world supercross, "
+            "gratis fantasy wsx, MX Fantasy League"
+        ),
+        "h1": "Hur tippar jag WSX / World Supercross?",
+        "lead": (
+            "Vill du tippa World Supercross (WSX) online? I MX Fantasy League tippar du "
+            "SX1 och SX2 inför varje GP — gratis fantasy utan betting, på mx-fantasy.se."
+        ),
+        "what_title": "Vad är tippa WSX / fantasy World Supercross?",
+        "what_paragraphs": [
+            (
+                "World Supercross Championship (WSX) är den internationella FIM-serien med "
+                "GP-rundor runt om i världen. Klasserna heter SX1 och SX2. "
+                "I fantasy tippar du vilka förare som placerar sig högst och får fantasypoäng."
+            ),
+            (
+                "Söker du fantasy WSX, tippa world supercross eller WSX-spel på svenska är "
+                "MX Fantasy League byggt för dig som följer både AMA och världscupen."
+            ),
+        ],
+        "steps": [
+            "<strong class=\"text-white\">Skapa konto</strong> — gratis på mx-fantasy.se.",
+            "<strong class=\"text-white\">Välj serien WSX</strong> på startsidan.",
+            "<strong class=\"text-white\">Öppna nästa GP</strong> och tippa topp 6 i SX1 och SX2.",
+            "<strong class=\"text-white\">Välj holeshot</strong> per klass innan deadline.",
+            "<strong class=\"text-white\">Följ leaderboard</strong> och utmana i ligor.",
+        ],
+        "faq": faq,
+        "faq_json": _tippa_serie_faq_json(faq),
+        "related_links": [
+            {
+                "href": "/tippa-supercross",
+                "label": "Tippa Supercross (SX)",
+                "blurb": "amerikansk AMA Supercross",
+            },
+            {
+                "href": "/tippa-motocross",
+                "label": "Tippa Motocross (MX)",
+                "blurb": "Pro Motocross utomhus",
+            },
+            {
+                "href": "/tippa-smx",
+                "label": "Tippa SMX",
+                "blurb": "SuperMotocross playoffs",
+            },
         ],
     }
 
@@ -894,6 +1105,18 @@ def tippa_supercross_page():
 def tippa_motocross_page():
     """SEO: hur man tippar motocross / fantasy MX."""
     return render_template("tippa_serie.html", page=_tippa_motocross_page_data())
+
+
+@app.get("/tippa-smx")
+def tippa_smx_page():
+    """SEO: hur man tippar SMX / SuperMotocross."""
+    return render_template("tippa_serie.html", page=_tippa_smx_page_data())
+
+
+@app.get("/tippa-wsx")
+def tippa_wsx_page():
+    """SEO: hur man tippar WSX / World Supercross."""
+    return render_template("tippa_serie.html", page=_tippa_wsx_page_data())
 
 
 # -------------------------------------------------

@@ -46,6 +46,8 @@ _GAME_EXACT = {
     "/trackmaps",
     "/tippa-supercross",
     "/tippa-motocross",
+    "/tippa-smx",
+    "/tippa-wsx",
     "/my_scores",
     "/leagues",
     "/bulletin_board",

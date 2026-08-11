@@ -183,6 +183,8 @@ def create_app() -> Flask:
 			f"- [Om spelet]({base}/om): vad MX Fantasy League är, hur tippning fungerar, FAQ\n"
 			f"- [Tippa supercross]({base}/tippa-supercross): tippa AMA Supercross / SX gratis\n"
 			f"- [Tippa motocross]({base}/tippa-motocross): tippa Pro Motocross / MX gratis\n"
+			f"- [Tippa SMX]({base}/tippa-smx): tippa SuperMotocross Playoffs / Final gratis\n"
+			f"- [Tippa WSX]({base}/tippa-wsx): tippa World Supercross (SX1/SX2) gratis\n"
 			f"- [Spelmanual]({base}/manual): regler, poängsystem, holeshot och wildcard\n"
 			f"- [Starta / bjud in]({base}/start): skapa konto och gå med\n"
 			f"- [Registrera]({base}/register): gratis konto\n"
@@ -225,6 +227,16 @@ def create_app() -> Flask:
   </url>
   <url>
     <loc>{base}/tippa-motocross</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base}/tippa-smx</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base}/tippa-wsx</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
