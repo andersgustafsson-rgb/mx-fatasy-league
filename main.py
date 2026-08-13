@@ -30611,6 +30611,66 @@ def kundmail_translate():
         return jsonify({"error": "Översättning misslyckades"}), 500
 
 
+@app.get("/api/kundmail/checklist")
+def kundmail_checklist_list():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    import checklist_service as cs
+
+    return jsonify({"success": True, "items": cs.list_items(int(session["user_id"]))})
+
+
+@app.post("/api/kundmail/checklist")
+def kundmail_checklist_create():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    import checklist_service as cs
+
+    data = request.get_json(silent=True) or {}
+    row, err = cs.create_item(int(session["user_id"]), data.get("text") or "")
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"success": True, "item": cs.item_to_dict(row)}), 201
+
+
+@app.patch("/api/kundmail/checklist/<int:item_id>")
+def kundmail_checklist_update(item_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    import checklist_service as cs
+
+    data = request.get_json(silent=True) or {}
+    if "done" not in data:
+        return jsonify({"error": "Saknar done"}), 400
+    row, err = cs.set_done(int(session["user_id"]), item_id, bool(data.get("done")))
+    if err == "not_found":
+        return jsonify({"error": "not_found"}), 404
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"success": True, "item": cs.item_to_dict(row)})
+
+
+@app.delete("/api/kundmail/checklist/<int:item_id>")
+def kundmail_checklist_delete(item_id: int):
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    import checklist_service as cs
+
+    if not cs.delete_item(int(session["user_id"]), item_id):
+        return jsonify({"error": "not_found"}), 404
+    return jsonify({"success": True})
+
+
+@app.post("/api/kundmail/checklist/clear-done")
+def kundmail_checklist_clear_done():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    import checklist_service as cs
+
+    removed = cs.clear_done(int(session["user_id"]))
+    return jsonify({"success": True, "removed": removed})
+
+
 @app.get("/api/kundmail/zendesk_status")
 def kundmail_zendesk_status():
     if "user_id" not in session:

@@ -124,12 +124,6 @@
       color: #041512;
     }
     .km-btn-primary:hover { background: #34b3a3; }
-    .km-btn-zendesk {
-      background: var(--km-accent);
-      border-color: color-mix(in srgb, var(--km-accent) 65%, black);
-      color: #1a0a00;
-    }
-    .km-btn-zendesk:hover { background: #f07322; }
     .km-btn-ghost { background: transparent; }
     .km-chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .kundmail-date-wrap { display: flex; gap: 0.6rem; align-items: stretch; }
@@ -221,6 +215,44 @@
       background: color-mix(in srgb, var(--km-input) 80%, transparent);
     }
     .km-check input { margin-top: 0.2rem; width: 1.1rem; height: 1.1rem; }
+    .km-todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.7rem 0.85rem;
+      border-radius: 0.85rem;
+      border: 1px solid var(--km-line);
+      background: var(--km-input);
+    }
+    .km-todo-item.done .km-todo-text {
+      text-decoration: line-through;
+      color: var(--km-muted);
+    }
+    .km-todo-item input[type="checkbox"] {
+      margin-top: 0.2rem;
+      width: 1.1rem;
+      height: 1.1rem;
+      flex-shrink: 0;
+    }
+    .km-todo-text {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.98rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .km-todo-del {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      color: var(--km-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.4rem;
+    }
+    .km-todo-del:hover { color: #fca5a5; background: rgba(248, 113, 113, 0.12); }
     @media (max-width: 980px) {
       .km-grid { grid-template-columns: 1fr !important; }
       .kundmail-body-editable { min-height: 320px; }
@@ -303,19 +335,6 @@
               <label for="orderNumber" class="km-label">Ordernummer</label>
               <input id="orderNumber" type="text" placeholder="valfritt" class="km-field" />
             </div>
-
-            <div class="sm:col-span-2">
-              <label for="customerEmail" class="km-label">Kundens e-post</label>
-              <input id="customerEmail" type="email" placeholder="kund@exempel.se" class="km-field" autocomplete="email" />
-            </div>
-
-            <label class="km-check sm:col-span-2 cursor-pointer">
-              <input id="zendeskNotifyCustomer" type="checkbox" checked />
-              <span>
-                <span class="block font-semibold">Skicka svar till kund via Zendesk</span>
-                <span class="block text-sm mt-1" style="color: var(--km-muted);">Av vid test. Kundmail-signatur strippas — Zendesk lägger på sin egen.</span>
-              </span>
-            </label>
           </div>
         </div>
 
@@ -370,9 +389,6 @@
           <div class="km-chip-row">
             <button id="regenerateMail" type="button" class="km-btn">Generera om</button>
             <button id="copyAll" type="button" class="km-btn km-btn-primary">Kopiera allt</button>
-            <button id="createZendeskTicket" type="button" class="km-btn km-btn-zendesk" title="Skapar Zendesk-ärende">
-              Skapa i Zendesk
-            </button>
           </div>
         </div>
 
@@ -384,7 +400,6 @@
           <button id="copyBody" type="button" class="km-btn km-btn-ghost">Kopiera text</button>
         </div>
 
-        <p id="zendeskStatus" class="text-sm" style="color: var(--km-muted);"></p>
         <p id="validation" class="text-sm text-amber-300"></p>
         <p id="outputEditHint" class="hidden text-sm text-amber-200/90">Du har redigerat texten. «Generera om» byter till mall. «→ Språk» översätter det som står nu.</p>
 
@@ -407,6 +422,33 @@
         </div>
       </section>
     </div>
+
+    <section id="checklist-section" class="km-panel mt-8 p-5 sm:p-6 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold">Checklista{% if username %} · {{ username }}{% endif %}</h2>
+          <p class="text-sm mt-1" style="color: var(--km-muted);">Din personliga lista — syns bara för dig när du är inloggad.</p>
+        </div>
+        <button type="button" id="checklistClearDone" class="km-btn km-btn-ghost text-sm">Rensa klara</button>
+      </div>
+
+      <form id="checklistForm" class="flex flex-wrap gap-3 items-stretch">
+        <input
+          id="checklistInput"
+          type="text"
+          maxlength="500"
+          placeholder="Ny punkt…"
+          class="km-field"
+          style="flex: 1; min-width: 200px;"
+          autocomplete="off"
+        />
+        <button type="submit" class="km-btn km-btn-primary">Lägg till</button>
+      </form>
+
+      <div id="checklistList" class="space-y-2"></div>
+      <p id="checklistEmpty" class="text-sm" style="color: var(--km-muted);">Inga punkter ännu — skriv något ovan och tryck Enter.</p>
+      <p id="checklistStatus" class="text-sm hidden" style="color: var(--km-muted);"></p>
+    </section>
 
     <section id="reminders-section" class="km-panel mt-8 p-5 sm:p-6 space-y-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -467,6 +509,6 @@
 
   <script src="{{ url_for('static', filename='push_challenges.js') }}?v=6"></script>
   <script src="{{ url_for('static', filename='reminders.js') }}?v=2"></script>
-  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260807-nl1"></script>
+  <script src="{{ url_for('static', filename='kundmail.js') }}?v=20260813-checklist-user"></script>
 </body>
 </html>

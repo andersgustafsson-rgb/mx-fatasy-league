@@ -3,6 +3,7 @@
 const STORAGE_KEY = "kundmail_settings_v4";
 const PRODUCTS_KEY = "kundmail_products_v1";
 const SIGNATURES_KEY = "kundmail_signature_profiles_v1";
+const CHECKLIST_LOCAL_KEY = "kundmail_checklist_v1"; // legacy — migreras till server per användare
 
 const TEMPLATE_DEFS = [
   {
@@ -846,28 +847,6 @@ function signature(settings, langPack) {
   if (cleanStr(settings.companyName)) parts.push(cleanStr(settings.companyName));
   if (!parts.length) return langPack.mail.signatureEmpty;
   return langPack.mail.signature(parts);
-}
-
-/** Zendesk lägger på agentens signatur själv — strippa Kundmail-signaturen vid API-skapande. */
-function stripMailSignatureForZendesk(plain) {
-  const text = String(plain || "").replace(/\r\n/g, "\n");
-  if (!text.trim()) return text;
-
-  const markers = [
-    /\n+Med vänliga hälsningar\b/i,
-    /\n+Med venlig hilsen\b/i,
-    /\n+Kind regards\b/i,
-    /\n+Best regards\b/i,
-    /\n+Vänliga hälsningar\b/i,
-  ];
-
-  let cut = -1;
-  for (const re of markers) {
-    const m = re.exec(text);
-    if (m && (cut < 0 || m.index < cut)) cut = m.index;
-  }
-  if (cut < 0) return text.trimEnd();
-  return text.slice(0, cut).trimEnd();
 }
 
 function orderLine(orderNumber, langPack) {
@@ -1911,6 +1890,48 @@ function forceGenerate() {
   generate({ force: true });
 }
 
+/** MC-shopord som GTX ofta missar (sv "styre" → da "tavle"). */
+const KUNDMAIL_TERM_MAP = {
+  da: {
+    styre: "styre",
+    styret: "styret",
+    styren: "styren",
+    styrets: "styrets",
+  },
+  en: {
+    styre: "handlebar",
+    styret: "handlebar",
+    styren: "handlebars",
+    styrets: "handlebar's",
+  },
+};
+
+function protectKundmailTerms(text, target) {
+  const map = KUNDMAIL_TERM_MAP[target];
+  if (!map || !text) return { text, tokens: [] };
+  const tokens = [];
+  const re = /\b(styrets|styret|styren|styre)\b/gi;
+  const protectedText = text.replace(re, (match) => {
+    const key = match.toLowerCase();
+    const replacement = map[key];
+    if (!replacement) return match;
+    const token = `⟦KM${tokens.length}⟧`;
+    tokens.push(replacement);
+    return token;
+  });
+  return { text: protectedText, tokens };
+}
+
+function restoreKundmailTerms(text, tokens) {
+  if (!text || !tokens?.length) return text || "";
+  let out = text;
+  tokens.forEach((word, i) => {
+    out = out.replace(new RegExp(`⟦\\s*KM\\s*${i}\\s*⟧`, "gi"), word);
+    out = out.replace(new RegExp(`\\[\\s*KM\\s*${i}\\s*\\]`, "gi"), word);
+  });
+  return out;
+}
+
 async function gtxTranslateChunk(text, source, target) {
   const url = new URL("https://translate.googleapis.com/translate_a/single");
   url.searchParams.set("client", "gtx");
@@ -1928,8 +1949,9 @@ async function gtxTranslateChunk(text, source, target) {
 async function translateTextGtx(text, source = "sv", target = "da") {
   const normalized = normalizeMailNewlines(text);
   if (source === target) return cleanStr(normalized);
+  const { text: protectedFull, tokens } = protectKundmailTerms(normalized, target);
   // Translate paragraph-by-paragraph so GTX cannot invent extra blank lines.
-  const parts = normalized.split(/(\n+)/);
+  const parts = protectedFull.split(/(\n+)/);
   const out = [];
   for (const part of parts) {
     if (!part) continue;
@@ -1941,110 +1963,7 @@ async function translateTextGtx(text, source = "sv", target = "da") {
     // Single-line segments should stay single-line (GTX sometimes injects \\n).
     out.push(String(translated || "").replace(/\s*\n+\s*/g, " ").replace(/\u200b/g, "").trim());
   }
-  return normalizeMailNewlines(out.join(""));
-}
-
-async function refreshZendeskStatus() {
-  const el = $("zendeskStatus");
-  const btn = $("createZendeskTicket");
-  if (!el) return;
-  try {
-    const res = await fetch("/api/kundmail/zendesk_status", { credentials: "same-origin" });
-    if (!res.ok) {
-      el.textContent = "Zendesk: inloggning krävs.";
-      if (btn) btn.disabled = true;
-      return;
-    }
-    const data = await res.json();
-    if (data.configured) {
-      const who = data.assignee_name
-        ? ` · handläggare ${data.assignee_name}`
-        : "";
-      el.textContent = data.subdomain
-        ? `Zendesk: redo (${data.subdomain}.zendesk.com)${who}`
-        : `Zendesk: redo${who}`;
-      if (btn) btn.disabled = false;
-    } else {
-      el.textContent =
-        "Zendesk: saknar env (ZENDESK_SUBDOMAIN, ZENDESK_EMAIL, ZENDESK_API_TOKEN).";
-      if (btn) btn.disabled = true;
-    }
-  } catch (_e) {
-    el.textContent = "Zendesk: kunde inte kontrollera status.";
-    if (btn) btn.disabled = true;
-  }
-}
-
-async function createZendeskTicket(btn) {
-  const statusEl = $("zendeskStatus");
-  const email = cleanStr(els.customerEmail?.value);
-  const subject = cleanStr(els.subjectOut?.value);
-  // Lämna Kundmail-signaturen i UI/kopiera — Zendesk har egen agent-signatur.
-  const body = stripMailSignatureForZendesk(getBodyPlain());
-  if (!email || !email.includes("@")) {
-    if (statusEl) statusEl.textContent = "Ange kundens e-post innan du skapar i Zendesk.";
-    els.customerEmail?.focus();
-    return;
-  }
-  if (!subject || !body) {
-    if (statusEl) statusEl.textContent = "Ämne och meddelande måste finnas.";
-    return;
-  }
-
-  const label = btn?.textContent;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = "Skapar…";
-  }
-  if (statusEl) statusEl.textContent = "Skapar Zendesk-ärende…";
-
-  try {
-    const res = await fetch("/api/kundmail/zendesk_ticket", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subject,
-        body,
-        requester_email: email,
-        requester_name: cleanStr(els.customerName?.value) || undefined,
-        order_number: cleanStr(els.orderNumber?.value) || undefined,
-        template_id: getSelectedTemplate()?.id || undefined,
-        notify_requester: Boolean(els.zendeskNotifyCustomer?.checked),
-        solve: true,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) {
-      const detail =
-        typeof data.detail === "string"
-          ? data.detail
-          : data.detail
-            ? JSON.stringify(data.detail).slice(0, 200)
-            : "";
-      if (statusEl) {
-        statusEl.textContent = `${data.error || "Kunde inte skapa ärende"}${detail ? `: ${detail}` : ""}`;
-      }
-      return;
-    }
-    const who = data.assignee_name ? ` · ${escapeHtml(data.assignee_name)}` : "";
-    const note = data.notified_requester ? " (mail till kund)" : " (utan kundmail)";
-    if (statusEl) {
-      statusEl.innerHTML = `Skapat & löst${note}${who}: <a class="text-orange-300 underline" href="${escapeHtml(
-        data.ticket_url
-      )}" target="_blank" rel="noopener">ticket #${escapeHtml(String(data.ticket_id))}</a>`;
-    }
-    if (data.ticket_url) {
-      window.open(data.ticket_url, "_blank", "noopener");
-    }
-  } catch (e) {
-    if (statusEl) statusEl.textContent = `Fel: ${e.message || e}`;
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = label || "Skapa i Zendesk";
-    }
-  }
+  return normalizeMailNewlines(restoreKundmailTerms(out.join(""), tokens));
 }
 
 async function translateViaServer(subject, body, source, target) {
@@ -2146,6 +2065,178 @@ async function translateMailTo(targetLang) {
   }
 }
 
+let checklistItemsCache = [];
+
+function setChecklistStatus(msg, isError = false) {
+  const el = $("checklistStatus");
+  if (!el) return;
+  if (!msg) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  el.classList.remove("hidden");
+  el.textContent = msg;
+  el.style.color = isError ? "#fca5a5" : "var(--km-muted)";
+}
+
+function renderChecklist(items = checklistItemsCache) {
+  const listEl = $("checklistList");
+  const emptyEl = $("checklistEmpty");
+  if (!listEl) return;
+  checklistItemsCache = Array.isArray(items) ? items : [];
+  listEl.innerHTML = "";
+  if (emptyEl) emptyEl.classList.toggle("hidden", checklistItemsCache.length > 0);
+
+  checklistItemsCache.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = `km-todo-item${item.done ? " done" : ""}`;
+    row.dataset.id = String(item.id);
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!item.done;
+    cb.setAttribute("aria-label", "Markera klar");
+    cb.addEventListener("change", () => toggleChecklistDone(item.id, cb.checked));
+
+    const text = document.createElement("div");
+    text.className = "km-todo-text";
+    text.textContent = item.text;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "km-todo-del";
+    del.setAttribute("aria-label", "Ta bort");
+    del.textContent = "Ta bort";
+    del.addEventListener("click", () => deleteChecklistItem(item.id));
+
+    row.append(cb, text, del);
+    listEl.appendChild(row);
+  });
+}
+
+async function fetchChecklist() {
+  const res = await fetch("/api/kundmail/checklist", { credentials: "same-origin" });
+  if (!res.ok) throw new Error(res.status === 401 ? "Logga in igen" : "Kunde inte hämta listan");
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || "Kunde inte hämta listan");
+  return data.items || [];
+}
+
+async function migrateLocalChecklistIfNeeded(serverItems) {
+  if (serverItems.length) return serverItems;
+  let local = [];
+  try {
+    const raw = localStorage.getItem(CHECKLIST_LOCAL_KEY);
+    local = raw ? JSON.parse(raw) : [];
+  } catch {
+    local = [];
+  }
+  if (!Array.isArray(local) || !local.length) return serverItems;
+
+  // Äldre lokal lista → spara till den inloggade användaren en gång.
+  for (const item of local.slice().reverse()) {
+    const text = cleanStr(item?.text);
+    if (!text) continue;
+    await fetch("/api/kundmail/checklist", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  }
+  try {
+    localStorage.removeItem(CHECKLIST_LOCAL_KEY);
+  } catch (_e) { /* ignore */ }
+  return fetchChecklist();
+}
+
+async function refreshChecklist() {
+  try {
+    setChecklistStatus("Hämtar…");
+    let items = await fetchChecklist();
+    items = await migrateLocalChecklistIfNeeded(items);
+    renderChecklist(items);
+    setChecklistStatus("");
+  } catch (err) {
+    renderChecklist([]);
+    setChecklistStatus(err?.message || "Kunde inte ladda checklistan.", true);
+  }
+}
+
+async function addChecklistItem(text) {
+  const t = cleanStr(text);
+  if (!t) return;
+  const res = await fetch("/api/kundmail/checklist", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: t }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    setChecklistStatus(data.error || "Kunde inte spara.", true);
+    return;
+  }
+  await refreshChecklist();
+}
+
+async function toggleChecklistDone(id, done) {
+  const res = await fetch(`/api/kundmail/checklist/${id}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ done: !!done }),
+  });
+  if (!res.ok) {
+    setChecklistStatus("Kunde inte uppdatera.", true);
+    await refreshChecklist();
+    return;
+  }
+  await refreshChecklist();
+}
+
+async function deleteChecklistItem(id) {
+  const res = await fetch(`/api/kundmail/checklist/${id}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+  });
+  if (!res.ok) {
+    setChecklistStatus("Kunde inte ta bort.", true);
+    return;
+  }
+  await refreshChecklist();
+}
+
+async function clearDoneChecklistItems() {
+  const res = await fetch("/api/kundmail/checklist/clear-done", {
+    method: "POST",
+    credentials: "same-origin",
+  });
+  if (!res.ok) {
+    setChecklistStatus("Kunde inte rensa.", true);
+    return;
+  }
+  await refreshChecklist();
+}
+
+function initChecklist() {
+  const form = $("checklistForm");
+  const input = $("checklistInput");
+  if (!form || !input) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const value = input.value;
+    input.value = "";
+    await addChecklistItem(value);
+    input.focus();
+  });
+
+  $("checklistClearDone")?.addEventListener("click", () => clearDoneChecklistItems());
+  refreshChecklist();
+}
+
 function translateMailToSwedish() {
   return translateMailTo("sv");
 }
@@ -2179,11 +2270,7 @@ function init() {
   els.extraFields = $("extraFields");
   els.productName = $("productName");
   els.customerName = $("customerName");
-  els.customerEmail = $("customerEmail");
-  els.zendeskNotifyCustomer = $("zendeskNotifyCustomer");
   els.orderNumber = $("orderNumber");
-  els.zendeskStatus = $("zendeskStatus");
-  els.createZendeskTicket = $("createZendeskTicket");
   els.signatureProfileSelect = $("signatureProfileSelect");
   els.signatureProfileName = $("signatureProfileName");
   els.signatureProfileText = $("signatureProfileText");
@@ -2274,8 +2361,6 @@ function init() {
     const plain = `${UI.copyAllPrefix} ${els.subjectOut.value}\n\n${getBodyPlain()}`;
     copyRichContent(plain, `<p><strong>${escapeHtml(els.subjectOut.value)}</strong></p>${els.bodyOut?.innerHTML || ""}`, e.currentTarget);
   });
-  $("createZendeskTicket")?.addEventListener("click", (e) => createZendeskTicket(e.currentTarget));
-  refreshZendeskStatus();
 
   els.bodyOut?.addEventListener("paste", handleBodyPaste);
   els.subjectOut?.addEventListener("input", markOutputEdited);
@@ -2285,6 +2370,7 @@ function init() {
   els.translateToDanish?.addEventListener("click", translateMailToDanish);
   els.translateToEnglish?.addEventListener("click", translateMailToEnglish);
 
+  initChecklist();
   generate();
 }
 

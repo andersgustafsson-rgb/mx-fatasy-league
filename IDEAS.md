@@ -15,6 +15,27 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 5 | **WSX trackmaps** | ⏳ Före race | Kartorna har **inte kommit ut än**. När de släpps: ladda ner, lägg i `static/trackmaps/`. **WSX story-hype-kort** för Stories finns (Dela WSX-hype). |
 | 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Tippoäng:** samma highscore rullar vidare (ingen nollställning). SMX-rundor multipliceras **1× / 2× / 3×** (Playoff 1/2/Final) på race+HS+WC — lika för alla. **Förar-ställning (senare):** seed + reset för SMX-titel separat från tipp-highscore. Valfritt: arkivera MX fantasy-historik, fixa serie-`end_date`. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
+| 8 | **Städa / strukturera kodbasen** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 13 aug:** ingen stor uppdelning under säsongen — för hög risk när spelet är live. Efter SMX: börja strukturera så AI/arbete blir enklare & billigare. Se plan nedan. |
+
+---
+
+## Plan: kodstruktur efter SMX (låst beslut)
+
+**Varför vänta:** `main.py` (~29k rader) är för stor, men mid-season-refaktor kan paja scoring/picks/deadlines. Små bugfixar + SMX-features OK; stor städning = efter finalen.
+
+**Mål:** tunnare `main.py`, logik i `services/`, routes i `app/routes/` — utan att skriva om allt på en gång.
+
+**Första skivorna (i ungefär den ordningen):**
+1. **Scoring** → `services/scoring.py` (`calculate_scores`, SMX-multiplikatorer, helpers)
+2. **Deadlines / countdown** → egen modul
+3. **Results-import** (WSX sync, CSV, entry lists)
+4. **Kundmail / Zendesk**
+5. **SEO tippa-sidor** → `public`
+6. Sen: titta på `social_recap_service.py`, städa dubbel `app.py`/`main.py`-entry
+
+**Regel under tiden (redan nu):** ny större feature helst *inte* växa `main.py` mer — lägg i service/blueprint när det är naturligt. Akut race-fix = gör på plats, städa senare.
+
+**Kickoff:** efter SMX Final (Ridgedale ~26 sep 2026), när tipp-säsongen lugnat sig.
 
 ---
 

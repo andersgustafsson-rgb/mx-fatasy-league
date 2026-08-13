@@ -63,6 +63,52 @@ def _translate_chunk_en_sv(text: str) -> str:
     return _translate_chunk(text, source="en", target="sv")
 
 
+# MC-shopord som GTX ofta översätter fel (sv "styre" → da "tavle").
+_KUNDMAIL_TERM_MAP = {
+    "da": {
+        "styre": "styre",
+        "styret": "styret",
+        "styren": "styren",
+        "styrets": "styrets",
+    },
+    "en": {
+        "styre": "handlebar",
+        "styret": "handlebar",
+        "styren": "handlebars",
+        "styrets": "handlebar's",
+    },
+}
+_KUNDMAIL_TERM_RE = re.compile(r"\b(styrets|styret|styren|styre)\b", re.IGNORECASE)
+
+
+def _protect_kundmail_terms(text: str, target: str) -> tuple[str, list[str]]:
+    term_map = _KUNDMAIL_TERM_MAP.get((target or "").lower())
+    if not term_map or not text:
+        return text, []
+    tokens: list[str] = []
+
+    def _repl(match: re.Match[str]) -> str:
+        key = match.group(0).lower()
+        replacement = term_map.get(key)
+        if not replacement:
+            return match.group(0)
+        token = f"⟦KM{len(tokens)}⟧"
+        tokens.append(replacement)
+        return token
+
+    return _KUNDMAIL_TERM_RE.sub(_repl, text), tokens
+
+
+def _restore_kundmail_terms(text: str, tokens: list[str]) -> str:
+    if not text or not tokens:
+        return text or ""
+    out = text
+    for i, word in enumerate(tokens):
+        out = re.sub(rf"⟦\s*KM\s*{i}\s*⟧", word, out, flags=re.IGNORECASE)
+        out = re.sub(rf"\[\s*KM\s*{i}\s*\]", word, out, flags=re.IGNORECASE)
+    return out
+
+
 def translate_text(text: str, *, source: str, target: str) -> str:
     """Översätt text mellan språk (bevarar radbrytningar)."""
     text = (text or "").strip()
@@ -70,11 +116,12 @@ def translate_text(text: str, *, source: str, target: str) -> str:
         return ""
     if source == target:
         return text
-    chunks = _split_for_translation(text)
+    protected, tokens = _protect_kundmail_terms(text, target)
+    chunks = _split_for_translation(protected)
     out = "\n\n".join(_translate_chunk(chunk, source=source, target=target) for chunk in chunks).strip()
     # GTX/contenteditable kan tripla blankrader — behåll max en tom rad.
     out = re.sub(r"\n{3,}", "\n\n", out.replace("\u200b", ""))
-    return out
+    return _restore_kundmail_terms(out, tokens)
 
 
 def translate_en_to_sv(text: str) -> str:

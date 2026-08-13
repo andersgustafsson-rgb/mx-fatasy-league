@@ -559,6 +559,19 @@ class UserReminder(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class UserChecklistItem(db.Model):
+    """Personlig checklista per användare (Kundmail / jobb)."""
+    __tablename__ = "user_checklist_items"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    text = db.Column(db.String(500), nullable=False)
+    done = db.Column(db.Boolean, nullable=False, default=False)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class DailySiteStats(db.Model):
     """Aggregerade sidvisningar / unika besokare per kalenderdag (Europe/Stockholm)."""
     __tablename__ = "daily_site_stats"
