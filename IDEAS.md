@@ -16,6 +16,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 6 | **SMX inför finalerna (efter Ironman)** | 📋 Att göra | **Tippoäng:** samma highscore rullar vidare (ingen nollställning). SMX-rundor multipliceras **1× / 2× / 3×** (Playoff 1/2/Final) på race+HS+WC — lika för alla. **Förar-ställning (senare):** seed + reset för SMX-titel separat från tipp-highscore. Valfritt: arkivera MX fantasy-historik, fixa serie-`end_date`. |
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 | 8 | **Städa / strukturera kodbasen** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 13 aug:** ingen stor uppdelning under säsongen — för hög risk när spelet är live. Efter SMX: börja strukturera så AI/arbete blir enklare & billigare. Se plan nedan. |
+| 9 | **Social login (Google först)** | ⏸️ Efter SMX-final (~26 sep) | Mål: snabbare registrering (folk orkar inte fler lösenord). **Google först**, ev. Microsoft/Outlook senare; Facebook sist/skip. Fungerar med befintliga konton via e-postlänkning. Behåll vanligt lösenord. Vid första OAuth: koppla om e-post finns, annars skapa konto + välj användarnamn. |
 
 ---
 
@@ -47,6 +48,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 - [ ] **Skydda fler domäner** (`.com` / `.eu`) — skippades medvetet vid köp; bara om du vill skydda namnet.
 - [x] **Keep-alive** — GitHub Action `keepalive.yml` + `scripts/cron_keepalive.py` (Render Cron i `render.yaml`).
 - [ ] **Tidrapport: spara på server** — idag mest webbläsare/PNG; tidigare bollades serverlagring + historik (större grej, bara om du behöver det).
+- [x] **Admin raceday-flöde (AMA/WSX)** — import + holeshot i centrum, manuell/OUT under Avancerat. 18 aug 2026.
 
 ---
 
