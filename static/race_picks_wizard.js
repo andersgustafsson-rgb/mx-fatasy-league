@@ -306,6 +306,54 @@
     $('wizard-picks-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  function isMobileNav() {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 479px)').matches;
+  }
+
+  function navNextLabel(svLong, enLong, svShort, enShort) {
+    if (isEn()) return isMobileNav() ? enShort : enLong;
+    return isMobileNav() ? svShort : svLong;
+  }
+
+  function updateNextButtonLabel(s, showOverviewNext) {
+    const next = $('wizard-btn-next');
+    if (!next) return;
+
+    let text = '';
+    let aria = '';
+    if (showOverviewNext) {
+      text = navNextLabel('Nästa: Översikt →', 'Next: Overview →', 'Översikt →', 'Overview →');
+      aria = isEn() ? 'Next: overview' : 'Nästa: översikt';
+    } else if (s === 1) {
+      text = navNextLabel(
+        `Nästa: ${cfg.label250} →`,
+        `Next: ${cfg.label250} →`,
+        `${cfg.label250} →`,
+        `${cfg.label250} →`
+      );
+      aria = isEn() ? `Next: ${cfg.label250}` : `Nästa: ${cfg.label250}`;
+    } else if (s === 2) {
+      text = navNextLabel(
+        'Nästa: Holeshot →',
+        'Next: Holeshot →',
+        'Holeshot →',
+        'Holeshot →'
+      );
+      aria = isEn() ? 'Next: holeshot' : 'Nästa: holeshot';
+    } else {
+      text = navNextLabel(
+        'Nästa: Holeshot →',
+        'Next: Holeshot →',
+        'Holeshot →',
+        'Holeshot →'
+      );
+      aria = isEn() ? 'Next: holeshot' : 'Nästa: holeshot';
+    }
+
+    next.textContent = text;
+    next.setAttribute('aria-label', aria);
+  }
+
   function updateNavButtons() {
     const back = $('wizard-btn-back');
     const editPicks = $('wizard-btn-edit-picks');
@@ -333,8 +381,8 @@
         back.setAttribute('aria-label', isEn() ? 'Back to overview' : 'Tillbaka till översikt');
         back.disabled = false;
       } else {
-        back.textContent = '← Tillbaka';
-        back.setAttribute('aria-label', 'Tillbaka till föregående steg');
+        back.textContent = isEn() ? '← Back' : '← Tillbaka';
+        back.setAttribute('aria-label', isEn() ? 'Back to previous step' : 'Tillbaka till föregående steg');
         back.disabled = currentStep <= 1;
       }
       back.classList.toggle('wizard-nav__btn--edit', isEditWalkback && currentStep > 1);
@@ -458,19 +506,7 @@
         next.style.display = 'none';
       } else {
         next.style.display = '';
-        if (showOverviewNext) {
-          next.textContent = 'Nästa: Översikt →';
-        } else if (s === 1) {
-          next.textContent = isEditWalkback
-            ? (isEn() ? `Next: ${cfg.label250} →` : `Nästa: ${cfg.label250} →`)
-            : `Nästa: ${cfg.label250} →`;
-        } else if (s === 2) {
-          next.textContent = isEditWalkback
-            ? (isEn() ? 'Next: Holeshot →' : 'Nästa: Holeshot →')
-            : 'Nästa: Holeshot →';
-        } else {
-          next.textContent = 'Nästa: Holeshot →';
-        }
+        updateNextButtonLabel(s, showOverviewNext);
       }
     }
 
@@ -651,6 +687,18 @@
     });
 
     window.addEventListener('beforeunload', () => persistStep());
+
+    if (typeof window.matchMedia === 'function') {
+      const mq = window.matchMedia('(max-width: 479px)');
+      const onNavResize = () => {
+        updateNavButtons();
+        const showOverviewNext =
+          currentStep === 3 && isPicksFullyComplete() && !step3ShowingSummary && !isEditWalkback;
+        updateNextButtonLabel(currentStep, showOverviewNext);
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onNavResize);
+      else if (mq.addListener) mq.addListener(onNavResize);
+    }
   }
 
   function getSelectorRiderId(selector) {

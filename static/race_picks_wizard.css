@@ -359,6 +359,8 @@
   color: #94a3b8;
   text-align: center;
   flex: 1;
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .wizard-nav__btn {
@@ -372,6 +374,49 @@
 .wizard-nav__btn--back {
   flex: 0 1 auto;
   min-width: 0;
+}
+
+.wizard-nav__btn--next {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 479px) {
+  .wizard-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'label label'
+      'back next';
+    gap: 0.45rem 0.5rem;
+    align-items: stretch;
+  }
+
+  .wizard-nav__label {
+    grid-area: label;
+    flex: none;
+    width: 100%;
+    font-size: 0.74rem;
+    padding: 0 0.1rem;
+  }
+
+  .wizard-nav__btn {
+    max-width: none;
+    width: 100%;
+    padding: 0.55rem 0.45rem;
+    font-size: 0.76rem;
+    min-height: 2.45rem;
+    line-height: 1.15;
+  }
+
+  .wizard-nav__btn--back {
+    grid-area: back;
+    justify-self: stretch;
+  }
+
+  .wizard-nav__btn--next {
+    grid-area: next;
+    justify-self: stretch;
+  }
 }
 
 .wizard-nav__btn--edit {
