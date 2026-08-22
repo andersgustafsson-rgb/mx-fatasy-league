@@ -17,6 +17,7 @@ Lista att bolla och inte glömma. Bocka av / stryk när det är klart.
 | 7 | **SMX trackmaps / venues** | Delvis gjort | Kartor + posters från playoffs-sidan i `static/trackmaps/smx/` (Columbus, Carson, Ridgedale). Kopplade via `trackmap_utils`. |
 | 8 | **Städa / strukturera kodbasen** | ⏸️ Efter SMX-final (~26 sep) | **Beslut 13 aug:** ingen stor uppdelning under säsongen — för hög risk när spelet är live. Efter SMX: börja strukturera så AI/arbete blir enklare & billigare. Se plan nedan. |
 | 9 | **Social login (Google först)** | ⏸️ Efter SMX-final (~26 sep) | Mål: snabbare registrering (folk orkar inte fler lösenord). **Google först**, ev. Microsoft/Outlook senare; Facebook sist/skip. Fungerar med befintliga konton via e-postlänkning. Behåll vanligt lösenord. Vid första OAuth: koppla om e-post finns, annars skapa konto + välj användarnamn. |
+| 10 | **Admin mobilanpassad** | 📋 Efter SMX-final (~26 sep) | Du sköter mer från mobilen. Picks-statistik har fått första pass (aktuell tävling, kort layout) — resten av admin (import, holeshot, tabeller) behöver samma behandling: scroll-flikar, kort istället för tabeller, touch-vänliga knappar. |
 
 ---
 

@@ -11,7 +11,7 @@
   let totalSteps = 3;
   /** Step 3: true = full summary overview, false = focus holeshot/wildcard forms. */
   let step3ShowingSummary = true;
-  /** Only true after "Redigera mina val" — reverse walk holeshot → SX2 → SX1. Never for first-time picks. */
+  /** True after "Redigera mina val" — walk 450 → 250 → holeshot/wildcard, then save. */
   let isEditWalkback = false;
 
   function $(id) {
@@ -297,6 +297,7 @@
 
   function showStep3Overview() {
     isEditWalkback = false;
+    window._wizardInEditMode = false;
     step3ShowingSummary = true;
     showStep(3, { skipSave: true });
     if (typeof window.updateSaveButtonVisibility === 'function') {
@@ -319,7 +320,7 @@
         back.style.display = 'none';
         back.classList.remove('wizard-nav__btn--edit');
       }
-      if (editPicks) editPicks.hidden = false;
+      if (editPicks) editPicks.hidden = true;
       if (label) label.textContent = 'Klart — alla val gjorda';
       return;
     }
@@ -327,11 +328,16 @@
     if (editPicks) editPicks.hidden = true;
     if (back) {
       back.style.display = '';
-      back.textContent = '← Tillbaka';
-      back.setAttribute('aria-label', 'Tillbaka till föregående steg');
-      back.disabled = currentStep <= 1;
-      // Only when editing existing picks: bakåt = holeshot → SX2 → SX1
-      back.classList.toggle('wizard-nav__btn--edit', isEditWalkback);
+      if (isEditWalkback && currentStep === 1) {
+        back.textContent = isEn() ? '← Overview' : '← Översikt';
+        back.setAttribute('aria-label', isEn() ? 'Back to overview' : 'Tillbaka till översikt');
+        back.disabled = false;
+      } else {
+        back.textContent = '← Tillbaka';
+        back.setAttribute('aria-label', 'Tillbaka till föregående steg');
+        back.disabled = currentStep <= 1;
+      }
+      back.classList.toggle('wizard-nav__btn--edit', isEditWalkback && currentStep > 1);
     }
 
     if (label) {
@@ -359,7 +365,10 @@
       const rid = String(hidden.value || '').trim();
       const span = sel.querySelector('.selected-rider');
       if (!rid) {
-        if (span) span.textContent = '-- välj förare --';
+        if (span) {
+          span.setAttribute('data-i18n', 'picks.choose_placeholder');
+          span.textContent = '-- välj förare --';
+        }
         delete sel.dataset.selectedRiderId;
         return;
       }
@@ -369,12 +378,41 @@
         span.textContent = rider
           ? `#${rider.rider_number} ${rider.name} (${rider.bike_brand || ''})`
           : `#${rid}`;
+        span.removeAttribute('data-i18n');
       }
     };
     mapOne('holeshot-450', 'holeshot-450');
     mapOne('holeshot-250', 'holeshot-250');
     if (!cfg.isWSX) {
       mapOne('wildcard-pick', 'wildcard-pick');
+    }
+  }
+
+  function bindOverviewToolbarActions(root) {
+    if (!root) return;
+    root.querySelector('[data-wizard-overview-edit]')?.addEventListener('click', () => {
+      enterFullEditMode();
+    });
+    root.querySelector('[data-wizard-overview-save]')?.addEventListener('click', () => {
+      if (typeof window.savePicks === 'function') window.savePicks();
+    });
+  }
+
+  function enterFullEditMode() {
+    isEditWalkback = true;
+    step3ShowingSummary = false;
+    window._wizardInEditMode = true;
+    if (typeof window.ensureWizardDropdownsReady === 'function') {
+      window.ensureWizardDropdownsReady();
+    }
+    if (typeof window.syncUiFromHiddenSelects === 'function') {
+      window.syncUiFromHiddenSelects();
+    }
+    showStep(1, { skipSave: true });
+    $('wizard-step-1')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateNavButtons();
+    if (typeof window.updateSaveButtonVisibility === 'function') {
+      window.updateSaveButtonVisibility();
     }
   }
 
@@ -415,15 +453,21 @@
 
     if (next) {
       const showOverviewNext =
-        s === 3 && isPicksFullyComplete() && !step3ShowingSummary;
-      if (s >= totalSteps && !showOverviewNext) {
+        s === 3 && isPicksFullyComplete() && !step3ShowingSummary && !isEditWalkback;
+      if (s >= totalSteps && (!showOverviewNext || (isEditWalkback && isPicksFullyComplete()))) {
         next.style.display = 'none';
       } else {
         next.style.display = '';
         if (showOverviewNext) {
           next.textContent = 'Nästa: Översikt →';
         } else if (s === 1) {
-          next.textContent = `Nästa: ${cfg.label250} →`;
+          next.textContent = isEditWalkback
+            ? (isEn() ? `Next: ${cfg.label250} →` : `Nästa: ${cfg.label250} →`)
+            : `Nästa: ${cfg.label250} →`;
+        } else if (s === 2) {
+          next.textContent = isEditWalkback
+            ? (isEn() ? 'Next: Holeshot →' : 'Nästa: Holeshot →')
+            : 'Nästa: Holeshot →';
         } else {
           next.textContent = 'Nästa: Holeshot →';
         }
@@ -431,7 +475,11 @@
     }
 
     const saveWrap = $('wizard-step-save');
-    if (saveWrap) saveWrap.style.display = s >= totalSteps ? '' : 'none';
+    if (saveWrap) {
+      // Vid redigering: spara-knappen syns först på steg 3 (holeshot/wildcard)
+      const showSave = isEditWalkback ? s >= totalSteps : s >= totalSteps;
+      saveWrap.style.display = showSave ? '' : 'none';
+    }
 
     updateProgress();
     refreshQuickPicksForStep(s);
@@ -568,6 +616,13 @@
 
   function bindNav() {
     $('wizard-btn-back')?.addEventListener('click', () => {
+      if (currentStep === 1 && isEditWalkback) {
+        isEditWalkback = false;
+        window._wizardInEditMode = false;
+        step3ShowingSummary = true;
+        showStep(3, { skipSave: true });
+        return;
+      }
       if (currentStep <= 1) return;
       if (currentStep === 3) {
         step3ShowingSummary = false;
@@ -576,18 +631,20 @@
     });
 
     $('wizard-btn-edit-picks')?.addEventListener('click', () => {
-      enterStep3BonusEdit();
+      enterFullEditMode();
     });
 
     $('wizard-btn-next')?.addEventListener('click', () => {
       if (!validateStep(currentStep)) return;
       if (currentStep === 3 && isPicksFullyComplete() && !step3ShowingSummary) {
+        if (isEditWalkback) {
+          $('save-picks-btn')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
         showStep3Overview();
         return;
       }
-      if (currentStep === 2) {
-        // First-time step 3: focus holeshot/wildcard — not edit-walkback
-        isEditWalkback = false;
+      if (currentStep === 2 && !isEditWalkback) {
         step3ShowingSummary = false;
       }
       showStep(currentStep + 1);
@@ -781,12 +838,22 @@
       if (onOverview) {
         heroP.textContent = tPick(
           'picks.draft_ready',
-          'Klart! Utkast sparat — lämna in med knappen nedan när du vill.'
+          'Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd.'
         );
       } else if (isEditWalkback) {
-        heroP.textContent = isEn()
-          ? 'Edit holeshot, or go Back to change your top 6.'
-          : 'Justera holeshot, eller gå Tillbaka för att ändra topp 6.';
+        if (currentStep === 1) {
+          heroP.textContent = isEn()
+            ? 'Change your top 6, then continue to the next class.'
+            : 'Ändra din topp 6, fortsätt sedan till nästa klass.';
+        } else if (currentStep === 2) {
+          heroP.textContent = isEn()
+            ? 'Adjust your top 6, then continue to holeshot' + (cfg.isWSX ? '.' : ' & wildcard.')
+            : 'Justera din topp 6, fortsätt sedan till holeshot' + (cfg.isWSX ? '.' : ' & wildcard.');
+        } else {
+          heroP.textContent = isEn()
+            ? 'Adjust holeshot' + (cfg.isWSX ? ', then save.' : ' & wildcard, then save.')
+            : 'Justera holeshot' + (cfg.isWSX ? ', spara sedan.' : ' & wildcard, spara sedan.');
+        }
       } else {
         heroP.textContent = cfg.isWSX
           ? (isEn() ? 'Who takes the first turn in SX1 and SX2?' : 'Vem tar första kurvan i SX1 och SX2?')
@@ -834,7 +901,13 @@
       (complete ? ' is-complete' : '') +
       (showFullSummary ? ' is-overview' : isEditWalkback ? ' is-edit-hint' : ' is-bonus-focus');
     if (showFullSummary) {
+      const editLabel = isEn() ? 'Edit my picks' : 'Redigera mina val';
+      const saveLabel = isEn() ? 'Submit my picks' : 'Lämna in mina val';
       el.innerHTML = `
+      <div class="wizard-overview-toolbar">
+        <button type="button" class="rp-btn wizard-btn-edit-picks" data-wizard-overview-edit>${mxIcon('edit')} ${editLabel}</button>
+        <button type="button" class="rp-btn rp-btn--primary" data-wizard-overview-save>${saveLabel}</button>
+      </div>
       <div class="${bannerCls}">${bannerText}</div>
       <div class="wizard-summary-body">
         <div class="wizard-summary-grid">
@@ -843,12 +916,15 @@
         </div>
         <div class="wizard-summary-extras">${extras}</div>
       </div>`;
+      bindOverviewToolbarActions(el);
       hydrateSummaryPortraits(el);
+    } else if (isEditWalkback && currentStep === 3) {
+      const hint = isEn()
+        ? 'Almost done — save your picks when holeshot' + (cfg.isWSX ? ' looks right.' : ' & wildcard look right.')
+        : 'Nästan klart — spara dina val när holeshot' + (cfg.isWSX ? ' stämmer.' : ' & wildcard stämmer.');
+      el.innerHTML = `<div class="wizard-edit-hint">${mxIcon('edit')} ${hint}</div>`;
     } else if (isEditWalkback) {
-      const backHint = isEn()
-        ? `Your top 6 are kept. Edit holeshot here, or tap Back to change ${cfg.label250} then ${cfg.label450}.`
-        : `Dina topp 6 behålls. Justera holeshot här, eller tryck Tillbaka för att ändra ${cfg.label250} och sedan ${cfg.label450}.`;
-      el.innerHTML = `<div class="wizard-edit-hint">${mxIcon('edit')} ${backHint}</div>`;
+      el.innerHTML = '';
     } else {
       el.innerHTML = '';
     }
@@ -938,8 +1014,7 @@
     setupWildcardWheel();
 
     isEditWalkback = false;
-    // Incomplete picks always open on step 1 (SX1). Only complete → overview,
-    // and only "Redigera" starts at holeshot. Never resume mid-wizard on holeshot.
+    // Incomplete picks → steg 1. Klara picks → översikt med redigera-knapp ovanför sammanfattningen.
     if (cfg.picksComplete || isPicksFullyComplete()) {
       step3ShowingSummary = true;
       showStep(3, { skipSave: true });
@@ -950,13 +1025,23 @@
   }
 
   function initAfterDraftLoad() {
+    // Användaren håller redan på — rör inte steget (t.ex. fetch eller redigera från översikt).
+    if (window._wizardInEditMode || isEditWalkback) {
+      refreshUI();
+      return;
+    }
+    if (window._picksDirtySinceLoad && currentStep > 1) {
+      refreshUI();
+      return;
+    }
+
     isEditWalkback = false;
     if (cfg.picksComplete || isPicksFullyComplete()) {
       step3ShowingSummary = true;
       showStep(3, { skipSave: true });
     } else {
       step3ShowingSummary = false;
-      showStep(1, { skipSave: true });
+      showStep(resolveStartStep(), { skipSave: true });
     }
     syncWildcardRollLockedState();
     refreshUI();
@@ -967,16 +1052,11 @@
   }
 
   function openBonusAdjust() {
-    isEditWalkback = true;
-    step3ShowingSummary = false;
-    showStep(3, { skipSave: true });
-    refreshUI();
-    const forms = $('wizard-step-3-forms');
-    forms?.classList.remove('is-collapsed');
-    const panel = forms?.querySelector('.wizard-adjust-panel');
-    if (panel) panel.open = true;
-    forms?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    updateNavButtons();
+    enterStep3BonusEdit();
+  }
+
+  function startEdit() {
+    enterFullEditMode();
   }
 
   window.PicksWizard = {
@@ -985,6 +1065,7 @@
     getStep,
     goToStep: showStep,
     openBonusAdjust,
+    startEdit,
     showOverview: showStep3Overview,
     persistStep,
     refresh: refreshUI,

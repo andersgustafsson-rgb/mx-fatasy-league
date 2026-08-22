@@ -56,6 +56,57 @@
   background: rgba(120, 53, 15, 0.55);
 }
 
+.wizard-overview-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  position: sticky;
+  top: 0.35rem;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+
+.wizard-overview-toolbar .rp-btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.wizard-overview-toolbar .wizard-btn-edit-picks {
+  order: 1;
+}
+
+.wizard-overview-toolbar .rp-btn--primary {
+  order: 2;
+  font-weight: 800;
+}
+
+@media (min-width: 480px) {
+  .wizard-overview-toolbar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .wizard-overview-toolbar .wizard-btn-edit-picks {
+    flex: 1 1 11rem;
+    order: 1;
+  }
+
+  .wizard-overview-toolbar .rp-btn--primary {
+    flex: 1 1 11rem;
+    order: 2;
+  }
+}
+
+.wizard-picks-summary.is-overview .wizard-summary-body {
+  margin-top: 0.15rem;
+}
+
 .picks-wizard-progress {
   display: flex;
   gap: 0.5rem;

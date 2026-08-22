@@ -13906,6 +13906,62 @@ def _competition_picks_assessment(comp: Competition) -> dict:
     }
 
 
+def _admin_picks_stats_payload(comp: Competition) -> dict:
+    """JSON payload for admin picks statistics (one competition)."""
+    assessment = _competition_picks_assessment(comp)
+    sched: dict = {}
+    try:
+        sched = _competition_race_schedule(comp) or {}
+    except Exception:
+        pass
+    has_results = (
+        CompetitionResult.query.filter_by(competition_id=comp.id).first() is not None
+    )
+    return {
+        "success": True,
+        "competition_id": comp.id,
+        "competition_name": comp.name,
+        "series": comp.series,
+        "event_date": comp.event_date.isoformat() if comp.event_date else None,
+        "picks_locked": is_picks_locked(comp),
+        "has_results": has_results,
+        "deadline_display": sched.get("pick_deadline_display"),
+        "race_display": sched.get("race_display") or sched.get("start_display"),
+        "is_wsx": assessment["is_wsx"],
+        "total_users": assessment["total_users"],
+        "users_complete": assessment["users_complete"],
+        "users_partial": assessment["users_partial"],
+        "users_started": assessment["users_started"],
+        "users_not_started": assessment["users_not_started"],
+        "complete_pct": assessment["complete_pct"],
+        "started_pct": assessment["started_pct"],
+        "users_complete_list": assessment["users_complete_list"],
+        "users_partial_list": assessment["users_partial_list"],
+    }
+
+
+@app.get("/admin/picks_stats/current")
+def admin_picks_stats_current():
+    """Recommended competition for picks stats (nästa race utan resultat)."""
+    if not is_admin_user():
+        return jsonify({"error": "unauthorized"}), 403
+
+    try:
+        comp = _next_competition_for_pick_reminders()
+        if not comp:
+            comp = _current_picks_competition()
+        if not comp:
+            return jsonify({"success": False, "error": "Ingen aktuell tävling hittades"}), 404
+
+        payload = _admin_picks_stats_payload(comp)
+        payload["is_recommended"] = True
+        return jsonify(payload)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 @app.get("/admin/picks_stats/<int:competition_id>")
 def admin_picks_stats(competition_id):
     """Get statistics about picks made for a competition"""
@@ -13917,23 +13973,7 @@ def admin_picks_stats(competition_id):
         if not comp:
             return jsonify({"error": "Competition not found"}), 404
 
-        assessment = _competition_picks_assessment(comp)
-
-        return jsonify({
-            "competition_id": competition_id,
-            "competition_name": comp.name,
-            "series": comp.series,
-            "is_wsx": assessment["is_wsx"],
-            "total_users": assessment["total_users"],
-            "users_complete": assessment["users_complete"],
-            "users_partial": assessment["users_partial"],
-            "users_started": assessment["users_started"],
-            "users_not_started": assessment["users_not_started"],
-            "complete_pct": assessment["complete_pct"],
-            "started_pct": assessment["started_pct"],
-            "users_complete_list": assessment["users_complete_list"],
-            "users_partial_list": assessment["users_partial_list"],
-        })
+        return jsonify(_admin_picks_stats_payload(comp))
     except Exception as e:
         import traceback
         traceback.print_exc()

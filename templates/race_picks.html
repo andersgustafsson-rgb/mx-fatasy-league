@@ -740,7 +740,7 @@
   <script src="{{ url_for('static', filename='mx_icons.js') }}?v=size-lock-2"></script>
   <script src="{{ url_for('static', filename='mx_i18n.js') }}?v=4"></script>
   <script src="{{ url_for('static', filename='mx_btn_feedback.js') }}?v=1"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=start-step1-1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='race_picks_wizard.css') }}?v=edit-flow-3">
 </head>
 <body class="text-gray-200 font-sans min-h-screen">
   <div class="race-picks-shell mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
@@ -1000,7 +1000,7 @@
       <div>
         {% if initial_picks_status and initial_picks_status.icon == '✅' %}
         <h2 data-i18n-sv="Översikt — dina val" data-i18n-en="Overview — your picks">Översikt — dina val</h2>
-        <p data-i18n-sv="Klart! Utkast sparat — lämna in med knappen nedan när du vill." data-i18n-en="Done! Draft saved — submit with the button below when ready.">Klart! Utkast sparat — lämna in med knappen nedan när du vill.</p>
+        <p data-i18n-sv="Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd." data-i18n-en="Done! Edit above if you want changes — submit when ready.">Klart! Redigera ovan om du vill ändra — lämna in när du är nöjd.</p>
         {% else %}
         <h2><span data-i18n="picks.step3">Steg 3</span> — Holeshot{% if competition.series != 'WSX' %} & Wildcard{% endif %}</h2>
         <p>{% if competition.series == 'WSX' %}Vem tar första kurvan i SX1 och SX2?{% else %}Holeshot + slumpa wildcard-plats (10–20) och välj 450-förare.{% endif %}</p>
@@ -1419,6 +1419,74 @@
     sel.value = v;
   }
 
+  /** Synka synliga rider-selectors från dolda selects / dataset (t.ex. efter i18n eller snabböversikt). */
+  function syncUiFromHiddenSelects() {
+    const restoreTop6 = (riderClass) => {
+      for (let i = 1; i <= 6; i++) {
+        const selector = document.querySelector(
+          `.rider-selector[data-class="${riderClass}"][data-position="${i}"]`
+        );
+        if (!selector) continue;
+
+        const hp = hiddenPickSelectName(riderClass, i);
+        const hidden = hp ? document.querySelector(`select[name="${hp}"]`) : null;
+        let rid = selector.dataset.selectedRiderId || hidden?.value;
+        if (!rid) continue;
+        rid = String(rid);
+
+        const span = selector.querySelector('.selected-rider');
+        const current = (span?.textContent || '').trim();
+        if (!isEmptyRiderText(current) && selector.dataset.selectedRiderId === rid) continue;
+
+        const rider = allRiders.find((r) => String(r.id) === rid);
+        if (!rider) continue;
+
+        const label = riderOptionLabel(rider);
+        if (span) {
+          span.textContent = label;
+          span.removeAttribute('data-i18n');
+        }
+        selector.dataset.selectedRiderId = rid;
+        const clearBtn = selector.querySelector('.clear-selection');
+        if (clearBtn) clearBtn.style.display = 'block';
+        ensureSelectValue(hidden, rid, label);
+        onPickChange(riderClass, i, rid);
+      }
+      updateRiderSelectors(riderClass);
+    };
+
+    const restoreBonus = (dataClass, hiddenId) => {
+      const selector = document.querySelector(`.rider-selector[data-class="${dataClass}"]`);
+      const hidden = document.getElementById(hiddenId);
+      if (!selector || !hidden?.value) return;
+
+      let rid = selector.dataset.selectedRiderId || hidden.value;
+      rid = String(rid);
+
+      const span = selector.querySelector('.selected-rider');
+      const current = (span?.textContent || '').trim();
+      if (!isEmptyRiderText(current) && selector.dataset.selectedRiderId === rid) return;
+
+      const rider = allRiders.find((r) => String(r.id) === rid);
+      const label = rider
+        ? riderOptionLabel(rider)
+        : (hidden.options[hidden.selectedIndex]?.text || rid);
+      if (span) {
+        span.textContent = label;
+        span.removeAttribute('data-i18n');
+      }
+      selector.dataset.selectedRiderId = rid;
+      ensureSelectValue(hidden, rid, label);
+    };
+
+    const topClasses = isWSXSeries ? ['wsx_sx1', 'wsx_sx2'] : ['450cc', '250cc'];
+    topClasses.forEach(restoreTop6);
+    restoreBonus('holeshot-450', 'holeshot-450');
+    restoreBonus('holeshot-250', 'holeshot-250');
+    if (!isWSXSeries) restoreBonus('wildcard-pick', 'wildcard-pick');
+  }
+  window.syncUiFromHiddenSelects = syncUiFromHiddenSelects;
+
   /** Synka dolda selects mot det som syns i UI (dataset / label). */
   function syncHiddenSelectsFromUi() {
     const mapHidden = (dataClass, hiddenId) => {
@@ -1475,6 +1543,7 @@
       l450.filter((r) => !isOutRiderId(r.id)),
       '-- välj 450cc förare --'
     );
+    syncUiFromHiddenSelects();
     syncHiddenSelectsFromUi();
   }
 
@@ -1608,6 +1677,7 @@
             if (selector && pick) {
               const selectedRiderSpan = selector.querySelector('.selected-rider');
               selectedRiderSpan.textContent = pick.riderName;
+              selectedRiderSpan.removeAttribute('data-i18n');
               
               // Show clear button
               const clearBtn = selector.querySelector('.clear-selection');
@@ -1644,6 +1714,7 @@
           if (selector && pick) {
             const selectedRiderSpan = selector.querySelector('.selected-rider');
             selectedRiderSpan.textContent = pick.riderName;
+            selectedRiderSpan.removeAttribute('data-i18n');
             
             // Update hidden select
             const hiddenSelect = document.getElementById(`holeshot-${classType}`);
@@ -1668,6 +1739,7 @@
         if (selector && pick) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
           selectedRiderSpan.textContent = pick.riderName;
+          selectedRiderSpan.removeAttribute('data-i18n');
           
           // Update hidden select
           const hiddenSelect = document.getElementById('wildcard-pick');
@@ -1903,25 +1975,26 @@
     
     // Update display
     selectedRiderSpan.textContent = riderName;
-    
+    selectedRiderSpan.removeAttribute('data-i18n');
+
     // Show clear button
     const clearBtn = selector.querySelector('.clear-selection');
     if (clearBtn) {
       clearBtn.style.display = 'block';
     }
-    
+
     // Close dropdown
     const dropdown = selector.querySelector('.rider-selector-dropdown');
     dropdown.style.display = 'none';
     selector.classList.remove('open');
-    
+
     // Clear search
     const searchInput = dropdown.querySelector('input');
     if (searchInput) {
       searchInput.value = '';
       filterRiders(riderClass, position, '');
     }
-    
+
     // Update the hidden select element for form submission
     const hp = hiddenPickSelectName(riderClass, position);
     if (hp) {
@@ -2107,13 +2180,14 @@
     const clearBtn = selector.querySelector('.clear-selection');
     
     // Reset display
+    selectedRiderSpan.setAttribute('data-i18n', 'picks.choose_placeholder');
     selectedRiderSpan.textContent = emptyRiderLabel();
-    
+
     // Hide clear button
     if (clearBtn) {
       clearBtn.style.display = 'none';
     }
-    
+
     // Clear hidden select
     const hp = hiddenPickSelectName(riderClass, position);
     if (hp) {
@@ -2628,6 +2702,7 @@ function ensureWizardDropdownsReady() {
   riderClasses.forEach((cls) => updateRiderSelectors(cls));
   updateHoleshotDropdowns();
   initializePreviewImages();
+  if (typeof syncUiFromHiddenSelects === 'function') syncUiFromHiddenSelects();
   if (typeof syncHiddenSelectsFromUi === 'function') syncHiddenSelectsFromUi();
   window._wizardDropdownsReady = true;
 }
@@ -2892,6 +2967,7 @@ function onPickChange(cls, pos, riderId = null) {
 
       const riderText = `#${rider.rider_number} ${rider.name} (${rider.bike_brand})`;
       selectedRiderSpan.textContent = riderText;
+      selectedRiderSpan.removeAttribute('data-i18n');
 
       const clearBtn = selector.querySelector('.clear-selection');
       if (clearBtn) clearBtn.style.display = 'block';
@@ -2928,6 +3004,7 @@ function onPickChange(cls, pos, riderId = null) {
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
           selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
         }
@@ -2944,6 +3021,7 @@ function onPickChange(cls, pos, riderId = null) {
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
           selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
         }
@@ -2961,6 +3039,7 @@ function onPickChange(cls, pos, riderId = null) {
         if (rider) {
           const selectedRiderSpan = selector.querySelector('.selected-rider');
           selectedRiderSpan.textContent = label;
+          selectedRiderSpan.removeAttribute('data-i18n');
           const clearBtn = selector.querySelector('.clear-selection');
           if (clearBtn) clearBtn.style.display = 'block';
         }
@@ -3053,21 +3132,31 @@ function onPickChange(cls, pos, riderId = null) {
       updatePicksStatus(myPicks);
 
       const hasLocalDraft = Boolean(localStorage.getItem(`race_picks_${competitionId}`));
-      if (!hasLocalDraft) {
+      const wizardStep =
+        window.PicksWizard && typeof window.PicksWizard.getStep === 'function'
+          ? Number(window.PicksWizard.getStep())
+          : 1;
+      const userBusy =
+        Boolean(window._picksDirtySinceLoad) ||
+        Boolean(window._wizardInEditMode) ||
+        hasLocalDraft ||
+        wizardStep > 1;
+
+      if (!userBusy) {
         if (!actualResults || actualResults.length === 0) {
           applyMyPicksToForm(myPicks, { loadPortraits: false });
           deferLoadPickPortraits(myPicks);
         } else {
           displayResults(myPicks);
         }
-      }
-
-      removeWrongCoastSelections();
-
-      if (window.PicksWizard?.initAfterDraftLoad) {
-        window.PicksWizard.initAfterDraftLoad();
-      } else if (window.PicksWizard?.renderSummary) {
-        window.PicksWizard.renderSummary();
+        removeWrongCoastSelections();
+        if (window.PicksWizard?.initAfterDraftLoad) {
+          window.PicksWizard.initAfterDraftLoad();
+        } else if (window.PicksWizard?.renderSummary) {
+          window.PicksWizard.renderSummary();
+        }
+      } else if (window.PicksWizard?.refresh) {
+        window.PicksWizard.refresh();
       }
 
     } catch (e) {
@@ -3837,7 +3926,7 @@ function setMainTrackmap(src, thumbEl) {
 }
 
 </script>
-<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=start-step1-1"></script>
+<script src="{{ url_for('static', filename='race_picks_wizard.js') }}?v=edit-flow-3"></script>
 
 {% if not is_logged_in %}
 {% set pit_pass_race_name = competition.name %}
@@ -3861,6 +3950,9 @@ function setMainTrackmap(src, thumbEl) {
     function applyBilingual(lang) {
       if (typeof MxI18n === 'undefined') return;
       MxI18n.apply(lang);
+      if (typeof syncUiFromHiddenSelects === 'function') {
+        syncUiFromHiddenSelects();
+      }
       document.querySelectorAll('[data-i18n-sv],[data-i18n-en]').forEach(function (el) {
         var val = lang === 'en' ? el.dataset.i18nEn : el.dataset.i18nSv;
         if (val !== undefined) el.textContent = val;

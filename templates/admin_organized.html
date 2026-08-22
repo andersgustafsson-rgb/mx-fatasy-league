@@ -131,6 +131,137 @@
             border-bottom: 1px solid #374151;
         }
         .admin-advanced-body { padding: 1.15rem; }
+
+        /* Mobil — admin från telefon */
+        @media (max-width: 640px) {
+            body .container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                padding-top: 1rem;
+                padding-bottom: 1.5rem;
+            }
+            .cyberpunk-header {
+                font-size: 1.65rem;
+                line-height: 1.2;
+            }
+            .section-card {
+                padding: 1rem !important;
+            }
+            .admin-tab-bar {
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 0.35rem;
+                padding-bottom: 0.35rem;
+                margin-left: -0.25rem;
+                margin-right: -0.25rem;
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+            .admin-tab-bar::-webkit-scrollbar { display: none; }
+            .admin-tab-bar .tab-btn {
+                flex-shrink: 0;
+                font-size: 0.82rem;
+                padding: 0.65rem 0.85rem;
+                white-space: nowrap;
+            }
+            .picks-stats-stat-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.65rem;
+            }
+            .picks-stats-stat-grid > :last-child {
+                grid-column: 1 / -1;
+            }
+            .picks-stats-stat-grid .text-3xl {
+                font-size: 1.65rem;
+            }
+            .picks-stats-partial-table {
+                display: none;
+            }
+            .picks-stats-partial-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 0.65rem;
+            }
+            .picks-stats-touch {
+                font-size: 16px; /* undvik iOS zoom på focus */
+                min-height: 44px;
+            }
+            .picks-stats-complete-list {
+                flex-direction: column;
+                gap: 0.35rem;
+            }
+            .picks-stats-complete-list li {
+                background: rgba(30, 41, 59, 0.8);
+                border: 1px solid rgba(51, 65, 85, 0.8);
+                border-radius: 0.5rem;
+                padding: 0.5rem 0.65rem;
+            }
+        }
+        @media (min-width: 641px) {
+            .picks-stats-partial-cards {
+                display: none;
+            }
+        }
+        .picks-stats-partial-card {
+            border: 1px solid rgba(251, 191, 36, 0.25);
+            background: rgba(15, 23, 42, 0.65);
+            border-radius: 0.65rem;
+            padding: 0.75rem;
+        }
+        .picks-stats-partial-card__name {
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 0.35rem;
+        }
+        .picks-stats-partial-card__grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 0.35rem;
+        }
+        .picks-stats-partial-card__grid strong {
+            display: block;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+        }
+        .picks-stats-partial-card__missing {
+            font-size: 0.75rem;
+            color: #fcd34d;
+        }
+        .picks-stats-complete-panel {
+            border: 1px solid rgba(52, 211, 153, 0.22);
+            border-radius: 0.65rem;
+            background: rgba(15, 23, 42, 0.55);
+            padding: 0.65rem 0.75rem;
+        }
+        .picks-stats-complete-panel > summary {
+            cursor: pointer;
+            list-style: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6ee7b7;
+        }
+        .picks-stats-complete-panel > summary::-webkit-details-marker { display: none; }
+        .picks-stats-complete-panel > summary::after {
+            content: "visa";
+            float: right;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .picks-stats-complete-panel[open] > summary::after { content: "dölj"; }
+        .picks-stats-complete-panel .picks-stats-complete-list {
+            margin-top: 0.65rem;
+            padding-top: 0.65rem;
+            border-top: 1px solid rgba(51, 65, 85, 0.7);
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -165,7 +296,7 @@
         </div>
 
         <!-- Navigation Tabs -->
-        <div class="flex flex-wrap justify-center mb-8 border-b border-gray-600">
+        <div class="admin-tab-bar flex flex-wrap justify-center mb-8 border-b border-gray-600">
             <button onclick="showSection('race-results')" class="tab-btn active px-6 py-3 text-lg">
                 🏁 Tävlingsresultat
             </button>
@@ -771,27 +902,40 @@
                 <div class="mb-6">
                     <h3 class="text-xl font-semibold text-white mb-3">📊 Picks Statistics</h3>
                     <div class="bg-gray-800 rounded-lg p-4">
-                        <p class="text-gray-300 mb-4">Visa hur många användare som gjort sina picks för en tävling.</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <p class="text-gray-300 mb-4">Visa hur många användare som gjort sina picks. Aktuell tävling väljs automatiskt.</p>
+
+                        <div id="picks-stats-current-banner" class="hidden mb-4 rounded-lg border border-cyan-500/30 bg-gradient-to-r from-gray-900 to-gray-800 p-3 sm:p-4">
+                            <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-2 sm:gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs uppercase tracking-widest text-cyan-400/90 mb-1">Aktuell tävling</p>
+                                    <p class="text-base sm:text-lg font-bold text-white break-words" id="picks-stats-banner-name">—</p>
+                                    <p class="text-xs sm:text-sm text-gray-400 mt-1 break-words" id="picks-stats-banner-meta">—</p>
+                                </div>
+                                <span id="picks-stats-banner-status" class="self-start text-xs font-semibold px-3 py-1.5 rounded-full bg-gray-700 text-gray-200 shrink-0">—</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-300 mb-2">Välj tävling:</label>
-                                <select id="picks-stats-competition" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
-                                    <option value="">Loading competitions...</option>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">Tävling</label>
+                                <select id="picks-stats-competition" onchange="loadPicksStats()" class="picks-stats-touch w-full px-3 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400">
+                                    <option value="">Laddar tävlingar…</option>
                                 </select>
                             </div>
                             <div class="flex items-end">
-                                <button onclick="loadPicksStats()" class="btn-primary px-4 py-2 rounded-lg w-full">
-                                    📊 Visa statistik
+                                <button type="button" onclick="loadPicksStats(true)" class="btn-primary picks-stats-touch px-4 py-2.5 rounded-lg w-full md:w-auto whitespace-nowrap">
+                                    ↻ Uppdatera
                                 </button>
                             </div>
                         </div>
+
+                        <div id="picks-stats-loading" class="hidden text-sm text-cyan-300/90 mb-3">Hämtar statistik…</div>
                         
                         <!-- Stats Display -->
-                        <div id="picks-stats-display" class="hidden bg-gray-900 rounded-lg p-4 border border-gray-700">
-                            <h4 class="text-lg font-semibold text-cyan-400 mb-1" id="picks-stats-title">Picks Statistik</h4>
-                            <p class="text-xs text-gray-400 mb-4" id="picks-stats-subtitle">Komplett = 6+6 topp 6, båda holeshots och wildcard (ej WSX)</p>
-                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div id="picks-stats-display" class="hidden bg-gray-900 rounded-lg p-3 sm:p-4 border border-gray-700">
+                            <h4 class="text-base sm:text-lg font-semibold text-cyan-400 mb-1 break-words" id="picks-stats-title">Picks Statistik</h4>
+                            <p class="text-xs text-gray-400 mb-4 leading-relaxed" id="picks-stats-subtitle">Komplett = 6+6 topp 6, båda holeshots och wildcard (ej WSX)</p>
+                            <div class="picks-stats-stat-grid grid grid-cols-2 md:grid-cols-5 gap-4">
                                 <div class="text-center">
                                     <div class="text-3xl font-bold text-emerald-400" id="picks-stats-complete">-</div>
                                     <div class="text-sm text-gray-400 mt-1">✅ Klara</div>
@@ -819,8 +963,9 @@
 
                             <div id="picks-stats-partial-section" class="mt-4 hidden">
                                 <h5 class="text-sm font-semibold text-amber-300 mb-2">⚠️ Ofullständiga lineups — vad som saknas:</h5>
-                                <div class="overflow-x-auto rounded-lg border border-gray-700">
-                                    <table class="w-full text-sm text-left">
+                                <div id="picks-stats-partial-cards" class="picks-stats-partial-cards"></div>
+                                <div class="picks-stats-partial-table overflow-x-auto rounded-lg border border-gray-700">
+                                    <table class="w-full text-sm text-left min-w-[520px]">
                                         <thead class="bg-gray-800 text-gray-300 text-xs uppercase">
                                             <tr>
                                                 <th class="px-3 py-2">Användare</th>
@@ -836,10 +981,10 @@
                                 </div>
                             </div>
 
-                            <div id="picks-stats-complete-section" class="mt-4 hidden">
-                                <h5 class="text-sm font-semibold text-emerald-300 mb-2">✅ Klara lineups:</h5>
-                                <ul id="picks-stats-complete-list" class="text-sm text-gray-300 flex flex-wrap gap-x-4 gap-y-1"></ul>
-                            </div>
+                            <details id="picks-stats-complete-section" class="picks-stats-complete-panel mt-4 hidden">
+                                <summary id="picks-stats-complete-summary">✅ Klara lineups (0)</summary>
+                                <ul id="picks-stats-complete-list" class="picks-stats-complete-list text-sm text-gray-300 flex flex-wrap gap-x-4 gap-y-1"></ul>
+                            </details>
                         </div>
                     </div>
                 </div>
@@ -1525,6 +1670,9 @@
                 loadWsxBulkCompetitions();
                 loadQuickWsxHoleshotCompetitions();
             }
+            if (sectionId === 'picks-management') {
+                loadPicksStatsCompetitions(true);
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1883,65 +2031,93 @@
             }
         }
 
-        // Load competitions for picks statistics
-        async function loadPicksStatsCompetitions() {
+        function _picksStatsFormatDate(iso) {
+            if (!iso) return '';
             try {
-                const data = await fetchCompetitionsForImportShared();
-                
-                if (data.success) {
-                    const select = document.getElementById('picks-stats-competition');
-                    select.innerHTML = '<option value="">Välj tävling...</option>';
-                    
-                    data.competitions.forEach(comp => {
-                        const option = document.createElement('option');
-                        option.value = comp.id;
-                        option.textContent = comp.name;
-                        select.appendChild(option);
-                    });
-                } else {
-                    document.getElementById('picks-stats-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
-                }
-            } catch (error) {
-                console.error('Error loading competitions for picks stats:', error);
-                document.getElementById('picks-stats-competition').innerHTML = '<option value="">Fel vid laddning av tävlingar</option>';
+                const d = new Date(iso + 'T12:00:00');
+                return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' });
+            } catch (_) {
+                return iso;
             }
         }
 
-        // Load picks statistics for selected competition
-        async function loadPicksStats() {
-            const competitionId = document.getElementById('picks-stats-competition').value;
-            
-            if (!competitionId) {
-                alert('❌ Välj en tävling först!');
+        function _picksStatsStatusBadge(data) {
+            if (data.has_results) {
+                return { text: 'Resultat inne', cls: 'bg-violet-900/60 text-violet-200 border border-violet-700/50' };
+            }
+            if (data.picks_locked) {
+                return { text: 'Picks låsta', cls: 'bg-amber-900/50 text-amber-200 border border-amber-700/50' };
+            }
+            return { text: 'Picks öppna', cls: 'bg-emerald-900/50 text-emerald-200 border border-emerald-700/50' };
+        }
+
+        function updatePicksStatsBanner(data) {
+            const banner = document.getElementById('picks-stats-current-banner');
+            if (!banner || !data || !data.competition_id) {
+                if (banner) banner.classList.add('hidden');
                 return;
             }
-            
-            try {
-                const response = await fetch(`/admin/picks_stats/${competitionId}`);
-                const data = await response.json();
-                
-                if (data.error) {
-                    alert('❌ Fel vid hämtning av statistik: ' + data.error);
-                    return;
-                }
+            const nameEl = document.getElementById('picks-stats-banner-name');
+            const metaEl = document.getElementById('picks-stats-banner-meta');
+            const statusEl = document.getElementById('picks-stats-banner-status');
+            const series = (data.series || 'AMA').toUpperCase();
+            const dateStr = _picksStatsFormatDate(data.event_date);
+            const deadline = data.deadline_display ? `Picks stänger ${data.deadline_display}` : '';
+            const parts = [series, dateStr, deadline].filter(Boolean);
+            if (nameEl) nameEl.textContent = data.competition_name || '—';
+            if (metaEl) metaEl.textContent = parts.join(' · ') || '—';
+            const badge = _picksStatsStatusBadge(data);
+            if (statusEl) {
+                statusEl.textContent = badge.text;
+                statusEl.className = `text-xs font-semibold px-3 py-1 rounded-full ${badge.cls}`;
+            }
+            banner.classList.remove('hidden');
+        }
 
-                document.getElementById('picks-stats-subtitle').textContent = data.is_wsx
-                    ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
-                    : 'Komplett = 6+6 topp 6, båda holeshots och wildcard med position + förare';
+        function renderPicksStats(data) {
+            if (!data || data.error) {
+                alert('❌ Fel vid hämtning av statistik: ' + (data?.error || 'Okänt fel'));
+                return;
+            }
 
-                document.getElementById('picks-stats-title').textContent = `Picks Statistik: ${data.competition_name}`;
-                document.getElementById('picks-stats-complete').textContent = data.users_complete;
-                document.getElementById('picks-stats-partial').textContent = data.users_partial;
-                document.getElementById('picks-stats-not-started').textContent = data.users_not_started;
-                document.getElementById('picks-stats-complete-pct').textContent = data.complete_pct + '%';
-                document.getElementById('picks-stats-started-pct').textContent = data.started_pct + '%';
-                document.getElementById('picks-stats-total-users').textContent =
-                    `Totalt antal användare: ${data.total_users} · Påbörjat: ${data.users_started}`;
+            updatePicksStatsBanner(data);
 
-                const partialBody = document.getElementById('picks-stats-partial-body');
-                const partialSection = document.getElementById('picks-stats-partial-section');
-                if (data.users_partial_list && data.users_partial_list.length > 0) {
-                    partialBody.innerHTML = data.users_partial_list.map((u) => {
+            document.getElementById('picks-stats-subtitle').textContent = data.is_wsx
+                ? 'Komplett = 6+6 topp 6 och båda holeshots (WSX, ingen wildcard)'
+                : 'Komplett = 6+6 topp 6, båda holeshots och wildcard med position + förare';
+
+            document.getElementById('picks-stats-title').textContent = `Picks Statistik: ${data.competition_name}`;
+            document.getElementById('picks-stats-complete').textContent = data.users_complete;
+            document.getElementById('picks-stats-partial').textContent = data.users_partial;
+            document.getElementById('picks-stats-not-started').textContent = data.users_not_started;
+            document.getElementById('picks-stats-complete-pct').textContent = data.complete_pct + '%';
+            document.getElementById('picks-stats-started-pct').textContent = data.started_pct + '%';
+            document.getElementById('picks-stats-total-users').textContent =
+                `Totalt antal användare: ${data.total_users} · Påbörjat: ${data.users_started}`;
+
+            const partialBody = document.getElementById('picks-stats-partial-body');
+            const partialCards = document.getElementById('picks-stats-partial-cards');
+            const partialSection = document.getElementById('picks-stats-partial-section');
+            if (data.users_partial_list && data.users_partial_list.length > 0) {
+                partialBody.innerHTML = data.users_partial_list.map((u) => {
+                    const hs = `${u.holeshot_450 ? '✓' : '—'} / ${u.holeshot_250 ? '✓' : '—'}`;
+                    const wc = data.is_wsx ? '—' : (
+                        u.wildcard_position && u.wildcard_rider ? '✓' :
+                        u.wildcard_position ? 'pos' : '—'
+                    );
+                    const missing = (u.missing || []).join(', ');
+                    const name = u.display_name || u.username;
+                    return `<tr>
+                        <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
+                        <td class="px-3 py-2">${u.race_450}/6</td>
+                        <td class="px-3 py-2">${u.race_250}/6</td>
+                        <td class="px-3 py-2">${hs}</td>
+                        <td class="px-3 py-2 hidden sm:table-cell">${wc}</td>
+                        <td class="px-3 py-2 text-amber-200/90 text-xs">${missing}</td>
+                    </tr>`;
+                }).join('');
+                if (partialCards) {
+                    partialCards.innerHTML = data.users_partial_list.map((u) => {
                         const hs = `${u.holeshot_450 ? '✓' : '—'} / ${u.holeshot_250 ? '✓' : '—'}`;
                         const wc = data.is_wsx ? '—' : (
                             u.wildcard_position && u.wildcard_rider ? '✓' :
@@ -1949,38 +2125,147 @@
                         );
                         const missing = (u.missing || []).join(', ');
                         const name = u.display_name || u.username;
-                        return `<tr>
-                            <td class="px-3 py-2 whitespace-nowrap">${name} <span class="text-gray-500 text-xs">(${u.username})</span></td>
-                            <td class="px-3 py-2">${u.race_450}/6</td>
-                            <td class="px-3 py-2">${u.race_250}/6</td>
-                            <td class="px-3 py-2">${hs}</td>
-                            <td class="px-3 py-2 hidden sm:table-cell">${wc}</td>
-                            <td class="px-3 py-2 text-amber-200/90 text-xs">${missing}</td>
-                        </tr>`;
+                        const wcCell = data.is_wsx ? '' : `
+                            <div><span>WC</span><strong>${wc}</strong></div>`;
+                        return `<article class="picks-stats-partial-card">
+                            <div class="picks-stats-partial-card__name">${name} <span class="text-gray-500 text-xs font-normal">(${u.username})</span></div>
+                            <div class="picks-stats-partial-card__grid">
+                                <div><span>450</span><strong>${u.race_450}/6</strong></div>
+                                <div><span>250</span><strong>${u.race_250}/6</strong></div>
+                                <div><span>HS</span><strong>${hs}</strong></div>
+                                ${wcCell}
+                            </div>
+                            <div class="picks-stats-partial-card__missing">Saknas: ${missing || '—'}</div>
+                        </article>`;
                     }).join('');
-                    partialSection.classList.remove('hidden');
-                } else {
-                    partialBody.innerHTML = '';
-                    partialSection.classList.add('hidden');
+                }
+                partialSection.classList.remove('hidden');
+            } else {
+                partialBody.innerHTML = '';
+                if (partialCards) partialCards.innerHTML = '';
+                partialSection.classList.add('hidden');
+            }
+
+            const completeList = document.getElementById('picks-stats-complete-list');
+            const completeSection = document.getElementById('picks-stats-complete-section');
+            const completeSummary = document.getElementById('picks-stats-complete-summary');
+            if (data.users_complete_list && data.users_complete_list.length > 0) {
+                const count = data.users_complete_list.length;
+                if (completeSummary) {
+                    completeSummary.textContent = `✅ Klara lineups (${count})`;
+                }
+                completeList.innerHTML = data.users_complete_list.map((u) => {
+                    const name = u.display_name || u.username;
+                    return `<li>• ${name} <span class="text-gray-500">(${u.username})</span></li>`;
+                }).join('');
+                completeSection.classList.remove('hidden');
+                completeSection.removeAttribute('open');
+            } else {
+                completeList.innerHTML = '';
+                if (completeSummary) completeSummary.textContent = '✅ Klara lineups (0)';
+                completeSection.classList.add('hidden');
+            }
+
+            document.getElementById('picks-stats-display').classList.remove('hidden');
+        }
+
+        function _populatePicksStatsSelect(competitions, recommendedId) {
+            const select = document.getElementById('picks-stats-competition');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const upcoming = competitions
+                .filter((c) => !c.has_results)
+                .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''));
+            const past = competitions
+                .filter((c) => c.has_results)
+                .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''));
+
+            const addOption = (comp, groupEl) => {
+                const option = document.createElement('option');
+                option.value = comp.id;
+                const dateStr = _picksStatsFormatDate(comp.event_date);
+                const series = comp.series ? ` · ${comp.series}` : '';
+                const star = String(comp.id) === String(recommendedId) ? '★ ' : '';
+                option.textContent = `${star}${comp.name}${series}${dateStr ? ' · ' + dateStr : ''}`;
+                (groupEl || select).appendChild(option);
+            };
+
+            if (upcoming.length) {
+                const og = document.createElement('optgroup');
+                og.label = 'Kommande';
+                upcoming.forEach((c) => addOption(c, og));
+                select.appendChild(og);
+            }
+            if (past.length) {
+                const og = document.createElement('optgroup');
+                og.label = 'Avklarade';
+                past.forEach((c) => addOption(c, og));
+                select.appendChild(og);
+            }
+            if (!upcoming.length && !past.length) {
+                select.innerHTML = '<option value="">Inga tävlingar</option>';
+                return;
+            }
+
+            if (recommendedId && select.querySelector(`option[value="${recommendedId}"]`)) {
+                select.value = String(recommendedId);
+            } else if (upcoming.length) {
+                select.value = String(upcoming[0].id);
+            }
+        }
+
+        // Load competitions for picks statistics (auto-selects current race)
+        async function loadPicksStatsCompetitions(autoLoadStats = false) {
+            try {
+                const [compData, currentRes] = await Promise.all([
+                    fetchCompetitionsForImportShared(),
+                    fetch('/admin/picks_stats/current').then((r) => r.json()).catch(() => null),
+                ]);
+
+                if (!compData.success) {
+                    document.getElementById('picks-stats-competition').innerHTML =
+                        '<option value="">Fel vid laddning av tävlingar</option>';
+                    return;
                 }
 
-                const completeList = document.getElementById('picks-stats-complete-list');
-                const completeSection = document.getElementById('picks-stats-complete-section');
-                if (data.users_complete_list && data.users_complete_list.length > 0) {
-                    completeList.innerHTML = data.users_complete_list.map((u) => {
-                        const name = u.display_name || u.username;
-                        return `<li>• ${name} <span class="text-gray-500">(${u.username})</span></li>`;
-                    }).join('');
-                    completeSection.classList.remove('hidden');
-                } else {
-                    completeList.innerHTML = '';
-                    completeSection.classList.add('hidden');
+                const recommendedId = currentRes?.success ? currentRes.competition_id : null;
+                _populatePicksStatsSelect(compData.competitions || [], recommendedId);
+
+                if (autoLoadStats) {
+                    if (currentRes?.success) {
+                        renderPicksStats(currentRes);
+                    } else {
+                        await loadPicksStats(false);
+                    }
                 }
-                
-                document.getElementById('picks-stats-display').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading competitions for picks stats:', error);
+                document.getElementById('picks-stats-competition').innerHTML =
+                    '<option value="">Fel vid laddning av tävlingar</option>';
+            }
+        }
+
+        // Load picks statistics for selected competition
+        async function loadPicksStats(forceRefresh = false) {
+            const competitionId = document.getElementById('picks-stats-competition')?.value;
+            const loadingEl = document.getElementById('picks-stats-loading');
+
+            if (!competitionId) {
+                if (forceRefresh) alert('❌ Välj en tävling först!');
+                return;
+            }
+
+            try {
+                if (loadingEl) loadingEl.classList.remove('hidden');
+                const response = await fetch(`/admin/picks_stats/${competitionId}`);
+                const data = await response.json();
+                renderPicksStats(data);
             } catch (error) {
                 console.error('Error loading picks stats:', error);
                 alert('❌ Fel vid hämtning av statistik: ' + error.message);
+            } finally {
+                if (loadingEl) loadingEl.classList.add('hidden');
             }
         }
 
@@ -2971,7 +3256,7 @@
             stagger(() => loadSetScoreCompetitions(), 600);
             stagger(() => loadAllUsers(), 700);
             stagger(() => loadFullPicksCompetitions(), 800);
-            stagger(() => loadPicksStatsCompetitions(), 900);
+            stagger(() => loadPicksStatsCompetitions(true), 900);
             stagger(() => loadAnnouncement(), 1000);
             stagger(() => loadUsersWithEmail(), 1100);
             stagger(() => loadVisitStats(), 1200);
