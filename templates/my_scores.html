@@ -61,9 +61,7 @@
         overflow-x: visible;
       }
       .scores-table,
-      .scores-table tbody,
-      .scores-table tr,
-      .scores-table td {
+      .scores-table tbody {
         display: block;
         width: 100%;
       }
@@ -72,47 +70,52 @@
         display: none;
       }
       .scores-table tbody {
-        padding: 0.65rem;
+        padding: 0.5rem;
       }
       .scores-table .score-row {
-        margin-bottom: 0.65rem;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        column-gap: 0.75rem;
+        margin-bottom: 0.4rem;
+        padding: 0.65rem 0.8rem;
         border: 1px solid rgba(51, 65, 85, 0.7);
-        border-radius: 0.9rem;
+        border-radius: 0.7rem;
         background: rgba(15, 23, 42, 0.62);
-        overflow: hidden;
       }
       .scores-table .score-row td {
-        padding: 0.45rem 0.85rem;
+        display: block;
+        width: auto;
+        padding: 0;
         text-align: left;
         white-space: normal;
       }
       .scores-table .score-row td::before {
-        content: attr(data-label);
-        display: block;
-        margin-bottom: 0.2rem;
-        font-size: 0.62rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #64748b;
+        display: none;
       }
-      .scores-table .score-row td:first-child {
-        padding-top: 0.75rem;
+      .scores-table .score-row td[data-label="Datum"],
+      .scores-table .score-row td[data-label="Status"],
+      .scores-table .score-row td[data-label="Serie"] {
+        display: none;
       }
-      .scores-table .score-row td:last-child {
-        padding-bottom: 0.8rem;
+      .scores-table .score-row td[data-label="Tävling"] {
+        grid-column: 1;
+        min-width: 0;
       }
       .scores-table .score-row td[data-label="Poäng"] {
-        text-align: left;
+        grid-column: 2;
+        text-align: right;
+        font-size: 1.15rem;
+        line-height: 1;
       }
       .older-toggle-row {
         display: block;
-        margin: 0.15rem 0 0.5rem;
+        margin: 0.1rem 0 0.35rem;
       }
       .older-toggle-row td {
         display: block;
         width: 100%;
-        padding: 0.25rem 0.65rem 0.5rem;
+        padding: 0.2rem 0.5rem 0.4rem;
       }
     }
   </style>
@@ -254,7 +257,10 @@
                     </span>
                     <div class="min-w-0">
                       <div class="font-semibold text-slate-100 truncate">{{ row.name }}</div>
-                      <div class="text-xs text-slate-600 mt-0.5">
+                      <div class="sm:hidden text-xs text-slate-400 mt-0.5">
+                        {{ row.event_date }} · {% if row.has_results %}Kört{% else %}Väntar{% endif %}
+                      </div>
+                      <div class="hidden sm:block text-xs text-slate-600 mt-0.5">
                         {% if row.has_results %}Klicka för detaljer{% else %}Inga resultat ännu{% endif %}
                       </div>
                     </div>
