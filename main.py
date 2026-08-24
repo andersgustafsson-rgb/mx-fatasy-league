@@ -9323,7 +9323,7 @@ def _my_scores_payload(uid: int, series_filter: str, wsx_year: int | None) -> tu
             (Competition.id == CompetitionScore.competition_id)
             & (CompetitionScore.user_id == uid),
         )
-        .order_by(Competition.event_date.asc().nulls_last())
+        .order_by(Competition.event_date.desc().nulls_last())
         .all()
     )
     rows = _filter_my_score_rows(rows, series_filter, wsx_year)

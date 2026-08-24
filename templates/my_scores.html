@@ -7,229 +7,252 @@
   <title>Mina Poäng - MX Fantasy League</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='rp-buttons.css') }}?v=btn-clean-2">
-<script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <script src="{{ url_for('static', filename='mx_icons.js') }}?v=1"></script>
+  <style>
+    .series-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1.5px solid rgba(100,116,139,0.45);
+      background: rgba(30,41,59,0.7);
+      color: #94a3b8;
+      cursor: pointer;
+      transition: background 0.13s, border-color 0.13s, color 0.13s;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .series-btn:hover { border-color: rgba(148,163,184,0.7); color: #e2e8f0; }
+    .series-btn.is-active { border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.7); color: #67e8f9; }
+    .series-btn[data-series="SX"].is-active  { border-color: rgba(34,211,238,0.7); background: rgba(8,47,73,0.65); color: #67e8f9; }
+    .series-btn[data-series="MX"].is-active  { border-color: rgba(52,211,153,0.6); background: rgba(6,78,59,0.55); color: #6ee7b7; }
+    .series-btn[data-series="SMX"].is-active { border-color: rgba(167,139,250,0.6); background: rgba(88,28,135,0.45); color: #c4b5fd; }
+    .series-btn[data-series="WSX"].is-active { border-color: rgba(251,191,36,0.6);  background: rgba(120,53,15,0.45); color: #fde68a; }
+    .series-btn[data-series="all"].is-active { border-color: rgba(148,163,184,0.55); background: rgba(51,65,85,0.6); color: #cbd5e1; }
+
+    tr.row-hidden { display: none; }
+    tr.row-older-hidden { display: none; }
+
+    .older-toggle-row td {
+      padding: 0.6rem 1rem;
+      text-align: center;
+    }
+    .older-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 1rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #94a3b8;
+      border: 1px solid rgba(100,116,139,0.4);
+      background: rgba(30,41,59,0.5);
+      cursor: pointer;
+      transition: background 0.13s, border-color 0.13s, color 0.13s;
+    }
+    .older-toggle-btn:hover { border-color: rgba(148,163,184,0.65); color: #e2e8f0; background: rgba(51,65,85,0.6); }
+  </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 font-sans">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
     {% set completed_count = (scores | selectattr('has_results') | list | length) if scores else 0 %}
     {% set total_count = (scores | length) if scores else 0 %}
+    {% set total_sx  = (scores | selectattr('series','equalto','SX')  | map(attribute='total_points') | sum) if scores else 0 %}
+    {% set total_mx  = (scores | selectattr('series','equalto','MX')  | map(attribute='total_points') | sum) if scores else 0 %}
+    {% set total_wsx = (scores | selectattr('series','equalto','WSX') | map(attribute='total_points') | sum) if scores else 0 %}
+    {% set total_smx = (scores | selectattr('series','equalto','SMX') | map(attribute='total_points') | sum) if scores else 0 %}
 
-    {% set total_sx = (scores | selectattr('series', 'equalto', 'SX') | map(attribute='total_points') | sum) if scores else 0 %}
-    {% set total_mx = (scores | selectattr('series', 'equalto', 'MX') | map(attribute='total_points') | sum) if scores else 0 %}
-    {% set total_wsx = (scores | selectattr('series', 'equalto', 'WSX') | map(attribute='total_points') | sum) if scores else 0 %}
-    {% set total_smx = (scores | selectattr('series', 'equalto', 'SMX') | map(attribute='total_points') | sum) if scores else 0 %}
-
-    <header class="relative rounded-2xl overflow-hidden mb-8 shadow-2xl border border-slate-500/25">
+    <!-- Rubrik -->
+    <header class="relative rounded-2xl overflow-hidden mb-6 shadow-2xl border border-slate-500/25">
       <div class="absolute inset-0 bg-gradient-to-br from-cyan-600/60 via-indigo-900/70 to-slate-950"></div>
-      <div class="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_10%,rgba(255,255,255,0.2),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(255,255,255,0.15),transparent_35%)]"></div>
-      <div class="relative p-6 sm:p-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div class="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_20%_10%,rgba(255,255,255,0.2),transparent_40%)]"></div>
+      <div class="relative p-5 sm:p-7 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div class="min-w-0">
-          <h1 class="text-2xl sm:text-4xl font-black text-white tracking-tight drop-shadow-lg truncate">
-            {% if viewing_user %}
-              Poänghistorik · {{ viewing_user }}
-            {% elif series_filter == 'WSX' %}
-              Mina poäng · WSX{% if wsx_year %} {{ wsx_year }}{% endif %}
-            {% elif series_filter in ('SX', 'MX', 'SMX') %}
-              Mina poäng · {{ series_filter }}
-            {% else %}
-              Mina poäng
-            {% endif %}
+          <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight drop-shadow-lg truncate">
+            {% if viewing_user %}Poänghistorik · {{ viewing_user }}
+            {% elif series_filter == 'WSX' %}Mina poäng · WSX{% if wsx_year %} {{ wsx_year }}{% endif %}
+            {% elif series_filter in ('SX','MX','SMX') %}Mina poäng · {{ series_filter }}
+            {% else %}Mina poäng{% endif %}
           </h1>
-          <p class="text-slate-200/90 text-sm sm:text-base mt-2 max-w-2xl">
-            {% if series_filter == 'WSX' %}
-              Endast World Supercross{% if wsx_year %} {{ wsx_year }}{% endif %} — samma säsong som highscoren. SX/MX/SMX visas inte här.
-            {% else %}
-              Din poäng per tävling, plus snabb filtrering. Klicka på en körd tävling för att se exakt poängfördelning.
-            {% endif %}
+          <p class="text-slate-200/80 text-sm mt-1.5">
+            Din poäng per tävling — nyaste överst. Klicka på en körd rad för detaljvy.
           </p>
         </div>
         <a href="{% if viewing_user %}{{ url_for('user_stats_page', username=viewing_user) }}{% else %}{{ url_for('index') }}{% endif %}"
-           class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">
-          ← Tillbaka
-        </a>
+           class="rp-btn rp-btn--secondary rp-btn--sm shrink-0">← Tillbaka</a>
       </div>
     </header>
 
     {% if scores %}
-      <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
-          <div class="text-slate-400 text-xs font-bold tracking-wider uppercase">Totalt</div>
-          <div class="mt-2 flex items-end justify-between gap-3">
-            <div class="text-3xl font-black text-emerald-300 tabular-nums">{{ total_points }}</div>
-            <div class="text-slate-400 text-sm">{{ completed_count }}/{{ total_count }} körda</div>
-          </div>
-        </div>
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
-          <div class="text-slate-400 text-xs font-bold tracking-wider uppercase">Seriepoäng</div>
-          <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
-            {% if series_filter == 'WSX' %}
-              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
-            {% elif series_filter == 'SX' %}
-              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
-            {% elif series_filter == 'MX' %}
-              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
-            {% elif series_filter == 'SMX' %}
-              <div class="flex items-center justify-between gap-2 col-span-2"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
-            {% else %}
-              <div class="flex items-center justify-between gap-2"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
-              <div class="flex items-center justify-between gap-2"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
-              <div class="flex items-center justify-between gap-2"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
-              <div class="flex items-center justify-between gap-2"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
-            {% endif %}
-          </div>
-        </div>
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
-          <div class="text-slate-400 text-xs font-bold tracking-wider uppercase">Snitt per körd</div>
-          {% set avg = (total_points / completed_count) if completed_count else 0 %}
-          <div class="mt-2 flex items-end justify-between gap-3">
-            <div class="text-3xl font-black text-slate-100 tabular-nums">{{ (avg | round(1)) }}</div>
-            <div class="text-slate-400 text-sm">poäng/race</div>
-          </div>
-        </div>
-        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
-          <div class="text-slate-400 text-xs font-bold tracking-wider uppercase">Filter</div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <span class="inline-flex items-center rounded-full bg-slate-800/80 border border-slate-700/60 px-2.5 py-1 text-xs text-slate-300">Sök + serie + status</span>
-            <span class="inline-flex items-center rounded-full bg-slate-800/80 border border-slate-700/60 px-2.5 py-1 text-xs text-slate-300">Sticky header</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-2xl border border-slate-700/45 bg-slate-900/30 shadow-2xl overflow-hidden">
-        <div class="p-4 sm:p-5 border-b border-slate-700/40 bg-gradient-to-r from-slate-950/60 to-slate-900/30">
-          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            <div class="min-w-0">
-              <div class="text-sm font-bold text-white">Tävlingar</div>
-              <div id="result-count" class="text-xs text-slate-400 mt-1"></div>
+    <!-- Statistikboxar -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
+        <div class="text-slate-400 text-[10px] font-bold tracking-wider uppercase mb-1">Totalt</div>
+        <div class="text-3xl font-black text-emerald-300 tabular-nums leading-none">{{ total_points }}</div>
+        <div class="text-slate-500 text-xs mt-1">{{ completed_count }}/{{ total_count }} körda</div>
+      </div>
+      <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
+        <div class="text-slate-400 text-[10px] font-bold tracking-wider uppercase mb-2">Per serie</div>
+        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          {% if series_filter in ('SX','MX','SMX','WSX') %}
+            <div class="col-span-2 flex justify-between">
+              <span class="font-semibold {% if series_filter=='SX' %}text-cyan-200{% elif series_filter=='MX' %}text-emerald-200{% elif series_filter=='SMX' %}text-violet-200{% else %}text-amber-200{% endif %}">{{ series_filter }}</span>
+              <span class="tabular-nums text-slate-200">{{ total_points }}</span>
             </div>
-            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <div class="relative">
-                <input id="score-search" type="text" placeholder="Sök tävling…"
-                       class="w-full sm:w-72 bg-slate-950/40 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none" />
-              </div>
-              <div class="flex gap-2">
-                <select id="series-filter"
-                        class="bg-slate-950/40 border border-slate-700/60 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
-                  {% if series_filter == 'WSX' %}
-                    <option value="WSX" selected>WSX</option>
-                  {% elif series_filter in ('SX', 'MX', 'SMX') %}
-                    <option value="{{ series_filter }}" selected>{{ series_filter }}</option>
-                    <option value="all">Alla serier</option>
-                  {% else %}
-                    <option value="all" {% if series_filter == 'all' %}selected{% endif %}>Alla serier</option>
-                    <option value="WSX">WSX</option>
-                    <option value="SX">SX</option>
-                    <option value="MX">MX</option>
-                    <option value="SMX">SMX</option>
-                  {% endif %}
-                </select>
-                <select id="status-filter"
-                        class="bg-slate-950/40 border border-slate-700/60 rounded-xl px-3 py-2 text-sm text-slate-100 outline-none">
-                  <option value="all">Alla status</option>
-                  <option value="completed">Kört</option>
-                  <option value="pending">Väntar</option>
-                </select>
-              </div>
-              <button id="clear-filters"
-                      class="inline-flex items-center justify-center bg-white/8 hover:bg-white/14 border border-white/10 rounded-xl px-3 py-2 text-sm font-semibold text-slate-100 transition-colors">
-                Rensa
-              </button>
-            </div>
+          {% else %}
+            <div class="flex justify-between"><span class="text-cyan-200 font-semibold">SX</span><span class="tabular-nums text-slate-200">{{ total_sx }}</span></div>
+            <div class="flex justify-between"><span class="text-emerald-200 font-semibold">MX</span><span class="tabular-nums text-slate-200">{{ total_mx }}</span></div>
+            <div class="flex justify-between"><span class="text-violet-200 font-semibold">SMX</span><span class="tabular-nums text-slate-200">{{ total_smx }}</span></div>
+            <div class="flex justify-between"><span class="text-amber-200 font-semibold">WSX</span><span class="tabular-nums text-slate-200">{{ total_wsx }}</span></div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
+        <div class="text-slate-400 text-[10px] font-bold tracking-wider uppercase mb-1">Snitt / race</div>
+        {% set avg = (total_points / completed_count) if completed_count else 0 %}
+        <div class="text-3xl font-black text-slate-100 tabular-nums leading-none">{{ (avg | round(1)) }}</div>
+        <div class="text-slate-500 text-xs mt-1">poäng/körd</div>
+      </div>
+      <!-- Bästa race -->
+      {% if scores and completed_count > 0 %}
+        {% set best = scores | selectattr('has_results') | sort(attribute='total_points', reverse=True) | first %}
+        <div class="rounded-2xl border border-amber-700/35 bg-amber-950/15 p-4 shadow-xl">
+          <div class="text-amber-400/80 text-[10px] font-bold tracking-wider uppercase mb-1">Bästa race</div>
+          <div class="text-2xl font-black text-amber-300 tabular-nums leading-none">{{ best.total_points }}p</div>
+          <div class="text-amber-200/70 text-xs mt-1 truncate">{{ best.name }}</div>
+        </div>
+      {% else %}
+        <div class="rounded-2xl border border-slate-700/50 bg-slate-900/35 p-4 shadow-xl">
+          <div class="text-slate-400 text-[10px] font-bold tracking-wider uppercase mb-1">Bästa race</div>
+          <div class="text-slate-600 text-sm mt-2">—</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Filterrad -->
+    <div class="rounded-2xl border border-slate-700/45 bg-slate-900/30 shadow-xl mb-0 overflow-hidden">
+      <div class="p-3 sm:p-4 border-b border-slate-700/40 bg-slate-950/50">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+          <!-- Sökfält -->
+          <input id="score-search" type="text" placeholder="Sök tävling…"
+                 class="flex-1 min-w-0 bg-slate-950/40 border border-slate-700/60 focus:border-cyan-500/60 focus:ring-2 focus:ring-cyan-500/20 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 outline-none" />
+          <!-- Seriefilterknappar -->
+          <div class="flex flex-wrap gap-1.5 items-center">
+            <button type="button" class="series-btn is-active" data-series="all">Alla</button>
+            <button type="button" class="series-btn" data-series="SX">SX</button>
+            <button type="button" class="series-btn" data-series="MX">MX</button>
+            <button type="button" class="series-btn" data-series="SMX">SMX</button>
+            <button type="button" class="series-btn" data-series="WSX">WSX</button>
+            <span class="mx-1 text-slate-700">|</span>
+            <button type="button" class="series-btn" data-status="completed" id="btn-status-completed">Körda</button>
+            <button type="button" class="series-btn" data-status="pending" id="btn-status-pending">Kommande</button>
           </div>
         </div>
+        <div id="result-count" class="text-xs text-slate-500 mt-2"></div>
+      </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[56rem] border-collapse">
-            <thead class="sticky top-0 z-10 bg-slate-950/85 backdrop-blur border-b border-slate-700/50">
-              <tr class="text-left text-xs font-bold tracking-wider uppercase text-slate-400">
-                <th class="px-4 py-3">Datum</th>
-                <th class="px-4 py-3">Tävling</th>
-                <th class="px-4 py-3 text-center">Serie</th>
-                <th class="px-4 py-3 text-center">Status</th>
-                <th class="px-4 py-3 text-right">Poäng</th>
-              </tr>
-            </thead>
-            <tbody id="scores-tbody" class="divide-y divide-slate-800/70">
-              {% for row in scores %}
+      <!-- Tabell -->
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse">
+          <thead class="sticky top-0 z-10 bg-slate-950/90 backdrop-blur border-b border-slate-700/50">
+            <tr class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-500">
+              <th class="px-3 sm:px-4 py-3">Datum</th>
+              <th class="px-3 sm:px-4 py-3">Tävling</th>
+              <th class="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">Serie</th>
+              <th class="px-3 sm:px-4 py-3 text-center">Status</th>
+              <th class="px-3 sm:px-4 py-3 text-right">Poäng</th>
+            </tr>
+          </thead>
+          <tbody id="scores-tbody" class="divide-y divide-slate-800/60">
+            {% set current_year = namespace(value=none) %}
+            {% for row in scores %}
+              {% set row_year = row.event_date[:4] if row.event_date else '' %}
               {% set status_key = "completed" if row.has_results else "pending" %}
               <tr
                 id="comp-{{ row['competition_id'] }}"
                 data-name="{{ row.name | lower }}"
                 data-series="{{ row.series }}"
                 data-status="{{ status_key }}"
+                data-year="{{ row_year }}"
                 onclick="{% if row.has_results %}showDetails({{ row['competition_id'] }}){% endif %}"
-                class="{% if row.has_results %}cursor-pointer{% else %}cursor-default{% endif %} hover:bg-slate-800/30 transition-colors">
-                <td class="px-4 py-3 text-sm text-slate-300 tabular-nums whitespace-nowrap">{{ row.event_date }}</td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3 min-w-0">
+                class="score-row {% if row.has_results %}cursor-pointer{% else %}cursor-default{% endif %} hover:bg-slate-800/30 transition-colors">
+                <td class="px-3 sm:px-4 py-3 text-sm text-slate-400 tabular-nums whitespace-nowrap">{{ row.event_date }}</td>
+                <td class="px-3 sm:px-4 py-3">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="inline-flex sm:hidden text-[10px] font-bold px-1.5 py-0.5 rounded
+                      {% if row.series == 'SX' %}text-cyan-300 bg-cyan-950/50 border border-cyan-800/40
+                      {% elif row.series == 'MX' %}text-emerald-300 bg-emerald-950/40 border border-emerald-800/40
+                      {% elif row.series == 'SMX' %}text-violet-300 bg-violet-950/40 border border-violet-800/40
+                      {% elif row.series == 'WSX' %}text-amber-300 bg-amber-950/40 border border-amber-800/40
+                      {% else %}text-slate-300 bg-slate-900/40 border border-slate-700/40{% endif %}">
+                      {{ row.series }}
+                    </span>
                     <div class="min-w-0">
                       <div class="font-semibold text-slate-100 truncate">{{ row.name }}</div>
-                      <div class="text-xs text-slate-500 mt-0.5">
-                        {% if row.has_results %}
-                          Klicka för detaljer
-                        {% else %}
-                          Inga resultat ännu
-                        {% endif %}
+                      <div class="text-xs text-slate-600 mt-0.5">
+                        {% if row.has_results %}Klicka för detaljer{% else %}Inga resultat ännu{% endif %}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
                   <span class="inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-xs font-bold
-                    {% if row.series == 'SX' %} border-cyan-700/50 bg-cyan-950/30 text-cyan-200
-                    {% elif row.series == 'MX' %} border-emerald-800/50 bg-emerald-950/25 text-emerald-200
-                    {% elif row.series == 'SMX' %} border-violet-800/50 bg-violet-950/25 text-violet-200
-                    {% elif row.series == 'WSX' %} border-amber-800/50 bg-amber-950/25 text-amber-200
-                    {% else %} border-slate-700/60 bg-slate-900/30 text-slate-200 {% endif %}">
+                    {% if row.series == 'SX' %}border-cyan-700/50 bg-cyan-950/30 text-cyan-200
+                    {% elif row.series == 'MX' %}border-emerald-800/50 bg-emerald-950/25 text-emerald-200
+                    {% elif row.series == 'SMX' %}border-violet-800/50 bg-violet-950/25 text-violet-200
+                    {% elif row.series == 'WSX' %}border-amber-800/50 bg-amber-950/25 text-amber-200
+                    {% else %}border-slate-700/60 bg-slate-900/30 text-slate-200{% endif %}">
                     {{ row.series }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 sm:px-4 py-3 text-center">
                   {% if row.has_results %}
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-900/35 text-emerald-200 border border-emerald-700/35">
-                      <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Kört
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-emerald-900/35 text-emerald-200 border border-emerald-700/35">
+                      <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block"></span><span class="hidden xs:inline">Kört</span>
                     </span>
                   {% else %}
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-900/25 text-amber-200 border border-amber-700/35">
-                      <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-400"></span> Väntar
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-amber-900/25 text-amber-200 border border-amber-700/35">
+                      <span class="h-1.5 w-1.5 rounded-full bg-amber-400 inline-block"></span><span class="hidden xs:inline">Väntar</span>
                     </span>
                   {% endif %}
                 </td>
-                <td class="px-4 py-3 text-right font-black tabular-nums
-                  {% if row.has_results and row.total_points > 0 %} text-emerald-300
-                  {% elif row.has_results and row.total_points == 0 %} text-rose-300
-                  {% else %} text-slate-500 {% endif %}">
-                  {{ row.total_points }}
+                <td class="px-3 sm:px-4 py-3 text-right font-black tabular-nums
+                  {% if row.has_results and row.total_points > 0 %}text-emerald-300
+                  {% elif row.has_results and row.total_points == 0 %}text-rose-300
+                  {% else %}text-slate-600{% endif %}">
+                  {% if row.has_results %}{{ row.total_points }}{% else %}—{% endif %}
                 </td>
               </tr>
-              {% endfor %}
-            </tbody>
-            <tfoot class="border-t border-slate-800/80 bg-slate-950/40">
-              <tr>
-                <td colspan="4" class="px-4 py-3 text-right font-bold text-slate-300">Totalt</td>
-                <td class="px-4 py-3 text-right font-black text-emerald-300 tabular-nums">{{ total_points }}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+            {% endfor %}
+          </tbody>
+          <tfoot class="border-t border-slate-800/80 bg-slate-950/40">
+            <tr>
+              <td colspan="4" class="px-3 sm:px-4 py-3 text-right font-bold text-slate-400 text-sm">Totalt (synliga)</td>
+              <td id="footer-total" class="px-3 sm:px-4 py-3 text-right font-black text-emerald-300 tabular-nums">{{ total_points }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
 
-        <div id="no-results" class="hidden p-8 text-center text-slate-400 text-sm">
-          Inga rader matchar dina filter.
-        </div>
-      </section>
+      <div id="no-results" class="hidden p-8 text-center text-slate-400 text-sm">
+        Inga rader matchar ditt filter.
+      </div>
+    </div>
+
     {% else %}
-      <!-- Ingen data -->
-      <p class="text-slate-400 text-center">
-        Inga racepoäng registrerade ännu.<br>
-        <a href="{{ url_for('index') }}" class="text-blue-500 hover:underline">
-          Gör dina picks inför nästa race!
-        </a>
-      </p>
+    <p class="text-slate-400 text-center mt-10">
+      Inga racepoäng registrerade ännu.<br>
+      <a href="{{ url_for('index') }}" class="text-cyan-400 hover:underline">Gör dina picks inför nästa race!</a>
+    </p>
     {% endif %}
   </div>
 
-  <!-- Modal för detaljvy -->
+  <!-- Detaljmodal (oförändrad funktion) -->
   <div id="detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-3">
     <div class="bg-slate-950 border border-slate-700/60 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden">
       <div class="p-4 sm:p-5 border-b border-slate-800/80 shrink-0">
@@ -238,9 +261,7 @@
             <h3 id="detail-modal-title" class="text-lg sm:text-xl font-black text-white truncate">Dina poäng</h3>
             <p id="detail-modal-sub" class="text-xs text-slate-400 mt-1"></p>
           </div>
-          <button type="button" onclick="closeModal()" class="shrink-0 bg-white/8 hover:bg-white/14 border border-white/10 text-white px-3 py-2 rounded-xl text-sm font-bold">
-            Stäng
-          </button>
+          <button type="button" onclick="closeModal()" class="shrink-0 bg-white/8 hover:bg-white/14 border border-white/10 text-white px-3 py-2 rounded-xl text-sm font-bold">Stäng</button>
         </div>
         <div id="detail-summary" class="mt-3 grid grid-cols-3 gap-2 text-center hidden"></div>
         <div class="mt-3 flex flex-wrap gap-2 text-[10px] text-slate-400">
@@ -261,291 +282,331 @@
     const viewingUser = {% if viewing_user %}'{{ viewing_user }}'{% else %}null{% endif %};
     const initialSeriesFilter = {{ (series_filter or 'all') | tojson }};
 
+    // ── Filter-state ──────────────────────────────────────────────
+    let activeSeries = initialSeriesFilter === 'all' ? 'all' : initialSeriesFilter;
+    let activeStatus = 'all';
+    let olderExpanded = false;
+
+    // All rows sorted newest first — find the current-year cutoff
+    const allRows = Array.from(document.querySelectorAll('#scores-tbody tr.score-row'));
+    const years = [...new Set(allRows.map(r => r.dataset.year).filter(Boolean))].sort((a, b) => b - a);
+    const latestYear = years[0] || '';
+
     function applyFilters() {
-      const q = (document.getElementById("score-search")?.value || "").trim().toLowerCase();
-      const series = document.getElementById("series-filter")?.value || "all";
-      const status = document.getElementById("status-filter")?.value || "all";
+      const q = (document.getElementById('score-search')?.value || '').trim().toLowerCase();
+      const searching = q.length > 0;
 
-      const tbody = document.getElementById("scores-tbody");
-      const rows = tbody ? Array.from(tbody.querySelectorAll("tr")) : [];
+      let visibleTotal = 0;
+      let visiblePoints = 0;
 
-      let visible = 0;
-      for (const tr of rows) {
-        const name = tr.getAttribute("data-name") || "";
-        const rSeries = tr.getAttribute("data-series") || "";
-        const rStatus = tr.getAttribute("data-status") || "";
+      allRows.forEach(tr => {
+        const name   = tr.dataset.name || '';
+        const series = tr.dataset.series || '';
+        const status = tr.dataset.status || '';
+        const year   = tr.dataset.year || '';
 
-        const okName = !q || name.includes(q);
-        const okSeries = series === "all" || rSeries === series;
-        const okStatus = status === "all" || rStatus === status;
+        const okName   = !q || name.includes(q);
+        const okSeries = activeSeries === 'all' || series === activeSeries;
+        const okStatus = activeStatus === 'all' || status === activeStatus;
+        const isOlder  = year && year < latestYear;
 
-        const show = okName && okSeries && okStatus;
-        tr.classList.toggle("hidden", !show);
-        if (show) visible += 1;
-      }
+        // When searching, show everything matching regardless of year
+        const okOlder = searching || !isOlder || olderExpanded;
 
-      const noResults = document.getElementById("no-results");
-      if (noResults) noResults.classList.toggle("hidden", visible !== 0);
+        const show = okName && okSeries && okStatus && okOlder;
+        tr.classList.toggle('row-hidden', !show);
+        if (show) {
+          visibleTotal++;
+          if (tr.dataset.status === 'completed') {
+            const pts = parseInt(tr.querySelector('td:last-child')?.textContent || '0', 10);
+            if (!isNaN(pts)) visiblePoints += pts;
+          }
+        }
+      });
 
-      const counter = document.getElementById("result-count");
-      if (counter) counter.textContent = `${visible} av ${rows.length} rader`;
+      // Manage "Visa äldre" toggle row
+      updateOlderToggle(searching);
+
+      const noResults = document.getElementById('no-results');
+      if (noResults) noResults.classList.toggle('hidden', visibleTotal !== 0);
+
+      const counter = document.getElementById('result-count');
+      if (counter) counter.textContent = `${visibleTotal} av ${allRows.length} tävlingar visas`;
+
+      const footerTotal = document.getElementById('footer-total');
+      if (footerTotal) footerTotal.textContent = visiblePoints || '—';
     }
 
-    function clearFilters() {
-      const q = document.getElementById("score-search");
-      const series = document.getElementById("series-filter");
-      const status = document.getElementById("status-filter");
-      if (q) q.value = "";
-      // Keep locked series scope (e.g. ?series=WSX) — do not reintroduce SMX/SX
-      if (series && series.options.length > 1) series.value = "all";
-      else if (series && initialSeriesFilter && initialSeriesFilter !== "all") series.value = initialSeriesFilter;
-      if (status) status.value = "all";
+    function updateOlderToggle(searching) {
+      // Remove old toggle row if any
+      const existing = document.getElementById('older-toggle-row');
+      if (existing) existing.remove();
+
+      const hasOlderYears = years.length > 1;
+      if (!hasOlderYears || searching) return;
+
+      // Count older rows matching current filter
+      const olderCount = allRows.filter(tr => {
+        if ((tr.dataset.year || '') >= latestYear) return false;
+        const series = tr.dataset.series || '';
+        const status = tr.dataset.status || '';
+        return (activeSeries === 'all' || series === activeSeries) &&
+               (activeStatus === 'all' || status === activeStatus);
+      }).length;
+
+      if (olderCount === 0) return;
+
+      // Find last visible row
+      const visibleRows = allRows.filter(tr => !tr.classList.contains('row-hidden'));
+      const lastCurrentRow = visibleRows.filter(tr => (tr.dataset.year || '') >= latestYear).slice(-1)[0];
+      const insertAfter = lastCurrentRow || (visibleRows[visibleRows.length - 1]);
+
+      if (!insertAfter) return;
+
+      const tbody = document.getElementById('scores-tbody');
+      const tr = document.createElement('tr');
+      tr.id = 'older-toggle-row';
+      tr.className = 'older-toggle-row border-t border-dashed border-slate-700/60';
+      tr.innerHTML = `<td colspan="5">
+        <button type="button" class="older-toggle-btn" onclick="toggleOlder()">
+          ${olderExpanded
+            ? `▲ Göm äldre tävlingar`
+            : `▼ Visa ${olderCount} äldre tävlingar (${years.slice(1).join(', ')})`}
+        </button>
+      </td>`;
+      insertAfter.after(tr);
+    }
+
+    function toggleOlder() {
+      olderExpanded = !olderExpanded;
       applyFilters();
     }
-    
-    function closeModal(){
-      const m=document.getElementById("detail-modal");
-      m.classList.add("hidden");
-      m.classList.remove("flex");
+
+    function setSeriesFilter(series) {
+      activeSeries = series;
+      document.querySelectorAll('.series-btn[data-series]').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.series === series);
+      });
+      applyFilters();
+    }
+
+    function setStatusFilter(status) {
+      if (activeStatus === status) {
+        activeStatus = 'all';
+      } else {
+        activeStatus = status;
+      }
+      document.querySelectorAll('.series-btn[data-status]').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.status === activeStatus);
+      });
+      applyFilters();
+    }
+
+    function closeModal() {
+      const m = document.getElementById('detail-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
     }
 
     function renderPickRow(row) {
-      const status = row.status || "miss";
-      const icon = status === "perfect"
-        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
-        : status === "close"
-          ? "▲"
-          : (typeof mxIcon === 'function' ? mxIcon('x-circle', { className: 'mx-icon--danger' }) : '');
-      const bg = status === "perfect" ? "bg-emerald-950/25 border-emerald-800/40" : status === "close" ? "bg-amber-950/20 border-amber-800/35" : "bg-rose-950/15 border-rose-900/30";
-      const actualCls = status === "perfect" ? "bg-emerald-400 text-emerald-950" : status === "close" ? "bg-amber-400 text-amber-950" : "bg-rose-400 text-rose-950";
+      const status = row.status || 'miss';
+      const icon = status === 'perfect'
+        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '✓')
+        : status === 'close' ? '▲'
+        : (typeof mxIcon === 'function' ? mxIcon('x-circle', { className: 'mx-icon--danger' }) : '✗');
+      const bg = status === 'perfect' ? 'bg-emerald-950/25 border-emerald-800/40'
+        : status === 'close' ? 'bg-amber-950/20 border-amber-800/35'
+        : 'bg-rose-950/15 border-rose-900/30';
+      const actualCls = status === 'perfect' ? 'bg-emerald-400 text-emerald-950'
+        : status === 'close' ? 'bg-amber-400 text-amber-950'
+        : 'bg-rose-400 text-rose-950';
       const pts = Number(row.points || 0);
-      const ptsHtml = pts > 0 ? `<span class="font-black text-emerald-300 tabular-nums shrink-0">+${pts}p</span>` : `<span class="text-slate-500 shrink-0">0p</span>`;
-      const name = (row.rider_name || "").trim() || "—";
-      return `
-        <div class="py-2.5 px-3 rounded-lg border ${bg} space-y-2">
-          <div class="flex items-start gap-2">
-            <span class="text-base shrink-0 leading-none mt-0.5">${icon}</span>
-            <span class="font-bold text-white text-sm sm:text-base leading-snug break-words flex-1">${name}</span>
-            <span class="shrink-0 sm:hidden">${ptsHtml}</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-1.5 text-xs pl-6">
-            <span class="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-100 border border-cyan-800/40">Du: P${row.predicted}</span>
-            <span class="text-slate-500">→</span>
-            <span class="px-2 py-0.5 rounded font-bold ${actualCls}">Kom P${row.actual}</span>
-            <span class="hidden sm:inline">${ptsHtml}</span>
-          </div>
-          ${row.hint ? `<p class="text-[10px] text-slate-400 pl-6">${row.hint}</p>` : ""}
-        </div>`;
+      const ptsHtml = pts > 0
+        ? `<span class="font-black text-emerald-300 tabular-nums shrink-0">+${pts}p</span>`
+        : `<span class="text-slate-500 shrink-0">0p</span>`;
+      const name = (row.rider_name || '').trim() || '—';
+      return `<div class="py-2.5 px-3 rounded-lg border ${bg} space-y-2">
+        <div class="flex items-start gap-2">
+          <span class="text-base shrink-0 leading-none mt-0.5">${icon}</span>
+          <span class="font-bold text-white text-sm leading-snug break-words flex-1">${name}</span>
+          <span class="shrink-0 sm:hidden">${ptsHtml}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs pl-6">
+          <span class="px-2 py-0.5 rounded bg-cyan-950/60 text-cyan-100 border border-cyan-800/40">Du: P${row.predicted}</span>
+          <span class="text-slate-500">→</span>
+          <span class="px-2 py-0.5 rounded font-bold ${actualCls}">Kom P${row.actual}</span>
+          <span class="hidden sm:inline">${ptsHtml}</span>
+        </div>
+        ${row.hint ? `<p class="text-[10px] text-slate-400 pl-6">${row.hint}</p>` : ''}
+      </div>`;
     }
 
     function renderSimpleRow(row) {
-      if (row.kind === "bonus") {
-        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold mx-btn-icon">${typeof mxIcon==='function'?mxIcon('target'):''} ${row.text || row.hint}</div>`;
+      if (row.kind === 'bonus') {
+        return `<div class="py-2 px-3 rounded-lg border border-amber-700/40 bg-amber-950/20 text-amber-100 text-xs font-semibold">${typeof mxIcon==='function'?mxIcon('target'):''} ${row.text||row.hint}</div>`;
       }
-      if (row.kind === "note") {
+      if (row.kind === 'note') {
         return `<div class="py-2 px-3 rounded-lg border border-rose-800/30 bg-rose-950/15 text-rose-200 text-xs">${row.text}</div>`;
       }
-      const ok = row.status === "correct";
+      const ok = row.status === 'correct';
       const icon = ok
-        ? (typeof mxIcon === 'function' ? mxIcon('check-circle', { className: 'mx-icon--ok' }) : '')
-        : (typeof mxIcon === 'function' ? mxIcon('x-circle', { className: 'mx-icon--danger' }) : '');
-      const pts = Number(row.points || 0);
-      const ptsTxt = pts > 0 ? `+${pts}p` : "0p";
-      const label = row.label ? `<span class="text-slate-500 text-[10px] uppercase">${row.label}</span>` : "";
-      if (row.kind === "wildcard") {
-        const picked = (row.picked_name || row.rider_name || "—").trim();
-        const actual = (row.actual_name || "").trim();
-        const posNum = row.position != null ? row.position : null;
-        const pos = posNum != null ? `plats ${posNum}` : "—";
-        let bodyHtml;
-        if (ok) {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> — stämde</span>`;
-        } else if (actual) {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> → där kom <strong class="text-amber-200">${actual}</strong></span>`;
-        } else {
-          bodyHtml = `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> (10–20) · gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(ingen på platsen i resultat)</span></span>`;
-        }
+        ? (typeof mxIcon==='function'?mxIcon('check-circle',{className:'mx-icon--ok'}):'✓')
+        : (typeof mxIcon==='function'?mxIcon('x-circle',{className:'mx-icon--danger'}):'✗');
+      const pts = Number(row.points||0);
+      const ptsTxt = pts>0?`+${pts}p`:'0p';
+      if (row.kind === 'wildcard') {
+        const picked = (row.picked_name||row.rider_name||'—').trim();
+        const actual = (row.actual_name||'').trim();
+        const pos = row.position!=null?`plats ${row.position}`:'—';
+        const bodyHtml = ok
+          ? `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong> — stämde</span>`
+          : actual
+            ? `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong> → där kom <strong class="text-amber-200">${actual}</strong></span>`
+            : `<span class="text-slate-400">Slumpad <strong class="text-cyan-200">${pos}</strong> · gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(ingen på platsen)</span></span>`;
         return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-xs font-bold uppercase text-slate-500">Wildcard · plats 10–20</span>
-            <span class="text-base shrink-0">${icon}</span>
-          </div>
+          <div class="flex items-center justify-between gap-2"><span class="text-xs font-bold uppercase text-slate-500">Wildcard · plats 10–20</span><span>${icon}</span></div>
           <div class="text-sm leading-snug">${bodyHtml}</div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] text-slate-500">${row.hint || ""}</span>
-            <span class="font-bold tabular-nums text-sm ${ok ? "text-emerald-300" : "text-slate-500"}">${ptsTxt}</span>
-          </div>
+          <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-slate-500">${row.hint||''}</span><span class="font-bold tabular-nums text-sm ${ok?'text-emerald-300':'text-slate-500'}">${ptsTxt}</span></div>
         </div>`;
       }
-      const picked = (row.picked_name || row.rider_name || "—").trim();
-      const actual = (row.actual_name || "").trim();
+      const picked = (row.picked_name||row.rider_name||'—').trim();
+      const actual = (row.actual_name||'').trim();
       const actualHtml = actual
         ? `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> → holeshot <strong class="text-amber-200">${actual}</strong></span>`
         : `<span class="text-slate-400">Gissade <strong class="text-slate-200">${picked}</strong> <span class="text-rose-300/90">(resultat saknas)</span></span>`;
       return `<div class="py-2.5 px-3 rounded-lg border border-slate-700/60 bg-slate-900/40 space-y-1.5">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-xs font-bold uppercase text-slate-500">${row.label || "Holeshot"}</span>
-          <span class="text-base shrink-0">${icon}</span>
-        </div>
+        <div class="flex items-center justify-between gap-2"><span class="text-xs font-bold uppercase text-slate-500">${row.label||'Holeshot'}</span><span>${icon}</span></div>
         <div class="text-sm leading-snug">${actualHtml}</div>
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-[10px] text-slate-500">${row.hint || ""}</span>
-          <span class="font-bold tabular-nums text-sm ${ok ? "text-emerald-300" : "text-slate-500"}">${ptsTxt}</span>
-        </div>
+        <div class="flex items-center justify-between gap-2"><span class="text-[10px] text-slate-500">${row.hint||''}</span><span class="font-bold tabular-nums text-sm ${ok?'text-emerald-300':'text-slate-500'}">${ptsTxt}</span></div>
       </div>`;
     }
 
     function renderSection(title, rows, renderFn) {
-      if (!rows || !rows.length) return "";
+      if (!rows||!rows.length) return '';
       let h = `<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">${title}</h4><div class="space-y-2">`;
-      rows.forEach((r) => { h += renderFn(r); });
-      h += "</div></div>";
-      return h;
+      rows.forEach(r => { h += renderFn(r); });
+      return h + '</div></div>';
     }
 
     function renderDetailModal(data) {
-      const comp = data.competition || {};
-      const sum = data.summary || {};
-      const sec = data.sections || {};
-
-      const titleEl = document.getElementById("detail-modal-title");
-      const subEl = document.getElementById("detail-modal-sub");
-      const summaryEl = document.getElementById("detail-summary");
-      const listEl = document.getElementById("detail-list");
-      const totalEl = document.getElementById("detail-total");
-
-      if (titleEl) {
-        titleEl.textContent = comp.name ? `${comp.name}` : "Dina poäng";
-      }
-      if (subEl) {
-        const bits = [comp.series, "Jämför din gissning med resultatet"].filter(Boolean);
-        subEl.textContent = bits.join(" · ");
-      }
+      const comp = data.competition||{};
+      const sum  = data.summary||{};
+      const sec  = data.sections||{};
+      const titleEl   = document.getElementById('detail-modal-title');
+      const subEl     = document.getElementById('detail-modal-sub');
+      const summaryEl = document.getElementById('detail-summary');
+      const listEl    = document.getElementById('detail-list');
+      const totalEl   = document.getElementById('detail-total');
+      if (titleEl) titleEl.textContent = comp.name||'Dina poäng';
+      if (subEl) subEl.textContent = [comp.series,'Jämför din gissning med resultatet'].filter(Boolean).join(' · ');
       if (summaryEl) {
-        summaryEl.classList.remove("hidden");
+        summaryEl.classList.remove('hidden');
         summaryEl.innerHTML = `
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Race picks</div>
-            <div class="font-black text-white tabular-nums">${sum.race_points ?? 0}p</div>
+            <div class="font-black text-white tabular-nums">${sum.race_points??0}p</div>
           </div>
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Holeshot</div>
-            <div class="font-black text-white tabular-nums">${sum.holeshot_points ?? 0}p</div>
+            <div class="font-black text-white tabular-nums">${sum.holeshot_points??0}p</div>
           </div>
           <div class="rounded-lg bg-slate-900/50 border border-slate-700/50 p-2">
             <div class="text-[10px] text-slate-500 uppercase">Wildcard</div>
-            <div class="font-black text-white tabular-nums">${sum.wildcard_points ?? 0}p</div>
+            <div class="font-black text-white tabular-nums">${sum.wildcard_points??0}p</div>
           </div>`;
       }
-      if (totalEl) {
-        totalEl.textContent = `Totalt: ${data.total ?? 0}p`;
-      }
+      if (totalEl) totalEl.textContent = `Totalt: ${data.total??0}p`;
       if (!listEl) return;
-
-      let html = "";
-      const labels = data.labels || {};
-      const primaryLabel = labels.primary || "450cc";
-      const secondaryLabel = labels.secondary || "250cc";
-      html += renderSection(primaryLabel + " — dina placeringar", sec.picks_450, renderPickRow);
-      html += renderSection(secondaryLabel + " — dina placeringar", sec.picks_250, renderPickRow);
-      if (sec.holeshot && sec.holeshot.length) {
-        html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Holeshot</h4><div class=\"space-y-2\">";
-        sec.holeshot.forEach((r) => { html += renderSimpleRow(r); });
-        html += "</div></div>";
+      const labels = data.labels||{};
+      let html = '';
+      html += renderSection((labels.primary||'450cc')+' — dina placeringar', sec.picks_450, renderPickRow);
+      html += renderSection((labels.secondary||'250cc')+' — dina placeringar', sec.picks_250, renderPickRow);
+      if (sec.holeshot?.length) {
+        html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Holeshot</h4><div class="space-y-2">';
+        sec.holeshot.forEach(r=>{html+=renderSimpleRow(r);});
+        html += '</div></div>';
       }
-      if (sec.wildcard && sec.wildcard.length) {
-        html += "<div><h4 class=\"text-xs font-bold uppercase tracking-wider text-slate-500 mb-2\">Wildcard</h4><div class=\"space-y-2\">";
-        sec.wildcard.forEach((r) => { html += renderSimpleRow(r); });
-        html += "</div></div>";
+      if (sec.wildcard?.length) {
+        html += '<div><h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Wildcard</h4><div class="space-y-2">';
+        sec.wildcard.forEach(r=>{html+=renderSimpleRow(r);});
+        html += '</div></div>';
       }
-      if (sec.other && sec.other.length) {
-        sec.other.forEach((r) => { html += renderSimpleRow(r); });
-      }
-      if (!html && data.breakdown && data.breakdown.length) {
-        html = "<p class=\"text-slate-500 text-xs\">Kunde inte visa strukturerad vy — använder äldre format.</p>";
-        data.breakdown.forEach((item) => {
-          html += `<div class="py-1 border-b border-slate-800/60 text-xs">${item}</div>`;
-        });
-      }
-      if (!html) {
-        html = "<p class=\"text-slate-500 text-center py-4\">Inga picks registrerade för detta race.</p>";
-      }
+      if (sec.other?.length) sec.other.forEach(r=>{html+=renderSimpleRow(r);});
+      if (!html) html = '<p class="text-slate-500 text-center py-4">Inga picks registrerade för detta race.</p>';
       listEl.innerHTML = html;
     }
 
-    async function showDetails(compId){
-      try{
-        const url = viewingUser 
+    async function showDetails(compId) {
+      try {
+        const url = viewingUser
           ? `/get_user_race_results/${viewingUser}/${compId}`
           : `/get_my_race_results/${compId}`;
         const res = await fetch(url);
         const data = await res.json();
-        if (!res.ok || data.error) {
-          alert(data.error || "Kunde inte hämta detaljer");
-          return;
-        }
+        if (!res.ok || data.error) { alert(data.error||'Kunde inte hämta detaljer'); return; }
         if (data.sections) {
           renderDetailModal(data);
         } else {
-          // Legacy fallback
-          const listEl = document.getElementById("detail-list");
+          const listEl = document.getElementById('detail-list');
           if (listEl) {
-            listEl.innerHTML = "";
-            (data.breakdown || []).forEach((item) => {
-              const div = document.createElement("div");
-              div.className = "py-1 text-xs border-b border-slate-800/60";
+            listEl.innerHTML = '';
+            (data.breakdown||[]).forEach(item => {
+              const div = document.createElement('div');
+              div.className = 'py-1 text-xs border-b border-slate-800/60';
               div.textContent = item;
               listEl.appendChild(div);
             });
           }
-          const totalEl = document.getElementById("detail-total");
-          if (totalEl) totalEl.textContent = "Totalt: " + (data.total || 0) + "p";
+          const totalEl = document.getElementById('detail-total');
+          if (totalEl) totalEl.textContent = 'Totalt: '+(data.total||0)+'p';
         }
-        document.getElementById("detail-modal").classList.remove("hidden");
-        document.getElementById("detail-modal").classList.add("flex");
-      }catch(e){
-        alert("Kunde inte hämta detaljer");
-      }
+        document.getElementById('detail-modal').classList.remove('hidden');
+        document.getElementById('detail-modal').classList.add('flex');
+      } catch(e) { alert('Kunde inte hämta detaljer'); }
     }
 
-    // Wiring
-    document.addEventListener("DOMContentLoaded", () => {
-      const q = document.getElementById("score-search");
-      const series = document.getElementById("series-filter");
-      const status = document.getElementById("status-filter");
-      const clear = document.getElementById("clear-filters");
+    document.addEventListener('DOMContentLoaded', () => {
+      // Sätt initial serie-knapp baserat på URL-parameter
+      if (initialSeriesFilter && initialSeriesFilter !== 'all') {
+        setSeriesFilter(initialSeriesFilter);
+      } else {
+        applyFilters();
+      }
 
-      if (q) q.addEventListener("input", applyFilters);
-      if (series) series.addEventListener("change", applyFilters);
-      if (status) status.addEventListener("change", applyFilters);
-      if (clear) clear.addEventListener("click", clearFilters);
+      // Sökfält
+      const q = document.getElementById('score-search');
+      if (q) q.addEventListener('input', applyFilters);
 
-      applyFilters();
+      // Serie-knappar
+      document.querySelectorAll('.series-btn[data-series]').forEach(btn => {
+        btn.addEventListener('click', () => setSeriesFilter(btn.dataset.series));
+      });
 
-      // Optional deep link: /my_scores?focus=<competition_id>
+      // Status-knappar
+      document.querySelectorAll('.series-btn[data-status]').forEach(btn => {
+        btn.addEventListener('click', () => setStatusFilter(btn.dataset.status));
+      });
+
+      // Deep link ?focus=
       try {
-        const params = new URLSearchParams(window.location.search || "");
-        const focus = params.get("focus");
+        const params = new URLSearchParams(window.location.search || '');
+        const focus = params.get('focus');
         if (focus) {
-          // Ensure the row isn't filtered out (keep locked series scope)
-          if (q) q.value = "";
-          if (series && series.options.length > 1) series.value = "all";
-          else if (series && initialSeriesFilter && initialSeriesFilter !== "all") series.value = initialSeriesFilter;
-          if (status) status.value = "all";
+          setSeriesFilter('all');
+          olderExpanded = true;
           applyFilters();
-
           const tr = document.getElementById(`comp-${focus}`);
           if (tr) {
-            tr.scrollIntoView({ block: "center", behavior: "smooth" });
-            tr.classList.add("ring-2", "ring-amber-400/70");
-            window.setTimeout(() => tr.classList.remove("ring-2", "ring-amber-400/70"), 2500);
-            if ((tr.getAttribute("data-status") || "") === "completed") {
+            tr.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            tr.classList.add('ring-2','ring-amber-400/70');
+            window.setTimeout(() => tr.classList.remove('ring-2','ring-amber-400/70'), 2500);
+            if ((tr.getAttribute('data-status')||'') === 'completed') {
               const cid = Number(focus);
               if (cid) showDetails(cid);
             }
           }
         }
-      } catch (_) {}
+      } catch(_) {}
     });
   </script>
 </body>
