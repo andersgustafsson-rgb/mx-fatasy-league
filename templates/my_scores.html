@@ -55,6 +55,66 @@
       transition: background 0.13s, border-color 0.13s, color 0.13s;
     }
     .older-toggle-btn:hover { border-color: rgba(148,163,184,0.65); color: #e2e8f0; background: rgba(51,65,85,0.6); }
+
+    @media (max-width: 639px) {
+      .scores-table-wrap {
+        overflow-x: visible;
+      }
+      .scores-table,
+      .scores-table tbody,
+      .scores-table tr,
+      .scores-table td {
+        display: block;
+        width: 100%;
+      }
+      .scores-table thead,
+      .scores-table tfoot {
+        display: none;
+      }
+      .scores-table tbody {
+        padding: 0.65rem;
+      }
+      .scores-table .score-row {
+        margin-bottom: 0.65rem;
+        border: 1px solid rgba(51, 65, 85, 0.7);
+        border-radius: 0.9rem;
+        background: rgba(15, 23, 42, 0.62);
+        overflow: hidden;
+      }
+      .scores-table .score-row td {
+        padding: 0.45rem 0.85rem;
+        text-align: left;
+        white-space: normal;
+      }
+      .scores-table .score-row td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.2rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .scores-table .score-row td:first-child {
+        padding-top: 0.75rem;
+      }
+      .scores-table .score-row td:last-child {
+        padding-bottom: 0.8rem;
+      }
+      .scores-table .score-row td[data-label="Poäng"] {
+        text-align: left;
+      }
+      .older-toggle-row {
+        display: block;
+        margin: 0.15rem 0 0.5rem;
+      }
+      .older-toggle-row td {
+        display: block;
+        width: 100%;
+        padding: 0.25rem 0.65rem 0.5rem;
+      }
+    }
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 font-sans">
@@ -157,8 +217,8 @@
       </div>
 
       <!-- Tabell -->
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse">
+      <div class="scores-table-wrap overflow-x-auto">
+        <table class="scores-table w-full border-collapse">
           <thead class="sticky top-0 z-10 bg-slate-950/90 backdrop-blur border-b border-slate-700/50">
             <tr class="text-left text-[10px] font-bold tracking-wider uppercase text-slate-500">
               <th class="px-3 sm:px-4 py-3">Datum</th>
@@ -181,8 +241,8 @@
                 data-year="{{ row_year }}"
                 onclick="{% if row.has_results %}showDetails({{ row['competition_id'] }}){% endif %}"
                 class="score-row {% if row.has_results %}cursor-pointer{% else %}cursor-default{% endif %} hover:bg-slate-800/30 transition-colors">
-                <td class="px-3 sm:px-4 py-3 text-sm text-slate-400 tabular-nums whitespace-nowrap">{{ row.event_date }}</td>
-                <td class="px-3 sm:px-4 py-3">
+                <td data-label="Datum" class="px-3 sm:px-4 py-3 text-sm text-slate-400 tabular-nums whitespace-nowrap">{{ row.event_date }}</td>
+                <td data-label="Tävling" class="px-3 sm:px-4 py-3">
                   <div class="flex items-center gap-2 min-w-0">
                     <span class="inline-flex sm:hidden text-[10px] font-bold px-1.5 py-0.5 rounded
                       {% if row.series == 'SX' %}text-cyan-300 bg-cyan-950/50 border border-cyan-800/40
@@ -200,7 +260,7 @@
                     </div>
                   </div>
                 </td>
-                <td class="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
+                <td data-label="Serie" class="px-3 sm:px-4 py-3 text-center hidden sm:table-cell">
                   <span class="inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-xs font-bold
                     {% if row.series == 'SX' %}border-cyan-700/50 bg-cyan-950/30 text-cyan-200
                     {% elif row.series == 'MX' %}border-emerald-800/50 bg-emerald-950/25 text-emerald-200
@@ -210,7 +270,7 @@
                     {{ row.series }}
                   </span>
                 </td>
-                <td class="px-3 sm:px-4 py-3 text-center">
+                <td data-label="Status" class="px-3 sm:px-4 py-3 text-center">
                   {% if row.has_results %}
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold bg-emerald-900/35 text-emerald-200 border border-emerald-700/35">
                       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block"></span><span class="hidden xs:inline">Kört</span>
@@ -221,7 +281,7 @@
                     </span>
                   {% endif %}
                 </td>
-                <td class="px-3 sm:px-4 py-3 text-right font-black tabular-nums
+                <td data-label="Poäng" class="px-3 sm:px-4 py-3 text-right font-black tabular-nums
                   {% if row.has_results and row.total_points > 0 %}text-emerald-300
                   {% elif row.has_results and row.total_points == 0 %}text-rose-300
                   {% else %}text-slate-600{% endif %}">
