@@ -281,6 +281,7 @@
   <script>
     const viewingUser = {% if viewing_user %}'{{ viewing_user }}'{% else %}null{% endif %};
     const initialSeriesFilter = {{ (series_filter or 'all') | tojson }};
+    const initialWsxYear = {{ wsx_year | tojson }};
 
     // ── Filter-state ──────────────────────────────────────────────
     let activeSeries = initialSeriesFilter === 'all' ? 'all' : initialSeriesFilter;
@@ -382,7 +383,32 @@
       applyFilters();
     }
 
+    function buildSeriesUrl(series) {
+      const url = new URL(window.location.href);
+      if (!series || series === 'all') {
+        url.searchParams.delete('series');
+        url.searchParams.delete('year');
+        return url.toString();
+      }
+
+      url.searchParams.set('series', series);
+      if (series === 'WSX') {
+        if (initialSeriesFilter === 'WSX' && initialWsxYear) {
+          url.searchParams.set('year', String(initialWsxYear));
+        } else {
+          url.searchParams.delete('year');
+        }
+      } else {
+        url.searchParams.delete('year');
+      }
+      return url.toString();
+    }
+
     function setSeriesFilter(series) {
+      if (series !== activeSeries) {
+        window.location.href = buildSeriesUrl(series);
+        return;
+      }
       activeSeries = series;
       document.querySelectorAll('.series-btn[data-series]').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.series === series);
@@ -566,12 +592,11 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Sätt initial serie-knapp baserat på URL-parameter
-      if (initialSeriesFilter && initialSeriesFilter !== 'all') {
-        setSeriesFilter(initialSeriesFilter);
-      } else {
-        applyFilters();
-      }
+      // Sätt initial serie-knapp baserat på serverns aktuella scope
+      document.querySelectorAll('.series-btn[data-series]').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.series === activeSeries);
+      });
+      applyFilters();
 
       // Sökfält
       const q = document.getElementById('score-search');
