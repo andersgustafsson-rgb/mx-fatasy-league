@@ -385,13 +385,6 @@ def _paint_cinematic_backdrop(width: int, height: int, data: dict[str, Any], acc
     return out.convert("RGB")
 
 
-def _draw_glass_panel(draw, box, *, fill=(12, 18, 32, 180), outline=(255, 255, 255), outline_a=40, radius=22):
-    """Draw opaque-ish panel (RGB canvas — approximate glass)."""
-    # On RGB we simulate glass with dark translucent-looking solid + soft border
-    f = (fill[0], fill[1], fill[2])
-    draw.rounded_rectangle(box, radius=radius, fill=f, outline=outline[:3], width=2)
-
-
 def _render_landscape(data: dict[str, Any], width: int, height: int, *, compact: bool) -> bytes:
     from PIL import Image, ImageDraw
 
