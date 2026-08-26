@@ -486,6 +486,62 @@ def social_recap_page():
 	return render_template("admin_social_recap.html")
 
 
+@bp.route("/admin/hype-poster")
+@login_required
+def hype_poster_page():
+	if not is_admin_user():
+		return redirect(url_for("index"))
+	return render_template("admin_hype_poster.html")
+
+
+@bp.get("/admin/api/hype-poster")
+@login_required
+def hype_poster_api():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	if not comp_id:
+		return jsonify({"error": "competition_id_required"}), 400
+	try:
+		from hype_poster_service import build_hype_poster_data
+
+		data = build_hype_poster_data(comp_id)
+		return jsonify(data)
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("hype_poster_api failed: %s", e)
+		payload = {"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
+		if (os.getenv("ADMIN_API_TRACEBACK", "") or "").strip().lower() in ("1", "true", "yes"):
+			payload["traceback"] = traceback.format_exc()
+		return jsonify(payload), 500
+
+
+@bp.get("/admin/api/hype-poster.png")
+@login_required
+def hype_poster_png():
+	if not is_admin_user():
+		return jsonify({"error": "Unauthorized"}), 401
+	comp_id = request.args.get("competition_id", type=int)
+	if not comp_id:
+		return jsonify({"error": "competition_id_required"}), 400
+	layout = (request.args.get("layout") or "facebook").strip().lower()
+	try:
+		from hype_poster_service import build_hype_poster_data, render_hype_poster_png
+
+		data = build_hype_poster_data(comp_id)
+		png = render_hype_poster_png(data, layout=layout)
+		return Response(png, mimetype="image/png")
+	except ValueError as e:
+		return jsonify({"error": str(e)}), 404
+	except Exception as e:
+		current_app.logger.exception("hype_poster_png failed: %s", e)
+		payload = {"error": str(e) or type(e).__name__, "error_type": type(e).__name__}
+		if (os.getenv("ADMIN_API_TRACEBACK", "") or "").strip().lower() in ("1", "true", "yes"):
+			payload["traceback"] = traceback.format_exc()
+		return jsonify(payload), 500
+
+
 @bp.get("/admin/api/social-recap")
 @login_required
 def social_recap_api():
